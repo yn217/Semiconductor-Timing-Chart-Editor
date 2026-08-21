@@ -1,33 +1,98 @@
 # GUI Specification
 
-## Main layout
-Top Ribbon/Toolbar / Left Signal-Group Tree / Center Waveform / Right Inspector / Bottom context editor / Overlay Legend+Annotation。
+## 0. Normative priority
+GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` と Golden GUI images を **Visual Acceptance Contract** とする。
 
-## Bottom tabs
-Signal / Annotation / Problems / JSON。JSONは低優先度で通常表示しない。Signal選択->Signal、Annotation選択->Annotation。Pin/Follow Selection OFFで固定。
+優先順位:
+1. `docs/GUI_VISUAL_CONTRACT.md`
+2. Golden GUI images (`gui-mockup/assets/original/`)
+3. `docs/GUI_SPEC.md`
+4. `gui-mockup/index.html` / CSS / JS（AI-readable structural reference）
 
-## Signal Editor
-Event TableはStart/Value中心。End/Durationは計算表示でCanonical保存しない。Binary quick buttons 0/1/X/Z。BusはHex/Binary/Symbol/X/Z。Clock専用Generator form。
+HTML mockupだけを見て一般的なWeb UIへ簡略化してはならない。Golden imageと構造が矛盾する場合はGolden image/Visual Contractを優先する。
 
-## Annotation Editor
-Type、From/To Anchor、Label、Offsets、Snap、Style。Canvas上Drag、矢印key 1px、Shift 10px、endpoint handles、label独立移動。
+## 1. Main layout
+- Office/Ribbon風の上部UI。
+- genericな1行button barへ置換しない。
+- Left: Signal / Group tree
+- Center upper: Waveform canvas
+- Center lower: Context bottom editor
+- Right: Inspector
+- Legend / Annotation: Waveform上のoverlay
 
-## Group UI
-+Group/+Signal。Rename/Add/Insert Above-Below/Duplicate/Move/Collapse/Delete。Drag & DropでGroup/Signal並べ替え。Group移動でSignal roleは変えない。
+Bottom editorは原則 **Center column内だけ** に配置し、Left Signal Tree / Right Inspectorの下まで全幅に広げない。
 
-## Vertical spacing / Group Band Inspector
-- Global rowHeight/signalSpacing
-- Group before/after
-- Signal before/after
+## 2. Ribbon
+Ribbonは機能をグループ化して表示する。単純な横一列のボタン群は禁止。
+
+想定タブ:
+- File
+- Home
+- Insert
+- Annotation
+- View
+- AI（後段）
+
+Home/Insert等では関連commandをgroup化し、group separator / captionを持つ。
+
+## 3. Bottom tabs
+Signal / Annotation / Problems / JSON。Transaction実装後はTransactionを追加可能。
+
+JSONは低優先度で通常操作に必須としない。
+Signal選択 -> Signal、Annotation選択 -> Annotation。ただしPin / Follow Selection OFFで固定可能。
+Bottom panelは高さ変更・collapse可能。
+
+## 4. Signal Editor
+Event TableはStart/Value中心。End/Durationは計算表示でCanonical保存しない。
+Binary quick buttons: 0 / 1 / X / Z。
+Bus: Hex / Binary / Symbol / X / Z。
+Clock専用Generator form。
+
+## 5. Annotation Editor
+Type、From/To Anchor、Label、Offsets、Snap、Style。
+Canvas上Drag、矢印key 1px、Shift 10px、endpoint handles、label独立移動。
+
+## 6. Group UI
++Group / +Signal。
+Rename / Add / Insert Above-Below / Duplicate / Move / Collapse / Delete。
+Drag & DropでGroup/Signal並べ替え。Group移動でSignal roleは変えない。
+
+## 7. Vertical spacing / Group Band Inspector
+- Global rowHeight / signalSpacing
+- Group before / after
+- Signal before / after
 - Reset inherited/default
-- Spacer追加/高さ/Drag
+- Spacer追加 / 高さ / Drag
 - Background ON/OFF, Color, Opacity
-- Extend: label/waveform/both
-- Border/Header
-即時Preview + Undo/Redo。
+- Extend: label / waveform / both
+- Border / Header
+- 即時Preview + Undo/Redo
 
-## Legend
-Selectable Overlay。Drag、keyboard nudge、X/Y、horizontal/vertical、show/hide、used roles only。
+Signal rowのabsolute Yをcanonical保存しない。
 
-## AI-readable mockup
-UI構造はCanvasにせずsemantic HTML controls。stable data-testid/data-role/data-signal/data-anchor。Waveform visualだけSVG可。Tabsはbutton、controlはexplicit label。原画はreference assetとして保持する。
+## 8. Signal role/name columns
+Role badgeとSignal nameは独立column。
+- input -> `[i]`
+- output -> `[o]`
+- internal -> `[wire]`
+
+Waveform lane内へ `i req_valid` / `wire busy` のようなrole+name文字列を重ねて表示しない。
+Signal name columnはLeft/Center/Right、width調整、auto-fitを持つ。
+
+## 9. Legend
+Selectable Overlay。
+Drag、keyboard nudge、X/Y、horizontal/vertical、show/hide、used roles only。
+
+## 10. Waveform visual ownership
+Waveform traceの形状はGUI CSSや独自SVG pathで決めない。
+Cycle waveformは `docs/WAVEDROM_COMPATIBILITY.md` に従い、WaveDrom renderer/default skin geometryを使用する。
+GUIはsignal/group background、selection、annotation等をその外側/overlayとして提供する。
+
+## 11. AI-readable mockup
+UI構造はsemantic HTML controlsで表す。stable `data-testid` / `data-role` / `data-signal` / `data-anchor` を利用する。Waveform visualだけSVG可。
+
+ただし `gui-mockup/index.html` は **構造をAIへ伝える補助資料** であり、Golden imageを無視して見た目を簡略化する根拠にはならない。
+
+## 12. Visual regression requirement
+Signal / Annotation / JSON（将来Transaction）の代表画面をPlaywright screenshotで保存し、Golden画像との差分をCIで検出する。
+Layout metric testとvisual screenshot testの両方を持つこと。
