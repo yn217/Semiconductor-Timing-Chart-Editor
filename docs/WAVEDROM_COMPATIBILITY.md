@@ -1,31 +1,151 @@
 # WaveDrom Compatibility / Difference Specification
 
-## Principle
-WaveDromの優れた信号波形形状を再発明しない。Cycle waveform rendererはWaveDrom Renderer/Skinを利用するか、将来自前化する場合もWaveDrom SVG geometryをGolden Referenceにする。
+## 0. Normative rule
+Cycle-level signal traces must preserve **actual WaveDrom waveform geometry**.
 
-## Preserve / implement
-- 0/1/X/Z
-- weak high/low等
+For the MVP, use the WaveDrom renderer/default skin directly for the waveform trace layer. A custom renderer that merely resembles WaveDrom is not acceptable.
+
+Only the following layers may be custom around it:
+- semantic model / editor
+- signal role/name columns
+- group backgrounds
+- selection/hover
+- annotation overlay
+- transaction overlay/view
+- document header/footer/layout
+
+## 1. Required rendering pipeline
+
+```text
+Semantic Timing Model
+    ↓
+WaveDrom Adapter
+    ↓
+Temporary WaveJSON
+    ↓
+WaveDrom Renderer + default skin
+    ↓
+Waveform SVG
+    ↓
+Geometry Map extraction
+    ↓
+Custom Overlay (annotation/selection/group UI)
+```
+
+Temporary WaveJSON is internal only and must not become the canonical saved model.
+
+## 2. Preserve / implement
+- Low `0`
+- High `1`
+- X / undefined
+- Z / high impedance
+- weak high / low where supported by WaveDrom
 - Bus/Data waveform + text
-- Clock positive/negative、period/phase、gating相当
-- gap/spacer
-- signal groups
-- node/edge相当
-- straight/curved/sharp/diagonal edge、arrow/bidirectional/no-arrow、label
-- header/footer/tick/tock/hscale相当（GUI/Document Layoutへ再設計）
+- positive/negative clocks
+- clock active-edge marker where applicable
+- period / phase including 0.5 phase
+- gating-equivalent mixed clock/static intervals
+- gap `|`
+- spacers/groups as appropriate
+- node/edge semantics via our semantic anchors / Transition Arrow GUI
+- WaveDrom edge line styles where applicable
 
-## Replace input syntax
+## 3. Replace input syntax only
+WaveDrom visual semantics are retained while authoring syntax is replaced.
+
 - `wave: "0...1..0"` -> Semantic `start/value`
-- `.` -> 自動継続
+- `.` -> automatic continuation
 - `node: "...a..b"` -> semantic waveform geometry anchor
 - `edge: "a->b"` -> GUI Transition Arrow
 - `period/phase` -> Signal/Clock Properties GUI
 - group arrays -> Signal Tree GUI
 - `|` gap -> Timeline Gap GUI
-- `hscale` -> Time Scale/Zoom GUI
+- `hscale` -> Time Scale / Zoom GUI
 - head/foot -> Document Layout
 
-## Geometry rule
-WaveDromの斜めedge、Bus transition、Clock、X/Z形状を「似せる」実装は禁止。Golden testsでは基本波形のSVG path座標、stroke、transition endpointsを比較し、許容差0pxを原則とする。
+## 4. Forbidden custom approximations
+Do not independently generate the following trace geometry with hand-written SVG paths/CSS if WaveDrom is the active renderer:
 
-Annotationのclock edge snapはWaveDrom実Geometryを参照し、別計算で推測しない。
+- binary 0→1 transition
+- binary 1→0 transition
+- bus/data transition polygon
+- X transition
+- Z transition
+- clock pulse geometry
+- positive/negative clock edge brick
+- gap geometry
+
+In particular, a simple vertical digital step such as:
+
+```text
+____|‾‾‾‾
+```
+
+is not an acceptable replacement for a WaveDrom default-skin transition when WaveDrom uses its transition brick geometry.
+
+## 5. Geometry Golden requirements
+For equivalent WaveJSON input, compare the generated waveform layer with WaveDrom reference output.
+
+Golden checks shall include at minimum:
+- `0 -> 1`
+- `1 -> 0`
+- `0 -> X`, `X -> 0/1`
+- `0/1 -> Z`, `Z -> 0/1`
+- bus value-to-value transition
+- bus X/value transitions
+- positive clock
+- negative clock
+- phase `0.5`
+- period scaling
+- gated/static clock interval
+- gap
+
+Compare normalized:
+- SVG path `d`
+- element transforms
+- lane/brick dimensions
+- transition endpoints
+- stroke width
+- linecap / linejoin where visually relevant
+
+Default geometry tolerance: **0 px**.
+If normalization requires a non-zero exception, it must be documented per test and must not hide a visible shape difference.
+
+## 6. Geometry Map
+After WaveDrom renders, extract actual rendered positions for semantic use.
+
+Required anchors:
+- cycle start / center / end
+- value start
+- transition start / center / end where meaningful
+- rising edge
+- falling edge
+- bus transition
+
+Annotation/Transition Arrow code must consume this Geometry Map.
+It must not use an independently estimated `cycle * pixelsPerCycle` coordinate when an exact rendered anchor is available.
+
+## 7. Signal labels and roles
+Our GUI owns signal label/role columns.
+
+Do not place strings such as:
+- `i req_valid`
+- `wire busy`
+- `o ready`
+
+inside the waveform trace region as a substitute for the dedicated role/name columns.
+
+WaveDrom-generated labels may be hidden/cropped/replaced only in a way that does **not** modify the waveform trace geometry.
+
+## 8. Acceptance rule
+A screenshot that is semantically correct but visibly different from WaveDrom signal shapes is a FAIL.
+
+A renderer shall not be accepted merely because:
+- timing values are correct
+- edges occur at the correct cycle
+- the waveform looks like a normal digital waveform
+
+The geometry itself must match WaveDrom.
+
+## 9. Future independent renderer
+A fully independent renderer may be considered later only if it passes the same SVG-geometry Golden suite against WaveDrom. Until then, WaveDrom remains the waveform visual source of truth.
