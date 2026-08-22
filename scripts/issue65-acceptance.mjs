@@ -67,7 +67,7 @@ try {
   });
   await page.screenshot({ path: `${root}/issue65-1672x941.png` });
   await browser.close();
-  const report = { issue: 65, ...result, pass: result.pass, knownIncomplete: ['clock preset/import/export', 'problems signal filter', 'JSON browser file-import E2E'] };
+  const report = { issue: 65, ...result, pass: result.pass, knownIncomplete: ['clock import/export', 'JSON browser file-import E2E', 'full APB/AHB/AXI/CDC matrix'] };
   fs.writeFileSync(`${root}/acceptance.json`, `${JSON.stringify(report, null, 2)}\n`);
   assert.ok(report.pass, 'Issue #65 progress acceptance failed');
   console.log('Issue #65 progress acceptance passed: Signal, Comment, Annotation, Transaction, and JSON editor paths use observable canonical operations.');

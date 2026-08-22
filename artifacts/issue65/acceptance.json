@@ -7,8 +7,8 @@
   "jsonExport": true,
   "pass": true,
   "knownIncomplete": [
-    "clock preset/import/export",
-    "problems signal filter",
-    "JSON browser file-import E2E"
+    "clock import/export",
+    "JSON browser file-import E2E",
+    "full APB/AHB/AXI/CDC matrix"
   ]
 }
