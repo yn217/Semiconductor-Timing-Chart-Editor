@@ -88,6 +88,12 @@
     });
 
     content.addEventListener('click', event => {
+      const editorRow = event.target.closest?.('tbody tr[data-editor-index]');
+      if (editorRow) {
+        model.editor.rowIndex = Number(editorRow.dataset.editorIndex);
+        controller.render();
+        return;
+      }
       const button = event.target.closest?.('[data-editor-action]');
       if (!button) return;
       const signalId = model.selection?.id;

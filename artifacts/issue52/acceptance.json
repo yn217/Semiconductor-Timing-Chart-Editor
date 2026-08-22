@@ -1,0 +1,27 @@
+{
+  "issue": 52,
+  "cases": {
+    "selectedRowInsertion": {
+      "selectedStart": 3,
+      "insertedStart": 4,
+      "rowIndex": 2,
+      "oneUndo": true,
+      "dirty": true,
+      "pass": true
+    },
+    "undo": {
+      "actionReturned": true,
+      "history": 0,
+      "redo": 1,
+      "exactDocument": true,
+      "pass": true
+    },
+    "fullTimeline": {
+      "disabled": true,
+      "reason": "変更点を追加できる空きcycleがありません",
+      "pass": true
+    }
+  },
+  "errors": [],
+  "pass": true
+}
