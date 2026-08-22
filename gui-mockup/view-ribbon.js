@@ -165,9 +165,9 @@
       canvas.dataset.viewSnap = view.guides.snap ? 'on' : 'off';
     }
     document.querySelectorAll('.row .role,.canvas-icon').forEach(node => { node.style.display = view.columns.role ? '' : 'none'; });
-    document.querySelectorAll('.row-name,.signal-label').forEach(node => { node.style.display = view.columns.signalName ? '' : 'none'; });
-    document.querySelectorAll('.bus-width-column,.hierarchy-bus-column').forEach(node => { node.style.display = view.columns.busWidth ? '' : 'none'; });
-    document.querySelectorAll('.hierarchy-instance-column').forEach(node => { node.style.display = view.columns.instancePath ? '' : 'none'; });
+    document.querySelectorAll('.row-name .signal-name-part,.signal-label .signal-name-part').forEach(node => { node.style.display = view.columns.signalName ? '' : 'none'; });
+    document.querySelectorAll('.bus-width-column,.hierarchy-bus-column,.bus-width-part').forEach(node => { node.style.display = view.columns.busWidth ? '' : 'none'; });
+    document.querySelectorAll('.hierarchy-instance-column,.instance-path-part').forEach(node => { node.style.display = view.columns.instancePath ? '' : 'none'; });
     const left = document.querySelector('.left-panel'); const inspector = document.querySelector('.inspector'); const bottom = document.querySelector('.bottom');
     if (bottom && view.panels.bottom) view.bottomHeight = Number(view.bottomHeight || model.view.bottomHeight || bottom.getBoundingClientRect().height || 270);
     if (left) { left.hidden = !view.panels.left; left.classList.toggle('hidden', !view.panels.left); }

@@ -1,0 +1,59 @@
+{
+  "issue": 79,
+  "checks": {
+    "openHierarchy": true,
+    "modeParts": true,
+    "signalNameIndependent": true,
+    "busWidthIndependent": true,
+    "instancePathIndependent": true,
+    "viewOnly": true
+  },
+  "modes": {
+    "signalOnly": {
+      "text": "rdata[15:0]",
+      "instance": false,
+      "name": true,
+      "bus": true
+    },
+    "relative": {
+      "text": "top.u_soc.u_dma.rdata[15:0]",
+      "instance": true,
+      "name": true,
+      "bus": true
+    },
+    "full": {
+      "text": "top.u_soc.u_dma.rdata[15:0]",
+      "instance": true,
+      "name": true,
+      "bus": true
+    },
+    "splitColumns": {
+      "text": "—rdata[15:0]",
+      "instance": true,
+      "name": true,
+      "bus": true
+    }
+  },
+  "final": {
+    "text": "—rdata[15:0]",
+    "parts": {
+      "instance": {
+        "display": "",
+        "text": "—"
+      },
+      "name": {
+        "display": "",
+        "text": "rdata"
+      },
+      "bus": {
+        "display": "",
+        "text": "[15:0]"
+      }
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue79-1672x941.png"
+  ]
+}
