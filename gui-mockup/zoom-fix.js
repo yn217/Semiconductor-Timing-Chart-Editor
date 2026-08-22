@@ -15,6 +15,9 @@
     #cycleCanvas .trace > svg{transform-box:border-box}
     #cycleCanvas .comment-body[data-zoom-cycle0],
     #cycleCanvas .latency[data-zoom-cycle0]{transform:translateX(var(--comment-cycle0-offset,0px))!important}
+    #cycleCanvas .comment-body[data-zoom-label-host],
+    #cycleCanvas .latency[data-zoom-label-host]{position:relative;justify-content:flex-start}
+    #cycleCanvas [data-zoom-comment-label]{position:absolute;top:50%;transform:translate(-50%,-50%);white-space:nowrap;pointer-events:none;color:inherit;font:inherit;line-height:inherit;z-index:2}
   `;
   document.head.appendChild(style);
 
@@ -27,6 +30,7 @@
 
   let raf = 0;
   let applying = false;
+  let labelRaf = 0;
 
   const updateStatus = () => {
     const status = document.querySelector('.status');
@@ -71,6 +75,56 @@
       }
     }
     metrics.geometryRefreshes += 1;
+  };
+
+  const ensureTimedBandLabel = band => {
+    let label = band.querySelector(':scope > [data-zoom-comment-label]');
+    if (label) return label;
+
+    const textNodes = [...band.childNodes].filter(node => node.nodeType === Node.TEXT_NODE && node.textContent.trim());
+    const text = textNodes.map(node => node.textContent).join('').trim();
+    if (!text) return null;
+    textNodes.forEach(node => node.remove());
+
+    label = document.createElement('span');
+    label.dataset.zoomCommentLabel = 'true';
+    label.textContent = text;
+    band.appendChild(label);
+    band.dataset.zoomLabelHost = 'true';
+    return label;
+  };
+
+  const positionTimedBandLabels = () => {
+    labelRaf = 0;
+    const canvas = document.querySelector('#cycleCanvas');
+    const referenceClock = controller.selectors?.getReferenceClock?.();
+    const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: 0, coordinateSpace: 'canvas' });
+    if (!canvas || !boundary) return;
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const viewportLeft = Math.max(canvasRect.left, boundary.canvasX);
+    const viewportRight = canvasRect.right - 8;
+
+    document.querySelectorAll('#cycleCanvas .comment-body, #cycleCanvas .latency').forEach(band => {
+      const label = ensureTimedBandLabel(band);
+      if (!label) return;
+      const rect = band.getBoundingClientRect();
+      const visibleLeft = Math.max(rect.left, viewportLeft);
+      const visibleRight = Math.min(rect.right, viewportRight);
+      if (visibleRight <= visibleLeft) {
+        label.style.visibility = 'hidden';
+        return;
+      }
+      label.style.visibility = '';
+      const visibleCenter = (visibleLeft + visibleRight) / 2;
+      label.style.left = `${visibleCenter - rect.left}px`;
+      label.dataset.positionSource = 'visible-timed-band';
+    });
+  };
+
+  const scheduleTimedBandLabels = () => {
+    if (labelRaf) return;
+    labelRaf = requestAnimationFrame(positionTimedBandLabels);
   };
 
   const alignTimedBandsToCycleZero = () => {
@@ -139,10 +193,12 @@
       // scrollable extent without scaling any label/UI columns.
       if (requiredRight > 0) wave.style.minWidth = `${Math.max(920, Math.ceil(requiredRight))}px`;
 
-      // Timed Comment Row bands follow the time-axis scale, but their text
-      // remains normal UI text. Their left edge is independently locked to
-      // the measured Cycle-0 boundary below.
+      // Timed Comment Row bands follow the time-axis scale. Their text is
+      // detached into an unscaled overlay label and positioned within the
+      // currently visible portion of the band so zoom never pushes the text
+      // off-screen merely because the timing range became wider.
       document.querySelectorAll('#cycleCanvas .comment-body, #cycleCanvas .latency').forEach(band => {
+        ensureTimedBandLabel(band);
         band.style.width = zoom === 1 ? '' : `${zoom * 100}%`;
         band.dataset.viewZoom = String(zoom);
       });
@@ -154,6 +210,7 @@
       // CSS rule above keeps the stable layout-derived Cycle-0 offset.
       alignTimedBandsToCycleZero();
       window.TimingChartProductionAnnotations?.render?.(model);
+      positionTimedBandLabels();
       updateStatus();
       metrics.frames += 1;
     } finally {
@@ -187,9 +244,13 @@
       const traceChanged = mutations.some(mutation => mutation.type === 'childList' && mutation.target?.closest?.('.trace'));
       if (traceChanged) scheduleZoom();
     }).observe(canvas, { subtree: true, childList: true });
+    canvas.addEventListener('scroll', scheduleTimedBandLabels, { passive: true });
   }
 
-  window.addEventListener('resize', scheduleZoom);
+  window.addEventListener('resize', () => {
+    scheduleZoom();
+    scheduleTimedBandLabels();
+  });
   controller.applyTimingOnlyZoom = scheduleZoom;
   scheduleZoom();
 })();
