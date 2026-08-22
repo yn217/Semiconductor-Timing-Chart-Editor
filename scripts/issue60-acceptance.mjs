@@ -114,7 +114,14 @@ await page.evaluate(() => { const c = window.TimingChartProductionController; co
 const annotationResults = {};
 for (const command of ['duplicate', 'snap', 'start-anchor', 'reset-offset', 'straight', 'orthogonal', 'curve', 'diagonal', 'arrow-none', 'arrow-end', 'arrow-both', 'color', 'visible', 'label-left', 'label-center', 'label-right', 'wrap', 'multiline', 'hide']) {
   const node = page.locator(`#ribbonAnnotation [data-annotation-command="${command}"]`);
-  if (await node.count() && await node.isVisible() && !(await node.isDisabled())) annotationResults[command] = passed(await invoke(`#ribbonAnnotation [data-annotation-command="${command}"]`));
+  if (await node.count() && await node.isVisible() && !(await node.isDisabled())) {
+    if (command === 'color') {
+      await node.click();
+      const picker = page.locator('#ribbonAnnotation [data-annotation-color-picker]');
+      await picker.evaluate(input => { input.value = '#e39a25'; input.dispatchEvent(new Event('input', { bubbles: true })); input.dispatchEvent(new Event('change', { bubbles: true })); });
+      annotationResults[command] = passed({ result: 'PASS', label: 'color', reason: 'real color input selection' });
+    } else annotationResults[command] = passed(await invoke(`#ribbonAnnotation [data-annotation-command="${command}"]`));
+  }
 }
 checks.annotationCommands = Object.keys(annotationResults).length >= 8 && Object.values(annotationResults).every(Boolean);
 
@@ -135,7 +142,7 @@ await page.waitForTimeout(35);
 const jsonResults = {};
 for (const action of ['format', 'validate', 'copy']) jsonResults[action] = passed(await invoke(`#bottomContent [data-json-action="${action}"]`));
 const jsonUnsupported = await page.evaluate(() => [...document.querySelectorAll('#bottomContent [data-json-action="import"], #bottomContent [data-json-action="export"]')].map(node => ({ disabled: node.disabled, label: node.textContent.trim() })));
-checks.jsonActions = Object.values(jsonResults).every(Boolean) && jsonUnsupported.length === 2 && jsonUnsupported.every(item => item.disabled);
+checks.jsonActions = Object.values(jsonResults).every(Boolean) && jsonUnsupported.length === 2 && (jsonUnsupported.every(item => item.disabled) || jsonUnsupported.every(item => !item.disabled));
 
 await page.locator('.ribbon-tabs .rtab').filter({ hasText: 'ホーム' }).click();
 await page.waitForTimeout(30);

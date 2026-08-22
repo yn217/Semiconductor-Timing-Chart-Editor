@@ -1,0 +1,14 @@
+{
+  "issue": 65,
+  "signalEdit": true,
+  "commentEditDuplicateDelete": true,
+  "annotationTableEdit": true,
+  "transactionEdit": true,
+  "jsonExport": true,
+  "pass": true,
+  "knownIncomplete": [
+    "clock preset/import/export",
+    "problems signal filter",
+    "JSON browser file-import E2E"
+  ]
+}
