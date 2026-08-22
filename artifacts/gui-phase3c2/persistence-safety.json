@@ -1,0 +1,30 @@
+{
+  "draft": {
+    "runtimeDraft": true,
+    "serializedDraftCount": 0,
+    "canonicalValuesClean": true,
+    "pass": true
+  },
+  "duty": {
+    "actionReturnsFalse": true,
+    "validation": "unsupported-duty",
+    "canonicalDuty": 0.5,
+    "geometryUnchanged": true,
+    "pass": true
+  },
+  "enum": {
+    "ui": "Both",
+    "canonical": "both",
+    "rerender": "Both",
+    "pass": true
+  },
+  "edgeReference": {
+    "timelineEdge": "falling",
+    "pass": true
+  },
+  "whitelist": {
+    "injected": "__uiTest",
+    "persisted": false,
+    "pass": true
+  }
+}
