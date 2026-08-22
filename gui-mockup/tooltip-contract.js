@@ -3,6 +3,7 @@
 
   const controller = window.TimingChartProductionController;
   if (!controller) return;
+  const metrics = controller.tooltipContractMetrics = controller.tooltipContractMetrics || { tooltipMetadataPasses: 0, scopedMetadataPasses: 0, observedMutationBatches: 0, registrationCalls: 0 };
 
   const normalize = value => String(value || '').replace(/[\s\n]+/g, '').trim();
   const textOf = node => normalize(node.querySelector?.('.tool-label')?.textContent || node.textContent || node.getAttribute('aria-label'));
@@ -56,8 +57,10 @@
     return [meta.label || textOf(element), meta.description, `Affects: ${meta.affects || 'current view/document selection'}`, meta.shortcut ? `Shortcut: ${meta.shortcut}` : '', reason ? `Reason: ${reason}` : ''].filter(Boolean).join('\n');
   };
 
-  const applyMetadata = () => {
-    const candidates = document.querySelectorAll('#ribbonHome .tool, #ribbonHome .toggles label, #ribbonInsert [data-insert-command], #ribbonAnnotation [data-annotation-command], #ribbonView [data-view-command]');
+  const applyMetadata = (root = document) => {
+    if (root === document) metrics.tooltipMetadataPasses++; else metrics.scopedMetadataPasses++;
+    const scope = root.querySelectorAll ? root : document;
+    const candidates = scope.querySelectorAll('#ribbonHome .tool, #ribbonHome .toggles label, #ribbonInsert [data-insert-command], #ribbonAnnotation [data-annotation-command], #ribbonView [data-view-command]');
     candidates.forEach(element => {
       const target = element.matches('.toggles label') ? element : element;
       const meta = metadataFor(target);
@@ -97,7 +100,8 @@
   document.addEventListener('focusin', event => { const element = event.target.closest?.('[data-tooltip-contract]'); if (element) show(element); });
   document.addEventListener('focusout', event => { if (event.target.closest?.('[data-tooltip-contract]')) hide(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); });
-  new MutationObserver(() => queueMicrotask(applyMetadata)).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['disabled', 'title', 'data-control-status'] });
   applyMetadata();
-  window.TimingChartTooltipContract = { applyMetadata, show, hide, metadataFor };
+  const register = element => { if (!element) return; metrics.registrationCalls++; applyMetadata(element.parentElement || document); };
+  const registerSubtree = root => { if (!root) return; metrics.registrationCalls++; applyMetadata(root); };
+  window.TimingChartTooltipContract = { applyMetadata, register, registerSubtree, show, hide, metadataFor, metrics };
 })();

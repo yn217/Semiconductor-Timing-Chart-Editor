@@ -5,7 +5,8 @@
   if (!controller) return;
   const normalize = value => String(value || '').replace(/[\s\n]+/g, '').trim();
   const label = element => normalize(element.querySelector?.('.tool-label')?.textContent || element.textContent || element.getAttribute('aria-label'));
-  const inventory = controller.controlAudit = controller.controlAudit || { controls: [], lastRun: 0 };
+  const inventory = controller.controlAudit = controller.controlAudit || { controls: [], lastRun: 0, metrics: { controlAuditRuns: 0, registrationCalls: 0, observedMutationBatches: 0 } };
+  inventory.metrics ??= { controlAuditRuns: 0, registrationCalls: 0, observedMutationBatches: 0 };
 
   const record = (element, status, reason = '') => {
     element.dataset.controlStatus = status;
@@ -108,7 +109,25 @@
     });
   };
 
+  const registerSubtree = root => {
+    if (!root) return;
+    inventory.metrics.registrationCalls++;
+    const descendants = root.querySelectorAll ? [...root.querySelectorAll('button, input, select, .tool, .mini-btn, .rtab')] : [];
+    const nodes = [root, ...descendants];
+    nodes.forEach(element => {
+      if (element.matches?.('[data-annotation-field]') && element.dataset.annotationBound !== 'true') {
+        element.dataset.annotationBound = 'true';
+        element.addEventListener('change', () => controller.actions.updateAnnotation(controller.model.selection.id, element.dataset.annotationField, element.type === 'checkbox' ? element.checked : element.value));
+        record(element, 'implemented');
+      }
+      if (element.dataset.annotationCommand || element.dataset.insertCommand || element.dataset.insertMenuCommand) {
+        if (!element.dataset.controlStatus) element.dataset.controlStatus = element.disabled ? 'disabled' : 'implemented';
+        record(element, element.dataset.controlStatus, element.disabled ? element.title : '');
+      }
+    });
+  };
   const run = () => {
+    inventory.metrics.controlAuditRuns++;
     applyRibbon();
     applyLeftPanel();
     disableBottomNoOps();
@@ -122,6 +141,8 @@
     inventory.lastRun = Date.now();
     inventory.visibleEnabled = [...document.querySelectorAll('button:not([disabled]), input:not([disabled]), select:not([disabled]), .tool:not([disabled]), .mini-btn:not([disabled])')].filter(element => !element.hidden && element.offsetParent !== null).length;
   };
+  inventory.register = record;
+  inventory.registerSubtree = registerSubtree;
+  inventory.run = run;
   run();
-  new MutationObserver(() => queueMicrotask(run)).observe(document.body, { subtree: true, childList: true });
 })();

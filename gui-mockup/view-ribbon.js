@@ -213,5 +213,6 @@
   const originalRender = controller.render;
   controller.render = (...args) => { const result = originalRender?.(...args); apply(); refresh(); return result; };
   controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu };
+  setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
   apply(); refresh();
 })();

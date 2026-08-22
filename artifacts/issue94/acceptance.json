@@ -1,0 +1,35 @@
+{
+  "issue": 94,
+  "result": {
+    "opened": true,
+    "rows": 20,
+    "before": {
+      "controlAuditRuns": 1,
+      "tooltipMetadataPasses": 1,
+      "observedMutationBatches": 0,
+      "tooltipObservedMutationBatches": 0,
+      "waveRenders": null
+    },
+    "after": {
+      "controlAuditRuns": 1,
+      "tooltipMetadataPasses": 1,
+      "observedMutationBatches": 0,
+      "tooltipObservedMutationBatches": 0,
+      "scopedControlRegistrations": 11,
+      "scopedTooltipPasses": 9,
+      "waveRenders": null
+    },
+    "explicitAudit": true,
+    "inventory": 89,
+    "tooltips": true
+  },
+  "errors": [],
+  "sourceGuards": {
+    "controlObserverRemoved": true,
+    "tooltipObserverRemoved": true
+  },
+  "pass": true,
+  "artifacts": [
+    "issue94-1672x941.png"
+  ]
+}
