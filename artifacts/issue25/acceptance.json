@@ -1,0 +1,36 @@
+{
+  "issue": 25,
+  "intentionalVisualDelta": true,
+  "goldenReferenceModified": false,
+  "stylesModified": false,
+  "iconsModified": false,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "commentIcon": "icons.svg#i-comment",
+      "labelGapPx": 4,
+      "canonicalUnchanged": true,
+      "waveDromTracePreserved": true,
+      "visualDelta": {
+        "changedPixels": 42931,
+        "totalPixels": 1573352,
+        "diffPercent": 0.0272863288062684
+      }
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "commentIcon": "icons.svg#i-comment",
+      "labelGapPx": 4,
+      "canonicalUnchanged": true,
+      "waveDromTracePreserved": true,
+      "visualDelta": null
+    }
+  ],
+  "pass": true
+}
