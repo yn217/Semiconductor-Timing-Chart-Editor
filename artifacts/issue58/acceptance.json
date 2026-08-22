@@ -1,0 +1,25 @@
+{
+  "issue": 58,
+  "observed": {
+    "executed": 0,
+    "unexpectedImages": 0,
+    "unexpectedScripts": 0,
+    "signalText": true,
+    "groupText": true,
+    "groupTexts": [
+      "内部制御 (Internal Control)",
+      "出力 (Output)",
+      "<img src=\"x\" onerror=\"window.__issue58Executed=1\">&<script>window.__issue58Executed=2</script>"
+    ],
+    "groupMarkup": "⌄\nHierarchy\n⋮\ni\n<img src=\"x\" onerror=\"window.__issue58Executed=1\">&<script>window.__issue58Executed=2</script>\n◉\n⋮\ni\nreq_addr[7:0]\n◉\n⋮\n▣\n<img src=\"x\" onerror=\"window.__issue58Executed=1\">&<script>window.__issue58Executed=2</script>\n⋮\n⌄\n内部制御 (Internal Control)\n⋮\nwire\nbusy\n◉\n⋮\nwire\nstate[1:0]\n◉\n⋮\n▣\nProcessing note\n⋮\n⌄\n出力 (Output)\n⋮\no\nready\n◉\n⋮\no\nrdata[15:0]\n◉\n⋮\n▣\nRead latency\n⋮\n⌄\n<img src=\"x\" onerror=\"window.__issue58Executed=1\">&<script>window.__issue58Executed=2</script>\n⋮\ni\nreq_valid\n◉\n⋮",
+    "commentText": true,
+    "transactionText": true,
+    "annotationText": true,
+    "stableId": true,
+    "hierarchyText": true
+  },
+  "roundTrip": true,
+  "errors": [],
+  "safeDynamicRendering": true,
+  "pass": true
+}
