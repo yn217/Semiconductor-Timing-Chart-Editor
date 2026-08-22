@@ -1,10 +1,10 @@
 {
   "private": true,
   "scripts": {
-    "test": "node scripts/acceptance-check.mjs && node scripts/gui-contract-check.mjs && node scripts/geometry-test.mjs && node scripts/adapter-test.mjs && node scripts/wavedrom-render-test.mjs && node scripts/visual-regression.mjs && node scripts/validate-samples.mjs && node scripts/browser-contract.mjs"
+    "test": "node scripts/acceptance-check.mjs && node scripts/gui-contract-check.mjs && node scripts/geometry-test.mjs && node scripts/adapter-test.mjs && node scripts/wavedrom-render-test.mjs && node scripts/wavedrom-conformance.mjs && node scripts/visual-regression.mjs && node scripts/validate-samples.mjs && node scripts/browser-contract.mjs"
   },
   "devDependencies": {
     "playwright": "^1.62.1",
-    "wavedrom": "^3.6.2"
+    "wavedrom": "3.6.2"
   }
 }
