@@ -96,6 +96,17 @@
     return { text: `${JSON.stringify(serializable, null, 2)}\n`, documentHash: hash(serializable) };
   };
   controller.prepareSaveText = prepareSaveText;
+  const normalizeExternalDocument = parsed => {
+    if (parsed?.formatVersion === 1 && parsed.timeline?.cycleCount && Array.isArray(parsed.signals)) return parsed;
+    const sourceSignals = parsed?.cycleView?.signals || parsed?.signals || [];
+    const cycleCount = Number(parsed?.document?.timebase?.cycleCount || parsed?.timeline?.cycleCount || parsed?.document?.cycleCount || 10);
+    const normalizedSignals = sourceSignals.map((source, index) => { const signal = clone(source); signal.id ||= `signal_${index + 1}`; signal.name ||= signal.id; signal.role ||= 'internal'; signal.type ||= 'binary'; if (signal.type === 'clock') { signal.generator = { start: signal.generator?.start ?? 0, period: signal.generator?.period ?? 1, duty: signal.generator?.duty ?? 0.5, phase: signal.generator?.phase ?? 0, initial: signal.generator?.initial ?? 0, polarity: signal.generator?.polarity || 'positive' }; signal.edgeCounter ||= { show: false, mode: 'rising', startNumber: 1, countFrom: 'signal-start', labelEvery: 1, position: 'above', offset: { x: 0, y: -6 } }; } else if (!Array.isArray(signal.values)) signal.values = [{ start: 0, value: signal.type === 'state' ? 'IDLE' : signal.type === 'bus' ? '00' : 0 }]; return signal; });
+    const referenceClock = normalizedSignals.find(signal => signal.type === 'clock')?.id || normalizedSignals[0]?.id || 'clk';
+    const groups = (parsed.signalGroups || []).map(group => ({ id: group.id, name: group.name || group.id, rows: [...(group.rows || group.signals || [])] }));
+    if (!groups.length) groups.push({ id: 'group_default', name: 'Signals', rows: normalizedSignals.map(signal => signal.id) });
+    return { formatVersion: 1, document: { id: parsed.document?.id || 'sample.tcd', title: parsed.document?.title || 'Timing Chart Sample', header: { subtitle: parsed.document?.description || '', description: parsed.document?.description || '', notes: '', preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: '', revision: '', text: '' } }, timeline: { start: 0, end: cycleCount, timeBase: 'cycle', cycleCount, referenceClock, edge: 'rising' }, signalGroups: groups, signals: normalizedSignals, annotations: [], legend: { orientation: parsed.legend?.orientation || 'horizontal', usedRolesOnly: true, position: { x: Number(parsed.legend?.offset?.x || 0), y: Number(parsed.legend?.offset?.y || 0) } }, layout: { roleColumnWidth: 32, signalNameWidth: Number(parsed.layout?.signalNameWidth || 168), signalNameAlign: ['left', 'center', 'right'].includes(parsed.layout?.signalNameAlign) ? parsed.layout.signalNameAlign : 'left', busWidthAlign: 'left', rowHeight: Number(parsed.layout?.rowHeight || 28), signalSpacing: Number(parsed.layout?.signalSpacing || 6), overflow: 'ellipsis' }, transactions: parsed.transactions || [], constraints: [] };
+  };
+  controller.normalizeExternalDocument = normalizeExternalDocument;
   const protect = async decision => {
     if (!model.persistence.dirty || decision === 'discard') return true;
     if (decision === 'save') return Boolean(await controller.actions.save());
@@ -108,7 +119,7 @@
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
-    try { parsed = JSON.parse(text); } catch (error) { model.persistence.lastError = `Invalid JSON: ${error.message}`; return false; }
+    try { parsed = JSON.parse(text); parsed = normalizeExternalDocument(parsed); } catch (error) { model.persistence.lastError = `Invalid JSON: ${error.message}`; return false; }
     const issues = controller.validateDocument(parsed);
     if (parsed?.formatVersion !== 1 || issues.length) { model.persistence.lastError = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; return false; }
     model.document = clone(parsed); model.history = { undo: [], redo: [] }; controller.history = model.history; model.validation = []; repairSelection(); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; controller.render(); updateDirty(); return true;

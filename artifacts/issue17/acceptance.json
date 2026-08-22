@@ -1,0 +1,120 @@
+{
+  "fixtures": [
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\11_signal_types_roles_legend.tcd.json",
+      "signals": 6,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\12_group_bands_and_spacing.tcd.json",
+      "signals": 7,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\13_signal_name_layout.tcd.json",
+      "signals": 5,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\14_annotation_overlay_all_types.tcd.json",
+      "signals": 4,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\15_transition_arrows_anchor_styles.tcd.json",
+      "signals": 4,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\16_clock_phase_gating_gap.tcd.json",
+      "signals": 5,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\17_cycle_insert_delete_ripple.tcd.json",
+      "signals": 4,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\18_legend_and_group_reorder.tcd.json",
+      "signals": 4,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\19_header_footer_export.tcd.json",
+      "signals": 3,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\20_transaction_cycle_linked_views.tcd.json",
+      "signals": 6,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\01_apb_register_access.tcd.json",
+      "signals": 10,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\02_ahb_lite_pipelined_transfer.tcd.json",
+      "signals": 11,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\03_axi4_full_write_burst.tcd.json",
+      "signals": 18,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\04_axi4_full_read_outstanding.tcd.json",
+      "signals": 14,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\05_sram_1p_sync_read_write.tcd.json",
+      "signals": 7,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\06_sram_2p_parallel_and_conflict.tcd.json",
+      "signals": 12,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\07_axi_to_dram_read_path.tcd.json",
+      "signals": 17,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\08_async_fifo_cdc.tcd.json",
+      "signals": 12,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\09_accelerator_request_response.tcd.json",
+      "signals": 12,
+      "annotations": 0
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\10_axi4_stream_packet_backpressure.tcd.json",
+      "signals": 8,
+      "annotations": 0
+    }
+  ],
+  "parsedRendered": true,
+  "roundTrip": true,
+  "sample16": {
+    "multipleClocks": true,
+    "phase": true,
+    "independentCounters": true,
+    "gatedClockFixture": true,
+    "labelEveryFixture": true,
+    "geometryMap": "WaveDrom runtime"
+  },
+  "coverageMatrix": "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/coverage_matrix.csv",
+  "visualArtifacts": [
+    "sample20.png"
+  ],
+  "goldenRewrite": false,
+  "pass": true
+}
