@@ -1,0 +1,26 @@
+{
+  "canonicalJson": {
+    "reflectsDocument": true,
+    "readOnly": true,
+    "annotationCount": 1
+  },
+  "validation": {
+    "issues": [
+      {
+        "code": "invalid-start-order",
+        "id": "req_valid",
+        "path": "$.signals[req_valid].values",
+        "message": "invalid-start-order"
+      },
+      {
+        "code": "invalid-reference-clock",
+        "path": "$.timeline.referenceClock",
+        "message": "invalid-reference-clock"
+      }
+    ],
+    "paths": true
+  },
+  "normalEditingWithoutJson": true,
+  "pinAndFollowCoveredByPhase3A1": true,
+  "pass": true
+}

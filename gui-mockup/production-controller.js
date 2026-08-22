@@ -83,7 +83,7 @@
       if (!annotationTypes.has(annotation.type)) issues.push({ code: 'invalid-annotation-type', id: annotation.id });
       for (const key of Object.keys(annotation)) if (['resolved', 'canvasX', 'canvasY', 'localX', 'localY', 'bbox', 'drag', 'element'].includes(key)) issues.push({ code: 'annotation-runtime-field', id: annotation.id, field: key });
       const anchors = ['anchor', 'start', 'end', 'from', 'to'].filter(key => annotation[key]);
-      for (const key of anchors) { const anchor = annotation[key]; if (!getSignal(anchor.signal) || !Number.isInteger(Number(anchor.cycle)) || Number(anchor.cycle) < 0 || Number(anchor.cycle) > documentValue.timeline.cycleCount || !anchorPoints.has(anchor.point) || !Number.isFinite(Number(anchor.offset?.x || 0)) || !Number.isFinite(Number(anchor.offset?.y || 0))) issues.push({ code: 'invalid-annotation-anchor', id: annotation.id, field: key }); }
+      for (const key of anchors) { const anchor = annotation[key]; if (!getSignal(anchor.signal) || !Number.isInteger(Number(anchor.cycle)) || Number(anchor.cycle) < 0 || Number(anchor.cycle) > (documentValue.timeline?.cycleCount ?? -1) || !anchorPoints.has(anchor.point) || !Number.isFinite(Number(anchor.offset?.x || 0)) || !Number.isFinite(Number(anchor.offset?.y || 0))) issues.push({ code: 'invalid-annotation-anchor', id: annotation.id, field: key }); }
       if (annotation.type === 'dependency' && (!['straight', 'orthogonal', 'curve', 'diagonal'].includes(annotation.lineType || 'orthogonal') || !['none', 'start', 'end', 'both'].includes(annotation.arrowhead || 'end'))) issues.push({ code: 'invalid-dependency-style', id: annotation.id });
       if (annotation.visible !== undefined && typeof annotation.visible !== 'boolean') issues.push({ code: 'invalid-annotation-visible', id: annotation.id });
     }
@@ -105,9 +105,14 @@
     }
     const signalIds = ids;
     for (const group of documentValue?.signalGroups || []) for (const row of group.rows || []) if (!signalIds.has(row)) issues.push({ code: 'invalid-group-row', groupId: group.id, row });
-    if (!signalIds.has(documentValue?.timeline?.referenceClock) || documentValue.signals.find(signal => signal.id === documentValue.timeline.referenceClock)?.type !== 'clock') issues.push({ code: 'invalid-reference-clock' });
+    if (!signalIds.has(documentValue?.timeline?.referenceClock) || documentValue?.signals?.find(signal => signal.id === documentValue.timeline.referenceClock)?.type !== 'clock') issues.push({ code: 'invalid-reference-clock' });
     if (!['rising', 'falling'].includes(documentValue?.timeline?.edge)) issues.push({ code: 'invalid-timeline-edge' });
-    return issues;
+    const paths = issue => ({
+      'format-version': '$.formatVersion',
+      'missing-document': '$.document', 'missing-timeline': '$.timeline', 'missing-signalGroups': '$.signalGroups', 'missing-signals': '$.signals', 'missing-annotations': '$.annotations', 'missing-legend': '$.legend', 'missing-layout': '$.layout', 'missing-transactions': '$.transactions', 'missing-constraints': '$.constraints',
+      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`
+    }[issue.code] || '$');
+    return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
   window.TimingChartProductionController = controller;
 
