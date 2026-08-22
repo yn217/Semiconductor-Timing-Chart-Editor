@@ -1,0 +1,49 @@
+{
+  "cases": {
+    "initialGeometry": {
+      "referenceClock": "clk",
+      "maxRulerError": 0,
+      "source": "wavedrom-svg",
+      "pass": true
+    },
+    "clickPlayhead": {
+      "clicks": [
+        {
+          "cycle": 2,
+          "playheadX": 857.5,
+          "boundaryX": 857.5,
+          "error": 0
+        },
+        {
+          "cycle": 7,
+          "playheadX": 872.5,
+          "boundaryX": 872.5,
+          "error": 0
+        }
+      ],
+      "pass": true
+    },
+    "multipleClock": {
+      "initialReference": "clk_b",
+      "switchedReference": "clk",
+      "source": "wavedrom-svg",
+      "clkBMaxRulerError": 0,
+      "pass": true
+    },
+    "resizeScroll": {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "resizeMaxRulerError": 0,
+      "resizePlayheadError": 0,
+      "scrollLeft": 120,
+      "scrollMaxRulerError": 0,
+      "scrollPlayheadError": 0,
+      "pass": true
+    }
+  },
+  "source": "wavedrom-svg",
+  "maxErrorPx": 0.1,
+  "pass": true
+}

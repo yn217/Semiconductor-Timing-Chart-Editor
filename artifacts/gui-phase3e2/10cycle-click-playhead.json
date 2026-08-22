@@ -1,0 +1,17 @@
+{
+  "clicks": [
+    {
+      "cycle": 2,
+      "playheadX": 857.5,
+      "boundaryX": 857.5,
+      "error": 0
+    },
+    {
+      "cycle": 7,
+      "playheadX": 872.5,
+      "boundaryX": 872.5,
+      "error": 0
+    }
+  ],
+  "pass": true
+}

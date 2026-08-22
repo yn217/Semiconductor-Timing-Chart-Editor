@@ -69,37 +69,23 @@
       ruler.style.gridTemplateColumns = `175px repeat(${count + 1}, 1fr)`;
       ruler.appendChild(document.createElement('span'));
       for (let cycle = 0; cycle < count; cycle += 1) { const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = cycle; tick.dataset.cycle = cycle; tick.addEventListener('click', event => { if (event.shiftKey && currentModel.timeSelection.rangeStart !== null) currentModel.timeSelection.rangeEnd = cycle; else currentModel.timeSelection.rangeStart = cycle; currentModel.timeSelection.cycle = cycle; renderTransient(currentModel); }); ruler.appendChild(tick); }
-      if (count === 10) {
-        ruler.style.display = '';
-        ruler.style.position = '';
-        ruler.querySelector('.cycle-title').style.position = '';
-        ruler.querySelectorAll('.tick').forEach(tick => { tick.style.position = ''; tick.style.left = ''; tick.style.top = ''; tick.style.transform = ''; });
-      } else {
-        const referenceClock = controller.selectors.getReferenceClock();
-        const boundaries = Array.from({ length: count }, (_, cycle) => controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
-        if (boundaries.length === count) {
-          const rulerRect = ruler.getBoundingClientRect();
-          ruler.style.display = 'block';
-          ruler.style.position = 'relative';
-          const cycleTitle = ruler.querySelector('.cycle-title');
-          cycleTitle.style.position = 'absolute'; cycleTitle.style.left = '0px'; cycleTitle.style.top = '0px';
-          ruler.children[1].style.display = 'none';
-          ruler.querySelectorAll('.tick').forEach(tick => {
-            const cycle = Number(tick.dataset.cycle);
-            const x = boundaries[cycle].canvasX - rulerRect.left;
-            tick.style.position = 'absolute'; tick.style.left = `${x}px`; tick.style.top = '0px'; tick.style.transform = 'translateX(-50%)';
-          });
-        }
+      const referenceClock = controller.selectors.getReferenceClock();
+      const boundaries = Array.from({ length: count }, (_, cycle) => controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
+      if (boundaries.length === count) {
+        const rulerRect = ruler.getBoundingClientRect();
+        ruler.style.position = 'relative';
+        ruler.querySelectorAll('.tick').forEach(tick => {
+          const cycle = Number(tick.dataset.cycle);
+          const x = boundaries[cycle].canvasX - rulerRect.left;
+          tick.style.position = 'absolute'; tick.style.left = `${x}px`; tick.style.top = '0px'; tick.style.transform = 'translateX(-50%)';
+        });
       }
     }
     const playhead = document.querySelector('#cycleCanvas .playhead');
     const referenceClock = controller.selectors.getReferenceClock();
     const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
     const canvas = document.querySelector('#cycleCanvas');
-    if (playhead && canvas) {
-      if (timeline.cycleCount === 10) playhead.style.left = '';
-      else if (boundary) { const rect = canvas.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + canvas.scrollLeft}px`; }
-    }
+    if (playhead && boundary && canvas) { const rect = canvas.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + canvas.scrollLeft}px`; }
   };
   controller.renderTransient = renderTransient;
   window.TimingChartProductionTimeAxis = { renderTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };

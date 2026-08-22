@@ -1,0 +1,7 @@
+{
+  "initialReference": "clk_b",
+  "switchedReference": "clk",
+  "source": "wavedrom-svg",
+  "clkBMaxRulerError": 0,
+  "pass": true
+}

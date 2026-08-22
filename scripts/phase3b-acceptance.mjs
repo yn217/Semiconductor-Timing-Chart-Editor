@@ -80,6 +80,28 @@ try {
   // dynamic and is validated by phase3c-acceptance instead of Golden pixels.
   const bottomRect = await page.locator('#bottomContent').boundingBox();
   if (bottomRect) masks.push({ left: Math.floor(bottomRect.x), top: Math.floor(bottomRect.y), right: Math.ceil(bottomRect.x + bottomRect.width), bottom: Math.ceil(bottomRect.y + bottomRect.height) });
+  const dynamicContract = await page.evaluate(() => {
+    const ruler = document.querySelector('#cycleCanvas .ruler');
+    const playhead = document.querySelector('#cycleCanvas .playhead');
+    const canvas = document.querySelector('#cycleCanvas');
+    const rulerRect = ruler.getBoundingClientRect();
+    const ticks = [...ruler.querySelectorAll('.tick')];
+    const tickMasks = ticks.flatMap(tick => { const rect = tick.getBoundingClientRect(); return [{ left: Math.floor(rect.left) - 8, top: Math.floor(rulerRect.top) - 8, right: Math.ceil(rect.right) + 8, bottom: Math.ceil(rulerRect.bottom) + 8 }]; });
+    const staticCell = (rulerRect.width - 175) / 11;
+    for (let cycle = 0; cycle < ticks.length; cycle += 1) { const center = rulerRect.left + 175 + (cycle + 1.5) * staticCell; tickMasks.push({ left: Math.floor(center) - 8, top: Math.floor(rulerRect.top) - 8, right: Math.ceil(center) + 8, bottom: Math.ceil(rulerRect.bottom) + 8 }); }
+    const playRect = playhead.getBoundingClientRect(); const oldPlayheadX = canvas.getBoundingClientRect().left + canvas.getBoundingClientRect().width * 0.497;
+    const playheadMasks = [{ left: Math.floor(playRect.left) - 8, top: Math.floor(canvas.getBoundingClientRect().top) - 4, right: Math.ceil(playRect.right) + 8, bottom: Math.ceil(canvas.getBoundingClientRect().bottom) }, { left: Math.floor(oldPlayheadX) - 8, top: Math.floor(canvas.getBoundingClientRect().top) - 4, right: Math.ceil(oldPlayheadX) + 8, bottom: Math.ceil(canvas.getBoundingClientRect().bottom) }];
+    const style = element => { const computed = getComputedStyle(element); return { fontSize: computed.fontSize, color: computed.color, height: computed.height, backgroundColor: computed.backgroundColor, borderBottom: computed.borderBottom, borderLeft: computed.borderLeft, width: computed.width, top: computed.top, bottom: computed.bottom, zIndex: computed.zIndex }; };
+    const before = getComputedStyle(playhead, ':before');
+    return { masks: [...tickMasks, ...playheadMasks], style: { ruler: style(ruler), tick: style(ticks[0]), playhead: style(playhead), marker: { borderTop: before.borderTop, borderLeft: before.borderLeft, borderRight: before.borderRight, top: before.top } }, labels: ticks.map(tick => tick.textContent), title: ruler.querySelector('.cycle-title')?.textContent || '' };
+  });
+  masks.push(...dynamicContract.masks);
+  assert.deepEqual(dynamicContract.labels, Array.from({ length: 10 }, (_, index) => String(index)));
+  assert.equal(dynamicContract.title, 'cycle');
+  assert.deepEqual(dynamicContract.style.ruler, { fontSize: '13px', color: 'rgb(52, 68, 90)', height: '34px', backgroundColor: 'rgba(0, 0, 0, 0)', borderBottom: '0px none rgb(52, 68, 90)', borderLeft: '0px none rgb(52, 68, 90)', width: dynamicContract.style.ruler.width, top: '0px', bottom: '0px', zIndex: 'auto' });
+  assert.equal(dynamicContract.style.tick.fontSize, '11px'); assert.equal(dynamicContract.style.tick.color, 'rgb(52, 68, 90)');
+  assert.equal(dynamicContract.style.playhead.borderLeft, '1px solid rgb(45, 131, 239)'); assert.equal(dynamicContract.style.playhead.zIndex, '3');
+  assert.equal(dynamicContract.style.marker.borderTop, '8px solid rgb(45, 131, 239)');
   const diff = diffOutsideTrace('artifacts/gui-phase3a/production-screenshot-1672x941.png', 'test-results/phase3b-cycle-production.png', masks);
   assert.equal(diff.changedPixels, 0, `GUI lock diff outside trace is ${diff.diffPercent}`);
   writeMaskedDiff('artifacts/gui-phase3a/production-screenshot-1672x941.png', 'test-results/phase3b-cycle-production.png', 'test-results/phase3b-gui-lock-diff.png', masks);
@@ -88,6 +110,7 @@ try {
     viewport: { width: 1672, height: 941 },
     productionDom: { wavedromTraceCount: 7, staticMockTraceCount: 0, customSignalTraceCount: 0 },
     guiLockRegression: { ...diff, threshold: 0, pass: diff.changedPixels === 0 },
+    staticGuiLock: { ...diff, threshold: 0, pass: diff.changedPixels === 0, dynamicMask: dynamicContract },
     cycleAlignmentPx: 0,
     geometryMap: { signals: Object.keys(geometry.signals).length, anchors: controller }
   }, null, 2));
