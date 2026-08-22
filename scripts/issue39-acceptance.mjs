@@ -37,7 +37,25 @@ async function runViewport(browser, viewport) {
     const group = c.model.document.signalGroups[0]; const beforeSpacers = (group.spacers || []).length; document.querySelector('[data-insert-command="add-spacer"]').click(); await pause(50); expect((c.model.document.signalGroups[0].spacers || []).length === beforeSpacers + 1, 'Spacer command failed');
 
     const beforeAnnotations = c.model.document.annotations.length;
-    for (const type of ['marker', 'range', 'text', 'callout', 'dependency']) { document.querySelector(`[data-insert-command="add-${type}"]`).click(); await pause(50); expect(c.model.document.annotations.length > beforeAnnotations, `${type} annotation command failed`); }
+    for (const type of ['marker', 'range', 'text', 'callout']) { document.querySelector(`[data-insert-command="add-${type}"]`).click(); await pause(50); expect(c.model.document.annotations.length > beforeAnnotations, `${type} annotation command failed`); }
+    // Use two rendered signals that are not the old hard-coded req_valid/ready
+    // fixture. The command must resolve the clicked points from the live
+    // WaveDrom geometry map, rather than from signal IDs or cycle constants.
+    const sourceSignal = 'state[1:0]';
+    const destinationSignal = 'rdata[15:0]';
+    const sourcePoint = c.model.waveGeometry.signals[sourceSignal]?.transitionCenter?.[0];
+    const destinationPoint = c.model.waveGeometry.signals[destinationSignal]?.transitionCenter?.[0];
+    expect(sourcePoint && destinationPoint, 'Acceptance fixture does not expose rendered WaveDrom transitions');
+    const clickGeometry = (signalId, point) => { const entry = c.model.waveGeometry.signals[signalId]; const trace = document.getElementById(entry.traceId); const svg = trace.querySelector('svg'); const screen = new DOMPoint(point.localX, point.localY).matrixTransform(svg.getScreenCTM()); return { x: screen.x, y: screen.y, trace }; };
+    document.querySelector('[data-insert-command="add-dependency"]').click(); await pause(10);
+    expect(c.model.view.dependencySelection?.step === 'from', 'Dependency command did not enter source-selection mode');
+    const sourceScreen = clickGeometry(sourceSignal, sourcePoint); sourceScreen.trace.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: sourceScreen.x, clientY: sourceScreen.y })); await pause(10);
+    expect(c.model.view.dependencySelection?.step === 'to', 'Source transition click was not accepted');
+    const destinationScreen = clickGeometry(destinationSignal, destinationPoint); destinationScreen.trace.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: destinationScreen.x, clientY: destinationScreen.y })); await pause(80);
+    const dependency = c.model.document.annotations.at(-1);
+    expect(dependency?.type === 'dependency', 'Dependency annotation was not created from selected transitions');
+    expect(dependency.from.signal === sourceSignal && dependency.from.cycle === sourcePoint.cycle, 'Dependency source was not the selected WaveDrom transition');
+    expect(dependency.to.signal === destinationSignal && dependency.to.cycle === destinationPoint.cycle, 'Dependency destination was not the selected WaveDrom transition');
     for (const type of ['verticalLine', 'bracket', 'highlight']) { document.querySelector('[data-insert-command="annotation-other"]').click(); await pause(5); document.querySelector(`#insertOtherMenu [data-insert-menu-command="${type}"]`).click(); await pause(50); expect(c.model.document.annotations.some(annotation => annotation.type === type), `${type} menu command failed`); }
 
     const undoBeforeCycle = c.model.history.undo.length; document.querySelector('[data-insert-command="insert-cycle"]').click(); await pause(60); expect(c.model.history.undo.length === undoBeforeCycle + 1, 'Cycle追加 did not create one history entry');

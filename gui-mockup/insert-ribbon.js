@@ -25,8 +25,69 @@
   const openMenu = (node, anchor) => { closeMenus(); const rect = anchor.getBoundingClientRect(); node.style.left = `${rect.left}px`; node.style.top = `${rect.bottom + 3}px`; node.hidden = false; };
   const groupId = () => controller.model.document.signalGroups[0]?.id;
   const addSignal = type => controller.actions.addSignal({ type, name: `${type}_${Date.now()}`, role: 'internal' }, groupId());
+  const dependencyPoint = anchorType => {
+    if (anchorType === 'rising-edge' || anchorType === 'rising-transition-center') return 'rising';
+    if (anchorType === 'falling-edge' || anchorType === 'falling-transition-center') return 'falling';
+    return ['transition-start', 'transition-end', 'cycle-boundary'].includes(anchorType) ? anchorType : 'transition-center';
+  };
+  const currentDependencySelection = () => controller.model.view.dependencySelection || null;
+  const setDependencyStatus = message => {
+    const status = document.querySelector('.status span');
+    if (status) status.textContent = message;
+  };
+  const actualTransitionAt = event => {
+    const trace = event.target.closest?.('#cycleCanvas .trace[data-renderer="wavedrom"]');
+    if (!trace) return null;
+    const svg = trace.querySelector('svg');
+    if (!svg?.getScreenCTM) return null;
+    const signals = controller.model.waveGeometry?.signals || {};
+    const entry = Object.entries(signals).find(([, item]) => item.traceId === trace.id)?.[1];
+    if (!entry) return null;
+    const candidates = [];
+    for (const key of ['transitionStart', 'transitionCenter', 'transitionEnd', 'risingEdge', 'fallingEdge']) {
+      for (const item of entry[key] || []) {
+        const screen = new DOMPoint(Number(item.localX), Number(item.localY)).matrixTransform(svg.getScreenCTM());
+        candidates.push({ item, x: screen.x, y: screen.y, point: dependencyPoint(item.anchorType) });
+      }
+    }
+    const nearest = candidates.sort((a, b) => Math.hypot(a.x - event.clientX, a.y - event.clientY) - Math.hypot(b.x - event.clientX, b.y - event.clientY))[0];
+    if (!nearest || Math.hypot(nearest.x - event.clientX, nearest.y - event.clientY) > 22) return null;
+    return { signal: nearest.item.signal, cycle: Number(nearest.item.cycle), point: nearest.point, offset: { x: 0, y: 0 }, source: 'wavedrom-svg', anchorType: nearest.item.anchorType };
+  };
+  const beginDependencySelection = () => {
+    controller.model.view.dependencySelection = { step: 'from', from: null };
+    document.querySelector('#cycleCanvas')?.setAttribute('data-dependency-pick', 'source');
+    setDependencyStatus('Dependency: source transitionを選択してください');
+    return true;
+  };
+  const cancelDependencySelection = () => {
+    delete controller.model.view.dependencySelection;
+    document.querySelector('#cycleCanvas')?.removeAttribute('data-dependency-pick');
+    setDependencyStatus('Ready');
+    return true;
+  };
+  controller.actions.beginDependencySelection = beginDependencySelection;
+  controller.actions.cancelDependencySelection = cancelDependencySelection;
+  document.addEventListener('click', event => {
+    const selection = currentDependencySelection();
+    if (!selection) return;
+    const anchor = actualTransitionAt(event);
+    if (!anchor) return;
+    event.preventDefault(); event.stopPropagation();
+    if (selection.step === 'from') {
+      selection.from = anchor;
+      selection.step = 'to';
+      document.querySelector('#cycleCanvas')?.setAttribute('data-dependency-pick', 'destination');
+      setDependencyStatus('Dependency: destination transitionを選択してください');
+      return;
+    }
+    const from = selection.from;
+    cancelDependencySelection();
+    controller.actions.addDependency(from, anchor, { label: 'Dependency', lineType: 'straight', arrowhead: 'end' });
+  }, { capture: true });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && currentDependencySelection()) { event.preventDefault(); cancelDependencySelection(); } });
   const addAnnotation = type => {
-    if (type === 'dependency') return controller.actions.addDependency({ signal: 'req_valid', cycle: 3, point: 'rising', offset: { x: 0, y: 0 } }, { signal: 'ready', cycle: 8, point: 'rising', offset: { x: 0, y: 0 } }, { label: 'Dependency', lineType: 'straight', arrowhead: 'end' });
+    if (type === 'dependency') return beginDependencySelection();
     return controller.actions.addAnnotation(type, { label: type === 'marker' ? 'Marker' : type === 'range' ? 'Range' : type === 'text' ? 'Text' : 'Callout' });
   };
   const insertPoint = () => Math.max(0, Math.min(Number(controller.model.view.insertionCycle ?? 0), Number(controller.model.document.timeline.cycleCount)));
