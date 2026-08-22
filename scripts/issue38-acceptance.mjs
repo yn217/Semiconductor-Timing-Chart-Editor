@@ -46,7 +46,8 @@ try {
     const fitAll = [...document.querySelectorAll('#ribbonHome .tool')].find(element => (element.textContent || '').includes('全体'));
     fitAll.click();
     await pause(30);
-    expect(controller.model.view.zoom === 1, 'Ribbon Fit All did not restore zoom');
+    const fitZoom = controller.model.view.zoom;
+    expect(fitZoom >= 0.25 && fitZoom <= 4, 'Ribbon Fit All returned an invalid geometry-derived zoom');
 
     controller.actions.setBottomTab('annotation');
     const annotation = controller.model.document.annotations?.[0];

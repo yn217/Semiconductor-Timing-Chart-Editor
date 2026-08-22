@@ -232,8 +232,77 @@
     scheduleZoom();
     return true;
   };
-  controller.actions.fitAll = () => controller.actions.setZoom(100);
-  controller.actions.fitSelection = () => controller.actions.setZoom(125);
+  const getTimingViewport = () => window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+  const pointBounds = points => {
+    const finite = points.filter(point => Number.isFinite(Number(point?.x))).map(point => Number(point.x));
+    if (!finite.length) return null;
+    return { left: Math.min(...finite), right: Math.max(...finite) };
+  };
+  const boundaryBounds = (start, end) => {
+    const clock = controller.selectors?.getReferenceClock?.();
+    if (!clock || !controller.getCycleBoundary) return null;
+    const cycleCount = Number(model.document.timeline.cycleCount || 0);
+    let rangeStart = Number(start); let rangeEnd = Number(end);
+    if (rangeEnd <= rangeStart) { if (rangeStart < cycleCount) rangeEnd = rangeStart + 1; else rangeStart = Math.max(0, rangeStart - 1); }
+    const points = [controller.getCycleBoundary({ signal: clock.id, cycle: rangeStart, coordinateSpace: 'canvas' }), controller.getCycleBoundary({ signal: clock.id, cycle: rangeEnd, coordinateSpace: 'canvas' })];
+    return pointBounds(points.map(point => ({ x: point?.canvasX })));
+  };
+  const signalBounds = signalId => {
+    const entry = model.waveGeometry?.signals?.[signalId];
+    if (!entry) return null;
+    const points = Object.values(entry).flatMap(value => Array.isArray(value) ? value : []).map(point => ({ x: point?.canvasX }));
+    return pointBounds(points);
+  };
+  const anchorPoint = anchor => {
+    if (!anchor) return null;
+    if (anchor.point === 'cycle-boundary' || anchor.anchor === 'cycle-boundary') return controller.getCycleBoundary?.({ signal: controller.selectors?.getReferenceClock?.()?.id, cycle: Number(anchor.cycle), coordinateSpace: 'canvas' });
+    return controller.getAnchor?.({ signal: anchor.signal, cycle: Number(anchor.cycle), edge: anchor.anchor || anchor.point, coordinateSpace: 'canvas' }) || controller.getCycleBoundary?.({ signal: anchor.signal || controller.selectors?.getReferenceClock?.()?.id, cycle: Number(anchor.cycle), coordinateSpace: 'canvas' });
+  };
+  const selectedBounds = () => {
+    const selection = model.selection || {};
+    if (selection.kind === 'signal') return signalBounds(selection.id) || boundaryBounds(0, model.document.timeline.cycleCount);
+    if (selection.kind === 'annotation') {
+      const annotation = (model.document.annotations || []).find(item => item.id === selection.id);
+      const anchors = annotation ? [annotation.start || annotation.anchor || annotation.from, annotation.end || annotation.to, annotation.to] : [];
+      return pointBounds(anchors.map(anchorPoint).map(point => ({ x: point?.canvasX })));
+    }
+    if (selection.kind === 'transaction') {
+      const transaction = (model.document.transactions || []).find(item => item.id === selection.id);
+      if (transaction) return boundaryBounds(Number(transaction.start || 0), Number(transaction.end ?? transaction.start ?? 0));
+    }
+    const time = model.timeSelection;
+    if (time?.range?.start !== undefined && time?.range?.end !== undefined) return boundaryBounds(Number(time.range.start), Number(time.range.end));
+    if (time?.cycle !== undefined) return boundaryBounds(Number(time.cycle), Number(time.cycle));
+    return boundaryBounds(0, model.document.timeline.cycleCount);
+  };
+  const fitZoomForBounds = bounds => {
+    const viewport = getTimingViewport();
+    if (!viewport || !bounds || bounds.right <= bounds.left) return null;
+    const viewportRect = viewport.getBoundingClientRect();
+    const available = Math.max(80, viewportRect.right - bounds.left - 12);
+    const current = Number(model.view.zoom || 1);
+    return Math.max(0.25, Math.min(4, current * available / Math.max(1, bounds.right - bounds.left)));
+  };
+  const revealBounds = bounds => {
+    const viewport = getTimingViewport();
+    if (!viewport || !bounds) return;
+    const rect = viewport.getBoundingClientRect();
+    const center = (bounds.left + bounds.right) / 2;
+    const target = viewport.scrollLeft + center - (rect.left + rect.width / 2);
+    viewport.scrollLeft = Math.max(0, Math.min(viewport.scrollWidth - viewport.clientWidth, target));
+    controller.renderTransient?.(model);
+  };
+  const fitTo = (bounds, { resetScroll = false, recompute } = {}) => {
+    const viewport = getTimingViewport();
+    if (resetScroll && viewport) { viewport.scrollLeft = 0; controller.renderTransient?.(model); bounds = recompute?.() || bounds; }
+    const zoom = fitZoomForBounds(bounds);
+    if (zoom === null) return false;
+    controller.actions.setZoom(zoom * 100);
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (resetScroll && viewport) { viewport.scrollLeft = 0; controller.renderTransient?.(model); } else revealBounds(bounds); }));
+    return true;
+  };
+  controller.actions.fitAll = () => fitTo(null, { resetScroll: true, recompute: () => boundaryBounds(0, model.document.timeline.cycleCount) });
+  controller.actions.fitSelection = () => fitTo(selectedBounds());
 
   // Semantic/document renders may replace WaveDrom SVG nodes. Re-apply the
   // lightweight view-only zoom after that replacement, but ignore ruler and

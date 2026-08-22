@@ -73,7 +73,7 @@
 
   function actualBoundaries(svg) {
     const lines = [...svg.querySelectorAll('[id^="gmarks_"] line[id^="gmark_"]')];
-    return lines.slice(0, 100).map(line => {
+    return lines.map(line => {
       const matrix = rootMatrix(svg, line);
       return matrixPoint(matrix, { x: Number(line.getAttribute('x1')), y: Number(line.getAttribute('y1')) });
     }).filter((point, index, all) => index === 0 || Math.abs(point.x - all[index - 1].x) > 0.1);

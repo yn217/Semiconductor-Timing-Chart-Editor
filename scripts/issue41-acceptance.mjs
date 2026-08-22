@@ -42,7 +42,7 @@ async function runViewport(browser, viewport) {
     command('relative').click(); await wait(20); command('full-path').click(); await wait(20); command('split-columns').click(); await wait(20); command('signal-only').click(); await wait(20);
     expect(JSON.stringify(c.getSerializableDocument()) !== beforeView || c.model.document.layout.pathDisplayMode === 'signalOnly', 'hierarchy action did not use existing presentation action');
     command('zoom-plus').click(); command('zoom-minus').click(); command('fit-selection').click(); command('fit-all').click(); await wait(50);
-    expect(c.model.view.zoom === 1, 'zoom fit-all did not restore 100%');
+    expect(c.model.view.zoom >= 0.25 && c.model.view.zoom <= 4, 'zoom fit-all returned an invalid geometry-derived zoom');
     expect((c.zoomMetrics?.fullWaveDromRenders || 0) === initialRender, 'view zoom caused full WaveDrom rerender');
 
     command('left-panel').click(); command('bottom-panel').click(); command('inspector').click(); await wait(10);
