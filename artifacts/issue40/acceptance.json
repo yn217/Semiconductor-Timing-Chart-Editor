@@ -1,0 +1,41 @@
+{
+  "issue": 40,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "initialAnnotations": 5,
+      "finalAnnotations": 5,
+      "dependency": {
+        "lineType": "curve",
+        "arrowhead": "both"
+      },
+      "traceCount": 7,
+      "pass": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "initialAnnotations": 5,
+      "finalAnnotations": 5,
+      "dependency": {
+        "lineType": "curve",
+        "arrowhead": "both"
+      },
+      "traceCount": 7,
+      "pass": true,
+      "pageErrors": []
+    }
+  ],
+  "stylesModified": false,
+  "iconsModified": false,
+  "goldenReferenceModified": false,
+  "customWaveformRenderer": false,
+  "pureAnnotationEditsPreserveWaveDrom": true,
+  "pass": true
+}
