@@ -1,0 +1,80 @@
+{
+  "issue": 84,
+  "checks": {
+    "initialSync": true,
+    "pinSynchronizes": true,
+    "followSynchronizes": true,
+    "pinPreventsContextSwitch": true,
+    "hideShowPreservesControls": true,
+    "followActuallyFollows": true,
+    "openClearsStalePin": true,
+    "viewStateNoSemanticHistory": true
+  },
+  "states": {
+    "pinOn": {
+      "model": {
+        "follow": false,
+        "pinned": true
+      },
+      "dom": {
+        "checked": false,
+        "ariaChecked": "false",
+        "pressed": "true",
+        "state": "on"
+      }
+    },
+    "followOn": {
+      "model": {
+        "follow": true,
+        "pinned": false
+      },
+      "dom": {
+        "checked": true,
+        "ariaChecked": "true",
+        "pressed": "false",
+        "state": "off"
+      }
+    },
+    "contextBefore": {
+      "model": {
+        "follow": false,
+        "pinned": true
+      },
+      "dom": {
+        "checked": false,
+        "ariaChecked": "false",
+        "pressed": "true",
+        "state": "on"
+      }
+    },
+    "contextAfter": {
+      "model": {
+        "follow": false,
+        "pinned": true
+      },
+      "dom": {
+        "checked": false,
+        "ariaChecked": "false",
+        "pressed": "true",
+        "state": "on"
+      }
+    },
+    "final": {
+      "model": {
+        "follow": true,
+        "pinned": false
+      },
+      "dom": {
+        "checked": true,
+        "ariaChecked": "true",
+        "pressed": "false",
+        "state": "off"
+      }
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue84-1672x941.png"
+  ]
+}

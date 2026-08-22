@@ -116,7 +116,7 @@
   };
   controller.actions.requestNew = async ({ unsavedDecision = 'cancel' } = {}) => {
     if (!await protect(unsavedDecision)) return false;
-    model.document = newDocument(); model.history = { undo: [], redo: [] }; controller.history = model.history; model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null }; model.selection = { kind: 'signal', id: 'clk' }; model.editor = { rowIndex: 0 }; model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; controller.render(); updateDirty(); return true;
+    model.document = newDocument(); model.history = { undo: [], redo: [] }; controller.history = model.history; model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null }; model.selection = { kind: 'signal', id: 'clk' }; model.editor = { rowIndex: 0 }; model.view.pinned = false; model.view.followSelection = true; model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; controller.render(); updateDirty(); return true;
   };
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
@@ -124,7 +124,7 @@
     try { parsed = JSON.parse(text); parsed = normalizeExternalDocument(parsed); } catch (error) { model.persistence.lastError = `Invalid JSON: ${error.message}`; return false; }
     const issues = controller.validateDocument(parsed);
     if (parsed?.formatVersion !== 1 || issues.length) { model.persistence.lastError = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; return false; }
-    model.document = clone(parsed); model.history = { undo: [], redo: [] }; controller.history = model.history; model.validation = []; model.timeSelection = { cycle: Math.max(0, Math.min(Number(model.timeSelection?.cycle ?? 0), Number(model.document.timeline.cycleCount))), rangeStart: null, rangeEnd: null }; repairSelection(); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; controller.render(); updateDirty(); return true;
+    model.document = clone(parsed); model.history = { undo: [], redo: [] }; controller.history = model.history; model.validation = []; model.timeSelection = { cycle: Math.max(0, Math.min(Number(model.timeSelection?.cycle ?? 0), Number(model.document.timeline.cycleCount))), rangeStart: null, rangeEnd: null }; model.view.pinned = false; model.view.followSelection = true; repairSelection(); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; controller.render(); updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
