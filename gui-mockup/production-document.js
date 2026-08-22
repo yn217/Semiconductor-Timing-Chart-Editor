@@ -6,8 +6,41 @@
   const clone = value => structuredClone(value);
   const stable = value => JSON.stringify(value);
   const hash = value => stable(value);
-  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null };
+  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null, operation: { type: 'document', result: 'ready', message: 'Ready', detail: '', action: '' } };
   model.history = { undo: [], redo: [] };
+  let unloadGuardActive = false;
+  const beforeUnload = event => { if (!model.persistence.dirty) return; event.preventDefault(); event.returnValue = ''; };
+  const renderOperationStatus = () => {
+    const status = document.querySelector('.status');
+    const target = status?.querySelector('span');
+    if (!target) return;
+    const operation = model.persistence.operation || { result: 'ready', message: 'Ready', detail: '', action: '' };
+    target.textContent = operation.message || 'Ready';
+    target.dataset.operationResult = operation.result;
+    target.dataset.operationType = operation.type || 'document';
+    target.dataset.operationDetail = operation.detail || '';
+    target.dataset.operationAction = operation.action || '';
+    target.title = operation.detail || '';
+    target.setAttribute('role', 'status');
+    target.setAttribute('aria-live', 'polite');
+    target.tabIndex = operation.action ? 0 : -1;
+    if (!target.dataset.operationBound) {
+      target.dataset.operationBound = 'true';
+      const openProblems = event => { if (!target.dataset.operationAction) return; event.preventDefault(); controller.actions.setBottomTab?.('problems'); };
+      target.addEventListener('click', openProblems);
+      target.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') openProblems(event); });
+    }
+  };
+  const syncUnloadGuard = () => {
+    if (model.persistence.dirty && !unloadGuardActive) { window.addEventListener('beforeunload', beforeUnload); unloadGuardActive = true; }
+    if (!model.persistence.dirty && unloadGuardActive) { window.removeEventListener('beforeunload', beforeUnload); unloadGuardActive = false; }
+  };
+  const publishOperation = ({ type = 'document', result = 'neutral', message, detail = '', action = '' }) => {
+    model.persistence.operation = { type, result, message, detail, action };
+    model.persistence.lastError = result === 'error' ? detail || message : null;
+    renderOperationStatus();
+  };
+  controller.publishOperation = publishOperation;
 
   const updateDirty = () => {
     model.persistence.dirty = hash(controller.getSerializableDocument()) !== model.persistence.savedRevisionHash;
@@ -20,6 +53,8 @@
       if (label === 'Undo') button.disabled = model.history.undo.length === 0;
       if (label === 'Redo') button.disabled = model.history.redo.length === 0;
     });
+    syncUnloadGuard();
+    renderOperationStatus();
   };
   const repairSelection = () => {
     const id = model.selection?.id;
@@ -112,6 +147,7 @@
     model.persistence.fileName = fileName;
     model.persistence.savedRevisionHash = documentHash;
     model.persistence.lastError = null;
+    publishOperation({ type: 'save', result: 'success', message: `✓ Saved: ${fileName}` });
     updateDirty();
   };
   const prepareSaveText = () => {
@@ -140,31 +176,31 @@
     return false;
   };
   controller.actions.requestNew = async ({ unsavedDecision = 'cancel' } = {}) => {
-    if (!await protect(unsavedDecision)) return false;
-    replaceDocument(newDocument()); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; updateDirty(); return true;
+    if (!await protect(unsavedDecision)) { publishOperation({ type: 'new', result: 'neutral', message: 'New canceled', detail: 'Unsaved changes were kept.' }); return false; }
+    replaceDocument(newDocument()); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'new', result: 'success', message: '✓ New document created' }); updateDirty(); return true;
   };
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
-    try { parsed = JSON.parse(text); parsed = normalizeExternalDocument(parsed); } catch (error) { model.persistence.lastError = `Invalid JSON: ${error.message}`; return false; }
+    try { parsed = JSON.parse(text); parsed = normalizeExternalDocument(parsed); } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
     const issues = controller.validateDocument(parsed);
-    if (parsed?.formatVersion !== 1 || issues.length) { model.persistence.lastError = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; return false; }
-    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; updateDirty(); return true;
+    if (parsed?.formatVersion !== 1 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
+    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'open', result: 'success', message: `✓ Opened: ${fileName}` }); updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
     if (text !== undefined) return loadText(text, fileName || 'example.tcd', unsavedDecision);
-    if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { model.persistence.lastError = error.name === 'AbortError' ? null : error.message; return false; } }
+    if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); else publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); return false; } }
     const input = document.createElement('input'); input.type = 'file'; input.accept = '.tcd,application/json'; input.hidden = true; document.body.appendChild(input); input.click(); return new Promise(resolve => { input.addEventListener('change', async () => { const file = input.files?.[0]; const result = file ? await loadText(await file.text(), file.name, unsavedDecision) : false; input.remove(); resolve(result); }, { once: true }); });
   };
   controller.actions.saveAs = async ({ fileName = 'Untitled.tcd' } = {}) => {
-    const prepared = prepareSaveText(); if (prepared.error) { model.persistence.lastError = prepared.error; return false; }
-    if (window.showSaveFilePicker) { try { const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const writable = await handle.createWritable(); await writable.write(prepared.text); await writable.close(); commitSaveSuccess({ fileHandle: handle, fileName, documentHash: prepared.documentHash }); return true; } catch (error) { model.persistence.lastError = error.name === 'AbortError' ? null : error.message; return false; } }
+    const prepared = prepareSaveText(); if (prepared.error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: prepared.error, action: 'problems' }); return false; }
+    if (window.showSaveFilePicker) { try { const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const writable = await handle.createWritable(); await writable.write(prepared.text); await writable.close(); commitSaveSuccess({ fileHandle: handle, fileName, documentHash: prepared.documentHash }); return true; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'save', result: 'neutral', message: 'Save canceled' }); else publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: error.message }); return false; } }
     const blob = new Blob([prepared.text], { type: 'application/json;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = fileName.endsWith('.tcd') ? fileName : `${fileName}.tcd`; link.hidden = true; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); commitSaveSuccess({ fileHandle: null, fileName: link.download, documentHash: prepared.documentHash }); return true;
   };
   controller.actions.save = async () => {
-    const prepared = prepareSaveText(); if (prepared.error) { model.persistence.lastError = prepared.error; return false; }
-    if (model.persistence.fileHandle) { try { const writable = await model.persistence.fileHandle.createWritable(); await writable.write(prepared.text); await writable.close(); commitSaveSuccess({ fileHandle: model.persistence.fileHandle, fileName: model.persistence.fileName, documentHash: prepared.documentHash }); return true; } catch (error) { model.persistence.lastError = error.message; return false; } }
+    const prepared = prepareSaveText(); if (prepared.error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: prepared.error, action: 'problems' }); return false; }
+    if (model.persistence.fileHandle) { try { const writable = await model.persistence.fileHandle.createWritable(); await writable.write(prepared.text); await writable.close(); commitSaveSuccess({ fileHandle: model.persistence.fileHandle, fileName: model.persistence.fileName, documentHash: prepared.documentHash }); return true; } catch (error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: error.message }); return false; } }
     return controller.actions.saveAs({ fileName: model.persistence.fileName });
   };
   controller.persistence = model.persistence;

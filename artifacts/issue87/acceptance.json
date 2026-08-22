@@ -1,0 +1,55 @@
+{
+  "issue": 87,
+  "cases": {
+    "invalidJsonOpen": {
+      "documentUnchanged": true,
+      "historyUnchanged": true,
+      "visibleError": true,
+      "pass": true
+    },
+    "invalidCanonicalOpen": {
+      "visibleReason": true,
+      "documentUnchanged": true,
+      "pass": true
+    },
+    "validationBlockedSave": {
+      "pickerNotNeeded": true,
+      "visibleFailure": true,
+      "problemsAction": true,
+      "documentUnchanged": true,
+      "pass": true
+    },
+    "problemsNavigation": {
+      "tab": "problems",
+      "pass": true
+    },
+    "successfulSave": {
+      "pickerCalled": true,
+      "confirmation": true,
+      "clean": true,
+      "pass": true
+    },
+    "cancelOpen": {
+      "neutral": true,
+      "noError": true,
+      "pass": true
+    },
+    "cancelSave": {
+      "neutral": true,
+      "dirtyRetained": true,
+      "pass": true
+    },
+    "cleanAfterSave": {
+      "dirty": false,
+      "guardRemoved": true,
+      "pass": true
+    },
+    "dirtyBeforeUnload": {
+      "dirty": true,
+      "guardActive": true,
+      "pass": true
+    }
+  },
+  "errors": [],
+  "pass": true
+}
