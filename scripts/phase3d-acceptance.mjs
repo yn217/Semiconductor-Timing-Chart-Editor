@@ -13,18 +13,21 @@ try {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
   await page.goto('http://127.0.0.1:4187/gui-mockup/', { waitUntil: 'networkidle' });
+  await page.evaluate(() => { window.showSaveFilePicker = undefined; window.showOpenFilePicker = undefined; });
   const state = () => page.evaluate(() => window.TimingChartProductionController.getState());
   const serial = () => page.evaluate(() => window.TimingChartProductionController.getSerializableDocument());
   const action = (name, ...args) => page.evaluate(({ name, args }) => window.TimingChartProductionController.actions[name](...args), { name, args });
+  const captureDownload = async operation => { const downloadPromise = page.waitForEvent('download'); const result = await operation(); const download = await downloadPromise; const filePath = await download.path(); return { result, text: fs.readFileSync(filePath, 'utf8'), filename: download.suggestedFilename() }; };
   const editStart = async (value, index = 1) => { await page.locator(`.row[data-signal="req_valid"]`).click(); const input = page.locator(`[data-editor-field="start"][data-editor-index="${index}"]`); await input.fill(String(value)); await input.dispatchEvent('change'); await wait(50); };
   const initial = await serial();
   await page.screenshot({ path: `${root}/production-screenshot.png` });
-  await page.evaluate(async () => await window.TimingChartProductionController.actions.save());
+  await captureDownload(() => page.evaluate(async () => await window.TimingChartProductionController.actions.save()));
   await editStart(4);
   let current = await state();
   assert.equal(current.persistence.dirty, true);
-  const savedText = await page.evaluate(async () => await window.TimingChartProductionController.actions.save());
-  assert.equal(typeof savedText, 'string');
+  const saved = await captureDownload(() => page.evaluate(async () => await window.TimingChartProductionController.actions.save()));
+  const savedText = saved.text;
+  assert.match(saved.filename, /\.tcd$/);
   assert.equal((await state()).persistence.dirty, false);
   assert.deepEqual(JSON.parse(savedText), await serial());
   fs.writeFileSync(`${root}/saved-example.tcd`, savedText, 'utf8');
@@ -55,8 +58,8 @@ try {
   report.cases.case5 = 'PASS';
 
   const originalId = (await serial()).document.id;
-  const saveAsText = await page.evaluate(async () => await window.TimingChartProductionController.actions.saveAs({ fileName: 'test:test2.tcd' }));
-  assert.equal(typeof saveAsText, 'string');
+  const saveAs = await captureDownload(() => page.evaluate(async () => await window.TimingChartProductionController.actions.saveAs({ fileName: 'test2.tcd' })));
+  assert.equal(saveAs.result, true);
   assert.equal((await state()).persistence.fileName, 'test2.tcd');
   assert.equal((await serial()).document.id, originalId);
   report.cases.case6 = 'PASS';

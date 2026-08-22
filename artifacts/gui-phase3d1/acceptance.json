@@ -1,0 +1,38 @@
+{
+  "saveAsCancel": {
+    "dirty": true,
+    "fileName": "example.tcd",
+    "baselineUnchanged": true,
+    "documentUnchanged": true,
+    "pass": true
+  },
+  "writeFailure": {
+    "write": {
+      "dirty": true,
+      "baselineUnchanged": true,
+      "documentUnchanged": true,
+      "lastError": true,
+      "pass": true
+    },
+    "close": {
+      "dirty": true,
+      "baselineUnchanged": true,
+      "pass": true
+    }
+  },
+  "saveBeforeOpen": {
+    "saveSucceededBeforeOpen": true,
+    "openSucceeded": true,
+    "previousDocumentWritten": true,
+    "pass": true
+  },
+  "fallbackDownload": {
+    "event": true,
+    "filename": "fallback-download.tcd",
+    "utf8Json": true,
+    "validation": true,
+    "dirtyAfter": false,
+    "pass": true
+  },
+  "pass": true
+}

@@ -1,0 +1,14 @@
+{
+  "write": {
+    "dirty": true,
+    "baselineUnchanged": true,
+    "documentUnchanged": true,
+    "lastError": true,
+    "pass": true
+  },
+  "close": {
+    "dirty": true,
+    "baselineUnchanged": true,
+    "pass": true
+  }
+}
