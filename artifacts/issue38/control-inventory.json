@@ -1,0 +1,594 @@
+{
+  "enabledControlCount": 45,
+  "disabledControlCount": 24,
+  "inventory": [
+    {
+      "label": "ファイル",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "ホーム",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "挿入",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Ribbon tab selection is implemented; detailed commands remain tracked by #32 / #34"
+    },
+    {
+      "label": "注釈",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Ribbon tab selection is implemented; detailed commands remain tracked by #32 / #34"
+    },
+    {
+      "label": "表示",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Ribbon tab selection is implemented; detailed commands remain tracked by #32 / #34"
+    },
+    {
+      "label": "チェック",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Ribbon tab selection is implemented; detailed commands remain tracked by #32 / #34"
+    },
+    {
+      "label": "AI",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Ribbon tab selection is implemented; detailed commands remain tracked by #32 / #34"
+    },
+    {
+      "label": "Cycle",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Transaction",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Split",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "新規",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "開く",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "保存",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "名前を付けて保存",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Undo",
+      "tag": "button",
+      "disabled": true,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Redo",
+      "tag": "button",
+      "disabled": true,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "切取",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "コピー",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "貼付",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "削除",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "複製",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "上へ",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "下へ",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "Cycle挿入",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Cycle削除",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "N Cycle挿入",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "範囲削除",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "行間隔",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "Group間隔",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "自動レイアウト",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "Zoom−",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Zoom",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Zoom＋",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "全体表示",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "選択に合わせる",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "追加",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "左パネルの追加メニュー以外の操作は未実装です。対応予定: #32"
+    },
+    {
+      "label": "",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "フィルター条件UIは未実装です。対応予定: #32"
+    },
+    {
+      "label": "Signal",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Annotation",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Problems",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "JSON",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "Pin",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "＋ 変更点を追加",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "▣ 行を複製",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "🗑 行を削除",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "⇩ インポート...",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "この操作は未実装です。対応Issue: #38以降"
+    },
+    {
+      "label": "⇧ エクスポート...",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "この操作は未実装です。対応Issue: #38以降"
+    },
+    {
+      "label": "⟳ プレビュー更新",
+      "tag": "button",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "この操作は未実装です。対応Issue: #38以降"
+    },
+    {
+      "label": "0",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "0",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "初期値",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "3",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "1",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "リクエスト有効",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "7",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "0",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "リクエスト無効（終了）",
+      "tag": "input",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "req_valid",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "binary",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "表示非表示",
+      "tag": "select",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    }
+  ],
+  "unknownEnabledControls": [],
+  "search": true,
+  "ribbonZoom": true,
+  "annotationInspector": true,
+  "inspectorCommand": true,
+  "fileMenuClosedByDefault": true,
+  "disabledControls": [
+    {
+      "label": "Undo",
+      "reason": ""
+    },
+    {
+      "label": "Redo",
+      "reason": ""
+    },
+    {
+      "label": "切取",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "コピー",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "貼付",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "削除",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "複製",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "上へ",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "下へ",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "行間隔",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "Group間隔",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "自動レイアウト",
+      "reason": "未実装の操作です。対応予定: #32 / #34"
+    },
+    {
+      "label": "on",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "on",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "on",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "on",
+      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+    },
+    {
+      "label": "",
+      "reason": "左パネルの追加メニュー以外の操作は未実装です。対応予定: #32"
+    },
+    {
+      "label": "",
+      "reason": "フィルター条件UIは未実装です。対応予定: #32"
+    },
+    {
+      "label": "⇩ インポート...",
+      "reason": "この操作は未実装です。対応Issue: #38以降"
+    },
+    {
+      "label": "⇧ エクスポート...",
+      "reason": "この操作は未実装です。対応Issue: #38以降"
+    },
+    {
+      "label": "⟳ プレビュー更新",
+      "reason": "この操作は未実装です。対応Issue: #38以降"
+    },
+    {
+      "label": "表示非表示",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    }
+  ],
+  "pass": true
+}
