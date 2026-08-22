@@ -59,7 +59,9 @@
   };
   canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
   const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
-  const controller = { model, getState: () => structuredClone(model), actions: {} };
+  const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() } };
+  controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
+  controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
   const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
   const getSignal = id => getSignals().find(signal => signal.id === id);
   const getTimeline = () => model.document.timeline;
@@ -282,11 +284,10 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); };
+  const render = () => { renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
-  controller.actions.selectObject = row => { model.selection = { kind: row.dataset.kind === 'comment' ? 'comment' : 'signal', id: row.dataset.kind === 'comment' ? row.dataset.commentId || row.dataset.signal : row.dataset.signal }; if (model.selection.kind === 'signal') model.editor.rowIndex = Math.max(0, getSignal(model.selection.id)?.values?.length - 1 || 0); if (model.view.followSelection && !model.view.pinned) model.view.tab = model.view.mode === 'transaction' ? 'transaction' : 'signal'; render(); };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
   controller.actions.setSignalVisibility = (signalId, visible) => { if (!model.document.signals.some(signal => signal.id === signalId)) return false; model.view.hiddenSignals = model.view.hiddenSignals.filter(id => id !== signalId); if (!visible) model.view.hiddenSignals.push(signalId); render(); return true; };
@@ -376,15 +377,6 @@
     wave.style.transformOrigin = 'left top';
     wave.style.transform = zoom === 1 ? '' : `scaleX(${zoom})`;
   };
-  controller.actions.setZoom = percentValue => {
-    const percent = Number(percentValue);
-    if (!Number.isFinite(percent) || percent < 25 || percent > 400) return false;
-    model.view.zoom = percent / 100;
-    render();
-    return true;
-  };
-  controller.actions.fitAll = () => controller.actions.setZoom(100);
-  controller.actions.fitSelection = () => controller.actions.setZoom(125);
   controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
   const nextTransactionId = () => { const used = new Set((model.document.transactions || []).map(transaction => transaction.id)); for (let index = 1; index <= used.size + 1_000_000; index++) { const id = `txn_${String(index).padStart(3, '0')}`; if (!used.has(id)) return id; } return null; };
   const defaultTransactionPhases = (start, end) => { if (end - start < 2) return [{ name: 'Transaction', start, end }]; const split = start + 1; return [{ name: 'Request', start, end: split }, { name: 'Response', start: split, end }]; };

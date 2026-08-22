@@ -1,0 +1,29 @@
+{
+  "issue": 57,
+  "result": {
+    "selected": true,
+    "zoomed": true,
+    "zoomBefore": 1,
+    "selectedAnnotation": true,
+    "annotationHook": "ref: <Node>",
+    "viewHook": true,
+    "unchanged": true,
+    "hookNames": [
+      "annotation-ribbon",
+      "view-ribbon"
+    ],
+    "selectionScriptCount": 1
+  },
+  "errors": [],
+  "pass": true,
+  "sourceGuards": {
+    "explicitSelectionScript": true,
+    "noDynamicScriptInjection": true,
+    "singleZoomOwner": true,
+    "singleSelectionOwner": true,
+    "renderHooks": true
+  },
+  "artifacts": [
+    "issue57-1672x941.png"
+  ]
+}

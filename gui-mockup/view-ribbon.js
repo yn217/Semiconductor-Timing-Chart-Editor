@@ -210,8 +210,7 @@
   viewTab?.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); setRibbon(viewTab); });
   tabs.filter(tab => tab !== viewTab).forEach(tab => tab.addEventListener('click', () => setRibbon(tab)));
 
-  const originalRender = controller.render;
-  controller.render = (...args) => { const result = originalRender?.(...args); apply(); refresh(); return result; };
+  controller.registerRenderHook?.('view-ribbon', () => { apply(); refresh(); });
   controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu };
   setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
   apply(); refresh();

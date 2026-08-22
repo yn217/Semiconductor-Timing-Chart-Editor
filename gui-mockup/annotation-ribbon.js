@@ -32,7 +32,6 @@
   const home = document.querySelector('#ribbonHome'); const insert = document.querySelector('#ribbonInsert'); const tabs = [...document.querySelectorAll('.ribbon-tabs .rtab')]; const tab = tabs.find(node => normalize(node.textContent) === '注釈');
   const setRibbon = active => { const showing = active === tab; const leavingAnnotation = !showing && ribbon.style.display === 'flex'; if (showing) { if (home) { home.hidden = true; home.style.display = 'none'; } if (insert) { insert.hidden = true; insert.style.display = 'none'; } ribbon.hidden = false; ribbon.style.display = 'flex'; refresh(); return; } ribbon.hidden = true; ribbon.style.display = 'none'; if (leavingAnnotation && normalize(active?.textContent) !== '挿入' && home) { home.hidden = false; home.style.display = 'flex'; } };
   tab?.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); setRibbon(tab); }); tabs.filter(node => node !== tab).forEach(node => node.addEventListener('click', () => setRibbon(node)));
-  const originalSelect = controller.actions.selectAnnotation; controller.actions.selectAnnotation = id => { const result = originalSelect(id); refresh(); return result; };
-  new MutationObserver(refresh).observe(document.body, { subtree: true, childList: true }); refresh();
+  controller.registerRenderHook?.('annotation-ribbon', refresh); refresh();
   window.TimingChartAnnotationRibbon = { refresh, setRibbon };
 })();

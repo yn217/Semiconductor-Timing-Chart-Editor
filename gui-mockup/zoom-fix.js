@@ -255,15 +255,3 @@
   controller.scheduleTimedBandLabels = scheduleTimedBandLabels;
   scheduleZoom();
 })();
-
-// #37 selection fast path is kept in a dedicated module, but zoom-fix.js is
-// currently the final production bootstrap script in index.html. Load it once
-// here so selection can override the legacy selectObject()->full render path.
-(() => {
-  if (document.querySelector('script[data-selection-performance-fix]')) return;
-  const script = document.createElement('script');
-  script.src = 'selection-performance-fix.js';
-  script.dataset.selectionPerformanceFix = 'true';
-  script.async = false;
-  document.head.appendChild(script);
-})();
