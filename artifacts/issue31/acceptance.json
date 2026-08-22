@@ -1,0 +1,28 @@
+{
+  "viewports": [
+    {
+      "width": 1672,
+      "height": 941,
+      "statusBarHeight": 27,
+      "rangeApplied": true,
+      "undoAtomic": true,
+      "zoomViewOnly": true,
+      "wavedromGeometrySource": true,
+      "pass": true
+    },
+    {
+      "width": 1280,
+      "height": 720,
+      "statusBarHeight": 27,
+      "rangeApplied": true,
+      "undoAtomic": true,
+      "zoomViewOnly": true,
+      "wavedromGeometrySource": true,
+      "pass": true
+    }
+  ],
+  "semanticZoomUnchanged": true,
+  "outsideAndEscapeClose": true,
+  "onePopup": true,
+  "pass": true
+}

@@ -35,7 +35,7 @@
     transactions: [],
     constraints: []
   };
-  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false } };
+  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1 } };
   const controller = { model, getState: () => structuredClone(model), actions: {} };
   const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
   const getSignal = id => getSignals().find(signal => signal.id === id);
@@ -150,7 +150,14 @@
     setHidden(document.querySelector('#transactionCanvas'), model.view.mode === 'cycle');
   };
   const renderTab = () => tabs().forEach(button => button.classList.toggle('active', button.dataset.tab === model.view.tab));
-  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); };
+  const renderStatus = () => { const status = document.querySelector('.status'); if (!status) return; const range = [...status.querySelectorAll('span')].find(span => span.textContent.includes('Time Range')); const zoom = [...status.querySelectorAll('span')].find(span => span.textContent.includes('Zoom')); if (range) range.textContent = `Time Range: ${model.document.timeline.start} - ${model.document.timeline.end} cycle`; if (zoom) zoom.textContent = `Zoom: ${Math.round(model.view.zoom * 100)}%`; };
+  const closeStatusPopup = () => document.querySelector('[data-status-popup]')?.remove();
+  const openStatusPopup = (kind, target) => { closeStatusPopup(); const popup = document.createElement('div'); popup.dataset.statusPopup = kind; popup.style.cssText = 'position:fixed;z-index:1000;width:190px;padding:8px;background:#fff;border:1px solid #b8c5d4;border-radius:4px;box-shadow:0 4px 14px rgba(0,0,0,.16);font:12px sans-serif;color:#334155;'; const rect = target.getBoundingClientRect(); popup.style.left = `${Math.max(4, Math.min(window.innerWidth - 204, rect.left - 20))}px`; popup.style.top = `${Math.max(4, rect.top - (kind === 'range' ? 122 : 92))}px`; if (kind === 'range') { popup.innerHTML = '<b>Time Range</b><label style="display:block;margin-top:6px">Start <input data-status-field="start" type="number" style="width:90px"></label><label style="display:block;margin-top:4px">End <input data-status-field="end" type="number" style="width:90px"></label><div data-status-error style="height:16px;color:#b22"></div><button data-status-action="reset">Reset</button> <button data-status-action="apply">Apply</button>'; popup.querySelector('[data-status-field="start"]').value = model.document.timeline.start; popup.querySelector('[data-status-field="end"]').value = model.document.timeline.end; } else { popup.innerHTML = '<b>Zoom</b><div style="margin-top:6px"><button data-status-action="minus">−</button> <input data-status-field="zoom" type="number" min="25" max="400" step="5" style="width:66px">% <button data-status-action="plus">＋</button></div><div style="margin-top:6px"><button data-status-action="fit-all">Fit All</button> <button data-status-action="fit-selection">Selection</button></div>'; popup.querySelector('[data-status-field="zoom"]').value = Math.round(model.view.zoom * 100); } popup.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!action) return; if (kind === 'range') { if (action === 'reset') { popup.querySelector('[data-status-field="start"]').value = 0; popup.querySelector('[data-status-field="end"]').value = model.document.timeline.cycleCount; } if (action === 'apply') { const ok = controller.actions.setTimeRange(popup.querySelector('[data-status-field="start"]').value, popup.querySelector('[data-status-field="end"]').value); if (!ok) popup.querySelector('[data-status-error]').textContent = 'Invalid range'; else closeStatusPopup(); } } else { const input = popup.querySelector('[data-status-field="zoom"]'); const current = Number(input.value); if (action === 'minus') input.value = Math.max(25, current - 10); if (action === 'plus') input.value = Math.min(400, current + 10); if (action === 'fit-all') { controller.actions.fitAll(); closeStatusPopup(); } if (action === 'fit-selection') { controller.actions.fitSelection(); closeStatusPopup(); } } }); if (kind === 'zoom') { const input = popup.querySelector('[data-status-field="zoom"]'); const apply = () => { if (!controller.actions.setZoom(input.value)) input.setCustomValidity('Zoom must be 25-400%'); else input.setCustomValidity(''); }; input.addEventListener('change', apply); input.addEventListener('keydown', event => { if (event.key === 'Enter') { apply(); event.preventDefault(); } }); } document.body.appendChild(popup); };
+  const bindStatus = () => { const status = document.querySelector('.status'); if (!status) return; [...status.querySelectorAll('span')].filter(span => /Time Range|Zoom/.test(span.textContent)).forEach(span => { if (span.dataset.statusBound) return; span.dataset.statusControl = span.textContent.includes('Time Range') ? 'range' : 'zoom'; span.dataset.statusBound = 'true'; span.tabIndex = 0; span.style.cursor = 'pointer'; span.addEventListener('click', event => { event.stopPropagation(); openStatusPopup(span.dataset.statusControl, span); }); }); };
+  document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
+  document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
+  const render = () => { renderMode(); renderTab(); renderSelection(); renderStatus(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
@@ -158,6 +165,32 @@
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
   const transactionRun = (label, mutation) => controller.documentHistory?.run ? controller.documentHistory.run(label, mutation) : (mutation(), render(), true);
+  controller.actions.setTimeRange = (startValue, endValue) => {
+    const start = Number(startValue); const end = Number(endValue);
+    const current = model.document.timeline;
+    if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end <= start || end > 10000) return false;
+    return transactionRun(`Set time range ${start}-${end}`, () => {
+      current.start = start;
+      current.end = end;
+      current.cycleCount = end - start;
+    });
+  };
+  const applyZoom = () => {
+    const wave = document.querySelector('#cycleCanvas .wave');
+    if (!wave) return;
+    const zoom = Number(model.view.zoom || 1);
+    wave.style.transformOrigin = 'left top';
+    wave.style.transform = zoom === 1 ? '' : `scaleX(${zoom})`;
+  };
+  controller.actions.setZoom = percentValue => {
+    const percent = Number(percentValue);
+    if (!Number.isFinite(percent) || percent < 25 || percent > 400) return false;
+    model.view.zoom = percent / 100;
+    render();
+    return true;
+  };
+  controller.actions.fitAll = () => controller.actions.setZoom(100);
+  controller.actions.fitSelection = () => controller.actions.setZoom(125);
   controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
   controller.actions.addTransaction = (seed = {}) => transactionRun('Add transaction', () => { const id = seed.id || `txn_${String(model.document.transactions.length + 1).padStart(3, '0')}`; const transaction = { id, name: seed.name || `Transaction ${model.document.transactions.length + 1}`, start: Number(seed.start ?? 0), end: Number(seed.end ?? 2), lane: seed.lane || 'default', source: seed.source || '', destination: seed.destination || '', phases: structuredClone(seed.phases || [{ name: 'Request', start: Number(seed.start ?? 0), end: Number(seed.start ?? 1) }, { name: 'Response', start: Number(seed.start ?? 1), end: Number(seed.end ?? 2) }]), linkedSignals: [...(seed.linkedSignals || ['req_valid', 'ready'])], comment: seed.comment || '' }; model.document.transactions.push(transaction); model.selection = { kind: 'transaction', id }; model.crossHighlight = [...transaction.linkedSignals]; model.view.mode = model.view.mode === 'cycle' ? 'transaction' : model.view.mode; model.view.tab = 'transaction'; });
   controller.actions.deleteTransaction = id => transactionRun('Delete transaction', () => { const index = model.document.transactions.findIndex(item => item.id === id); if (index < 0) return false; model.document.transactions.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; model.crossHighlight = []; });
