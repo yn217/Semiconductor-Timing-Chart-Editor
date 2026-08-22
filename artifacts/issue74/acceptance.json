@@ -1,0 +1,12 @@
+{
+  "issue": 74,
+  "selectedSignal": "req_valid",
+  "basicEdit": true,
+  "stableSourceIdentity": true,
+  "visibilitySync": true,
+  "typeUndoRedo": true,
+  "styleObservable": true,
+  "saveOpen": true,
+  "errors": [],
+  "pass": true
+}
