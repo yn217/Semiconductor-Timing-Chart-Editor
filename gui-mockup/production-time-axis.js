@@ -11,6 +11,7 @@
   const insertCycles = (documentValue, start, count) => {
     const next = clone(documentValue);
     for (const signal of eventSignals(next)) for (const value of signal.values || []) if (Number(value.start) >= start && Number(value.start) !== 0) value.start += count;
+    for (const transaction of next.transactions || []) { if (Number(transaction.start) >= start) transaction.start += count; if (Number(transaction.end) >= start) transaction.end += count; for (const phase of transaction.phases || []) { if (Number(phase.start) >= start) phase.start += count; if (Number(phase.end) >= start) phase.end += count; } }
     controller.transformAnnotations?.(next, start, count, 'insert');
     next.timeline.cycleCount += count;
     next.timeline.end = next.timeline.cycleCount;
@@ -32,6 +33,11 @@
       }
       const seen = new Set();
       signal.values = merged.filter(value => { const key = Number(value.start); if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => a.start - b.start);
+    }
+    for (const transaction of next.transactions || []) {
+      const map = point => mapPointForDelete(Number(point), start, end);
+      transaction.start = map(transaction.start).mapped; transaction.end = Math.max(transaction.start, map(transaction.end).mapped);
+      for (const phase of transaction.phases || []) { phase.start = map(phase.start).mapped; phase.end = Math.max(phase.start, map(phase.end).mapped); }
     }
     controller.transformAnnotations?.(next, start, end, 'delete');
     next.timeline.cycleCount -= count;
@@ -58,6 +64,27 @@
   controller.actions.insertCycles = insert;
   controller.actions.deleteCycles = (start, count = 1) => removeRange(Number(start), Number(start) + Number(count));
   controller.actions.deleteRange = removeRange;
+  controller.actions.insertGap = (start, count = 1) => insert(start, count);
+  controller.actions.duplicateRange = (start, end) => {
+    const from = Number(start); const to = Number(end); const count = to - from;
+    if (!validInteger(from) || !validInteger(to) || count < 1 || to > model.document.timeline.cycleCount) return false;
+    return run(`Duplicate cycles ${from}-${to}`, () => {
+      const source = clone(model.document); const sourceSignals = eventSignals(source).map(signal => ({ id: signal.id, values: (signal.values || []).filter(value => Number(value.start) >= from && Number(value.start) < to).map(value => ({ ...value })) }));
+      const next = insertCycles(model.document, to, count);
+      for (const copied of sourceSignals) { const target = eventSignals(next).find(signal => signal.id === copied.id); for (const value of copied.values) target?.values.push({ ...value, start: Number(value.start) + count }); target?.values.sort((a, b) => a.start - b.start); }
+      model.document = next;
+    });
+  };
+  controller.actions.moveRange = (start, end, target) => {
+    const from = Number(start); const to = Number(end); const destination = Number(target); const count = to - from;
+    if (!validInteger(from) || !validInteger(to) || !validInteger(destination) || count < 1 || to > model.document.timeline.cycleCount || destination > model.document.timeline.cycleCount) return false;
+    return run(`Move cycles ${from}-${to} to ${destination}`, () => {
+      const source = clone(model.document); const selected = eventSignals(source).map(signal => ({ id: signal.id, values: (signal.values || []).filter(value => Number(value.start) >= from && Number(value.start) < to).map(value => ({ ...value })) }));
+      let next = deleteRange(model.document, from, to); const adjusted = destination > to ? destination - count : destination; next = insertCycles(next, adjusted, count);
+      for (const copied of selected) { const targetSignal = eventSignals(next).find(signal => signal.id === copied.id); for (const value of copied.values) targetSignal?.values.push({ ...value, start: adjusted + Number(value.start) - from }); targetSignal?.values.sort((a, b) => a.start - b.start); }
+      model.document = next;
+    });
+  };
   model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
 
   const renderEdgeCounters = currentModel => {

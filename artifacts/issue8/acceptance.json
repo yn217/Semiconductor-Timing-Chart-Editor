@@ -1,0 +1,9 @@
+{
+  "insertN": true,
+  "continuation": true,
+  "annotationAndTransactionTracking": true,
+  "duplicateRange": true,
+  "undoAtomic": true,
+  "invalidStatesRejected": true,
+  "pass": true
+}
