@@ -63,8 +63,14 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
   await page.evaluate(() => {
     const c = window.TimingChartProductionController;
     c.model.selection = { kind: 'time', id: null };
-    c.model.timeSelection = { range: { start: c.model.document.timeline.cycleCount - 4, end: c.model.document.timeline.cycleCount }, cycle: c.model.document.timeline.cycleCount - 2, source: 'test' };
+    const start = c.getCycleBoundary({ signal: c.selectors.getReferenceClock().id, cycle: c.model.document.timeline.cycleCount - 4, coordinateSpace: 'canvas' });
+    const end = c.getCycleBoundary({ signal: c.selectors.getReferenceClock().id, cycle: c.model.document.timeline.cycleCount, coordinateSpace: 'canvas' });
+    c.actions.selectTimeAtCanvasX(start.canvasX);
+    c.actions.selectTimeAtCanvasX(end.canvasX, { shiftKey: true });
   });
+  const selectedRange = await page.evaluate(() => structuredClone(window.TimingChartProductionController.model.timeSelection));
+  assert.equal(selectedRange.rangeStart, 96, 'Fit Selection fixture did not create canonical rangeStart through production action');
+  assert.equal(selectedRange.rangeEnd, 100, 'Fit Selection fixture did not create canonical rangeEnd through production action');
   const fittedSelection = await page.evaluate(() => window.TimingChartProductionController.actions.fitSelection());
   assert.equal(fittedSelection, true, 'Fit Selection returned false');
   await page.waitForTimeout(130);

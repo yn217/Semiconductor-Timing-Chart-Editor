@@ -260,6 +260,9 @@
   };
   const selectedBounds = () => {
     const selection = model.selection || {};
+    const time = model.timeSelection;
+    const hasExplicitRange = Number.isFinite(Number(time?.rangeStart)) && Number.isFinite(Number(time?.rangeEnd));
+    if (hasExplicitRange) return boundaryBounds(Number(time.rangeStart), Number(time.rangeEnd));
     if (selection.kind === 'signal') return signalBounds(selection.id) || boundaryBounds(0, model.document.timeline.cycleCount);
     if (selection.kind === 'annotation') {
       const annotation = (model.document.annotations || []).find(item => item.id === selection.id);
@@ -270,9 +273,7 @@
       const transaction = (model.document.transactions || []).find(item => item.id === selection.id);
       if (transaction) return boundaryBounds(Number(transaction.start || 0), Number(transaction.end ?? transaction.start ?? 0));
     }
-    const time = model.timeSelection;
-    if (time?.range?.start !== undefined && time?.range?.end !== undefined) return boundaryBounds(Number(time.range.start), Number(time.range.end));
-    if (time?.cycle !== undefined) return boundaryBounds(Number(time.cycle), Number(time.cycle));
+    if (selection.kind === 'time' && time?.cycle !== undefined) return boundaryBounds(Number(time.cycle), Number(time.cycle));
     return boundaryBounds(0, model.document.timeline.cycleCount);
   };
   const fitZoomForBounds = bounds => {
@@ -298,11 +299,11 @@
     const zoom = fitZoomForBounds(bounds);
     if (zoom === null) return false;
     controller.actions.setZoom(zoom * 100);
-    requestAnimationFrame(() => requestAnimationFrame(() => { if (resetScroll && viewport) { viewport.scrollLeft = 0; controller.renderTransient?.(model); } else revealBounds(bounds); }));
+    requestAnimationFrame(() => requestAnimationFrame(() => { if (resetScroll && viewport) { viewport.scrollLeft = 0; controller.renderTransient?.(model); } else revealBounds(recompute?.() || bounds); }));
     return true;
   };
   controller.actions.fitAll = () => fitTo(null, { resetScroll: true, recompute: () => boundaryBounds(0, model.document.timeline.cycleCount) });
-  controller.actions.fitSelection = () => fitTo(selectedBounds());
+  controller.actions.fitSelection = () => fitTo(selectedBounds(), { recompute: selectedBounds });
 
   // Semantic/document renders may replace WaveDrom SVG nodes. Re-apply the
   // lightweight view-only zoom after that replacement, but ignore ruler and
