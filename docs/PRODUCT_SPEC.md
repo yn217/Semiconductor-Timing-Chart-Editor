@@ -93,6 +93,33 @@ JSONは自動生成。通常非表示。JSON tabはDefault Read Only。Advanced 
 ## 16. Transaction View
 同一時間軸上でTransaction、Phase、Burst、Overlap、Pipelineを表現。Transaction <-> Cycle View相互Highlight。Cycle/Transaction/Split切替。
 
-## 17. Golden Samples
+## 17. Clock Edge Counter / Edge Index
+Clock signalごとに独立したEdge番号表示を持つ。
+
+Count mode:
+- rising: rising edgeだけでカウントアップ
+- falling: falling edgeだけでカウントアップ
+- both: rising/fallingの両方で1つの連番をカウントアップ
+
+表示番号はWaveDromが描画した実Edge GeometryへOverlayし、独自`cycle * pixelsPerCycle`座標で配置しない。
+
+Signalごとの設定:
+- show ON/OFF
+- mode: rising / falling / both
+- startNumber: 0/1/任意整数
+- countFrom: signal-start / selected-edge / marker / visible-range-start
+- labelEvery: 毎edge / N edgeごと（内部カウントは全edgeで継続し、表示だけ間引く）
+- position: above / below
+- offset x/y px
+
+複数Clockでは各signalが独立したcounterを持つ。ACLK/PCLK/DDRCLK等が同時に表示されても相互にcounterを共有しない。
+
+Gated Clockでは、実際にWaveDrom上に存在する対象edgeだけを数える。Clock停止区間ではcounterを進めない。
+
+Edge番号はDerived Dataであり、各edgeの番号列を保存ファイルへ列挙しない。保存するのはcounter設定だけ。
+
+将来、Annotation/Rangeのanchorとして `clock edge index` を利用可能な構造にする。
+
+## 18. Golden Samples
 01 APB、02 AHB-Lite、03 AXI4 Full Write、04 AXI4 Full Read outstanding、05 SRAM1P、06 SRAM2P、07 AXI→DRAM、08 Async FIFO、09 Accelerator、10 AXI4-Stream。
-11 Signal types/roles/legend、12 Group bands/spacing、13 Signal labels、14 Annotation、15 Arrows、16 Clock/gap、17 Ripple edit、18 Legend/group order、19 Header/footer/export、20 Transaction/Cycle linked。
+11 Signal types/roles/legend、12 Group bands/spacing、13 Signal labels、14 Annotation、15 Arrows、16 Clock/gap/edge counter、17 Ripple edit、18 Legend/group order、19 Header/footer/export、20 Transaction/Cycle linked。
