@@ -1,0 +1,67 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const out = path.join(root, 'artifacts', 'issue80');
+await fs.mkdir(out, { recursive: true });
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
+const errors = [];
+page.on('pageerror', error => errors.push(error.message));
+await page.goto(`file://${path.join(root, 'gui-mockup', 'index.html').replaceAll('\\', '/')}`);
+await page.waitForTimeout(300);
+
+const result = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  const pause = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const base = structuredClone(c.getSerializableDocument());
+  const hierarchyDoc = structuredClone(base);
+  hierarchyDoc.document.id = 'issue80-hierarchy-a.tcd';
+  hierarchyDoc.signals.find(signal => signal.id === 'req_valid').source.instancePath = ['top', 'u_soc'];
+  hierarchyDoc.signals.find(signal => signal.id === 'busy').source.instancePath = ['top', 'u_soc', 'u_dma'];
+  hierarchyDoc.signals.find(signal => signal.id === 'rdata[15:0]').source.instancePath = ['top', 'u_soc', 'u_dma'];
+  const checks = {};
+  checks.openHierarchy = await c.actions.openText(JSON.stringify(hierarchyDoc), { fileName: hierarchyDoc.document.id, unsavedDecision: 'discard' });
+  c.actions.setPathDisplayMode('relative'); await pause(25);
+  const viewTab = [...document.querySelectorAll('.rtab')].find(node => node.textContent.trim() === '表示'); viewTab.click(); await pause(20);
+  const scopeButton = () => document.querySelector('#ribbonView [data-view-command="scope"]');
+  const openScope = async () => { scopeButton().click(); await pause(10); };
+  await openScope();
+  const candidates = [...document.querySelectorAll('[data-scope-menu] [data-scope]')].map(node => node.dataset.scope);
+  checks.scopeChoicesFromDocument = candidates.includes('top') && candidates.includes('top.u_soc') && candidates.includes('top.u_soc.u_dma') && !candidates.includes('u_top');
+  document.querySelector('[data-scope-menu] [data-scope="top.u_soc"]')?.click(); await pause(30);
+  const reqLabel = document.querySelector('#groups .row[data-signal="req_valid"] .row-name')?.textContent.trim();
+  checks.nestedScopeSelection = JSON.stringify(c.model.view.scope) === JSON.stringify(['top', 'u_soc']) && reqLabel === 'req_valid';
+  const nestedScopeButton = { text: scopeButton()?.textContent, title: scopeButton()?.title, label: scopeButton()?.querySelector('.tool-label')?.textContent };
+  checks.currentScopeVisible = nestedScopeButton.text.includes('top.u_soc') && nestedScopeButton.title.includes('top.u_soc');
+  await openScope(); document.querySelector('[data-scope-menu] button[data-scope="top"]')?.click(); await pause(25);
+  checks.parentNavigation = JSON.stringify(c.model.view.scope) === JSON.stringify(['top']);
+  await openScope(); document.querySelector('[data-scope-menu] button[data-scope=""]')?.click(); await pause(25);
+  checks.rootNavigation = JSON.stringify(c.model.view.scope) === JSON.stringify([]);
+  const fullBefore = (c.actions.setPathDisplayMode('full'), await pause(20), document.querySelector('#groups .row[data-signal="req_valid"] .row-name')?.textContent.trim());
+  c.actions.setScope(['top', 'u_soc']); await pause(20);
+  const fullAfter = document.querySelector('#groups .row[data-signal="req_valid"] .row-name')?.textContent.trim();
+  checks.fullPathIndependent = fullBefore === fullAfter && fullAfter.includes('top.u_soc');
+  c.actions.setPathDisplayMode('signalOnly'); await pause(20);
+  const signalOnlyBefore = document.querySelector('#groups .row[data-signal="req_valid"] .row-name')?.textContent.trim(); c.actions.setScope([]); await pause(20); const signalOnlyAfter = document.querySelector('#groups .row[data-signal="req_valid"] .row-name')?.textContent.trim();
+  checks.signalOnlyIndependent = signalOnlyBefore === signalOnlyAfter && signalOnlyAfter === 'req_valid';
+  const hierarchyStateBefore = JSON.stringify(c.getSerializableDocument()); const historyBefore = c.model.history.undo.length;
+  c.actions.setScope(['top', 'u_soc']); await pause(20); const hierarchyStateAfter = JSON.stringify(c.getSerializableDocument());
+  checks.scopeIsTransient = hierarchyStateBefore === hierarchyStateAfter && historyBefore === c.model.history.undo.length;
+  const hierarchyDocB = structuredClone(hierarchyDoc); hierarchyDocB.document.id = 'issue80-hierarchy-b.tcd'; hierarchyDocB.signals.find(signal => signal.id === 'req_valid').source.instancePath = ['chip', 'core']; hierarchyDocB.signals.find(signal => signal.id === 'busy').source.instancePath = ['chip', 'core', 'dma']; hierarchyDocB.signals.find(signal => signal.id === 'rdata[15:0]').source.instancePath = ['chip', 'core', 'dma'];
+  checks.secondHierarchyOpen = await c.actions.openText(JSON.stringify(hierarchyDocB), { fileName: hierarchyDocB.document.id, unsavedDecision: 'discard' }) && JSON.stringify(c.model.view.scope) === JSON.stringify([]);
+  const flat = structuredClone(base); flat.document.id = 'issue80-flat.tcd'; flat.annotations = []; flat.signals.forEach(signal => { if (signal.type !== 'commentRow') signal.source.instancePath = []; });
+  checks.flatOpen = await c.actions.openText(JSON.stringify(flat), { fileName: flat.document.id, unsavedDecision: 'discard' }) && JSON.stringify(c.model.view.scope) === JSON.stringify([]);
+  viewTab.click(); await pause(15);
+  checks.flatScopeDisabled = scopeButton()?.disabled === true && scopeButton()?.dataset.disabledReason.includes('no instance hierarchy');
+  return { checks, candidates, labels: { reqLabel, fullBefore, fullAfter, signalOnlyBefore, signalOnlyAfter }, nestedScopeButton, scope: c.model.view.scope, scopeButton: { text: scopeButton()?.textContent, title: scopeButton()?.title, label: scopeButton()?.querySelector('.tool-label')?.textContent, state: scopeButton()?.dataset.state } };
+});
+
+const report = { issue: 80, ...result, errors, pass: Object.values(result.checks).every(Boolean) && errors.length === 0, artifacts: ['issue80-1672x941.png'] };
+await page.screenshot({ path: path.join(out, 'issue80-1672x941.png') });
+await browser.close();
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
+if (!report.pass) { console.error(JSON.stringify(report, null, 2)); process.exit(1); }
+console.log(`Issue #80 acceptance passed: ${Object.keys(result.checks).length} browser checks.`);

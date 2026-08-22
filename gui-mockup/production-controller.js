@@ -307,10 +307,15 @@
     const source = getSource(signal); return JSON.stringify(source.instancePath || []) === JSON.stringify(parsed.instancePath || []) && source.signalName === parsed.signalName && Number(source.msb ?? -1) === Number(parsed.msb ?? -1) && Number(source.lsb ?? -1) === Number(parsed.lsb ?? -1);
   });
   const previewBatch = text => { const seen = new Set(); return String(text || '').split(/\r?\n/).map((line, index) => { const parsed = parseFullPath(line); if (!parsed.valid) return { line: index + 1, ...parsed, status: 'invalid' }; const key = JSON.stringify([parsed.instancePath, parsed.signalName, parsed.msb ?? null, parsed.lsb ?? null]); if (duplicatePath(parsed) || seen.has(key)) return { line: index + 1, ...parsed, status: 'duplicate' }; seen.add(key); return { line: index + 1, ...parsed, status: 'valid' }; }).filter(item => item.input); };
-  controller.hierarchy = { parseFullPath, previewBatch, getFullPath: fullPath, getRelativePath: relativePath, getDisplayLabel: signalLabel, getRows: hierarchyRows };
+  const scopePaths = () => { const paths = new Set(['']); for (const { signal } of hierarchyRows()) { const path = getSource(signal).instancePath || []; for (let index = 1; index <= path.length; index++) paths.add(path.slice(0, index).join('.')); } return [...paths].sort((a, b) => a.length - b.length || a.localeCompare(b)).map(value => value ? value.split('.') : []); };
+  const normalizeScope = scope => Array.isArray(scope) ? [...scope].filter(Boolean) : String(scope || '').split('.').filter(Boolean);
+  const scopeKey = scope => normalizeScope(scope).join('.');
+  const isValidScope = scope => { const key = scopeKey(scope); return !key || scopePaths().some(candidate => candidate.join('.') === key); };
+  controller.repairScope = () => { if (!isValidScope(model.view.scope)) model.view.scope = []; return model.view.scope; };
+  controller.hierarchy = { parseFullPath, previewBatch, getFullPath: fullPath, getRelativePath: relativePath, getDisplayLabel: signalLabel, getRows: hierarchyRows, getScopePaths: scopePaths, isValidScope };
   controller.ensureCanonicalSource = ensureCanonicalSource;
   controller.actions.setPathDisplayMode = mode => { if (!Object.values(PATH_DISPLAY_MODES).includes(mode)) return false; return transactionRun('Change path display mode', () => { model.document.layout.pathDisplayMode = mode; }); };
-  controller.actions.setScope = scope => { const next = Array.isArray(scope) ? [...scope] : String(scope || '').split('.').filter(Boolean); model.view.scope = next; render(); return true; };
+  controller.actions.setScope = scope => { const next = normalizeScope(scope); if (!isValidScope(next)) return false; model.view.scope = next; render(); controller.viewRibbon?.refresh?.(); return true; };
   controller.actions.setLeftPanelMode = mode => { if (!['group', 'hierarchy'].includes(mode)) return false; model.view.leftPanelMode = mode; render(); return true; };
   controller.actions.setInstancePathAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align instance path column', () => { model.document.layout.instancePathAlign = alignment; }); };
   controller.actions.setDisplayName = (signalId, name) => { const signal = getSignal(signalId); if (!signal || typeof name !== 'string' || !name.trim()) return false; return transactionRun('Change signal display name', () => { ensureCanonicalSource(signal); signal.display = { ...(signal.display || {}), name: name.trim() }; }); };

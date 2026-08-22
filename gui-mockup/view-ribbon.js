@@ -62,7 +62,7 @@
       button('relative', 'Relative', 'i-search', 'Relative path表示', () => setPath(PATH.RELATIVE)),
       button('full-path', 'Full Path', 'i-search', 'Full path表示', () => setPath(PATH.FULL)),
       button('split-columns', 'Split Columns', 'i-search', 'Instance / signal / bus幅を分割表示', () => setPath(PATH.SPLIT_COLUMNS)),
-      button('scope', 'Scope', 'i-search', 'Scopeを現在の階層へ設定', () => controller.actions.setScope(view.scope?.length ? [] : ['u_top']))
+      button('scope', 'Scope', 'i-search', '現在の文書階層からScopeを選択', () => controller.viewRibbon?.openScopeMenu?.())
     ]),
     group('パネル', [
       button('inspector', 'Inspector', 'i-settings', 'Inspectorを表示/非表示', () => { view.panels.inspector = !view.panels.inspector; apply(); refresh(); }),
@@ -82,6 +82,19 @@
 
   const PATH = window.TimingChartPathDisplayModes;
   const setPath = mode => controller.actions.setPathDisplayMode?.(mode);
+  const openScopeMenu = () => {
+    document.querySelector('[data-scope-menu]')?.remove();
+    const menu = document.createElement('div'); menu.dataset.scopeMenu = 'true'; menu.style.cssText = 'position:fixed;z-index:2200;min-width:220px;max-height:360px;overflow:auto;padding:6px;background:#fff;border:1px solid #b8c5d4;border-radius:5px;box-shadow:0 8px 24px #0003;font:12px sans-serif;color:#243047;';
+    const target = ribbon.querySelector('[data-view-command="scope"]'); const rect = target?.getBoundingClientRect(); menu.style.left = `${Math.max(4, rect?.left || 4)}px`; menu.style.top = `${Math.min(window.innerHeight - 370, (rect?.bottom || 30) + 4)}px`;
+    const current = view.scope || []; const currentLabel = current.length ? current.join(' > ') : 'Root / Show All';
+    const title = document.createElement('div'); title.textContent = `Current Scope: ${currentLabel}`; title.style.cssText = 'font-weight:600;padding:6px 8px;border-bottom:1px solid #e4e9f0;margin-bottom:4px;'; menu.appendChild(title);
+    const add = (label, scope, disabled = false) => { const item = document.createElement('button'); item.type = 'button'; item.textContent = label; item.disabled = disabled; item.dataset.scope = scope.join('.'); item.style.cssText = 'display:block;width:100%;text-align:left;border:0;background:#fff;padding:6px 8px;border-radius:3px;'; if (!disabled) item.addEventListener('mouseenter', () => { item.style.background = '#eef5ff'; }); item.addEventListener('click', () => { if (!disabled) { controller.actions.setScope(scope); menu.remove(); } }); menu.appendChild(item); };
+    add('Root / Show All', [], current.length === 0); add('Parent', current.slice(0, -1), current.length === 0);
+    const scopes = controller.hierarchy?.getScopePaths?.() || [];
+    if (!scopes.some(scope => scope.length)) { const empty = document.createElement('div'); empty.textContent = 'この文書に選択可能な階層はありません'; empty.style.cssText = 'padding:8px;color:#68768a;'; menu.appendChild(empty); }
+    for (const scope of scopes.filter(scope => scope.length)) add(scope.join(' > '), scope, scope.join('.') === current.join('.'));
+    document.body.appendChild(menu); const close = event => { if (!event.target.closest('[data-scope-menu]')) { menu.remove(); document.removeEventListener('pointerdown', close); } }; setTimeout(() => document.addEventListener('pointerdown', close), 0);
+  };
   let savedPanels = null;
   const toggleWaveformOnly = () => {
     if (!view.panels.waveformOnly) {
@@ -175,6 +188,7 @@
     for (const [id, mode] of [['signal-only', PATH.SIGNAL_ONLY], ['relative', PATH.RELATIVE], ['full-path', PATH.FULL], ['split-columns', PATH.SPLIT_COLUMNS]]) {
       const node = ribbon.querySelector(`[data-view-command="${id}"]`); if (node) { node.dataset.state = pathMode === mode ? 'on' : 'off'; node.setAttribute('aria-pressed', pathMode === mode ? 'true' : 'false'); }
     }
+    const scopeButton = ribbon.querySelector('[data-view-command="scope"]'); const scopes = controller.hierarchy?.getScopePaths?.() || []; const hasHierarchy = scopes.some(scope => scope.length); const scopeLabel = model.view.scope?.length ? `Scope: ${model.view.scope.join('.')}` : 'Scope: Root'; if (scopeButton) { const label = scopeButton.querySelector('.tool-label'); if (label) label.textContent = scopeLabel; scopeButton.disabled = !hasHierarchy; scopeButton.dataset.disabledReason = hasHierarchy ? '' : 'Current document has no instance hierarchy'; scopeButton.title = hasHierarchy ? `Current Scope: ${scopeLabel}` : 'Scope unavailable: current document has no instance hierarchy'; }
   }
 
   const home = document.querySelector('#ribbonHome'); const insert = document.querySelector('#ribbonInsert'); const annotation = document.querySelector('#ribbonAnnotation');
@@ -198,6 +212,6 @@
 
   const originalRender = controller.render;
   controller.render = (...args) => { const result = originalRender?.(...args); apply(); refresh(); return result; };
-  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout };
+  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu };
   apply(); refresh();
 })();

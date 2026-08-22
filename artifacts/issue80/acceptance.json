@@ -1,0 +1,47 @@
+{
+  "issue": 80,
+  "checks": {
+    "openHierarchy": true,
+    "scopeChoicesFromDocument": true,
+    "nestedScopeSelection": true,
+    "currentScopeVisible": true,
+    "parentNavigation": true,
+    "rootNavigation": true,
+    "fullPathIndependent": true,
+    "signalOnlyIndependent": true,
+    "scopeIsTransient": true,
+    "secondHierarchyOpen": true,
+    "flatOpen": true,
+    "flatScopeDisabled": true
+  },
+  "candidates": [
+    "",
+    "",
+    "top",
+    "top.u_soc",
+    "top.u_soc.u_dma"
+  ],
+  "labels": {
+    "reqLabel": "req_valid",
+    "fullBefore": "top.u_soc.req_valid",
+    "fullAfter": "top.u_soc.req_valid",
+    "signalOnlyBefore": "req_valid",
+    "signalOnlyAfter": "req_valid"
+  },
+  "nestedScopeButton": {
+    "text": "Scope: top.u_soc",
+    "title": "Current Scope: Scope: top.u_soc",
+    "label": "Scope: top.u_soc"
+  },
+  "scope": [],
+  "scopeButton": {
+    "text": "Scope: Root",
+    "title": "Scope unavailable: current document has no instance hierarchy",
+    "label": "Scope: Root"
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue80-1672x941.png"
+  ]
+}
