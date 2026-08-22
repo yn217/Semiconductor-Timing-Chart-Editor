@@ -17,6 +17,48 @@ Rules: `start`昇順、同一start重複は原則invalid、値は次changeまで
 ## Clock
 Generatorとして保存し、全edgeを列挙しない。period/duty/phase/polarityとenable change-pointsを持つ。
 
+Clock signalは表示用の`edgeCounter`設定を任意で持てる。Edge番号自体はDerived Dataであり永続化しない。
+
+```json
+{
+  "id": "aclk",
+  "name": "ACLK",
+  "type": "clock",
+  "role": "input",
+  "generator": {
+    "start": 0,
+    "period": 1,
+    "duty": 0.5,
+    "phase": 0,
+    "initial": 0
+  },
+  "edgeCounter": {
+    "show": true,
+    "mode": "rising",
+    "startNumber": 1,
+    "countFrom": "signal-start",
+    "labelEvery": 1,
+    "position": "above",
+    "offset": {"x": 0, "y": -6}
+  }
+}
+```
+
+`edgeCounter.mode`:
+- `rising`
+- `falling`
+- `both`
+
+`countFrom`:
+- `signal-start`
+- `selected-edge`（別途semantic anchorを保持）
+- `marker`（marker idを参照）
+- `visible-range-start`
+
+`labelEvery`は1以上の整数。Counterは対象edgeごとに進み、表示ラベルだけN edgeごとに間引く。
+
+複数Clockのcounterはsignalごとに独立。Gated Clockは実際に描画される対象edgeだけを数え、停止区間では進まない。
+
 ## Group
 Array orderが表示順。RoleはGroup membershipを制約しない。Group styleにbackground/opacity/extend/border/header、spacingBefore/Afterを保持可能。
 
