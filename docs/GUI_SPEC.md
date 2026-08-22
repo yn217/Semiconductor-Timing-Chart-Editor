@@ -48,16 +48,41 @@ Binary quick buttons: 0 / 1 / X / Z。
 Bus: Hex / Binary / Symbol / X / Z。
 Clock専用Generator form。
 
-## 5. Annotation Editor
+## 5. Clock Edge Counter Inspector
+Clock signal選択時、Right Inspectorに`Edge Numbers` sectionを表示する。
+
+Controls:
+- Show ON/OFF
+- Count mode: Rising / Falling / Both
+- Start number
+- Count from: Signal start / Selected edge / Marker / Visible range start
+- Show every N edges
+- Position: Above / Below
+- X offset px
+- Y offset px
+
+Count mode:
+- Rising: rising edgeだけでカウントアップ
+- Falling: falling edgeだけでカウントアップ
+- Both: rising/fallingの両方で1つの連番をカウントアップ
+
+複数Clockではsignalごとに設定・counterを独立させる。
+Gated Clockは実際に存在する対象edgeだけをカウントする。
+
+数字はWaveDromのClock SVGへ直接焼き込まず、WaveDrom Geometry Mapのactual edge座標へOverlayする。独自`cycle * pixelsPerCycle`推測は禁止。
+
+Edge number表示の位置は`position + offset x/y`で調整し、必要に応じて1px単位のInspector入力を許可する。
+
+## 6. Annotation Editor
 Type、From/To Anchor、Label、Offsets、Snap、Style。
 Canvas上Drag、矢印key 1px、Shift 10px、endpoint handles、label独立移動。
 
-## 6. Group UI
+## 7. Group UI
 +Group / +Signal。
 Rename / Add / Insert Above-Below / Duplicate / Move / Collapse / Delete。
 Drag & DropでGroup/Signal並べ替え。Group移動でSignal roleは変えない。
 
-## 7. Vertical spacing / Group Band Inspector
+## 8. Vertical spacing / Group Band Inspector
 - Global rowHeight / signalSpacing
 - Group before / after
 - Signal before / after
@@ -70,7 +95,7 @@ Drag & DropでGroup/Signal並べ替え。Group移動でSignal roleは変えな�
 
 Signal rowのabsolute Yをcanonical保存しない。
 
-## 8. Signal role/name columns
+## 9. Signal role/name columns
 Role badgeとSignal nameは独立column。
 - input -> `[i]`
 - output -> `[o]`
@@ -79,20 +104,22 @@ Role badgeとSignal nameは独立column。
 Waveform lane内へ `i req_valid` / `wire busy` のようなrole+name文字列を重ねて表示しない。
 Signal name columnはLeft/Center/Right、width調整、auto-fitを持つ。
 
-## 9. Legend
+## 10. Legend
 Selectable Overlay。
 Drag、keyboard nudge、X/Y、horizontal/vertical、show/hide、used roles only。
 
-## 10. Waveform visual ownership
+## 11. Waveform visual ownership
 Waveform traceの形状はGUI CSSや独自SVG pathで決めない。
 Cycle waveformは `docs/WAVEDROM_COMPATIBILITY.md` に従い、WaveDrom renderer/default skin geometryを使用する。
-GUIはsignal/group background、selection、annotation等をその外側/overlayとして提供する。
+GUIはsignal/group background、selection、annotation、clock edge number等をその外側/overlayとして提供する。
 
-## 11. AI-readable mockup
+## 12. AI-readable mockup
 UI構造はsemantic HTML controlsで表す。stable `data-testid` / `data-role` / `data-signal` / `data-anchor` を利用する。Waveform visualだけSVG可。
 
 ただし `gui-mockup/index.html` は **構造をAIへ伝える補助資料** であり、Golden imageを無視して見た目を簡略化する根拠にはならない。
 
-## 12. Visual regression requirement
+## 13. Visual regression requirement
 Signal / Annotation / JSON（将来Transaction）の代表画面をPlaywright screenshotで保存し、Golden画像との差分をCIで検出する。
 Layout metric testとvisual screenshot testの両方を持つこと。
+
+Clock Edge Counterについては、少なくともRising/Falling/Both、複数Clock、Gated Clock、labelEveryの代表状態をvisual/E2E fixtureで確認する。
