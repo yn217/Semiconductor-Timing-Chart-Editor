@@ -34,7 +34,7 @@ async function runViewport(browser, viewport) {
     const count = () => c.model.document.signals.length;
     const beforeComment = count(); document.querySelector('[data-insert-command="add-comment"]').click(); await pause(50); expect(count() === beforeComment + 1, 'Comment Row command failed');
     const beforeGroup = c.model.document.signalGroups.length; document.querySelector('[data-insert-command="add-group"]').click(); await pause(50); expect(c.model.document.signalGroups.length === beforeGroup + 1, 'Group command failed');
-    const group = c.model.document.signalGroups[0]; const beforeSpacers = (group.spacers || []).length; document.querySelector('[data-insert-command="add-spacer"]').click(); await pause(50); expect((c.model.document.signalGroups[0].spacers || []).length === beforeSpacers + 1, 'Spacer command failed');
+    const group = c.model.document.signalGroups.find(item => item.id === c.model.selection.id) || c.model.document.signalGroups[0]; const beforeSpacers = (group.spacers || []).length; document.querySelector('[data-insert-command="add-spacer"]').click(); await pause(50); const selectedGroupAfterSpacer = c.model.document.signalGroups.find(item => item.id === group.id); expect((selectedGroupAfterSpacer?.spacers || []).length === beforeSpacers + 1, 'Spacer command failed');
 
     const beforeAnnotations = c.model.document.annotations.length;
     for (const type of ['marker', 'range', 'text', 'callout']) { document.querySelector(`[data-insert-command="add-${type}"]`).click(); await pause(50); expect(c.model.document.annotations.length > beforeAnnotations, `${type} annotation command failed`); }

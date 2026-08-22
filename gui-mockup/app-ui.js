@@ -152,6 +152,10 @@ function bindIssue64Menus(model=getProductionModel()) {
       const items = signal?.type === 'commentRow' ? [['edit-comment', '編集'], ['duplicate-comment', '複製'], ['delete', '削除'], ['up', '上へ移動'], ['down', '下へ移動'], ['visible', '表示 / 非表示']] : [['rename', '名前を変更'], ['duplicate', '複製'], ['delete', '削除'], ['up', '上へ移動'], ['down', '下へ移動'], ['visible', '表示 / 非表示'], ['role-input', 'Role: Input'], ['role-output', 'Role: Output'], ['role-internal', 'Role: Internal'], ['inspector', 'Inspectorを開く']];
       show(items, event.clientX, event.clientY, { signalId: row.dataset.signal, groupId: row.closest('.group')?.dataset.groupId });
     });
+    more.closest('.row')?.addEventListener('click', () => {
+      const groupId = more.closest('.group')?.dataset.groupId;
+      if (groupId && model.document.signalGroups.some(group => group.id === groupId)) model.view.currentGroupId = groupId;
+    });
   });
   $$('#groups .group-h').forEach(header => {
     const button = header.lastElementChild;
@@ -160,6 +164,7 @@ function bindIssue64Menus(model=getProductionModel()) {
     button.addEventListener('click', event => {
       event.preventDefault(); event.stopPropagation();
       const groupId = header.closest('.group')?.dataset.groupId;
+      if (groupId && model.document.signalGroups.some(group => group.id === groupId)) model.view.currentGroupId = groupId;
       show([['rename-group', '名前を変更'], ['collapse-group', 'グループを折りたたむ / 展開'], ['up-group', '上へ移動'], ['down-group', '下へ移動'], ['add-signal', 'Signalを追加'], ['add-comment', 'Comment Rowを追加'], ['add-spacer', 'Spacerを追加'], ['group-appearance', 'Group Band / 背景設定'], ['group-spacing', 'グループ間隔設定'], ['delete-group', 'グループ削除']], event.clientX, event.clientY, { groupId });
     });
   });

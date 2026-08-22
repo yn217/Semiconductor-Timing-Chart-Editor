@@ -1,0 +1,56 @@
+{
+  "issue": 81,
+  "checks": {
+    "binaryExactGroup": true,
+    "binarySelection": true,
+    "oneHistoryEntry": true,
+    "commentExactGroup": true,
+    "spacerExactGroup": true,
+    "reorderStillTargetsOwner": true,
+    "openRepairsStaleGroup": true
+  },
+  "details": {
+    "setup": {
+      "groupA": "group_input",
+      "groupB": "group_internal"
+    },
+    "binaryCheck": {
+      "exactGroup": true,
+      "selected": true,
+      "history": true
+    },
+    "currentGroupBeforeSpacer": "group_internal",
+    "spacerState": {
+      "pass": true,
+      "current": "group_internal",
+      "groupSpacers": [
+        {
+          "id": "group_internal",
+          "count": 1
+        },
+        {
+          "id": "group_input",
+          "count": 0
+        },
+        {
+          "id": "group_output",
+          "count": 0
+        }
+      ]
+    },
+    "replacement": {
+      "opened": true,
+      "lastError": null,
+      "staleCurrentGroup": "group_internal",
+      "groupIds": [
+        "fresh_group"
+      ]
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue81-1672x941.png",
+    "issue81-1280x720.png"
+  ]
+}

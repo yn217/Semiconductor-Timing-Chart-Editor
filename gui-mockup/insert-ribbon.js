@@ -23,7 +23,16 @@
   };
   const closeMenus = () => document.querySelectorAll('[data-insert-menu]').forEach(node => { node.hidden = true; });
   const openMenu = (node, anchor) => { closeMenus(); const rect = anchor.getBoundingClientRect(); node.style.left = `${rect.left}px`; node.style.top = `${rect.bottom + 3}px`; node.hidden = false; };
-  const groupId = () => controller.model.document.signalGroups[0]?.id;
+  const groupId = () => {
+    const groups = controller.model.document.signalGroups || [];
+    const selection = controller.model.selection || {};
+    const selectedGroup = groups.find(group => group.id === selection.id);
+    if (selection.kind === 'group' && selectedGroup) return selectedGroup.id;
+    const currentGroup = groups.find(group => group.id === controller.model.view.currentGroupId);
+    if (currentGroup) return currentGroup.id;
+    const owningGroup = groups.find(group => (group.rows || []).includes(selection.id) || (group.spacers || []).some(spacer => spacer.id === selection.id));
+    return owningGroup?.id || groups[0]?.id;
+  };
   const addSignal = type => controller.actions.addSignal({ type, name: `${type}_${Date.now()}`, role: 'internal' }, groupId());
   const dependencyPoint = anchorType => {
     if (anchorType === 'rising-edge' || anchorType === 'rising-transition-center') return 'rising';
