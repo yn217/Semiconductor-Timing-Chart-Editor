@@ -56,7 +56,7 @@
     </div>
     <div class="rg view">
       <button class="ib"><svg><use href="icons.svg#view"/></svg><span>ビューモード</span></button>
-      <select id="viewMode" aria-label="View mode"><option value="cycle">Cycle</option><option value="transaction">Transaction</option><option value="split">Split</option></select>
+      <div id="viewMode" class="view-mode-segmented" aria-label="View mode"><button type="button" data-mode="cycle" class="active">Cycle</button><button type="button" data-mode="transaction">Transaction</button><button type="button" data-mode="split">Split</button></div>
       <b>表示</b>
     </div>
     <div class="rg display">
@@ -87,14 +87,15 @@
   </section>
   <section class="workspace">
     <aside class="left signal-tree" data-testid="signal-tree">
-      <header>信号 / グループ <button id="collapseGroups">•••</button></header>
-      <div class="search">⌕ <input placeholder="信号を検索..." aria-label="信号を検索"> ⏷</div>
+      <header>信号 / グループ <span></span><button class="addbtn" id="leftAdd"><svg><use href="icons.svg#plus"/></svg>追加</button><button class="iconbtn" id="collapseGroups"><svg><use href="icons.svg#more"/></svg></button></header>
+      <div class="search"><input placeholder="信号・コメントを検索..." aria-label="信号を検索"><button class="iconbtn" aria-label="Filter"><svg><use href="icons.svg#filter"/></svg></button></div>
       <div id="treeContent"></div><button class="add" id="addGroupFooter">＋ グループを追加</button>
     </aside>
     <section class="center center-column">
       <section class="wave canvas-pane"><div class="wave-label">時間 (cycle)</div><div class="canvas-scroll"><div id="waveformCanvas" class="waveform-canvas" data-testid="waveform-canvas"></div></div><div id="legend" class="legend" data-testid="legend"></div></section>
       <section class="bottom">
-        <nav aria-label="Bottom editor"><button data-tab="signal">Signal</button><button data-tab="annotation">Annotation</button><button data-tab="problems">Problems <span id="problemCount"></span></button><button data-tab="json">JSON</button><button data-tab="transaction">Transaction</button><span></span><label><input id="followSelection" type="checkbox" checked> Follow Selection</label><button id="pinSelection">Pin</button></nav>
+        <nav class="tabs" aria-label="Bottom editor"><button data-tab="signal">Signal</button><button data-tab="annotation">Annotation</button><button data-tab="problems">Problems <span id="problemCount"></span></button><button data-tab="json">JSON</button><button class="transaction-tab hidden" data-tab="transaction">Transaction</button><span></span><label><input id="followSelection" type="checkbox" checked> Follow Selection</label><button id="pinSelection">Pin</button></nav>
+        <div class="jsonbar"><strong>Production Editor</strong><small>Semantic model · WaveDrom/default skin</small><span></span><button data-action="json-edit">Edit</button><button data-action="validate-json">Validate</button></div>
         <div id="bottomContent" class="bottom-content"></div>
       </section>
     </section>
@@ -104,6 +105,6 @@
   </section>
   <footer class="status"><span id="statusText">Ready</span><span>Semantic model · WaveDrom/default skin · SVG geometry</span></footer>
 </main>
-<script src="vendor/wavedrom.min.js"></script><script src="vendor/waveskin-default.js"></script><script src="geometry.js"></script><script src="wavedrom-adapter.js"></script><script src="app.js"></script><script src="ui-golden-v3.js"></script>
+<script src="vendor/wavedrom.min.js"></script><script src="vendor/waveskin-default.js"></script><script src="geometry.js"></script><script src="wavedrom-adapter.js"></script><script src="app.js"></script>
 </body>
 </html>

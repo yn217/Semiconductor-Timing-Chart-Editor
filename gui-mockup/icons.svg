@@ -16,4 +16,8 @@
 <symbol id="view" viewBox="0 0 24 24"><g class="s"><rect x="5" y="4" width="14" height="16" rx="1"/><path d="M12 4v16"/></g></symbol>
 <symbol id="align" viewBox="0 0 24 24"><g class="s"><path d="M6 5h12M8 9h8M5 13h14M9 17h6"/></g></symbol>
 <symbol id="ai" viewBox="0 0 24 24"><g class="s"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/></g></symbol>
+<symbol id="plus" viewBox="0 0 24 24"><g class="s"><path d="M12 5v14M5 12h14"/></g></symbol>
+<symbol id="more" viewBox="0 0 24 24"><g class="s"><circle cx="6" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="18" cy="12" r="1"/></g></symbol>
+<symbol id="filter" viewBox="0 0 24 24"><g class="s"><path d="M4 6h16l-6 7v5l-4 2v-7z"/></g></symbol>
+<symbol id="eye" viewBox="0 0 24 24"><g class="s"><path d="M3 12s3-5 9-5 9 5 9 5-3 5-9 5-9-5-9-5z"/><circle cx="12" cy="12" r="2"/></g></symbol>
 </defs></svg>
