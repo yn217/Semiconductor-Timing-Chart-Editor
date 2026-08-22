@@ -79,6 +79,14 @@ try {
   await (await chooser).setFiles({ name: 'clk.clock.json', mimeType: 'application/json', buffer: Buffer.from(clockExport) });
   await page.waitForTimeout(35);
   assert.ok(await page.evaluate(() => Boolean(window.TimingChartProductionController.getClockConfig('clk'))));
+  await page.locator('#bottomTabs [data-tab="json"]').click();
+  await page.waitForTimeout(35);
+  const importedText = await page.evaluate(() => { const documentValue = structuredClone(window.TimingChartProductionController.getSerializableDocument()); documentValue.document.title = 'Issue65 imported through UI'; return JSON.stringify(documentValue); });
+  const jsonChooser = page.waitForEvent('filechooser');
+  await page.locator('#bottomContent [data-json-action="import"]').click();
+  await (await jsonChooser).setFiles({ name: 'issue65-imported.tcd.json', mimeType: 'application/json', buffer: Buffer.from(importedText) });
+  await page.waitForTimeout(45);
+  assert.equal(await page.evaluate(() => window.TimingChartProductionController.model.document.document.title), 'Issue65 imported through UI');
   await page.screenshot({ path: `${root}/issue65-1672x941.png` });
   await browser.close();
   const report = { issue: 65, ...result, clockImportExport: true, pass: result.pass, knownIncomplete: ['JSON browser file-import E2E', 'full APB/AHB/AXI/CDC matrix'] };
