@@ -42,8 +42,7 @@
   };
 
   timingPane.addEventListener('scroll', () => {
-    window.TimingChartProductionTimeAxis?.renderTransient?.(window.TimingChartProductionController?.model);
-    window.TimingChartProductionAnnotations?.render?.(window.TimingChartProductionController?.model);
+    window.TimingChartProductionTimeAxis?.renderScrollTransient?.(window.TimingChartProductionController?.model);
     window.TimingChartProductionController?.scheduleTimedBandLabels?.();
   }, { passive: true });
 

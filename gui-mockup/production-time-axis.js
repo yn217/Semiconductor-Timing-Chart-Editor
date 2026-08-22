@@ -3,6 +3,7 @@
   const controller = window.TimingChartProductionController;
   if (!controller) return;
   const model = controller.model;
+  const metrics = controller.timeAxisMetrics = controller.timeAxisMetrics || { scrollEvents: 0, rulerRebuilds: 0, edgeCounterRebuilds: 0, annotationFullRenders: 0, transientFrames: 0, waveDromRenders: 0 };
   const clone = value => structuredClone(value);
   const eventSignals = documentValue => documentValue.signals.filter(signal => signal.type !== 'clock' && signal.type !== 'commentRow');
   const valueAt = (values, time) => [...values].sort((a, b) => a.start - b.start).filter(value => Number(value.start) <= time).at(-1);
@@ -117,6 +118,7 @@
   };
 
   const renderEdgeCounters = currentModel => {
+    metrics.edgeCounterRebuilds += 1;
     const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || canvas;
     scrollHost.querySelectorAll('[data-edge-counter]').forEach(node => node.remove());
@@ -147,6 +149,8 @@
   };
 
   const renderTransient = currentModel => {
+    metrics.transientFrames += 1;
+    metrics.rulerRebuilds += 1;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
     const timeline = currentModel.document.timeline;
     const ruler = document.querySelector('#cycleCanvas .ruler');
@@ -185,8 +189,28 @@
     renderEdgeCounters(currentModel);
   };
   controller.renderTransient = renderTransient;
-  window.TimingChartProductionTimeAxis = { renderTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
-  window.addEventListener('resize', () => renderTransient(model));
+  let transientFrame = 0;
+  let pendingTransientModel = model;
+  const scheduleTransientLayout = currentModel => {
+    pendingTransientModel = currentModel || model;
+    if (transientFrame) return;
+    transientFrame = requestAnimationFrame(() => { transientFrame = 0; renderTransient(pendingTransientModel); });
+  };
+  controller.scheduleTransientLayout = scheduleTransientLayout;
+  const renderScrollTransient = currentModel => {
+    metrics.scrollEvents += 1;
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+    const playhead = document.querySelector('#cycleCanvas .playhead');
+    const referenceClock = controller.selectors.getReferenceClock();
+    const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
+    if (playhead && boundary && scrollHost) {
+      const rect = scrollHost.getBoundingClientRect();
+      playhead.style.left = `${boundary.canvasX - rect.left + scrollHost.scrollLeft}px`;
+    }
+  };
+  controller.renderScrollTransient = renderScrollTransient;
+  window.TimingChartProductionTimeAxis = { renderTransient: scheduleTransientLayout, renderNow: renderTransient, renderScrollTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
+  window.addEventListener('resize', () => scheduleTransientLayout(model));
   const cycleCanvas = document.querySelector('#cycleCanvas');
   cycleCanvas?.addEventListener('click', event => {
     if (event.button !== 0 || event.defaultPrevented) return;
@@ -195,8 +219,8 @@
     if (!target.closest('.wave, .wave-row, .trace')) return;
     controller.actions.selectTimeAtCanvasX(event.clientX, { shiftKey: event.shiftKey });
   });
-  (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderTransient(model));
-  if (cycleCanvas && window.ResizeObserver) new ResizeObserver(() => renderTransient(model)).observe(cycleCanvas);
+  (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderScrollTransient(model), { passive: true });
+  if (cycleCanvas && window.ResizeObserver) new ResizeObserver(() => scheduleTransientLayout(model)).observe(cycleCanvas);
 
   const tool = text => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(text));
   const promptCycle = (message, fallback) => Number(window.prompt(message, String(fallback)));

@@ -67,6 +67,7 @@
     if (annotation.label) { const labelElement = label((annotation.type === 'callout' ? a.x + 26 : a.x + 8) + Number(annotation.labelOffset?.x || 0), (annotation.type === 'callout' ? a.y - 18 : a.y - 8) + Number(annotation.labelOffset?.y || 0), annotation.label); selectable(labelElement, 'label'); overlay.appendChild(labelElement); }
   };
   const render = currentModel => {
+    if (controller.timeAxisMetrics) controller.timeAxisMetrics.annotationFullRenders += 1;
     let overlay = document.querySelector('#cycleCanvas svg[data-production-overlay="annotations"]');
     const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;
     const overlayHost = window.TimingChartTimingViewport?.getScrollHost?.() || canvas;

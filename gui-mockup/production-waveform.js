@@ -31,6 +31,8 @@
       waveJson.signal[0].polarity = signal.generator?.polarity || 'positive';
     }
     window.WaveDrom.RenderWaveForm(index, waveJson, mountPrefix, false);
+    const axisMetrics = window.TimingChartProductionController?.timeAxisMetrics;
+    if (axisMetrics) axisMetrics.waveDromRenders += 1;
     const svg = host.querySelector('svg');
     if (!svg) throw new Error(`WaveDrom SVG was not mounted for ${signal.id}`);
 
