@@ -1,0 +1,37 @@
+{
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "productionDom": {
+    "wavedromTraceCount": 7,
+    "staticMockTraceCount": 0,
+    "customSignalTraceCount": 0
+  },
+  "guiLockRegression": {
+    "changedPixels": 0,
+    "totalPixels": 1573352,
+    "diffPercent": 0,
+    "bbox": null,
+    "threshold": 0,
+    "pass": true
+  },
+  "cycleAlignmentPx": 0,
+  "geometryMap": {
+    "signals": 7,
+    "anchors": {
+      "reqRise": {
+        "x": 492,
+        "y": 0
+      },
+      "reqFall": {
+        "x": 1148,
+        "y": 0
+      },
+      "busTransition": {
+        "x": 328,
+        "y": 0
+      }
+    }
+  }
+}

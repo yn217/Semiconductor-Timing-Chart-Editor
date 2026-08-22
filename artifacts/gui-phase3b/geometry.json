@@ -1,0 +1,344 @@
+{
+  "geometry": {
+    "cycleCount": 10,
+    "signals": {
+      "clk": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transition": [],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "req_valid": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [
+          {
+            "cycle": 3,
+            "x": 492,
+            "edge": "rising"
+          }
+        ],
+        "fallingEdge": [
+          {
+            "cycle": 7,
+            "x": 1148,
+            "edge": "falling"
+          }
+        ],
+        "transition": [
+          {
+            "cycle": 3,
+            "x": 492,
+            "edge": "rising"
+          },
+          {
+            "cycle": 7,
+            "x": 1148,
+            "edge": "falling"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "req_addr[7:0]": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transition": [
+          {
+            "cycle": 2,
+            "x": 328,
+            "edge": "transition"
+          },
+          {
+            "cycle": 4,
+            "x": 656,
+            "edge": "transition"
+          },
+          {
+            "cycle": 6,
+            "x": 984,
+            "edge": "transition"
+          },
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "transition"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "busy": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [
+          {
+            "cycle": 2,
+            "x": 328,
+            "edge": "rising"
+          }
+        ],
+        "fallingEdge": [
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "falling"
+          }
+        ],
+        "transition": [
+          {
+            "cycle": 2,
+            "x": 328,
+            "edge": "rising"
+          },
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "falling"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "state[1:0]": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transition": [
+          {
+            "cycle": 2,
+            "x": 328,
+            "edge": "transition"
+          },
+          {
+            "cycle": 4,
+            "x": 656,
+            "edge": "transition"
+          },
+          {
+            "cycle": 6,
+            "x": 984,
+            "edge": "transition"
+          },
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "transition"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "ready": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "rising"
+          }
+        ],
+        "fallingEdge": [
+          {
+            "cycle": 9,
+            "x": 1476,
+            "edge": "falling"
+          }
+        ],
+        "transition": [
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "rising"
+          },
+          {
+            "cycle": 9,
+            "x": 1476,
+            "edge": "falling"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "rdata[15:0]": {
+        "cycleBoundary": [
+          0,
+          164,
+          328,
+          492,
+          656,
+          820,
+          984,
+          1148,
+          1312,
+          1476,
+          1640
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transition": [
+          {
+            "cycle": 3,
+            "x": 492,
+            "edge": "transition"
+          },
+          {
+            "cycle": 6,
+            "x": 984,
+            "edge": "transition"
+          },
+          {
+            "cycle": 8,
+            "x": 1312,
+            "edge": "transition"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      }
+    },
+    "cycleBoundary": [
+      0,
+      164,
+      328,
+      492,
+      656,
+      820,
+      984,
+      1148,
+      1312,
+      1476,
+      1640
+    ]
+  },
+  "anchors": {
+    "reqRise": {
+      "x": 492,
+      "y": 0
+    },
+    "reqFall": {
+      "x": 1148,
+      "y": 0
+    },
+    "busTransition": {
+      "x": 328,
+      "y": 0
+    }
+  },
+  "masks": [
+    {
+      "left": 513,
+      "top": 293,
+      "right": 2161,
+      "bottom": 330
+    },
+    {
+      "left": 513,
+      "top": 328,
+      "right": 2161,
+      "bottom": 365
+    },
+    {
+      "left": 513,
+      "top": 363,
+      "right": 2161,
+      "bottom": 400
+    },
+    {
+      "left": 513,
+      "top": 433,
+      "right": 2161,
+      "bottom": 470
+    },
+    {
+      "left": 513,
+      "top": 468,
+      "right": 2161,
+      "bottom": 505
+    },
+    {
+      "left": 513,
+      "top": 538,
+      "right": 2161,
+      "bottom": 575
+    },
+    {
+      "left": 513,
+      "top": 573,
+      "right": 2161,
+      "bottom": 610
+    }
+  ],
+  "guiLockDiff": {
+    "changedPixels": 0,
+    "totalPixels": 1573352,
+    "diffPercent": 0,
+    "bbox": null
+  }
+}

@@ -4,7 +4,18 @@
   // Phase 3A.1: the only UI state. app-ui.js is a renderer and owns no state or
   // Phase 3A event handlers.
   const model = {
-    document: { id: 'example.tcd', timeBase: 'cycle', referenceClock: 'clk' },
+    document: {
+      id: 'example.tcd', cycleCount: 10, timeBase: 'cycle', referenceClock: 'clk', edge: 'rising',
+      signals: [
+        { id: 'clk', name: 'clk', type: 'clock', role: 'input', polarity: 'positive', period: 1, phase: 0 },
+        { id: 'req_valid', name: 'req_valid', type: 'binary', role: 'input', values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }] },
+        { id: 'req_addr[7:0]', name: 'req_addr[7:0]', type: 'bus', role: 'input', values: [{ start: 0, value: '00' }, { start: 2, value: '12' }, { start: 4, value: '34' }, { start: 6, value: '56' }, { start: 8, value: '78' }] },
+        { id: 'busy', name: 'busy', type: 'binary', role: 'internal', values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 8, value: 0 }] },
+        { id: 'state[1:0]', name: 'state[1:0]', type: 'state', role: 'internal', values: [{ start: 0, value: 'IDLE' }, { start: 2, value: 'REQ' }, { start: 4, value: 'WAIT' }, { start: 6, value: 'EXEC' }, { start: 8, value: 'DONE' }] },
+        { id: 'ready', name: 'ready', type: 'binary', role: 'output', values: [{ start: 0, value: 0 }, { start: 8, value: 1 }, { start: 9, value: 0 }] },
+        { id: 'rdata[15:0]', name: 'rdata[15:0]', type: 'bus', role: 'output', values: [{ start: 0, value: 'XXXX' }, { start: 3, value: '0000' }, { start: 6, value: '5678' }, { start: 8, value: 'ABCD' }] }
+      ]
+    },
     selection: { kind: 'signal', id: 'req_valid' },
     view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false }
   };
@@ -35,6 +46,7 @@
     renderTab();
     renderSelection();
     window.TimingChartGoldenRenderer?.render(model);
+    window.TimingChartProductionWaveform?.render(model);
   };
 
   controller.actions.setViewMode = nextMode => {
