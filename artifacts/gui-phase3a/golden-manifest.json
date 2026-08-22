@@ -1,0 +1,16 @@
+{
+  "phase": "3A",
+  "source": "references/gui-replacement-pack",
+  "files": {
+    "references/gui-replacement-pack/production/index.html": "5ca899f184e772c10ae32a035e02e532118bcc9ad7be186ce592ceece889f9cd",
+    "references/gui-replacement-pack/production/styles.css": "8f0c1897d4d6870db50733da52ff467d9b36bb4e4e60f13657c9628e86eb1a86",
+    "references/gui-replacement-pack/production/icons.svg": "b149b28838237e85e2242b81545cd948d6e0fa7768077ed37adb60a7ed33b5d8",
+    "references/gui-replacement-pack/production/app-ui.js": "df294aea1891f02cd38574a258d16e73c790bb744c45220e57b5b8a79ed67cf0",
+    "references/gui-replacement-pack/00_overall_cycle_view.png": "56fa56570019da504ef9ddebea54dc1c28dbc8b88f0e0324344fad44cdd70c49",
+    "references/gui-replacement-pack/01_left_panel_LOCKED.png": "65fa1c92a13da4e3837ab09c1f89fde8f7a5562d1489efbcafea45bf50823f37",
+    "references/gui-replacement-pack/02_bottom_signal_LOCKED.png": "34b7a63d9157f41bf1ffa46da38f6329bccf45734cdc5bc6878dbfce778c8413",
+    "references/gui-replacement-pack/03_bottom_annotation_LOCKED.png": "be2a05e1b4dde6269d2d18042702a8794adccc0116f136f840048f4ab0325ed4",
+    "references/gui-replacement-pack/04_bottom_problems_LOCKED.png": "f0754de7bbaf53bdf8ffe8ce57d1f9cc2e99b402c50887b24e02ab58ebf0f35e",
+    "references/gui-replacement-pack/05_bottom_json_LOCKED.png": "a00d91f6547db3c2b2edea208f9d34a97c99405ff9545056464357bde68fa275"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "document": {
+    "id": "example.tcd",
+    "timeBase": "cycle",
+    "referenceClock": "clk"
+  },
+  "selection": {
+    "kind": "signal",
+    "id": "req_valid"
+  },
+  "view": {
+    "mode": "cycle",
+    "tab": "annotation",
+    "followSelection": false,
+    "pinned": true
+  }
+}
