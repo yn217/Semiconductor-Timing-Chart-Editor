@@ -1,0 +1,24 @@
+{
+  "issue": 41,
+  "results": [
+    {
+      "viewport": {},
+      "zoomRenders": 0,
+      "selected": "clk",
+      "pass": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {},
+      "zoomRenders": 0,
+      "selected": "clk",
+      "pass": true,
+      "pageErrors": []
+    }
+  ],
+  "stylesModified": false,
+  "iconsModified": false,
+  "goldenReferenceModified": false,
+  "canonicalViewOnly": true,
+  "pass": true
+}
