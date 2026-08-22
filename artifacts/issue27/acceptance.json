@@ -1,0 +1,136 @@
+{
+  "issue": 27,
+  "geometrySource": "WaveDrom actual SVG",
+  "maxErrorPx": 0.1,
+  "fixedOriginOffset": false,
+  "goldenReferenceModified": false,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "initial": {
+        "boundary": {
+          "x": 537.5,
+          "source": "wavedrom-svg"
+        },
+        "rows": [
+          {
+            "title": "Address phase",
+            "left": 537.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Processing note",
+            "left": 537.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Read latency",
+            "left": 537.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          }
+        ],
+        "scrollLeft": 0
+      },
+      "scrolled": {
+        "boundary": {
+          "x": 357.5,
+          "source": "wavedrom-svg"
+        },
+        "rows": [
+          {
+            "title": "Address phase",
+            "left": 357.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Processing note",
+            "left": 357.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Read latency",
+            "left": 357.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          }
+        ],
+        "scrollLeft": 180
+      },
+      "traceGeometryUnchanged": true,
+      "canonicalUnchanged": true,
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "initial": {
+        "boundary": {
+          "x": 470.5,
+          "source": "wavedrom-svg"
+        },
+        "rows": [
+          {
+            "title": "Address phase",
+            "left": 470.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Processing note",
+            "left": 470.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Read latency",
+            "left": 470.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          }
+        ],
+        "scrollLeft": 0
+      },
+      "scrolled": {
+        "boundary": {
+          "x": 290.5,
+          "source": "wavedrom-svg"
+        },
+        "rows": [
+          {
+            "title": "Address phase",
+            "left": 290.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Processing note",
+            "left": 290.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          },
+          {
+            "title": "Read latency",
+            "left": 290.5,
+            "errorPx": 0,
+            "source": "wavedrom-svg"
+          }
+        ],
+        "scrollLeft": 180
+      },
+      "traceGeometryUnchanged": true,
+      "canonicalUnchanged": true,
+      "pass": true
+    }
+  ],
+  "pass": true
+}

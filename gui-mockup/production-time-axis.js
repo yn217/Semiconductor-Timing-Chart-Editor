@@ -100,6 +100,21 @@
       edges.forEach((edge, index) => { if (index % every) return; const label = document.createElement('span'); label.dataset.edgeCounter = signal.id; label.textContent = String(startNumber + index); label.style.cssText = `position:absolute;left:${edge.canvasX - canvasRect.left + Number(counter.offset?.x || 0)}px;top:${edge.canvasY - canvasRect.top + Number(counter.offset?.y || (counter.position === 'below' ? 8 : -8))}px;z-index:5;color:#52647a;font:11px sans-serif;pointer-events:none;`; label.title = `${signal.id} ${edge.edge} edge ${startNumber + index}`; canvas.appendChild(label); });
     }
   };
+  const alignCommentRowsToCycleZero = currentModel => {
+    const canvas = document.querySelector('#cycleCanvas');
+    const referenceClock = controller.selectors.getReferenceClock();
+    const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: 0, coordinateSpace: 'canvas' });
+    if (!canvas || !boundary || boundary.source !== 'wavedrom-svg') return;
+    canvas.querySelectorAll('.wave-row').forEach(row => {
+      if (row.querySelector('.trace')) return;
+      const band = row.querySelector('.comment-body, .latency');
+      if (!band) return;
+      const delta = boundary.canvasX - band.getBoundingClientRect().left;
+      band.style.transform = `translateX(${delta}px)`;
+      band.dataset.cycle0Aligned = 'wavedrom-svg';
+      band.dataset.cycle0ErrorPx = String(Math.abs(delta));
+    });
+  };
 
   const renderTransient = currentModel => {
     const timeline = currentModel.document.timeline;
@@ -129,6 +144,8 @@
     const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
     const canvas = document.querySelector('#cycleCanvas');
     if (playhead && boundary && canvas) { const rect = canvas.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + canvas.scrollLeft}px`; }
+    alignCommentRowsToCycleZero(currentModel);
+    if (window.requestAnimationFrame) window.requestAnimationFrame(() => alignCommentRowsToCycleZero(currentModel));
     renderEdgeCounters(currentModel);
   };
   controller.renderTransient = renderTransient;
