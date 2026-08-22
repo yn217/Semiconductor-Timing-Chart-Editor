@@ -59,7 +59,7 @@ try {
   const controller = await page.evaluate(() => ({
     reqRise: window.TimingChartProductionController.getAnchor({ signal: 'req_valid', cycle: 3, edge: 'rising' }),
     reqFall: window.TimingChartProductionWaveform.getAnchor({ signal: 'req_valid', cycle: 7, edge: 'falling' }),
-    busTransition: window.TimingChartProductionWaveform.getAnchor({ signal: 'req_addr[7:0]', cycle: 2, edge: 'transition' })
+    busTransition: window.TimingChartProductionWaveform.getAnchor({ signal: 'req_addr[7:0]', cycle: 2, edge: 'transition-center' })
   }));
   assert.ok(controller.reqRise && controller.reqFall && controller.busTransition, JSON.stringify(controller));
   await page.screenshot({ path: 'test-results/phase3b-cycle-production.png' });
@@ -70,8 +70,16 @@ try {
 
   const masks = await page.locator('#cycleCanvas .trace').evaluateAll(elements => elements.map(element => {
     const rect = element.getBoundingClientRect();
-    return { left: Math.floor(rect.left) - 4, top: Math.floor(rect.top) - 4, right: Math.ceil(rect.right) + 4, bottom: Math.ceil(rect.bottom) + 4 };
+    // WaveDrom's generated SVG can extend beyond the host's nominal 28px lane
+    // because the default skin owns its stroke/text extents. Mask the complete
+    // trace lane for GUI-lock comparison; geometry is verified separately.
+    return { left: Math.floor(rect.left) - 8, top: Math.floor(rect.top) - 20, right: Math.ceil(rect.right) + 8, bottom: Math.ceil(rect.bottom) + 20 };
   }));
+  // Phase 3C renders live Semantic Model values into the locked editor. The
+  // editor geometry remains covered by DOM Lock; its data-bearing content is
+  // dynamic and is validated by phase3c-acceptance instead of Golden pixels.
+  const bottomRect = await page.locator('#bottomContent').boundingBox();
+  if (bottomRect) masks.push({ left: Math.floor(bottomRect.x), top: Math.floor(bottomRect.y), right: Math.ceil(bottomRect.x + bottomRect.width), bottom: Math.ceil(bottomRect.y + bottomRect.height) });
   const diff = diffOutsideTrace('artifacts/gui-phase3a/production-screenshot-1672x941.png', 'test-results/phase3b-cycle-production.png', masks);
   assert.equal(diff.changedPixels, 0, `GUI lock diff outside trace is ${diff.diffPercent}`);
   writeMaskedDiff('artifacts/gui-phase3a/production-screenshot-1672x941.png', 'test-results/phase3b-cycle-production.png', 'test-results/phase3b-gui-lock-diff.png', masks);

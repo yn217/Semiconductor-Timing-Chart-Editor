@@ -142,6 +142,8 @@
         entry.transitionCenter.push(center);
         entry.transitionEnd.push(end);
         entry.transition.push(center);
+        if (href === '#0m1') entry.risingEdge.push({ ...center, anchorType: 'rising-transition-center' });
+        if (href === '#1m0') entry.fallingEdge.push({ ...center, anchorType: 'falling-transition-center' });
       });
       geometry.signals[signal.id] = entry;
     }
@@ -179,7 +181,7 @@
     },
     getAnchor({ signal, cycle, edge, coordinateSpace = 'local' }) {
       const geometry = window.TimingChartProductionController?.model?.waveGeometry?.signals?.[signal];
-      const list = edge === 'rising' ? (geometry?.risingEdge?.length ? geometry.risingEdge : geometry?.transitionCenter) : edge === 'falling' ? (geometry?.fallingEdge?.length ? geometry.fallingEdge : geometry?.transitionCenter) : edge === 'transition-start' ? geometry?.transitionStart : edge === 'transition-end' ? geometry?.transitionEnd : geometry?.transitionCenter;
+      const list = edge === 'rising' ? geometry?.risingEdge : edge === 'falling' ? geometry?.fallingEdge : edge === 'transition-start' ? geometry?.transitionStart : edge === 'transition-end' ? geometry?.transitionEnd : edge === 'transition-center' ? geometry?.transitionCenter : undefined;
       const match = list?.find(item => item.cycle === cycle);
       if (!match) return undefined;
       return { ...match, x: coordinateSpace === 'canvas' ? match.canvasX : match.localX, y: coordinateSpace === 'canvas' ? match.canvasY : match.localY };

@@ -1,0 +1,48 @@
+{
+  "cases": {
+    "case1": "PASS",
+    "case2": "PASS",
+    "case3": "PASS",
+    "case4": "PASS",
+    "case5": "PASS",
+    "case6": "PASS",
+    "case7": "PASS",
+    "case8": "PASS",
+    "case9": "PASS",
+    "case10": "PASS"
+  },
+  "geometry": {
+    "afterStartEdit": {
+      "x": 666.5218191146851,
+      "y": 15.427270889282227,
+      "localX": 666.5218191146851,
+      "localY": 15.427270889282227,
+      "canvasX": 1183.521819114685,
+      "canvasY": 347.9272708892822,
+      "source": "wavedrom-svg",
+      "signal": "req_valid",
+      "cycle": 4,
+      "phase": 0,
+      "anchorType": "transition-center"
+    },
+    "strict": {
+      "rising": true,
+      "falling": true,
+      "wrongDirection": true
+    }
+  },
+  "validation": {
+    "duplicateStart": {
+      "field": "start",
+      "code": "duplicate-start"
+    },
+    "duty": {
+      "field": "duty",
+      "code": "unsupported-duty",
+      "message": "WaveDrom標準では任意Dutyは未対応です"
+    }
+  },
+  "staticTraceCount": 0,
+  "customTraceCount": 0,
+  "pass": true
+}
