@@ -1,0 +1,34 @@
+{
+  "issue": 39,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "mode": "cycle",
+      "commandCount": 14,
+      "signals": 15,
+      "annotations": 13,
+      "history": 17,
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "mode": "cycle",
+      "commandCount": 14,
+      "signals": 15,
+      "annotations": 13,
+      "history": 17,
+      "pass": true
+    }
+  ],
+  "stylesModified": false,
+  "iconsModified": false,
+  "goldenReferenceModified": false,
+  "customWaveformRenderer": false,
+  "pass": true
+}
