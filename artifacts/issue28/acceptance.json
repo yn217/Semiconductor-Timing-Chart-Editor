@@ -1,0 +1,170 @@
+{
+  "issue": 28,
+  "minBottomPx": 150,
+  "minCanvasPx": 280,
+  "viewStateOnly": true,
+  "goldenReferenceModified": false,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "initial": {
+        "center": 698,
+        "canvas": 428,
+        "bottom": 270,
+        "trace": [
+          517,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 537.5,
+        "history": 0
+      },
+      "expanded": {
+        "center": 698,
+        "canvas": 320,
+        "bottom": 418,
+        "trace": [
+          517,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 537.5,
+        "history": 0
+      },
+      "restored": {
+        "center": 698,
+        "canvas": 428,
+        "bottom": 270,
+        "trace": [
+          517,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 537.5,
+        "history": 0
+      },
+      "draggedUp": {
+        "center": 698,
+        "canvas": 348,
+        "bottom": 350,
+        "trace": [
+          517,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 537.5,
+        "history": 0
+      },
+      "bounded": {
+        "center": 698,
+        "canvas": 320,
+        "bottom": 418,
+        "trace": [
+          517,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 537.5,
+        "history": 0
+      },
+      "tabsPreserveHeight": true,
+      "semanticsUnchanged": true,
+      "noUndoEntry": true,
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "initial": {
+        "center": 619,
+        "canvas": 349,
+        "bottom": 270,
+        "trace": [
+          450,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 470.5,
+        "history": 0
+      },
+      "expanded": {
+        "center": 619,
+        "canvas": 320,
+        "bottom": 339,
+        "trace": [
+          450,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 470.5,
+        "history": 0
+      },
+      "restored": {
+        "center": 619,
+        "canvas": 349,
+        "bottom": 270,
+        "trace": [
+          450,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 470.5,
+        "history": 0
+      },
+      "draggedUp": {
+        "center": 619,
+        "canvas": 320,
+        "bottom": 339,
+        "trace": [
+          450,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 470.5,
+        "history": 0
+      },
+      "bounded": {
+        "center": 619,
+        "canvas": 320,
+        "bottom": 339,
+        "trace": [
+          450,
+          1640,
+          297.5,
+          30
+        ],
+        "boundarySource": "wavedrom-svg",
+        "boundaryX": 470.5,
+        "history": 0
+      },
+      "tabsPreserveHeight": true,
+      "semanticsUnchanged": true,
+      "noUndoEntry": true,
+      "pass": true
+    }
+  ],
+  "pass": true
+}
