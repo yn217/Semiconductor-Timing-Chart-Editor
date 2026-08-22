@@ -1,0 +1,14 @@
+.has-wavedrom .wave-svg .signal-path,
+.has-wavedrom .wave-svg .bus-path {
+  visibility: hidden;
+}
+
+.has-wavedrom .wave-svg .signal-label,
+.has-wavedrom .wave-svg .bus-value {
+  visibility: hidden;
+}
+
+#waveDromGeometry_0 {
+  z-index: 1;
+  overflow: visible;
+}

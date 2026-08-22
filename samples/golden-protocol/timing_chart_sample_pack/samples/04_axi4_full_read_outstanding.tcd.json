@@ -1,0 +1,522 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "AXI4 Full read: multiple outstanding IDs",
+    "description": "Two outstanding AXI4 read bursts with response ordering across different IDs and RREADY backpressure.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 18
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_ar",
+      "name": "AXI Read Address (AR)",
+      "signals": [
+        "aclk",
+        "aresetn",
+        "arid",
+        "araddr",
+        "arlen",
+        "arburst",
+        "arvalid",
+        "arready"
+      ],
+      "spacingAfter": 14
+    },
+    {
+      "id": "g_r",
+      "name": "AXI Read Data (R)",
+      "signals": [
+        "rid",
+        "rdata",
+        "rresp",
+        "rlast",
+        "rvalid",
+        "rready"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "aclk",
+        "name": "ACLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "aresetn",
+        "name": "ARESETn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "arid",
+        "name": "ARID",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0"
+          },
+          {
+            "start": 5,
+            "value": "1"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ],
+        "width": 4
+      },
+      {
+        "id": "araddr",
+        "name": "ARADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0x9000_0000"
+          },
+          {
+            "start": 5,
+            "value": "0x9000_1000"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "arlen",
+        "name": "ARLEN",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "1"
+          },
+          {
+            "start": 5,
+            "value": "1"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ],
+        "width": 8
+      },
+      {
+        "id": "arburst",
+        "name": "ARBURST",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "INCR"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "arvalid",
+        "name": "ARVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "arready",
+        "name": "ARREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "rid",
+        "name": "RID",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 8,
+            "value": "1"
+          },
+          {
+            "start": 10,
+            "value": "0"
+          },
+          {
+            "start": 12,
+            "value": "1"
+          },
+          {
+            "start": 13,
+            "value": "0"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ],
+        "width": 4
+      },
+      {
+        "id": "rdata",
+        "name": "RDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 8,
+            "value": "ID1_D0"
+          },
+          {
+            "start": 10,
+            "value": "ID0_D0"
+          },
+          {
+            "start": 12,
+            "value": "ID1_D1"
+          },
+          {
+            "start": 13,
+            "value": "ID0_D1"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ],
+        "width": 64
+      },
+      {
+        "id": "rresp",
+        "name": "RRESP",
+        "role": "output",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 8,
+            "value": "OKAY"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "rlast",
+        "name": "RLAST",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 12,
+            "value": 1
+          },
+          {
+            "start": 13,
+            "value": 0
+          },
+          {
+            "start": 13.5,
+            "value": 1
+          },
+          {
+            "start": 14,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rvalid",
+        "name": "RVALID",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 14,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rready",
+        "name": "RREADY",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          },
+          {
+            "start": 10,
+            "value": 1
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_axi_out",
+        "type": "range",
+        "label": "Two outstanding read transactions",
+        "start": {
+          "signal": "aclk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "aclk",
+          "cycle": 14,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -24
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "a_id1",
+        "type": "dependencyArrow",
+        "label": "AR ID=1 accepted → first R beat",
+        "from": {
+          "signal": "arid",
+          "cycle": 5,
+          "anchor": "value-start"
+        },
+        "to": {
+          "signal": "rid",
+          "cycle": 8,
+          "anchor": "value-start"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_ooo",
+        "type": "text",
+        "text": "ID=1 returns before ID=0",
+        "anchor": {
+          "signal": "rid",
+          "cycle": 8,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -12
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "m",
+        "name": "AXI4 Master"
+      },
+      {
+        "id": "s",
+        "name": "AXI4 Slave"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "r0",
+        "name": "READ ID=0, 2 beats",
+        "from": "m",
+        "to": "s",
+        "start": 4,
+        "end": 14,
+        "phases": [
+          {
+            "name": "AR",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Wait",
+            "start": 5,
+            "end": 10
+          },
+          {
+            "name": "R0",
+            "start": 10,
+            "end": 11
+          },
+          {
+            "name": "R1",
+            "start": 13,
+            "end": 14
+          }
+        ]
+      },
+      {
+        "id": "r1",
+        "name": "READ ID=1, 2 beats",
+        "from": "m",
+        "to": "s",
+        "start": 5,
+        "end": 13,
+        "phases": [
+          {
+            "name": "AR",
+            "start": 5,
+            "end": 6
+          },
+          {
+            "name": "Wait",
+            "start": 6,
+            "end": 8
+          },
+          {
+            "name": "R0",
+            "start": 8,
+            "end": 9
+          },
+          {
+            "name": "R1",
+            "start": 12,
+            "end": 13
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "multiple outstanding transactions",
+    "overlapping transaction bars",
+    "ID bus values",
+    "backpressure",
+    "fractional anchor",
+    "arrow label"
+  ]
+}

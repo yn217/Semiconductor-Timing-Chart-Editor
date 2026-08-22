@@ -1,0 +1,20 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+
+const html = fs.readFileSync('gui-mockup/index.html', 'utf8');
+const css = fs.readFileSync('gui-mockup/styles.css', 'utf8');
+const contract = fs.readFileSync('docs/GUI_VISUAL_CONTRACT.md', 'utf8');
+assert.match(contract, /1672 x 941/);
+assert.match(html, /class="menu-tabs"/);
+assert.match(html, /class="ribbon"/);
+assert.match(html, /class="center-column"/);
+assert.match(html, /class="signal-tree"/);
+assert.match(html, /class="inspector"/);
+const center = html.indexOf('class="center-column"');
+assert.ok(center > html.indexOf('class="signal-tree"'));
+assert.ok(html.indexOf('class="bottom"', center) > center);
+assert.ok(html.indexOf('class="inspector"') > html.indexOf('class="bottom"', center));
+assert.match(css, /grid-template-columns:280px minmax\(620px,1fr\) 360px/);
+assert.match(css, /\.bottom\{height:345px/);
+assert.doesNotMatch(html, /class="toolbar"/);
+console.log('GUI Visual Acceptance Contract structure passed.');

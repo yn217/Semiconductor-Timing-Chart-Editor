@@ -1,0 +1,362 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "AXI4-Stream packet with backpressure",
+    "description": "Packetized ready/valid stream with held data under backpressure, TKEEP and TLAST.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 15
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_axis",
+      "name": "AXI4-Stream",
+      "signals": [
+        "aclk",
+        "aresetn",
+        "tvalid",
+        "tready",
+        "tdata",
+        "tkeep",
+        "tlast",
+        "tuser"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "aclk",
+        "name": "ACLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "aresetn",
+        "name": "ARESETn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "tvalid",
+        "name": "TVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 11,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "tready",
+        "name": "TREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "tdata",
+        "name": "TDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "P0"
+          },
+          {
+            "start": 5,
+            "value": "P1"
+          },
+          {
+            "start": 6,
+            "value": "P2"
+          },
+          {
+            "start": 8,
+            "value": "P2"
+          },
+          {
+            "start": 9,
+            "value": "P3"
+          },
+          {
+            "start": 10,
+            "value": "P4"
+          },
+          {
+            "start": 11,
+            "value": "X"
+          }
+        ],
+        "width": 64
+      },
+      {
+        "id": "tkeep",
+        "name": "TKEEP",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "0"
+          },
+          {
+            "start": 4,
+            "value": "0xFF"
+          },
+          {
+            "start": 10,
+            "value": "0x0F"
+          },
+          {
+            "start": 11,
+            "value": "0"
+          }
+        ],
+        "width": 8
+      },
+      {
+        "id": "tlast",
+        "name": "TLAST",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 10,
+            "value": 1
+          },
+          {
+            "start": 11,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "tuser",
+        "name": "TUSER",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "0"
+          },
+          {
+            "start": 4,
+            "value": "SOP"
+          },
+          {
+            "start": 5,
+            "value": "0"
+          },
+          {
+            "start": 10,
+            "value": "EOP"
+          },
+          {
+            "start": 11,
+            "value": "0"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_axis_pkt",
+        "type": "range",
+        "label": "Packet transfer",
+        "start": {
+          "signal": "aclk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "aclk",
+          "cycle": 11,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -22
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "a_axis_bp",
+        "type": "text",
+        "text": "Backpressure: P2 held stable",
+        "anchor": {
+          "signal": "tready",
+          "cycle": 6,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -12
+        }
+      },
+      {
+        "id": "a_axis_end",
+        "type": "dependencyArrow",
+        "label": "TLAST handshake",
+        "from": {
+          "signal": "tlast",
+          "cycle": 10,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "tready",
+          "cycle": 10,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "src",
+        "name": "Stream Source"
+      },
+      {
+        "id": "sink",
+        "name": "Stream Sink"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "pkt0",
+        "name": "Packet 0 (5 beats)",
+        "from": "src",
+        "to": "sink",
+        "start": 4,
+        "end": 11,
+        "phases": [
+          {
+            "name": "Beat0",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Beat1",
+            "start": 5,
+            "end": 6
+          },
+          {
+            "name": "Backpressure / Beat2 held",
+            "start": 6,
+            "end": 8
+          },
+          {
+            "name": "Beat2",
+            "start": 8,
+            "end": 9
+          },
+          {
+            "name": "Beat3",
+            "start": 9,
+            "end": 10
+          },
+          {
+            "name": "Beat4 / TLAST",
+            "start": 10,
+            "end": 11
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "packet transaction",
+    "ready/valid stall",
+    "held bus value",
+    "TLAST arrow",
+    "range annotation",
+    "single dense group"
+  ]
+}

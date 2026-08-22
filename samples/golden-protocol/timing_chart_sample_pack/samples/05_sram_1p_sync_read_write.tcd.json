@@ -1,0 +1,305 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Single-port SRAM synchronous read/write",
+    "description": "One-port synchronous SRAM with writes and one-cycle read latency.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_sram1_ctrl",
+      "name": "SRAM 1P Control",
+      "signals": [
+        "clk",
+        "cs",
+        "we",
+        "be"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "g_sram1_data",
+      "name": "Address / Data",
+      "signals": [
+        "addr",
+        "wdata",
+        "rdata"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "cs",
+        "name": "CS",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "we",
+        "name": "WE",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          },
+          {
+            "start": 7,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "be",
+        "name": "BE",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "0"
+          },
+          {
+            "start": 3,
+            "value": "0xF"
+          },
+          {
+            "start": 9,
+            "value": "0"
+          }
+        ],
+        "width": 4
+      },
+      {
+        "id": "addr",
+        "name": "ADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 3,
+            "value": "0x10"
+          },
+          {
+            "start": 5,
+            "value": "0x11"
+          },
+          {
+            "start": 7,
+            "value": "0x12"
+          },
+          {
+            "start": 9,
+            "value": "X"
+          }
+        ],
+        "width": 8
+      },
+      {
+        "id": "wdata",
+        "name": "WDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 3,
+            "value": "0xAABBCCDD"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          },
+          {
+            "start": 7,
+            "value": "0x11223344"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "rdata",
+        "name": "RDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "0xDEADBEEF"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_sram_read",
+        "type": "dependencyArrow",
+        "label": "Read address → data (1 cycle)",
+        "from": {
+          "signal": "addr",
+          "cycle": 5,
+          "anchor": "value-start"
+        },
+        "to": {
+          "signal": "rdata",
+          "cycle": 6,
+          "anchor": "value-start"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_sram_wr",
+        "type": "text",
+        "text": "Synchronous write",
+        "anchor": {
+          "signal": "we",
+          "cycle": 3,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -12
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "client",
+        "name": "Client"
+      },
+      {
+        "id": "mem",
+        "name": "SRAM 1P"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "w1",
+        "name": "WRITE [0x10]",
+        "from": "client",
+        "to": "mem",
+        "start": 3,
+        "end": 4
+      },
+      {
+        "id": "r1",
+        "name": "READ [0x11]",
+        "from": "client",
+        "to": "mem",
+        "start": 5,
+        "end": 7
+      },
+      {
+        "id": "w2",
+        "name": "WRITE [0x12]",
+        "from": "client",
+        "to": "mem",
+        "start": 7,
+        "end": 8
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "simple memory waveform",
+    "read-latency arrow",
+    "bus labels",
+    "compact signal group"
+  ]
+}

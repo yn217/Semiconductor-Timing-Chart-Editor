@@ -1,0 +1,253 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 15 - Transition arrows and exact anchors",
+    "description": "Covers straight/orthogonal/curved/diagonal dependency arrows, arrowhead modes, clock/signal transition anchors and independent endpoint offsets.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g",
+      "name": "Signals",
+      "signals": [
+        "clk",
+        "a",
+        "b",
+        "c"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "a",
+        "name": "a",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          },
+          {
+            "start": 4,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "b",
+        "name": "b",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 5,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "c",
+        "name": "c",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "e1",
+        "type": "dependencyArrow",
+        "label": "straight",
+        "from": {
+          "signal": "a",
+          "cycle": 2,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "b",
+          "cycle": 5,
+          "anchor": "rising"
+        },
+        "line": "straight",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "e2",
+        "type": "dependencyArrow",
+        "label": "orthogonal",
+        "from": {
+          "signal": "a",
+          "cycle": 4,
+          "anchor": "falling"
+        },
+        "to": {
+          "signal": "c",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "e3",
+        "type": "dependencyArrow",
+        "label": "curve",
+        "from": {
+          "signal": "b",
+          "cycle": 5,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "c",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "line": "curve",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "e4",
+        "type": "dependencyArrow",
+        "label": "bidirectional",
+        "from": {
+          "signal": "a",
+          "cycle": 2,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "c",
+          "cycle": 9,
+          "anchor": "falling"
+        },
+        "line": "diagonal",
+        "arrow": "both",
+        "startOffset": {
+          "x": 1,
+          "y": 0
+        },
+        "endOffset": {
+          "x": -2,
+          "y": 1
+        },
+        "labelOffset": {
+          "x": 3,
+          "y": -5
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "transition arrow",
+    "rising anchor",
+    "falling anchor",
+    "straight",
+    "orthogonal",
+    "curve",
+    "diagonal",
+    "bidirectional",
+    "endpoint pixel offset"
+  ]
+}

@@ -1,0 +1,251 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 12 - Group bands and vertical spacing",
+    "description": "Covers colored group bands, waveform-only/background-both modes, global spacing, group spacing and per-signal overrides.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 30,
+    "signalSpacing": 5,
+    "signalNameWidth": 150,
+    "signalNameAlign": "right",
+    "spacers": [
+      {
+        "id": "sp1",
+        "afterSignal": "wv",
+        "height": 14
+      }
+    ]
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "addr",
+      "name": "AXI Address",
+      "signals": [
+        "clk",
+        "aw",
+        "awv"
+      ],
+      "spacingAfter": 18,
+      "style": {
+        "background": "#EAF2FF",
+        "opacity": 0.24,
+        "extend": "both",
+        "showHeader": true
+      }
+    },
+    {
+      "id": "data",
+      "name": "AXI Data",
+      "signals": [
+        "wd",
+        "wv"
+      ],
+      "spacingBefore": 4,
+      "spacingAfter": 22,
+      "style": {
+        "background": "#EDF9EF",
+        "opacity": 0.24,
+        "extend": "waveform",
+        "showHeader": true
+      }
+    },
+    {
+      "id": "resp",
+      "name": "AXI Response",
+      "signals": [
+        "br",
+        "bv"
+      ],
+      "spacingBefore": 8,
+      "style": {
+        "background": "#FFF2E8",
+        "opacity": 0.24,
+        "extend": "both",
+        "showHeader": true
+      }
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "aw",
+        "name": "AWADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 2,
+            "value": "0x1000"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "awv",
+        "name": "AWVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          },
+          {
+            "start": 4,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "wd",
+        "name": "WDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "D0"
+          },
+          {
+            "start": 5,
+            "value": "D1"
+          },
+          {
+            "start": 6,
+            "value": "D2"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ],
+        "layout": {
+          "spacingBefore": 4,
+          "spacingAfter": 12
+        }
+      },
+      {
+        "id": "wv",
+        "name": "WVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "br",
+        "name": "BRESP",
+        "role": "output",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 8,
+            "value": "OKAY"
+          },
+          {
+            "start": 10,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "bv",
+        "name": "BVALID",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 10,
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "annotations": []
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "group band",
+    "group opacity",
+    "group header",
+    "global row height",
+    "global signal spacing",
+    "group spacing",
+    "signal spacing override",
+    "spacer row"
+  ]
+}

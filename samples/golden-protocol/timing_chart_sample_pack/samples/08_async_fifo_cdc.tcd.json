@@ -1,0 +1,392 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Asynchronous FIFO across two clock domains",
+    "description": "Different clock periods/phases, enqueue/dequeue transactions, Gray-pointer visibility and cross-domain latency annotation.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 18
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_wr",
+      "name": "Write Clock Domain",
+      "signals": [
+        "wr_clk",
+        "wr_rstn",
+        "wr_en",
+        "wr_data",
+        "wr_full",
+        "wr_ptr"
+      ],
+      "spacingAfter": 18
+    },
+    {
+      "id": "g_rd",
+      "name": "Read Clock Domain",
+      "signals": [
+        "rd_clk",
+        "rd_rstn",
+        "rd_en",
+        "rd_data",
+        "rd_empty",
+        "rd_ptr"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "wr_clk",
+        "name": "wr_clk",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "wr_rstn",
+        "name": "wr_rstn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "wr_en",
+        "name": "wr_en",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "wr_data",
+        "name": "wr_data",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "A0"
+          },
+          {
+            "start": 5,
+            "value": "A1"
+          },
+          {
+            "start": 6,
+            "value": "A2"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "wr_full",
+        "name": "wr_full",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "wr_ptr",
+        "name": "wr_ptr_gray",
+        "role": "internal",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "000"
+          },
+          {
+            "start": 4,
+            "value": "001"
+          },
+          {
+            "start": 5,
+            "value": "011"
+          },
+          {
+            "start": 6,
+            "value": "010"
+          }
+        ]
+      },
+      {
+        "id": "rd_clk",
+        "name": "rd_clk",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1.5,
+          "phase": 0.25,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "rd_rstn",
+        "name": "rd_rstn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "rd_en",
+        "name": "rd_en",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 12.5,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rd_data",
+        "name": "rd_data",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 9.5,
+            "value": "A0"
+          },
+          {
+            "start": 11,
+            "value": "A1"
+          },
+          {
+            "start": 12.5,
+            "value": "A2"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "rd_empty",
+        "name": "rd_empty",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 7.5,
+            "value": 0
+          },
+          {
+            "start": 14,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "rd_ptr",
+        "name": "rd_ptr_gray",
+        "role": "internal",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "000"
+          },
+          {
+            "start": 9.5,
+            "value": "001"
+          },
+          {
+            "start": 11,
+            "value": "011"
+          },
+          {
+            "start": 12.5,
+            "value": "010"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_cdc",
+        "type": "range",
+        "label": "CDC FIFO transfer window",
+        "start": {
+          "signal": "wr_clk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "rd_clk",
+          "cycle": 12.5,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -28
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "a_fifo_latency",
+        "type": "dependencyArrow",
+        "label": "enqueue A0 → dequeue A0",
+        "from": {
+          "signal": "wr_data",
+          "cycle": 4,
+          "anchor": "value-start"
+        },
+        "to": {
+          "signal": "rd_data",
+          "cycle": 9.5,
+          "anchor": "value-start"
+        },
+        "line": "curve",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "wr",
+        "name": "Write Domain"
+      },
+      {
+        "id": "fifo",
+        "name": "Async FIFO"
+      },
+      {
+        "id": "rd",
+        "name": "Read Domain"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "e0",
+        "name": "enqueue A0/A1/A2",
+        "from": "wr",
+        "to": "fifo",
+        "start": 4,
+        "end": 7
+      },
+      {
+        "id": "d0",
+        "name": "dequeue A0/A1/A2",
+        "from": "fifo",
+        "to": "rd",
+        "start": 8,
+        "end": 14
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "multiple clocks",
+    "different periods/phases",
+    "fractional timing",
+    "internal signals",
+    "curved dependency arrow",
+    "group spacing"
+  ]
+}

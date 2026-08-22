@@ -1,0 +1,148 @@
+[
+  {
+    "file": "01_apb_register_access.tcd.json",
+    "title": "APB register write/read with wait state",
+    "cycles": 18,
+    "signalCount": 10,
+    "transactionCount": 2,
+    "coverage": [
+      "binary/bus rendering",
+      "group spacing",
+      "range annotation",
+      "dependency arrow",
+      "error text",
+      "transaction phase view"
+    ]
+  },
+  {
+    "file": "02_ahb_lite_pipelined_transfer.tcd.json",
+    "title": "AHB-Lite pipelined transfers with stall",
+    "cycles": 14,
+    "signalCount": 11,
+    "transactionCount": 3,
+    "coverage": [
+      "state/bus rendering",
+      "pipelined transaction overlap",
+      "stall annotation",
+      "group spacing",
+      "signal ordering"
+    ]
+  },
+  {
+    "file": "03_axi4_full_write_burst.tcd.json",
+    "title": "AXI4 Full write burst with backpressure",
+    "cycles": 18,
+    "signalCount": 18,
+    "transactionCount": 1,
+    "coverage": [
+      "large signal count",
+      "multiple groups",
+      "bus/state/binary",
+      "burst beats",
+      "backpressure",
+      "dependency arrows",
+      "transaction phases"
+    ]
+  },
+  {
+    "file": "04_axi4_full_read_outstanding.tcd.json",
+    "title": "AXI4 Full read: multiple outstanding IDs",
+    "cycles": 18,
+    "signalCount": 14,
+    "transactionCount": 2,
+    "coverage": [
+      "multiple outstanding transactions",
+      "overlapping transaction bars",
+      "ID bus values",
+      "backpressure",
+      "fractional anchor",
+      "arrow label"
+    ]
+  },
+  {
+    "file": "05_sram_1p_sync_read_write.tcd.json",
+    "title": "Single-port SRAM synchronous read/write",
+    "cycles": 12,
+    "signalCount": 7,
+    "transactionCount": 3,
+    "coverage": [
+      "simple memory waveform",
+      "read-latency arrow",
+      "bus labels",
+      "compact signal group"
+    ]
+  },
+  {
+    "file": "06_sram_2p_parallel_and_conflict.tcd.json",
+    "title": "Dual-port SRAM parallel access and conflict",
+    "cycles": 12,
+    "signalCount": 12,
+    "transactionCount": 4,
+    "coverage": [
+      "multiple memory ports",
+      "simultaneous transactions",
+      "large group spacing",
+      "internal conflict flag",
+      "range annotation"
+    ]
+  },
+  {
+    "file": "07_axi_to_dram_read_path.tcd.json",
+    "title": "AXI4-to-DRAM read path",
+    "cycles": 24,
+    "signalCount": 17,
+    "transactionCount": 2,
+    "coverage": [
+      "multi-clock view",
+      "fractional cycles",
+      "cross-group arrows",
+      "long latency range",
+      "transaction nesting",
+      "DRAM abstract states"
+    ]
+  },
+  {
+    "file": "08_async_fifo_cdc.tcd.json",
+    "title": "Asynchronous FIFO across two clock domains",
+    "cycles": 18,
+    "signalCount": 12,
+    "transactionCount": 2,
+    "coverage": [
+      "multiple clocks",
+      "different periods/phases",
+      "fractional timing",
+      "internal signals",
+      "curved dependency arrow",
+      "group spacing"
+    ]
+  },
+  {
+    "file": "09_accelerator_request_response.tcd.json",
+    "title": "Accelerator command/response with overlapping transactions",
+    "cycles": 20,
+    "signalCount": 12,
+    "transactionCount": 2,
+    "coverage": [
+      "input→internal→output grouping",
+      "overlapping transactions",
+      "error annotation",
+      "response backpressure",
+      "multiple dependency arrows"
+    ]
+  },
+  {
+    "file": "10_axi4_stream_packet_backpressure.tcd.json",
+    "title": "AXI4-Stream packet with backpressure",
+    "cycles": 15,
+    "signalCount": 8,
+    "transactionCount": 1,
+    "coverage": [
+      "packet transaction",
+      "ready/valid stall",
+      "held bus value",
+      "TLAST arrow",
+      "range annotation",
+      "single dense group"
+    ]
+  }
+]

@@ -1,0 +1,200 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 16 - Clock phase, gating and collapsed gap",
+    "description": "Exercises multiple clock periods, fractional phase, DDR half cycles, gated clock enable segments and a collapsed long idle range.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 32
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "clks",
+      "name": "Clock / Timing",
+      "signals": [
+        "clk1",
+        "clk2",
+        "ddr",
+        "gclk",
+        "edge_evt"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true,
+    "gaps": [
+      {
+        "start": 12,
+        "end": 28,
+        "display": "collapsed",
+        "label": "idle 16 cycles"
+      }
+    ]
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk1",
+        "name": "clk_100",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "clk2",
+        "name": "clk_50_phase",
+        "role": "output",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 2,
+          "duty": 0.5,
+          "phase": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "ddr",
+        "name": "ddr_clk",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 0.5,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "gclk",
+        "name": "gated_clk",
+        "role": "internal",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        },
+        "enable": [
+          {
+            "start": 0,
+            "value": false
+          },
+          {
+            "start": 3,
+            "value": true
+          },
+          {
+            "start": 7,
+            "value": false
+          },
+          {
+            "start": 10,
+            "value": true
+          }
+        ]
+      },
+      {
+        "id": "edge_evt",
+        "name": "edge_event",
+        "role": "internal",
+        "type": "event",
+        "values": [
+          {
+            "start": 0,
+            "value": "none"
+          },
+          {
+            "start": 3.5,
+            "value": "rise"
+          },
+          {
+            "start": 7.5,
+            "value": "fall"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "half",
+        "type": "vline",
+        "label": "half-cycle edge",
+        "anchor": {
+          "signal": "ddr",
+          "cycle": 3.5,
+          "edge": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "scope": "all"
+      },
+      {
+        "id": "clk_active",
+        "type": "range",
+        "label": "gated clock active",
+        "start": {
+          "signal": "gclk",
+          "cycle": 3,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "gclk",
+          "cycle": 7,
+          "anchor": "falling"
+        },
+        "offset": {
+          "x": 0,
+          "y": -20
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "positive clock",
+    "different period",
+    "phase",
+    "half cycle",
+    "gated clock",
+    "event",
+    "timeline gap",
+    "collapsed range"
+  ]
+}

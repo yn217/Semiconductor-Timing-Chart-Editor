@@ -1,0 +1,600 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "AXI4 Full write burst with backpressure",
+    "description": "Full AXI4 write example using AW, W and B channels, four data beats and independent READY/VALID stalls.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 18
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_aw",
+      "name": "AXI Write Address (AW)",
+      "signals": [
+        "aclk",
+        "aresetn",
+        "awid",
+        "awaddr",
+        "awlen",
+        "awsize",
+        "awburst",
+        "awvalid",
+        "awready"
+      ],
+      "spacingAfter": 14
+    },
+    {
+      "id": "g_w",
+      "name": "AXI Write Data (W)",
+      "signals": [
+        "wdata",
+        "wstrb",
+        "wlast",
+        "wvalid",
+        "wready"
+      ],
+      "spacingAfter": 14
+    },
+    {
+      "id": "g_b",
+      "name": "AXI Write Response (B)",
+      "signals": [
+        "bid",
+        "bresp",
+        "bvalid",
+        "bready"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "aclk",
+        "name": "ACLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "aresetn",
+        "name": "ARESETn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "awid",
+        "name": "AWID",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "3"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ],
+        "width": 4
+      },
+      {
+        "id": "awaddr",
+        "name": "AWADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0x8000_1000"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "awlen",
+        "name": "AWLEN",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "3"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ],
+        "width": 8
+      },
+      {
+        "id": "awsize",
+        "name": "AWSIZE",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "4B"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "awburst",
+        "name": "AWBURST",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "INCR"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "awvalid",
+        "name": "AWVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "awready",
+        "name": "AWREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 5,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "wdata",
+        "name": "WDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "D0"
+          },
+          {
+            "start": 7,
+            "value": "D1"
+          },
+          {
+            "start": 8,
+            "value": "D2"
+          },
+          {
+            "start": 10,
+            "value": "D3"
+          },
+          {
+            "start": 11,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "wstrb",
+        "name": "WSTRB",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "0"
+          },
+          {
+            "start": 6,
+            "value": "0xF"
+          },
+          {
+            "start": 11,
+            "value": "0"
+          }
+        ],
+        "width": 4
+      },
+      {
+        "id": "wlast",
+        "name": "WLAST",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 10,
+            "value": 1
+          },
+          {
+            "start": 11,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "wvalid",
+        "name": "WVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 11,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "wready",
+        "name": "WREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          },
+          {
+            "start": 10,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "bid",
+        "name": "BID",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 12,
+            "value": "3"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ],
+        "width": 4
+      },
+      {
+        "id": "bresp",
+        "name": "BRESP",
+        "role": "output",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 12,
+            "value": "OKAY"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "bvalid",
+        "name": "BVALID",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 12,
+            "value": 1
+          },
+          {
+            "start": 14,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "bready",
+        "name": "BREADY",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 12,
+            "value": 0
+          },
+          {
+            "start": 13,
+            "value": 1
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_axi_wburst",
+        "type": "range",
+        "label": "4-beat AXI4 INCR write burst",
+        "start": {
+          "signal": "aclk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "aclk",
+          "cycle": 14,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -26
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "a_axi_aw_to_w",
+        "type": "dependencyArrow",
+        "label": "Address accepted → first data",
+        "from": {
+          "signal": "awready",
+          "cycle": 5,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "wvalid",
+          "cycle": 6,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_axi_w_to_b",
+        "type": "dependencyArrow",
+        "label": "WLAST accepted → response",
+        "from": {
+          "signal": "wlast",
+          "cycle": 10,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "bvalid",
+          "cycle": 12,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_axi_backpressure",
+        "type": "text",
+        "text": "WREADY backpressure",
+        "anchor": {
+          "signal": "wready",
+          "cycle": 8,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -12
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "master",
+        "name": "AXI4 Master"
+      },
+      {
+        "id": "slave",
+        "name": "AXI4 Slave"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "t1",
+        "name": "WRITE ID=3, 4 beats, INCR",
+        "from": "master",
+        "to": "slave",
+        "start": 4,
+        "end": 14,
+        "phases": [
+          {
+            "name": "AW",
+            "start": 4,
+            "end": 6
+          },
+          {
+            "name": "W D0",
+            "start": 6,
+            "end": 7
+          },
+          {
+            "name": "W D1",
+            "start": 7,
+            "end": 8
+          },
+          {
+            "name": "W backpressure",
+            "start": 8,
+            "end": 10
+          },
+          {
+            "name": "W D2/D3",
+            "start": 10,
+            "end": 11
+          },
+          {
+            "name": "B response",
+            "start": 12,
+            "end": 14
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "large signal count",
+    "multiple groups",
+    "bus/state/binary",
+    "burst beats",
+    "backpressure",
+    "dependency arrows",
+    "transaction phases"
+  ]
+}

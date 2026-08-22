@@ -1,0 +1,228 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 14 - Annotation overlay",
+    "description": "Covers text, vertical line, range, bracket and highlight overlay objects with independent px offsets.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 10
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g",
+      "name": "Signals",
+      "signals": [
+        "clk",
+        "req",
+        "ack",
+        "data"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "req",
+        "name": "req",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "ack",
+        "name": "ack",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "data",
+        "name": "data[31:0]",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "0xCAFE"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "txt",
+        "type": "text",
+        "text": "Request accepted",
+        "anchor": {
+          "signal": "req",
+          "cycle": 3,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 5,
+          "y": -13
+        }
+      },
+      {
+        "id": "vl",
+        "type": "vline",
+        "label": "T0",
+        "anchor": {
+          "signal": "clk",
+          "cycle": 3,
+          "edge": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "scope": "all"
+      },
+      {
+        "id": "rng",
+        "type": "range",
+        "label": "Latency = 3 cycles",
+        "start": {
+          "signal": "clk",
+          "cycle": 3,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 6,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -24
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "brk",
+        "type": "bracket",
+        "label": "Response window",
+        "start": {
+          "signal": "clk",
+          "cycle": 6,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "side": "bottom",
+        "offset": {
+          "x": 0,
+          "y": 18
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": 6
+        }
+      },
+      {
+        "id": "hl",
+        "type": "highlight",
+        "label": "Critical interval",
+        "start": {
+          "cycle": 3
+        },
+        "end": {
+          "cycle": 6
+        },
+        "scope": {
+          "fromSignal": "req",
+          "toSignal": "data"
+        },
+        "opacity": 0.12
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "text annotation",
+    "vline",
+    "range",
+    "bracket",
+    "highlight",
+    "overlay",
+    "px offset",
+    "scope"
+  ]
+}

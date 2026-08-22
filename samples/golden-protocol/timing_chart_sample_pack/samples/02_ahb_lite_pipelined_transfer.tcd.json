@@ -1,0 +1,422 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "AHB-Lite pipelined transfers with stall",
+    "description": "Back-to-back address phases, overlapping data phase and an HREADY stall.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 14
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_ahb_req",
+      "name": "AHB Address / Control",
+      "signals": [
+        "hclk",
+        "hresetn",
+        "haddr",
+        "htrans",
+        "hwrite",
+        "hsize",
+        "hburst"
+      ],
+      "spacingAfter": 12
+    },
+    {
+      "id": "g_ahb_data",
+      "name": "AHB Data / Response",
+      "signals": [
+        "hwdata",
+        "hrdata",
+        "hready",
+        "hresp"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "hclk",
+        "name": "HCLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "hresetn",
+        "name": "HRESETn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "haddr",
+        "name": "HADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0x2000"
+          },
+          {
+            "start": 5,
+            "value": "0x2004"
+          },
+          {
+            "start": 6,
+            "value": "0x2008"
+          },
+          {
+            "start": 9,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "htrans",
+        "name": "HTRANS",
+        "role": "input",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "IDLE"
+          },
+          {
+            "start": 4,
+            "value": "NONSEQ"
+          },
+          {
+            "start": 5,
+            "value": "SEQ"
+          },
+          {
+            "start": 6,
+            "value": "SEQ"
+          },
+          {
+            "start": 9,
+            "value": "IDLE"
+          }
+        ]
+      },
+      {
+        "id": "hwrite",
+        "name": "HWRITE",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "hsize",
+        "name": "HSIZE",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "WORD"
+          },
+          {
+            "start": 9,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "hburst",
+        "name": "HBURST",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "SINGLE"
+          },
+          {
+            "start": 4,
+            "value": "INCR"
+          },
+          {
+            "start": 9,
+            "value": "SINGLE"
+          }
+        ]
+      },
+      {
+        "id": "hwdata",
+        "name": "HWDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 5,
+            "value": "0x11111111"
+          },
+          {
+            "start": 6,
+            "value": "0x22222222"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "hrdata",
+        "name": "HRDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 8,
+            "value": "0x33333333"
+          },
+          {
+            "start": 9,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "hready",
+        "name": "HREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "hresp",
+        "name": "HRESP",
+        "role": "output",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "OKAY"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_ahb_pipe",
+        "type": "range",
+        "label": "Pipelined address/data phases",
+        "start": {
+          "signal": "hclk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "hclk",
+          "cycle": 9,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -24
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "a_ahb_stall",
+        "type": "dependencyArrow",
+        "label": "HREADY stall",
+        "from": {
+          "signal": "haddr",
+          "cycle": 6,
+          "anchor": "value-start"
+        },
+        "to": {
+          "signal": "hready",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "master",
+        "name": "AHB-Lite Master"
+      },
+      {
+        "id": "slave",
+        "name": "AHB-Lite Slave"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "t1",
+        "name": "WRITE 0x2000",
+        "from": "master",
+        "to": "slave",
+        "start": 4,
+        "end": 6,
+        "phases": [
+          {
+            "name": "Address",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Data",
+            "start": 5,
+            "end": 6
+          }
+        ]
+      },
+      {
+        "id": "t2",
+        "name": "WRITE 0x2004",
+        "from": "master",
+        "to": "slave",
+        "start": 5,
+        "end": 8,
+        "phases": [
+          {
+            "name": "Address",
+            "start": 5,
+            "end": 6
+          },
+          {
+            "name": "Data + stall",
+            "start": 6,
+            "end": 8
+          }
+        ]
+      },
+      {
+        "id": "t3",
+        "name": "READ 0x2008",
+        "from": "master",
+        "to": "slave",
+        "start": 6,
+        "end": 9,
+        "phases": [
+          {
+            "name": "Address",
+            "start": 6,
+            "end": 8
+          },
+          {
+            "name": "Data",
+            "start": 8,
+            "end": 9
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "state/bus rendering",
+    "pipelined transaction overlap",
+    "stall annotation",
+    "group spacing",
+    "signal ordering"
+  ]
+}

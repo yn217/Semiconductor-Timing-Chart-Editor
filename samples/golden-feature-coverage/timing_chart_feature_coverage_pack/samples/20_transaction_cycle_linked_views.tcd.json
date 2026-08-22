@@ -1,0 +1,403 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 20 - Transaction/Cycle linked views",
+    "description": "Exercises Transaction/Cycle/Split mode, overlapping transactions, phase bars, pipeline representation and cross-highlight links.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "cmd",
+      "name": "Command",
+      "signals": [
+        "clk",
+        "req",
+        "tag"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "int",
+      "name": "Internal",
+      "signals": [
+        "stage"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "rspg",
+      "name": "Response",
+      "signals": [
+        "rsp",
+        "rtag"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "req",
+        "name": "req_valid",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "tag",
+        "name": "tag",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 2,
+            "value": "T0"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "T1"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "stage",
+        "name": "pipeline_stage",
+        "role": "internal",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "IDLE"
+          },
+          {
+            "start": 3,
+            "value": "S0"
+          },
+          {
+            "start": 4,
+            "value": "S1"
+          },
+          {
+            "start": 5,
+            "value": "S2"
+          },
+          {
+            "start": 6,
+            "value": "S0"
+          },
+          {
+            "start": 7,
+            "value": "S1"
+          },
+          {
+            "start": 8,
+            "value": "S2"
+          },
+          {
+            "start": 10,
+            "value": "IDLE"
+          }
+        ]
+      },
+      {
+        "id": "rsp",
+        "name": "rsp_valid",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 5,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          },
+          {
+            "start": 9,
+            "value": 1
+          },
+          {
+            "start": 10,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rtag",
+        "name": "rsp_tag",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 5,
+            "value": "T0"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          },
+          {
+            "start": 9,
+            "value": "T1"
+          },
+          {
+            "start": 10,
+            "value": "X"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "t0a",
+        "type": "dependencyArrow",
+        "label": "T0 latency",
+        "from": {
+          "signal": "req",
+          "cycle": 2,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "rsp",
+          "cycle": 5,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "t1a",
+        "type": "dependencyArrow",
+        "label": "T1 latency",
+        "from": {
+          "signal": "req",
+          "cycle": 6,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "rsp",
+          "cycle": 9,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "host",
+        "name": "Host"
+      },
+      {
+        "id": "engine",
+        "name": "Engine"
+      },
+      {
+        "id": "pipe",
+        "name": "Pipeline"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "t0",
+        "name": "T0",
+        "from": "host",
+        "to": "engine",
+        "start": 2,
+        "end": 6,
+        "links": {
+          "signals": [
+            "req",
+            "tag",
+            "stage",
+            "rsp",
+            "rtag"
+          ]
+        },
+        "phases": [
+          {
+            "name": "Accept",
+            "start": 2,
+            "end": 3
+          },
+          {
+            "name": "S0",
+            "start": 3,
+            "end": 4
+          },
+          {
+            "name": "S1",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Response",
+            "start": 5,
+            "end": 6
+          }
+        ]
+      },
+      {
+        "id": "t1",
+        "name": "T1",
+        "from": "host",
+        "to": "engine",
+        "start": 6,
+        "end": 10,
+        "links": {
+          "signals": [
+            "req",
+            "tag",
+            "stage",
+            "rsp",
+            "rtag"
+          ]
+        },
+        "phases": [
+          {
+            "name": "Accept",
+            "start": 6,
+            "end": 7
+          },
+          {
+            "name": "S0",
+            "start": 6,
+            "end": 7
+          },
+          {
+            "name": "S1",
+            "start": 7,
+            "end": 8
+          },
+          {
+            "name": "S2",
+            "start": 8,
+            "end": 9
+          },
+          {
+            "name": "Response",
+            "start": 9,
+            "end": 10
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "transaction view",
+    "cycle view",
+    "split view",
+    "linked selection",
+    "overlap",
+    "pipeline phases",
+    "transaction-to-signal highlight"
+  ],
+  "viewTests": [
+    "Selecting T0 highlights req/tag/stage/rsp/rtag intervals",
+    "Selecting rsp transition at cycle 9 selects transaction T1",
+    "Switch Cycle→Transaction→Split without losing selection"
+  ]
+}

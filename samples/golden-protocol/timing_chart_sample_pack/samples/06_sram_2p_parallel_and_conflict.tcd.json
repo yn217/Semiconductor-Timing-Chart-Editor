@@ -1,0 +1,450 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Dual-port SRAM parallel access and conflict",
+    "description": "Exercises two signal groups with simultaneous operations. Same-address write behavior is an illustrative conflict marker, not a universal SRAM semantic.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_pa",
+      "name": "Port A",
+      "signals": [
+        "clk",
+        "a_en",
+        "a_we",
+        "a_addr",
+        "a_wdata",
+        "a_rdata"
+      ],
+      "spacingAfter": 16
+    },
+    {
+      "id": "g_pb",
+      "name": "Port B",
+      "signals": [
+        "b_en",
+        "b_we",
+        "b_addr",
+        "b_wdata",
+        "b_rdata"
+      ],
+      "spacingAfter": 12
+    },
+    {
+      "id": "g_int",
+      "name": "Internal / Status",
+      "signals": [
+        "same_addr_conflict"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "a_en",
+        "name": "A_EN",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "a_we",
+        "name": "A_WE",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "a_addr",
+        "name": "A_ADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 3,
+            "value": "0x20"
+          },
+          {
+            "start": 5,
+            "value": "0x21"
+          },
+          {
+            "start": 6,
+            "value": "0x22"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ],
+        "width": 8
+      },
+      {
+        "id": "a_wdata",
+        "name": "A_WDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 3,
+            "value": "AAAA"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "CCCC"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "a_rdata",
+        "name": "A_RDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "BEEF"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "b_en",
+        "name": "B_EN",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "b_we",
+        "name": "B_WE",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "b_addr",
+        "name": "B_ADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 3,
+            "value": "0x30"
+          },
+          {
+            "start": 4,
+            "value": "0x31"
+          },
+          {
+            "start": 6,
+            "value": "0x22"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ],
+        "width": 8
+      },
+      {
+        "id": "b_wdata",
+        "name": "B_WDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "BBBB"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          },
+          {
+            "start": 6,
+            "value": "DDDD"
+          },
+          {
+            "start": 7,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "b_rdata",
+        "name": "B_RDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "1234"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "same_addr_conflict",
+        "name": "same_addr_conflict",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_conf",
+        "type": "text",
+        "text": "Example flags simultaneous same-address writes",
+        "anchor": {
+          "signal": "same_addr_conflict",
+          "cycle": 6,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -14
+        }
+      },
+      {
+        "id": "a_dual",
+        "type": "range",
+        "label": "Independent dual-port activity",
+        "start": {
+          "signal": "clk",
+          "cycle": 3,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -22
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "pa",
+        "name": "Port A"
+      },
+      {
+        "id": "mem",
+        "name": "SRAM 2P"
+      },
+      {
+        "id": "pb",
+        "name": "Port B"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "pa1",
+        "name": "A: WRITE 0x20",
+        "from": "pa",
+        "to": "mem",
+        "start": 3,
+        "end": 4
+      },
+      {
+        "id": "pb1",
+        "name": "B: READ 0x30",
+        "from": "pb",
+        "to": "mem",
+        "start": 3,
+        "end": 5
+      },
+      {
+        "id": "pb2",
+        "name": "B: WRITE 0x31",
+        "from": "pb",
+        "to": "mem",
+        "start": 4,
+        "end": 5
+      },
+      {
+        "id": "conf",
+        "name": "A/B same-address write conflict",
+        "from": "pa",
+        "to": "mem",
+        "start": 6,
+        "end": 7
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "multiple memory ports",
+    "simultaneous transactions",
+    "large group spacing",
+    "internal conflict flag",
+    "range annotation"
+  ]
+}

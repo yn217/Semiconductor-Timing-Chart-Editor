@@ -1,0 +1,215 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 11 - Signal types, roles and legend",
+    "description": "Covers clock/binary/bus/state/X/Z/weak states, i/o/wire role icons, mixed-role groups and movable legend.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_io",
+      "name": "Input / Output Mix",
+      "signals": [
+        "clk",
+        "bin",
+        "bus"
+      ],
+      "spacingAfter": 14,
+      "style": {
+        "background": "#EEF5FF",
+        "opacity": 0.18,
+        "extend": "both",
+        "showBackground": true
+      }
+    },
+    {
+      "id": "g_int",
+      "name": "Internal Signals",
+      "signals": [
+        "state",
+        "xz",
+        "weak"
+      ],
+      "style": {
+        "background": "#F6F6F6",
+        "opacity": 0.22,
+        "extend": "both",
+        "showBackground": true
+      }
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "bin",
+        "name": "binary_sig",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "bus",
+        "name": "data_bus[15:0]",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 2,
+            "value": "0x12AB"
+          },
+          {
+            "start": 6,
+            "value": "0x34CD"
+          },
+          {
+            "start": 9,
+            "value": "Z"
+          }
+        ],
+        "width": 16
+      },
+      {
+        "id": "state",
+        "name": "fsm_state",
+        "role": "internal",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "IDLE"
+          },
+          {
+            "start": 3,
+            "value": "REQ"
+          },
+          {
+            "start": 5,
+            "value": "WAIT"
+          },
+          {
+            "start": 8,
+            "value": "DONE"
+          }
+        ]
+      },
+      {
+        "id": "xz",
+        "name": "x_z_demo",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 2,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": "Z"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "weak",
+        "name": "weak_demo",
+        "role": "internal",
+        "type": "logic",
+        "values": [
+          {
+            "start": 0,
+            "value": "L"
+          },
+          {
+            "start": 3,
+            "value": "H"
+          },
+          {
+            "start": 6,
+            "value": "L"
+          }
+        ]
+      }
+    ],
+    "annotations": []
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "clock",
+    "binary",
+    "bus",
+    "state",
+    "X",
+    "Z",
+    "weak high/low",
+    "role icons",
+    "legend",
+    "group background"
+  ]
+}

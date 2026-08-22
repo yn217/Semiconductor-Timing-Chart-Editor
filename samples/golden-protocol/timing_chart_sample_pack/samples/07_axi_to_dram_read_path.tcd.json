@@ -1,0 +1,596 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "AXI4-to-DRAM read path",
+    "description": "Illustrative controller timing from AXI read address acceptance through DRAM ACT/READ/data and AXI R beats.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 24
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_axi",
+      "name": "AXI Side",
+      "signals": [
+        "aclk",
+        "arvalid",
+        "arready",
+        "araddr",
+        "rvalid",
+        "rready",
+        "rdata",
+        "rlast"
+      ],
+      "spacingAfter": 16
+    },
+    {
+      "id": "g_ctrl",
+      "name": "Controller Internal",
+      "signals": [
+        "cmdq_valid",
+        "bank_hit",
+        "dram_cmd"
+      ],
+      "spacingAfter": 16
+    },
+    {
+      "id": "g_dram",
+      "name": "DRAM Command / Data",
+      "signals": [
+        "dram_ck",
+        "bank",
+        "row",
+        "col",
+        "dq_valid",
+        "dq"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "aclk",
+        "name": "ACLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "arvalid",
+        "name": "ARVALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "arready",
+        "name": "ARREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "araddr",
+        "name": "ARADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0x4000_2040"
+          },
+          {
+            "start": 5,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "rvalid",
+        "name": "RVALID",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 14,
+            "value": 1
+          },
+          {
+            "start": 18,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rready",
+        "name": "RREADY",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "rdata",
+        "name": "RDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 14,
+            "value": "D0"
+          },
+          {
+            "start": 15,
+            "value": "D1"
+          },
+          {
+            "start": 16,
+            "value": "D2"
+          },
+          {
+            "start": 17,
+            "value": "D3"
+          },
+          {
+            "start": 18,
+            "value": "X"
+          }
+        ],
+        "width": 64
+      },
+      {
+        "id": "rlast",
+        "name": "RLAST",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 17,
+            "value": 1
+          },
+          {
+            "start": 18,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "cmdq_valid",
+        "name": "cmdq_valid",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 5,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "bank_hit",
+        "name": "bank_hit",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "dram_cmd",
+        "name": "dram_cmd",
+        "role": "internal",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "NOP"
+          },
+          {
+            "start": 7,
+            "value": "ACT"
+          },
+          {
+            "start": 8,
+            "value": "NOP"
+          },
+          {
+            "start": 10,
+            "value": "READ"
+          },
+          {
+            "start": 11,
+            "value": "NOP"
+          },
+          {
+            "start": 19,
+            "value": "PRE"
+          },
+          {
+            "start": 20,
+            "value": "NOP"
+          }
+        ]
+      },
+      {
+        "id": "dram_ck",
+        "name": "DRAM_CK",
+        "role": "output",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 0.5,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "bank",
+        "name": "BANK",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 7,
+            "value": "B1"
+          },
+          {
+            "start": 20,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "row",
+        "name": "ROW",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 7,
+            "value": "0x120"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "col",
+        "name": "COL",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 10,
+            "value": "0x08"
+          },
+          {
+            "start": 11,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "dq_valid",
+        "name": "DQ_VALID",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 13.5,
+            "value": 1
+          },
+          {
+            "start": 17.5,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "dq",
+        "name": "DQ",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 13.5,
+            "value": "D0"
+          },
+          {
+            "start": 14.5,
+            "value": "D1"
+          },
+          {
+            "start": 15.5,
+            "value": "D2"
+          },
+          {
+            "start": 16.5,
+            "value": "D3"
+          },
+          {
+            "start": 17.5,
+            "value": "X"
+          }
+        ],
+        "width": 64
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_axi_dram",
+        "type": "dependencyArrow",
+        "label": "AXI address accepted → DRAM ACT",
+        "from": {
+          "signal": "arready",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "dram_cmd",
+          "cycle": 7,
+          "anchor": "value-start"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_dram_axi",
+        "type": "dependencyArrow",
+        "label": "DRAM data → AXI RVALID",
+        "from": {
+          "signal": "dq_valid",
+          "cycle": 13.5,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "rvalid",
+          "cycle": 14,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_latency",
+        "type": "range",
+        "label": "Read service latency",
+        "start": {
+          "signal": "aclk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "aclk",
+          "cycle": 18,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -30
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "axi",
+        "name": "AXI Master"
+      },
+      {
+        "id": "ctrl",
+        "name": "AXI→DRAM Controller"
+      },
+      {
+        "id": "dram",
+        "name": "DRAM"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "x1",
+        "name": "AXI READ burst",
+        "from": "axi",
+        "to": "ctrl",
+        "start": 4,
+        "end": 18,
+        "phases": [
+          {
+            "name": "AR",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Queue",
+            "start": 5,
+            "end": 7
+          },
+          {
+            "name": "DRAM service",
+            "start": 7,
+            "end": 14
+          },
+          {
+            "name": "R beats",
+            "start": 14,
+            "end": 18
+          }
+        ]
+      },
+      {
+        "id": "d1",
+        "name": "ACT / READ / DATA / PRE",
+        "from": "ctrl",
+        "to": "dram",
+        "start": 7,
+        "end": 20,
+        "phases": [
+          {
+            "name": "ACT",
+            "start": 7,
+            "end": 8
+          },
+          {
+            "name": "tRCD wait",
+            "start": 8,
+            "end": 10
+          },
+          {
+            "name": "READ",
+            "start": 10,
+            "end": 11
+          },
+          {
+            "name": "CAS wait",
+            "start": 11,
+            "end": 13.5
+          },
+          {
+            "name": "DATA",
+            "start": 13.5,
+            "end": 17.5
+          },
+          {
+            "name": "PRE",
+            "start": 19,
+            "end": 20
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "multi-clock view",
+    "fractional cycles",
+    "cross-group arrows",
+    "long latency range",
+    "transaction nesting",
+    "DRAM abstract states"
+  ]
+}

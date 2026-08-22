@@ -1,0 +1,153 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 13 - Signal label layout",
+    "description": "Exercises left/center/right alignment, column width, overflow policy and per-signal label override.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 10
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 160,
+    "signalNameAlign": "right",
+    "signalNameOverflow": "ellipsis",
+    "autoFitMin": 100,
+    "autoFitMax": 320
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "names",
+      "name": "Signal Name Layout",
+      "signals": [
+        "clk",
+        "s1",
+        "s2",
+        "s3",
+        "s4"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "s1",
+        "name": "short",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          }
+        ],
+        "labelLayout": {
+          "align": "left"
+        }
+      },
+      {
+        "id": "s2",
+        "name": "medium_length_signal_name",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          }
+        ],
+        "labelLayout": {
+          "align": "center"
+        }
+      },
+      {
+        "id": "s3",
+        "name": "very_long_axi_master_read_address_channel_valid_signal_name",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          }
+        ],
+        "labelLayout": {
+          "overflow": "expand"
+        }
+      },
+      {
+        "id": "s4",
+        "name": "internal_pipeline_stage_03_data_valid",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 7,
+            "value": 1
+          }
+        ]
+      }
+    ],
+    "annotations": []
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "signal name alignment",
+    "signal column width",
+    "ellipsis",
+    "auto fit",
+    "long labels"
+  ]
+}

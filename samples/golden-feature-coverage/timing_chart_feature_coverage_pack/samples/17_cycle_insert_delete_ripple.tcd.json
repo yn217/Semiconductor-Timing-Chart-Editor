@@ -1,0 +1,243 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 17 - Cycle insertion, deletion and ripple editing",
+    "description": "Fixture intended for mutation tests: insert/delete cycles before READY and confirm signal changes, annotations and transaction anchors shift consistently.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 14
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g",
+      "name": "Ripple Edit",
+      "signals": [
+        "clk",
+        "req",
+        "ready",
+        "data"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "req",
+        "name": "req",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "ready",
+        "name": "ready",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 10,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "data",
+        "name": "data",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 8,
+            "value": "D0"
+          },
+          {
+            "start": 9,
+            "value": "D1"
+          },
+          {
+            "start": 10,
+            "value": "X"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "r1",
+        "type": "range",
+        "label": "Insert cycles between REQ and READY",
+        "start": {
+          "signal": "clk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -22
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "d1",
+        "type": "dependencyArrow",
+        "label": "must remain anchored after ripple edit",
+        "from": {
+          "signal": "req",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "ready",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "m",
+        "name": "Requester"
+      },
+      {
+        "id": "s",
+        "name": "Responder"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "t",
+        "name": "REQ→DATA",
+        "from": "m",
+        "to": "s",
+        "start": 4,
+        "end": 10,
+        "phases": [
+          {
+            "name": "wait",
+            "start": 4,
+            "end": 8
+          },
+          {
+            "name": "data",
+            "start": 8,
+            "end": 10
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "insert cycle",
+    "delete cycle",
+    "insert N cycles",
+    "ripple edit",
+    "annotation follow",
+    "transaction follow",
+    "undo/redo"
+  ],
+  "testOperations": [
+    {
+      "op": "insertCycles",
+      "before": 7,
+      "count": 3,
+      "scope": "all"
+    },
+    {
+      "assert": "ready start moves 8→11; annotation/transaction anchors follow"
+    },
+    {
+      "op": "undo"
+    },
+    {
+      "op": "deleteRange",
+      "start": 2,
+      "end": 3
+    },
+    {
+      "assert": "all subsequent anchors shift left by 1"
+    }
+  ]
+}

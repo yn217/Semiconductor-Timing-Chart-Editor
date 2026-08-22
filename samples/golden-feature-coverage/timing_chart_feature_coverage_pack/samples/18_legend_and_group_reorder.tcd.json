@@ -1,0 +1,160 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 18 - Free legend and arbitrary group order",
+    "description": "Covers input→internal→input→output group ordering, empty group, free-position legend and horizontal legend layout.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 12
+    },
+    "samplePurpose": "Feature coverage / visual verification"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "canvas",
+    "position": {
+      "x": 635,
+      "y": 102
+    },
+    "orientation": "horizontal",
+    "style": {
+      "border": true,
+      "background": true,
+      "padding": 8,
+      "itemGap": 10
+    },
+    "items": "usedRolesOnly"
+  },
+  "signalGroups": [
+    {
+      "id": "in2",
+      "name": "Command Input",
+      "signals": [
+        "clk",
+        "i0"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "int1",
+      "name": "Internal Control",
+      "signals": [
+        "w0"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "in3",
+      "name": "Another Input Group",
+      "signals": [],
+      "spacingAfter": 6
+    },
+    {
+      "id": "out",
+      "name": "Response Output",
+      "signals": [
+        "o0"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "i0",
+        "name": "cmd",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          },
+          {
+            "start": 3,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "w0",
+        "name": "busy",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 3,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "o0",
+        "name": "done",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "annotations": []
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "multiple same-role groups",
+    "arbitrary group ordering",
+    "empty group",
+    "legend free position",
+    "legend horizontal",
+    "drag legend"
+  ]
+}

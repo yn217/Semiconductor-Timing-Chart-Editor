@@ -1,0 +1,518 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Accelerator command/response with overlapping transactions",
+    "description": "Generic example for comments, arrows, internal state, backpressure and an error response.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 20
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_cmd",
+      "name": "Command Input",
+      "signals": [
+        "clk",
+        "rstn",
+        "cmd_valid",
+        "cmd_ready",
+        "cmd_opcode",
+        "cmd_tag"
+      ],
+      "spacingAfter": 12
+    },
+    {
+      "id": "g_internal",
+      "name": "Internal Control",
+      "signals": [
+        "state",
+        "busy"
+      ],
+      "spacingBefore": 6,
+      "spacingAfter": 12
+    },
+    {
+      "id": "g_rsp",
+      "name": "Response Output",
+      "signals": [
+        "rsp_valid",
+        "rsp_ready",
+        "rsp_tag",
+        "rsp_status"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "rstn",
+        "name": "RSTn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "cmd_valid",
+        "name": "cmd_valid",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 6,
+            "value": 0
+          },
+          {
+            "start": 7,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "cmd_ready",
+        "name": "cmd_ready",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          },
+          {
+            "start": 6,
+            "value": 1
+          },
+          {
+            "start": 7,
+            "value": 0
+          },
+          {
+            "start": 9,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "cmd_opcode",
+        "name": "cmd_opcode",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "MUL"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          },
+          {
+            "start": 7,
+            "value": "DIV"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "cmd_tag",
+        "name": "cmd_tag",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "T0"
+          },
+          {
+            "start": 6,
+            "value": "X"
+          },
+          {
+            "start": 7,
+            "value": "T1"
+          },
+          {
+            "start": 8,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "state",
+        "name": "state",
+        "role": "internal",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "IDLE"
+          },
+          {
+            "start": 5,
+            "value": "EXEC"
+          },
+          {
+            "start": 10,
+            "value": "WB"
+          },
+          {
+            "start": 11,
+            "value": "EXEC"
+          },
+          {
+            "start": 15,
+            "value": "WB"
+          },
+          {
+            "start": 16,
+            "value": "IDLE"
+          }
+        ]
+      },
+      {
+        "id": "busy",
+        "name": "busy",
+        "role": "internal",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 5,
+            "value": 1
+          },
+          {
+            "start": 16,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rsp_valid",
+        "name": "rsp_valid",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 10,
+            "value": 1
+          },
+          {
+            "start": 12,
+            "value": 0
+          },
+          {
+            "start": 15,
+            "value": 1
+          },
+          {
+            "start": 17,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "rsp_ready",
+        "name": "rsp_ready",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 10,
+            "value": 0
+          },
+          {
+            "start": 11,
+            "value": 1
+          },
+          {
+            "start": 15,
+            "value": 0
+          },
+          {
+            "start": 16,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "rsp_tag",
+        "name": "rsp_tag",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 10,
+            "value": "T0"
+          },
+          {
+            "start": 12,
+            "value": "X"
+          },
+          {
+            "start": 15,
+            "value": "T1"
+          },
+          {
+            "start": 17,
+            "value": "X"
+          }
+        ]
+      },
+      {
+        "id": "rsp_status",
+        "name": "rsp_status",
+        "role": "output",
+        "type": "state",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 10,
+            "value": "OK"
+          },
+          {
+            "start": 12,
+            "value": "X"
+          },
+          {
+            "start": 15,
+            "value": "DIV0"
+          },
+          {
+            "start": 17,
+            "value": "X"
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_cmd0",
+        "type": "dependencyArrow",
+        "label": "T0 accept → response",
+        "from": {
+          "signal": "cmd_valid",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "rsp_valid",
+          "cycle": 10,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_cmd1",
+        "type": "dependencyArrow",
+        "label": "T1 accept → response",
+        "from": {
+          "signal": "cmd_valid",
+          "cycle": 7,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "rsp_valid",
+          "cycle": 15,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_div0",
+        "type": "text",
+        "text": "Error response",
+        "anchor": {
+          "signal": "rsp_status",
+          "cycle": 15,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -12
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "host",
+        "name": "Host"
+      },
+      {
+        "id": "acc",
+        "name": "Accelerator"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "t0",
+        "name": "MUL tag=T0",
+        "from": "host",
+        "to": "acc",
+        "start": 4,
+        "end": 12,
+        "phases": [
+          {
+            "name": "Accept",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Execute",
+            "start": 5,
+            "end": 10
+          },
+          {
+            "name": "Response wait",
+            "start": 10,
+            "end": 12
+          }
+        ]
+      },
+      {
+        "id": "t1",
+        "name": "DIV tag=T1",
+        "from": "host",
+        "to": "acc",
+        "start": 7,
+        "end": 17,
+        "phases": [
+          {
+            "name": "Accept",
+            "start": 7,
+            "end": 8
+          },
+          {
+            "name": "Execute",
+            "start": 8,
+            "end": 15
+          },
+          {
+            "name": "Error response",
+            "start": 15,
+            "end": 17
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "input→internal→output grouping",
+    "overlapping transactions",
+    "error annotation",
+    "response backpressure",
+    "multiple dependency arrows"
+  ]
+}

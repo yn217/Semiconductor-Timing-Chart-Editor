@@ -31,3 +31,10 @@ Prepared ZIP identities:
 - `TimingChartEditor_Feature_Coverage_10_Samples.zip`: SHA-256 `4123864f906e8d752dac0a6cc04830b7478db1df3c5e5a60871931588744c0be`
 
 The GitHub connector used for bootstrap does not expose binary ZIP upload. See Issue #17 for acceptance requirements and package identity.
+
+The prepared packages are also retained under `references/` and unpacked for local validation under:
+
+- `samples/golden-protocol/` — 01-10
+- `samples/golden-feature-coverage/` — 11-20
+
+Run `node scripts/validate-samples.mjs` to validate the 20 semantic `.tcd.json` fixtures and the feature coverage matrix.

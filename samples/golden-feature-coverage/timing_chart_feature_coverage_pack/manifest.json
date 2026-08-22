@@ -1,0 +1,139 @@
+[
+  {
+    "file": "11_signal_types_roles_legend.tcd.json",
+    "title": "Feature 11 - Signal types, roles and legend",
+    "coverage": [
+      "clock",
+      "binary",
+      "bus",
+      "state",
+      "X",
+      "Z",
+      "weak high/low",
+      "role icons",
+      "legend",
+      "group background"
+    ]
+  },
+  {
+    "file": "12_group_bands_and_spacing.tcd.json",
+    "title": "Feature 12 - Group bands and vertical spacing",
+    "coverage": [
+      "group band",
+      "group opacity",
+      "group header",
+      "global row height",
+      "global signal spacing",
+      "group spacing",
+      "signal spacing override",
+      "spacer row"
+    ]
+  },
+  {
+    "file": "13_signal_name_layout.tcd.json",
+    "title": "Feature 13 - Signal label layout",
+    "coverage": [
+      "signal name alignment",
+      "signal column width",
+      "ellipsis",
+      "auto fit",
+      "long labels"
+    ]
+  },
+  {
+    "file": "14_annotation_overlay_all_types.tcd.json",
+    "title": "Feature 14 - Annotation overlay",
+    "coverage": [
+      "text annotation",
+      "vline",
+      "range",
+      "bracket",
+      "highlight",
+      "overlay",
+      "px offset",
+      "scope"
+    ]
+  },
+  {
+    "file": "15_transition_arrows_anchor_styles.tcd.json",
+    "title": "Feature 15 - Transition arrows and exact anchors",
+    "coverage": [
+      "transition arrow",
+      "rising anchor",
+      "falling anchor",
+      "straight",
+      "orthogonal",
+      "curve",
+      "diagonal",
+      "bidirectional",
+      "endpoint pixel offset"
+    ]
+  },
+  {
+    "file": "16_clock_phase_gating_gap.tcd.json",
+    "title": "Feature 16 - Clock phase, gating and collapsed gap",
+    "coverage": [
+      "positive clock",
+      "different period",
+      "phase",
+      "half cycle",
+      "gated clock",
+      "event",
+      "timeline gap",
+      "collapsed range"
+    ]
+  },
+  {
+    "file": "17_cycle_insert_delete_ripple.tcd.json",
+    "title": "Feature 17 - Cycle insertion, deletion and ripple editing",
+    "coverage": [
+      "insert cycle",
+      "delete cycle",
+      "insert N cycles",
+      "ripple edit",
+      "annotation follow",
+      "transaction follow",
+      "undo/redo"
+    ]
+  },
+  {
+    "file": "18_legend_and_group_reorder.tcd.json",
+    "title": "Feature 18 - Free legend and arbitrary group order",
+    "coverage": [
+      "multiple same-role groups",
+      "arbitrary group ordering",
+      "empty group",
+      "legend free position",
+      "legend horizontal",
+      "drag legend"
+    ]
+  },
+  {
+    "file": "19_header_footer_export.tcd.json",
+    "title": "Feature 19 - Long document text and export",
+    "coverage": [
+      "header",
+      "footer",
+      "long text wrapping",
+      "notes",
+      "figure number",
+      "revision",
+      "SVG export",
+      "PNG export",
+      "PDF export"
+    ]
+  },
+  {
+    "file": "20_transaction_cycle_linked_views.tcd.json",
+    "title": "Feature 20 - Transaction/Cycle linked views",
+    "coverage": [
+      "transaction view",
+      "cycle view",
+      "split view",
+      "linked selection",
+      "overlap",
+      "pipeline phases",
+      "transaction-to-signal highlight"
+    ]
+  }
+]

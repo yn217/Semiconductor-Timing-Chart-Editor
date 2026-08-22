@@ -1,0 +1,411 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "APB register write/read with wait state",
+    "description": "Peripheral-side APB example. Includes setup/access phases, PREADY wait states and PSLVERR.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 18
+    },
+    "samplePurpose": "Timing Chart Editor functional/visual verification fixture"
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 190,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g_apb_ctrl",
+      "name": "APB Control",
+      "signals": [
+        "pclk",
+        "presetn",
+        "psel",
+        "penable",
+        "pwrite"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "g_apb_addr",
+      "name": "Address / Write Data",
+      "signals": [
+        "paddr",
+        "pwdata"
+      ],
+      "spacingAfter": 10
+    },
+    {
+      "id": "g_apb_resp",
+      "name": "Read / Response",
+      "signals": [
+        "prdata",
+        "pready",
+        "pslverr"
+      ],
+      "spacingAfter": 0
+    }
+  ],
+  "cycleView": {
+    "signals": [
+      {
+        "id": "pclk",
+        "name": "PCLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "phase": 0,
+          "duty": 0.5,
+          "initial": 0
+        }
+      },
+      {
+        "id": "presetn",
+        "name": "PRESETn",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "psel",
+        "name": "PSEL",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          },
+          {
+            "start": 11,
+            "value": 1
+          },
+          {
+            "start": 14,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "penable",
+        "name": "PENABLE",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 5,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          },
+          {
+            "start": 12,
+            "value": 1
+          },
+          {
+            "start": 14,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "pwrite",
+        "name": "PWRITE",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ]
+      },
+      {
+        "id": "paddr",
+        "name": "PADDR",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0x1000"
+          },
+          {
+            "start": 9,
+            "value": "X"
+          },
+          {
+            "start": 11,
+            "value": "0x1004"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "pwdata",
+        "name": "PWDATA",
+        "role": "input",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 4,
+            "value": "0xA5A50001"
+          },
+          {
+            "start": 9,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "prdata",
+        "name": "PRDATA",
+        "role": "output",
+        "type": "bus",
+        "values": [
+          {
+            "start": 0,
+            "value": "X"
+          },
+          {
+            "start": 11,
+            "value": "0x0000005A"
+          },
+          {
+            "start": 14,
+            "value": "X"
+          }
+        ],
+        "width": 32
+      },
+      {
+        "id": "pready",
+        "name": "PREADY",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 1
+          },
+          {
+            "start": 5,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "pslverr",
+        "name": "PSLVERR",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 13,
+            "value": 1
+          },
+          {
+            "start": 14,
+            "value": 0
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "a_apb_write",
+        "type": "range",
+        "label": "APB write with wait states",
+        "start": {
+          "signal": "pclk",
+          "cycle": 4,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "pclk",
+          "cycle": 9,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -22
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      },
+      {
+        "id": "a_apb_wait",
+        "type": "dependencyArrow",
+        "label": "3-cycle wait",
+        "from": {
+          "signal": "penable",
+          "cycle": 5,
+          "anchor": "rising"
+        },
+        "to": {
+          "signal": "pready",
+          "cycle": 8,
+          "anchor": "rising"
+        },
+        "line": "orthogonal",
+        "arrow": "end",
+        "startOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "endOffset": {
+          "x": 0,
+          "y": 0
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -8
+        }
+      },
+      {
+        "id": "a_apb_error",
+        "type": "text",
+        "text": "Read completes with error",
+        "anchor": {
+          "signal": "pslverr",
+          "cycle": 13,
+          "point": "value-start"
+        },
+        "offset": {
+          "x": 6,
+          "y": -12
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [
+      {
+        "id": "m",
+        "name": "APB Master"
+      },
+      {
+        "id": "s",
+        "name": "APB Peripheral"
+      }
+    ],
+    "transactions": [
+      {
+        "id": "t1",
+        "name": "WRITE 0x1000",
+        "from": "m",
+        "to": "s",
+        "start": 4,
+        "end": 9,
+        "phases": [
+          {
+            "name": "Setup",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Access / Wait",
+            "start": 5,
+            "end": 9
+          }
+        ]
+      },
+      {
+        "id": "t2",
+        "name": "READ 0x1004 (error)",
+        "from": "m",
+        "to": "s",
+        "start": 11,
+        "end": 14,
+        "phases": [
+          {
+            "name": "Setup",
+            "start": 11,
+            "end": 12
+          },
+          {
+            "name": "Access",
+            "start": 12,
+            "end": 14
+          }
+        ]
+      }
+    ]
+  },
+  "verificationCoverage": [
+    "binary/bus rendering",
+    "group spacing",
+    "range annotation",
+    "dependency arrow",
+    "error text",
+    "transaction phase view"
+  ]
+}

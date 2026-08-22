@@ -1,0 +1,160 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "title": "Feature 19 - Long document text and export",
+    "description": "Covers long header/footer text, wrapping, notes, figure metadata and export-oriented page layout.",
+    "timebase": {
+      "mode": "cycle",
+      "unit": "cycle",
+      "cycleCount": 14
+    },
+    "samplePurpose": "Feature coverage / visual verification",
+    "subtitle": "Power-on initialization example",
+    "header": {
+      "show": true,
+      "text": "This deliberately long header verifies automatic wrapping and independent document layout. The explanatory text must never expand the waveform's horizontal time scale merely because the prose is long.",
+      "align": "left",
+      "maxWidth": "page"
+    },
+    "footer": {
+      "show": true,
+      "notes": [
+        "Note 1: reset_n is sampled synchronously in this illustrative example.",
+        "Note 2: init_done becomes valid only after the required initialization interval has completed.",
+        "Note 3: Long notes must wrap without clipping in SVG, PNG and PDF export."
+      ],
+      "figureNumber": "Figure 7-3",
+      "revision": "Rev A"
+    }
+  },
+  "layout": {
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "signalNameWidth": 180,
+    "signalNameAlign": "right"
+  },
+  "legend": {
+    "show": true,
+    "anchor": "top-right",
+    "offset": {
+      "x": -16,
+      "y": 12
+    },
+    "orientation": "vertical"
+  },
+  "signalGroups": [
+    {
+      "id": "g",
+      "name": "Reset / Initialization",
+      "signals": [
+        "clk",
+        "resetn",
+        "init"
+      ]
+    }
+  ],
+  "timeline": {
+    "showCycleRuler": true
+  },
+  "cycleView": {
+    "signals": [
+      {
+        "id": "clk",
+        "name": "CLK",
+        "role": "input",
+        "type": "clock",
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0
+        }
+      },
+      {
+        "id": "resetn",
+        "name": "reset_n",
+        "role": "input",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 4,
+            "value": 1
+          }
+        ]
+      },
+      {
+        "id": "init",
+        "name": "init_done",
+        "role": "output",
+        "type": "binary",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 10,
+            "value": 1
+          }
+        ]
+      }
+    ],
+    "annotations": [
+      {
+        "id": "r",
+        "type": "range",
+        "label": "Initialization sequence",
+        "start": {
+          "signal": "clk",
+          "cycle": 0,
+          "anchor": "rising"
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 10,
+          "anchor": "rising"
+        },
+        "offset": {
+          "x": 0,
+          "y": -20
+        },
+        "labelOffset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    ]
+  },
+  "transactionView": {
+    "lanes": [],
+    "transactions": []
+  },
+  "verificationCoverage": [
+    "header",
+    "footer",
+    "long text wrapping",
+    "notes",
+    "figure number",
+    "revision",
+    "SVG export",
+    "PNG export",
+    "PDF export"
+  ],
+  "exportTest": {
+    "targets": [
+      "svg",
+      "png",
+      "pdf"
+    ],
+    "fit": [
+      "width",
+      "page",
+      "selection"
+    ]
+  }
+}
