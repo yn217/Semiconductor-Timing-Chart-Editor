@@ -1,0 +1,28 @@
+{
+  "referenceClock": "clk_b",
+  "geometrySource": "wavedrom-svg",
+  "rulerErrors": [
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    0
+  ],
+  "clkA": {
+    "x": 1177.5,
+    "signal": "clk"
+  },
+  "clkB": {
+    "x": 1177.5,
+    "signal": "clk_b"
+  },
+  "pass": true
+}

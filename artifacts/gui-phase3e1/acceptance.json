@@ -1,0 +1,85 @@
+{
+  "cases": {
+    "geometryCoordinate": {
+      "source": "wavedrom-svg",
+      "local": {
+        "x": 660.5,
+        "y": 0.5
+      },
+      "canvas": {
+        "x": 1177.5,
+        "y": 298
+      },
+      "pass": true
+    },
+    "multipleClockReference": {
+      "referenceClock": "clk_b",
+      "geometrySource": "wavedrom-svg",
+      "rulerErrors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "clkA": {
+        "x": 1177.5,
+        "signal": "clk"
+      },
+      "clkB": {
+        "x": 1177.5,
+        "signal": "clk_b"
+      },
+      "pass": true
+    },
+    "viewport1672": {
+      "rulerMaxError": 0,
+      "playheadError": 0,
+      "scrollLeft": 0,
+      "pass": true
+    },
+    "viewport1280": {
+      "rulerMaxError": 0,
+      "pass": true
+    },
+    "scrolled": {
+      "scrollLeft": 120,
+      "rulerErrors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "playheadError": 0,
+      "pass": true
+    }
+  },
+  "pass": true,
+  "viewport": {
+    "primary": {
+      "width": 1672,
+      "height": 941
+    },
+    "secondary": {
+      "width": 1280,
+      "height": 720
+    }
+  }
+}

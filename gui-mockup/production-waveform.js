@@ -105,16 +105,39 @@
     };
   }
 
+  function boundaryRecord(signal, cycle, point, svg) {
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox.baseVal;
+    const screen = new DOMPoint(point.x, point.y).matrixTransform(svg.getScreenCTM());
+    const canvasX = screen.x;
+    const canvasY = screen.y;
+    return {
+      x: canvasX,
+      y: canvasY,
+      localX: point.x,
+      localY: point.y,
+      canvasX,
+      canvasY,
+      source: 'wavedrom-svg',
+      signal: signal.id,
+      cycle,
+      anchorType: 'cycle-boundary',
+      traceId: svg.parentElement?.id || null,
+      svgRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height }
+    };
+  }
+
   function buildGeometry(model, mounted) {
     const geometry = { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
     for (const item of mounted) {
       if (!item) continue;
       const { signal, svg } = item;
       const boundaries = actualBoundaries(svg);
-      if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map(point => ({ x: point.x, y: point.y, source: 'wavedrom-svg' }));
+      if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg));
       const lane = svg.querySelector('[id^="wavelane_draw_"]');
       const symbols = [...(lane?.querySelectorAll(':scope > use') || [])];
-      const entry = { cycleBoundary: boundaries.map(point => ({ x: point.x, y: point.y, source: 'wavedrom-svg', signal: signal.id, anchorType: 'cycle-boundary' })), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox') };
+      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null };
       symbols.forEach(use => {
         const href = hrefOf(use);
         const definition = document.getElementById(href.slice(1));
@@ -185,9 +208,17 @@
       const match = list?.find(item => item.cycle === cycle);
       if (!match) return undefined;
       return { ...match, x: coordinateSpace === 'canvas' ? match.canvasX : match.localX, y: coordinateSpace === 'canvas' ? match.canvasY : match.localY };
+    },
+    getCycleBoundary({ signal, cycle, coordinateSpace = 'canvas' }) {
+      const item = window.TimingChartProductionController?.model?.waveGeometry?.signals?.[signal]?.cycleBoundary?.[cycle];
+      if (!item) return undefined;
+      const svg = item.traceId ? document.getElementById(item.traceId)?.querySelector('svg') : null;
+      const screen = svg?.getScreenCTM ? new DOMPoint(item.localX, item.localY).matrixTransform(svg.getScreenCTM()) : { x: item.canvasX, y: item.canvasY };
+      const canvasX = screen.x; const canvasY = screen.y;
+      return { ...item, canvasX, canvasY, x: coordinateSpace === 'canvas' ? canvasX : item.localX, y: coordinateSpace === 'canvas' ? canvasY : item.localY };
     }
   };
   window.TimingChartProductionWaveform = bridge;
-  if (window.TimingChartProductionController) window.TimingChartProductionController.getAnchor = bridge.getAnchor;
+  if (window.TimingChartProductionController) { window.TimingChartProductionController.getAnchor = bridge.getAnchor; window.TimingChartProductionController.getCycleBoundary = bridge.getCycleBoundary; }
   window.TimingChartProductionController?.model && bridge.render(window.TimingChartProductionController.model);
 })();

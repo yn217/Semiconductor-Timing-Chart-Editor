@@ -82,21 +82,18 @@ try {
     await insert(4, 3); await setCycle(6);
     const result = await page.evaluate(() => {
       const model = window.TimingChartProductionController.model;
-      const canvas = document.querySelector('#cycleCanvas'); const playhead = document.querySelector('#cycleCanvas .playhead');
-      const boundary = model.waveGeometry.signals.clk.cycleBoundary[6];
-      return { error: Math.abs(playhead.getBoundingClientRect().left - boundary.x), cycle: model.timeSelection.cycle };
+      const playhead = document.querySelector('#cycleCanvas .playhead');
+      const boundary = window.TimingChartProductionController.getCycleBoundary({ signal: 'clk', cycle: 6, coordinateSpace: 'canvas' });
+      return { error: Math.abs(playhead.getBoundingClientRect().left - boundary.canvasX), cycle: model.timeSelection.cycle, source: boundary.source };
     });
     assert.ok(result.error <= 0.1, JSON.stringify(result)); return result;
   });
   await common('ruler-alignment', async () => {
     await insert(4, 3);
     const result = await page.evaluate(() => {
-      const model = window.TimingChartProductionController.model;
       const ticks = [...document.querySelectorAll('#cycleCanvas .ruler .tick')];
-      const trace = document.querySelectorAll('#cycleCanvas .trace svg')[1];
-      const rect = trace.getBoundingClientRect();
-      const boundaries = model.waveGeometry.signals.req_valid.cycleBoundary;
-      return { labels: ticks.map(tick => tick.textContent), errors: ticks.map((tick, index) => Math.abs((tick.getBoundingClientRect().x + tick.getBoundingClientRect().width / 2) - (rect.x + boundaries[index].x))) };
+      const boundaries = ticks.map((_, index) => window.TimingChartProductionController.getCycleBoundary({ signal: 'clk', cycle: index, coordinateSpace: 'canvas' }));
+      return { labels: ticks.map(tick => tick.textContent), errors: ticks.map((tick, index) => Math.abs((tick.getBoundingClientRect().x + tick.getBoundingClientRect().width / 2) - boundaries[index].canvasX)), source: boundaries[0].source };
     });
     assert.deepEqual(result.labels, Array.from({ length: 13 }, (_, i) => String(i)));
     assert.ok(result.errors.every(error => error <= 0.1), JSON.stringify(result));
