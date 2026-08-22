@@ -1,0 +1,11 @@
+{
+  "issue": 35,
+  "initialHidden": true,
+  "exactExports": 3,
+  "outsideClick": true,
+  "escape": true,
+  "tabSwitch": true,
+  "goldenReferenceModified": false,
+  "waveDromGeometryChanged": false,
+  "pass": true
+}
