@@ -252,6 +252,7 @@
     scheduleTimedBandLabels();
   });
   controller.applyTimingOnlyZoom = scheduleZoom;
+  controller.scheduleTimedBandLabels = scheduleTimedBandLabels;
   scheduleZoom();
 })();
 

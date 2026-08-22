@@ -1,0 +1,32 @@
+{
+  "issue": 33,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "frozenLabel": true,
+      "timingScroll": true,
+      "geometryErrorPx": 0,
+      "canonicalUnchanged": true,
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "frozenLabel": true,
+      "timingScroll": true,
+      "geometryErrorPx": 0,
+      "canonicalUnchanged": true,
+      "pass": true
+    }
+  ],
+  "goldenReferenceModified": false,
+  "stylesModified": false,
+  "iconsModified": false,
+  "customWaveformRenderer": false,
+  "pass": true
+}

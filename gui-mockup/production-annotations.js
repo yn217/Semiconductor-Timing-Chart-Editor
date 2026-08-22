@@ -27,7 +27,8 @@
     const p = key => resolved[key] && !resolved[key].error ? resolved[key] : null;
     const start = p('start') || p('from') || p('anchor'); const end = p('end') || p('to');
     const line = (x1, y1, x2, y2, extra = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'line'); Object.assign(el.dataset, extra); el.setAttribute('x1', x1); el.setAttribute('y1', y1); el.setAttribute('x2', x2); el.setAttribute('y2', y2); el.setAttribute('stroke', annotation.color || '#1473e6'); el.setAttribute('stroke-width', '1.5'); return el; };
-    const xy = point => point && { x: point.x - canvasRect.left + document.querySelector('#cycleCanvas').scrollLeft, y: point.y - canvasRect.top + document.querySelector('#cycleCanvas').scrollTop };
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+    const xy = point => point && { x: point.x - canvasRect.left + (scrollHost?.scrollLeft || 0), y: point.y - canvasRect.top + (scrollHost?.scrollTop || 0) };
     const label = (x, y, text, extra = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'text'); const style = annotation.labelStyle || {}; const align = style.align || extra['text-anchor'] === 'middle' ? (style.align || 'center') : (style.align || 'left'); const anchor = align === 'right' ? 'end' : align === 'center' ? 'middle' : 'start'; const rawLines = String(text || '').split('\n'); const lines = style.wrap && style.maxWidth ? rawLines.flatMap(line => { const maxChars = Math.max(1, Math.floor(Number(style.maxWidth) / 7)); const chunks = []; for (let i = 0; i < line.length; i += maxChars) chunks.push(line.slice(i, i + maxChars)); return chunks.length ? chunks : ['']; }) : rawLines; el.setAttribute('x', x); el.setAttribute('y', y); el.setAttribute('fill', annotation.color || '#1473e6'); el.setAttribute('font-size', '11'); el.setAttribute('text-anchor', anchor); const lineHeight = Number(style.lineHeight || 1.2) * 11; lines.forEach((lineText, index) => { const span = document.createElementNS('http://www.w3.org/2000/svg', 'tspan'); span.textContent = lineText; span.setAttribute('x', x); span.setAttribute('dy', index === 0 ? 0 : lineHeight); el.appendChild(span); }); Object.entries(extra).filter(([key]) => key !== 'text-anchor').forEach(([key, value]) => el.setAttribute(key, value)); return el; };
     const markerId = `annotation-arrow-${String(annotation.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     const ensureArrowMarker = () => { if (overlay.querySelector(`#${markerId}`)) return; const defs = overlay.querySelector('defs') || overlay.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'defs'), overlay.firstChild); const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker'); marker.id = markerId; marker.setAttribute('viewBox', '0 0 10 10'); marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('markerWidth', '6'); marker.setAttribute('markerHeight', '6'); marker.setAttribute('orient', 'auto-start-reverse'); const head = document.createElementNS('http://www.w3.org/2000/svg', 'path'); head.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z'); head.setAttribute('fill', annotation.color || '#1473e6'); marker.appendChild(head); defs.appendChild(marker); };
@@ -52,17 +53,18 @@
   const render = currentModel => {
     let overlay = document.querySelector('#cycleCanvas svg[data-production-overlay="annotations"]');
     const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;
+    const overlayHost = window.TimingChartTimingViewport?.getScrollHost?.() || canvas;
     if (!overlay) {
       overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
       overlay.dataset.productionOverlay = 'annotations';
       overlay.setAttribute('data-production-overlay', 'annotations');
       overlay.style.cssText = 'position:absolute;left:0;top:0;overflow:visible;contain:layout;pointer-events:none;z-index:4';
-      const initialRect = canvas.getBoundingClientRect();
+      const initialRect = overlayHost.getBoundingClientRect();
       overlay.style.width = `${initialRect.width}px`;
       overlay.style.height = `${initialRect.height}px`;
-      canvas.appendChild(overlay);
+      overlayHost.appendChild(overlay);
     }
-    overlay.innerHTML = ''; const rect = canvas.getBoundingClientRect(); const errors = [];
+    overlay.innerHTML = ''; const rect = overlayHost.getBoundingClientRect(); const errors = [];
     // Percentage height on an absolutely positioned SVG can participate in the
     // center grid's min-content calculation when annotation selection changes.
     // Pin the overlay to the measured canvas box so overlays cannot resize the
