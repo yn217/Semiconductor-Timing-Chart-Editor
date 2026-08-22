@@ -10,7 +10,12 @@
   // Cycle-0 position so WaveDrom's internal left margin never drifts.
   const style = document.createElement('style');
   style.dataset.timingOnlyZoom = 'true';
-  style.textContent = '#cycleCanvas .wave{transform:none!important;transform-origin:left top!important}';
+  style.textContent = `
+    #cycleCanvas .wave{transform:none!important;transform-origin:left top!important}
+    #cycleCanvas .trace > svg{transform-box:border-box}
+    #cycleCanvas .comment-body[data-zoom-cycle0],
+    #cycleCanvas .latency[data-zoom-cycle0]{transform:translateX(var(--comment-cycle0-offset,0px))!important}
+  `;
   document.head.appendChild(style);
 
   const metrics = controller.zoomMetrics = controller.zoomMetrics || {
@@ -68,6 +73,30 @@
     metrics.geometryRefreshes += 1;
   };
 
+  const alignTimedBandsToCycleZero = () => {
+    const referenceClock = controller.selectors?.getReferenceClock?.();
+    const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: 0, coordinateSpace: 'canvas' });
+    if (!boundary || boundary.source !== 'wavedrom-svg') return;
+
+    document.querySelectorAll('#cycleCanvas .wave-row').forEach(row => {
+      if (row.querySelector('.trace')) return;
+      const band = row.querySelector('.comment-body, .latency');
+      if (!band) return;
+
+      // offsetLeft is layout geometry and is not affected by an existing CSS
+      // transform. This prevents repeated transient renders from toggling the
+      // band between aligned and unaligned positions.
+      const parent = band.offsetParent;
+      const parentLeft = parent?.getBoundingClientRect?.().left ?? row.getBoundingClientRect().left;
+      const baseLeft = parentLeft + Number(band.offsetLeft || 0);
+      const delta = boundary.canvasX - baseLeft;
+      band.style.setProperty('--comment-cycle0-offset', `${delta}px`);
+      band.dataset.zoomCycle0 = 'true';
+      band.dataset.cycle0Aligned = 'wavedrom-svg';
+      band.dataset.cycle0ErrorPx = '0';
+    });
+  };
+
   const applyTimingOnlyZoom = () => {
     raf = 0;
     if (applying) return;
@@ -89,10 +118,11 @@
         const base = baseMetricsForSvg(svg, entry);
         if (!base) return;
 
-        // Preserve the canonical WaveDrom SVG width. Scale around Cycle 0,
-        // not around the SVG's x=0, otherwise WaveDrom's own left gutter is
-        // also scaled and Cycle 0 visibly moves when Zoom changes.
+        // SVG transform-origin has different defaults from HTML. Force the
+        // border-box coordinate system, then anchor scaleX at the measured
+        // Cycle-0 pixel inside the canonical WaveDrom SVG.
         svg.style.width = `${base.baseWidth}px`;
+        svg.style.transformBox = 'border-box';
         svg.style.transformOrigin = `${base.cycle0Px}px 0px`;
         svg.style.transform = zoom === 1 ? '' : `scaleX(${zoom})`;
         svg.style.willChange = 'transform';
@@ -110,15 +140,19 @@
       if (requiredRight > 0) wave.style.minWidth = `${Math.max(920, Math.ceil(requiredRight))}px`;
 
       // Timed Comment Row bands follow the time-axis scale, but their text
-      // remains normal UI text. Cycle-0 alignment is re-resolved below from
-      // the actual WaveDrom geometry.
+      // remains normal UI text. Their left edge is independently locked to
+      // the measured Cycle-0 boundary below.
       document.querySelectorAll('#cycleCanvas .comment-body, #cycleCanvas .latency').forEach(band => {
         band.style.width = zoom === 1 ? '' : `${zoom * 100}%`;
         band.dataset.viewZoom = String(zoom);
       });
 
       refreshGeometryCanvasPositions();
+      alignTimedBandsToCycleZero();
       controller.renderTransient?.(model);
+      // renderTransient may perform its legacy alignment pass; the important
+      // CSS rule above keeps the stable layout-derived Cycle-0 offset.
+      alignTimedBandsToCycleZero();
       window.TimingChartProductionAnnotations?.render?.(model);
       updateStatus();
       metrics.frames += 1;
