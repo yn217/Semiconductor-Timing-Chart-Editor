@@ -85,16 +85,35 @@
       model.document = next;
     });
   };
-  model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
+  model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null, source: 'initial' };
   controller.actions.getCurrentCycle = () => Math.max(0, Math.min(Number(model.timeSelection?.cycle ?? 0), Number(model.document.timeline?.cycleCount ?? 0)));
-  controller.actions.setCurrentCycle = cycle => {
+  const selectCycle = (cycle, { range = false, source = 'ruler' } = {}) => {
     const next = Math.max(0, Math.min(Number(cycle), Number(model.document.timeline?.cycleCount ?? 0)));
     if (!Number.isInteger(next)) return false;
+    if (range && model.timeSelection.rangeStart !== null) model.timeSelection.rangeEnd = next;
+    else { model.timeSelection.rangeStart = next; model.timeSelection.rangeEnd = null; }
     model.timeSelection.cycle = next;
-    model.timeSelection.rangeStart = null;
-    model.timeSelection.rangeEnd = null;
+    model.timeSelection.source = source;
     renderTransient(model);
     return true;
+  };
+  controller.actions.setCurrentCycle = cycle => selectCycle(cycle, { source: 'action' });
+  const screenCycleBoundaries = () => {
+    const referenceClock = controller.selectors.getReferenceClock();
+    const count = Number(model.document.timeline?.cycleCount ?? 0);
+    if (!referenceClock || !controller.getCycleBoundary) return [];
+    return Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary({ signal: referenceClock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
+  };
+  controller.actions.selectTimeAtCanvasX = (clientX, { shiftKey = false } = {}) => {
+    const boundaries = screenCycleBoundaries();
+    if (!boundaries.length || !Number.isFinite(Number(clientX))) return false;
+    let selected = boundaries[0].cycle;
+    let distance = Math.abs(boundaries[0].canvasX - Number(clientX));
+    for (const boundary of boundaries.slice(1)) {
+      const candidateDistance = Math.abs(boundary.canvasX - Number(clientX));
+      if (candidateDistance < distance) { selected = boundary.cycle; distance = candidateDistance; }
+    }
+    return selectCycle(selected, { range: shiftKey, source: 'waveform-geometry' });
   };
 
   const renderEdgeCounters = currentModel => {
@@ -139,15 +158,17 @@
       const labelWidth = Number(currentModel.view.previewSignalNameWidth ?? timeline.signalNameWidth ?? currentModel.document.layout?.signalNameWidth ?? 168) + 7;
       ruler.style.gridTemplateColumns = `${labelWidth}px repeat(${count + 1}, 1fr)`;
       ruler.appendChild(document.createElement('span'));
-      for (let cycle = 0; cycle < count; cycle += 1) { const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = cycle; tick.dataset.cycle = cycle; tick.addEventListener('click', event => { if (event.shiftKey && currentModel.timeSelection.rangeStart !== null) currentModel.timeSelection.rangeEnd = cycle; else currentModel.timeSelection.rangeStart = cycle; currentModel.timeSelection.cycle = cycle; renderTransient(currentModel); }); ruler.appendChild(tick); }
+      for (let cycle = 0; cycle < count; cycle += 1) { const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = cycle; tick.dataset.cycle = cycle; tick.addEventListener('click', event => { selectCycle(cycle, { range: event.shiftKey, source: 'ruler' }); }); ruler.appendChild(tick); }
+      if (Number(currentModel.timeSelection?.cycle) === count) { const finalTick = document.createElement('span'); finalTick.className = 'tick'; finalTick.textContent = count; finalTick.dataset.cycle = count; finalTick.addEventListener('click', event => { selectCycle(count, { range: event.shiftKey, source: 'ruler' }); }); ruler.appendChild(finalTick); }
       const referenceClock = controller.selectors.getReferenceClock();
-      const boundaries = Array.from({ length: count }, (_, cycle) => controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
-      if (boundaries.length === count) {
+      const boundaries = Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
+      if (boundaries.length >= count) {
         const rulerRect = ruler.getBoundingClientRect();
         ruler.style.position = 'relative';
         ruler.querySelectorAll('.tick').forEach(tick => {
           const cycle = Number(tick.dataset.cycle);
-          const x = boundaries[cycle].canvasX - rulerRect.left;
+          const boundary = boundaries[cycle]; if (!boundary) return;
+          const x = boundary.canvasX - rulerRect.left;
           tick.style.position = 'absolute'; tick.style.left = `${x}px`; tick.style.top = '0px'; tick.style.transform = 'translateX(-50%)';
         });
       }
@@ -156,7 +177,9 @@
     const referenceClock = controller.selectors.getReferenceClock();
     const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
     const canvas = document.querySelector('#cycleCanvas');
-    if (playhead && boundary && canvas) { const rect = scrollHost.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + scrollHost.scrollLeft}px`; }
+    if (playhead && boundary && canvas) { const rect = scrollHost.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + scrollHost.scrollLeft}px`; playhead.style.pointerEvents = 'none'; playhead.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); playhead.title = `挿入位置: Cycle ${currentModel.timeSelection?.cycle ?? 0} の直前`; }
+    if (ruler) { ruler.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); ruler.querySelectorAll('.tick').forEach(tick => { const selected = Number(tick.dataset.cycle) === Number(currentModel.timeSelection?.cycle); tick.dataset.selected = selected ? 'true' : 'false'; tick.style.fontWeight = selected ? '700' : ''; tick.style.color = selected ? '#1473e6' : ''; }); }
+    if (canvas) { canvas.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); canvas.title = `挿入位置: Cycle ${currentModel.timeSelection?.cycle ?? 0} の直前`; }
     alignCommentRowsToCycleZero(currentModel);
     if (window.requestAnimationFrame) window.requestAnimationFrame(() => alignCommentRowsToCycleZero(currentModel));
     renderEdgeCounters(currentModel);
@@ -165,6 +188,13 @@
   window.TimingChartProductionTimeAxis = { renderTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
   window.addEventListener('resize', () => renderTransient(model));
   const cycleCanvas = document.querySelector('#cycleCanvas');
+  cycleCanvas?.addEventListener('click', event => {
+    if (event.button !== 0 || event.defaultPrevented) return;
+    const target = event.target;
+    if (target.closest('.ruler, .canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea')) return;
+    if (!target.closest('.wave, .wave-row, .trace')) return;
+    controller.actions.selectTimeAtCanvasX(event.clientX, { shiftKey: event.shiftKey });
+  });
   (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderTransient(model));
   if (cycleCanvas && window.ResizeObserver) new ResizeObserver(() => renderTransient(model)).observe(cycleCanvas);
 

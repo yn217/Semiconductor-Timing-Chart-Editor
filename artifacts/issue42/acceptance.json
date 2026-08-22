@@ -1,0 +1,52 @@
+{
+  "issue": 42,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "checks": {
+        "waveformClick": true,
+        "scroll": true,
+        "zooms": [
+          0.5,
+          1,
+          1.5,
+          2
+        ],
+        "finalBoundary": true,
+        "frozenLabels": true,
+        "cycleInsert": true,
+        "nCycleInsert": true,
+        "transientOnly": true,
+        "errors": []
+      },
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "checks": {
+        "waveformClick": true,
+        "scroll": true,
+        "zooms": [
+          0.5,
+          1,
+          1.5,
+          2
+        ],
+        "finalBoundary": true,
+        "frozenLabels": true,
+        "cycleInsert": true,
+        "nCycleInsert": true,
+        "transientOnly": true,
+        "errors": []
+      },
+      "pass": true
+    }
+  ],
+  "pass": true
+}
