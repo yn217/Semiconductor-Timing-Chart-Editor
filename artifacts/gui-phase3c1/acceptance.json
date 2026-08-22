@@ -1,0 +1,49 @@
+{
+  "schema": {
+    "formatVersion": 1,
+    "requiredFields": [
+      "document",
+      "timeline",
+      "signalGroups",
+      "signals",
+      "annotations",
+      "legend",
+      "layout",
+      "transactions",
+      "constraints"
+    ],
+    "issues": [],
+    "pass": true
+  },
+  "roundTrip": {
+    "semanticEqual": true,
+    "issues": [],
+    "pass": true
+  },
+  "transient": {
+    "excluded": [
+      "selection",
+      "editor",
+      "validation",
+      "view",
+      "waveGeometry"
+    ],
+    "waveJsonExcluded": true,
+    "atExcluded": true,
+    "derivedFieldsExcluded": true,
+    "pass": true
+  },
+  "clock": {
+    "periodEdit": {
+      "canonicalPeriod": 2,
+      "waveDromPeriod": 2,
+      "geometryChanged": true
+    },
+    "duty": {
+      "uiPercent": 50,
+      "canonical": 0.5,
+      "pass": true
+    }
+  },
+  "pass": true
+}

@@ -9,7 +9,7 @@
     return '=';
   }
   function waveFor(signal, cycleCount) {
-    if (signal.type === 'clock') return { wave: `${signal.polarity === 'negative' ? 'n' : 'p'}${'.'.repeat(Math.max(0, cycleCount - 1))}`, period: signal.period, phase: signal.phase };
+    if (signal.type === 'clock') { const generator = signal.generator || signal; return { wave: `${(generator.polarity || signal.polarity) === 'negative' ? 'n' : 'p'}${'.'.repeat(Math.max(0, cycleCount - 1))}`, period: generator.period, phase: generator.phase }; }
     const changes = [...(signal.values ?? [])].sort((a, b) => a.start - b.start);
     const byStart = new Map(changes.map(change => [Number(change.start), change]));
     const isBus = signal.type === 'bus' || signal.type === 'state';
@@ -24,8 +24,8 @@
     return { wave: out, data: isBus ? data : undefined };
   }
   function toWaveJson(document) {
-    const cycleCount = Number(document.document?.cycleCount ?? document.document?.timebase?.cycleCount ?? 0);
-    const signals = document.signals ?? document.cycleView?.signals ?? [];
+    const cycleCount = Number(document.timeline?.cycleCount ?? document.document?.cycleCount ?? document.document?.timebase?.cycleCount ?? 0);
+    const signals = (document.signals ?? document.cycleView?.signals ?? []).filter(signal => signal.type !== 'commentRow');
     return { signal: signals.map(signal => { const result = waveFor(signal, cycleCount); return { name: signal.name, wave: result.wave, ...(result.data ? { data: result.data } : {}), ...(signal.type === 'clock' ? { ...(result.period ? { period: result.period } : {}), ...(result.phase !== undefined ? { phase: result.phase } : {}) } : {}) }; }) };
   }
   global.TimingWaveDromAdapter = { toWaveJson, waveFor };

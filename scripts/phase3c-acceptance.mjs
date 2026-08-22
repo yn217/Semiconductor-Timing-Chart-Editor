@@ -84,7 +84,7 @@ try {
   const clockBefore = await traceMarkup();
   await change(page.locator('[data-clock-field="period"]'), 2);
   m = await model();
-  assert.equal(m.document.signals.find(s => s.id === 'clk').period, 2);
+  assert.equal(m.document.signals.find(s => s.id === 'clk').generator.period, 2);
   assert.notEqual(await traceMarkup(), clockBefore);
   await page.screenshot({ path: `${root}/clock-editor.png` });
   result.cases.case7 = 'PASS';
