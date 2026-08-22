@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 
 const html = fs.readFileSync('gui-mockup/index.html', 'utf8');
 const js = fs.readFileSync('gui-mockup/app.js', 'utf8');
-const css = fs.readFileSync('gui-mockup/styles.css', 'utf8');
+const css = fs.readFileSync('gui-mockup/styles.css', 'utf8') + fs.readFileSync('gui-mockup/production-overrides.css', 'utf8');
 const geometry = fs.readFileSync('gui-mockup/geometry.js', 'utf8');
 const adapter = fs.readFileSync('gui-mockup/wavedrom-adapter.js', 'utf8');
 

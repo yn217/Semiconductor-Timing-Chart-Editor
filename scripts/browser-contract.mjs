@@ -20,10 +20,10 @@ try {
   await page.screenshot({ path: 'test-results/gui-json-tab.png', fullPage: true });
   const boxes = await page.evaluate(() => Object.fromEntries(['.ribbon','.signal-tree','.center-column','.bottom','.inspector'].map(sel => [sel, document.querySelector(sel).getBoundingClientRect().toJSON()])));
   assert.equal(errors.length, 0, errors.join('\n'));
-  assert.ok(boxes['.ribbon'].height >= 80 && boxes['.ribbon'].height <= 105);
-  assert.ok(boxes['.signal-tree'].width >= 272 && boxes['.signal-tree'].width <= 288);
-  assert.ok(boxes['.inspector'].width >= 350 && boxes['.inspector'].width <= 370);
-  assert.ok(boxes['.bottom'].height >= 330 && boxes['.bottom'].height <= 360);
+  assert.ok(boxes['.ribbon'].height >= 108 && boxes['.ribbon'].height <= 112);
+  assert.ok(boxes['.signal-tree'].width >= 266 && boxes['.signal-tree'].width <= 270);
+  assert.ok(boxes['.inspector'].width >= 334 && boxes['.inspector'].width <= 338);
+  assert.ok(boxes['.bottom'].height >= 400 && boxes['.bottom'].height <= 440);
   assert.ok(boxes['.bottom'].x > boxes['.signal-tree'].right - 1 && boxes['.bottom'].right < boxes['.inspector'].x + 1);
   const wdState = await page.evaluate(() => ({ adapter: Boolean(window.TimingWaveDromAdapter), wavedrom: Boolean(window.WaveDrom?.RenderWaveForm), skin: Boolean(window.WaveSkin), body: document.body.innerHTML.includes('waveDromGeometry_0'), host: document.querySelector('#waveDromGeometry_0')?.innerHTML.slice(0, 120) ?? '', status: document.querySelector('#statusText')?.textContent ?? '' }));
   assert.ok(await page.locator('#waveDromGeometry_0 svg').count() > 0, `WaveDrom SVG subtree missing: ${JSON.stringify(wdState)}`);

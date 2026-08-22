@@ -1,28 +1,110 @@
 <!doctype html>
 <html lang="ja">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Timing Chart Editor</title><link rel="stylesheet" href="styles.css"><link rel="stylesheet" href="wavedrom-overlay.css"></head>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Timing Chart Editor</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="wavedrom-overlay.css">
+  <link rel="stylesheet" href="production-overrides.css">
+</head>
 <body>
 <main class="app" data-testid="timing-editor">
-  <header class="window-header"><div class="app-icon">∿</div><strong>Timing Chart Editor</strong><span id="dirtyState">Saved</span><div class="window-actions">− □ ×</div></header>
-  <nav class="menu-tabs" aria-label="Application menu"><button class="menu-tab">ファイル</button><button class="menu-tab active">ホーム</button><button class="menu-tab">挿入</button><button class="menu-tab">注釈</button><button class="menu-tab">表示</button><button class="menu-tab">AI</button></nav>
+  <header class="titlebar">
+    <span class="appmark">∿</span>
+    <input id="documentTitle" class="title-input" value="Read Timing" aria-label="Document title">
+    <span id="dirtyState" class="saved">Saved</span>
+    <input id="documentSubtitle" class="hidden-hook" aria-label="Document subtitle">
+    <input id="documentFigure" class="hidden-hook" aria-label="Figure number">
+    <input id="documentRevision" class="hidden-hook" aria-label="Revision">
+    <span id="documentSummary" class="hidden-hook">10 cycles · 6 signals</span>
+    <span class="win">−　□　×</span>
+  </header>
+  <nav class="tabs-top" aria-label="Application menu">
+    <button>ファイル</button><button class="active">ホーム</button><button>挿入</button>
+    <button>注釈</button><button>表示</button><button>AI</button>
+  </nav>
   <section class="ribbon" aria-label="Ribbon commands">
-    <div class="ribbon-group"><div class="ribbon-actions"><button id="newDocument">新規</button><button id="openDocument">開く</button><button id="saveDocument">保存</button></div><span>ファイル</span><input id="fileInput" type="file" accept=".tcd,.json,application/json" hidden></div>
-    <div class="ribbon-group"><div class="ribbon-actions"><button id="undo">↶</button><button id="redo">↷</button></div><span>編集</span></div>
-    <div class="ribbon-group wide"><div class="ribbon-actions"><button id="addSignal">＋ 信号</button><button id="addGroup">＋ グループ</button><button id="addSpacer">＋ Spacer</button><button id="addTransaction">＋ Transaction</button></div><span>信号・構造</span></div>
-    <div class="ribbon-group wide"><div class="ribbon-actions"><button id="addAnnotation">Text / Range</button><button id="addEdge">Dependency Arrow</button><button id="snapAnchors">Snap Anchors</button></div><span>注釈・依存関係</span></div>
-    <div class="ribbon-group"><div class="ribbon-actions"><button id="insertCycle">＋ Cycle</button><button id="deleteCycle">− Cycle</button></div><span>時間軸</span></div>
-    <div class="ribbon-group"><div class="ribbon-actions"><label class="ribbon-field">View<select id="viewMode"><option value="cycle">Cycle</option><option value="transaction">Transaction</option><option value="split">Split</option></select></label><label class="ribbon-field">Zoom<input id="zoom" type="range" min="0.5" max="2" step="0.1" value="1"></label></div><span>表示</span></div>
-    <div class="ribbon-group export-group"><div class="ribbon-actions"><button id="exportSvg">SVG</button><button id="exportPng">PNG</button><button id="exportPdf">PDF</button></div><span>出力</span></div>
+    <div class="rg clip">
+      <button class="ib" id="newDocument"><svg><use href="icons.svg#duplicate"/></svg><span>新規</span></button>
+      <button class="ib" id="openDocument"><svg><use href="icons.svg#copy"/></svg><span>開く</span></button>
+      <button class="ib" id="saveDocument"><svg><use href="icons.svg#paste"/></svg><span>保存</span></button>
+      <input id="fileInput" type="file" accept=".tcd,.json,application/json" hidden>
+      <b>クリップボード</b>
+    </div>
+    <div class="rg edit">
+      <button class="ib" id="undo"><svg><use href="icons.svg#undo"/></svg><span>元に戻す</span></button>
+      <button class="ib" id="redo"><svg><use href="icons.svg#redo"/></svg><span>やり直す</span></button>
+      <b>編集</b>
+    </div>
+    <div class="rg signals">
+      <button class="ib" id="addSignal"><svg><use href="icons.svg#signal-add"/></svg><span>信号を追加</span></button>
+      <button class="ib" id="addGroup"><svg><use href="icons.svg#group-add"/></svg><span>グループを追加</span></button>
+      <button class="ib" id="addSpacer"><svg><use href="icons.svg#layout"/></svg><span>Spacer</span></button>
+      <button class="ib" id="addTransaction"><svg><use href="icons.svg#duplicate"/></svg><span>Transaction</span></button>
+      <b>信号</b>
+    </div>
+    <div class="rg order">
+      <button class="ib faded"><svg><use href="icons.svg#up"/></svg><span>上へ移動</span></button>
+      <button class="ib faded"><svg><use href="icons.svg#down"/></svg><span>下へ移動</span></button>
+      <b>順序</b>
+    </div>
+    <div class="rg layout">
+      <button class="ib"><svg><use href="icons.svg#layout"/></svg><span>自動レイアウト</span></button>
+      <div class="scale"><select aria-label="Time scale"><option>1 ns / div</option></select><button><svg><use href="icons.svg#timescale"/></svg>時間スケール</button></div>
+      <b>レイアウト</b>
+    </div>
+    <div class="rg view">
+      <button class="ib"><svg><use href="icons.svg#view"/></svg><span>ビューモード</span></button>
+      <select id="viewMode" aria-label="View mode"><option value="cycle">Cycle</option><option value="transaction">Transaction</option><option value="split">Split</option></select>
+      <b>表示</b>
+    </div>
+    <div class="rg display">
+      <label><svg><use href="icons.svg#align"/></svg>整列</label>
+      <label><input type="checkbox" checked>グリッド</label>
+      <label><input type="checkbox" checked>スナップ</label>
+      <label class="zoom-control">Zoom<input id="zoom" type="range" min="0.5" max="2" step="0.1" value="1"></label>
+      <b>表示</b>
+    </div>
+    <div class="rg ai">
+      <button class="ib"><svg><use href="icons.svg#ai"/></svg><span>AI<br>アシスタント</span></button><b>AI</b>
+    </div>
+    <div class="rg annotation-tools">
+      <button class="ib" id="addAnnotation"><svg><use href="icons.svg#paste"/></svg><span>注釈</span></button>
+      <button class="ib" id="addEdge"><svg><use href="icons.svg#timescale"/></svg><span>依存矢印</span></button>
+      <button class="ib" id="snapAnchors"><svg><use href="icons.svg#align"/></svg><span>Snap</span></button>
+      <b>注釈</b>
+    </div>
+    <div class="rg timeline-tools">
+      <button class="ib" id="insertCycle"><svg><use href="icons.svg#signal-add"/></svg><span>Cycle追加</span></button>
+      <button class="ib" id="deleteCycle"><svg><use href="icons.svg#delete"/></svg><span>Cycle削除</span></button><b>時間軸</b>
+    </div>
+    <div class="rg export-group">
+      <button class="ib" id="exportSvg"><svg><use href="icons.svg#copy"/></svg><span>SVG</span></button>
+      <button class="ib" id="exportPng"><svg><use href="icons.svg#paste"/></svg><span>PNG</span></button>
+      <button class="ib" id="exportPdf"><svg><use href="icons.svg#layout"/></svg><span>PDF</span></button><b>出力</b>
+    </div>
   </section>
-  <section class="document-bar"><input id="documentTitle" value="Read Timing" aria-label="Document title"><input id="documentSubtitle" placeholder="Subtitle" aria-label="Document subtitle"><input id="documentFigure" placeholder="Figure 1" aria-label="Figure number"><input id="documentRevision" placeholder="Rev. A" aria-label="Revision"><span id="documentSummary">10 cycles · 6 signals</span></section>
-  <div class="workspace">
-    <aside class="signal-tree" data-testid="signal-tree"><div class="pane-title"><h2>信号 / グループ</h2><button id="collapseGroups">⋯</button></div><div class="tree-search">⌕　信号を検索…</div><div id="treeContent"></div><button class="add-group-footer" id="addGroupFooter">＋ グループを追加</button></aside>
-    <section class="center-column">
-      <section class="canvas-pane"><div class="canvas-scroll"><div id="waveformCanvas" class="waveform-canvas" data-testid="waveform-canvas"></div></div><div id="legend" class="legend" data-testid="legend"></div></section>
-      <section class="bottom"><nav class="tabs" aria-label="Bottom editor"><button data-tab="signal">Signal</button><button data-tab="annotation">Annotation</button><button data-tab="problems">Problems <span id="problemCount"></span></button><button data-tab="json">JSON</button><button data-tab="transaction">Transaction</button><label class="follow"><input id="followSelection" type="checkbox" checked> Follow Selection</label><button id="pinSelection">Pin</button></nav><div id="bottomContent" class="bottom-content"></div></section>
+  <section class="workspace">
+    <aside class="left signal-tree" data-testid="signal-tree">
+      <header>信号 / グループ <button id="collapseGroups">•••</button></header>
+      <div class="search">⌕ <input placeholder="信号を検索..." aria-label="信号を検索"> ⏷</div>
+      <div id="treeContent"></div><button class="add" id="addGroupFooter">＋ グループを追加</button>
+    </aside>
+    <section class="center center-column">
+      <section class="wave canvas-pane"><div class="wave-label">時間 (cycle)</div><div class="canvas-scroll"><div id="waveformCanvas" class="waveform-canvas" data-testid="waveform-canvas"></div></div><div id="legend" class="legend" data-testid="legend"></div></section>
+      <section class="bottom">
+        <nav aria-label="Bottom editor"><button data-tab="signal">Signal</button><button data-tab="annotation">Annotation</button><button data-tab="problems">Problems <span id="problemCount"></span></button><button data-tab="json">JSON</button><button data-tab="transaction">Transaction</button><span></span><label><input id="followSelection" type="checkbox" checked> Follow Selection</label><button id="pinSelection">Pin</button></nav>
+        <div class="jsonbar"><strong>Production Editor</strong><small>Semantic model · WaveDrom/default skin</small><span></span><button data-action="json-edit">Edit</button><button data-action="validate-json">Validate</button></div>
+        <div id="bottomContent" class="bottom-content"></div>
+      </section>
     </section>
-    <aside class="inspector" data-testid="inspector"><div class="pane-title"><h2>オブジェクトのプロパティ</h2><span id="selectionKind">Document</span></div><div id="inspectorContent"></div></aside>
-  </div>
+    <aside class="right inspector" data-testid="inspector">
+      <header>オブジェクトのプロパティ <button>•••</button></header><div id="selectionKind" class="selection-kind">Document</div><div id="inspectorContent"></div>
+    </aside>
+  </section>
   <footer class="status"><span id="statusText">Ready</span><span>Semantic model · WaveDrom/default skin · SVG geometry</span></footer>
-</main><script src="vendor/wavedrom.min.js"></script><script src="vendor/waveskin-default.js"></script><script src="geometry.js"></script><script src="wavedrom-adapter.js"></script><script src="app.js"></script>
-</body></html>
+</main>
+<script src="vendor/wavedrom.min.js"></script><script src="vendor/waveskin-default.js"></script><script src="geometry.js"></script><script src="wavedrom-adapter.js"></script><script src="app.js"></script>
+</body>
+</html>
