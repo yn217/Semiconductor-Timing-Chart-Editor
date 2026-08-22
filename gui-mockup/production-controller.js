@@ -184,10 +184,31 @@
     for (const group of documentValue?.signalGroups || []) for (const row of group.rows || []) if (!signalIds.has(row)) issues.push({ code: 'invalid-group-row', groupId: group.id, row });
     if (!signalIds.has(documentValue?.timeline?.referenceClock) || documentValue?.signals?.find(signal => signal.id === documentValue.timeline.referenceClock)?.type !== 'clock') issues.push({ code: 'invalid-reference-clock' });
     if (!['rising', 'falling'].includes(documentValue?.timeline?.edge)) issues.push({ code: 'invalid-timeline-edge' });
+    const transactionIds = new Set();
+    const timelineStart = Number(documentValue?.timeline?.start ?? 0);
+    const timelineEnd = Number(documentValue?.timeline?.end ?? documentValue?.timeline?.cycleCount ?? 0);
+    for (const transaction of documentValue?.transactions || []) {
+      const id = transaction?.id;
+      const start = Number(transaction?.start);
+      const end = Number(transaction?.end);
+      if (!id || transactionIds.has(id)) issues.push({ code: 'duplicate-transaction-id', id });
+      transactionIds.add(id);
+      if (!Number.isInteger(start) || !Number.isInteger(end) || start < timelineStart || end <= start || end > timelineEnd) issues.push({ code: 'invalid-transaction-bounds', id });
+      if (transaction.linkedSignals !== undefined) {
+        if (!Array.isArray(transaction.linkedSignals)) issues.push({ code: 'invalid-transaction-links', id });
+        else for (const signalId of transaction.linkedSignals) if (!candidateSignal(signalId) || candidateSignal(signalId).type === 'commentRow') issues.push({ code: 'invalid-transaction-link', id, signalId });
+      }
+      if (transaction.phases !== undefined && !Array.isArray(transaction.phases)) issues.push({ code: 'invalid-transaction-phases', id });
+      for (const phase of Array.isArray(transaction.phases) ? transaction.phases : []) {
+        const phaseStart = Number(phase?.start);
+        const phaseEnd = Number(phase?.end);
+        if (!phase?.name || !Number.isInteger(phaseStart) || !Number.isInteger(phaseEnd) || phaseStart < start || phaseEnd <= phaseStart || phaseEnd > end) issues.push({ code: 'invalid-transaction-phase-bounds', id, phase: phase?.name });
+      }
+    }
     const paths = issue => ({
       'format-version': '$.formatVersion',
       'missing-document': '$.document', 'missing-timeline': '$.timeline', 'missing-signalGroups': '$.signalGroups', 'missing-signals': '$.signals', 'missing-annotations': '$.annotations', 'missing-legend': '$.legend', 'missing-layout': '$.layout', 'missing-transactions': '$.transactions', 'missing-constraints': '$.constraints',
-      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`
+      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`, 'duplicate-transaction-id': `$.transactions[${issue.id}]`, 'invalid-transaction-bounds': `$.transactions[${issue.id}]`, 'invalid-transaction-links': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-link': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-phases': `$.transactions[${issue.id}].phases`, 'invalid-transaction-phase-bounds': `$.transactions[${issue.id}].phases`
     }[issue.code] || '$');
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
@@ -353,7 +374,33 @@
   controller.actions.fitAll = () => controller.actions.setZoom(100);
   controller.actions.fitSelection = () => controller.actions.setZoom(125);
   controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
-  controller.actions.addTransaction = (seed = {}) => transactionRun('Add transaction', () => { const id = seed.id || `txn_${String(model.document.transactions.length + 1).padStart(3, '0')}`; const transaction = { id, name: seed.name || `Transaction ${model.document.transactions.length + 1}`, start: Number(seed.start ?? 0), end: Number(seed.end ?? 2), lane: seed.lane || 'default', source: seed.source || '', destination: seed.destination || '', phases: structuredClone(seed.phases || [{ name: 'Request', start: Number(seed.start ?? 0), end: Number(seed.start ?? 1) }, { name: 'Response', start: Number(seed.start ?? 1), end: Number(seed.end ?? 2) }]), linkedSignals: [...(seed.linkedSignals || ['req_valid', 'ready'])], comment: seed.comment || '' }; model.document.transactions.push(transaction); model.selection = { kind: 'transaction', id }; model.crossHighlight = [...transaction.linkedSignals]; model.view.mode = model.view.mode === 'cycle' ? 'transaction' : model.view.mode; model.view.tab = 'transaction'; });
+  const nextTransactionId = () => { const used = new Set((model.document.transactions || []).map(transaction => transaction.id)); for (let index = 1; index <= used.size + 1_000_000; index++) { const id = `txn_${String(index).padStart(3, '0')}`; if (!used.has(id)) return id; } return null; };
+  const defaultTransactionPhases = (start, end) => { if (end - start < 2) return [{ name: 'Transaction', start, end }]; const split = start + 1; return [{ name: 'Request', start, end: split }, { name: 'Response', start: split, end }]; };
+  const transactionCandidate = seed => {
+    const timeline = getTimeline();
+    const defaultStart = Number(timeline.start ?? 0);
+    const start = Number(seed.start ?? defaultStart);
+    const defaultEnd = Math.min(start + 2, Number(timeline.end ?? (defaultStart + 2)));
+    const end = Number(seed.end ?? defaultEnd);
+    const links = seed.linkedSignals === undefined ? [] : structuredClone(seed.linkedSignals);
+    if (!Array.isArray(links) || new Set(links).size !== links.length || links.some(id => !getSignal(id))) return null;
+    const id = seed.id === undefined ? nextTransactionId() : String(seed.id);
+    if (!id || model.document.transactions.some(transaction => transaction.id === id)) return null;
+    const transaction = structuredClone(seed);
+    transaction.id = id;
+    transaction.name = String(seed.name || `Transaction ${model.document.transactions.length + 1}`);
+    transaction.start = start;
+    transaction.end = end;
+    transaction.lane = seed.lane || 'default';
+    transaction.source = seed.source || '';
+    transaction.destination = seed.destination || '';
+    transaction.phases = structuredClone(seed.phases || defaultTransactionPhases(start, end));
+    transaction.linkedSignals = links;
+    transaction.comment = seed.comment || '';
+    return transaction;
+  };
+  controller.actions.addTransaction = (seed = {}) => transactionRun('Add transaction', () => { const transaction = transactionCandidate(seed); if (!transaction) return false; model.document.transactions.push(transaction); model.selection = { kind: 'transaction', id: transaction.id }; model.crossHighlight = [...transaction.linkedSignals]; model.view.mode = model.view.mode === 'cycle' ? 'transaction' : model.view.mode; model.view.tab = 'transaction'; });
+  controller.actions.duplicateTransaction = id => { const source = model.document.transactions.find(transaction => transaction.id === id); if (!source) return false; const duration = Number(source.end) - Number(source.start); const start = Number(source.end); const end = start + duration; const offset = start - Number(source.start); const phases = (source.phases || []).map(phase => ({ ...structuredClone(phase), start: Number(phase.start) + offset, end: Number(phase.end) + offset })); return controller.actions.addTransaction({ ...structuredClone(source), id: undefined, name: `${source.name} copy`, start, end, phases }); };
   controller.actions.deleteTransaction = id => transactionRun('Delete transaction', () => { const index = model.document.transactions.findIndex(item => item.id === id); if (index < 0) return false; model.document.transactions.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; model.crossHighlight = []; });
   controller.actions.updateTransaction = (id, field, value) => transactionRun(`Update transaction ${field}`, () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction || !['name', 'start', 'end', 'lane', 'source', 'destination', 'comment'].includes(field)) return false; transaction[field] = ['start', 'end'].includes(field) ? Number(value) : String(value); });
   controller.actions.setBusWidthAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; model.document.layout.busWidthAlign = alignment; render(); return true; };

@@ -1,0 +1,199 @@
+{
+  "issue": 85,
+  "checks": {
+    "openAhb": true,
+    "protocolDocumentsUseNoFixtureLinks": true,
+    "newTransactionUsesOnlyCurrentSignals": true,
+    "newTransactionHasInBoundsPhases": true,
+    "newTransactionOneHistoryEntry": true,
+    "noStartupFixtureLinks": true,
+    "addSource": true,
+    "duplicate": true,
+    "phasesShiftTogether": true,
+    "duplicatePhasesInBounds": true,
+    "duplicateOneHistoryEntry": true,
+    "crossHighlightValid": true,
+    "invalidLinkRejectedAtomically": true,
+    "addTxn001": true,
+    "addTxn003": true,
+    "deleteNonContiguous": true,
+    "generatedIdAvoidsCollision": true,
+    "addInvalidSource": true,
+    "outOfRangeDuplicateRejected": true,
+    "saveOpenRoundTrip": true,
+    "roundTripPreservesTransactions": true
+  },
+  "details": {
+    "protocolChecks": {
+      "apb": true,
+      "ahb": true,
+      "axi": true
+    },
+    "newTransaction": {
+      "transaction": {
+        "id": "txn_002",
+        "name": "Transaction 2",
+        "start": 0,
+        "end": 2,
+        "lane": "default",
+        "source": "",
+        "destination": "",
+        "phases": [
+          {
+            "name": "Request",
+            "start": 0,
+            "end": 1
+          },
+          {
+            "name": "Response",
+            "start": 1,
+            "end": 2
+          }
+        ],
+        "linkedSignals": [],
+        "comment": ""
+      },
+      "beforeDocument": "{\"formatVersion\":1,\"document\":{\"id\":\"issue85-axi.tcd\",\"title\":\"AXI\",\"header\":{\"subtitle\":\"\",\"description\":\"\",\"notes\":\"\",\"preconditions\":[],\"constraints\":[],\"exceptions\":[]},\"footer\":{\"figureNumber\":\"\",\"revision\":\"\",\"text\":\"\"}},\"timeline\":{\"start\":0,\"end\":10,\"timeBase\":\"cycle\",\"cycleCount\":10,\"referenceClock\":\"clk\",\"edge\":\"rising\"},\"signalGroups\":[{\"id\":\"ahb_signals\",\"name\":\"AHB Signals\",\"rows\":[\"clk\",\"busy\"]}],\"signals\":[{\"id\":\"clk\",\"name\":\"clk\",\"type\":\"clock\",\"role\":\"input\",\"source\":{\"instancePath\":[],\"signalName\":\"clk\"},\"display\":{\"name\":\"clk\"},\"generator\":{\"start\":0,\"period\":1,\"duty\":0.5,\"phase\":0,\"initial\":0,\"polarity\":\"positive\"},\"edgeCounter\":{\"show\":false,\"mode\":\"rising\",\"startNumber\":1,\"countFrom\":\"signal-start\",\"labelEvery\":1,\"position\":\"above\",\"offset\":{\"x\":0,\"y\":-6}}},{\"id\":\"busy\",\"name\":\"busy\",\"type\":\"binary\",\"role\":\"internal\",\"source\":{\"instancePath\":[],\"signalName\":\"busy\"},\"display\":{\"name\":\"busy\"},\"values\":[{\"start\":0,\"value\":0},{\"start\":2,\"value\":1},{\"start\":8,\"value\":0}]}],\"annotations\":[],\"legend\":{\"orientation\":\"horizontal\",\"usedRolesOnly\":true,\"position\":{\"x\":0,\"y\":0}},\"layout\":{\"roleColumnWidth\":32,\"signalNameWidth\":168,\"signalNameAlign\":\"left\",\"busWidthAlign\":\"left\",\"rowHeight\":28,\"signalSpacing\":6,\"overflow\":\"ellipsis\",\"pathDisplayMode\":\"signalOnly\",\"instancePathAlign\":\"left\",\"instancePathWidth\":180,\"busWidthMode\":\"inline\",\"scope\":[]},\"transactions\":[{\"id\":\"txn_001\",\"name\":\"Transaction 1\",\"start\":0,\"end\":2,\"lane\":\"default\",\"source\":\"\",\"destination\":\"\",\"phases\":[{\"name\":\"Request\",\"start\":0,\"end\":1},{\"name\":\"Response\",\"start\":1,\"end\":2}],\"linkedSignals\":[],\"comment\":\"\"}],\"constraints\":[]}",
+      "history": 2
+    },
+    "duplicate": {
+      "source": {
+        "id": "txn_source",
+        "name": "Three phase source",
+        "start": 2,
+        "end": 6,
+        "lane": "master",
+        "source": "master",
+        "destination": "slave",
+        "linkedSignals": [
+          "busy"
+        ],
+        "phases": [
+          {
+            "name": "Request",
+            "start": 2,
+            "end": 3
+          },
+          {
+            "name": "Wait",
+            "start": 3,
+            "end": 5
+          },
+          {
+            "name": "Data",
+            "start": 5,
+            "end": 6
+          }
+        ],
+        "comment": "source"
+      },
+      "duplicate": {
+        "id": "txn_003",
+        "name": "Three phase source copy",
+        "start": 6,
+        "end": 10,
+        "lane": "master",
+        "source": "master",
+        "destination": "slave",
+        "linkedSignals": [
+          "busy"
+        ],
+        "phases": [
+          {
+            "name": "Request",
+            "start": 6,
+            "end": 7
+          },
+          {
+            "name": "Wait",
+            "start": 7,
+            "end": 9
+          },
+          {
+            "name": "Data",
+            "start": 9,
+            "end": 10
+          }
+        ],
+        "comment": "source"
+      },
+      "offset": 4
+    },
+    "ids": [
+      "txn_003",
+      "txn_001"
+    ],
+    "finalTransactions": [
+      {
+        "id": "txn_003",
+        "start": 2,
+        "end": 4,
+        "name": "Transaction 2",
+        "lane": "default",
+        "source": "",
+        "destination": "",
+        "phases": [
+          {
+            "name": "Request",
+            "start": 2,
+            "end": 3
+          },
+          {
+            "name": "Response",
+            "start": 3,
+            "end": 4
+          }
+        ],
+        "linkedSignals": [],
+        "comment": ""
+      },
+      {
+        "start": 4,
+        "end": 6,
+        "id": "txn_001",
+        "name": "Transaction 2",
+        "lane": "default",
+        "source": "",
+        "destination": "",
+        "phases": [
+          {
+            "name": "Request",
+            "start": 4,
+            "end": 5
+          },
+          {
+            "name": "Response",
+            "start": 5,
+            "end": 6
+          }
+        ],
+        "linkedSignals": [],
+        "comment": ""
+      },
+      {
+        "id": "txn_edge",
+        "name": "Out of range duplicate",
+        "start": 6,
+        "end": 10,
+        "linkedSignals": [],
+        "phases": [
+          {
+            "name": "All",
+            "start": 6,
+            "end": 10
+          }
+        ],
+        "lane": "default",
+        "source": "",
+        "destination": "",
+        "comment": ""
+      }
+    ],
+    "beforeCollisionCount": 4
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue85-1672x941.png"
+  ]
+}
