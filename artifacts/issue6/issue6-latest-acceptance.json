@@ -1,0 +1,22 @@
+{
+  "checks": {
+    "bottomGroupAddRemoved": true,
+    "canonicalGroupAddMenu": true,
+    "rolePreservedOnMove": true,
+    "busAlignedColumns": true,
+    "independentAlignment": true,
+    "spacingAndSpacerPersisted": true,
+    "groupBandPersisted": true,
+    "collapsedRowsHide": true,
+    "legendFreePosition": true,
+    "rowMenuCommands": true,
+    "groupMenuCommands": true,
+    "saveOpenLayout": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue6-latest-1672x941.png",
+    "issue6-latest-1280x720.png"
+  ]
+}
