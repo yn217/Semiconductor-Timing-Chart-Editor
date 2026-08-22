@@ -106,6 +106,7 @@
   };
   const renderTab = () => tabs().forEach(button => button.classList.toggle('active', button.dataset.tab === model.view.tab));
   const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); };
+  controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
   controller.actions.selectObject = row => { model.selection = { kind: row.dataset.kind === 'comment' ? 'comment' : 'signal', id: row.dataset.kind === 'comment' ? row.dataset.commentId || row.dataset.signal : row.dataset.signal }; if (model.selection.kind === 'signal') model.editor.rowIndex = Math.max(0, getSignal(model.selection.id)?.values?.length - 1 || 0); if (model.view.followSelection && !model.view.pinned) model.view.tab = model.view.mode === 'transaction' ? 'transaction' : 'signal'; render(); };

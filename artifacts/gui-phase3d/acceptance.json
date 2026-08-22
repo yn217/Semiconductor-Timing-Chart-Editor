@@ -1,0 +1,20 @@
+{
+  "cases": {
+    "case1": "PASS",
+    "case2": "PASS",
+    "case3": "PASS",
+    "case4": "PASS",
+    "case5": "PASS",
+    "case6": "PASS",
+    "case7": "PASS",
+    "case8": "PASS",
+    "case9": "PASS",
+    "case10": "PASS",
+    "case12": "PASS",
+    "case13": "PASS",
+    "case14": "PASS",
+    "case15": "PASS"
+  },
+  "fileAdapter": "File System Access API when available; UTF-8 Blob/text fallback in test/headless mode",
+  "pass": true
+}

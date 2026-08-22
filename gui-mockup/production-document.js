@@ -1,0 +1,123 @@
+(() => {
+  'use strict';
+  const controller = window.TimingChartProductionController;
+  if (!controller) return;
+  const model = controller.model;
+  const clone = value => structuredClone(value);
+  const stable = value => JSON.stringify(value);
+  const hash = value => stable(value);
+  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null };
+  model.history = { undo: [], redo: [] };
+
+  const updateDirty = () => {
+    model.persistence.dirty = hash(controller.getSerializableDocument()) !== model.persistence.savedRevisionHash;
+    const title = document.querySelector('.titlebar strong');
+    const saved = document.querySelector('.titlebar .saved');
+    if (title) title.textContent = `タイミングチャートエディタ - ${model.persistence.fileName}`;
+    if (saved) saved.textContent = model.persistence.dirty ? 'Modified' : 'Saved';
+    document.querySelectorAll('.tool').forEach(button => {
+      const label = button.querySelector('.tool-label')?.textContent?.trim();
+      if (label === 'Undo') button.disabled = model.history.undo.length === 0;
+      if (label === 'Redo') button.disabled = model.history.redo.length === 0;
+    });
+  };
+  const repairSelection = () => {
+    const id = model.selection?.id;
+    const exists = controller.selectors.getSignals().some(signal => signal.id === id) || controller.selectors.getComments().some(comment => comment.id === id);
+    if (!exists) model.selection = { kind: 'signal', id: controller.selectors.getSignals()[0]?.id || null };
+    model.editor.rowIndex = 0;
+  };
+  const validateCurrent = () => controller.validateDocument(model.document);
+  const record = (label, before, after) => { if (stable(before) === stable(after)) return; model.history.undo.push({ label, before, after }); model.history.redo = []; updateDirty(); };
+  const wrapMutation = (name, label) => {
+    const original = controller.actions[name];
+    controller.actions[name] = (...args) => {
+      const before = clone(controller.getSerializableDocument());
+      const result = original(...args);
+      const after = clone(controller.getSerializableDocument());
+      if (result) record(label, before, after); else updateDirty();
+      return result;
+    };
+  };
+  for (const [name, label] of [['updateSignalValue', 'Change signal value'], ['addSignalValue', 'Add signal value'], ['duplicateSignalValue', 'Duplicate signal value'], ['deleteSignalValue', 'Delete signal value'], ['updateClock', 'Change clock'], ['updateComment', 'Change comment']]) wrapMutation(name, label);
+
+  const restore = snapshot => {
+    model.document = clone(snapshot);
+    model.validation = [];
+    repairSelection();
+    controller.render();
+    updateDirty();
+  };
+  controller.actions.undo = () => {
+    const entry = model.history.undo.pop();
+    if (!entry) return false;
+    model.history.redo.push(entry);
+    restore(entry.before);
+    return true;
+  };
+  controller.actions.redo = () => {
+    const entry = model.history.redo.pop();
+    if (!entry) return false;
+    model.history.undo.push(entry);
+    restore(entry.after);
+    return true;
+  };
+
+  const newDocument = () => ({
+    formatVersion: 1,
+    document: { id: 'untitled.tcd', title: 'Untitled' },
+    timeline: { start: 0, end: 1, timeBase: 'cycle', cycleCount: 1, referenceClock: 'clk', edge: 'rising' },
+    signalGroups: [{ id: 'group_input', name: '入力 (Input)', rows: ['clk'] }],
+    signals: [{ id: 'clk', name: 'clk', type: 'clock', role: 'input', generator: { start: 0, period: 1, duty: 0.5, phase: 0, initial: 0, polarity: 'positive' }, edgeCounter: { show: true, mode: 'rising', startNumber: 1, countFrom: 'signal-start', labelEvery: 1, position: 'above', offset: { x: 0, y: -6 } } }],
+    annotations: [], legend: { orientation: 'horizontal', usedRolesOnly: true }, layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis' }, transactions: [], constraints: []
+  });
+  const protect = decision => !model.persistence.dirty || decision === 'discard' || decision === 'save';
+  controller.actions.requestNew = ({ unsavedDecision = 'cancel' } = {}) => {
+    if (!protect(unsavedDecision)) return false;
+    model.document = newDocument(); model.history = { undo: [], redo: [] }; controller.history = model.history; model.selection = { kind: 'signal', id: 'clk' }; model.editor = { rowIndex: 0 }; model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; controller.render(); updateDirty(); return true;
+  };
+  const loadText = (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
+    if (!protect(unsavedDecision)) return false;
+    let parsed;
+    try { parsed = JSON.parse(text); } catch (error) { model.persistence.lastError = `Invalid JSON: ${error.message}`; return false; }
+    const issues = controller.validateDocument(parsed);
+    if (parsed?.formatVersion !== 1 || issues.length) { model.persistence.lastError = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; return false; }
+    model.document = clone(parsed); model.history = { undo: [], redo: [] }; controller.history = model.history; model.validation = []; repairSelection(); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; controller.render(); updateDirty(); return true;
+  };
+  controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
+  controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
+    if (text !== undefined) return loadText(text, fileName || 'example.tcd', unsavedDecision);
+    if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { model.persistence.lastError = error.name === 'AbortError' ? null : error.message; return false; } }
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.tcd,application/json'; input.hidden = true; document.body.appendChild(input); input.click(); return new Promise(resolve => { input.addEventListener('change', async () => { const file = input.files?.[0]; const result = file ? loadText(await file.text(), file.name, unsavedDecision) : false; input.remove(); resolve(result); }, { once: true }); });
+  };
+  const saveText = (fileName = model.persistence.fileName) => {
+    const serializable = controller.getSerializableDocument();
+    const issues = controller.validateDocument(serializable);
+    if (issues.length) { model.persistence.lastError = `Cannot save invalid document: ${issues.map(issue => issue.code).join(', ')}`; return false; }
+    const text = `${JSON.stringify(serializable, null, 2)}\n`;
+    model.persistence.savedRevisionHash = hash(serializable); model.persistence.dirty = false; model.persistence.fileName = fileName; model.persistence.lastError = null; updateDirty(); return text;
+  };
+  controller.actions.saveAs = async ({ fileName = 'Untitled.tcd' } = {}) => {
+    const testMode = fileName.startsWith('test:');
+    if (testMode) fileName = fileName.slice(5);
+    const text = saveText(fileName); if (text === false) return false;
+    if (window.showSaveFilePicker && !testMode) { try { const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const writable = await handle.createWritable(); await writable.write(text); await writable.close(); model.persistence.fileHandle = handle; updateDirty(); return true; } catch (error) { model.persistence.lastError = error.name === 'AbortError' ? null : error.message; return false; } }
+    return text;
+  };
+  controller.actions.save = async () => {
+    if (model.persistence.fileHandle) { const text = saveText(); if (text === false) return false; try { const writable = await model.persistence.fileHandle.createWritable(); await writable.write(text); await writable.close(); return true; } catch (error) { model.persistence.lastError = error.message; return false; } }
+    return saveText(model.persistence.fileName);
+  };
+  controller.persistence = model.persistence;
+  controller.history = model.history;
+  const tool = label => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(label));
+  tool('新規')?.addEventListener('click', () => controller.actions.requestNew({ unsavedDecision: 'cancel' }));
+  tool('開く')?.addEventListener('click', () => controller.actions.requestOpen({ unsavedDecision: 'cancel' }));
+  tool('保存')?.addEventListener('click', () => controller.actions.save());
+  const saveAsButton = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.includes('名前を付けて'));
+  saveAsButton?.addEventListener('click', () => controller.actions.saveAs());
+  tool('Undo')?.addEventListener('click', () => controller.actions.undo());
+  tool('Redo')?.addEventListener('click', () => controller.actions.redo());
+  document.addEventListener('keydown', event => { if (!event.ctrlKey) return; const key = event.key.toLowerCase(); if (key === 'z' && !event.shiftKey) { event.preventDefault(); controller.actions.undo(); } else if (key === 'y' || (key === 'z' && event.shiftKey)) { event.preventDefault(); controller.actions.redo(); } else if (key === 's') { event.preventDefault(); event.shiftKey ? controller.actions.saveAs() : controller.actions.save(); } else if (key === 'o') { event.preventDefault(); controller.actions.requestOpen({ unsavedDecision: 'cancel' }); } else if (key === 'n') { event.preventDefault(); controller.actions.requestNew({ unsavedDecision: 'cancel' }); } });
+  updateDirty();
+})();

@@ -1,0 +1,266 @@
+{
+  "formatVersion": 1,
+  "document": {
+    "id": "example.tcd",
+    "title": "Timing Chart"
+  },
+  "timeline": {
+    "start": 0,
+    "end": 10,
+    "timeBase": "cycle",
+    "cycleCount": 10,
+    "referenceClock": "clk",
+    "edge": "rising"
+  },
+  "signalGroups": [
+    {
+      "id": "group_input",
+      "name": "入力 (Input)",
+      "rows": [
+        "clk",
+        "req_valid",
+        "req_addr[7:0]",
+        "comment_01"
+      ]
+    },
+    {
+      "id": "group_internal",
+      "name": "内部制御 (Internal Control)",
+      "rows": [
+        "busy",
+        "state[1:0]",
+        "comment_02"
+      ]
+    },
+    {
+      "id": "group_output",
+      "name": "出力 (Output)",
+      "rows": [
+        "ready",
+        "rdata[15:0]",
+        "comment_03"
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "id": "clk",
+      "name": "clk",
+      "type": "clock",
+      "role": "input",
+      "generator": {
+        "start": 0,
+        "period": 1,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": true,
+        "mode": "rising",
+        "startNumber": 1,
+        "countFrom": "signal-start",
+        "labelEvery": 1,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": -6
+        }
+      }
+    },
+    {
+      "id": "req_valid",
+      "name": "req_valid",
+      "type": "binary",
+      "role": "input",
+      "values": [
+        {
+          "start": 0,
+          "value": 0,
+          "comment": "初期値"
+        },
+        {
+          "start": 4,
+          "value": 1,
+          "comment": "リクエスト有効"
+        },
+        {
+          "start": 7,
+          "value": 0,
+          "comment": "リクエスト無効（終了）"
+        }
+      ]
+    },
+    {
+      "id": "req_addr[7:0]",
+      "name": "req_addr[7:0]",
+      "type": "bus",
+      "role": "input",
+      "width": 8,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "00",
+          "comment": "初期値"
+        },
+        {
+          "start": 2,
+          "value": "12",
+          "comment": "アドレス1"
+        },
+        {
+          "start": 4,
+          "value": "34",
+          "comment": "アドレス2"
+        },
+        {
+          "start": 7,
+          "value": "9A",
+          "comment": "最終値"
+        }
+      ]
+    },
+    {
+      "id": "comment_01",
+      "type": "commentRow",
+      "title": "Address phase",
+      "body": "アドレス位相フェーズ（req_valid = 1 の期間）",
+      "groupId": "group_input"
+    },
+    {
+      "id": "busy",
+      "name": "busy",
+      "type": "binary",
+      "role": "internal",
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 2,
+          "value": 1
+        },
+        {
+          "start": 8,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "state[1:0]",
+      "name": "state[1:0]",
+      "type": "state",
+      "role": "internal",
+      "values": [
+        {
+          "start": 0,
+          "value": "IDLE",
+          "comment": "初期状態"
+        },
+        {
+          "start": 2,
+          "value": "REQ",
+          "comment": "リクエスト受付"
+        },
+        {
+          "start": 4,
+          "value": "WAIT",
+          "comment": "応答待ち"
+        },
+        {
+          "start": 6,
+          "value": "EXEC",
+          "comment": "実行中"
+        },
+        {
+          "start": 8,
+          "value": "DONE",
+          "comment": "完了"
+        },
+        {
+          "start": 9,
+          "value": "IDLE",
+          "comment": "待機へ復帰"
+        }
+      ]
+    },
+    {
+      "id": "comment_02",
+      "type": "commentRow",
+      "title": "Processing note",
+      "body": "処理中は新しいリクエストを受け付けない",
+      "groupId": "group_internal"
+    },
+    {
+      "id": "ready",
+      "name": "ready",
+      "type": "binary",
+      "role": "output",
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 8,
+          "value": 1
+        },
+        {
+          "start": 9,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "rdata[15:0]",
+      "name": "rdata[15:0]",
+      "type": "bus",
+      "role": "output",
+      "width": 16,
+      "displayFormat": "hex",
+      "values": [
+        {
+          "start": 0,
+          "value": "XXXX"
+        },
+        {
+          "start": 3,
+          "value": "0000"
+        },
+        {
+          "start": 6,
+          "value": "5678"
+        },
+        {
+          "start": 8,
+          "value": "ABCD"
+        }
+      ]
+    },
+    {
+      "id": "comment_03",
+      "type": "commentRow",
+      "title": "Read latency",
+      "body": "リクエスト受付からレスポンス出力まで 6 cycle",
+      "groupId": "group_output"
+    }
+  ],
+  "annotations": [],
+  "legend": {
+    "orientation": "horizontal",
+    "usedRolesOnly": true
+  },
+  "layout": {
+    "roleColumnWidth": 32,
+    "signalNameWidth": 168,
+    "signalNameAlign": "left",
+    "rowHeight": 28,
+    "signalSpacing": 6,
+    "overflow": "ellipsis"
+  },
+  "transactions": [],
+  "constraints": []
+}
