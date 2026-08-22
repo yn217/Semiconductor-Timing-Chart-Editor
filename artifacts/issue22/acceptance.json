@@ -1,0 +1,91 @@
+{
+  "viewport": {
+    "width": 1672,
+    "height": 941,
+    "deviceScaleFactor": 1
+  },
+  "panels": {
+    "signal": {
+      "changedPixels": 4666,
+      "totalPixels": 241744,
+      "diffPercent": 0.019301409755774705,
+      "threshold": 0.05,
+      "pass": true
+    },
+    "annotation": {
+      "changedPixels": 360,
+      "totalPixels": 241744,
+      "diffPercent": 0.0014891786352505129,
+      "threshold": 0.05,
+      "pass": true
+    },
+    "problems": {
+      "changedPixels": 242,
+      "totalPixels": 241744,
+      "diffPercent": 0.001001058971473956,
+      "threshold": 0.05,
+      "pass": true
+    },
+    "json": {
+      "changedPixels": 1651,
+      "totalPixels": 241744,
+      "diffPercent": 0.0068295386855516576,
+      "threshold": 0.05,
+      "pass": true
+    }
+  },
+  "overallMasked": {
+    "changedPixels": 5798,
+    "totalPixels": 1573352,
+    "diffPercent": 0.003685125769694258,
+    "threshold": 0.08,
+    "masks": [
+      {
+        "x": 517,
+        "y": 297,
+        "width": 1640,
+        "height": 28
+      },
+      {
+        "x": 517,
+        "y": 332,
+        "width": 1640,
+        "height": 28
+      },
+      {
+        "x": 517,
+        "y": 367,
+        "width": 1640,
+        "height": 28
+      },
+      {
+        "x": 517,
+        "y": 437,
+        "width": 1640,
+        "height": 28
+      },
+      {
+        "x": 517,
+        "y": 472,
+        "width": 1640,
+        "height": 28
+      },
+      {
+        "x": 517,
+        "y": 542,
+        "width": 1640,
+        "height": 28
+      },
+      {
+        "x": 517,
+        "y": 577,
+        "width": 1640,
+        "height": 28
+      }
+    ]
+  },
+  "reference": "references/gui-replacement-pack/production",
+  "dut": "gui-mockup",
+  "goldenRewrite": false,
+  "pass": true
+}

@@ -13,10 +13,10 @@ try {
   const json = () => page.locator('[data-json-document="canonical"]').textContent();
   await page.locator('[data-tab="json"]').click();
   const initial = JSON.parse(await json());
-  assert.equal(initial.document.title, 'Timing Chart'); assert.equal(initial.signals.length, 10); assert.equal(initial.annotations.length, 0);
+  assert.equal(initial.document.title, 'Timing Chart'); assert.equal(initial.signals.length, 10); assert.equal(initial.annotations.length, 5);
   await page.evaluate(() => window.TimingChartProductionController.actions.addAnnotation('marker', { id: 'issue11_marker', label: 'Read latency' }));
   await page.locator('[data-tab="json"]').click();
-  const updated = JSON.parse(await json()); assert.equal(updated.annotations.length, 1); assert.equal(updated.annotations[0].id, 'issue11_marker');
+  const updated = JSON.parse(await json()); assert.equal(updated.annotations.length, 6); assert.equal(updated.annotations.some(annotation => annotation.id === 'issue11_marker'), true);
   const invalid = await page.evaluate(() => { const value = structuredClone(window.TimingChartProductionController.getSerializableDocument()); value.timeline.referenceClock = 'missing'; value.signals[1].values[1].start = -1; return window.TimingChartProductionController.validateDocument(value); });
   assert.ok(invalid.some(issue => issue.path === '$.timeline.referenceClock')); assert.ok(invalid.some(issue => issue.path.includes('req_valid')));
   await page.evaluate(() => window.TimingChartProductionController.model.document.timeline.referenceClock = 'missing');

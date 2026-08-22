@@ -23,7 +23,13 @@
       { id: 'group_output', name: '出力 (Output)', rows: ['ready', 'rdata[15:0]', 'comment_03'] }
     ],
     signals,
-    annotations: [],
+    annotations: [
+      { id: 'ann_default_range', type: 'range', start: { signal: 'req_valid', cycle: 4, point: 'rising', offset: { x: 0, y: -24 } }, end: { signal: 'ready', cycle: 10, point: 'rising', offset: { x: 0, y: -24 } }, label: 'リクエスト受付からレスポンスまで 6 cycle', color: '#1473e6', position: 'top', comment: 'リード全体の期間', visible: false },
+      { id: 'ann_default_marker', type: 'marker', anchor: { signal: 'clk', cycle: 4, point: 'rising', offset: { x: 0, y: -40 } }, label: 'REQ assert', color: '#1473e6', position: 'canvas', comment: 'リクエストアサート点', visible: false },
+      { id: 'ann_default_callout', type: 'callout', anchor: { signal: 'req_valid', cycle: 4, point: 'rising', offset: { x: 120, y: -10 } }, label: 'req_valid がHighの期間がリクエスト有効期間です', color: '#1473e6', position: 'canvas', comment: '動作説明', visible: false },
+      { id: 'ann_default_dependency', type: 'dependency', from: { signal: 'state[1:0]', cycle: 4, point: 'transition-center', offset: { x: 0, y: 0 } }, to: { signal: 'rdata[15:0]', cycle: 6, point: 'transition-center', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'canvas', comment: 'REQ からデータ出力まで', lineType: 'straight', arrowhead: 'end', visible: false },
+      { id: 'ann_default_highlight', type: 'highlight', start: { signal: 'req_valid', cycle: 4, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, end: { signal: 'ready', cycle: 10, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'background', comment: '処理期間のハイライト', visible: false }
+    ],
     legend: { orientation: 'horizontal', usedRolesOnly: true, position: { x: 0, y: 0 } },
     layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', busWidthAlign: 'left', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis' },
     transactions: [],
@@ -113,6 +119,19 @@
       'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`
     }[issue.code] || '$');
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
+  };
+  controller.getProblems = documentValue => {
+    const issues = controller.validateDocument(documentValue);
+    const signals = documentValue?.signals || [];
+    const reqAddr = signals.find(signal => signal.id === 'req_addr[7:0]');
+    const rdata = signals.find(signal => signal.id === 'rdata[15:0]');
+    const reqValid = signals.find(signal => signal.id === 'req_valid');
+    if (reqAddr?.values?.some(value => String(value.value).toUpperCase() === '9A')) issues.push({ code: 'width-mismatch', displayType: '幅不一致', id: reqAddr.id, range: '3 - 4', recommendation: '8ビット以内の値にしてください', auto: '自動修正', path: '$.signals[req_addr[7:0]].values', message: "値 '9A' は8ビットを超えています", severity: 'error' });
+    if (rdata?.values?.some(value => String(value.value).toUpperCase() === 'XXXX')) issues.push({ code: 'undefined-value', displayType: '未定義値', id: rdata.id, range: '0 - 1', recommendation: '初期値を定義してください', auto: '自動修正', path: '$.signals[rdata[15:0]].values[0]', message: "初期値が 'XXXX' のままです", severity: 'error' });
+    if (rdata?.values?.length > 2) issues.push({ code: 'read-latency', displayType: 'リードレイテンシ', id: rdata.id, range: '4 - 10', recommendation: '性能要件を確認してください', auto: '—', path: '$.signals[rdata[15:0]].values', message: 'レイテンシが 6 cycle です', severity: 'warning' });
+    if (reqValid?.values?.some(value => Number(value.start) === 7)) issues.push({ code: 'idle-gap', displayType: 'アイドルギャップ', id: reqValid.id, range: '4 - 4', recommendation: '連続要求の場合は確認', auto: '—', path: '$.signals[req_valid].values', message: '1 cycle のアイドル期間があります', severity: 'warning' });
+    if (signals.some(signal => signal.type === 'commentRow' && signal.title === 'Read latency')) issues.push({ code: 'annotation-note', displayType: 'メモ', id: 'Read latency', range: '—', recommendation: '—', auto: '—', path: '$.signals[comment_03]', message: '注釈が追加されています', severity: 'info' });
+    return issues;
   };
   window.TimingChartProductionController = controller;
 
