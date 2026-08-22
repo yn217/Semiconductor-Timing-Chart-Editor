@@ -1,15 +1,17 @@
 # GUI Specification
 
 ## 0. Normative priority
-GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` と Golden GUI images を **Visual Acceptance Contract** とする。
+GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` と executable reference を **Visual Acceptance Contract** とする。
 
 優先順位:
 1. `docs/GUI_VISUAL_CONTRACT.md`
-2. Golden GUI images (`gui-mockup/assets/original/`)
-3. `docs/GUI_SPEC.md`
-4. `gui-mockup/index.html` / CSS / JS（AI-readable structural reference）
+2. `docs/GUI_IMPLEMENTATION_REFERENCE.md`
+3. `ui-reference-v2/index.html` / `styles.css` / `icons.svg`（Production実装用Reference）
+4. Golden GUI images (`gui-mockup/assets/original/`)
+5. `docs/GUI_SPEC.md`
+6. 既存Production GUI
 
-HTML mockupだけを見て一般的なWeb UIへ簡略化してはならない。Golden imageと構造が矛盾する場合はGolden image/Visual Contractを優先する。
+`ui-reference-v2` は「参考」ではなく、ChatGPTがGolden PNGを基に作成した実装用DOM/CSS/Icon Reference。Productionはこれを移植・再利用し、同じ機能を別レイアウトへ再設計してはならない。
 
 ## 1. Main layout
 - Office/Ribbon風の上部UI。
@@ -21,6 +23,8 @@ HTML mockupだけを見て一般的なWeb UIへ簡略化してはならない。
 - Legend / Annotation: Waveform上のoverlay
 
 Bottom editorは原則 **Center column内だけ** に配置し、Left Signal Tree / Right Inspectorの下まで全幅に広げない。
+
+Golden viewport 1672x941 / DPR 1では、`ui-reference-v2` のpane位置・Ribbon境界・Bottom Editor境界を基準とし、主要geometry差は0-2px以内を目標とする。
 
 ## 2. Ribbon
 Ribbonは機能をグループ化して表示する。単純な横一列のボタン群は禁止。
@@ -34,6 +38,8 @@ Ribbonは機能をグループ化して表示する。単純な横一列のボ�
 - AI（後段）
 
 Home/Insert等では関連commandをgroup化し、group separator / captionを持つ。
+
+Ribbonのiconographyは `ui-reference-v2/icons.svg` を基本とする。絵文字や無関係なgeneric iconへ勝手に置換しない。
 
 ## 3. Bottom tabs
 Signal / Annotation / Problems / JSON。Transaction実装後はTransactionを追加可能。
@@ -110,16 +116,32 @@ Drag、keyboard nudge、X/Y、horizontal/vertical、show/hide、used roles only�
 
 ## 11. Waveform visual ownership
 Waveform traceの形状はGUI CSSや独自SVG pathで決めない。
-Cycle waveformは `docs/WAVEDROM_COMPATIBILITY.md` に従い、WaveDrom renderer/default skin geometryを使用する。
+Cycle waveformは `docs/WAVEDROM_COMPATIBILITY.md` と `docs/WAVEDROM_CONFORMANCE.md` に従い、WaveDrom renderer/default skin geometryを使用する。
 GUIはsignal/group background、selection、annotation、clock edge number等をその外側/overlayとして提供する。
 
-## 12. AI-readable mockup
-UI構造はsemantic HTML controlsで表す。stable `data-testid` / `data-role` / `data-signal` / `data-anchor` を利用する。Waveform visualだけSVG可。
+## 12. AI-readable reference
+Production用Referenceはsemantic HTML/CSS/SVGで表す。stable `data-testid` / `data-role` / `data-signal` / `data-anchor` を利用する。
 
-ただし `gui-mockup/index.html` は **構造をAIへ伝える補助資料** であり、Golden imageを無視して見た目を簡略化する根拠にはならない。
+`ui-reference-v2` を見てProduction UIを移植すること。Golden PNGを毎回AIが再解釈して別のHTMLを作る運用は禁止。
 
 ## 13. Visual regression requirement
-Signal / Annotation / JSON（将来Transaction）の代表画面をPlaywright screenshotで保存し、Golden画像との差分をCIで検出する。
-Layout metric testとvisual screenshot testの両方を持つこと。
+GUI visual acceptanceは screenshot file existenceではない。
+
+同一Chromium / viewport 1672x941 / DPR 1 / deterministic fixtureで、
+
+Reference path:
+`ui-reference-v2/index.html` -> screenshot
+
+DUT path:
+Production app -> corresponding screenshot
+
+を比較する。
+
+必須:
+- Layout metric test（主要geometry 0-2px）
+- Reference vs DUT screenshot/perceptual diff（small reviewed threshold）
+- failure時 reference / dut / diff artifact出力
+
+WaveDrom trace内部はSVG conformanceで別途0px確認するためGUI screenshot差分ではmask可。ただしwaveform viewportの位置・サイズはmaskしない。
 
 Clock Edge Counterについては、少なくともRising/Falling/Both、複数Clock、Gated Clock、labelEveryの代表状態をvisual/E2E fixtureで確認する。
