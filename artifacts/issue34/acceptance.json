@@ -1,0 +1,30 @@
+{
+  "issue": 34,
+  "results": [
+    {
+      "viewport": {},
+      "home": 29,
+      "insert": 14,
+      "annotation": 24,
+      "view": 25,
+      "disabledReasons": 24,
+      "pass": true,
+      "pageErrors": []
+    },
+    {
+      "viewport": {},
+      "home": 29,
+      "insert": 14,
+      "annotation": 24,
+      "view": 25,
+      "disabledReasons": 24,
+      "pass": true,
+      "pageErrors": []
+    }
+  ],
+  "stylesModified": false,
+  "iconsModified": false,
+  "goldenReferenceModified": false,
+  "canonicalUnchanged": true,
+  "pass": true
+}
