@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg"><defs>
+<style>.s{fill:none;stroke:#1e2a37;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}</style>
+<symbol id="paste" viewBox="0 0 24 24"><g class="s"><path d="M9 4h6v3H9zM7 6H5v14h14V6h-2M8 10h8M8 14h8M8 18h5"/></g></symbol>
+<symbol id="cut" viewBox="0 0 24 24"><g class="s"><circle cx="6" cy="7" r="2.5"/><circle cx="6" cy="17" r="2.5"/><path d="M8 8.5 19 4M8 15.5 19 20M9 12l10-4"/></g></symbol>
+<symbol id="copy" viewBox="0 0 24 24"><g class="s"><rect x="7" y="7" width="11" height="13" rx="1"/><path d="M5 17H4V4h11v1"/></g></symbol>
+<symbol id="undo" viewBox="0 0 24 24"><g class="s"><path d="M8 8H3V3M3 8c3-4 7-5 11-3 4 2 6 7 4 11-1 2-3 4-6 5"/></g></symbol>
+<symbol id="redo" viewBox="0 0 24 24"><g class="s"><path d="M16 8h5V3M21 8c-3-4-7-5-11-3-4 2-6 7-4 11 1 2 3 4 6 5"/></g></symbol>
+<symbol id="signal-add" viewBox="0 0 24 24"><g class="s"><path d="M4 12h16M12 4v16M4 6h5M15 18h5"/></g></symbol>
+<symbol id="group-add" viewBox="0 0 24 24"><g class="s"><path d="M5 5h6v6H5zM13 13h6v6h-6zM14 6h5M16.5 3.5v5"/></g></symbol>
+<symbol id="duplicate" viewBox="0 0 24 24"><g class="s"><rect x="6" y="5" width="10" height="13" rx="1"/><rect x="10" y="8" width="10" height="12" rx="1"/></g></symbol>
+<symbol id="delete" viewBox="0 0 24 24"><g class="s"><path d="M5 7h14M9 4h6M8 7l1 13h6l1-13M10 10v7M14 10v7"/></g></symbol>
+<symbol id="up" viewBox="0 0 24 24"><g class="s"><path d="M12 20V5M7 10l5-5 5 5"/></g></symbol>
+<symbol id="down" viewBox="0 0 24 24"><g class="s"><path d="M12 4v15M7 14l5 5 5-5"/></g></symbol>
+<symbol id="layout" viewBox="0 0 24 24"><g class="s"><path d="M4 5h16M4 19h16M6 9h5v6H6zM13 9h5v6h-5z"/></g></symbol>
+<symbol id="timescale" viewBox="0 0 24 24"><g class="s"><path d="M4 12h16M4 9v6M20 9v6M8 10v4M12 10v4M16 10v4"/></g></symbol>
+<symbol id="view" viewBox="0 0 24 24"><g class="s"><rect x="5" y="4" width="14" height="16" rx="1"/><path d="M12 4v16"/></g></symbol>
+<symbol id="align" viewBox="0 0 24 24"><g class="s"><path d="M6 5h12M8 9h8M5 13h14M9 17h6"/></g></symbol>
+<symbol id="ai" viewBox="0 0 24 24"><g class="s"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6zM18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/></g></symbol>
+</defs></svg>
