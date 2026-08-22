@@ -17,11 +17,7 @@
   const ribbon = document.createElement('div'); ribbon.id = 'ribbonAnnotation'; ribbon.className = 'ribbon'; ribbon.hidden = true; ribbon.style.display = 'none'; ribbon.dataset.ribbonPanel = 'annotation'; ribbon.append(edit, anchor, line, style, label, object); document.querySelector('#ribbonHome')?.after(ribbon); setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
 
   function localRun(label, mutation) {
-    const model = controller.model; const before = structuredClone(controller.getSerializableDocument()); mutation();
-    const issues = controller.validateDocument(controller.getSerializableDocument()); if (issues.length) return false;
-    const after = structuredClone(controller.getSerializableDocument()); if (JSON.stringify(before) === JSON.stringify(after)) return true;
-    model.history.undo.push({ label, before, after }); model.history.redo = []; if (model.persistence) model.persistence.dirty = true;
-    window.TimingChartProductionAnnotations?.render?.(model); return true;
+    return controller.dispatchDocumentCommand?.(label, mutation) ?? controller.documentHistory?.run(label, mutation) ?? false;
   }
   function update(field, value) { const item = selected(); if (!item) return; localRun(`Update annotation ${field}`, () => { if (field.startsWith('labelStyle.')) { item.labelStyle ??= { wrap: false, maxWidth: 240, lineHeight: 1.2, align: 'center' }; const key = field.slice('labelStyle.'.length); item.labelStyle[key] = key === 'wrap' ? Boolean(value) : key === 'align' ? String(value) : Number(value); } else if (field === 'visible') item.visible = Boolean(value); else item[field] = String(value); }); }
   function updateAnchor(key) { const item = selected(); if (!item) return; controller.actions.beginAnnotationAnchorSelection?.(key); }

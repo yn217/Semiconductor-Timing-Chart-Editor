@@ -64,17 +64,9 @@
   };
   const validateCurrent = () => controller.validateDocument(model.document);
   const record = (label, before, after) => { if (stable(before) === stable(after)) return; model.history.undo.push({ label, before, after }); model.history.redo = []; updateDirty(); };
-  const wrapMutation = (name, label) => {
-    const original = controller.actions[name];
-    controller.actions[name] = (...args) => {
-      const before = clone(controller.getSerializableDocument());
-      const result = original(...args);
-      const after = clone(controller.getSerializableDocument());
-      if (result) record(label, before, after); else updateDirty();
-      return result;
-    };
-  };
-  for (const [name, label] of [['updateSignalValue', 'Change signal value'], ['addSignalValue', 'Add signal value'], ['duplicateSignalValue', 'Duplicate signal value'], ['deleteSignalValue', 'Delete signal value'], ['updateClock', 'Change clock'], ['updateComment', 'Change comment']]) wrapMutation(name, label);
+  // Persistent mutation ownership is defined at each action in the controller.
+  // Keep this module responsible for the shared history/dirty/validation boundary,
+  // rather than adding another post-hoc wrapper list here.
 
   const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
     model.document = clone(nextDocument);

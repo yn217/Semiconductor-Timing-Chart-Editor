@@ -1,0 +1,107 @@
+{
+  "issue": 53,
+  "cases": {
+    "signalNameAlignment": {
+      "field": "layout.signalNameAlign",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "busWidthAlignment": {
+      "field": "layout.busWidthAlign",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "legendVisible": {
+      "field": "legend.show",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "clock": {
+      "field": "signals[clk].generator.period",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "signalValue": {
+      "field": "signals[req_valid].values[0].start",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "comment": {
+      "field": "comment.body",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "annotation": {
+      "field": "annotations",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "transaction": {
+      "field": "transactions",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "cycle": {
+      "field": "timeline.cycleCount",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "group": {
+      "field": "signalGroups",
+      "dirty": true,
+      "oneHistoryEntry": true,
+      "exactUndo": true,
+      "pass": true
+    },
+    "noOp": {
+      "historyUnchanged": true,
+      "clean": true,
+      "pass": true
+    },
+    "failedValidationRollback": {
+      "atomic": true,
+      "noHistory": true,
+      "clean": true,
+      "pass": true
+    },
+    "transientView": {
+      "selectionZoomCycleExcluded": true,
+      "pass": true
+    },
+    "save": {
+      "dirtyReset": true,
+      "pass": true
+    },
+    "unsavedOpenProtection": {
+      "cancelPreservedDocument": true,
+      "pass": true
+    }
+  },
+  "staticAudit": {
+    "noPostHocWrapList": true,
+    "controllerPersistentActionsUseBoundary": true,
+    "annotationRibbonUsesBoundary": true,
+    "timeAxisUsesBoundary": true,
+    "pass": true
+  },
+  "errors": [],
+  "pass": true
+}
