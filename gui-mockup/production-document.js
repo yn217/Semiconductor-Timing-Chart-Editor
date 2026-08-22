@@ -48,6 +48,17 @@
     controller.render();
     updateDirty();
   };
+  controller.documentHistory = { run(label, mutation) {
+    const before = clone(controller.getSerializableDocument());
+    let result = true;
+    try { result = mutation() !== false; } catch (error) { model.persistence.lastError = error.message; result = false; }
+    const issues = controller.validateDocument(model.document);
+    if (!result || issues.length) { restore(before); model.validation = issues; controller.render(); return false; }
+    const after = clone(controller.getSerializableDocument());
+    record(label, before, after);
+    controller.render();
+    return true;
+  } };
   controller.actions.undo = () => {
     const entry = model.history.undo.pop();
     if (!entry) return false;
@@ -130,6 +141,6 @@
   saveAsButton?.addEventListener('click', () => controller.actions.saveAs());
   tool('Undo')?.addEventListener('click', () => controller.actions.undo());
   tool('Redo')?.addEventListener('click', () => controller.actions.redo());
-  document.addEventListener('keydown', event => { if (!event.ctrlKey) return; const key = event.key.toLowerCase(); if (key === 'z' && !event.shiftKey) { event.preventDefault(); controller.actions.undo(); } else if (key === 'y' || (key === 'z' && event.shiftKey)) { event.preventDefault(); controller.actions.redo(); } else if (key === 's') { event.preventDefault(); event.shiftKey ? controller.actions.saveAs() : controller.actions.save(); } else if (key === 'o') { event.preventDefault(); controller.actions.requestOpen({ unsavedDecision: 'cancel' }); } else if (key === 'n') { event.preventDefault(); controller.actions.requestNew({ unsavedDecision: 'cancel' }); } });
+  document.addEventListener('keydown', event => { if (!event.ctrlKey) return; const key = event.key.toLowerCase(); if (key === 'z' && !event.shiftKey) { event.preventDefault(); controller.actions.undo(); } else if (key === 'y' || (key === 'z' && event.shiftKey)) { event.preventDefault(); controller.actions.redo(); } else if (key === 's') { event.preventDefault(); event.shiftKey ? controller.actions.saveAs() : controller.actions.save(); } else if (key === 'o') { event.preventDefault(); controller.actions.requestOpen({ unsavedDecision: uiDecision() }); } else if (key === 'n') { event.preventDefault(); controller.actions.requestNew({ unsavedDecision: uiDecision() }); } });
   updateDirty();
 })();

@@ -1,0 +1,152 @@
+{
+  "cases": {
+    "cycle-insert": {
+      "reqValidStarts": [
+        0,
+        3,
+        8
+      ],
+      "cycleCount": 11,
+      "history": {
+        "undo": 1,
+        "redo": 0
+      },
+      "pass": true
+    },
+    "cycle-delete": {
+      "reqValidStarts": [
+        0,
+        3,
+        6
+      ],
+      "cycleCount": 9,
+      "pass": true
+    },
+    "n-cycle-insert": {
+      "reqValidStarts": [
+        0,
+        3,
+        10
+      ],
+      "cycleCount": 13,
+      "pass": true
+    },
+    "range-delete": {
+      "reqValidStarts": [
+        0,
+        3,
+        4
+      ],
+      "cycleCount": 7,
+      "canonical": true,
+      "pass": true
+    },
+    "transition-geometry": {
+      "transitionCycle": 4,
+      "transitionX": 663.5149579048157,
+      "pass": true
+    },
+    "comment-row-unchanged": {
+      "unchanged": true,
+      "count": 3,
+      "pass": true
+    },
+    "clock-generator": {
+      "unchanged": true,
+      "generator": {
+        "start": 0,
+        "period": 1,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "pass": true
+    },
+    "playhead-geometry": {
+      "error": 0,
+      "cycle": 6,
+      "pass": true
+    },
+    "ruler-alignment": {
+      "labels": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11",
+        "12"
+      ],
+      "errors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "pass": true
+    },
+    "undo-redo-time-axis": {
+      "undoRestored": true,
+      "redoRestored": true,
+      "geometryCycleCount": 10,
+      "pass": true
+    },
+    "invalid-range": {
+      "rejected": true,
+      "historyUnchanged": true,
+      "pass": true
+    },
+    "delete-all": {
+      "rejected": true,
+      "historyUnchanged": true,
+      "pass": true
+    },
+    "ns-mode": {
+      "rejected": true,
+      "reason": "time-axis-cycle-only",
+      "historyUnchanged": true,
+      "pass": true
+    },
+    "save-open-time-axis": {
+      "roundTrip": true,
+      "cycleCount": 7,
+      "pass": true
+    },
+    "transient-selection": {
+      "excluded": true,
+      "pass": true
+    },
+    "keyboard-dirty-decision-path": {
+      "ctrlN": "uiDecision",
+      "ctrlO": "uiDecision",
+      "pass": true
+    }
+  },
+  "screenshots": {
+    "viewport": {
+      "width": 1672,
+      "height": 941
+    },
+    "before": "before.png",
+    "afterInsert": "after-insert.png",
+    "afterRangeDelete": "after-range-delete.png"
+  },
+  "pass": true,
+  "baselineRestored": true
+}

@@ -105,7 +105,7 @@
     setHidden(document.querySelector('#transactionCanvas'), model.view.mode === 'cycle');
   };
   const renderTab = () => tabs().forEach(button => button.classList.toggle('active', button.dataset.tab === model.view.tab));
-  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); };
+  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
