@@ -85,10 +85,11 @@
   let savedPanels = null;
   const toggleWaveformOnly = () => {
     if (!view.panels.waveformOnly) {
-      savedPanels = { inspector: view.panels.inspector, left: view.panels.left, bottom: view.panels.bottom };
+      savedPanels = { inspector: view.panels.inspector, left: view.panels.left, bottom: view.panels.bottom, bottomHeight: Number(view.bottomHeight || document.querySelector('.bottom')?.getBoundingClientRect().height || 270) };
       view.panels = { ...view.panels, inspector: false, left: false, bottom: false, waveformOnly: true };
     } else {
       view.panels = { ...view.panels, ...(savedPanels || { inspector: true, left: true, bottom: true }), waveformOnly: false };
+      if (savedPanels?.bottomHeight) view.bottomHeight = savedPanels.bottomHeight;
       savedPanels = null;
     }
     apply(); refresh();
@@ -106,6 +107,39 @@
   `;
   document.head.appendChild(style);
 
+  function applyPanelLayout() {
+    const workspace = document.querySelector('.workspace');
+    const center = document.querySelector('.center');
+    const bottom = document.querySelector('.bottom');
+    if (!workspace || !center) return;
+    const rootStyle = getComputedStyle(document.documentElement);
+    const leftWidth = rootStyle.getPropertyValue('--left').trim() || '330px';
+    const rightWidth = rootStyle.getPropertyValue('--right').trim() || '300px';
+    workspace.style.gridTemplateColumns = `${view.panels.left ? leftWidth : '0px'} minmax(0,1fr) ${view.panels.inspector ? rightWidth : '0px'}`;
+    workspace.dataset.panelLayout = 'explicit';
+    const left = document.querySelector('.left-panel');
+    const inspector = document.querySelector('.inspector');
+    if (left) left.style.gridColumn = '1';
+    center.style.gridColumn = '2';
+    if (inspector) inspector.style.gridColumn = '3';
+    center.style.minWidth = '0';
+    const centerWidth = `${Math.max(0, center.clientWidth)}px`;
+    center.querySelectorAll('.canvas').forEach(canvas => { canvas.style.minWidth = '0'; canvas.style.width = centerWidth; canvas.style.maxWidth = centerWidth; canvas.style.boxSizing = 'border-box'; });
+    if (bottom) { bottom.style.minWidth = '0'; bottom.style.width = centerWidth; bottom.style.maxWidth = centerWidth; bottom.style.boxSizing = 'border-box'; }
+    if (bottom && view.panels.bottom) {
+      const savedHeight = Number(view.bottomHeight || model.view.bottomHeight);
+      if (Number.isFinite(savedHeight) && savedHeight >= 150) center.style.setProperty('--bottom-h', `${savedHeight}px`);
+      if (model.view.mode === 'split') {
+        const splitBottom = Number.parseFloat(getComputedStyle(center).getPropertyValue('--split-bottom-h')) || Number(bottom.getBoundingClientRect().height) || 270;
+        center.style.setProperty('--split-bottom-h', `${Number(view.bottomHeight || model.view.bottomHeight || splitBottom)}px`);
+        center.style.gridTemplateRows = 'minmax(90px,1fr) minmax(90px,1fr) var(--split-bottom-h)';
+      } else center.style.gridTemplateRows = 'minmax(0,1fr) var(--bottom-h)';
+    } else if (model.view.mode === 'split') center.style.gridTemplateRows = 'minmax(90px,1fr) minmax(90px,1fr)';
+    else center.style.gridTemplateRows = 'minmax(0,1fr)';
+    center.dataset.panelLayout = view.panels.bottom ? 'canvas-bottom' : 'canvas-only';
+    center.dataset.waveformOnly = view.panels.waveformOnly ? 'true' : 'false';
+  }
+
   function apply() {
     const canvas = document.querySelector('#cycleCanvas');
     if (canvas) {
@@ -122,9 +156,11 @@
     document.querySelectorAll('.bus-width-column,.hierarchy-bus-column').forEach(node => { node.style.display = view.columns.busWidth ? '' : 'none'; });
     document.querySelectorAll('.hierarchy-instance-column').forEach(node => { node.style.display = view.columns.instancePath ? '' : 'none'; });
     const left = document.querySelector('.left-panel'); const inspector = document.querySelector('.inspector'); const bottom = document.querySelector('.bottom');
-    if (left) left.hidden = !view.panels.left;
-    if (inspector) inspector.hidden = !view.panels.inspector;
-    if (bottom) bottom.hidden = !view.panels.bottom;
+    if (bottom && view.panels.bottom) view.bottomHeight = Number(view.bottomHeight || model.view.bottomHeight || bottom.getBoundingClientRect().height || 270);
+    if (left) { left.hidden = !view.panels.left; left.classList.toggle('hidden', !view.panels.left); }
+    if (inspector) { inspector.hidden = !view.panels.inspector; inspector.classList.toggle('hidden', !view.panels.inspector); }
+    if (bottom) { bottom.hidden = !view.panels.bottom; bottom.classList.toggle('hidden', !view.panels.bottom); }
+    applyPanelLayout();
     ribbon.dataset.viewState = JSON.stringify({ guides: view.guides, columns: view.columns, overlays: view.overlays, panels: view.panels });
   }
   function refresh() {
@@ -162,6 +198,6 @@
 
   const originalRender = controller.render;
   controller.render = (...args) => { const result = originalRender?.(...args); apply(); refresh(); return result; };
-  controller.viewRibbon = { ribbon, apply, refresh, setRibbon };
+  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout };
   apply(); refresh();
 })();

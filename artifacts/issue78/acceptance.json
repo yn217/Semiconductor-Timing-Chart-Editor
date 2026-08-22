@@ -1,0 +1,1166 @@
+{
+  "issue": 78,
+  "checks": {
+    "leftReclaimsWidth": true,
+    "leftRestoresWidth": true,
+    "inspectorReclaimsWidth": true,
+    "inspectorRestoresWidth": true,
+    "bottomReclaimsHeight": true,
+    "bottomRestoresHeight": true,
+    "contextPreserved": true,
+    "waveformExpands": true,
+    "waveformRestoresCombination": true,
+    "semanticStateUnchanged": true,
+    "geometryReused": true,
+    "explicitWorkspaceLayout": "canvas-bottom",
+    "noAutoPlacement": true
+  },
+  "viewports": {
+    "1672x941": {
+      "checks": {
+        "leftReclaimsWidth": true,
+        "leftRestoresWidth": true,
+        "inspectorReclaimsWidth": true,
+        "inspectorRestoresWidth": true,
+        "bottomReclaimsHeight": true,
+        "bottomRestoresHeight": true,
+        "contextPreserved": true,
+        "waveformExpands": true,
+        "waveformRestoresCombination": true,
+        "semanticStateUnchanged": true,
+        "geometryReused": true,
+        "explicitWorkspaceLayout": "canvas-bottom",
+        "noAutoPlacement": true
+      },
+      "geometry": {
+        "initial": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1042px 300px",
+          "centerRows": "428px 270px"
+        },
+        "leftOff": {
+          "left": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 1372,
+            "width": 1372,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 0,
+            "right": 1372,
+            "width": 1372,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 0,
+            "right": 1372,
+            "width": 1372,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": false,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "0px 1372px 300px",
+          "centerRows": "428px 270px"
+        },
+        "leftRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1042px 300px",
+          "centerRows": "428px 270px"
+        },
+        "inspectorOff": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1672,
+            "width": 1342,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1672,
+            "width": 1342,
+            "height": 428
+          },
+          "inspector": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1672,
+            "width": 1342,
+            "height": 270
+          },
+          "panels": {
+            "inspector": false,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1342px 0px",
+          "centerRows": "428px 270px"
+        },
+        "inspectorRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1042px 300px",
+          "centerRows": "428px 270px"
+        },
+        "bottomBefore": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1042px 300px",
+          "centerRows": "428px 270px"
+        },
+        "bottomOff": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": false,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1042px 300px",
+          "centerRows": "698px"
+        },
+        "bottomRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "330px 1042px 300px",
+          "centerRows": "428px 270px"
+        },
+        "waveformOnly": {
+          "left": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 1672,
+            "width": 1672,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 1672,
+            "width": 1672,
+            "height": 698
+          },
+          "inspector": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "bottom": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "panels": {
+            "inspector": false,
+            "left": false,
+            "bottom": false,
+            "waveformOnly": true
+          },
+          "bottomHeight": 270,
+          "tab": "annotation",
+          "follow": false,
+          "pinned": true,
+          "grid": "0px 1672px 0px",
+          "centerRows": "698px"
+        },
+        "waveformRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 914,
+            "left": 0,
+            "right": 330,
+            "width": 330,
+            "height": 698
+          },
+          "center": {
+            "top": 216,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 698
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 644,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 428
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 914,
+            "left": 1372,
+            "right": 1672,
+            "width": 300,
+            "height": 698
+          },
+          "bottom": {
+            "top": 644,
+            "bottom": 914,
+            "left": 330,
+            "right": 1372,
+            "width": 1042,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false,
+            "bottomHeight": 270
+          },
+          "bottomHeight": 270,
+          "tab": "annotation",
+          "follow": false,
+          "pinned": true,
+          "grid": "330px 1042px 300px",
+          "centerRows": "428px 270px"
+        }
+      },
+      "contextBefore": {
+        "tab": "annotation",
+        "follow": false,
+        "pinned": true
+      },
+      "contextAfter": {
+        "tab": "annotation",
+        "follow": false,
+        "pinned": true
+      }
+    },
+    "1280x720": {
+      "checks": {
+        "leftReclaimsWidth": true,
+        "leftRestoresWidth": true,
+        "inspectorReclaimsWidth": true,
+        "inspectorRestoresWidth": true,
+        "bottomReclaimsHeight": true,
+        "bottomRestoresHeight": true,
+        "contextPreserved": true,
+        "waveformExpands": true,
+        "waveformRestoresCombination": true,
+        "semanticStateUnchanged": true,
+        "geometryReused": true,
+        "explicitWorkspaceLayout": "canvas-bottom",
+        "noAutoPlacement": true
+      },
+      "geometry": {
+        "initial": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 730px 270px",
+          "centerRows": "207px 270px"
+        },
+        "leftOff": {
+          "left": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 0,
+            "right": 1010,
+            "width": 1010,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 0,
+            "right": 1010,
+            "width": 1010,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 693,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 477
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 0,
+            "right": 1010,
+            "width": 1010,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": false,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "0px 1010px 270px",
+          "centerRows": "207px 270px"
+        },
+        "leftRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 730px 270px",
+          "centerRows": "207px 270px"
+        },
+        "inspectorOff": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1280,
+            "width": 1000,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1280,
+            "width": 1000,
+            "height": 207
+          },
+          "inspector": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1280,
+            "width": 1000,
+            "height": 270
+          },
+          "panels": {
+            "inspector": false,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 1000px 0px",
+          "centerRows": "207px 270px"
+        },
+        "inspectorRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 730px 270px",
+          "centerRows": "207px 270px"
+        },
+        "bottomBefore": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 730px 270px",
+          "centerRows": "207px 270px"
+        },
+        "bottomOff": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": false,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 730px 270px",
+          "centerRows": "477px"
+        },
+        "bottomRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false
+          },
+          "bottomHeight": 270,
+          "tab": "signal",
+          "follow": true,
+          "pinned": false,
+          "grid": "280px 730px 270px",
+          "centerRows": "207px 270px"
+        },
+        "waveformOnly": {
+          "left": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 0,
+            "right": 1280,
+            "width": 1280,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 693,
+            "left": 0,
+            "right": 1280,
+            "width": 1280,
+            "height": 477
+          },
+          "inspector": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "bottom": {
+            "top": 0,
+            "bottom": 0,
+            "left": 0,
+            "right": 0,
+            "width": 0,
+            "height": 0
+          },
+          "panels": {
+            "inspector": false,
+            "left": false,
+            "bottom": false,
+            "waveformOnly": true
+          },
+          "bottomHeight": 270,
+          "tab": "annotation",
+          "follow": false,
+          "pinned": true,
+          "grid": "0px 1280px 0px",
+          "centerRows": "477px"
+        },
+        "waveformRestored": {
+          "left": {
+            "top": 216,
+            "bottom": 765,
+            "left": 0,
+            "right": 280,
+            "width": 280,
+            "height": 549
+          },
+          "center": {
+            "top": 216,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 477
+          },
+          "canvas": {
+            "top": 216,
+            "bottom": 423,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 207
+          },
+          "inspector": {
+            "top": 216,
+            "bottom": 765,
+            "left": 1010,
+            "right": 1280,
+            "width": 270,
+            "height": 549
+          },
+          "bottom": {
+            "top": 423,
+            "bottom": 693,
+            "left": 280,
+            "right": 1010,
+            "width": 730,
+            "height": 270
+          },
+          "panels": {
+            "inspector": true,
+            "left": true,
+            "bottom": true,
+            "waveformOnly": false,
+            "bottomHeight": 270
+          },
+          "bottomHeight": 270,
+          "tab": "annotation",
+          "follow": false,
+          "pinned": true,
+          "grid": "280px 730px 270px",
+          "centerRows": "207px 270px"
+        }
+      },
+      "contextBefore": {
+        "tab": "annotation",
+        "follow": false,
+        "pinned": true
+      },
+      "contextAfter": {
+        "tab": "annotation",
+        "follow": false,
+        "pinned": true
+      }
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue78-1672x941.png",
+    "issue78-1280x720.png"
+  ]
+}
