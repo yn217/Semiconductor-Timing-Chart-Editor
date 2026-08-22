@@ -63,6 +63,8 @@ The waveform is the primary work surface.
 - Signal label/role area must be visually separated from waveform traces.
 - `[i]`, `[o]`, `[wire]` are role badges/columns, not text embedded into the signal trace area.
 - Group background bands may extend through label+waveform or waveform-only according to group settings.
+- Clock Edge Counter numbers are custom overlay labels anchored to WaveDrom edge Geometry; they must not replace or distort WaveDrom clock paths.
+- Multiple clock signals may show independent edge indices simultaneously without label ownership ambiguity.
 
 ## 6. Bottom Editor contract
 Tabs:
@@ -79,6 +81,8 @@ Signal Event Table should be spreadsheet-like and horizontally aligned with the 
 Right Inspector stays visible beside both the waveform and Bottom Editor.
 Properties are sectioned/grouped rather than presented as an unstructured long form.
 
+For a selected Clock signal, expose a grouped `Edge Numbers` section containing Show, Rising/Falling/Both mode, Start number, Count from, Show every N edges, Above/Below and X/Y offset controls.
+
 ## 8. Signal tab Golden state
 Must visibly include:
 - selected signal in left tree
@@ -87,6 +91,8 @@ Must visibly include:
 - Start/Value event table
 - quick value operations where applicable
 - right Inspector for selected signal
+
+For Clock selection, a representative Golden/visual-regression state should also verify Edge Numbers without changing the underlying WaveDrom clock geometry.
 
 ## 9. Annotation tab Golden state
 Must visibly include:
@@ -115,12 +121,14 @@ For the reference viewport, automated tests shall include:
 2. Playwright screenshots for Signal / Annotation / JSON states
 3. visual diff against Golden references
 4. explicit review of any accepted baseline update
+5. representative Clock Edge Counter screenshots for Rising/Falling/Both and multiple clocks
 
 No code change may silently regenerate Golden screenshots and declare success.
 
 ## 12. Separation from WaveDrom geometry
 Full-window screenshot comparison is not sufficient for waveform correctness.
 Waveform geometry is validated separately by `docs/WAVEDROM_COMPATIBILITY.md` using SVG/path-level tests with 0 px default tolerance.
+Clock Edge Counter is an overlay consumer of the Geometry Map and must therefore be excluded from the raw WaveDrom trace geometry comparison while still being tested for exact anchor alignment.
 
 ## 13. Current known non-compliant patterns
 The following patterns are explicitly rejected:
@@ -129,5 +137,6 @@ The following patterns are explicitly rejected:
 - waveform confined to a small top-left area with a large unused blank canvas
 - signal role/name text drawn inside waveform lanes
 - custom binary/bus transition shapes that differ from WaveDrom
+- clock edge numbers positioned from an independent cycle-to-pixel formula rather than actual rendered edge Geometry
 
 These patterns must not be treated as acceptable simply because all functional controls are present.
