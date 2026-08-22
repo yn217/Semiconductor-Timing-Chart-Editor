@@ -93,7 +93,7 @@
 
   const disableBottomNoOps = () => {
     document.querySelectorAll('#bottomContent button').forEach(button => {
-      if (button.dataset.editorAction || button.dataset.annotationAction || button.dataset.commentAction || button.dataset.jsonAction || button.dataset.transactionAction || button.dataset.problemAction) { record(button, 'implemented'); return; }
+      if (button.dataset.editorAction || button.dataset.annotationAction || button.dataset.commentAction || button.dataset.clockAction || button.dataset.jsonAction || button.dataset.transactionAction || button.dataset.problemAction) { record(button, 'implemented'); return; }
       if (unsupportedNoOps.test(normalize(button.textContent))) disable(button, 'この操作は未実装です。対応Issue: #38以降');
     });
     document.querySelectorAll('#inspectorBody [data-annotation-field]').forEach(input => {
@@ -124,7 +124,7 @@
         if (!element.dataset.controlStatus) element.dataset.controlStatus = element.disabled ? 'disabled' : 'implemented';
         record(element, element.dataset.controlStatus, element.disabled ? element.title : '');
       }
-      if (element.matches?.('#bottomContent button') && !element.dataset.commentAction && !element.dataset.jsonAction && !element.dataset.transactionAction && !element.dataset.annotationAction && !element.dataset.editorAction && unsupportedNoOps.test(normalize(element.textContent))) disable(element, 'この操作は未実装です。対応Issue: #38以降');
+      if (element.matches?.('#bottomContent button') && !element.dataset.commentAction && !element.dataset.clockAction && !element.dataset.jsonAction && !element.dataset.transactionAction && !element.dataset.annotationAction && !element.dataset.editorAction && unsupportedNoOps.test(normalize(element.textContent))) disable(element, 'この操作は未実装です。対応Issue: #38以降');
       if (element.matches?.('#bottomContent .mini-btn') && controller.model.view.tab === 'problems') {
         const text = normalize(element.textContent);
         const filter = text.startsWith('すべて') ? 'all' : text.startsWith('エラー') ? 'err' : text.startsWith('警告') ? 'warn' : text.startsWith('情報') ? 'info' : '';

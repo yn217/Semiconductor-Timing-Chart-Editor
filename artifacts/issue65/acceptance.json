@@ -6,8 +6,8 @@
   "transactionEdit": true,
   "jsonExport": true,
   "pass": true,
+  "clockImportExport": true,
   "knownIncomplete": [
-    "clock import/export",
     "JSON browser file-import E2E",
     "full APB/AHB/AXI/CDC matrix"
   ]
