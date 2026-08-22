@@ -1,0 +1,444 @@
+{
+  "annotations": [
+    {
+      "id": "ann_marker_01",
+      "type": "marker",
+      "label": "Updated marker",
+      "color": "#e39a25",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 6,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": -30
+        }
+      }
+    },
+    {
+      "id": "ann_range_01",
+      "type": "range",
+      "label": "Request → Ready",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "start": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": -24
+        }
+      },
+      "end": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": -24
+        }
+      }
+    },
+    {
+      "id": "ann_offset_01",
+      "type": "marker",
+      "label": "Marker",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 6,
+        "point": "rising",
+        "offset": {
+          "x": 12,
+          "y": -20
+        }
+      }
+    },
+    {
+      "id": "ann_bus_01",
+      "type": "marker",
+      "label": "Marker",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "req_addr[7:0]",
+        "cycle": 4,
+        "point": "transition-center",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "ann_state_01",
+      "type": "text",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "state[1:0]",
+        "cycle": 4,
+        "point": "transition-center",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "ann_callout_01",
+      "type": "callout",
+      "label": "Valid request",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 120,
+          "y": -10
+        }
+      }
+    },
+    {
+      "id": "ann_dep_straight",
+      "type": "dependency",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "from": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "to": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "lineType": "straight",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann_dep_orthogonal",
+      "type": "dependency",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "from": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "to": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "lineType": "orthogonal",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann_dep_curve",
+      "type": "dependency",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "from": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "to": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "lineType": "curve",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann_dep_diagonal",
+      "type": "dependency",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "from": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "to": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "lineType": "diagonal",
+      "arrowhead": "end"
+    },
+    {
+      "id": "ann_vertical_01",
+      "type": "verticalLine",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 7,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "ann_bracket_01",
+      "type": "bracket",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "start": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "rising",
+        "offset": {
+          "x": 1,
+          "y": -10
+        }
+      },
+      "end": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "rising",
+        "offset": {
+          "x": 2,
+          "y": -12
+        }
+      }
+    },
+    {
+      "id": "ann_highlight_01",
+      "type": "highlight",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "start": {
+        "signal": "req_valid",
+        "cycle": 5,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "end": {
+        "signal": "ready",
+        "cycle": 10,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "ann_0001",
+      "type": "marker",
+      "label": "REQ",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 6,
+        "point": "rising",
+        "offset": {
+          "x": 0,
+          "y": -30
+        }
+      }
+    },
+    {
+      "id": "ann_drag_01",
+      "type": "marker",
+      "label": "Marker",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 4,
+        "point": "rising",
+        "offset": {
+          "x": 12,
+          "y": 5
+        }
+      }
+    },
+    {
+      "id": "ann_collapse_01",
+      "type": "range",
+      "label": "",
+      "color": "#1473e6",
+      "position": "canvas",
+      "comment": "",
+      "visible": true,
+      "anchor": {
+        "signal": "clk",
+        "cycle": 0,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "start": {
+        "signal": "req_valid",
+        "cycle": 4,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      },
+      "end": {
+        "signal": "ready",
+        "cycle": 4,
+        "point": "cycle-boundary",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    }
+  ]
+}

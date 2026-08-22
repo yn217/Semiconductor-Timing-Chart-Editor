@@ -4,7 +4,7 @@ import { spawn } from 'node:child_process';
 import { chromium } from 'playwright';
 import { PNG } from 'pngjs';
 
-const root = 'artifacts/gui-phase3e2';
+const root = process.argv[2] || 'artifacts/gui-phase3e2';
 const referencePath = 'artifacts/gui-phase3a/production-screenshot-1672x941.png';
 const dutPath = `${root}/initial-10cycle.png`;
 const diffPath = `${root}/static-gui-diff.png`;
@@ -54,7 +54,7 @@ try {
   fs.writeFileSync(`${root}/static-gui-mask.json`, `${JSON.stringify({ masks: contract.masks, styleContract: contract.style, labels: contract.labels, title: contract.title }, null, 2)}\n`);
   const semantic = JSON.parse(fs.readFileSync(`${root}/acceptance.json`, 'utf8'));
   fs.writeFileSync(`${root}/semantic-geometry.json`, `${JSON.stringify({ cases: semantic.cases, source: 'wavedrom-svg', maxErrorPx: 0.1, pass: true }, null, 2)}\n`);
-  const acceptance = { staticGuiLock: { ...result, threshold: 0, pass: result.changedPixels === 0 }, semanticGeometry: { maxErrorPx: 0.1, pass: semantic.pass === true }, goldenReferenceModified: false, stylesModified: false, iconsModified: false, geometryBypass: false, pass: result.changedPixels === 0 && semantic.pass === true };
+  const acceptance = { staticGuiLock: { ...result, threshold: 0, pass: result.changedPixels === 0 }, semanticGeometry: { maxErrorPx: 0.1, caseCount: Object.keys(semantic.cases || {}).length, pass: semantic.pass === true }, goldenReferenceModified: false, stylesModified: false, iconsModified: false, geometryBypass: false, pass: result.changedPixels === 0 && semantic.pass === true };
   fs.writeFileSync(`${root}/acceptance.json`, `${JSON.stringify(acceptance, null, 2)}\n`);
   await browser.close(); console.log(`Static GUI lock passed: ${(result.diffPercent * 100).toFixed(4)}%; semantic geometry source wavedrom-svg.`);
 } finally { server.kill(); }

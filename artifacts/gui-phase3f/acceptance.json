@@ -1,0 +1,20 @@
+{
+  "staticGuiLock": {
+    "changedPixels": 0,
+    "totalPixels": 1573352,
+    "diffPercent": 0,
+    "bbox": null,
+    "threshold": 0,
+    "pass": true
+  },
+  "semanticGeometry": {
+    "maxErrorPx": 0.1,
+    "caseCount": 22,
+    "pass": true
+  },
+  "goldenReferenceModified": false,
+  "stylesModified": false,
+  "iconsModified": false,
+  "geometryBypass": false,
+  "pass": true
+}

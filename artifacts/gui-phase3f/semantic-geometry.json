@@ -1,0 +1,185 @@
+{
+  "cases": {
+    "marker": {
+      "id": "ann_marker_01",
+      "source": "wavedrom-svg",
+      "signal": "clk",
+      "cycle": 4,
+      "pass": true
+    },
+    "binaryRange": {
+      "start": {
+        "x": 1023.5218191146851,
+        "y": 323.9272708892822,
+        "localX": 506.52181911468506,
+        "localY": 15.427270889282227,
+        "canvasX": 1023.5218191146851,
+        "canvasY": 347.9272708892822,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 3,
+        "phase": 0,
+        "anchorType": "rising-transition-center",
+        "semantic": {
+          "signal": "req_valid",
+          "cycle": 3,
+          "point": "rising",
+          "offset": {
+            "x": 0,
+            "y": -24
+          }
+        }
+      },
+      "end": {
+        "x": 1823.521819114685,
+        "y": 533.9272708892822,
+        "localX": 1306.521819114685,
+        "localY": 15.427270889282227,
+        "canvasX": 1823.521819114685,
+        "canvasY": 557.9272708892822,
+        "source": "wavedrom-svg",
+        "signal": "ready",
+        "cycle": 8,
+        "phase": 0,
+        "anchorType": "rising-transition-center",
+        "semantic": {
+          "signal": "ready",
+          "cycle": 8,
+          "point": "rising",
+          "offset": {
+            "x": 0,
+            "y": -24
+          }
+        }
+      },
+      "pass": true
+    },
+    "offset": {
+      "canonicalOffset": {
+        "x": 12,
+        "y": -20
+      },
+      "resolvedSource": "wavedrom-svg",
+      "pass": true
+    },
+    "busState": {
+      "bus": true,
+      "state": true,
+      "pass": true
+    },
+    "callout": {
+      "leaderSource": "wavedrom-svg",
+      "resizeReResolvable": true,
+      "pass": true
+    },
+    "dependency": {
+      "lineTypes": 4,
+      "endpointsGeometryAnchored": true,
+      "pass": true
+    },
+    "verticalBracketHighlight": {
+      "vertical": true,
+      "independentOffsets": true,
+      "pass": true
+    },
+    "bottomPanel": {
+      "rows": 13,
+      "canonicalCount": 13,
+      "hardCodedMock": false,
+      "pass": true
+    },
+    "inspector": {
+      "selected": "ann_marker_01",
+      "offsetFields": true,
+      "pass": true
+    },
+    "addDuplicateDelete": {
+      "uniqueIds": true,
+      "history": {
+        "undo": 14,
+        "redo": 0
+      },
+      "pass": true
+    },
+    "undoRedo": {
+      "restored": true,
+      "reapplied": true,
+      "pass": true
+    },
+    "saveOpen": {
+      "semanticEquality": true,
+      "runtimeFieldsExcluded": true,
+      "pass": true
+    },
+    "timeAxis": {
+      "insertMapped": true,
+      "offsetPreserved": true,
+      "pass": true
+    },
+    "unresolved": {
+      "canonicalKept": true,
+      "code": "unresolved-anchor",
+      "fallback": false,
+      "pass": true
+    },
+    "customTrace": {
+      "customSignalTrace": 0,
+      "annotationOverlayPaths": 1,
+      "pass": true
+    },
+    "resizeScroll": {
+      "canonicalUnchanged": true,
+      "resizeSource": "wavedrom-svg",
+      "scrollSource": "wavedrom-svg",
+      "pass": true
+    },
+    "labelColorEdit": {
+      "canonicalUpdated": true,
+      "pass": true
+    },
+    "pointDrag": {
+      "semanticAnchorUnchanged": true,
+      "offset": {
+        "x": 12,
+        "y": 5
+      },
+      "historyOneEntry": true,
+      "pass": true
+    },
+    "rangeDelete": {
+      "collapsedRangeAllowed": true,
+      "mapPointForDeleteReused": true,
+      "pass": true
+    },
+    "deleteSelectionRepair": {
+      "deleted": true,
+      "selection": {
+        "kind": "annotation",
+        "id": "ann_drag_01"
+      },
+      "pass": true
+    },
+    "overlayReResolve": {
+      "resize": true,
+      "scroll": true,
+      "referenceIndependent": true,
+      "pass": true
+    },
+    "schema": {
+      "knownTypes": [
+        "range",
+        "marker",
+        "text",
+        "callout",
+        "dependency",
+        "verticalLine",
+        "bracket",
+        "highlight"
+      ],
+      "pass": true
+    }
+  },
+  "source": "wavedrom-svg",
+  "maxErrorPx": 0.1,
+  "pass": true
+}

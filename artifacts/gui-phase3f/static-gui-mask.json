@@ -1,0 +1,271 @@
+{
+  "masks": [
+    {
+      "type": "ruler-tick-position",
+      "left": 526,
+      "top": 252,
+      "right": 549,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 686,
+      "top": 252,
+      "right": 709,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 846,
+      "top": 252,
+      "right": 869,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1006,
+      "top": 252,
+      "right": 1029,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1166,
+      "top": 252,
+      "right": 1189,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1326,
+      "top": 252,
+      "right": 1349,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1486,
+      "top": 252,
+      "right": 1509,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1646,
+      "top": 252,
+      "right": 1669,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1806,
+      "top": 252,
+      "right": 1829,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position",
+      "left": 1966,
+      "top": 252,
+      "right": 1989,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 625,
+      "top": 252,
+      "right": 642,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 701,
+      "top": 252,
+      "right": 718,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 777,
+      "top": 252,
+      "right": 794,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 854,
+      "top": 252,
+      "right": 871,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 930,
+      "top": 252,
+      "right": 947,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 1006,
+      "top": 252,
+      "right": 1023,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 1083,
+      "top": 252,
+      "right": 1100,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 1159,
+      "top": 252,
+      "right": 1176,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 1235,
+      "top": 252,
+      "right": 1252,
+      "bottom": 302
+    },
+    {
+      "type": "ruler-tick-position-reference",
+      "left": 1311,
+      "top": 252,
+      "right": 1328,
+      "bottom": 302
+    },
+    {
+      "type": "playhead-position",
+      "left": 529,
+      "top": 212,
+      "right": 547,
+      "bottom": 644
+    },
+    {
+      "type": "playhead-position-reference",
+      "left": 839,
+      "top": 212,
+      "right": 856,
+      "bottom": 644
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 277,
+      "right": 2165,
+      "bottom": 346
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 312,
+      "right": 2165,
+      "bottom": 381
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 347,
+      "right": 2165,
+      "bottom": 416
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 417,
+      "right": 2165,
+      "bottom": 486
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 452,
+      "right": 2165,
+      "bottom": 521
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 522,
+      "right": 2165,
+      "bottom": 591
+    },
+    {
+      "type": "wavedrom-trace-interior",
+      "left": 509,
+      "top": 557,
+      "right": 2165,
+      "bottom": 626
+    },
+    {
+      "type": "bottom-data-region",
+      "left": 330,
+      "top": 682,
+      "right": 1372,
+      "bottom": 914
+    }
+  ],
+  "styleContract": {
+    "ruler": {
+      "fontSize": "13px",
+      "color": "rgb(52, 68, 90)",
+      "height": "34px",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderBottom": "0px none rgb(52, 68, 90)",
+      "borderLeft": "0px none rgb(52, 68, 90)",
+      "width": "1014px",
+      "top": "0px",
+      "bottom": "0px",
+      "zIndex": "auto"
+    },
+    "tick": {
+      "fontSize": "11px",
+      "color": "rgb(52, 68, 90)",
+      "height": "15px",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderBottom": "0px none rgb(52, 68, 90)",
+      "borderLeft": "0px none rgb(52, 68, 90)",
+      "width": "5.9375px",
+      "top": "0px",
+      "bottom": "19px",
+      "zIndex": "auto"
+    },
+    "playhead": {
+      "fontSize": "13px",
+      "color": "rgb(23, 32, 51)",
+      "height": "389px",
+      "backgroundColor": "rgba(0, 0, 0, 0)",
+      "borderBottom": "0px none rgb(23, 32, 51)",
+      "borderLeft": "1px solid rgb(45, 131, 239)",
+      "width": "1px",
+      "top": "35px",
+      "bottom": "0px",
+      "zIndex": "3"
+    },
+    "marker": {
+      "borderTop": "8px solid rgb(45, 131, 239)",
+      "borderLeft": "6px solid rgba(0, 0, 0, 0)",
+      "borderRight": "6px solid rgba(0, 0, 0, 0)",
+      "top": "-2px"
+    }
+  },
+  "labels": [
+    "0",
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8",
+    "9"
+  ],
+  "title": "cycle"
+}

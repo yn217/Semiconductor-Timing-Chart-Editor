@@ -37,6 +37,17 @@
   const getComments = () => model.document.signals.filter(signal => signal.type === 'commentRow');
   const getGroupRows = groupId => model.document.signalGroups.find(group => group.id === groupId)?.rows || [];
   const getReferenceClock = () => getSignal(getTimeline().referenceClock);
+  const annotationTypes = new Set(['range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight']);
+  const anchorPoints = new Set(['cycle-boundary', 'rising', 'falling', 'transition-start', 'transition-center', 'transition-end']);
+  const serializeAnchor = anchor => anchor && ({ signal: anchor.signal, cycle: Number(anchor.cycle), point: anchor.point, offset: { x: Number(anchor.offset?.x || 0), y: Number(anchor.offset?.y || 0) } });
+  const serializeAnnotation = annotation => {
+    const result = { id: annotation.id, type: annotation.type, label: annotation.label || '', color: annotation.color || '#1473e6', position: annotation.position || 'canvas', comment: annotation.comment || '', visible: annotation.visible !== false };
+    for (const key of ['anchor', 'start', 'end', 'from', 'to']) if (annotation[key]) result[key] = serializeAnchor(annotation[key]);
+    if (annotation.labelOffset) result.labelOffset = { x: Number(annotation.labelOffset.x || 0), y: Number(annotation.labelOffset.y || 0) };
+    if (annotation.lineType) result.lineType = annotation.lineType;
+    if (annotation.arrowhead) result.arrowhead = annotation.arrowhead;
+    return result;
+  };
   const serializeSignal = signal => {
     if (signal.type === 'commentRow') return { id: signal.id, type: signal.type, title: signal.title, body: signal.body, ...(signal.groupId ? { groupId: signal.groupId } : {}) };
     const result = { id: signal.id, name: signal.name, type: signal.type, role: signal.role };
@@ -54,7 +65,7 @@
     timeline: { start: documentValue.timeline.start, end: documentValue.timeline.end, timeBase: documentValue.timeline.timeBase, cycleCount: documentValue.timeline.cycleCount, referenceClock: documentValue.timeline.referenceClock, edge: documentValue.timeline.edge },
     signalGroups: documentValue.signalGroups.map(group => ({ id: group.id, name: group.name, rows: [...group.rows] })),
     signals: documentValue.signals.map(serializeSignal),
-    annotations: structuredClone(documentValue.annotations),
+    annotations: (documentValue.annotations || []).map(serializeAnnotation),
     legend: structuredClone(documentValue.legend),
     layout: structuredClone(documentValue.layout),
     transactions: structuredClone(documentValue.transactions),
@@ -66,6 +77,16 @@
     const issues = [];
     if (documentValue?.formatVersion !== 1) issues.push({ code: 'format-version' });
     for (const field of ['document', 'timeline', 'signalGroups', 'signals', 'annotations', 'legend', 'layout', 'transactions', 'constraints']) if (!(field in (documentValue || {}))) issues.push({ code: `missing-${field}` });
+    const annotationIds = new Set();
+    for (const annotation of documentValue?.annotations || []) {
+      if (!annotation.id || annotationIds.has(annotation.id)) issues.push({ code: 'duplicate-annotation-id', id: annotation.id }); annotationIds.add(annotation.id);
+      if (!annotationTypes.has(annotation.type)) issues.push({ code: 'invalid-annotation-type', id: annotation.id });
+      for (const key of Object.keys(annotation)) if (['resolved', 'canvasX', 'canvasY', 'localX', 'localY', 'bbox', 'drag', 'element'].includes(key)) issues.push({ code: 'annotation-runtime-field', id: annotation.id, field: key });
+      const anchors = ['anchor', 'start', 'end', 'from', 'to'].filter(key => annotation[key]);
+      for (const key of anchors) { const anchor = annotation[key]; if (!getSignal(anchor.signal) || !Number.isInteger(Number(anchor.cycle)) || Number(anchor.cycle) < 0 || Number(anchor.cycle) > documentValue.timeline.cycleCount || !anchorPoints.has(anchor.point) || !Number.isFinite(Number(anchor.offset?.x || 0)) || !Number.isFinite(Number(anchor.offset?.y || 0))) issues.push({ code: 'invalid-annotation-anchor', id: annotation.id, field: key }); }
+      if (annotation.type === 'dependency' && (!['straight', 'orthogonal', 'curve', 'diagonal'].includes(annotation.lineType || 'orthogonal') || !['none', 'end', 'both'].includes(annotation.arrowhead || 'end'))) issues.push({ code: 'invalid-dependency-style', id: annotation.id });
+      if (annotation.visible !== undefined && typeof annotation.visible !== 'boolean') issues.push({ code: 'invalid-annotation-visible', id: annotation.id });
+    }
     const ids = new Set();
     for (const signal of documentValue?.signals || []) {
       for (const key of Object.keys(signal)) if (['draft', 'selected', 'editing', 'dirty', 'validation', 'waveGeometry', 'edgeReference'].includes(key)) issues.push({ code: 'transient-or-unsupported-field', id: signal.id, field: key });
@@ -105,7 +126,7 @@
     setHidden(document.querySelector('#transactionCanvas'), model.view.mode === 'cycle');
   };
   const renderTab = () => tabs().forEach(button => button.classList.toggle('active', button.dataset.tab === model.view.tab));
-  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); };
+  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };

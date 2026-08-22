@@ -11,6 +11,7 @@
   const insertCycles = (documentValue, start, count) => {
     const next = clone(documentValue);
     for (const signal of eventSignals(next)) for (const value of signal.values || []) if (Number(value.start) >= start && Number(value.start) !== 0) value.start += count;
+    controller.transformAnnotations?.(next, start, count, 'insert');
     next.timeline.cycleCount += count;
     next.timeline.end = next.timeline.cycleCount;
     return next;
@@ -32,6 +33,7 @@
       const seen = new Set();
       signal.values = merged.filter(value => { const key = Number(value.start); if (seen.has(key)) return false; seen.add(key); return true; }).sort((a, b) => a.start - b.start);
     }
+    controller.transformAnnotations?.(next, start, end, 'delete');
     next.timeline.cycleCount -= count;
     next.timeline.end = next.timeline.cycleCount;
     return next;
