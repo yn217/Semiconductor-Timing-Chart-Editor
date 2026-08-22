@@ -1,0 +1,67 @@
+{
+  "browserE2E": true,
+  "geometryConformance": "86/86, 0px",
+  "layoutMetrics": {
+    ".ribbon": {
+      "x": 0,
+      "y": 70,
+      "width": 1672,
+      "height": 146,
+      "top": 70,
+      "right": 1672,
+      "bottom": 216,
+      "left": 0
+    },
+    ".left-panel": {
+      "x": 0,
+      "y": 216,
+      "width": 330,
+      "height": 698,
+      "top": 216,
+      "right": 330,
+      "bottom": 914,
+      "left": 0
+    },
+    ".center": {
+      "x": 330,
+      "y": 216,
+      "width": 1042,
+      "height": 698,
+      "top": 216,
+      "right": 1372,
+      "bottom": 914,
+      "left": 330
+    },
+    ".bottom": {
+      "x": 330,
+      "y": 644,
+      "width": 1042,
+      "height": 270,
+      "top": 644,
+      "right": 1372,
+      "bottom": 914,
+      "left": 330
+    },
+    ".inspector": {
+      "x": 1372,
+      "y": 216,
+      "width": 300,
+      "height": 698,
+      "top": 216,
+      "right": 1672,
+      "bottom": 914,
+      "left": 1372
+    }
+  },
+  "signalAnnotationJsonTabs": true,
+  "pinFollow": true,
+  "saveReopen": true,
+  "groupSpacingSpacerBand": true,
+  "timelineUndo": true,
+  "snapVerticalLine": true,
+  "dependencyArrow": true,
+  "legendNudge": true,
+  "exportSvg": true,
+  "goldenRewrite": false,
+  "pass": true
+}
