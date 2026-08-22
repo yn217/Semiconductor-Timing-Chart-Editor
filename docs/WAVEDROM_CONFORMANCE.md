@@ -139,8 +139,25 @@ The fact that both paths eventually invoke WaveDrom does not remove the value of
 
 Tests must additionally assert that the DUT waveform elements originate from the WaveDrom-rendered subtree and that no custom fallback path replaced the trace geometry.
 
+## Clock Edge Counter overlay conformance
+Clock Edge Counter labels are custom overlays and are excluded from raw WaveDrom trace-shape equality, but their anchor positions must be derived from the same rendered Geometry Map.
+
+Required checks:
+- `rising`: each displayed/indexed event corresponds to an actual WaveDrom rising-edge Geometry anchor.
+- `falling`: each displayed/indexed event corresponds to an actual WaveDrom falling-edge Geometry anchor.
+- `both`: rising and falling anchors are merged chronologically into one counter sequence.
+- multiple Clock signals keep independent counters and numbering state.
+- gated/static clock intervals contribute no nonexistent edge count.
+- `labelEvery=N` suppresses only label rendering; the internal selected-edge index still increments for every selected edge.
+- `startNumber` changes numbering only, not edge selection.
+- `countFrom` changes the semantic starting anchor without shifting the actual WaveDrom edge positions.
+- Above/Below and X/Y offsets are visual offsets relative to the exact Geometry Map anchor.
+
+Forbidden: deriving label x-position from a separate `cycle * pixelsPerCycle` formula when the WaveDrom edge Geometry is available.
+
 ## Acceptance
 - 100% of supported generated cases pass.
 - Every skipped/unsupported case has an explicit reason.
 - 0 px default geometry difference.
 - Any WaveDrom dependency update reruns the entire matrix and requires review of any changed result.
+- Clock Edge Counter anchor alignment tests pass for Rising/Falling/Both, multiple clocks, gating and labelEvery.
