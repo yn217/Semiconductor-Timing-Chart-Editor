@@ -1,0 +1,39 @@
+{
+  "continuationCases": [
+    {
+      "id": 0,
+      "wave": "01.0......"
+    },
+    {
+      "id": 1,
+      "wave": "0.1...0..."
+    },
+    {
+      "id": 2,
+      "wave": "X...1...Z."
+    },
+    {
+      "id": 3,
+      "wave": "=.=...=...",
+      "data": [
+        "IDLE",
+        "0x1000",
+        "IDLE"
+      ]
+    }
+  ],
+  "independentExpected": true,
+  "canonicalBinary": "0..1...0..",
+  "canonicalBus": {
+    "wave": "=..=...=..",
+    "data": [
+      "IDLE",
+      "0x1000",
+      "IDLE"
+    ]
+  },
+  "svgEqual": true,
+  "unsupportedContinuation": false,
+  "tolerancePx": 0,
+  "pass": true
+}
