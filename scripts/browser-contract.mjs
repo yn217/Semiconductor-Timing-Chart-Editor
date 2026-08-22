@@ -28,6 +28,11 @@ try {
   assert.equal(errors.length, 0, errors.join('\n'));
   assert.ok(boxes['.ribbon'].height > 0 && boxes['.left-panel'].width > 0 && boxes['.inspector'].width > 0);
   assert.ok(await page.locator('#cycleCanvas .trace[data-renderer="wavedrom"] svg').count() >= 7, 'WaveDrom SVG trace subtree missing');
+  const runtime = await page.evaluate(() => ({ version: window.WaveDrom?.version, skin: Boolean(window.WaveSkin?.default), scripts: [...document.scripts].map(script => script.getAttribute('src')).filter(Boolean) }));
+  assert.equal(runtime.version, '3.6.2', 'Browser WaveDrom runtime is not the pinned package version');
+  assert.equal(runtime.skin, true, 'Pinned WaveDrom default skin is not loaded');
+  assert.ok(runtime.scripts.some(src => src === 'generated/wavedrom-3.6.2.min.js'));
+  assert.ok(runtime.scripts.some(src => src === 'generated/waveskin-default-3.6.2.js'));
   assert.equal(await page.locator('#cycleCanvas .trace [data-static-mock="true"]').count(), 0, 'Static mock trace remains mounted');
   assert.equal(await page.locator('#cycleCanvas .trace svg:not([data-renderer="wavedrom"])').count(), 0, 'Custom signal trace is mounted');
   assert.equal(await page.locator('#cycleCanvas .trace').evaluateAll(hosts => hosts.filter(host => host.dataset.renderer !== 'wavedrom').length), 0);

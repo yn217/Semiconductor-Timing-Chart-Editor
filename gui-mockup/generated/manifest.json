@@ -1,0 +1,17 @@
+{
+  "package": "wavedrom",
+  "version": "3.6.2",
+  "source": "node_modules/wavedrom",
+  "files": {
+    "runtime": {
+      "path": "gui-mockup/generated/wavedrom-3.6.2.min.js",
+      "source": "node_modules/wavedrom/wavedrom.min.js",
+      "sha256": "de13d6c53aa2d4ad6c8e69444a23931fa95f1b0626cfcfd216aa0070fc6b8f08"
+    },
+    "skin": {
+      "path": "gui-mockup/generated/waveskin-default-3.6.2.js",
+      "source": "node_modules/wavedrom/skins/default.js",
+      "sha256": "6d42a35297a5faa2e07e565ddc47dd6e1228af045881291a64a336b3f062d152"
+    }
+  }
+}

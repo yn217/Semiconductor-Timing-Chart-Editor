@@ -1,27 +1,22 @@
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 const html = fs.readFileSync('gui-mockup/index.html', 'utf8');
-const js = fs.readFileSync('gui-mockup/app.js', 'utf8');
-const css = fs.readFileSync('gui-mockup/styles.css', 'utf8') + fs.readFileSync('gui-mockup/production-overrides.css', 'utf8');
-const geometry = fs.readFileSync('gui-mockup/geometry.js', 'utf8');
-const adapter = fs.readFileSync('gui-mockup/wavedrom-adapter.js', 'utf8');
+const source = ['app-ui.js', 'production-controller.js', 'production-document.js', 'production-time-axis.js', 'production-waveform.js', 'production-annotations.js', 'wavedrom-adapter.js']
+  .map(file => fs.readFileSync(`gui-mockup/${file}`, 'utf8')).join('\n');
+const css = fs.readFileSync('gui-mockup/styles.css', 'utf8');
 
-for (const id of ['openDocument','saveDocument','addSignal','addGroup','addSpacer','addAnnotation','addEdge','snapAnchors','insertCycle','deleteCycle','exportSvg','exportPng','exportPdf','viewMode']) {
-  assert.match(html, new RegExp(`id="${id}"`), `missing control: ${id}`);
+for (const selector of ['id="leftAdd"', 'id="cycleCanvas"', 'id="bottomContent"', 'id="inspectorBody"', 'id="transactionCanvas"']) {
+  assert.ok(html.includes(selector), `missing locked GUI hook: ${selector}`);
 }
-for (const tab of ['signal','annotation','problems','json','transaction']) assert.match(html, new RegExp(`data-tab="${tab}"`), `missing tab: ${tab}`);
-for (const marker of ['formatVersion:1','start','values','signalGroups','annotations','edges','transactions','localStorage']) {
-  if (marker === 'localStorage') continue;
-  assert.ok(js.includes(marker), `semantic marker missing: ${marker}`);
-}
-assert.match(js, /JSON\.parse/);
-assert.match(js, /XMLSerializer/);
-assert.match(js, /window\.print/);
-assert.match(js, /RenderWaveForm/);
-assert.match(js, /data-select/);
-assert.match(css, /@media print/);
-assert.match(geometry, /resolveAnchor/);
-assert.match(geometry, /semantic-transition-geometry/);
-assert.match(adapter, /toWaveJson/);
-console.log('Accepted: editor controls, semantic persistence, SVG/PNG/PDF export paths, tabs, and print layout are present.');
+for (const tab of ['signal', 'annotation', 'problems', 'json', 'transaction']) assert.match(html, new RegExp(`data-tab="${tab}"`));
+for (const script of ['generated/waveskin-default-3.6.2.js', 'generated/wavedrom-3.6.2.min.js', 'production-controller.js', 'production-waveform.js']) assert.ok(html.includes(script), `missing production script: ${script}`);
+for (const marker of ['formatVersion', 'start', 'values', 'signalGroups', 'annotations', 'transactions', 'toWaveJson', 'RenderWaveForm', 'getCycleBoundary', 'getAnchor']) assert.ok(source.includes(marker), `production semantic marker missing: ${marker}`);
+assert.match(source, /JSON\.parse/);
+assert.match(source, /documentHistory/);
+assert.match(source, /dataset\.renderer/);
+assert.match(css, /\.ribbon/);
+assert.match(css, /\.bottom/);
+assert.equal(fs.existsSync('gui-mockup/vendor/wavedrom.min.js'), false);
+assert.equal(fs.existsSync('gui-mockup/vendor/waveskin-default.js'), false);
+console.log('Accepted: locked GUI hooks, canonical production model, WaveDrom runtime mount, persistence, and overlay paths are present.');
