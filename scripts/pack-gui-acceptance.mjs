@@ -13,11 +13,15 @@ try {
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
   const referencePage = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
-  await referencePage.goto('http://127.0.0.1:4175/.tmp-gui-pack-phase1/TimingChart_GUI_Replacement_Pack/production/', { waitUntil: 'networkidle' });
+  await referencePage.goto('http://127.0.0.1:4175/references/gui-replacement-pack/production/', { waitUntil: 'networkidle' });
   await referencePage.screenshot({ path: 'test-results/gui-pack-reference.png' });
   await page.goto('http://127.0.0.1:4175/gui-mockup/', { waitUntil: 'networkidle' });
   await page.screenshot({ path: 'test-results/gui-pack-production.png' });
   for (const selector of ['.ribbon-tabs', '.ribbon', '.left-panel', '.center', '.bottom', '.inspector', '.view-mode']) assert.ok(await page.locator(selector).count() > 0, `Replacement Pack selector missing: ${selector}`);
+  const lockedOrder = await page.evaluate(() => [...document.querySelector('.workspace').children].map(node => node.className));
+  assert.deepEqual(lockedOrder, ['left-panel', 'center', 'inspector'], 'Workspace DOM order is not locked to Replacement Pack');
+  assert.deepEqual(await page.locator('.bottom-tabs [data-tab]').evaluateAll(nodes => nodes.map(node => node.dataset.tab)), ['signal', 'transaction', 'annotation', 'problems', 'json'], 'Bottom tab DOM order differs from Replacement Pack');
+  assert.equal(await page.locator('link[href*="production-overrides"]').count(), 0, 'Legacy production override stylesheet is forbidden');
   for (const selector of ['.tabs-top', '.rg.clip', '.rg.edit', '.rg.signals', '.rg.order', '.rg.layout', '.rg.view', '.rg.display', '.jsonbar']) assert.equal(await page.locator(selector).count(), 0, `Forbidden legacy selector remains: ${selector}`);
   const reference = PNG.sync.read(fs.readFileSync('test-results/gui-pack-reference.png'));
   const dut = PNG.sync.read(fs.readFileSync('test-results/gui-pack-production.png'));
