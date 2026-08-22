@@ -1,0 +1,37 @@
+{
+  "checks": {
+    "added": true,
+    "multilineTspans": true,
+    "centerAlignment": true,
+    "rightAlignment": true,
+    "inspectorOffset": true,
+    "keyboardOffset": true,
+    "endpointsUnchanged": true,
+    "offsetPreservedAfterGeometry": true,
+    "saveOpenLabelText": true,
+    "signalWaveformUnchanged": true
+  },
+  "offsets": {
+    "before": {
+      "x": 11,
+      "y": -7
+    },
+    "afterInspector": {
+      "x": 22,
+      "y": -14
+    },
+    "afterKeys": {
+      "x": 23,
+      "y": -4
+    }
+  },
+  "endpoints": {
+    "before": "{\"start\":{\"signal\":\"req_valid\",\"cycle\":3,\"point\":\"rising\",\"offset\":{\"x\":2,\"y\":-20}},\"end\":{\"signal\":\"ready\",\"cycle\":8,\"point\":\"rising\",\"offset\":{\"x\":4,\"y\":-20}}}",
+    "after": "{\"start\":{\"signal\":\"req_valid\",\"cycle\":3,\"point\":\"rising\",\"offset\":{\"x\":2,\"y\":-20}},\"end\":{\"signal\":\"ready\",\"cycle\":8,\"point\":\"rising\",\"offset\":{\"x\":4,\"y\":-20}}}"
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue9-extended-1672x941.png"
+  ]
+}
