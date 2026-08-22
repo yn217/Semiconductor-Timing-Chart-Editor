@@ -1,6 +1,9 @@
 (() => {
   'use strict';
 
+  const PATH_DISPLAY_MODES = Object.freeze({ SIGNAL_ONLY: 'signalOnly', RELATIVE: 'relative', FULL: 'full', SPLIT_COLUMNS: 'splitColumns' });
+  window.TimingChartPathDisplayModes = PATH_DISPLAY_MODES;
+
   const signals = [
     { id: 'clk', name: 'clk', type: 'clock', role: 'input', generator: { start: 0, period: 1, duty: 0.5, phase: 0, initial: 0, polarity: 'positive' }, edgeCounter: { show: false, mode: 'rising', startNumber: 1, countFrom: 'signal-start', labelEvery: 1, position: 'above', offset: { x: 0, y: -6 } } },
     { id: 'req_valid', name: 'req_valid', type: 'binary', role: 'input', values: [{ start: 0, value: 0, comment: '初期値' }, { start: 3, value: 1, comment: 'リクエスト有効' }, { start: 7, value: 0, comment: 'リクエスト無効（終了）' }] },
@@ -252,7 +255,7 @@
   const previewBatch = text => { const seen = new Set(); return String(text || '').split(/\r?\n/).map((line, index) => { const parsed = parseFullPath(line); if (!parsed.valid) return { line: index + 1, ...parsed, status: 'invalid' }; const key = JSON.stringify([parsed.instancePath, parsed.signalName, parsed.msb ?? null, parsed.lsb ?? null]); if (duplicatePath(parsed) || seen.has(key)) return { line: index + 1, ...parsed, status: 'duplicate' }; seen.add(key); return { line: index + 1, ...parsed, status: 'valid' }; }).filter(item => item.input); };
   controller.hierarchy = { parseFullPath, previewBatch, getFullPath: fullPath, getRelativePath: relativePath, getDisplayLabel: signalLabel, getRows: hierarchyRows };
   controller.ensureCanonicalSource = ensureCanonicalSource;
-  controller.actions.setPathDisplayMode = mode => { if (!['signalOnly', 'relative', 'full', 'splitColumns'].includes(mode)) return false; return transactionRun('Change path display mode', () => { model.document.layout.pathDisplayMode = mode; }); };
+  controller.actions.setPathDisplayMode = mode => { if (!Object.values(PATH_DISPLAY_MODES).includes(mode)) return false; return transactionRun('Change path display mode', () => { model.document.layout.pathDisplayMode = mode; }); };
   controller.actions.setScope = scope => { const next = Array.isArray(scope) ? [...scope] : String(scope || '').split('.').filter(Boolean); model.view.scope = next; render(); return true; };
   controller.actions.setLeftPanelMode = mode => { if (!['group', 'hierarchy'].includes(mode)) return false; model.view.leftPanelMode = mode; render(); return true; };
   controller.actions.setInstancePathAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align instance path column', () => { model.document.layout.instancePathAlign = alignment; }); };

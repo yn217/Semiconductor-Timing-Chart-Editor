@@ -58,10 +58,10 @@
       toggle('edge-counter', 'Edge Counter', 'i-spacing', 'overlays', 'edgeCounter', 'Edge counter overlayを表示/非表示')
     ]),
     group('階層', [
-      button('signal-only', 'Signal only', 'i-search', 'Signal only表示', () => setPath('signalOnly')),
-      button('relative', 'Relative', 'i-search', 'Relative path表示', () => setPath('relative')),
-      button('full-path', 'Full Path', 'i-search', 'Full path表示', () => setPath('fullPath')),
-      button('split-columns', 'Split Columns', 'i-search', 'Instance / signal / bus幅を分割表示', () => setPath('splitColumns')),
+      button('signal-only', 'Signal only', 'i-search', 'Signal only表示', () => setPath(PATH.SIGNAL_ONLY)),
+      button('relative', 'Relative', 'i-search', 'Relative path表示', () => setPath(PATH.RELATIVE)),
+      button('full-path', 'Full Path', 'i-search', 'Full path表示', () => setPath(PATH.FULL)),
+      button('split-columns', 'Split Columns', 'i-search', 'Instance / signal / bus幅を分割表示', () => setPath(PATH.SPLIT_COLUMNS)),
       button('scope', 'Scope', 'i-search', 'Scopeを現在の階層へ設定', () => controller.actions.setScope(view.scope?.length ? [] : ['u_top']))
     ]),
     group('パネル', [
@@ -80,6 +80,7 @@
   );
   document.querySelector('#ribbonHome')?.after(ribbon);
 
+  const PATH = window.TimingChartPathDisplayModes;
   const setPath = mode => controller.actions.setPathDisplayMode?.(mode);
   let savedPanels = null;
   const toggleWaveformOnly = () => {
@@ -133,6 +134,10 @@
     });
     for (const [id, value] of [['inspector', view.panels.inspector], ['left-panel', view.panels.left], ['bottom-panel', view.panels.bottom], ['waveform-only', view.panels.waveformOnly]]) {
       const node = ribbon.querySelector(`[data-view-command="${id}"]`); if (node) node.dataset.state = value ? 'on' : 'off';
+    }
+    const pathMode = model.document.layout.pathDisplayMode || PATH.SIGNAL_ONLY;
+    for (const [id, mode] of [['signal-only', PATH.SIGNAL_ONLY], ['relative', PATH.RELATIVE], ['full-path', PATH.FULL], ['split-columns', PATH.SPLIT_COLUMNS]]) {
+      const node = ribbon.querySelector(`[data-view-command="${id}"]`); if (node) { node.dataset.state = pathMode === mode ? 'on' : 'off'; node.setAttribute('aria-pressed', pathMode === mode ? 'true' : 'false'); }
     }
   }
 
