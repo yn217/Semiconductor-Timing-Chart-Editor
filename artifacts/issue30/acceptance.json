@@ -1,0 +1,30 @@
+{
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "checks": {
+    "canonical": true,
+    "flatBackwardCompatible": true,
+    "displayNameIndependent": true,
+    "groupMovePreservesHierarchy": true,
+    "displayModes": true,
+    "relativeScope": true,
+    "scopeDoesNotChangeCanonical": true,
+    "hierarchyView": true,
+    "groupViewRestored": true,
+    "batchPreview": true,
+    "batchAdd": true,
+    "batchUndoOneOperation": true,
+    "batchRedoOneOperation": true,
+    "saveOpenHierarchy": true,
+    "waveGeometryUnchanged": true,
+    "fullPathCommands": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "production-1672x941.png",
+    "production-1280x720.png"
+  ]
+}

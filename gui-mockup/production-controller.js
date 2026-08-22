@@ -31,11 +31,31 @@
       { id: 'ann_default_highlight', type: 'highlight', start: { signal: 'req_valid', cycle: 4, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, end: { signal: 'ready', cycle: 10, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'background', comment: '処理期間のハイライト', visible: false }
     ],
     legend: { orientation: 'horizontal', usedRolesOnly: true, position: { x: 0, y: 0 } },
-    layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', busWidthAlign: 'left', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis' },
+    layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', busWidthAlign: 'left', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis', pathDisplayMode: 'signalOnly', instancePathAlign: 'left', instancePathWidth: 180, busWidthMode: 'inline', scope: [] },
     transactions: [],
     constraints: []
   };
-  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [] } };
+  const parseStructuredName = name => {
+    const match = String(name || '').match(/^(.*)\[(\d+)(?::(\d+))?\]$/);
+    if (!match) return { signalName: String(name || ''), msb: undefined, lsb: undefined };
+    const msb = Number(match[2]); const lsb = Number(match[3] ?? match[2]);
+    return { signalName: match[1], msb: Math.max(msb, lsb), lsb: Math.min(msb, lsb) };
+  };
+  const ensureCanonicalSource = signal => {
+    if (signal.type === 'commentRow') return signal;
+    const parsed = parseStructuredName(signal.name || signal.id);
+    signal.source = {
+      instancePath: Array.isArray(signal.source?.instancePath) ? [...signal.source.instancePath] : [],
+      signalName: signal.source?.signalName || parsed.signalName,
+      ...(signal.source?.msb !== undefined || parsed.msb !== undefined ? { msb: Number(signal.source?.msb ?? parsed.msb) } : {}),
+      ...(signal.source?.lsb !== undefined || parsed.lsb !== undefined ? { lsb: Number(signal.source?.lsb ?? parsed.lsb) } : {})
+    };
+    signal.display = { ...(signal.display || {}), name: signal.display?.name || signal.name || parsed.signalName };
+    if (signal.width === undefined && signal.source.msb !== undefined) signal.width = Math.abs(signal.source.msb - signal.source.lsb) + 1;
+    return signal;
+  };
+  canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
+  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
   const controller = { model, getState: () => structuredClone(model), actions: {} };
   const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
   const getSignal = id => getSignals().find(signal => signal.id === id);
@@ -43,6 +63,34 @@
   const getComments = () => model.document.signals.filter(signal => signal.type === 'commentRow');
   const getGroupRows = groupId => model.document.signalGroups.find(group => group.id === groupId)?.rows || [];
   const getReferenceClock = () => getSignal(getTimeline().referenceClock);
+  const getSource = signal => signal?.source || { instancePath: [], signalName: signal?.name || signal?.id || '' };
+  const getBusRange = signal => {
+    const source = getSource(signal);
+    if (source.msb === undefined || source.lsb === undefined) return signal?.width ? `[${Number(signal.width) - 1}:0]` : '';
+    return `[${source.msb}:${source.lsb}]`;
+  };
+  const fullPath = signal => {
+    if (!signal || signal.type === 'commentRow') return signal?.title || signal?.id || '';
+    const source = getSource(signal); return [...(source.instancePath || []), source.signalName].filter(Boolean).join('.') + getBusRange(signal);
+  };
+  const shortenMiddle = (value, max = 32) => {
+    const text = String(value || ''); if (text.length <= max) return text;
+    const parts = text.split('.'); if (parts.length < 3) return `${text.slice(0, Math.max(1, max - 1))}…`;
+    const tail = parts.slice(-2).join('.'); const head = parts[0]; const budget = Math.max(1, max - tail.length - 2);
+    return `${head.slice(0, budget)}.…${tail}`;
+  };
+  const relativePath = (signal, scope = model.view.scope) => {
+    const source = getSource(signal); const path = source.instancePath || []; const current = Array.isArray(scope) ? scope : String(scope || '').split('.').filter(Boolean);
+    let index = 0; while (index < current.length && index < path.length && current[index] === path[index]) index++;
+    return [...path.slice(index), source.signalName].filter(Boolean).join('.') + getBusRange(signal);
+  };
+  const signalLabel = (signal, mode = model.document.layout.pathDisplayMode || 'signalOnly') => {
+    if (!signal || signal.type === 'commentRow') return signal?.title || signal?.id || '';
+    if (mode === 'full') return shortenMiddle(fullPath(signal));
+    if (mode === 'relative') return shortenMiddle(relativePath(signal));
+    if (mode === 'splitColumns') return signal.display?.name || getSource(signal).signalName;
+    return signal.display?.name || getSource(signal).signalName;
+  };
   const annotationTypes = new Set(['range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight']);
   const anchorPoints = new Set(['cycle-boundary', 'rising', 'falling', 'transition-start', 'transition-center', 'transition-end']);
   const serializeAnchor = anchor => anchor && ({ signal: anchor.signal, cycle: Number(anchor.cycle), point: anchor.point, offset: { x: Number(anchor.offset?.x || 0), y: Number(anchor.offset?.y || 0) } });
@@ -56,7 +104,10 @@
   };
   const serializeSignal = signal => {
     if (signal.type === 'commentRow') return { id: signal.id, type: signal.type, title: signal.title, body: signal.body, ...(signal.groupId ? { groupId: signal.groupId } : {}) };
-    const result = { id: signal.id, name: signal.name, type: signal.type, role: signal.role };
+    ensureCanonicalSource(signal);
+    const result = { id: signal.id, name: signal.name, type: signal.type, role: signal.role, source: { instancePath: [...(signal.source.instancePath || [])], signalName: signal.source.signalName }, display: { name: signal.display?.name || signal.name } };
+    if (signal.source.msb !== undefined) result.source.msb = Number(signal.source.msb);
+    if (signal.source.lsb !== undefined) result.source.lsb = Number(signal.source.lsb);
     if (signal.width !== undefined) result.width = signal.width;
     if (signal.displayFormat !== undefined) result.displayFormat = signal.displayFormat;
     if (signal.type === 'clock') {
@@ -100,6 +151,14 @@
       for (const key of Object.keys(signal)) if (['draft', 'selected', 'editing', 'dirty', 'validation', 'waveGeometry', 'edgeReference'].includes(key)) issues.push({ code: 'transient-or-unsupported-field', id: signal.id, field: key });
       if (ids.has(signal.id)) issues.push({ code: 'duplicate-signal-id', id: signal.id });
       ids.add(signal.id);
+        if (signal.type !== 'commentRow') {
+          const source = signal.source;
+          if (source !== undefined && (!Array.isArray(source.instancePath) || source.instancePath.some(part => typeof part !== 'string' || !part.trim()) || typeof source.signalName !== 'string' || !source.signalName.trim())) issues.push({ code: 'invalid-signal-source', id: signal.id });
+          if (source?.msb !== undefined && (!Number.isInteger(Number(source.msb)) || source.lsb === undefined)) issues.push({ code: 'invalid-bus-range', id: signal.id });
+          if (source?.lsb !== undefined && (!Number.isInteger(Number(source.lsb)) || source.msb === undefined)) issues.push({ code: 'invalid-bus-range', id: signal.id });
+          if (source?.msb !== undefined && source?.lsb !== undefined && Number(source.msb) < Number(source.lsb)) issues.push({ code: 'invalid-bus-range', id: signal.id });
+          if (signal.display?.name !== undefined && typeof signal.display.name !== 'string') issues.push({ code: 'invalid-display-name', id: signal.id });
+        }
         if (signal.type === 'clock') {
           const generator = signal.generator || {};
           const counter = signal.edgeCounter || {};
@@ -118,7 +177,7 @@
     const paths = issue => ({
       'format-version': '$.formatVersion',
       'missing-document': '$.document', 'missing-timeline': '$.timeline', 'missing-signalGroups': '$.signalGroups', 'missing-signals': '$.signals', 'missing-annotations': '$.annotations', 'missing-legend': '$.legend', 'missing-layout': '$.layout', 'missing-transactions': '$.transactions', 'missing-constraints': '$.constraints',
-      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`
+      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`
     }[issue.code] || '$');
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
@@ -159,7 +218,7 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { renderMode(); renderTab(); renderSelection(); renderStatus(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); };
+  const render = () => { renderMode(); renderTab(); renderSelection(); renderStatus(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); renderHierarchy(); appendHierarchyInspector(); ensurePathMenu(); applyZoom(); bindStatus(); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
@@ -169,6 +228,67 @@
   controller.actions.setSignalVisibility = (signalId, visible) => { if (!model.document.signals.some(signal => signal.id === signalId)) return false; model.view.hiddenSignals = model.view.hiddenSignals.filter(id => id !== signalId); if (!visible) model.view.hiddenSignals.push(signalId); render(); return true; };
   controller.actions.setSignalNameWidth = widthValue => { const width = Number(widthValue); if (!Number.isInteger(width) || width < 120 || width > 360) return false; return transactionRun('Resize signal label column', () => { model.document.layout.signalNameWidth = width; }); };
   const transactionRun = (label, mutation) => controller.documentHistory?.run ? controller.documentHistory.run(label, mutation) : (mutation(), render(), true);
+  const hierarchyRows = () => getSignals().map(signal => ({ signal, group: model.document.signalGroups.find(group => (group.rows || []).includes(signal.id)) })).filter(item => item.signal);
+  const parseFullPath = raw => {
+    const text = String(raw || '').trim();
+    const match = text.match(/^(.+?)(?:\[(\d+)(?::(\d+))?\])?$/);
+    if (!match || !match[1] || /(^\.|\.$|\.\.|\s)/.test(match[1])) return { valid: false, input: text, reason: '階層パスまたは信号名が不正です' };
+    const parts = match[1].split('.'); const signalName = parts.pop();
+    if (!signalName || !/^[A-Za-z_$][\w$]*$/.test(signalName) || parts.some(part => !/^[A-Za-z_$][\w$]*$/.test(part))) return { valid: false, input: text, reason: '識別子に使用できない文字があります' };
+    const msb = match[2] === undefined ? undefined : Number(match[2]); const lsb = match[3] === undefined ? msb : Number(match[3]);
+    if (msb !== undefined && msb < lsb) return { valid: false, input: text, reason: 'Bus rangeはMSB:LSB順で指定してください' };
+    return { valid: true, input: text, instancePath: parts, signalName, ...(msb === undefined ? {} : { msb, lsb, width: msb - lsb + 1 }) };
+  };
+  const duplicatePath = parsed => hierarchyRows().some(({ signal }) => {
+    const source = getSource(signal); return JSON.stringify(source.instancePath || []) === JSON.stringify(parsed.instancePath || []) && source.signalName === parsed.signalName && Number(source.msb ?? -1) === Number(parsed.msb ?? -1) && Number(source.lsb ?? -1) === Number(parsed.lsb ?? -1);
+  });
+  const previewBatch = text => { const seen = new Set(); return String(text || '').split(/\r?\n/).map((line, index) => { const parsed = parseFullPath(line); if (!parsed.valid) return { line: index + 1, ...parsed, status: 'invalid' }; const key = JSON.stringify([parsed.instancePath, parsed.signalName, parsed.msb ?? null, parsed.lsb ?? null]); if (duplicatePath(parsed) || seen.has(key)) return { line: index + 1, ...parsed, status: 'duplicate' }; seen.add(key); return { line: index + 1, ...parsed, status: 'valid' }; }).filter(item => item.input); };
+  controller.hierarchy = { parseFullPath, previewBatch, getFullPath: fullPath, getRelativePath: relativePath, getDisplayLabel: signalLabel, getRows: hierarchyRows };
+  controller.ensureCanonicalSource = ensureCanonicalSource;
+  controller.actions.setPathDisplayMode = mode => { if (!['signalOnly', 'relative', 'full', 'splitColumns'].includes(mode)) return false; return transactionRun('Change path display mode', () => { model.document.layout.pathDisplayMode = mode; }); };
+  controller.actions.setScope = scope => { const next = Array.isArray(scope) ? [...scope] : String(scope || '').split('.').filter(Boolean); model.view.scope = next; render(); return true; };
+  controller.actions.setLeftPanelMode = mode => { if (!['group', 'hierarchy'].includes(mode)) return false; model.view.leftPanelMode = mode; render(); return true; };
+  controller.actions.setInstancePathAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align instance path column', () => { model.document.layout.instancePathAlign = alignment; }); };
+  controller.actions.setDisplayName = (signalId, name) => { const signal = getSignal(signalId); if (!signal || typeof name !== 'string' || !name.trim()) return false; return transactionRun('Change signal display name', () => { ensureCanonicalSource(signal); signal.display = { ...(signal.display || {}), name: name.trim() }; }); };
+  controller.actions.addSignalsFromPaths = (text, options = {}) => {
+    const preview = previewBatch(text); const valid = preview.filter(item => item.status === 'valid'); if (!valid.length) return { added: [], preview };
+    const group = model.document.signalGroups.find(item => item.id === options.groupId) || model.document.signalGroups[0];
+    const added = [];
+    const committed = transactionRun('Bulk add hierarchical signals', () => {
+      for (const item of valid) { const base = item.signalName + (item.msb === undefined ? '' : `[${item.msb}:${item.lsb}]`); let id = base; let suffix = 2; while (model.document.signals.some(signal => signal.id === id)) id = `${base}_${suffix++}`; const signal = { id, name: base, type: options.type || (item.msb === undefined ? 'binary' : 'bus'), role: options.role || 'internal', source: { instancePath: [...item.instancePath], signalName: item.signalName, ...(item.msb === undefined ? {} : { msb: item.msb, lsb: item.lsb }) }, display: { name: item.signalName }, ...(item.msb === undefined ? { values: [{ start: 0, value: 0 }] } : { width: item.width, displayFormat: 'hex', values: [{ start: 0, value: '0' }] }) }; model.document.signals.push(signal); group.rows.push(id); added.push(id); }
+    });
+    return committed ? { added, preview } : { added: [], preview };
+  };
+  const renderHierarchy = () => {
+    const host = document.querySelector('#groups'); if (!host) return;
+    if (model.view.leftPanelMode !== 'hierarchy') { if (host.dataset.hierarchyMode === 'true') { host.innerHTML = host.dataset.groupMarkup || host.innerHTML; delete host.dataset.hierarchyMode; } return; }
+    host.dataset.hierarchyMode = 'true';
+    const tree = new Map();
+    for (const { signal } of hierarchyRows()) { const path = getSource(signal).instancePath || []; let node = tree; for (const part of path) { if (!node.has(part)) node.set(part, { children: new Map(), signals: [] }); node = node.get(part).children; } if (!node.has('__signals')) node.set('__signals', { children: new Map(), signals: [] }); node.get('__signals').signals.push(signal); }
+    const esc = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const icon = signal => signal.role === 'output' ? 'o' : signal.role === 'internal' ? 'wire' : 'i';
+    const renderNode = (node, depth = 0) => [...node.entries()].flatMap(([name, value]) => name === '__signals' ? value.signals.map(signal => `<div class="row ${model.selection.id === signal.id ? 'selected' : ''}" data-signal="${esc(signal.id)}" data-kind="${esc(signal.type)}" style="padding-left:${18 + depth * 14}px"><span class="role ${signal.role === 'output' ? 'out' : signal.role === 'internal' ? 'wire' : 'in'}">${icon(signal)}</span><span class="row-name" title="${esc(fullPath(signal))}">${esc(signalLabel(signal))}${signal.width ? ` [${signal.width - 1}:0]` : ''}</span><span class="eye">◉</span><span class="more">⋮</span></div>`) : `<div class="group-h" style="padding-left:${8 + depth * 14}px"><span class="chev">⌄</span>${esc(name)}</div>${renderNode(value.children, depth + 1)}`).join('');
+    host.innerHTML = `<div class="group hierarchy-root"><div class="group-h"><span class="chev">⌄</span>Hierarchy<div class="spacer"></div><span>⋮</span></div>${renderNode(tree)}</div>`;
+    host.querySelectorAll('.row[data-signal]').forEach(row => row.addEventListener('click', () => controller.actions.selectObject(row)));
+  };
+  const appendHierarchyInspector = () => {
+    const host = document.querySelector('#inspectorBody'); const signal = getSignal(model.selection?.id); if (!host || !signal || model.view.leftPanelMode !== 'hierarchy' && (model.document.layout.pathDisplayMode || 'signalOnly') === 'signalOnly') return;
+    if (host.querySelector('[data-hierarchy-inspector]')) return;
+    const source = getSource(signal); const section = document.createElement('div'); section.className = 'section'; section.dataset.hierarchyInspector = 'true'; section.innerHTML = `<h3>Source / Hierarchy</h3><div class="prop"><span>Instance Path</span><b title="${fullPath(signal)}">${(source.instancePath || []).join('.') || '(flat)'}</b></div><div class="prop"><span>Signal</span><b>${source.signalName}</b></div><div class="prop"><span>Bus Width</span><b>${getBusRange(signal) || '—'}</b></div><div class="prop"><span>Display Name</span><input data-hierarchy-display-name value="${signal.display?.name || source.signalName}"></div><div class="prop"><span>Path Display</span><b>${model.document.layout.pathDisplayMode || 'signalOnly'}</b></div><div class="prop"><span>Relative Preview</span><b>${relativePath(signal)}</b></div><button type="button" data-hierarchy-action="reveal">Hierarchyで表示</button>`; section.querySelector('[data-hierarchy-action="reveal"]').addEventListener('click', () => controller.actions.setLeftPanelMode('hierarchy')); section.querySelector('[data-hierarchy-display-name]').addEventListener('change', event => controller.actions.setDisplayName(signal.id, event.target.value)); host.appendChild(section);
+  };
+  const ensurePathMenu = () => {
+    const menu = document.querySelector('#addMenu'); if (!menu || menu.querySelector('[data-hierarchy-command]')) return;
+    menu.insertAdjacentHTML('beforeend', '<div class="menuitem" data-hierarchy-command="full-path">フルパス確認</div><div class="menuitem" data-hierarchy-command="bulk-add">信号一括登録</div><div class="menuitem" data-hierarchy-command="group-view">グループ表示</div><div class="menuitem" data-hierarchy-command="hierarchy-view">階層表示</div>');
+    menu.addEventListener('click', event => { const command = event.target.closest('[data-hierarchy-command]')?.dataset.hierarchyCommand; if (command === 'full-path' || command === 'bulk-add') { menu.classList.remove('show'); openFullPathDialog(command === 'bulk-add'); } });
+    menu.addEventListener('click', event => { const command = event.target.closest('[data-hierarchy-command]')?.dataset.hierarchyCommand; if (command === 'group-view' || command === 'hierarchy-view') { menu.classList.remove('show'); controller.actions.setLeftPanelMode(command === 'hierarchy-view' ? 'hierarchy' : 'group'); } });
+    const more = document.querySelector('.left-panel .panel-head .iconbtn:last-child'); more?.addEventListener('click', event => { event.stopPropagation(); const rect = more.getBoundingClientRect(); menu.style.left = `${rect.left}px`; menu.style.top = `${rect.bottom + 4}px`; menu.classList.toggle('show'); });
+  };
+  const openFullPathDialog = bulkMode => {
+    document.querySelector('[data-full-path-dialog]')?.remove(); const dialog = document.createElement('div'); dialog.dataset.fullPathDialog = 'true'; dialog.style.cssText = 'position:fixed;z-index:2000;inset:8% 8%;background:#fff;border:1px solid #b8c5d4;box-shadow:0 10px 30px #0003;border-radius:6px;padding:16px;overflow:auto;font:13px sans-serif;color:#243047;';
+    const rowsHtml = () => hierarchyRows().map(({ signal, group }) => `<tr data-path-row="${signal.id}"><td>${signal.role}</td><td>${group?.name || '—'}</td><td>${(getSource(signal).instancePath || []).join('.') || '—'}</td><td>${getSource(signal).signalName}</td><td>${getBusRange(signal) || '—'}</td><td title="${fullPath(signal)}">${fullPath(signal)}</td><td>${signal.display?.name || getSource(signal).signalName}</td></tr>`).join('');
+    dialog.innerHTML = `<div style="display:flex;align-items:center;gap:8px"><h2 style="margin:0;flex:1">フルパス確認</h2><button type="button" data-path-close>閉じる</button></div><div style="display:flex;gap:8px;margin:12px 0"><input data-path-search placeholder="検索" style="flex:1"><button type="button" data-path-copy>選択パスをコピー</button></div><div data-path-bulk style="display:${bulkMode ? 'block' : 'none'};margin-bottom:12px"><textarea data-path-input rows="3" placeholder="Full Pathを複数行貼り付け"></textarea><button type="button" data-path-preview>Preview</button><button type="button" data-path-add>＋ 信号を追加</button><pre data-path-preview-output style="white-space:pre-wrap"></pre></div><table style="width:100%;border-collapse:collapse"><thead><tr><th>Role</th><th>Group</th><th>Instance Path</th><th>Signal Name</th><th>Bus Width</th><th>Full Path</th><th>Display Name</th></tr></thead><tbody data-path-rows>${rowsHtml()}</tbody></table>`;
+    document.body.appendChild(dialog); dialog.querySelector('[data-path-close]').addEventListener('click', () => dialog.remove()); dialog.querySelector('[data-path-search]').addEventListener('input', event => { const query = event.target.value.toLowerCase(); dialog.querySelectorAll('[data-path-row]').forEach(row => { row.hidden = !row.textContent.toLowerCase().includes(query); }); }); dialog.querySelector('[data-path-copy]').addEventListener('click', async () => { const values = [...dialog.querySelectorAll('[data-path-row]:not([hidden])')].map(row => row.children[5].textContent); await navigator.clipboard?.writeText(values.join('\n')); }); dialog.querySelector('[data-path-rows]').addEventListener('dblclick', event => { const row = event.target.closest('[data-path-row]'); if (row) { controller.actions.selectObject({ dataset: { signal: row.dataset.pathRow, kind: 'signal' } }); dialog.remove(); } }); const previewOutput = dialog.querySelector('[data-path-preview-output]'); dialog.querySelector('[data-path-preview]')?.addEventListener('click', () => { const result = previewBatch(dialog.querySelector('[data-path-input]').value); previewOutput.textContent = result.map(item => `${item.status.toUpperCase()} line ${item.line}: ${item.input}${item.reason ? ` — ${item.reason}` : ''}`).join('\n'); }); dialog.querySelector('[data-path-add]')?.addEventListener('click', () => { const result = controller.actions.addSignalsFromPaths(dialog.querySelector('[data-path-input]').value); if (result.added.length) { dialog.remove(); openFullPathDialog(false); } else { previewOutput.textContent = result.preview.map(item => `${item.status.toUpperCase()} line ${item.line}: ${item.input}${item.reason ? ` — ${item.reason}` : ''}`).join('\n'); } });
+  };
   controller.actions.setTimeRange = (startValue, endValue) => {
     const start = Number(startValue); const end = Number(endValue);
     const current = model.document.timeline;
@@ -220,6 +340,7 @@
   controller.actions.deleteSignalValue = (signalId, index) => { const signal = getSignal(signalId); if (!signal || !signal.values[index] || signal.values.length <= 1) return false; signal.values.splice(index, 1); canonicalize(signal); model.editor.rowIndex = Math.max(0, Math.min(index, signal.values.length - 1)); setValidation([]); render(); return true; };
   controller.actions.updateClock = (field, rawValue) => { const signal = getSignal('clk'); const generator = signal.generator; const value = Number(rawValue); if (field === 'duty') { if (value !== 50) { setValidation([{ field, code: 'unsupported-duty', message: 'WaveDrom標準では任意Dutyは未対応です' }]); return false; } generator.duty = 0.5; } else if (field === 'period') { if (!Number.isFinite(value) || value <= 0) { setValidation([{ field, code: 'invalid-period' }]); return false; } generator.period = value; } else if (field === 'phase') { if (!Number.isFinite(value)) { setValidation([{ field, code: 'invalid-phase' }]); return false; } generator.phase = value; } else if (field === 'start') generator.start = value; else if (field === 'initialLevel') generator.initial = Number(value); else if (field === 'edgeReference') model.document.timeline.edge = String(rawValue).toLowerCase(); else if (field.startsWith('edgeCounter.')) { const path = field.slice(12).split('.'); if (path[0] === 'offset' && path[1]) signal.edgeCounter.offset[path[1]] = Number(rawValue); else if (path[0] === 'show') signal.edgeCounter.show = rawValue === 'ON'; else if (path[0] === 'mode') signal.edgeCounter.mode = String(rawValue).toLowerCase(); else if (path[0] === 'position') signal.edgeCounter.position = String(rawValue).toLowerCase(); else if (path[0] === 'startNumber' || path[0] === 'labelEvery') signal.edgeCounter[path[0]] = Number(rawValue); else if (path[0] === 'countFrom') signal.edgeCounter.countFrom = String(rawValue); } render(); return true; };
   controller.actions.updateComment = (commentId, field, value) => { const comment = getComments().find(item => item.id === commentId); if (!comment || !['title', 'body'].includes(field)) return false; comment[field] = String(value); render(); return true; };
+  const initialGroupsHost = document.querySelector('#groups'); if (initialGroupsHost && !initialGroupsHost.dataset.groupMarkup) initialGroupsHost.dataset.groupMarkup = initialGroupsHost.innerHTML;
   document.querySelectorAll('.seg').forEach(button => button.addEventListener('click', () => controller.actions.setViewMode(button.dataset.mode)));
   tabs().forEach(button => button.addEventListener('click', () => controller.actions.setBottomTab(button.dataset.tab)));
   rows().forEach(row => row.addEventListener('click', () => controller.actions.selectObject(row)));
