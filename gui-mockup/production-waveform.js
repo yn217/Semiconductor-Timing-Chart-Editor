@@ -6,6 +6,8 @@
     .filter(row => row.querySelector('.trace'));
 
   function signalForRow(model, row) {
+    const id = row.dataset.signalId || row.dataset.signal;
+    if (id) return window.TimingChartProductionController?.selectors?.getSignal?.(id) || null;
     const label = row.querySelector('.signal-label')?.textContent?.trim();
     return window.TimingChartProductionController?.selectors?.getSignal?.(label) || null;
   }

@@ -1,0 +1,58 @@
+{
+  "files": [
+    {
+      "file": "01_apb_register_access.tcd.json",
+      "rows": 10,
+      "traces": 10
+    },
+    {
+      "file": "02_ahb_lite_pipelined_transfer.tcd.json",
+      "rows": 11,
+      "traces": 11
+    },
+    {
+      "file": "03_axi4_full_write_burst.tcd.json",
+      "rows": 18,
+      "traces": 18
+    },
+    {
+      "file": "04_axi4_full_read_outstanding.tcd.json",
+      "rows": 14,
+      "traces": 14
+    },
+    {
+      "file": "05_sram_1p_sync_read_write.tcd.json",
+      "rows": 7,
+      "traces": 7
+    },
+    {
+      "file": "06_sram_2p_parallel_and_conflict.tcd.json",
+      "rows": 12,
+      "traces": 12
+    },
+    {
+      "file": "07_axi_to_dram_read_path.tcd.json",
+      "rows": 17,
+      "traces": 17
+    },
+    {
+      "file": "08_async_fifo_cdc.tcd.json",
+      "rows": 12,
+      "traces": 12
+    },
+    {
+      "file": "09_accelerator_request_response.tcd.json",
+      "rows": 12,
+      "traces": 12
+    },
+    {
+      "file": "10_axi4_stream_packet_backpressure.tcd.json",
+      "rows": 8,
+      "traces": 8
+    }
+  ],
+  "rowsReconciled": true,
+  "staleRowsRemoved": true,
+  "goldenReferenceModified": false,
+  "pass": true
+}
