@@ -5,6 +5,8 @@ Cycle-level signal traces must preserve **actual WaveDrom waveform geometry**.
 
 For the MVP, use the WaveDrom renderer/default skin directly for the waveform trace layer. A custom renderer that merely resembles WaveDrom is not acceptable.
 
+WaveDrom source code and skin files do **not** need to be copied/vendored into this repository. Use a pinned package dependency and record the version in the lockfile/test report.
+
 Only the following layers may be custom around it:
 - semantic model / editor
 - signal role/name columns
@@ -83,35 +85,49 @@ ____|‾‾‾‾
 
 is not an acceptable replacement for a WaveDrom default-skin transition when WaveDrom uses its transition brick geometry.
 
-## 5. Geometry Golden requirements
+## 5. Exhaustive WaveDrom conformance
+Do not verify only a few manually selected waveforms.
+
+The full requirements are defined in `docs/WAVEDROM_CONFORMANCE.md`.
+
+At test time create two paths:
+
+```text
+Reference:
+Canonical WaveJSON -> pinned WaveDrom/default skin -> Reference SVG
+
+DUT:
+Semantic .tcd -> our Adapter -> temporary WaveJSON
+ -> production WaveDrom/default skin -> DUT waveform SVG
+```
+
+Then compare:
+1. generated WaveJSON against canonical WaveJSON;
+2. normalized SVG waveform geometry against Reference SVG.
+
+Generate coverage for **every supported WaveDrom signal primitive and every reachable ordered transition** for the pinned version, plus clocks, bus/data states, period/phase, gap and relevant layout interactions.
+
+Reference SVGs are generated during CI and do not need to be stored in Git.
+
+Default geometry tolerance: **0 px**.
+Every unsupported/skipped combination requires an explicit reason.
+
+## 6. Geometry Golden requirements
 For equivalent WaveJSON input, compare the generated waveform layer with WaveDrom reference output.
 
-Golden checks shall include at minimum:
-- `0 -> 1`
-- `1 -> 0`
-- `0 -> X`, `X -> 0/1`
-- `0/1 -> Z`, `Z -> 0/1`
-- bus value-to-value transition
-- bus X/value transitions
-- positive clock
-- negative clock
-- phase `0.5`
-- period scaling
-- gated/static clock interval
-- gap
-
-Compare normalized:
+Comparison shall include normalized:
 - SVG path `d`
+- polyline/polygon points
 - element transforms
 - lane/brick dimensions
 - transition endpoints
 - stroke width
 - linecap / linejoin where visually relevant
+- relevant text position when WaveDrom owns bus/data text
 
-Default geometry tolerance: **0 px**.
 If normalization requires a non-zero exception, it must be documented per test and must not hide a visible shape difference.
 
-## 6. Geometry Map
+## 7. Geometry Map
 After WaveDrom renders, extract actual rendered positions for semantic use.
 
 Required anchors:
@@ -125,7 +141,7 @@ Required anchors:
 Annotation/Transition Arrow code must consume this Geometry Map.
 It must not use an independently estimated `cycle * pixelsPerCycle` coordinate when an exact rendered anchor is available.
 
-## 7. Signal labels and roles
+## 8. Signal labels and roles
 Our GUI owns signal label/role columns.
 
 Do not place strings such as:
@@ -137,7 +153,7 @@ inside the waveform trace region as a substitute for the dedicated role/name col
 
 WaveDrom-generated labels may be hidden/cropped/replaced only in a way that does **not** modify the waveform trace geometry.
 
-## 8. Acceptance rule
+## 9. Acceptance rule
 A screenshot that is semantically correct but visibly different from WaveDrom signal shapes is a FAIL.
 
 A renderer shall not be accepted merely because:
@@ -147,5 +163,5 @@ A renderer shall not be accepted merely because:
 
 The geometry itself must match WaveDrom.
 
-## 9. Future independent renderer
-A fully independent renderer may be considered later only if it passes the same SVG-geometry Golden suite against WaveDrom. Until then, WaveDrom remains the waveform visual source of truth.
+## 10. Future independent renderer
+A fully independent renderer may be considered later only if it passes the same exhaustive SVG-geometry conformance suite against WaveDrom. Until then, WaveDrom remains the waveform visual source of truth.
