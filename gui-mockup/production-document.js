@@ -179,6 +179,13 @@
   saveAsButton?.addEventListener('click', () => controller.actions.saveAs());
   tool('Undo')?.addEventListener('click', () => controller.actions.undo());
   tool('Redo')?.addEventListener('click', () => controller.actions.redo());
-  document.addEventListener('keydown', event => { if (!event.ctrlKey) return; const key = event.key.toLowerCase(); if (key === 'z' && !event.shiftKey) { event.preventDefault(); controller.actions.undo(); } else if (key === 'y' || (key === 'z' && event.shiftKey)) { event.preventDefault(); controller.actions.redo(); } else if (key === 's') { event.preventDefault(); event.shiftKey ? controller.actions.saveAs() : controller.actions.save(); } else if (key === 'o') { event.preventDefault(); controller.actions.requestOpen({ unsavedDecision: uiDecision() }); } else if (key === 'n') { event.preventDefault(); controller.actions.requestNew({ unsavedDecision: uiDecision() }); } });
+  const shortcuts = window.TimingChartShortcutRouter;
+  shortcuts?.register({ id: 'document.undo', owner: 'production-document', shortcut: 'Ctrl+Z', execute: () => controller.actions.undo() });
+  shortcuts?.register({ id: 'document.redo', owner: 'production-document', shortcut: 'Ctrl+Y', execute: () => controller.actions.redo() });
+  shortcuts?.register({ id: 'document.redo-shift', owner: 'production-document', shortcut: 'Ctrl+Shift+Z', execute: () => controller.actions.redo() });
+  shortcuts?.register({ id: 'document.save', owner: 'production-document', shortcut: 'Ctrl+S', scope: 'any', allowEditable: true, execute: () => controller.actions.save() });
+  shortcuts?.register({ id: 'document.save-as', owner: 'production-document', shortcut: 'Ctrl+Shift+S', scope: 'application', execute: () => controller.actions.saveAs() });
+  shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: () => controller.actions.requestOpen({ unsavedDecision: uiDecision() }) });
+  shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: () => controller.actions.requestNew({ unsavedDecision: uiDecision() }) });
   updateDirty();
 })();

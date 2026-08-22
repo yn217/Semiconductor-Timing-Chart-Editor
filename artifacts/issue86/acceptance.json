@@ -1,0 +1,105 @@
+{
+  "issue": 86,
+  "cases": {
+    "registry": {
+      "singleRouter": true,
+      "documentCommandsDeclared": true,
+      "scopesDeclared": true
+    },
+    "commentNativeEditing": {
+      "textAfterNativeUndo": "",
+      "documentHistoryBefore": 0,
+      "documentHistoryAfter": 0,
+      "canonicalUnchanged": true,
+      "pass": true
+    },
+    "signalValueNativeEditing": {
+      "value": "0",
+      "documentHistoryBefore": 0,
+      "documentHistoryAfter": 0,
+      "canonicalUnchanged": true,
+      "pass": true
+    },
+    "canvasUndo": {
+      "editCreatedHistory": true,
+      "historyAfterUndo": 0,
+      "valueAfterUndo": 0,
+      "pass": true
+    },
+    "signalTreeRedo": {
+      "historyAfterRedo": 1,
+      "valueAfterRedo": 1,
+      "pass": true
+    },
+    "ctrlSInEditable": {
+      "saveWriteCalled": true,
+      "dirtyAfter": false,
+      "pass": true
+    },
+    "imeComposition": {
+      "historyUnchanged": true,
+      "pass": true
+    }
+  },
+  "errors": [],
+  "registry": [
+    {
+      "scope": "application",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.undo",
+      "owner": "production-document",
+      "shortcut": "ctrl+z"
+    },
+    {
+      "scope": "application",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.redo",
+      "owner": "production-document",
+      "shortcut": "ctrl+y"
+    },
+    {
+      "scope": "application",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.redo-shift",
+      "owner": "production-document",
+      "shortcut": "ctrl+shift+z"
+    },
+    {
+      "scope": "any",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.save",
+      "owner": "production-document",
+      "shortcut": "ctrl+s",
+      "allowEditable": true
+    },
+    {
+      "scope": "application",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.save-as",
+      "owner": "production-document",
+      "shortcut": "ctrl+shift+s"
+    },
+    {
+      "scope": "application",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.open",
+      "owner": "production-document",
+      "shortcut": "ctrl+o"
+    },
+    {
+      "scope": "application",
+      "priority": 0,
+      "preventDefault": true,
+      "id": "document.new",
+      "owner": "production-document",
+      "shortcut": "ctrl+n"
+    }
+  ],
+  "pass": true
+}
