@@ -1,0 +1,35 @@
+{
+  "issue": 55,
+  "samples": [
+    {
+      "file": "01_apb_register_access.tcd.json",
+      "signalCount": 10,
+      "annotationCount": 3,
+      "transactionCount": 2,
+      "problemCount": 4,
+      "referenceClock": "pclk",
+      "pass": true
+    },
+    {
+      "file": "02_ahb_lite_pipelined_transfer.tcd.json",
+      "signalCount": 11,
+      "annotationCount": 2,
+      "transactionCount": 3,
+      "problemCount": 4,
+      "referenceClock": "hclk",
+      "pass": true
+    },
+    {
+      "file": "03_axi4_full_write_burst.tcd.json",
+      "signalCount": 18,
+      "annotationCount": 4,
+      "transactionCount": 1,
+      "problemCount": 4,
+      "referenceClock": "aclk",
+      "pass": true
+    }
+  ],
+  "pageErrors": [],
+  "staticControllerAudit": true,
+  "pass": true
+}
