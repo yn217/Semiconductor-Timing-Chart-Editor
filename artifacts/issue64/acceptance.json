@@ -1,0 +1,23 @@
+{
+  "issue": 64,
+  "checks": {
+    "menuItemHitTest": true,
+    "collapse": true,
+    "overlapHitTest": true,
+    "addSignalToExactGroup": true,
+    "rename": true,
+    "appearance": true,
+    "spacing": true,
+    "addComment": true,
+    "addSpacer": true,
+    "escapeCloses": true,
+    "outsideClickCloses": true,
+    "viewport1280Reachable": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue64-1672x941.png",
+    "issue64-1280x720.png"
+  ]
+}

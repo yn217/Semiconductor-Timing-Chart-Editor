@@ -51,6 +51,120 @@ function bindIssue6Menus(model=getProductionModel()){const controller=window.Tim
   const close=()=>document.querySelector('#issue6ContextMenu')?.remove();const show=(items,x,y,context)=>{close();const menu=document.createElement('div');menu.id='issue6ContextMenu';menu.style.cssText=`position:fixed;z-index:2100;left:${x}px;top:${y}px;background:#fff;border:1px solid #b8c5d4;box-shadow:0 5px 16px #0003;padding:4px;display:grid;min-width:150px;font:12px sans-serif`;items.forEach(([command,label])=>{const button=document.createElement('button');button.type='button';button.dataset.command=command;button.textContent=label;button.style.cssText='border:0;background:#fff;text-align:left;padding:5px 8px;';menu.appendChild(button);});menu.addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command;if(!command)return;close();const signalId=context.signalId,groupId=context.groupId;const signal=signalId?model.document.signals.find(item=>item.id===signalId):null;if(command==='rename'&&signal){const name=window.prompt('名前を変更',signal.display?.name||signal.name);if(name)controller.actions.setDisplayName(signalId,name);}else if(command==='duplicate'&&signal)controller.actions.duplicateSignal(signalId);else if(command==='delete'&&signal)controller.actions.deleteSignal(signalId);else if(command==='up'&&signal)controller.actions.moveSignalBy(signalId,-1);else if(command==='down'&&signal)controller.actions.moveSignalBy(signalId,1);else if(command==='visible'&&signal)controller.actions.setSignalVisibility(signalId,(model.view.hiddenSignals||[]).includes(signalId));else if(command.startsWith('role-')&&signal)controller.actions.setSignalRole(signalId,command.slice(5));else if(command==='edit-comment'&&signal){const title=window.prompt('コメント行を編集',signal.title);if(title)controller.actions.updateComment(signalId,'title',title);}else if(command==='duplicate-comment'&&signal)controller.actions.addCommentRow({title:`${signal.title} copy`,body:signal.body},groupId);else if(command==='rename-group') {const name=window.prompt('グループ名を変更',model.document.signalGroups.find(item=>item.id===groupId)?.name);if(name)controller.actions.setGroupName(groupId,name);}else if(command==='collapse-group')controller.actions.setGroupCollapsed(groupId,!model.document.signalGroups.find(item=>item.id===groupId)?.collapsed);else if(command==='up-group')controller.actions.moveGroupBy(groupId,-1);else if(command==='down-group')controller.actions.moveGroupBy(groupId,1);else if(command==='add-signal')controller.actions.addSignal({name:`signal_${Date.now()}`},groupId);else if(command==='add-comment')controller.actions.addCommentRow({},groupId);else if(command==='add-spacer')controller.actions.addSpacer(groupId,16);else if(command==='group-spacing')controller.actions.setGroupSpacing(groupId,'spacingAfter',Number(window.prompt('グループ間隔(px)',model.document.signalGroups.find(item=>item.id===groupId)?.spacingAfter||0)));else if(command==='group-appearance'){const group=model.document.signalGroups.find(item=>item.id===groupId);const background=window.prompt('Group Band背景色',group?.style?.background||'#eef5ff');if(background)controller.actions.setGroupAppearance(groupId,{background});}else if(command==='delete-group')controller.actions.deleteGroup(groupId);});document.body.appendChild(menu);};if(document.body.dataset.issue6Menus!=='true'){document.body.dataset.issue6Menus='true';document.addEventListener('click',event=>{if(!event.target.closest('#issue6ContextMenu,.more,.group-h'))close();});}
   $$('#groups .row .more').forEach(more=>{if(more.dataset.issue6Bound)return;more.dataset.issue6Bound='true';more.addEventListener('click',event=>{event.stopPropagation();const row=more.closest('.row');const signal=model.document.signals.find(item=>item.id===row.dataset.signal);const items=signal?.type==='commentRow'?[['edit-comment','編集'],['duplicate-comment','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示']]:[['rename','名前を変更'],['duplicate','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示'],['role-input','Role: Input'],['role-output','Role: Output'],['role-internal','Role: Internal'],['inspector','Inspectorを開く']];show(items,event.clientX,event.clientY,{signalId:row.dataset.signal,groupId:row.closest('.group')?.dataset.groupId});});});
   $$('#groups .group-h').forEach(header=>{const button=header.lastElementChild;if(!button||button.dataset.issue6Bound)return;button.dataset.issue6Bound='true';button.style.cursor='pointer';button.addEventListener('click',event=>{event.stopPropagation();const group=header.closest('.group');const groupId=group?.dataset.groupId;show([['rename-group','名前を変更'],['collapse-group','グループを折りたたむ / 展開'],['up-group','上へ移動'],['down-group','下へ移動'],['add-signal','Signalを追加'],['add-comment','Comment Rowを追加'],['add-spacer','Spacerを追加'],['group-appearance','Group Band / 背景設定'],['group-spacing','グループ間隔設定'],['delete-group','グループ削除']],event.clientX,event.clientY,{groupId});});});}
+function bindIssue64Menus(model=getProductionModel()) {
+  const controller = window.TimingChartProductionController;
+  const addMenu = $('#addMenu');
+  if (addMenu && !addMenu.dataset.issue64Bound) {
+    addMenu.dataset.issue64Bound = 'true';
+    addMenu.addEventListener('click', event => {
+      const item = event.target.closest('.menuitem');
+      if (!item) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const groupId = model.document.signalGroups[0]?.id;
+      const text = item.textContent.trim();
+      if (text.includes('信号') && !text.includes('一括')) controller.actions.addSignal({ name: `signal_${Date.now()}` }, groupId);
+      else if (text.includes('コメント')) controller.actions.addCommentRow({}, groupId);
+      else if (text.includes('Spacer')) controller.actions.addSpacer(groupId, 16);
+      else if (text.includes('グループ') || text.includes('Group')) controller.actions.addGroup();
+      addMenu.classList.remove('show');
+    });
+  }
+  const menuState = document.body.__issue64MenuState || (document.body.__issue64MenuState = { openMenu: null });
+  const close = () => { menuState.openMenu?.remove(); menuState.openMenu = null; };
+  const findGroup = groupId => model.document.signalGroups.find(group => group.id === groupId);
+  const execute = (command, context) => {
+    const { signalId, groupId } = context;
+    const signal = signalId ? model.document.signals.find(item => item.id === signalId) : null;
+    const group = findGroup(groupId);
+    if (command === 'rename' && signal) { const name = window.prompt('名前を変更', signal.display?.name || signal.name); if (name) controller.actions.setDisplayName(signalId, name); }
+    else if (command === 'duplicate' && signal) controller.actions.duplicateSignal(signalId);
+    else if (command === 'delete' && signal) controller.actions.deleteSignal(signalId);
+    else if (command === 'up' && signal) controller.actions.moveSignalBy(signalId, -1);
+    else if (command === 'down' && signal) controller.actions.moveSignalBy(signalId, 1);
+    else if (command === 'visible' && signal) controller.actions.setSignalVisibility(signalId, (model.view.hiddenSignals || []).includes(signalId));
+    else if (command.startsWith('role-') && signal) controller.actions.setSignalRole(signalId, command.slice(5));
+    else if (command === 'edit-comment' && signal) { const title = window.prompt('コメント行を編集', signal.title); if (title) controller.actions.updateComment(signalId, 'title', title); }
+    else if (command === 'duplicate-comment' && signal) controller.actions.addCommentRow({ title: `${signal.title} copy`, body: signal.body }, groupId);
+    else if (command === 'inspector' && signal) controller.actions.selectObject({ dataset: { signal: signalId, kind: signal.type === 'commentRow' ? 'comment' : 'signal' } });
+    else if (command === 'rename-group' && group) { const name = window.prompt('グループ名を変更', group.name); if (name) controller.actions.setGroupName(groupId, name); }
+    else if (command === 'collapse-group' && group) controller.actions.setGroupCollapsed(groupId, !group.collapsed);
+    else if (command === 'up-group') controller.actions.moveGroupBy(groupId, -1);
+    else if (command === 'down-group') controller.actions.moveGroupBy(groupId, 1);
+    else if (command === 'add-signal') controller.actions.addSignal({ name: `signal_${Date.now()}` }, groupId);
+    else if (command === 'add-comment') controller.actions.addCommentRow({}, groupId);
+    else if (command === 'add-spacer') controller.actions.addSpacer(groupId, 16);
+    else if (command === 'group-spacing' && group) { const value = Number(window.prompt('グループ間隔(px)', group.spacingAfter || 0)); if (Number.isFinite(value)) controller.actions.setGroupSpacing(groupId, 'spacingAfter', value); }
+    else if (command === 'group-appearance' && group) { const background = window.prompt('Group Band背景色', group.style?.background || '#eef5ff'); if (background) controller.actions.setGroupAppearance(groupId, { background }); }
+    else if (command === 'delete-group') controller.actions.deleteGroup(groupId);
+  };
+  const show = (items, x, y, context) => {
+    close();
+    const menu = document.createElement('div');
+    menu.id = 'issue6ContextMenu';
+    menu.setAttribute('role', 'menu');
+    menu.dataset.groupId = context.groupId || '';
+    menu.style.cssText = 'position:fixed;z-index:2147483000;pointer-events:auto;background:#fff;border:1px solid #b8c5d4;box-shadow:0 5px 16px #0003;padding:4px;display:grid;min-width:150px;font:12px sans-serif;';
+    items.forEach(([command, label], index) => {
+      const button = document.createElement('button');
+      button.type = 'button'; button.role = 'menuitem'; button.dataset.command = command; button.textContent = label;
+      button.style.cssText = 'border:0;background:#fff;text-align:left;padding:5px 8px;cursor:pointer;pointer-events:auto;';
+      button.addEventListener('pointerdown', event => { event.preventDefault(); event.stopPropagation(); });
+      if (index === 0) button.dataset.menuInitial = 'true';
+      menu.appendChild(button);
+    });
+    menu.addEventListener('pointerdown', event => event.stopPropagation());
+    menu.addEventListener('click', event => {
+      const button = event.target.closest('[data-command]');
+      if (!button || !menu.contains(button)) return;
+      event.preventDefault(); event.stopPropagation();
+      execute(button.dataset.command, context);
+      close();
+    });
+    menu.addEventListener('keydown', event => {
+      const buttons = [...menu.querySelectorAll('[data-command]')];
+      const current = buttons.indexOf(document.activeElement);
+      if (event.key === 'Escape') { event.preventDefault(); close(); return; }
+      if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); const delta = event.key === 'ArrowDown' ? 1 : -1; buttons[(current + delta + buttons.length) % buttons.length]?.focus(); }
+      if ((event.key === 'Enter' || event.key === ' ') && current >= 0) { event.preventDefault(); buttons[current].click(); }
+    });
+    document.body.appendChild(menu);
+    const margin = 4;
+    const left = Math.max(margin, Math.min(Number(x) || margin, innerWidth - menu.offsetWidth - margin));
+    const top = Math.max(margin, Math.min(Number(y) || margin, innerHeight - menu.offsetHeight - margin));
+    menu.style.left = `${left}px`; menu.style.top = `${top}px`;
+    menuState.openMenu = menu;
+    menu.querySelector('[data-menu-initial]')?.focus();
+  };
+  if (document.body.dataset.issue64Menus !== 'true') {
+    document.body.dataset.issue64Menus = 'true';
+    document.addEventListener('pointerdown', event => {
+      if (menuState.openMenu && !menuState.openMenu.contains(event.target) && !event.target.closest('.more,.group-h')) close();
+    }, true);
+    document.addEventListener('keydown', event => { if (event.key === 'Escape' && menuState.openMenu) { event.preventDefault(); close(); } });
+  }
+  $$('#groups .row .more').forEach(more => {
+    if (more.dataset.issue64Bound) return;
+    more.dataset.issue64Bound = 'true';
+    more.addEventListener('click', event => {
+      event.preventDefault(); event.stopPropagation();
+      const row = more.closest('.row'); const signal = model.document.signals.find(item => item.id === row.dataset.signal);
+      const items = signal?.type === 'commentRow' ? [['edit-comment', '編集'], ['duplicate-comment', '複製'], ['delete', '削除'], ['up', '上へ移動'], ['down', '下へ移動'], ['visible', '表示 / 非表示']] : [['rename', '名前を変更'], ['duplicate', '複製'], ['delete', '削除'], ['up', '上へ移動'], ['down', '下へ移動'], ['visible', '表示 / 非表示'], ['role-input', 'Role: Input'], ['role-output', 'Role: Output'], ['role-internal', 'Role: Internal'], ['inspector', 'Inspectorを開く']];
+      show(items, event.clientX, event.clientY, { signalId: row.dataset.signal, groupId: row.closest('.group')?.dataset.groupId });
+    });
+  });
+  $$('#groups .group-h').forEach(header => {
+    const button = header.lastElementChild;
+    if (!button || button.dataset.issue64Bound) return;
+    button.dataset.issue64Bound = 'true'; button.style.cursor = 'pointer';
+    button.addEventListener('click', event => {
+      event.preventDefault(); event.stopPropagation();
+      const groupId = header.closest('.group')?.dataset.groupId;
+      show([['rename-group', '名前を変更'], ['collapse-group', 'グループを折りたたむ / 展開'], ['up-group', '上へ移動'], ['down-group', '下へ移動'], ['add-signal', 'Signalを追加'], ['add-comment', 'Comment Rowを追加'], ['add-spacer', 'Spacerを追加'], ['group-appearance', 'Group Band / 背景設定'], ['group-spacing', 'グループ間隔設定'], ['delete-group', 'グループ削除']], event.clientX, event.clientY, { groupId });
+    });
+  });
+}
+
 $('#leftAdd').addEventListener('click',e=>{const m=$('#addMenu');const rect=e.currentTarget.getBoundingClientRect();m.style.left=(rect.left)+'px';m.style.top=(rect.bottom+4)+'px';m.classList.toggle('show')});
-window.TimingChartGoldenRenderer={render(model){reconcileCycleRows(model);renderComments(model);ensureIssue6Rows(model);renderLayoutBindings(model);applyIssue25VisualPolish();syncIssue26Groups(model);bindIssue26LeftPanel(model);applyIssue26Ribbon();applyIssue29LabelWidth(model);bindIssue29LabelSplitter(model);bindBottomResize(model);applyIssue6Layout(model);bindIssue6Menus(model);renderIssue6Legend(model);renderBottom(model);renderInspector(model);bindEditor(model);}};
+window.TimingChartGoldenRenderer={render(model){reconcileCycleRows(model);renderComments(model);ensureIssue6Rows(model);renderLayoutBindings(model);applyIssue25VisualPolish();syncIssue26Groups(model);bindIssue26LeftPanel(model);applyIssue26Ribbon();applyIssue29LabelWidth(model);bindIssue29LabelSplitter(model);bindBottomResize(model);applyIssue6Layout(model);bindIssue64Menus(model);renderIssue6Legend(model);renderBottom(model);renderInspector(model);bindEditor(model);}};
 window.TimingChartProductionTransactions={render:model=>renderTransactionCanvas(model)};
