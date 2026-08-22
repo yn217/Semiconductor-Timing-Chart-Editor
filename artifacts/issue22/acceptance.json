@@ -35,9 +35,9 @@
     }
   },
   "overallMasked": {
-    "changedPixels": 5798,
+    "changedPixels": 41022,
     "totalPixels": 1573352,
-    "diffPercent": 0.003685125769694258,
+    "diffPercent": 0.02607299574411829,
     "threshold": 0.08,
     "masks": [
       {

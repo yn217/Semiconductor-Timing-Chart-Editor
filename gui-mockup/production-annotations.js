@@ -51,10 +51,36 @@
   };
   const render = currentModel => {
     let overlay = document.querySelector('#cycleCanvas svg[data-production-overlay="annotations"]');
-    if (!overlay) { overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); overlay.dataset.productionOverlay = 'annotations'; overlay.setAttribute('data-production-overlay', 'annotations'); overlay.style.cssText = 'position:absolute;left:0;top:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:4'; document.querySelector('#cycleCanvas')?.appendChild(overlay); }
-    overlay.innerHTML = ''; const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return; const rect = canvas.getBoundingClientRect(); const errors = [];
+    const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;
+    if (!overlay) {
+      overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      overlay.dataset.productionOverlay = 'annotations';
+      overlay.setAttribute('data-production-overlay', 'annotations');
+      overlay.style.cssText = 'position:absolute;left:0;top:0;overflow:visible;contain:layout;pointer-events:none;z-index:4';
+      const initialRect = canvas.getBoundingClientRect();
+      overlay.style.width = `${initialRect.width}px`;
+      overlay.style.height = `${initialRect.height}px`;
+      canvas.appendChild(overlay);
+    }
+    overlay.innerHTML = ''; const rect = canvas.getBoundingClientRect(); const errors = [];
+    // Percentage height on an absolutely positioned SVG can participate in the
+    // center grid's min-content calculation when annotation selection changes.
+    // Pin the overlay to the measured canvas box so overlays cannot resize the
+    // locked waveform/bottom split.
+    overlay.style.width = `${rect.width}px`;
+    overlay.style.height = `${rect.height}px`;
     for (const annotation of currentModel.document.annotations || []) { const resolved = resolve(annotation); errors.push(...resolved.errors); renderSvg(annotation, resolved.result, overlay, rect); }
     currentModel.annotationValidation = errors;
+    // Keep the locked center split tied to the available workspace after an
+    // overlay is mounted. Annotation SVGs are overlays, not layout content.
+    const center = canvas.closest('.center');
+    const workspace = canvas.closest('.workspace');
+    const bottom = center?.querySelector('.bottom');
+    if (center && workspace && bottom) {
+      const bottomHeight = bottom.getBoundingClientRect().height;
+      const available = workspace.getBoundingClientRect().height;
+      center.style.gridTemplateRows = `${Math.max(320, available - bottomHeight)}px ${bottomHeight}px`;
+    }
   };
   const run = (label, mutation) => controller.documentHistory.run(label, mutation);
   controller.transformAnnotations = (documentValue, start, endOrCount, mode) => {
