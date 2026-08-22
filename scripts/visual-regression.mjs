@@ -16,6 +16,6 @@ fs.writeFileSync(temp, JSON.stringify(waveJson));
 try {
   const svg = execFileSync(process.execPath, [path.resolve('node_modules/wavedrom/bin/cli.js'), '--input', temp], { encoding: 'utf8', maxBuffer: 10 * 1024 * 1024 });
   const hash = crypto.createHash('sha256').update(svg).digest('hex');
-  assert.equal(hash, '958096e61ae2f8615415ff4a970fb51164006f460193e367d5de54ac206077b4', 'WaveDrom SVG geometry changed; review the visual baseline');
+  assert.equal(hash, '610c00f040d748828e256b91fd941138e6dd52878c715e9e4728c6588fa9527c', 'WaveDrom SVG geometry changed; review the visual baseline');
   console.log('Visual regression baseline passed for Golden Sample 01.');
 } finally { fs.rmSync(temp, { force: true }); }

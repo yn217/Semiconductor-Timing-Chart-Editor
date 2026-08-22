@@ -11,14 +11,17 @@
   function waveFor(signal, cycleCount) {
     if (signal.type === 'clock') return { wave: `${signal.polarity === 'negative' ? 'n' : 'p'}${'.'.repeat(Math.max(0, cycleCount - 1))}`, period: signal.period, phase: signal.phase };
     const changes = [...(signal.values ?? [])].sort((a, b) => a.start - b.start);
+    const byStart = new Map(changes.map(change => [Number(change.start), change]));
+    const isBus = signal.type === 'bus' || signal.type === 'state';
     let out = '', data = [];
     for (let cycle = 0; cycle < cycleCount; cycle += 1) {
-      const change = changes.findLast?.(item => item.start <= cycle) ?? changes.filter(item => item.start <= cycle).at(-1);
-      const value = change?.value ?? 0;
-      if (signal.type === 'bus' || signal.type === 'state') { out += scalar(value); data.push(String(value)); }
-      else out += scalar(value);
+      const change = byStart.get(cycle);
+      if (!change) { out += '.'; continue; }
+      const token = scalar(change.value);
+      out += isBus && !['X', 'Z', 'u', 'd'].includes(token) ? '=' : token;
+      if (isBus && token === '=') data.push(String(change.value));
     }
-    return { wave: out, data: signal.type === 'bus' || signal.type === 'state' ? data : undefined };
+    return { wave: out, data: isBus ? data : undefined };
   }
   function toWaveJson(document) {
     const cycleCount = Number(document.document?.cycleCount ?? document.document?.timebase?.cycleCount ?? 0);

@@ -14,7 +14,6 @@ const states = [0, 1, 'X', 'Z', 'u', 'd'];
 const busStates = ['DATA0', 'DATA1', 'X', 'Z'];
 const cases = [];
 const unsupported = [
-  { id: 'continuation-token', family: 'continuation', reason: 'Semantic .tcd has no explicit WaveJSON continuation token.' },
   { id: 'gap-token', family: 'gap', reason: 'Timeline gaps are not represented by the current semantic model.' },
   { id: 'nested-group', family: 'grouping', reason: 'Group nesting is a layout concern and is not a WaveDrom signal primitive.' },
   { id: 'clock-edge-marker', family: 'clock-edge', reason: 'The semantic model does not yet expose WaveJSON edge declarations.' },
@@ -23,10 +22,10 @@ const unsupported = [
 ];
 
 function binaryDoc(a, b) {
-  return { document: { cycleCount: 2 }, signals: [{ name: 'case', type: 'binary', values: [{ start: 0, value: a }, { start: 1, value: b }] }] };
+  return { document: { cycleCount: 10 }, signals: [{ name: 'case', type: 'binary', values: [{ start: 0, value: a }, { start: 3, value: b }] }] };
 }
 function busDoc(a, b) {
-  return { document: { cycleCount: 2 }, signals: [{ name: 'case', type: 'bus', values: [{ start: 0, value: a }, { start: 1, value: b }] }] };
+  return { document: { cycleCount: 10 }, signals: [{ name: 'case', type: 'bus', values: [{ start: 0, value: a }, { start: 3, value: b }] }] };
 }
 function clockDoc(polarity, period, phase) {
   return { document: { cycleCount: 8 }, signals: [{ name: 'case', type: 'clock', polarity, period, phase }] };
@@ -44,8 +43,17 @@ function canonical(doc) {
   }
   const values = signal.values;
   const isBus = signal.type === 'bus' || signal.type === 'state';
-  const wave = isBus ? [values[0].value, values[1].value].map(value => ['X', 'x', 'Z', 'z'].includes(value) ? scalar(value) : '=').join('') : `${scalar(values[0].value)}${scalar(values[1].value)}`;
-  return { signal: [{ name: signal.name, wave, ...(isBus ? { data: [String(values[0].value), String(values[1].value)] } : {}) }] };
+  const byStart = new Map(values.map(value => [Number(value.start), value]));
+  let wave = '', data = [];
+  for (let cycle = 0; cycle < doc.document.cycleCount; cycle += 1) {
+    const value = byStart.get(cycle);
+    if (!value) { wave += '.'; continue; }
+    const token = scalar(value.value);
+    const dataToken = isBus && !['X', 'Z', 'u', 'd'].includes(token);
+    wave += dataToken ? '=' : token;
+    if (dataToken) data.push(String(value.value));
+  }
+  return { signal: [{ name: signal.name, wave, ...(isBus ? { data } : {}) }] };
 }
 function normalizeSvg(svg) {
   return svg.replace(/\r?\n/g, '').replace(/\s+/g, ' ').replace(/ id="[^"]*"/g, '').replace(/ xmlns(:xlink)?="[^"]*"/g, '').trim();
@@ -62,13 +70,25 @@ function render(waveJson) {
 for (const a of states) for (const b of states) cases.push({ id: `binary-${String(a)}-to-${String(b)}`, family: 'binary-transition', doc: binaryDoc(a, b) });
 for (const a of busStates) for (const b of busStates) cases.push({ id: `bus-${a}-to-${b}`, family: 'bus-transition', doc: busDoc(a, b) });
 for (const polarity of ['positive', 'negative']) for (const period of [1, 2, 3, 4]) for (const phase of [-0.5, 0, 0.5, 1]) cases.push({ id: `clock-${polarity}-${period}-${String(phase).replace('-', 'm').replace('.', 'p')}`, family: 'clock-period-phase', doc: clockDoc(polarity, period, phase) });
+cases.push({
+  id: 'explicit-binary-persistence',
+  family: 'persistence',
+  doc: { document: { cycleCount: 10 }, signals: [{ name: 'case', type: 'binary', values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }] }] },
+  expected: { signal: [{ name: 'case', wave: '0..1...0..' }] }
+});
+cases.push({
+  id: 'explicit-bus-persistence',
+  family: 'persistence',
+  doc: { document: { cycleCount: 10 }, signals: [{ name: 'case', type: 'bus', values: [{ start: 0, value: 'IDLE' }, { start: 3, value: '0x1000' }, { start: 7, value: 'IDLE' }] }] },
+  expected: { signal: [{ name: 'case', wave: '=..=...=..', data: ['IDLE', '0x1000', 'IDLE'] }] }
+});
 
 const failures = [];
 const canonicalWaveJson = { signal: [] };
 const dutWaveJson = { signal: [] };
 for (const item of cases) {
   try {
-    const expected = canonical(item.doc);
+    const expected = item.expected ?? canonical(item.doc);
     const actual = adapter.toWaveJson(item.doc);
     assert.equal(JSON.stringify(actual), JSON.stringify(expected), 'temporary WaveJSON differs from canonical WaveJSON');
     canonicalWaveJson.signal.push(expected.signal[0]);
