@@ -35,7 +35,7 @@
     transactions: [],
     constraints: []
   };
-  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1 } };
+  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [] } };
   const controller = { model, getState: () => structuredClone(model), actions: {} };
   const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
   const getSignal = id => getSignals().find(signal => signal.id === id);
@@ -164,6 +164,7 @@
   controller.actions.selectObject = row => { model.selection = { kind: row.dataset.kind === 'comment' ? 'comment' : 'signal', id: row.dataset.kind === 'comment' ? row.dataset.commentId || row.dataset.signal : row.dataset.signal }; if (model.selection.kind === 'signal') model.editor.rowIndex = Math.max(0, getSignal(model.selection.id)?.values?.length - 1 || 0); if (model.view.followSelection && !model.view.pinned) model.view.tab = model.view.mode === 'transaction' ? 'transaction' : 'signal'; render(); };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
+  controller.actions.setSignalVisibility = (signalId, visible) => { if (!model.document.signals.some(signal => signal.id === signalId)) return false; model.view.hiddenSignals = model.view.hiddenSignals.filter(id => id !== signalId); if (!visible) model.view.hiddenSignals.push(signalId); render(); return true; };
   const transactionRun = (label, mutation) => controller.documentHistory?.run ? controller.documentHistory.run(label, mutation) : (mutation(), render(), true);
   controller.actions.setTimeRange = (startValue, endValue) => {
     const start = Number(startValue); const end = Number(endValue);

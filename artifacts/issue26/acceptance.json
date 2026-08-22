@@ -1,0 +1,34 @@
+{
+  "issue": 26,
+  "goldenReferenceModified": false,
+  "waveDromGeometryChanged": false,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "homeCommandsRemoved": true,
+      "fileExports": 3,
+      "dragDropUndo": true,
+      "visibilityTransient": true,
+      "canonicalUnchanged": true,
+      "waveDromTraceCount": 7,
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "homeCommandsRemoved": true,
+      "fileExports": 3,
+      "dragDropUndo": true,
+      "visibilityTransient": true,
+      "canonicalUnchanged": true,
+      "waveDromTraceCount": 7,
+      "pass": true
+    }
+  ],
+  "pass": true
+}
