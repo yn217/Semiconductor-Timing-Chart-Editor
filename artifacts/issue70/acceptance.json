@@ -1,0 +1,11 @@
+{
+  "issue": 70,
+  "sourceContract": true,
+  "invalidRollback": true,
+  "selectableColor": true,
+  "typeAwareControls": true,
+  "anchorPick": true,
+  "undoRedo": true,
+  "saveOpen": true,
+  "pass": true
+}

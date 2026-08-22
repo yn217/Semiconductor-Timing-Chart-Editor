@@ -69,11 +69,11 @@ async function runViewport(browser, viewport) {
     expect(range.labelOffset?.x === 0 && range.labelOffset?.y === 0, 'Offset reset did not reset labelOffset');
 
     const beforeStyleTraceCount = traceCount();
-    command('label-right').click(); command('wrap').click(); command('multiline').click(); command('color').click(); command('visible').click(); await wait(30);
+    command('label-right').click(); command('wrap').click(); command('multiline').click(); command('color').click(); const colorPicker = document.querySelector('#ribbonAnnotation [data-annotation-color-picker]'); expect(colorPicker, 'Color command did not expose a selectable color control'); colorPicker.value = '#e39a25'; colorPicker.dispatchEvent(new Event('change', { bubbles: true })); command('visible').click(); await wait(30);
     expect(range.labelStyle?.align === 'right', 'Label alignment was not stored canonically');
     expect(range.labelStyle?.wrap === true, 'Label wrap was not stored canonically');
     expect(String(range.label).includes('\n'), 'Multiline label was not stored canonically');
-    expect(range.color === '#1473e6', 'Color command did not update canonical color');
+    expect(range.color === '#e39a25', 'Color command did not update canonical color');
     expect(range.visible === true, 'Visibility command did not toggle canonical visibility');
     expect(traceCount() === beforeStyleTraceCount, 'Pure annotation style edit rerendered WaveDrom traces');
 

@@ -96,7 +96,16 @@
   };
   controller.replaceDocument = replaceDocument;
   const restore = snapshot => {
+    const previousSelection = clone(model.selection);
+    const previousView = clone(model.view);
     replaceDocument(snapshot, { resetHistory: false, render: false });
+    const selectionExists = previousSelection?.kind === 'annotation'
+      ? model.document.annotations.some(annotation => annotation.id === previousSelection.id)
+      : previousSelection?.kind === 'signal'
+        ? model.document.signals.some(signal => signal.id === previousSelection.id)
+        : false;
+    if (selectionExists) model.selection = previousSelection;
+    model.view = { ...model.view, ...previousView };
     controller.render();
     updateDirty();
   };
