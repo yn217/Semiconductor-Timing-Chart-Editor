@@ -1,0 +1,15 @@
+{
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "changedPixels": 63862,
+  "totalPixels": 1573352,
+  "diffPercent": 0.040589772663714156,
+  "threshold": 0.05,
+  "pass": true,
+  "screenshot": "test-results/gui-pack-production.png",
+  "reference": "test-results/gui-pack-reference.png",
+  "visualDiff": "test-results/gui-pack-visual-diff.png",
+  "goldenImage": "references/gui-replacement-pack/00_overall_cycle_view.png"
+}
