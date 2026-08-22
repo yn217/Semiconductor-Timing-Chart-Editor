@@ -1,0 +1,23 @@
+{
+  "vline": {
+    "source": "wavedrom-svg",
+    "geometryErrorPx": 0
+  },
+  "resizeOffset": {
+    "x": 17,
+    "y": -12
+  },
+  "ripple": {
+    "start": [
+      3,
+      5
+    ],
+    "end": [
+      6,
+      8
+    ]
+  },
+  "waveformUnchanged": true,
+  "customSignalTraceCount": 0,
+  "pass": true
+}
