@@ -86,6 +86,16 @@
     });
   };
   model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
+  controller.actions.getCurrentCycle = () => Math.max(0, Math.min(Number(model.timeSelection?.cycle ?? 0), Number(model.document.timeline?.cycleCount ?? 0)));
+  controller.actions.setCurrentCycle = cycle => {
+    const next = Math.max(0, Math.min(Number(cycle), Number(model.document.timeline?.cycleCount ?? 0)));
+    if (!Number.isInteger(next)) return false;
+    model.timeSelection.cycle = next;
+    model.timeSelection.rangeStart = null;
+    model.timeSelection.rangeEnd = null;
+    renderTransient(model);
+    return true;
+  };
 
   const renderEdgeCounters = currentModel => {
     const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;

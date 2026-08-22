@@ -90,7 +90,7 @@
     if (type === 'dependency') return beginDependencySelection();
     return controller.actions.addAnnotation(type, { label: type === 'marker' ? 'Marker' : type === 'range' ? 'Range' : type === 'text' ? 'Text' : 'Callout' });
   };
-  const insertPoint = () => Math.max(0, Math.min(Number(controller.model.view.insertionCycle ?? 0), Number(controller.model.document.timeline.cycleCount)));
+  const insertPoint = () => controller.actions.getCurrentCycle ? controller.actions.getCurrentCycle() : Math.max(0, Math.min(Number(controller.model.timeSelection?.cycle ?? 0), Number(controller.model.document.timeline.cycleCount)));
   const openNDialog = () => {
     closeMenus();
     const dialog = document.createElement('div'); dialog.id = 'insertNCyclesDialog'; dialog.dataset.insertMenu = 'true'; dialog.style.cssText = 'position:fixed;z-index:2201;left:50%;top:38%;transform:translate(-50%,-50%);padding:14px;background:#fff;border:1px solid #b8c5d4;border-radius:5px;box-shadow:0 8px 24px #0003;font:12px sans-serif;';
