@@ -283,9 +283,9 @@
       "mode": "split",
       "contract": "explicit",
       "gridRows": [
-        "160px",
-        "160px",
-        "157px"
+        "90px",
+        "90px",
+        "297px"
       ],
       "center": {
         "top": 216,
@@ -298,27 +298,27 @@
       "elements": {
         "#cycleCanvas": {
           "top": 216,
-          "bottom": 376,
+          "bottom": 306,
           "left": 280,
           "right": 1010,
           "width": 730,
-          "height": 160
+          "height": 90
         },
         "#transactionCanvas": {
-          "top": 376,
-          "bottom": 536,
+          "top": 306,
+          "bottom": 396,
           "left": 280,
           "right": 1010,
           "width": 730,
-          "height": 160
+          "height": 90
         },
         ".bottom": {
-          "top": 536,
+          "top": 396,
           "bottom": 693,
           "left": 280,
           "right": 1010,
           "width": 730,
-          "height": 157
+          "height": 297
         }
       },
       "inside": true,

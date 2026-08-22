@@ -144,7 +144,11 @@
       if (Number.isFinite(savedHeight) && savedHeight >= 150) center.style.setProperty('--bottom-h', `${savedHeight}px`);
       if (model.view.mode === 'split') {
         const splitBottom = Number.parseFloat(getComputedStyle(center).getPropertyValue('--split-bottom-h')) || Number(bottom.getBoundingClientRect().height) || 270;
-        center.style.setProperty('--split-bottom-h', `${Number(view.bottomHeight || model.view.bottomHeight || splitBottom)}px`);
+        const requestedBottom = Number(view.bottomHeight || model.view.bottomHeight || splitBottom);
+        const maxBottom = Math.max(150, center.clientHeight - 180);
+        const effectiveBottom = Math.max(150, Math.min(requestedBottom, maxBottom));
+        center.style.setProperty('--split-bottom-h', `${effectiveBottom}px`);
+        center.dataset.splitBottomClamped = effectiveBottom !== requestedBottom ? 'true' : 'false';
         center.style.gridTemplateRows = 'minmax(90px,1fr) minmax(90px,1fr) var(--split-bottom-h)';
       } else center.style.gridTemplateRows = 'minmax(0,1fr) var(--bottom-h)';
     } else if (model.view.mode === 'split') center.style.gridTemplateRows = 'minmax(90px,1fr) minmax(90px,1fr)';
