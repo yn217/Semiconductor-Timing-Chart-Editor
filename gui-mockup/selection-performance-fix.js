@@ -6,18 +6,22 @@
   controller.selectionFastPathInstalled = true;
 
   const model = controller.model;
-  const metrics = controller.selectionMetrics = controller.selectionMetrics || {
-    selections: 0,
-    detailFrames: 0,
-    cancelledDetailFrames: 0,
-    fullRenders: 0,
+  const metrics = controller.selectionMetrics = controller.selectionMetrics || {};
+  Object.assign(metrics, {
+    selections: metrics.selections || 0,
+    detailFrames: metrics.detailFrames || 0,
+    cancelledDetailFrames: metrics.cancelledDetailFrames || 0,
     lastHighlightMs: 0,
-    lastDetailsMs: 0
-  };
+    lastDetailsMs: 0,
+    lastBottomMs: 0,
+    lastInspectorMs: 0,
+    fullRendersFromSelection: 0
+  });
 
-  let outerRaf = 0;
-  let innerRaf = 0;
+  let detailRaf = 0;
+  let detailTimer = 0;
   let generation = 0;
+  let previousPrimaryRow = document.querySelector('.row[data-signal].selected');
 
   const esc = value => String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -27,81 +31,81 @@
 
   const getSignal = id => controller.selectors?.getSignal?.(id);
   const getComment = id => controller.selectors?.getComments?.().find(item => item.id === id);
+
+  const findVisibleRow = id => {
+    if (!id) return null;
+    try { return document.querySelector(`.row[data-signal="${CSS.escape(String(id))}"]`); }
+    catch { return [...document.querySelectorAll('.row[data-signal]')].find(row => (row.dataset.commentId || row.dataset.signal) === id) || null; }
+  };
+
+  const renderHighlight = preferredRow => {
+    const started = performance.now();
+    const id = model.selection?.id;
+    const currentRow = preferredRow instanceof Element ? preferredRow : findVisibleRow(id);
+
+    if (previousPrimaryRow && previousPrimaryRow !== currentRow) {
+      previousPrimaryRow.classList.remove('selected');
+      previousPrimaryRow.setAttribute('aria-selected', 'false');
+    }
+    if (currentRow) {
+      currentRow.classList.add('selected');
+      currentRow.setAttribute('aria-selected', 'true');
+      previousPrimaryRow = currentRow;
+    }
+
+    // Transaction cross-highlights are normally empty during ordinary signal
+    // selection. Only touch those rows when the cross-highlight set is active.
+    const cross = model.crossHighlight || [];
+    if (cross.length) {
+      document.querySelectorAll('.row[data-signal]').forEach(row => {
+        const rowId = row.dataset.commentId || row.dataset.signal;
+        if (rowId !== id) row.classList.toggle('selected', cross.includes(rowId));
+      });
+    }
+
+    document.querySelectorAll('#bottomTabs [data-tab].active').forEach(button => {
+      if (button.dataset.tab !== model.view.tab) button.classList.remove('active');
+    });
+    document.querySelector(`#bottomTabs [data-tab="${model.view.tab}"]`)?.classList.add('active');
+    metrics.lastHighlightMs = performance.now() - started;
+  };
+
+  const installDelegatedEditorBinding = content => {
+    if (!content || content.dataset.selectionDelegated === 'true') return;
+    content.dataset.selectionDelegated = 'true';
+
+    content.addEventListener('change', event => {
+      const target = event.target;
+      const signalId = model.selection?.id;
+      if (!(target instanceof HTMLElement)) return;
+      if (target.matches('[data-editor-field]')) {
+        controller.actions.updateSignalValue(signalId, Number(target.dataset.editorIndex), target.dataset.editorField, target.value);
+      } else if (target.matches('[data-clock-field]')) {
+        controller.actions.updateClock(target.dataset.clockField, target.value);
+      } else if (target.matches('[data-comment-field]')) {
+        controller.actions.updateComment(signalId, target.dataset.commentField, target.value);
+      }
+    });
+
+    content.addEventListener('click', event => {
+      const button = event.target.closest?.('[data-editor-action]');
+      if (!button) return;
+      const signalId = model.selection?.id;
+      const action = button.dataset.editorAction;
+      if (action === 'add') controller.actions.addSignalValue(signalId);
+      else if (action === 'duplicate') controller.actions.duplicateSignalValue(signalId, model.editor?.rowIndex ?? 0);
+      else if (action === 'delete') controller.actions.deleteSignalValue(signalId, model.editor?.rowIndex ?? 0);
+    });
+  };
+
   const busRange = signal => {
     if (!signal) return '';
     if (signal.source?.msb !== undefined && signal.source?.lsb !== undefined) return `[${signal.source.msb}:${signal.source.lsb}]`;
     return signal.width ? `[${Number(signal.width) - 1}:0]` : '';
   };
 
-  const renderHighlight = () => {
-    const started = performance.now();
-    document.querySelectorAll('.row[data-signal]').forEach(row => {
-      const id = row.dataset.commentId || row.dataset.signal;
-      row.classList.toggle('selected', id === model.selection?.id || (model.crossHighlight || []).includes(id));
-      row.setAttribute('aria-selected', id === model.selection?.id ? 'true' : 'false');
-    });
-    document.querySelectorAll('#bottomTabs [data-tab]').forEach(button => {
-      button.classList.toggle('active', button.dataset.tab === model.view.tab);
-    });
-    metrics.lastHighlightMs = performance.now() - started;
-  };
-
-  const selectedToolbar = signal => {
-    const role = signal?.role === 'output' ? ['out', 'o'] : signal?.role === 'internal' ? ['wire', 'wire'] : ['in', 'i'];
-    return `<div class="selected-line">選択中の信号:　${esc(signal?.id || '')} <span class="role ${role[0]}">${role[1]}</span></div>`;
-  };
-
-  const editorInput = (index, field, value, type = 'text') => `<input data-editor-index="${index}" data-editor-field="${field}" value="${esc(value)}" type="${type}" style="width:100%;border:0;background:transparent;text-align:center;font:inherit;padding:0">`;
-
-  const derivedRows = signal => {
-    const values = [...(signal?.values || [])].sort((a, b) => Number(a.start) - Number(b.start));
-    return values.map((value, index) => ({
-      value,
-      index,
-      duration: index < values.length - 1 ? Number(values[index + 1].start) - Number(value.start) : null,
-      end: index < values.length - 1 ? Number(values[index + 1].start) : null
-    }));
-  };
-
-  const commonToolbar = () => '<div class="toolbar-line"><button class="mini-btn primary" data-editor-action="add">＋ 変更点を追加</button><button class="mini-btn" data-editor-action="duplicate">▣ 行を複製</button><button class="mini-btn" data-editor-action="delete">🗑 行を削除</button><button class="mini-btn">⇩ インポート...</button><button class="mini-btn">⇧ エクスポート...</button><button class="mini-btn">⟳ プレビュー更新</button></div>';
-
-  const renderEventSignalPanel = signal => {
-    const rows = derivedRows(signal);
-    const selected = model.editor?.rowIndex ?? Math.max(0, rows.length - 1);
-    const isBus = signal.type === 'bus';
-    const isState = signal.type === 'state';
-    const valueTitle = isState ? 'State' : 'Value';
-    const extraHead = isBus ? '<th>Display format</th>' : isState ? '<th>Color</th>' : '';
-    const body = rows.map(({ value, index, duration, end }) => {
-      const extra = isBus ? `<td class=center>${esc(signal.displayFormat === 'hex' ? 'Hex' : signal.displayFormat || 'Auto')}</td>` : isState ? '<td class=center>Auto</td>' : '';
-      return `<tr class="${index === selected ? 'selected-row' : ''}" data-editor-index="${index}"><td>${index === selected ? '☑' : '□'}</td><td class=center>${index + 1}</td><td class=center>${editorInput(index, 'start', value.start, 'number')}</td><td class=center>${editorInput(index, 'value', value.value)}</td>${extra}<td class=center>${duration ?? '—'}</td><td class=center>${end ?? '—'}</td><td>${editorInput(index, 'comment', value.comment || '')}</td></tr>`;
-    }).join('');
-    return `${selectedToolbar(signal)}${commonToolbar()}<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>${valueTitle}</th>${extraHead}<th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${body}</tbody></table>`;
-  };
-
-  const clockField = (label, field, value, type = 'number') => `<div class="field"><label>${label}</label><input data-clock-field="${field}" value="${esc(value)}" type="${type}"></div>`;
-  const clockSelect = (label, field, value, options) => `<div class="field"><label>${label}</label><select data-clock-field="${field}">${options.map(option => `<option ${String(option).toLowerCase() === String(value).toLowerCase() ? 'selected' : ''}>${option}</option>`).join('')}</select></div>`;
-  const renderClockPanel = signal => {
-    const generator = signal.generator || {};
-    const counter = signal.edgeCounter || {};
-    const timeline = model.document.timeline || {};
-    return `<div class="selected-line">選択中の信号:　${esc(signal.name || signal.id)}　種別: Clock</div><div class="toolbar-line"><button class="mini-btn">∿ プリセット⌄</button><button class="mini-btn">▣ 複製</button><button class="mini-btn">⇩ インポート...</button><button class="mini-btn">⇧ エクスポート...</button><button class="mini-btn">⟳ プレビュー更新</button></div><div class="clock-form">${clockField('Start (cycle)', 'start', generator.start ?? 0)}${clockField('Period (cycles)', 'period', generator.period ?? 1)}${clockField('Duty (%)', 'duty', (generator.duty ?? 0.5) * 100)}${clockField('Phase (cycles)', 'phase', generator.phase ?? 0)}${clockSelect('Initial level', 'initialLevel', generator.initial ?? 0, ['0', '1'])}${clockSelect('Edge基準', 'edgeReference', timeline.edge || 'rising', ['Rising', 'Falling'])}</div><div class="edge-box"><b>エッジ番号表示</b><div class="edge-grid" style="margin-top:8px">${clockSelect('Show', 'edgeCounter.show', counter.show === false ? 'OFF' : 'ON', ['ON', 'OFF'])}${clockSelect('Mode', 'edgeCounter.mode', counter.mode || 'rising', ['Rising', 'Falling', 'Both'])}${clockField('Start number', 'edgeCounter.startNumber', counter.startNumber ?? 1)}${clockSelect('Count from', 'edgeCounter.countFrom', counter.countFrom || 'signal-start', ['signal-start', 'selected-edge', 'marker', 'visible-range-start'])}${clockField('Show every', 'edgeCounter.labelEvery', counter.labelEvery ?? 1)}${clockSelect('Position', 'edgeCounter.position', counter.position || 'above', ['Above', 'Below'])}${clockField('Offset X', 'edgeCounter.offset.x', counter.offset?.x ?? 0)}${clockField('Offset Y', 'edgeCounter.offset.y', counter.offset?.y ?? -6)}</div></div>`;
-  };
-
-  const renderCommentPanel = comment => `<div class="selected-line">選択中: Comment Row　${esc(comment?.title || '')}</div><div class="toolbar-line"><button class="mini-btn">複製</button><button class="mini-btn">削除</button></div><div class="clock-form" style="grid-template-columns:1fr 2fr"><div class="field"><label>Title（左パネル用）</label><input data-comment-field="title" value="${esc(comment?.title || '')}"></div><div class="field"><label>Body（タイミングチャート用）</label><input data-comment-field="body" value="${esc(comment?.body || '')}"></div></div>`;
-
-  const bindSignalEditor = content => {
-    const signalId = model.selection?.id;
-    content.querySelectorAll('[data-editor-field]').forEach(input => input.addEventListener('change', () => controller.actions.updateSignalValue(signalId, Number(input.dataset.editorIndex), input.dataset.editorField, input.value)));
-    content.querySelector('[data-editor-action="add"]')?.addEventListener('click', () => controller.actions.addSignalValue(signalId));
-    content.querySelector('[data-editor-action="duplicate"]')?.addEventListener('click', () => controller.actions.duplicateSignalValue(signalId, model.editor?.rowIndex ?? 0));
-    content.querySelector('[data-editor-action="delete"]')?.addEventListener('click', () => controller.actions.deleteSignalValue(signalId, model.editor?.rowIndex ?? 0));
-    content.querySelectorAll('[data-clock-field]').forEach(input => input.addEventListener('change', () => controller.actions.updateClock(input.dataset.clockField, input.value)));
-    content.querySelectorAll('[data-comment-field]').forEach(input => input.addEventListener('change', () => controller.actions.updateComment(signalId, input.dataset.commentField, input.value)));
-  };
-
-  const renderHierarchyInspector = (host, signal) => {
-    if (!signal) return;
+  const appendHierarchyInspector = (host, signal) => {
+    if (!host || !signal) return;
     const mode = model.document.layout?.pathDisplayMode || 'signalOnly';
     if (model.view.leftPanelMode !== 'hierarchy' && mode === 'signalOnly') return;
     const source = signal.source || { instancePath: [], signalName: signal.name || signal.id };
@@ -110,7 +114,7 @@
     host.insertAdjacentHTML('beforeend', `<div class="section" data-hierarchy-inspector="true"><h3>Source / Hierarchy</h3><div class="prop"><span>Instance Path</span><b title="${esc(full)}">${esc((source.instancePath || []).join('.') || '(flat)')}</b></div><div class="prop"><span>Signal</span><b>${esc(source.signalName || signal.name)}</b></div><div class="prop"><span>Bus Width</span><b>${esc(busRange(signal) || '—')}</b></div><div class="prop"><span>Display Name</span><b>${esc(signal.display?.name || source.signalName || signal.name)}</b></div><div class="prop"><span>Relative</span><b title="${esc(full)}">${esc(relative)}</b></div></div>`);
   };
 
-  const renderSignalInspector = () => {
+  const renderInspectorLight = () => {
     const host = document.querySelector('#inspectorBody');
     if (!host || model.view.tab !== 'signal') return;
     const signal = getSignal(model.selection?.id);
@@ -120,45 +124,55 @@
       return;
     }
     if (!signal) return;
-    host.innerHTML = `<div class="section"><h3>信号プロパティ</h3><div class="prop"><span>名前</span><input value="${esc(signal.id)}"></div><div class="prop"><span>種別</span><input value="${esc(signal.type)}"></div><div class="prop"><span>可視性</span><select><option>表示</option><option>非表示</option></select></div></div><div class="section"><h3>表示</h3><label><input type=checkbox checked> 波形を表示</label><br><label><input type=checkbox checked> ラベルを表示</label></div>`;
-    renderHierarchyInspector(host, signal);
+    host.innerHTML = `<div class="section"><h3>信号プロパティ</h3><div class="prop"><span>名前</span><input value="${esc(signal.id)}"></div><div class="prop"><span>種別</span><input value="${esc(signal.type)}"></div><div class="prop"><span>可視性</span><select><option>表示</option><option>非表示</option></select></div></div><div class="section"><h3>表示</h3><label><input type="checkbox" checked> 波形を表示</label><br><label><input type="checkbox" checked> ラベルを表示</label></div>`;
+    appendHierarchyInspector(host, signal);
   };
 
   const renderSelectionDetails = expectedGeneration => {
-    innerRaf = 0;
+    detailTimer = 0;
     if (expectedGeneration !== generation) {
       metrics.cancelledDetailFrames += 1;
       return;
     }
+
     const started = performance.now();
     if (model.view.tab === 'signal') {
+      const bottomStarted = performance.now();
       const content = document.querySelector('#bottomContent');
-      if (content) {
-        const signal = getSignal(model.selection?.id);
-        const comment = !signal ? getComment(model.selection?.id) : null;
-        if (comment) content.innerHTML = renderCommentPanel(comment);
-        else if (signal?.type === 'clock') content.innerHTML = renderClockPanel(signal);
-        else if (signal) content.innerHTML = renderEventSignalPanel(signal);
-        content.dataset.renderedTab = 'signal';
-        bindSignalEditor(content);
-      }
-      renderSignalInspector();
+      if (typeof window.renderBottom === 'function') window.renderBottom(model);
+      installDelegatedEditorBinding(content);
+      if (content) content.dataset.renderedTab = 'signal';
+      metrics.lastBottomMs = performance.now() - bottomStarted;
+
+      const inspectorStarted = performance.now();
+      renderInspectorLight();
+      metrics.lastInspectorMs = performance.now() - inspectorStarted;
     }
+
     metrics.detailFrames += 1;
     metrics.lastDetailsMs = performance.now() - started;
-    document.dispatchEvent(new CustomEvent('timingchart:selection-details-rendered', { detail: { id: model.selection?.id, durationMs: metrics.lastDetailsMs } }));
+    document.dispatchEvent(new CustomEvent('timingchart:selection-details-rendered', {
+      detail: {
+        id: model.selection?.id,
+        durationMs: metrics.lastDetailsMs,
+        bottomMs: metrics.lastBottomMs,
+        inspectorMs: metrics.lastInspectorMs
+      }
+    }));
   };
 
   const scheduleDetails = () => {
     generation += 1;
     const expectedGeneration = generation;
-    if (outerRaf) cancelAnimationFrame(outerRaf);
-    if (innerRaf) cancelAnimationFrame(innerRaf);
-    outerRaf = requestAnimationFrame(() => {
-      outerRaf = 0;
-      // Use a second frame so the selected-row highlight is painted before
-      // rebuilding the editor/Inspector details.
-      innerRaf = requestAnimationFrame(() => renderSelectionDetails(expectedGeneration));
+    if (detailRaf) cancelAnimationFrame(detailRaf);
+    if (detailTimer) clearTimeout(detailTimer);
+
+    // One rAF is enough to let the immediate row highlight reach the next
+    // paint. Heavy detail DOM work then runs as a separate task immediately
+    // after that paint instead of waiting for a second animation frame.
+    detailRaf = requestAnimationFrame(() => {
+      detailRaf = 0;
+      detailTimer = window.setTimeout(() => renderSelectionDetails(expectedGeneration), 0);
     });
   };
 
@@ -174,9 +188,11 @@
     if (model.view.followSelection && !model.view.pinned) model.view.tab = model.view.mode === 'transaction' ? 'transaction' : 'signal';
 
     metrics.selections += 1;
-    renderHighlight();
+    renderHighlight(row instanceof Element ? row : null);
     scheduleDetails();
-    document.dispatchEvent(new CustomEvent('timingchart:selection-highlighted', { detail: { id, durationMs: metrics.lastHighlightMs } }));
+    document.dispatchEvent(new CustomEvent('timingchart:selection-highlighted', {
+      detail: { id, durationMs: metrics.lastHighlightMs }
+    }));
     return true;
   };
 
