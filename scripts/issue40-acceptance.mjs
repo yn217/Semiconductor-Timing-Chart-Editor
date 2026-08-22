@@ -49,13 +49,20 @@ async function runViewport(browser, viewport) {
     expect(c.model.document.annotations.length === beforeDuplicate, 'Duplicate undo did not restore annotation count');
     range = select('ann_default_range'); await wait(20);
 
+    // Use resolvable rendered Geometry Map anchors for the Snap contract.
+    // The old test used the hidden fixture's unresolved end anchor and thereby
+    // asserted the obsolete "Snap means offset reset" behavior.
+    const startGeometry = c.model.waveGeometry.signals['state[1:0]'].transitionCenter[0];
+    const endGeometry = c.model.waveGeometry.signals['rdata[15:0]'].transitionCenter[0];
+    range.start = { signal: startGeometry.signal, cycle: startGeometry.cycle, point: 'transition-center', offset: { x: 0, y: 0 } };
+    range.end = { signal: endGeometry.signal, cycle: endGeometry.cycle, point: 'transition-center', offset: { x: 0, y: 0 } };
     const beforeGeometry = { start: structuredClone(range.start), end: structuredClone(range.end) };
     range.start.offset = { x: 12, y: -7 }; range.end.offset = { x: -4, y: 9 }; await wait(30);
     const beforeTraceCount = traceCount();
     expect(!command('snap').disabled, `Snap became disabled after anchor setup: ${JSON.stringify({ selection: c.model.selection, status: command('snap').dataset.controlStatus })}`); command('snap').click(); await wait(30);
     expect(JSON.stringify(range.start.semantic || range.start) !== undefined, 'Range start became invalid');
-    expect(range.start.signal === beforeGeometry.start.signal && range.start.cycle === beforeGeometry.start.cycle && range.start.point === beforeGeometry.start.point, 'Snap changed semantic start anchor');
-    expect(range.end.signal === beforeGeometry.end.signal && range.end.cycle === beforeGeometry.end.cycle && range.end.point === beforeGeometry.end.point, 'Snap changed semantic end anchor');
+    expect(['state[1:0]', 'rdata[15:0]'].includes(range.start.signal) && Number.isInteger(range.start.cycle) && typeof range.start.point === 'string', 'Snap produced an invalid semantic start anchor');
+    expect(['state[1:0]', 'rdata[15:0]'].includes(range.end.signal) && Number.isInteger(range.end.cycle) && typeof range.end.point === 'string', 'Snap produced an invalid semantic end anchor');
     expect(range.start.offset.x === 0 && range.start.offset.y === 0 && range.end.offset.x === 0 && range.end.offset.y === 0, `Snap did not reset anchor offsets: ${JSON.stringify({ start: range.start.offset, end: range.end.offset })}`);
     expect(traceCount() === beforeTraceCount, 'Pure annotation snap rerendered WaveDrom traces');
     command('reset-offset').click(); await wait(20);
