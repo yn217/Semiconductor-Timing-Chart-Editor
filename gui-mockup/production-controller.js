@@ -119,7 +119,7 @@
   const tabs = () => [...document.querySelectorAll('#bottomTabs [data-tab]')];
   const rows = () => [...document.querySelectorAll('.row[data-signal]')];
   const setHidden = (element, hidden) => { if (!element) return; element.hidden = hidden; element.classList.toggle('hidden', hidden); };
-  const renderSelection = () => rows().forEach(row => row.classList.toggle('selected', row.dataset.signal === model.selection.id));
+  const renderSelection = () => rows().forEach(row => row.classList.toggle('selected', row.dataset.signal === model.selection.id || (model.crossHighlight || []).includes(row.dataset.signal)));
   const renderMode = () => {
     document.querySelectorAll('.seg').forEach(button => button.classList.toggle('active', button.dataset.mode === model.view.mode));
     const transaction = model.view.mode === 'transaction' || model.view.mode === 'split';
@@ -131,13 +131,18 @@
     setHidden(document.querySelector('#transactionCanvas'), model.view.mode === 'cycle');
   };
   const renderTab = () => tabs().forEach(button => button.classList.toggle('active', button.dataset.tab === model.view.tab));
-  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); };
+  const render = () => { renderMode(); renderTab(); renderSelection(); window.TimingChartGoldenRenderer?.render(model); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
   controller.actions.selectObject = row => { model.selection = { kind: row.dataset.kind === 'comment' ? 'comment' : 'signal', id: row.dataset.kind === 'comment' ? row.dataset.commentId || row.dataset.signal : row.dataset.signal }; if (model.selection.kind === 'signal') model.editor.rowIndex = Math.max(0, getSignal(model.selection.id)?.values?.length - 1 || 0); if (model.view.followSelection && !model.view.pinned) model.view.tab = model.view.mode === 'transaction' ? 'transaction' : 'signal'; render(); };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
+  const transactionRun = (label, mutation) => controller.documentHistory?.run ? controller.documentHistory.run(label, mutation) : (mutation(), render(), true);
+  controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
+  controller.actions.addTransaction = (seed = {}) => transactionRun('Add transaction', () => { const id = seed.id || `txn_${String(model.document.transactions.length + 1).padStart(3, '0')}`; const transaction = { id, name: seed.name || `Transaction ${model.document.transactions.length + 1}`, start: Number(seed.start ?? 0), end: Number(seed.end ?? 2), lane: seed.lane || 'default', source: seed.source || '', destination: seed.destination || '', phases: structuredClone(seed.phases || [{ name: 'Request', start: Number(seed.start ?? 0), end: Number(seed.start ?? 1) }, { name: 'Response', start: Number(seed.start ?? 1), end: Number(seed.end ?? 2) }]), linkedSignals: [...(seed.linkedSignals || ['req_valid', 'ready'])], comment: seed.comment || '' }; model.document.transactions.push(transaction); model.selection = { kind: 'transaction', id }; model.crossHighlight = [...transaction.linkedSignals]; model.view.mode = model.view.mode === 'cycle' ? 'transaction' : model.view.mode; model.view.tab = 'transaction'; });
+  controller.actions.deleteTransaction = id => transactionRun('Delete transaction', () => { const index = model.document.transactions.findIndex(item => item.id === id); if (index < 0) return false; model.document.transactions.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; model.crossHighlight = []; });
+  controller.actions.updateTransaction = (id, field, value) => transactionRun(`Update transaction ${field}`, () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction || !['name', 'start', 'end', 'lane', 'source', 'destination', 'comment'].includes(field)) return false; transaction[field] = ['start', 'end'].includes(field) ? Number(value) : String(value); });
   const setValidation = issues => { model.validation = issues; };
   const canonicalize = signal => signal.values.sort((a, b) => Number(a.start) - Number(b.start));
   const validateValue = (signal, index, candidate) => { const issues = []; const start = Number(candidate.start); if (!Number.isInteger(start) || start < 0) issues.push({ field: 'start', code: 'negative-or-non-integer' }); if (start >= getTimeline().cycleCount) issues.push({ field: 'start', code: 'outside-document' }); if (signal.values.some((value, valueIndex) => valueIndex !== index && Number(value.start) === start)) issues.push({ field: 'start', code: 'duplicate-start' }); if (signal.type === 'binary' && !['0', '1', 'X', 'Z', 'x', 'z'].includes(String(candidate.value))) issues.push({ field: 'value', code: 'invalid-binary' }); if (signal.type === 'bus' && signal.width && /^[0-9a-f]+$/i.test(String(candidate.value)) && String(candidate.value).replace(/^0x/i, '').length * 4 > signal.width) issues.push({ field: 'value', code: 'bus-width-overflow' }); return issues; };
@@ -153,5 +158,6 @@
   rows().forEach(row => row.addEventListener('click', () => controller.actions.selectObject(row)));
   const follow = document.querySelector('#bottomTabs input[type="checkbox"]'); follow?.addEventListener('change', () => controller.actions.setFollowSelection(follow.checked));
   const pin = document.querySelector('#bottomTabs .follow button'); pin?.addEventListener('click', () => controller.actions.setPinned(!model.view.pinned));
+  document.querySelector('.ribbon .txn-only .tool')?.addEventListener('click', () => controller.actions.addTransaction());
   render();
 })();

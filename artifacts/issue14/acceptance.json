@@ -1,0 +1,12 @@
+{
+  "sharedTimeAxis": true,
+  "noWaveDromData": true,
+  "transactionTimeline": true,
+  "linkedSignals": [
+    "req_valid",
+    "ready"
+  ],
+  "crossHighlight": true,
+  "cycleViewPreserved": true,
+  "pass": true
+}
