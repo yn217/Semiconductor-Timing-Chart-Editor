@@ -1,0 +1,28 @@
+# GUI Lock Specification
+
+This specification is normative for the Production GUI.
+
+## Locked structure
+
+- The left Signal / Group panel is locked to the Replacement Pack hierarchy.
+- The Cycle View bottom editor contains Signal, Annotation, Problems, and JSON only.
+- The Transaction View bottom editor contains Transaction, Annotation, Problems, and JSON.
+- Split View may expose Signal, Transaction, Annotation, Problems, and JSON.
+- The Cycle / Transaction / Split segmented control remains on the right side of the Ribbon tab row.
+- The Bottom Editor belongs to the center column only.
+- Production waveform traces continue to use WaveDrom/default skin. Placeholder SVGs in the reference are structural examples only.
+
+## Role icons
+
+The same role/type icon language is used in the left tree and canvas rows:
+
+- Input: `[i]`
+- Output: `[o]`
+- Internal: `[wire]`
+- Comment row: purple comment icon
+
+Role/name columns must remain visually separate from WaveDrom trace geometry.
+
+## Acceptance
+
+Reference and Production are captured at 1672x941 / DPR 1. Major pane geometry must be within 0-2px. Screenshot existence alone is not acceptance; a Reference-vs-DUT visual diff and DOM geometry assertions are required.

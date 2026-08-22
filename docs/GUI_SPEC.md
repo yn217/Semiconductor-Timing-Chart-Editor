@@ -6,12 +6,12 @@ GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` �
 優先順位:
 1. `docs/GUI_VISUAL_CONTRACT.md`
 2. `docs/GUI_IMPLEMENTATION_REFERENCE.md`
-3. `ui-reference-v2/index.html` / `styles.css` / `icons.svg`（Production実装用Reference）
-4. Golden GUI images (`gui-mockup/assets/original/`)
+3. `references/gui-replacement-pack/` と `gui-mockup/index.html` / `styles.css` / `icons.svg`（Production実装用Reference）
+4. Golden GUI images (`references/gui-replacement-pack/`)
 5. `docs/GUI_SPEC.md`
 6. 既存Production GUI
 
-`ui-reference-v2` は「参考」ではなく、ChatGPTがGolden PNGを基に作成した実装用DOM/CSS/Icon Reference。Productionはこれを移植・再利用し、同じ機能を別レイアウトへ再設計してはならない。
+`TimingChart_GUI_Replacement_Pack` は「参考」ではなく、Productionへ移植する実装用DOM/CSS/Icon Reference。Productionはこれを基準にし、同じ機能を別レイアウトへ再設計してはならない。
 
 ## 1. Main layout
 - Office/Ribbon風の上部UI。
@@ -24,7 +24,7 @@ GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` �
 
 Bottom editorは原則 **Center column内だけ** に配置し、Left Signal Tree / Right Inspectorの下まで全幅に広げない。
 
-Golden viewport 1672x941 / DPR 1では、`ui-reference-v2` のpane位置・Ribbon境界・Bottom Editor境界を基準とし、主要geometry差は0-2px以内を目標とする。
+Golden viewport 1672x941 / DPR 1では、Replacement Packのpane位置・Ribbon境界・Bottom Editor境界を基準とし、主要geometry差は0-2px以内を目標とする。
 
 ## 2. Ribbon
 Ribbonは機能をグループ化して表示する。単純な横一列のボタン群は禁止。
@@ -39,10 +39,18 @@ Ribbonは機能をグループ化して表示する。単純な横一列のボ�
 
 Home/Insert等では関連commandをgroup化し、group separator / captionを持つ。
 
-Ribbonのiconographyは `ui-reference-v2/icons.svg` を基本とする。絵文字や無関係なgeneric iconへ勝手に置換しない。
+RibbonのiconographyはReplacement Pack由来の`gui-mockup/icons.svg`を基本とする。絵文字や無関係なgeneric iconへ勝手に置換しない。
 
-## 3. Bottom tabs
-Signal / Annotation / Problems / JSON。Transaction実装後はTransactionを追加可能。
+## 3. View mode and Bottom tabs
+Ribbon右側の同じ位置に`Cycle / Transaction / Split`のView Mode segmented controlを置く。
+
+表示モードごとのBottom tabは次の通りとする。
+
+- Cycle: Signal / Annotation / Problems / JSON
+- Transaction: Transaction / Annotation / Problems / JSON
+- Split: Signal / Transaction / Annotation / Problems / JSON
+
+Cycle ViewではTransactionタブを表示しない。
 
 JSONは低優先度で通常操作に必須としない。
 Signal選択 -> Signal、Annotation選択 -> Annotation。ただしPin / Follow Selection OFFで固定可能。
@@ -122,7 +130,7 @@ GUIはsignal/group background、selection、annotation、clock edge number等を
 ## 12. AI-readable reference
 Production用Referenceはsemantic HTML/CSS/SVGで表す。stable `data-testid` / `data-role` / `data-signal` / `data-anchor` を利用する。
 
-`ui-reference-v2` を見てProduction UIを移植すること。Golden PNGを毎回AIが再解釈して別のHTMLを作る運用は禁止。
+Replacement Packの`production/index.html`、`production/styles.css`、`production/icons.svg`、`production/app-ui.js`を見てProduction UIを移植すること。Golden PNGを毎回AIが再解釈して別のHTMLを作る運用は禁止。
 
 ## 13. Visual regression requirement
 GUI visual acceptanceは screenshot file existenceではない。
@@ -130,7 +138,7 @@ GUI visual acceptanceは screenshot file existenceではない。
 同一Chromium / viewport 1672x941 / DPR 1 / deterministic fixtureで、
 
 Reference path:
-`ui-reference-v2/index.html` -> screenshot
+Replacement Pack reference -> screenshot
 
 DUT path:
 Production app -> corresponding screenshot

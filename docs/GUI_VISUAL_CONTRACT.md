@@ -28,12 +28,12 @@ The Bottom Context Editor belongs to the **center column**. Left Signal Tree and
 ## 3. Approximate Golden metrics at 1672 x 941
 These are layout acceptance targets, not arbitrary suggestions.
 
-- Left Signal/Group panel: about `280 px`
-- Right Inspector: about `350-370 px`
-- Center: remaining width, roughly `1020-1040 px`
-- Top menu + Ribbon: about `185-195 px`
-- Center waveform region: about `390-405 px` high before Bottom Editor
-- Bottom Context Editor: roughly `330-350 px` high by default
+- Left Signal/Group panel: `330 px`
+- Right Inspector: `300 px`
+- Center: remaining width, roughly `1040 px`
+- Title/menu/Ribbon boundary: `y=217 px`
+- Center waveform region: `338 px` in the Cycle View fixture
+- Bottom Context Editor: `270 px` in the Cycle View fixture
 
 Structural metric tolerance at the reference viewport: normally ±8 px unless browser/font platform differences require an explicitly documented exception.
 
@@ -72,7 +72,9 @@ Tabs:
 - Annotation
 - Problems
 - JSON
-- Transaction when implemented
+- Transaction only in Transaction and Split View
+
+Cycle View must not display a Transaction tab. Transaction View uses Transaction / Annotation / Problems / JSON. Split View may expose Signal / Transaction / Annotation / Problems / JSON.
 
 The editor is a substantial work area, not a tiny status pane.
 Signal Event Table should be spreadsheet-like and horizontally aligned with the center waveform area.
