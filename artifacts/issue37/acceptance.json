@@ -1,0 +1,32 @@
+{
+  "issue": 37,
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "selectedAfterGroup": {
+    "kind": "comment",
+    "id": "comment_01"
+  },
+  "selectedAfterHierarchy": {
+    "kind": "signal",
+    "id": "req_valid"
+  },
+  "fullRenders": 0,
+  "waveRenders": 35,
+  "selectionMetrics": {
+    "selections": 10,
+    "detailFrames": 4,
+    "cancelledDetailFrames": 0,
+    "lastHighlightMs": 0.10000002384185791,
+    "lastDetailsMs": 0,
+    "lastBottomMs": 1.5,
+    "lastInspectorMs": 0.3999999761581421,
+    "fullRendersFromSelection": 0
+  },
+  "canonicalUnchanged": true,
+  "undoUnchanged": true,
+  "highlightWithinFrame": true,
+  "pass": true,
+  "lockedGuiModified": false
+}
