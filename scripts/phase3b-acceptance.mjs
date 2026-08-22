@@ -54,7 +54,7 @@ try {
   const boundaryArrays = Object.values(geometry.signals).map(signal => signal.cycleBoundary);
   for (let cycle = 0; cycle <= geometry.cycleCount; cycle += 1) {
     const expected = boundaryArrays[0][cycle];
-    for (const boundaries of boundaryArrays) assert.ok(Math.abs(boundaries[cycle] - expected) <= 0.1, `Cycle ${cycle} is misaligned`);
+    for (const boundaries of boundaryArrays) assert.ok(Math.abs(boundaries[cycle].x - expected.x) <= 0.1 && Math.abs(boundaries[cycle].y - expected.y) <= 0.1, `Cycle ${cycle} is misaligned: ${JSON.stringify(boundaryArrays)}`);
   }
   const controller = await page.evaluate(() => ({
     reqRise: window.TimingChartProductionController.getAnchor({ signal: 'req_valid', cycle: 3, edge: 'rising' }),

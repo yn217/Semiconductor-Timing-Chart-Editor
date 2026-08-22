@@ -1,0 +1,3107 @@
+{
+  "geometry": {
+    "cycleCount": 10,
+    "signals": {
+      "clk": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [
+          {
+            "x": 20.5,
+            "y": 15.5,
+            "localX": 20.5,
+            "localY": 15.5,
+            "canvasX": 537.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 0,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 1
+          },
+          {
+            "x": 180.5,
+            "y": 15.5,
+            "localX": 180.5,
+            "localY": 15.5,
+            "canvasX": 697.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 1,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 2
+          },
+          {
+            "x": 340.5,
+            "y": 15.5,
+            "localX": 340.5,
+            "localY": 15.5,
+            "canvasX": 857.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 3
+          },
+          {
+            "x": 500.5,
+            "y": 15.5,
+            "localX": 500.5,
+            "localY": 15.5,
+            "canvasX": 1017.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 4
+          },
+          {
+            "x": 660.5,
+            "y": 15.5,
+            "localX": 660.5,
+            "localY": 15.5,
+            "canvasX": 1177.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 5
+          },
+          {
+            "x": 820.5,
+            "y": 15.5,
+            "localX": 820.5,
+            "localY": 15.5,
+            "canvasX": 1337.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 5,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 6
+          },
+          {
+            "x": 980.5,
+            "y": 15.5,
+            "localX": 980.5,
+            "localY": 15.5,
+            "canvasX": 1497.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 7
+          },
+          {
+            "x": 1140.5,
+            "y": 15.5,
+            "localX": 1140.5,
+            "localY": 15.5,
+            "canvasX": 1657.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 7,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 8
+          },
+          {
+            "x": 1300.5,
+            "y": 15.5,
+            "localX": 1300.5,
+            "localY": 15.5,
+            "canvasX": 1817.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 9
+          },
+          {
+            "x": 1460.5,
+            "y": 15.5,
+            "localX": 1460.5,
+            "localY": 15.5,
+            "canvasX": 1977.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 9,
+            "phase": 0,
+            "anchorType": "rising-edge",
+            "index": 10
+          }
+        ],
+        "fallingEdge": [
+          {
+            "x": 100.5,
+            "y": 15.5,
+            "localX": 100.5,
+            "localY": 15.5,
+            "canvasX": 617.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 0,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 1
+          },
+          {
+            "x": 260.5,
+            "y": 15.5,
+            "localX": 260.5,
+            "localY": 15.5,
+            "canvasX": 777.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 1,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 2
+          },
+          {
+            "x": 420.5,
+            "y": 15.5,
+            "localX": 420.5,
+            "localY": 15.5,
+            "canvasX": 937.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 2,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 3
+          },
+          {
+            "x": 580.5,
+            "y": 15.5,
+            "localX": 580.5,
+            "localY": 15.5,
+            "canvasX": 1097.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 3,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 4
+          },
+          {
+            "x": 740.5,
+            "y": 15.5,
+            "localX": 740.5,
+            "localY": 15.5,
+            "canvasX": 1257.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 4,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 5
+          },
+          {
+            "x": 900.5,
+            "y": 15.5,
+            "localX": 900.5,
+            "localY": 15.5,
+            "canvasX": 1417.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 5,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 6
+          },
+          {
+            "x": 1060.5,
+            "y": 15.5,
+            "localX": 1060.5,
+            "localY": 15.5,
+            "canvasX": 1577.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 6,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 7
+          },
+          {
+            "x": 1220.5,
+            "y": 15.5,
+            "localX": 1220.5,
+            "localY": 15.5,
+            "canvasX": 1737.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 7,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 8
+          },
+          {
+            "x": 1380.5,
+            "y": 15.5,
+            "localX": 1380.5,
+            "localY": 15.5,
+            "canvasX": 1897.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 8,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 9
+          },
+          {
+            "x": 1540.5,
+            "y": 15.5,
+            "localX": 1540.5,
+            "localY": 15.5,
+            "canvasX": 2057.5,
+            "canvasY": 313,
+            "source": "wavedrom-svg",
+            "signal": "clk",
+            "cycle": 9,
+            "phase": 0.5,
+            "anchorType": "falling-edge",
+            "index": 10
+          }
+        ],
+        "transitionStart": [],
+        "transitionCenter": [],
+        "transitionEnd": [],
+        "transition": [],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "req_valid": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transitionStart": [
+          {
+            "x": 503.5149579048157,
+            "y": 25.45014190673828,
+            "localX": 503.5149579048157,
+            "localY": 25.45014190673828,
+            "canvasX": 1020.5149579048157,
+            "canvasY": 357.9501419067383,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1143.5149579048157,
+            "y": 5.549858093261719,
+            "localX": 1143.5149579048157,
+            "localY": 5.549858093261719,
+            "canvasX": 1660.5149579048157,
+            "canvasY": 338.0498580932617,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 7,
+            "phase": 0,
+            "anchorType": "transition-start"
+          }
+        ],
+        "transitionCenter": [
+          {
+            "x": 506.52181911468506,
+            "y": 15.427270889282227,
+            "localX": 506.52181911468506,
+            "localY": 15.427270889282227,
+            "canvasX": 1023.5218191146851,
+            "canvasY": 347.9272708892822,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1146.521819114685,
+            "y": 15.572729110717773,
+            "localX": 1146.521819114685,
+            "localY": 15.572729110717773,
+            "canvasX": 1663.521819114685,
+            "canvasY": 348.0727291107178,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 7,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "transitionEnd": [
+          {
+            "x": 509.4660367965698,
+            "y": 5.613209880888462,
+            "localX": 509.4660367965698,
+            "localY": 5.613209880888462,
+            "canvasX": 1026.4660367965698,
+            "canvasY": 338.11320988088846,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 1149.4660367965698,
+            "y": 25.386789321899414,
+            "localX": 1149.4660367965698,
+            "localY": 25.386789321899414,
+            "canvasX": 1666.4660367965698,
+            "canvasY": 357.8867893218994,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 7,
+            "phase": 0,
+            "anchorType": "transition-end"
+          }
+        ],
+        "transition": [
+          {
+            "x": 506.52181911468506,
+            "y": 15.427270889282227,
+            "localX": 506.52181911468506,
+            "localY": 15.427270889282227,
+            "canvasX": 1023.5218191146851,
+            "canvasY": 347.9272708892822,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1146.521819114685,
+            "y": 15.572729110717773,
+            "localX": 1146.521819114685,
+            "localY": 15.572729110717773,
+            "canvasX": 1663.521819114685,
+            "canvasY": 348.0727291107178,
+            "source": "wavedrom-svg",
+            "signal": "req_valid",
+            "cycle": 7,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "req_addr[7:0]": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transitionStart": [
+          {
+            "x": 360.5,
+            "y": 5.504108428955078,
+            "localX": 360.5,
+            "localY": 5.504108428955078,
+            "canvasX": 877.5,
+            "canvasY": 373.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 680.5,
+            "y": 5.504108428955078,
+            "localX": 680.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1197.5,
+            "canvasY": 373.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1000.5,
+            "y": 5.504108428955078,
+            "localX": 1000.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1517.5,
+            "canvasY": 373.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1320.5,
+            "y": 5.504108428955078,
+            "localX": 1320.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1837.5,
+            "canvasY": 373.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-start"
+          }
+        ],
+        "transitionCenter": [
+          {
+            "x": 349.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 349.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 866.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 669.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 669.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1186.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 989.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 989.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1506.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1309.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 1309.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1826.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "transitionEnd": [
+          {
+            "x": 349.5,
+            "y": 5.5,
+            "localX": 349.5,
+            "localY": 5.5,
+            "canvasX": 866.5,
+            "canvasY": 373,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 669.5,
+            "y": 5.5,
+            "localX": 669.5,
+            "localY": 5.5,
+            "canvasX": 1186.5,
+            "canvasY": 373,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 989.5,
+            "y": 5.5,
+            "localX": 989.5,
+            "localY": 5.5,
+            "canvasX": 1506.5,
+            "canvasY": 373,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 1309.5,
+            "y": 5.5,
+            "localX": 1309.5,
+            "localY": 5.5,
+            "canvasX": 1826.5,
+            "canvasY": 373,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-end"
+          }
+        ],
+        "transition": [
+          {
+            "x": 349.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 349.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 866.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 669.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 669.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1186.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 989.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 989.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1506.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1309.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 1309.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1826.3722972869873,
+            "canvasY": 392.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "req_addr[7:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "busy": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transitionStart": [
+          {
+            "x": 343.5149579048157,
+            "y": 25.45014190673828,
+            "localX": 343.5149579048157,
+            "localY": 25.45014190673828,
+            "canvasX": 860.5149579048157,
+            "canvasY": 462.9501419067383,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1303.5149579048157,
+            "y": 5.549858093261719,
+            "localX": 1303.5149579048157,
+            "localY": 5.549858093261719,
+            "canvasX": 1820.5149579048157,
+            "canvasY": 443.0498580932617,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-start"
+          }
+        ],
+        "transitionCenter": [
+          {
+            "x": 346.52181911468506,
+            "y": 15.427270889282227,
+            "localX": 346.52181911468506,
+            "localY": 15.427270889282227,
+            "canvasX": 863.5218191146851,
+            "canvasY": 452.9272708892822,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1306.521819114685,
+            "y": 15.572729110717773,
+            "localX": 1306.521819114685,
+            "localY": 15.572729110717773,
+            "canvasX": 1823.521819114685,
+            "canvasY": 453.0727291107178,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "transitionEnd": [
+          {
+            "x": 349.4660367965698,
+            "y": 5.613209880888462,
+            "localX": 349.4660367965698,
+            "localY": 5.613209880888462,
+            "canvasX": 866.4660367965698,
+            "canvasY": 443.11320988088846,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 1309.4660367965698,
+            "y": 25.386789321899414,
+            "localX": 1309.4660367965698,
+            "localY": 25.386789321899414,
+            "canvasX": 1826.4660367965698,
+            "canvasY": 462.8867893218994,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-end"
+          }
+        ],
+        "transition": [
+          {
+            "x": 346.52181911468506,
+            "y": 15.427270889282227,
+            "localX": 346.52181911468506,
+            "localY": 15.427270889282227,
+            "canvasX": 863.5218191146851,
+            "canvasY": 452.9272708892822,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1306.521819114685,
+            "y": 15.572729110717773,
+            "localX": 1306.521819114685,
+            "localY": 15.572729110717773,
+            "canvasX": 1823.521819114685,
+            "canvasY": 453.0727291107178,
+            "source": "wavedrom-svg",
+            "signal": "busy",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "state[1:0]": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transitionStart": [
+          {
+            "x": 360.5,
+            "y": 5.504108428955078,
+            "localX": 360.5,
+            "localY": 5.504108428955078,
+            "canvasX": 877.5,
+            "canvasY": 478.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 680.5,
+            "y": 5.504108428955078,
+            "localX": 680.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1197.5,
+            "canvasY": 478.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1000.5,
+            "y": 5.504108428955078,
+            "localX": 1000.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1517.5,
+            "canvasY": 478.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1320.5,
+            "y": 5.504108428955078,
+            "localX": 1320.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1837.5,
+            "canvasY": 478.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-start"
+          }
+        ],
+        "transitionCenter": [
+          {
+            "x": 349.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 349.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 866.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 669.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 669.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1186.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 989.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 989.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1506.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1309.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 1309.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1826.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "transitionEnd": [
+          {
+            "x": 349.5,
+            "y": 5.5,
+            "localX": 349.5,
+            "localY": 5.5,
+            "canvasX": 866.5,
+            "canvasY": 478,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 669.5,
+            "y": 5.5,
+            "localX": 669.5,
+            "localY": 5.5,
+            "canvasX": 1186.5,
+            "canvasY": 478,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 989.5,
+            "y": 5.5,
+            "localX": 989.5,
+            "localY": 5.5,
+            "canvasX": 1506.5,
+            "canvasY": 478,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 1309.5,
+            "y": 5.5,
+            "localX": 1309.5,
+            "localY": 5.5,
+            "canvasX": 1826.5,
+            "canvasY": 478,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-end"
+          }
+        ],
+        "transition": [
+          {
+            "x": 349.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 349.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 866.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 2,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 669.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 669.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1186.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 4,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 989.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 989.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1506.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1309.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 1309.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1826.3722972869873,
+            "canvasY": 497.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "state[1:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "ready": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transitionStart": [
+          {
+            "x": 1303.5149579048157,
+            "y": 25.45014190673828,
+            "localX": 1303.5149579048157,
+            "localY": 25.45014190673828,
+            "canvasX": 1820.5149579048157,
+            "canvasY": 567.9501419067383,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1463.5149579048157,
+            "y": 5.549858093261719,
+            "localX": 1463.5149579048157,
+            "localY": 5.549858093261719,
+            "canvasX": 1980.5149579048157,
+            "canvasY": 548.0498580932617,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 9,
+            "phase": 0,
+            "anchorType": "transition-start"
+          }
+        ],
+        "transitionCenter": [
+          {
+            "x": 1306.521819114685,
+            "y": 15.427270889282227,
+            "localX": 1306.521819114685,
+            "localY": 15.427270889282227,
+            "canvasX": 1823.521819114685,
+            "canvasY": 557.9272708892822,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1466.521819114685,
+            "y": 15.572729110717773,
+            "localX": 1466.521819114685,
+            "localY": 15.572729110717773,
+            "canvasX": 1983.521819114685,
+            "canvasY": 558.0727291107178,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 9,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "transitionEnd": [
+          {
+            "x": 1309.4660367965698,
+            "y": 5.613209880888462,
+            "localX": 1309.4660367965698,
+            "localY": 5.613209880888462,
+            "canvasX": 1826.4660367965698,
+            "canvasY": 548.1132098808885,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 1469.4660367965698,
+            "y": 25.386789321899414,
+            "localX": 1469.4660367965698,
+            "localY": 25.386789321899414,
+            "canvasX": 1986.4660367965698,
+            "canvasY": 567.8867893218994,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 9,
+            "phase": 0,
+            "anchorType": "transition-end"
+          }
+        ],
+        "transition": [
+          {
+            "x": 1306.521819114685,
+            "y": 15.427270889282227,
+            "localX": 1306.521819114685,
+            "localY": 15.427270889282227,
+            "canvasX": 1823.521819114685,
+            "canvasY": 557.9272708892822,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1466.521819114685,
+            "y": 15.572729110717773,
+            "localX": 1466.521819114685,
+            "localY": 15.572729110717773,
+            "canvasX": 1983.521819114685,
+            "canvasY": 558.0727291107178,
+            "source": "wavedrom-svg",
+            "signal": "ready",
+            "cycle": 9,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      },
+      "rdata[15:0]": {
+        "cycleBoundary": [
+          {
+            "x": 20.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 180.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 340.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 500.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 660.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 820.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 980.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1140.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1300.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1460.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          },
+          {
+            "x": 1620.5,
+            "y": 0.5,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "anchorType": "cycle-boundary"
+          }
+        ],
+        "risingEdge": [],
+        "fallingEdge": [],
+        "transitionStart": [
+          {
+            "x": 520.5,
+            "y": 5.504108428955078,
+            "localX": 520.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1037.5,
+            "canvasY": 583.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1000.5,
+            "y": 5.504108428955078,
+            "localX": 1000.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1517.5,
+            "canvasY": 583.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-start"
+          },
+          {
+            "x": 1320.5,
+            "y": 5.504108428955078,
+            "localX": 1320.5,
+            "localY": 5.504108428955078,
+            "canvasX": 1837.5,
+            "canvasY": 583.0041084289551,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-start"
+          }
+        ],
+        "transitionCenter": [
+          {
+            "x": 509.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 509.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1026.3722972869873,
+            "canvasY": 602.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 989.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 989.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1506.3722972869873,
+            "canvasY": 602.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1309.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 1309.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1826.3722972869873,
+            "canvasY": 602.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "transitionEnd": [
+          {
+            "x": 509.5,
+            "y": 5.5,
+            "localX": 509.5,
+            "localY": 5.5,
+            "canvasX": 1026.5,
+            "canvasY": 583,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 989.5,
+            "y": 5.5,
+            "localX": 989.5,
+            "localY": 5.5,
+            "canvasX": 1506.5,
+            "canvasY": 583,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-end"
+          },
+          {
+            "x": 1309.5,
+            "y": 5.5,
+            "localX": 1309.5,
+            "localY": 5.5,
+            "canvasX": 1826.5,
+            "canvasY": 583,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-end"
+          }
+        ],
+        "transition": [
+          {
+            "x": 509.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 509.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1026.3722972869873,
+            "canvasY": 602.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 3,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 989.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 989.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1506.3722972869873,
+            "canvasY": 602.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 6,
+            "phase": 0,
+            "anchorType": "transition-center"
+          },
+          {
+            "x": 1309.3722972869873,
+            "y": 25.074329376220703,
+            "localX": 1309.3722972869873,
+            "localY": 25.074329376220703,
+            "canvasX": 1826.3722972869873,
+            "canvasY": 602.5743293762207,
+            "source": "wavedrom-svg",
+            "signal": "rdata[15:0]",
+            "cycle": 8,
+            "phase": 0,
+            "anchorType": "transition-center"
+          }
+        ],
+        "svgViewBox": "0 0 1640 30"
+      }
+    },
+    "cycleBoundary": [
+      {
+        "x": 20.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 180.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 340.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 500.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 660.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 820.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 980.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 1140.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 1300.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 1460.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      },
+      {
+        "x": 1620.5,
+        "y": 0.5,
+        "source": "wavedrom-svg"
+      }
+    ]
+  },
+  "hitTest": {
+    "clockRising": [
+      4.37113897078234e-7,
+      4.37113897078234e-7,
+      4.37113897078234e-7,
+      4.37113897078234e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7
+    ],
+    "clockFalling": [
+      4.37113897078234e-7,
+      4.37113897078234e-7,
+      4.37113897078234e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7,
+      4.3711384023481514e-7
+    ],
+    "binaryStart": [
+      0,
+      0
+    ],
+    "binaryCenter": [
+      0,
+      0
+    ],
+    "binaryEnd": [
+      0,
+      0
+    ]
+  },
+  "anchors": {
+    "local": {
+      "x": 506.52181911468506,
+      "y": 15.427270889282227,
+      "localX": 506.52181911468506,
+      "localY": 15.427270889282227,
+      "canvasX": 1023.5218191146851,
+      "canvasY": 347.9272708892822,
+      "source": "wavedrom-svg",
+      "signal": "req_valid",
+      "cycle": 3,
+      "phase": 0,
+      "anchorType": "transition-center"
+    },
+    "canvas": {
+      "x": 1023.5218191146851,
+      "y": 347.9272708892822,
+      "localX": 506.52181911468506,
+      "localY": 15.427270889282227,
+      "canvasX": 1023.5218191146851,
+      "canvasY": 347.9272708892822,
+      "source": "wavedrom-svg",
+      "signal": "req_valid",
+      "cycle": 3,
+      "phase": 0,
+      "anchorType": "transition-center"
+    }
+  },
+  "periodTest": {
+    "geometry": {
+      "cycleCount": 8,
+      "signals": {
+        "clk_a": {
+          "cycleBoundary": [
+            {
+              "x": 20.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 180.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 340.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 500.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 660.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 820.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 980.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1140.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1300.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1460.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1620.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1780.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1940.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2100.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2260.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2420.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2580.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            }
+          ],
+          "risingEdge": [
+            {
+              "x": 20.5,
+              "y": 15.5,
+              "localX": 20.5,
+              "localY": 15.5,
+              "canvasX": -9979.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 0,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 1
+            },
+            {
+              "x": 340.5,
+              "y": 15.5,
+              "localX": 340.5,
+              "localY": 15.5,
+              "canvasX": -9659.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 2,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 2
+            },
+            {
+              "x": 660.5,
+              "y": 15.5,
+              "localX": 660.5,
+              "localY": 15.5,
+              "canvasX": -9339.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 4,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 3
+            },
+            {
+              "x": 980.5,
+              "y": 15.5,
+              "localX": 980.5,
+              "localY": 15.5,
+              "canvasX": -9019.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 6,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 4
+            },
+            {
+              "x": 1300.5,
+              "y": 15.5,
+              "localX": 1300.5,
+              "localY": 15.5,
+              "canvasX": -8699.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 8,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 5
+            },
+            {
+              "x": 1620.5,
+              "y": 15.5,
+              "localX": 1620.5,
+              "localY": 15.5,
+              "canvasX": -8379.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 10,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 6
+            },
+            {
+              "x": 1940.5,
+              "y": 15.5,
+              "localX": 1940.5,
+              "localY": 15.5,
+              "canvasX": -8059.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 12,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 7
+            },
+            {
+              "x": 2260.5,
+              "y": 15.5,
+              "localX": 2260.5,
+              "localY": 15.5,
+              "canvasX": -7739.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 14,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 8
+            }
+          ],
+          "fallingEdge": [
+            {
+              "x": 180.5,
+              "y": 15.5,
+              "localX": 180.5,
+              "localY": 15.5,
+              "canvasX": -9819.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 1,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 1
+            },
+            {
+              "x": 500.5,
+              "y": 15.5,
+              "localX": 500.5,
+              "localY": 15.5,
+              "canvasX": -9499.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 3,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 2
+            },
+            {
+              "x": 820.5,
+              "y": 15.5,
+              "localX": 820.5,
+              "localY": 15.5,
+              "canvasX": -9179.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 5,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 3
+            },
+            {
+              "x": 1140.5,
+              "y": 15.5,
+              "localX": 1140.5,
+              "localY": 15.5,
+              "canvasX": -8859.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 7,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 4
+            },
+            {
+              "x": 1460.5,
+              "y": 15.5,
+              "localX": 1460.5,
+              "localY": 15.5,
+              "canvasX": -8539.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 9,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 5
+            },
+            {
+              "x": 1780.5,
+              "y": 15.5,
+              "localX": 1780.5,
+              "localY": 15.5,
+              "canvasX": -8219.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 11,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 6
+            },
+            {
+              "x": 2100.5,
+              "y": 15.5,
+              "localX": 2100.5,
+              "localY": 15.5,
+              "canvasX": -7899.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 13,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 7
+            },
+            {
+              "x": 2420.5,
+              "y": 15.5,
+              "localX": 2420.5,
+              "localY": 15.5,
+              "canvasX": -7579.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 15,
+              "phase": 0,
+              "anchorType": "falling-edge",
+              "index": 8
+            }
+          ],
+          "transitionStart": [],
+          "transitionCenter": [],
+          "transitionEnd": [],
+          "transition": [],
+          "svgViewBox": "0 0 2600 30"
+        }
+      },
+      "cycleBoundary": [
+        {
+          "x": 20.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 180.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 340.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 500.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 660.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 820.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 980.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1140.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1300.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1460.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1620.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1780.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1940.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 2100.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 2260.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 2420.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 2580.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        }
+      ]
+    },
+    "waveJson": [
+      {
+        "id": "clk_a",
+        "wave": "p.......",
+        "period": 2,
+        "phase": 0,
+        "polarity": "positive"
+      }
+    ]
+  },
+  "multipleClockTest": {
+    "geometry": {
+      "cycleCount": 8,
+      "signals": {
+        "clk_a": {
+          "cycleBoundary": [
+            {
+              "x": 20.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 180.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 340.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 500.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 660.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 820.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 980.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1140.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1300.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "anchorType": "cycle-boundary"
+            }
+          ],
+          "risingEdge": [
+            {
+              "x": 20.5,
+              "y": 15.5,
+              "localX": 20.5,
+              "localY": 15.5,
+              "canvasX": -9979.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 0,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 1
+            },
+            {
+              "x": 180.5,
+              "y": 15.5,
+              "localX": 180.5,
+              "localY": 15.5,
+              "canvasX": -9819.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 1,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 2
+            },
+            {
+              "x": 340.5,
+              "y": 15.5,
+              "localX": 340.5,
+              "localY": 15.5,
+              "canvasX": -9659.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 2,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 3
+            },
+            {
+              "x": 500.5,
+              "y": 15.5,
+              "localX": 500.5,
+              "localY": 15.5,
+              "canvasX": -9499.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 3,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 4
+            },
+            {
+              "x": 660.5,
+              "y": 15.5,
+              "localX": 660.5,
+              "localY": 15.5,
+              "canvasX": -9339.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 4,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 5
+            },
+            {
+              "x": 820.5,
+              "y": 15.5,
+              "localX": 820.5,
+              "localY": 15.5,
+              "canvasX": -9179.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 5,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 6
+            },
+            {
+              "x": 980.5,
+              "y": 15.5,
+              "localX": 980.5,
+              "localY": 15.5,
+              "canvasX": -9019.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 6,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 7
+            },
+            {
+              "x": 1140.5,
+              "y": 15.5,
+              "localX": 1140.5,
+              "localY": 15.5,
+              "canvasX": -8859.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 7,
+              "phase": 0,
+              "anchorType": "rising-edge",
+              "index": 8
+            }
+          ],
+          "fallingEdge": [
+            {
+              "x": 100.5,
+              "y": 15.5,
+              "localX": 100.5,
+              "localY": 15.5,
+              "canvasX": -9899.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 0,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 1
+            },
+            {
+              "x": 260.5,
+              "y": 15.5,
+              "localX": 260.5,
+              "localY": 15.5,
+              "canvasX": -9739.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 1,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 2
+            },
+            {
+              "x": 420.5,
+              "y": 15.5,
+              "localX": 420.5,
+              "localY": 15.5,
+              "canvasX": -9579.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 2,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 3
+            },
+            {
+              "x": 580.5,
+              "y": 15.5,
+              "localX": 580.5,
+              "localY": 15.5,
+              "canvasX": -9419.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 3,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 4
+            },
+            {
+              "x": 740.5,
+              "y": 15.5,
+              "localX": 740.5,
+              "localY": 15.5,
+              "canvasX": -9259.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 4,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 5
+            },
+            {
+              "x": 900.5,
+              "y": 15.5,
+              "localX": 900.5,
+              "localY": 15.5,
+              "canvasX": -9099.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 5,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 6
+            },
+            {
+              "x": 1060.5,
+              "y": 15.5,
+              "localX": 1060.5,
+              "localY": 15.5,
+              "canvasX": -8939.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 6,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 7
+            },
+            {
+              "x": 1220.5,
+              "y": 15.5,
+              "localX": 1220.5,
+              "localY": 15.5,
+              "canvasX": -8779.5,
+              "canvasY": 15.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_a",
+              "cycle": 7,
+              "phase": 0.5,
+              "anchorType": "falling-edge",
+              "index": 8
+            }
+          ],
+          "transitionStart": [],
+          "transitionCenter": [],
+          "transitionEnd": [],
+          "transition": [],
+          "svgViewBox": "0 0 1320 30"
+        },
+        "clk_b": {
+          "cycleBoundary": [
+            {
+              "x": 20.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 180.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 340.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 500.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 660.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 820.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 980.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1140.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1300.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1460.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1620.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1780.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 1940.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2100.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2260.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2420.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            },
+            {
+              "x": 2580.5,
+              "y": 0.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "anchorType": "cycle-boundary"
+            }
+          ],
+          "risingEdge": [
+            {
+              "x": 160.5,
+              "y": 15.5,
+              "localX": 160.5,
+              "localY": 15.5,
+              "canvasX": -9839.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 0,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 1
+            },
+            {
+              "x": 480.5,
+              "y": 15.5,
+              "localX": 480.5,
+              "localY": 15.5,
+              "canvasX": -9519.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 2,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 2
+            },
+            {
+              "x": 800.5,
+              "y": 15.5,
+              "localX": 800.5,
+              "localY": 15.5,
+              "canvasX": -9199.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 4,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 3
+            },
+            {
+              "x": 1120.5,
+              "y": 15.5,
+              "localX": 1120.5,
+              "localY": 15.5,
+              "canvasX": -8879.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 6,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 4
+            },
+            {
+              "x": 1440.5,
+              "y": 15.5,
+              "localX": 1440.5,
+              "localY": 15.5,
+              "canvasX": -8559.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 8,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 5
+            },
+            {
+              "x": 1760.5,
+              "y": 15.5,
+              "localX": 1760.5,
+              "localY": 15.5,
+              "canvasX": -8239.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 10,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 6
+            },
+            {
+              "x": 2080.5,
+              "y": 15.5,
+              "localX": 2080.5,
+              "localY": 15.5,
+              "canvasX": -7919.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 12,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 7
+            },
+            {
+              "x": 2400.5,
+              "y": 15.5,
+              "localX": 2400.5,
+              "localY": 15.5,
+              "canvasX": -7599.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 14,
+              "phase": 0.875,
+              "anchorType": "rising-edge",
+              "index": 8
+            }
+          ],
+          "fallingEdge": [
+            {
+              "x": 320.5,
+              "y": 15.5,
+              "localX": 320.5,
+              "localY": 15.5,
+              "canvasX": -9679.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 1,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 1
+            },
+            {
+              "x": 640.5,
+              "y": 15.5,
+              "localX": 640.5,
+              "localY": 15.5,
+              "canvasX": -9359.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 3,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 2
+            },
+            {
+              "x": 960.5,
+              "y": 15.5,
+              "localX": 960.5,
+              "localY": 15.5,
+              "canvasX": -9039.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 5,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 3
+            },
+            {
+              "x": 1280.5,
+              "y": 15.5,
+              "localX": 1280.5,
+              "localY": 15.5,
+              "canvasX": -8719.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 7,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 4
+            },
+            {
+              "x": 1600.5,
+              "y": 15.5,
+              "localX": 1600.5,
+              "localY": 15.5,
+              "canvasX": -8399.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 9,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 5
+            },
+            {
+              "x": 1920.5,
+              "y": 15.5,
+              "localX": 1920.5,
+              "localY": 15.5,
+              "canvasX": -8079.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 11,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 6
+            },
+            {
+              "x": 2240.5,
+              "y": 15.5,
+              "localX": 2240.5,
+              "localY": 15.5,
+              "canvasX": -7759.5,
+              "canvasY": 48.5,
+              "source": "wavedrom-svg",
+              "signal": "clk_b",
+              "cycle": 13,
+              "phase": 0.875,
+              "anchorType": "falling-edge",
+              "index": 7
+            }
+          ],
+          "transitionStart": [],
+          "transitionCenter": [],
+          "transitionEnd": [],
+          "transition": [],
+          "svgViewBox": "0 0 2580 30"
+        }
+      },
+      "cycleBoundary": [
+        {
+          "x": 20.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 180.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 340.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 500.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 660.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 820.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 980.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1140.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        },
+        {
+          "x": 1300.5,
+          "y": 0.5,
+          "source": "wavedrom-svg"
+        }
+      ]
+    },
+    "waveJson": [
+      {
+        "id": "clk_a",
+        "wave": "p.......",
+        "period": 1,
+        "phase": 0,
+        "polarity": "positive"
+      },
+      {
+        "id": "clk_b",
+        "wave": "n.......",
+        "period": 2,
+        "phase": 0.5,
+        "polarity": "negative"
+      }
+    ]
+  }
+}

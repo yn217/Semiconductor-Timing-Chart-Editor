@@ -1,0 +1,408 @@
+{
+  "clockEdges": {
+    "rising": [
+      {
+        "x": 20.5,
+        "y": 15.5,
+        "localX": 20.5,
+        "localY": 15.5,
+        "canvasX": 537.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 0,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 1
+      },
+      {
+        "x": 180.5,
+        "y": 15.5,
+        "localX": 180.5,
+        "localY": 15.5,
+        "canvasX": 697.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 1,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 2
+      },
+      {
+        "x": 340.5,
+        "y": 15.5,
+        "localX": 340.5,
+        "localY": 15.5,
+        "canvasX": 857.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 2,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 3
+      },
+      {
+        "x": 500.5,
+        "y": 15.5,
+        "localX": 500.5,
+        "localY": 15.5,
+        "canvasX": 1017.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 3,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 4
+      },
+      {
+        "x": 660.5,
+        "y": 15.5,
+        "localX": 660.5,
+        "localY": 15.5,
+        "canvasX": 1177.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 4,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 5
+      },
+      {
+        "x": 820.5,
+        "y": 15.5,
+        "localX": 820.5,
+        "localY": 15.5,
+        "canvasX": 1337.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 5,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 6
+      },
+      {
+        "x": 980.5,
+        "y": 15.5,
+        "localX": 980.5,
+        "localY": 15.5,
+        "canvasX": 1497.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 6,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 7
+      },
+      {
+        "x": 1140.5,
+        "y": 15.5,
+        "localX": 1140.5,
+        "localY": 15.5,
+        "canvasX": 1657.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 7,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 8
+      },
+      {
+        "x": 1300.5,
+        "y": 15.5,
+        "localX": 1300.5,
+        "localY": 15.5,
+        "canvasX": 1817.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 8,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 9
+      },
+      {
+        "x": 1460.5,
+        "y": 15.5,
+        "localX": 1460.5,
+        "localY": 15.5,
+        "canvasX": 1977.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 9,
+        "phase": 0,
+        "anchorType": "rising-edge",
+        "index": 10
+      }
+    ],
+    "falling": [
+      {
+        "x": 100.5,
+        "y": 15.5,
+        "localX": 100.5,
+        "localY": 15.5,
+        "canvasX": 617.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 0,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 1
+      },
+      {
+        "x": 260.5,
+        "y": 15.5,
+        "localX": 260.5,
+        "localY": 15.5,
+        "canvasX": 777.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 1,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 2
+      },
+      {
+        "x": 420.5,
+        "y": 15.5,
+        "localX": 420.5,
+        "localY": 15.5,
+        "canvasX": 937.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 2,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 3
+      },
+      {
+        "x": 580.5,
+        "y": 15.5,
+        "localX": 580.5,
+        "localY": 15.5,
+        "canvasX": 1097.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 3,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 4
+      },
+      {
+        "x": 740.5,
+        "y": 15.5,
+        "localX": 740.5,
+        "localY": 15.5,
+        "canvasX": 1257.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 4,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 5
+      },
+      {
+        "x": 900.5,
+        "y": 15.5,
+        "localX": 900.5,
+        "localY": 15.5,
+        "canvasX": 1417.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 5,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 6
+      },
+      {
+        "x": 1060.5,
+        "y": 15.5,
+        "localX": 1060.5,
+        "localY": 15.5,
+        "canvasX": 1577.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 6,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 7
+      },
+      {
+        "x": 1220.5,
+        "y": 15.5,
+        "localX": 1220.5,
+        "localY": 15.5,
+        "canvasX": 1737.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 7,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 8
+      },
+      {
+        "x": 1380.5,
+        "y": 15.5,
+        "localX": 1380.5,
+        "localY": 15.5,
+        "canvasX": 1897.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 8,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 9
+      },
+      {
+        "x": 1540.5,
+        "y": 15.5,
+        "localX": 1540.5,
+        "localY": 15.5,
+        "canvasX": 2057.5,
+        "canvasY": 313,
+        "source": "wavedrom-svg",
+        "signal": "clk",
+        "cycle": 9,
+        "phase": 0.5,
+        "anchorType": "falling-edge",
+        "index": 10
+      }
+    ],
+    "hitTest": true
+  },
+  "binaryTransitions": {
+    "start": [
+      {
+        "x": 503.5149579048157,
+        "y": 25.45014190673828,
+        "localX": 503.5149579048157,
+        "localY": 25.45014190673828,
+        "canvasX": 1020.5149579048157,
+        "canvasY": 357.9501419067383,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 3,
+        "phase": 0,
+        "anchorType": "transition-start"
+      },
+      {
+        "x": 1143.5149579048157,
+        "y": 5.549858093261719,
+        "localX": 1143.5149579048157,
+        "localY": 5.549858093261719,
+        "canvasX": 1660.5149579048157,
+        "canvasY": 338.0498580932617,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 7,
+        "phase": 0,
+        "anchorType": "transition-start"
+      }
+    ],
+    "center": [
+      {
+        "x": 506.52181911468506,
+        "y": 15.427270889282227,
+        "localX": 506.52181911468506,
+        "localY": 15.427270889282227,
+        "canvasX": 1023.5218191146851,
+        "canvasY": 347.9272708892822,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 3,
+        "phase": 0,
+        "anchorType": "transition-center"
+      },
+      {
+        "x": 1146.521819114685,
+        "y": 15.572729110717773,
+        "localX": 1146.521819114685,
+        "localY": 15.572729110717773,
+        "canvasX": 1663.521819114685,
+        "canvasY": 348.0727291107178,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 7,
+        "phase": 0,
+        "anchorType": "transition-center"
+      }
+    ],
+    "end": [
+      {
+        "x": 509.4660367965698,
+        "y": 5.613209880888462,
+        "localX": 509.4660367965698,
+        "localY": 5.613209880888462,
+        "canvasX": 1026.4660367965698,
+        "canvasY": 338.11320988088846,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 3,
+        "phase": 0,
+        "anchorType": "transition-end"
+      },
+      {
+        "x": 1149.4660367965698,
+        "y": 25.386789321899414,
+        "localX": 1149.4660367965698,
+        "localY": 25.386789321899414,
+        "canvasX": 1666.4660367965698,
+        "canvasY": 357.8867893218994,
+        "source": "wavedrom-svg",
+        "signal": "req_valid",
+        "cycle": 7,
+        "phase": 0,
+        "anchorType": "transition-end"
+      }
+    ]
+  },
+  "coordinateCheck": {
+    "x": 1023.5218191146851,
+    "y": 347.9272708892822,
+    "actualX": 1023.5218191146851,
+    "actualY": 347.9272708892822
+  },
+  "periodTest": {
+    "waveJson": [
+      {
+        "id": "clk_a",
+        "wave": "p.......",
+        "period": 2,
+        "phase": 0,
+        "polarity": "positive"
+      }
+    ],
+    "risingEdges": 8
+  },
+  "multipleClocks": {
+    "clk_a": {
+      "rising": 8,
+      "falling": 8
+    },
+    "clk_b": {
+      "rising": 8,
+      "falling": 7
+    }
+  },
+  "clockConstraints": {
+    "duty": "unsupported",
+    "reason": "WaveDrom 3.6.2 standard signal WaveJSON has no duty field; no custom clock path is used."
+  },
+  "pass": true
+}
