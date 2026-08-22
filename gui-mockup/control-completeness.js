@@ -7,6 +7,7 @@
   const label = element => normalize(element.querySelector?.('.tool-label')?.textContent || element.textContent || element.getAttribute('aria-label'));
   const inventory = controller.controlAudit = controller.controlAudit || { controls: [], lastRun: 0, metrics: { controlAuditRuns: 0, registrationCalls: 0, observedMutationBatches: 0 } };
   inventory.metrics ??= { controlAuditRuns: 0, registrationCalls: 0, observedMutationBatches: 0 };
+  const unsupportedNoOps = /インポート|エクスポート|プレビュー更新|プリセット|^複製$|^削除$|^Import$|^Export$/;
 
   const record = (element, status, reason = '') => {
     element.dataset.controlStatus = status;
@@ -91,10 +92,9 @@
   };
 
   const disableBottomNoOps = () => {
-    const noOps = /インポート|エクスポート|プレビュー更新|プリセット|^複製$|^削除$|^Import$|^Export$/;
     document.querySelectorAll('#bottomContent button').forEach(button => {
       if (button.dataset.editorAction || button.dataset.annotationAction || button.dataset.jsonAction || button.dataset.transactionAction || button.dataset.problemAction) { record(button, 'implemented'); return; }
-      if (noOps.test(normalize(button.textContent))) disable(button, 'この操作は未実装です。対応Issue: #38以降');
+      if (unsupportedNoOps.test(normalize(button.textContent))) disable(button, 'この操作は未実装です。対応Issue: #38以降');
     });
     document.querySelectorAll('#inspectorBody [data-annotation-field]').forEach(input => {
       if (input.dataset.controlStatus === 'implemented') return;
@@ -123,6 +123,12 @@
       if (element.dataset.annotationCommand || element.dataset.insertCommand || element.dataset.insertMenuCommand) {
         if (!element.dataset.controlStatus) element.dataset.controlStatus = element.disabled ? 'disabled' : 'implemented';
         record(element, element.dataset.controlStatus, element.disabled ? element.title : '');
+      }
+      if (element.matches?.('#bottomContent button') && unsupportedNoOps.test(normalize(element.textContent))) disable(element, 'この操作は未実装です。対応Issue: #38以降');
+      if (element.matches?.('#bottomContent .mini-btn') && controller.model.view.tab === 'problems') {
+        const text = normalize(element.textContent);
+        const filter = text.startsWith('すべて') ? 'all' : text.startsWith('エラー') ? 'err' : text.startsWith('警告') ? 'warn' : text.startsWith('情報') ? 'info' : '';
+        if (filter) { element.dataset.problemFilter = filter; record(element, 'implemented'); }
       }
     });
   };

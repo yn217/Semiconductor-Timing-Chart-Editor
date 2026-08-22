@@ -107,6 +107,7 @@
     dialog.querySelector('[data-insert-cancel]').addEventListener('click', () => dialog.remove()); dialog.querySelector('[data-insert-apply]').addEventListener('click', () => { const count = Number(dialog.querySelector('[data-insert-count]').value); if (Number.isInteger(count) && count > 0) controller.actions.insertCycles(insertPoint(), count); dialog.remove(); }); document.body.appendChild(dialog); dialog.querySelector('[data-insert-count]').focus();
   };
   const openHierarchy = command => {
+    closeMenus();
     controller.render?.();
     const item = document.querySelector(`#addMenu [data-hierarchy-command="${command}"]`);
     if (item) { document.querySelector('#addMenu')?.classList.add('show'); item.dispatchEvent(new MouseEvent('click', { bubbles: true })); }
