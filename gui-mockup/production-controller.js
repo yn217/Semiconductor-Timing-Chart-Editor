@@ -81,6 +81,8 @@
   controller.getSerializableDocument = () => serializeDocument(model.document);
   controller.validateDocument = documentValue => {
     const issues = [];
+    const candidateSignals = documentValue?.signals || [];
+    const candidateSignal = id => candidateSignals.find(signal => signal.id === id);
     if (documentValue?.formatVersion !== 1) issues.push({ code: 'format-version' });
     for (const field of ['document', 'timeline', 'signalGroups', 'signals', 'annotations', 'legend', 'layout', 'transactions', 'constraints']) if (!(field in (documentValue || {}))) issues.push({ code: `missing-${field}` });
     const annotationIds = new Set();
@@ -89,7 +91,7 @@
       if (!annotationTypes.has(annotation.type)) issues.push({ code: 'invalid-annotation-type', id: annotation.id });
       for (const key of Object.keys(annotation)) if (['resolved', 'canvasX', 'canvasY', 'localX', 'localY', 'bbox', 'drag', 'element'].includes(key)) issues.push({ code: 'annotation-runtime-field', id: annotation.id, field: key });
       const anchors = ['anchor', 'start', 'end', 'from', 'to'].filter(key => annotation[key]);
-      for (const key of anchors) { const anchor = annotation[key]; if (!getSignal(anchor.signal) || !Number.isInteger(Number(anchor.cycle)) || Number(anchor.cycle) < 0 || Number(anchor.cycle) > (documentValue.timeline?.cycleCount ?? -1) || !anchorPoints.has(anchor.point) || !Number.isFinite(Number(anchor.offset?.x || 0)) || !Number.isFinite(Number(anchor.offset?.y || 0))) issues.push({ code: 'invalid-annotation-anchor', id: annotation.id, field: key }); }
+      for (const key of anchors) { const anchor = annotation[key]; if (!candidateSignal(anchor.signal) || !Number.isInteger(Number(anchor.cycle)) || Number(anchor.cycle) < 0 || Number(anchor.cycle) > (documentValue.timeline?.cycleCount ?? -1) || !anchorPoints.has(anchor.point) || !Number.isFinite(Number(anchor.offset?.x || 0)) || !Number.isFinite(Number(anchor.offset?.y || 0))) issues.push({ code: 'invalid-annotation-anchor', id: annotation.id, field: key }); }
       if (annotation.type === 'dependency' && (!['straight', 'orthogonal', 'curve', 'diagonal'].includes(annotation.lineType || 'orthogonal') || !['none', 'start', 'end', 'both'].includes(annotation.arrowhead || 'end'))) issues.push({ code: 'invalid-dependency-style', id: annotation.id });
       if (annotation.visible !== undefined && typeof annotation.visible !== 'boolean') issues.push({ code: 'invalid-annotation-visible', id: annotation.id });
     }
@@ -165,6 +167,7 @@
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
   controller.actions.setSignalVisibility = (signalId, visible) => { if (!model.document.signals.some(signal => signal.id === signalId)) return false; model.view.hiddenSignals = model.view.hiddenSignals.filter(id => id !== signalId); if (!visible) model.view.hiddenSignals.push(signalId); render(); return true; };
+  controller.actions.setSignalNameWidth = widthValue => { const width = Number(widthValue); if (!Number.isInteger(width) || width < 120 || width > 360) return false; return transactionRun('Resize signal label column', () => { model.document.layout.signalNameWidth = width; }); };
   const transactionRun = (label, mutation) => controller.documentHistory?.run ? controller.documentHistory.run(label, mutation) : (mutation(), render(), true);
   controller.actions.setTimeRange = (startValue, endValue) => {
     const start = Number(startValue); const end = Number(endValue);

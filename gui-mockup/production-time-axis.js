@@ -124,7 +124,8 @@
       ruler.innerHTML = '';
       if (title) ruler.appendChild(title); else { const cycleTitle = document.createElement('span'); cycleTitle.className = 'cycle-title'; cycleTitle.textContent = timeline.timeBase; ruler.appendChild(cycleTitle); }
       const count = timeline.cycleCount;
-      ruler.style.gridTemplateColumns = `175px repeat(${count + 1}, 1fr)`;
+      const labelWidth = Number(currentModel.view.previewSignalNameWidth ?? timeline.signalNameWidth ?? currentModel.document.layout?.signalNameWidth ?? 168) + 7;
+      ruler.style.gridTemplateColumns = `${labelWidth}px repeat(${count + 1}, 1fr)`;
       ruler.appendChild(document.createElement('span'));
       for (let cycle = 0; cycle < count; cycle += 1) { const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = cycle; tick.dataset.cycle = cycle; tick.addEventListener('click', event => { if (event.shiftKey && currentModel.timeSelection.rangeStart !== null) currentModel.timeSelection.rangeEnd = cycle; else currentModel.timeSelection.rangeStart = cycle; currentModel.timeSelection.cycle = cycle; renderTransient(currentModel); }); ruler.appendChild(tick); }
       const referenceClock = controller.selectors.getReferenceClock();
