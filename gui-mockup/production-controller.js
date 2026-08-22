@@ -204,7 +204,7 @@
       for (const phase of Array.isArray(transaction.phases) ? transaction.phases : []) {
         const phaseStart = Number(phase?.start);
         const phaseEnd = Number(phase?.end);
-        if (!phase?.name || !Number.isInteger(phaseStart) || !Number.isInteger(phaseEnd) || phaseStart < start || phaseEnd <= phaseStart || phaseEnd > end) issues.push({ code: 'invalid-transaction-phase-bounds', id, phase: phase?.name });
+        if (!phase?.name || !Number.isFinite(phaseStart) || !Number.isFinite(phaseEnd) || phaseStart < start || phaseEnd <= phaseStart || phaseEnd > end) issues.push({ code: 'invalid-transaction-phase-bounds', id, phase: phase?.name });
       }
     }
     const paths = issue => ({

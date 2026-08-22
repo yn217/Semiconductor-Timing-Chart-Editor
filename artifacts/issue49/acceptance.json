@@ -1,0 +1,2120 @@
+{
+  "issue": 49,
+  "sampleCount": 20,
+  "samples": [
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\11_signal_types_roles_legend.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 6,
+        "annotations": 0,
+        "transactions": 0,
+        "groups": 2
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\12_group_bands_and_spacing.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 7,
+        "annotations": 0,
+        "transactions": 0,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\13_signal_name_layout.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 5,
+        "annotations": 0,
+        "transactions": 0,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\14_annotation_overlay_all_types.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 4,
+        "annotations": 5,
+        "transactions": 0,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[0].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].scope",
+          "reason": "Annotation scope is not part of the canonical annotation schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[4].start",
+          "reason": "Anchor signal was inferred as 'req'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[4].end",
+          "reason": "Anchor signal was inferred as 'data'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[4].scope",
+          "reason": "Annotation scope is not part of the canonical annotation schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\15_transition_arrows_anchor_styles.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 4,
+        "annotations": 4,
+        "transactions": 0,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\16_clock_phase_gating_gap.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 5,
+        "annotations": 2,
+        "transactions": 0,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[0].scope",
+          "reason": "Annotation scope is not part of the canonical annotation schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\17_cycle_insert_delete_ripple.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 4,
+        "annotations": 2,
+        "transactions": 1,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\18_legend_and_group_reorder.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 4,
+        "annotations": 0,
+        "transactions": 0,
+        "groups": 4
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\19_header_footer_export.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 3,
+        "annotations": 1,
+        "transactions": 0,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-feature-coverage\\timing_chart_feature_coverage_pack\\samples\\20_transaction_cycle_linked_views.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 6,
+        "annotations": 2,
+        "transactions": 2,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\01_apb_register_access.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 10,
+        "annotations": 3,
+        "transactions": 2,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[2].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\02_ahb_lite_pipelined_transfer.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 11,
+        "annotations": 2,
+        "transactions": 3,
+        "groups": 2
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].from.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\03_axi4_full_write_burst.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 18,
+        "annotations": 4,
+        "transactions": 1,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[3].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\04_axi4_full_read_outstanding.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 14,
+        "annotations": 3,
+        "transactions": 2,
+        "groups": 2
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].from.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].to.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[2].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\05_sram_1p_sync_read_write.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 7,
+        "annotations": 2,
+        "transactions": 3,
+        "groups": 2
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[0].from.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[0].to.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\06_sram_2p_parallel_and_conflict.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 12,
+        "annotations": 2,
+        "transactions": 4,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[0].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\07_axi_to_dram_read_path.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 17,
+        "annotations": 3,
+        "transactions": 2,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[0].to.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\08_async_fifo_cdc.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 12,
+        "annotations": 2,
+        "transactions": 2,
+        "groups": 2
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].from.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].to.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\09_accelerator_request_response.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 12,
+        "annotations": 3,
+        "transactions": 2,
+        "groups": 3
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[2].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    },
+    {
+      "file": "samples\\golden-protocol\\timing_chart_sample_pack\\samples\\10_axi4_stream_packet_backpressure.tcd.json",
+      "checks": {
+        "opened": true,
+        "valid": true,
+        "signals": true,
+        "annotations": true,
+        "transactions": true,
+        "groups": true,
+        "warningPaths": true,
+        "signalTypes": true,
+        "annotationTypes": true,
+        "transactionPhases": true,
+        "groupSpacing": true,
+        "groupStyle": true,
+        "layoutMetadata": true,
+        "legendMetadata": true,
+        "explicitWarnings": true,
+        "groupRows": true
+      },
+      "counts": {
+        "signals": 8,
+        "annotations": 3,
+        "transactions": 1,
+        "groups": 1
+      },
+      "warnings": [
+        {
+          "code": "unsupported-import-field",
+          "path": "$.cycleView.annotations[1].anchor.point",
+          "reason": "Legacy point 'value-start' was mapped to 'transition-start'",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.transactionView.lanes",
+          "reason": "Transaction lane definitions are not a canonical top-level field; transaction source/destination values were preserved",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.verificationCoverage",
+          "reason": "Metadata is not part of the canonical document schema",
+          "severity": "warning"
+        },
+        {
+          "code": "unsupported-import-field",
+          "path": "$.legend.offset",
+          "reason": "Legacy legend offset was mapped to canonical position",
+          "severity": "warning"
+        }
+      ]
+    }
+  ],
+  "preservation": {
+    "apbAnnotations": true,
+    "apbTransactions": true,
+    "groupSpacingAfter": true,
+    "legendOrientation": true,
+    "legendPosition": true,
+    "layout": true,
+    "roundTripEquivalent": true
+  },
+  "roundTrip": {
+    "reopened": true,
+    "equivalent": true,
+    "before": {
+      "formatVersion": 1,
+      "document": {
+        "id": "sample.tcd",
+        "title": "APB register write/read with wait state",
+        "header": {
+          "subtitle": "Peripheral-side APB example. Includes setup/access phases, PREADY wait states and PSLVERR.",
+          "description": "Peripheral-side APB example. Includes setup/access phases, PREADY wait states and PSLVERR.",
+          "notes": "",
+          "preconditions": [],
+          "constraints": [],
+          "exceptions": []
+        },
+        "footer": {
+          "figureNumber": "",
+          "revision": "",
+          "text": ""
+        }
+      },
+      "timeline": {
+        "start": 0,
+        "end": 18,
+        "timeBase": "cycle",
+        "cycleCount": 18,
+        "referenceClock": "pclk",
+        "edge": "rising"
+      },
+      "signalGroups": [
+        {
+          "id": "g_apb_ctrl",
+          "name": "APB Control",
+          "rows": [
+            "pclk",
+            "presetn",
+            "psel",
+            "penable",
+            "pwrite"
+          ],
+          "spacingAfter": 10
+        },
+        {
+          "id": "g_apb_addr",
+          "name": "Address / Write Data",
+          "rows": [
+            "paddr",
+            "pwdata"
+          ],
+          "spacingAfter": 10
+        },
+        {
+          "id": "g_apb_resp",
+          "name": "Read / Response",
+          "rows": [
+            "prdata",
+            "pready",
+            "pslverr"
+          ]
+        }
+      ],
+      "signals": [
+        {
+          "id": "pclk",
+          "name": "PCLK",
+          "type": "clock",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PCLK"
+          },
+          "display": {
+            "name": "PCLK"
+          },
+          "generator": {
+            "start": 0,
+            "period": 1,
+            "duty": 0.5,
+            "phase": 0,
+            "initial": 0,
+            "polarity": "positive"
+          },
+          "edgeCounter": {
+            "show": false,
+            "mode": "rising",
+            "startNumber": 1,
+            "countFrom": "signal-start",
+            "labelEvery": 1,
+            "position": "above",
+            "offset": {
+              "x": 0,
+              "y": -6
+            }
+          }
+        },
+        {
+          "id": "presetn",
+          "name": "PRESETn",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PRESETn"
+          },
+          "display": {
+            "name": "PRESETn"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 2,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "psel",
+          "name": "PSEL",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PSEL"
+          },
+          "display": {
+            "name": "PSEL"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 4,
+              "value": 1
+            },
+            {
+              "start": 9,
+              "value": 0
+            },
+            {
+              "start": 11,
+              "value": 1
+            },
+            {
+              "start": 14,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "penable",
+          "name": "PENABLE",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PENABLE"
+          },
+          "display": {
+            "name": "PENABLE"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 5,
+              "value": 1
+            },
+            {
+              "start": 9,
+              "value": 0
+            },
+            {
+              "start": 12,
+              "value": 1
+            },
+            {
+              "start": 14,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "pwrite",
+          "name": "PWRITE",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PWRITE"
+          },
+          "display": {
+            "name": "PWRITE"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 4,
+              "value": 1
+            },
+            {
+              "start": 9,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "paddr",
+          "name": "PADDR",
+          "type": "bus",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PADDR"
+          },
+          "display": {
+            "name": "PADDR"
+          },
+          "width": 32,
+          "values": [
+            {
+              "start": 0,
+              "value": "X"
+            },
+            {
+              "start": 4,
+              "value": "0x1000"
+            },
+            {
+              "start": 9,
+              "value": "X"
+            },
+            {
+              "start": 11,
+              "value": "0x1004"
+            },
+            {
+              "start": 14,
+              "value": "X"
+            }
+          ]
+        },
+        {
+          "id": "pwdata",
+          "name": "PWDATA",
+          "type": "bus",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PWDATA"
+          },
+          "display": {
+            "name": "PWDATA"
+          },
+          "width": 32,
+          "values": [
+            {
+              "start": 0,
+              "value": "X"
+            },
+            {
+              "start": 4,
+              "value": "0xA5A50001"
+            },
+            {
+              "start": 9,
+              "value": "X"
+            }
+          ]
+        },
+        {
+          "id": "prdata",
+          "name": "PRDATA",
+          "type": "bus",
+          "role": "output",
+          "source": {
+            "instancePath": [],
+            "signalName": "PRDATA"
+          },
+          "display": {
+            "name": "PRDATA"
+          },
+          "width": 32,
+          "values": [
+            {
+              "start": 0,
+              "value": "X"
+            },
+            {
+              "start": 11,
+              "value": "0x0000005A"
+            },
+            {
+              "start": 14,
+              "value": "X"
+            }
+          ]
+        },
+        {
+          "id": "pready",
+          "name": "PREADY",
+          "type": "binary",
+          "role": "output",
+          "source": {
+            "instancePath": [],
+            "signalName": "PREADY"
+          },
+          "display": {
+            "name": "PREADY"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 1
+            },
+            {
+              "start": 5,
+              "value": 0
+            },
+            {
+              "start": 8,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "pslverr",
+          "name": "PSLVERR",
+          "type": "binary",
+          "role": "output",
+          "source": {
+            "instancePath": [],
+            "signalName": "PSLVERR"
+          },
+          "display": {
+            "name": "PSLVERR"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 13,
+              "value": 1
+            },
+            {
+              "start": 14,
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "id": "a_apb_write",
+          "type": "range",
+          "label": "APB write with wait states",
+          "color": "#1473e6",
+          "position": "canvas",
+          "comment": "",
+          "visible": true,
+          "start": {
+            "signal": "pclk",
+            "cycle": 4,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": -22
+            }
+          },
+          "end": {
+            "signal": "pclk",
+            "cycle": 9,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": -22
+            }
+          },
+          "labelOffset": {
+            "x": 0,
+            "y": -6
+          }
+        },
+        {
+          "id": "a_apb_wait",
+          "type": "dependency",
+          "label": "3-cycle wait",
+          "color": "#1473e6",
+          "position": "canvas",
+          "comment": "",
+          "visible": true,
+          "from": {
+            "signal": "penable",
+            "cycle": 5,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "to": {
+            "signal": "pready",
+            "cycle": 8,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "labelOffset": {
+            "x": 0,
+            "y": -8
+          },
+          "lineType": "orthogonal",
+          "arrowhead": "end"
+        },
+        {
+          "id": "a_apb_error",
+          "type": "text",
+          "label": "Read completes with error",
+          "color": "#1473e6",
+          "position": "canvas",
+          "comment": "",
+          "visible": true,
+          "anchor": {
+            "signal": "pslverr",
+            "cycle": 13,
+            "point": "transition-start",
+            "offset": {
+              "x": 6,
+              "y": -12
+            }
+          }
+        }
+      ],
+      "legend": {
+        "show": true,
+        "anchor": "top-right",
+        "offset": {
+          "x": -16,
+          "y": 12
+        },
+        "orientation": "vertical",
+        "usedRolesOnly": true,
+        "position": {
+          "x": -16,
+          "y": 12
+        }
+      },
+      "layout": {
+        "rowHeight": 28,
+        "signalSpacing": 6,
+        "signalNameWidth": 190,
+        "signalNameAlign": "right",
+        "roleColumnWidth": 32,
+        "busWidthAlign": "left",
+        "pathDisplayMode": "signalOnly",
+        "instancePathAlign": "left",
+        "instancePathWidth": 180,
+        "busWidthMode": "inline",
+        "overflow": "ellipsis"
+      },
+      "transactions": [
+        {
+          "id": "t1",
+          "name": "WRITE 0x1000",
+          "from": "m",
+          "to": "s",
+          "start": 4,
+          "end": 9,
+          "phases": [
+            {
+              "name": "Setup",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "Access / Wait",
+              "start": 5,
+              "end": 9
+            }
+          ],
+          "source": "m",
+          "destination": "s"
+        },
+        {
+          "id": "t2",
+          "name": "READ 0x1004 (error)",
+          "from": "m",
+          "to": "s",
+          "start": 11,
+          "end": 14,
+          "phases": [
+            {
+              "name": "Setup",
+              "start": 11,
+              "end": 12
+            },
+            {
+              "name": "Access",
+              "start": 12,
+              "end": 14
+            }
+          ],
+          "source": "m",
+          "destination": "s"
+        }
+      ],
+      "constraints": []
+    },
+    "after": {
+      "formatVersion": 1,
+      "document": {
+        "id": "sample.tcd",
+        "title": "APB register write/read with wait state",
+        "header": {
+          "subtitle": "Peripheral-side APB example. Includes setup/access phases, PREADY wait states and PSLVERR.",
+          "description": "Peripheral-side APB example. Includes setup/access phases, PREADY wait states and PSLVERR.",
+          "notes": "",
+          "preconditions": [],
+          "constraints": [],
+          "exceptions": []
+        },
+        "footer": {
+          "figureNumber": "",
+          "revision": "",
+          "text": ""
+        }
+      },
+      "timeline": {
+        "start": 0,
+        "end": 18,
+        "timeBase": "cycle",
+        "cycleCount": 18,
+        "referenceClock": "pclk",
+        "edge": "rising"
+      },
+      "signalGroups": [
+        {
+          "id": "g_apb_ctrl",
+          "name": "APB Control",
+          "rows": [
+            "pclk",
+            "presetn",
+            "psel",
+            "penable",
+            "pwrite"
+          ],
+          "spacingAfter": 10
+        },
+        {
+          "id": "g_apb_addr",
+          "name": "Address / Write Data",
+          "rows": [
+            "paddr",
+            "pwdata"
+          ],
+          "spacingAfter": 10
+        },
+        {
+          "id": "g_apb_resp",
+          "name": "Read / Response",
+          "rows": [
+            "prdata",
+            "pready",
+            "pslverr"
+          ]
+        }
+      ],
+      "signals": [
+        {
+          "id": "pclk",
+          "name": "PCLK",
+          "type": "clock",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PCLK"
+          },
+          "display": {
+            "name": "PCLK"
+          },
+          "generator": {
+            "start": 0,
+            "period": 1,
+            "duty": 0.5,
+            "phase": 0,
+            "initial": 0,
+            "polarity": "positive"
+          },
+          "edgeCounter": {
+            "show": false,
+            "mode": "rising",
+            "startNumber": 1,
+            "countFrom": "signal-start",
+            "labelEvery": 1,
+            "position": "above",
+            "offset": {
+              "x": 0,
+              "y": -6
+            }
+          }
+        },
+        {
+          "id": "presetn",
+          "name": "PRESETn",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PRESETn"
+          },
+          "display": {
+            "name": "PRESETn"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 2,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "psel",
+          "name": "PSEL",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PSEL"
+          },
+          "display": {
+            "name": "PSEL"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 4,
+              "value": 1
+            },
+            {
+              "start": 9,
+              "value": 0
+            },
+            {
+              "start": 11,
+              "value": 1
+            },
+            {
+              "start": 14,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "penable",
+          "name": "PENABLE",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PENABLE"
+          },
+          "display": {
+            "name": "PENABLE"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 5,
+              "value": 1
+            },
+            {
+              "start": 9,
+              "value": 0
+            },
+            {
+              "start": 12,
+              "value": 1
+            },
+            {
+              "start": 14,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "pwrite",
+          "name": "PWRITE",
+          "type": "binary",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PWRITE"
+          },
+          "display": {
+            "name": "PWRITE"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 4,
+              "value": 1
+            },
+            {
+              "start": 9,
+              "value": 0
+            }
+          ]
+        },
+        {
+          "id": "paddr",
+          "name": "PADDR",
+          "type": "bus",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PADDR"
+          },
+          "display": {
+            "name": "PADDR"
+          },
+          "width": 32,
+          "values": [
+            {
+              "start": 0,
+              "value": "X"
+            },
+            {
+              "start": 4,
+              "value": "0x1000"
+            },
+            {
+              "start": 9,
+              "value": "X"
+            },
+            {
+              "start": 11,
+              "value": "0x1004"
+            },
+            {
+              "start": 14,
+              "value": "X"
+            }
+          ]
+        },
+        {
+          "id": "pwdata",
+          "name": "PWDATA",
+          "type": "bus",
+          "role": "input",
+          "source": {
+            "instancePath": [],
+            "signalName": "PWDATA"
+          },
+          "display": {
+            "name": "PWDATA"
+          },
+          "width": 32,
+          "values": [
+            {
+              "start": 0,
+              "value": "X"
+            },
+            {
+              "start": 4,
+              "value": "0xA5A50001"
+            },
+            {
+              "start": 9,
+              "value": "X"
+            }
+          ]
+        },
+        {
+          "id": "prdata",
+          "name": "PRDATA",
+          "type": "bus",
+          "role": "output",
+          "source": {
+            "instancePath": [],
+            "signalName": "PRDATA"
+          },
+          "display": {
+            "name": "PRDATA"
+          },
+          "width": 32,
+          "values": [
+            {
+              "start": 0,
+              "value": "X"
+            },
+            {
+              "start": 11,
+              "value": "0x0000005A"
+            },
+            {
+              "start": 14,
+              "value": "X"
+            }
+          ]
+        },
+        {
+          "id": "pready",
+          "name": "PREADY",
+          "type": "binary",
+          "role": "output",
+          "source": {
+            "instancePath": [],
+            "signalName": "PREADY"
+          },
+          "display": {
+            "name": "PREADY"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 1
+            },
+            {
+              "start": 5,
+              "value": 0
+            },
+            {
+              "start": 8,
+              "value": 1
+            }
+          ]
+        },
+        {
+          "id": "pslverr",
+          "name": "PSLVERR",
+          "type": "binary",
+          "role": "output",
+          "source": {
+            "instancePath": [],
+            "signalName": "PSLVERR"
+          },
+          "display": {
+            "name": "PSLVERR"
+          },
+          "values": [
+            {
+              "start": 0,
+              "value": 0
+            },
+            {
+              "start": 13,
+              "value": 1
+            },
+            {
+              "start": 14,
+              "value": 0
+            }
+          ]
+        }
+      ],
+      "annotations": [
+        {
+          "id": "a_apb_write",
+          "type": "range",
+          "label": "APB write with wait states",
+          "color": "#1473e6",
+          "position": "canvas",
+          "comment": "",
+          "visible": true,
+          "start": {
+            "signal": "pclk",
+            "cycle": 4,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": -22
+            }
+          },
+          "end": {
+            "signal": "pclk",
+            "cycle": 9,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": -22
+            }
+          },
+          "labelOffset": {
+            "x": 0,
+            "y": -6
+          }
+        },
+        {
+          "id": "a_apb_wait",
+          "type": "dependency",
+          "label": "3-cycle wait",
+          "color": "#1473e6",
+          "position": "canvas",
+          "comment": "",
+          "visible": true,
+          "from": {
+            "signal": "penable",
+            "cycle": 5,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "to": {
+            "signal": "pready",
+            "cycle": 8,
+            "point": "rising",
+            "offset": {
+              "x": 0,
+              "y": 0
+            }
+          },
+          "labelOffset": {
+            "x": 0,
+            "y": -8
+          },
+          "lineType": "orthogonal",
+          "arrowhead": "end"
+        },
+        {
+          "id": "a_apb_error",
+          "type": "text",
+          "label": "Read completes with error",
+          "color": "#1473e6",
+          "position": "canvas",
+          "comment": "",
+          "visible": true,
+          "anchor": {
+            "signal": "pslverr",
+            "cycle": 13,
+            "point": "transition-start",
+            "offset": {
+              "x": 6,
+              "y": -12
+            }
+          }
+        }
+      ],
+      "legend": {
+        "show": true,
+        "anchor": "top-right",
+        "offset": {
+          "x": -16,
+          "y": 12
+        },
+        "orientation": "vertical",
+        "usedRolesOnly": true,
+        "position": {
+          "x": -16,
+          "y": 12
+        }
+      },
+      "layout": {
+        "rowHeight": 28,
+        "signalSpacing": 6,
+        "signalNameWidth": 190,
+        "signalNameAlign": "right",
+        "roleColumnWidth": 32,
+        "busWidthAlign": "left",
+        "pathDisplayMode": "signalOnly",
+        "instancePathAlign": "left",
+        "instancePathWidth": 180,
+        "busWidthMode": "inline",
+        "overflow": "ellipsis"
+      },
+      "transactions": [
+        {
+          "id": "t1",
+          "name": "WRITE 0x1000",
+          "from": "m",
+          "to": "s",
+          "start": 4,
+          "end": 9,
+          "phases": [
+            {
+              "name": "Setup",
+              "start": 4,
+              "end": 5
+            },
+            {
+              "name": "Access / Wait",
+              "start": 5,
+              "end": 9
+            }
+          ],
+          "source": "m",
+          "destination": "s"
+        },
+        {
+          "id": "t2",
+          "name": "READ 0x1004 (error)",
+          "from": "m",
+          "to": "s",
+          "start": 11,
+          "end": 14,
+          "phases": [
+            {
+              "name": "Setup",
+              "start": 11,
+              "end": 12
+            },
+            {
+              "name": "Access",
+              "start": 12,
+              "end": 14
+            }
+          ],
+          "source": "m",
+          "destination": "s"
+        }
+      ],
+      "constraints": []
+    }
+  },
+  "pageErrors": [],
+  "pass": true,
+  "failures": []
+}

@@ -182,10 +182,10 @@
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
-    try { parsed = JSON.parse(text); parsed = normalizeExternalDocument(parsed); } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
+    try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
     const issues = controller.validateDocument(parsed);
     if (parsed?.formatVersion !== 1 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
-    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'open', result: 'success', message: `✓ Opened: ${fileName}` }); updateDirty(); return true;
+    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
