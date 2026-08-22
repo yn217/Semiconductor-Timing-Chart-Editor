@@ -41,10 +41,35 @@
   };
   for (const [name, label] of [['updateSignalValue', 'Change signal value'], ['addSignalValue', 'Add signal value'], ['duplicateSignalValue', 'Duplicate signal value'], ['deleteSignalValue', 'Delete signal value'], ['updateClock', 'Change clock'], ['updateComment', 'Change comment']]) wrapMutation(name, label);
 
-  const restore = snapshot => {
-    model.document = clone(snapshot);
+  const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
+    model.document = clone(nextDocument);
+    if (resetHistory) { model.history = { undo: [], redo: [] }; controller.history = model.history; }
     model.validation = [];
+    model.crossHighlight = [];
+    model.waveGeometry = null;
+    controller.waveGeometry = null;
+    model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
+    model.editor = { rowIndex: 0 };
+    model.selection = { kind: 'signal', id: controller.selectors.getSignals()[0]?.id || null };
+    model.view.hiddenSignals = [];
+    model.view.scope = [];
+    model.view.leftPanelMode = 'group';
+    model.view.pinned = false;
+    model.view.followSelection = true;
+    delete model.view.previewSignalNameWidth;
+    delete model.view.annotationAnchorSelection;
+    delete model.view.dependencySelection;
+    delete model.view.currentGroupId;
+    if (model.view.mode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal';
+    if (model.view.mode === 'transaction' && model.view.tab === 'signal') model.view.tab = 'transaction';
     repairSelection();
+    controller.repairScope?.();
+    if (render) controller.render();
+    return true;
+  };
+  controller.replaceDocument = replaceDocument;
+  const restore = snapshot => {
+    replaceDocument(snapshot, { resetHistory: false, render: false });
     controller.render();
     updateDirty();
   };
@@ -116,7 +141,7 @@
   };
   controller.actions.requestNew = async ({ unsavedDecision = 'cancel' } = {}) => {
     if (!await protect(unsavedDecision)) return false;
-    model.document = newDocument(); model.history = { undo: [], redo: [] }; controller.history = model.history; model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null }; model.selection = { kind: 'signal', id: 'clk' }; model.editor = { rowIndex: 0 }; model.view.pinned = false; model.view.followSelection = true; controller.repairScope?.(); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; controller.render(); updateDirty(); return true;
+    replaceDocument(newDocument()); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; updateDirty(); return true;
   };
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
@@ -124,7 +149,7 @@
     try { parsed = JSON.parse(text); parsed = normalizeExternalDocument(parsed); } catch (error) { model.persistence.lastError = `Invalid JSON: ${error.message}`; return false; }
     const issues = controller.validateDocument(parsed);
     if (parsed?.formatVersion !== 1 || issues.length) { model.persistence.lastError = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; return false; }
-    model.document = clone(parsed); model.history = { undo: [], redo: [] }; controller.history = model.history; model.validation = []; model.timeSelection = { cycle: Math.max(0, Math.min(Number(model.timeSelection?.cycle ?? 0), Number(model.document.timeline.cycleCount))), rangeStart: null, rangeEnd: null }; model.view.pinned = false; model.view.followSelection = true; repairSelection(); controller.repairScope?.(); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; controller.render(); updateDirty(); return true;
+    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; model.persistence.lastError = null; updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {

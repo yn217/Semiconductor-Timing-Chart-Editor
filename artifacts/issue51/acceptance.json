@@ -1,0 +1,84 @@
+{
+  "issue": 51,
+  "checks": {
+    "openA": true,
+    "openB": true,
+    "openClearsDocumentTransientState": true,
+    "viewPreferencesPreserved": true,
+    "newClearsDocumentTransientState": true,
+    "failedOpenLeavesStateUnchanged": true,
+    "undoRestoreUsesReplacementPath": true,
+    "redoRestoreUsesReplacementPath": true
+  },
+  "preReplace": {
+    "documentId": "issue51-a.tcd",
+    "hiddenSignals": [
+      "req_valid"
+    ],
+    "selection": {
+      "kind": "annotation",
+      "id": "ann_a"
+    },
+    "timeSelection": {
+      "cycle": 99,
+      "rangeStart": 8,
+      "rangeEnd": 10
+    }
+  },
+  "final": {
+    "documentId": "issue51-b.tcd",
+    "selection": {
+      "kind": "signal",
+      "id": "clk"
+    },
+    "view": {
+      "mode": "split",
+      "tab": "annotation",
+      "followSelection": true,
+      "pinned": false,
+      "zoom": 1.35,
+      "hiddenSignals": [],
+      "scope": [],
+      "leftPanelMode": "group",
+      "guides": {
+        "grid": true,
+        "snap": true,
+        "ruler": true,
+        "minimap": true
+      },
+      "columns": {
+        "signalName": false,
+        "role": true,
+        "busWidth": true,
+        "instancePath": true
+      },
+      "overlays": {
+        "comment": true,
+        "annotation": true,
+        "edgeCounter": true
+      },
+      "panels": {
+        "inspector": true,
+        "left": true,
+        "bottom": true,
+        "waveformOnly": false
+      },
+      "bottomHeight": 270
+    },
+    "waveGeometryIds": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "busy",
+      "state[1:0]",
+      "b_only",
+      "ready",
+      "rdata[15:0]"
+    ]
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue51-1672x941.png"
+  ]
+}
