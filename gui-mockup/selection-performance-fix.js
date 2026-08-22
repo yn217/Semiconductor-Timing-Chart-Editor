@@ -81,7 +81,7 @@
       if (target.matches('[data-editor-field]')) {
         controller.actions.updateSignalValue(signalId, Number(target.dataset.editorIndex), target.dataset.editorField, target.value);
       } else if (target.matches('[data-clock-field]')) {
-        controller.actions.updateClock(target.dataset.clockField, target.value);
+        controller.actions.updateClock(signalId, target.dataset.clockField, target.value);
       } else if (target.matches('[data-comment-field]')) {
         controller.actions.updateComment(signalId, target.dataset.commentField, target.value);
       }

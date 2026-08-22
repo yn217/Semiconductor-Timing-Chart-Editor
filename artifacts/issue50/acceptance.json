@@ -1,0 +1,42 @@
+{
+  "issue": 50,
+  "checks": {
+    "selectedPclkOnly": true,
+    "selectedHclkOnly": true,
+    "referenceClockIndependent": true,
+    "invalidTargetRejected": true,
+    "saveOpenPreservesBoth": true,
+    "undoRestoresOnlyEdit": true,
+    "redoRestoresOnlyEdit": true
+  },
+  "failures": [],
+  "roundTripClocks": [
+    {
+      "id": "pclk_custom",
+      "generator": {
+        "start": 0,
+        "period": 3,
+        "duty": 0.5,
+        "phase": 1.5,
+        "initial": 0,
+        "polarity": "positive"
+      }
+    },
+    {
+      "id": "hclk_custom",
+      "generator": {
+        "start": 0,
+        "period": 4,
+        "duty": 0.5,
+        "phase": 2,
+        "initial": 0,
+        "polarity": "positive"
+      }
+    }
+  ],
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue50-1672x941.png"
+  ]
+}
