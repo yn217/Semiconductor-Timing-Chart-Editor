@@ -1,0 +1,89 @@
+{
+  "issue": 54,
+  "cases": {
+    "startup9A": {
+      "overflow": false,
+      "fixtureIndependent": true,
+      "pass": true
+    },
+    "arbitraryHexValid": {
+      "overflow": false,
+      "pass": true
+    },
+    "arbitraryHexOverflow": {
+      "code": "bus-width-overflow",
+      "id": "payload_bus",
+      "severity": "error",
+      "noAutoFix": true,
+      "pass": true
+    },
+    "binaryXZ": {
+      "valid8Bit": true,
+      "overflow9Bit": true,
+      "xzAccepted": true,
+      "pass": true
+    },
+    "symbolic": {
+      "noNumericOverflow": true,
+      "pass": true
+    },
+    "genericSemanticValidation": {
+      "referenceClock": true,
+      "duplicateStart": true,
+      "pass": true
+    },
+    "goldenSamples": {
+      "count": 10,
+      "results": [
+        {
+          "file": "01_apb_register_access.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "02_ahb_lite_pipelined_transfer.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "03_axi4_full_write_burst.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "04_axi4_full_read_outstanding.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "05_sram_1p_sync_read_write.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "06_sram_2p_parallel_and_conflict.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "07_axi_to_dram_read_path.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "08_async_fifo_cdc.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "09_accelerator_request_response.tcd.json",
+          "issueCount": 0
+        },
+        {
+          "file": "10_axi4_stream_packet_backpressure.tcd.json",
+          "issueCount": 0
+        }
+      ],
+      "noFixtureAssumptions": true,
+      "pass": true
+    },
+    "staticFixtureAudit": {
+      "noStartupBranches": true,
+      "pass": true
+    }
+  },
+  "errors": [],
+  "pass": true
+}

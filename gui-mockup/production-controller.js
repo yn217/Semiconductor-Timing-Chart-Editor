@@ -162,6 +162,17 @@
       if (ids.has(signal.id)) issues.push({ code: 'duplicate-signal-id', id: signal.id });
       ids.add(signal.id);
         if (signal.type !== 'commentRow') {
+          if (signal.type === 'bus' && Number(signal.width) > 0) {
+            const format = String(signal.displayFormat || 'hex').toLowerCase();
+            for (const value of signal.values || []) {
+              const raw = String(value.value ?? '').trim();
+              const numeric = format === 'binary' || /^0b[01]+$/i.test(raw) ? raw.replace(/^0b/i, '') : raw.replace(/^0x/i, '');
+              const numericLike = format === 'binary' ? /^[01]+$/.test(numeric) : /^[0-9a-f]+$/i.test(numeric);
+              if (!numericLike) continue;
+              const capacity = format === 'binary' || /^0b/i.test(raw) ? numeric.length : numeric.length * 4;
+              if (capacity > Number(signal.width)) issues.push({ code: 'bus-width-overflow', severity: 'error', id: signal.id, field: 'value', range: String(value.start), value: raw, message: `値 '${raw}' は${signal.width}ビット幅を超えています`, recommendation: `${signal.width}ビット以内の値にしてください`, path: `$.signals[${signal.id}].values[${value.start}]` });
+            }
+          }
           const source = signal.source;
           if (source !== undefined && (!Array.isArray(source.instancePath) || source.instancePath.some(part => typeof part !== 'string' || !part.trim()) || typeof source.signalName !== 'string' || !source.signalName.trim())) issues.push({ code: 'invalid-signal-source', id: signal.id });
           if (source?.msb !== undefined && (!Number.isInteger(Number(source.msb)) || source.lsb === undefined)) issues.push({ code: 'invalid-bus-range', id: signal.id });
@@ -215,17 +226,7 @@
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
   controller.getProblems = documentValue => {
-    const issues = controller.validateDocument(documentValue);
-    const signals = documentValue?.signals || [];
-    const reqAddr = signals.find(signal => signal.id === 'req_addr[7:0]');
-    const rdata = signals.find(signal => signal.id === 'rdata[15:0]');
-    const reqValid = signals.find(signal => signal.id === 'req_valid');
-    if (reqAddr?.values?.some(value => String(value.value).toUpperCase() === '9A')) issues.push({ code: 'width-mismatch', displayType: '幅不一致', id: reqAddr.id, range: '3 - 4', recommendation: '8ビット以内の値にしてください', auto: '自動修正', path: '$.signals[req_addr[7:0]].values', message: "値 '9A' は8ビットを超えています", severity: 'error' });
-    if (rdata?.values?.some(value => String(value.value).toUpperCase() === 'XXXX')) issues.push({ code: 'undefined-value', displayType: '未定義値', id: rdata.id, range: '0 - 1', recommendation: '初期値を定義してください', auto: '自動修正', path: '$.signals[rdata[15:0]].values[0]', message: "初期値が 'XXXX' のままです", severity: 'error' });
-    if (rdata?.values?.length > 2) issues.push({ code: 'read-latency', displayType: 'リードレイテンシ', id: rdata.id, range: '4 - 10', recommendation: '性能要件を確認してください', auto: '—', path: '$.signals[rdata[15:0]].values', message: 'レイテンシが 6 cycle です', severity: 'warning' });
-    if (reqValid?.values?.some(value => Number(value.start) === 7)) issues.push({ code: 'idle-gap', displayType: 'アイドルギャップ', id: reqValid.id, range: '4 - 4', recommendation: '連続要求の場合は確認', auto: '—', path: '$.signals[req_valid].values', message: '1 cycle のアイドル期間があります', severity: 'warning' });
-    if (signals.some(signal => signal.type === 'commentRow' && signal.title === 'Read latency')) issues.push({ code: 'annotation-note', displayType: 'メモ', id: 'Read latency', range: '—', recommendation: '—', auto: '—', path: '$.signals[comment_03]', message: '注釈が追加されています', severity: 'info' });
-    return issues;
+    return controller.validateDocument(documentValue);
   };
   window.TimingChartProductionController = controller;
 
