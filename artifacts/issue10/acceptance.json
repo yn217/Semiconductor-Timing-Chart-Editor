@@ -1,0 +1,44 @@
+{
+  "endpoints": {
+    "edge_straight": {
+      "from": "wavedrom-svg",
+      "to": "wavedrom-svg"
+    },
+    "edge_orthogonal": {
+      "from": "wavedrom-svg",
+      "to": "wavedrom-svg"
+    },
+    "edge_curve": {
+      "from": "wavedrom-svg",
+      "to": "wavedrom-svg"
+    },
+    "edge_diagonal": {
+      "from": "wavedrom-svg",
+      "to": "wavedrom-svg"
+    }
+  },
+  "styles": [
+    "straight",
+    "orthogonal",
+    "curve",
+    "diagonal"
+  ],
+  "arrowheads": [
+    [
+      null,
+      "url(#annotation-arrow-edge_straight)"
+    ],
+    [
+      "url(#annotation-arrow-edge_orthogonal)",
+      null
+    ],
+    [
+      "url(#annotation-arrow-edge_curve)",
+      "url(#annotation-arrow-edge_curve)"
+    ]
+  ],
+  "independentLabelOffset": true,
+  "timelineTracking": true,
+  "runtimeSignalRenderer": false,
+  "pass": true
+}
