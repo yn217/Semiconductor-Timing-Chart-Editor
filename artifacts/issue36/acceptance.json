@@ -1,0 +1,35 @@
+{
+  "issue": 36,
+  "results": [
+    {
+      "viewport": {
+        "width": 1672,
+        "height": 941
+      },
+      "geometryMaxErrorPx": 0,
+      "labelStable": true,
+      "timingSvgResponds": true,
+      "canonicalStable": true,
+      "waveDromRerendered": false,
+      "burstFrames": 1,
+      "pass": true
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 720
+      },
+      "geometryMaxErrorPx": 0,
+      "labelStable": true,
+      "timingSvgResponds": true,
+      "canonicalStable": true,
+      "waveDromRerendered": false,
+      "burstFrames": 1,
+      "pass": true
+    }
+  ],
+  "goldenReferenceModified": false,
+  "stylesModified": false,
+  "iconsModified": false,
+  "pass": true
+}
