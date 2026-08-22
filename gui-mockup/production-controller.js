@@ -210,6 +210,32 @@
   const rows = () => [...document.querySelectorAll('.row[data-signal]')];
   const setHidden = (element, hidden) => { if (!element) return; element.hidden = hidden; element.classList.toggle('hidden', hidden); };
   const renderSelection = () => rows().forEach(row => row.classList.toggle('selected', row.dataset.signal === model.selection.id || (model.crossHighlight || []).includes(row.dataset.signal)));
+  const applyCenterLayout = () => {
+    const center = document.querySelector('.center');
+    if (!center) return;
+    const mode = model.view.mode;
+    center.dataset.viewMode = mode;
+    center.dataset.layoutContract = 'explicit';
+    center.style.minHeight = '0';
+    const workspace = center.closest('.workspace');
+    const workspaceHeight = workspace?.getBoundingClientRect().height;
+    if (workspaceHeight) center.style.height = `${workspaceHeight}px`;
+    const centerWidth = `${Math.max(0, center.clientWidth)}px`;
+    center.querySelectorAll('.canvas').forEach(canvas => { canvas.style.minWidth = '0'; canvas.style.width = centerWidth; canvas.style.maxWidth = centerWidth; canvas.style.boxSizing = 'border-box'; });
+    const bottom = center.querySelector('.bottom');
+    if (bottom) { bottom.style.minWidth = '0'; bottom.style.width = centerWidth; bottom.style.maxWidth = centerWidth; bottom.style.boxSizing = 'border-box'; }
+    if (mode !== 'split') {
+      center.style.removeProperty('--split-bottom-h');
+      center.style.gridTemplateRows = 'minmax(320px,1fr) var(--bottom-h)';
+      return;
+    }
+    const centerHeight = center.getBoundingClientRect().height;
+    const preferredBottom = Number.parseFloat(getComputedStyle(center).getPropertyValue('--bottom-h')) || center.querySelector('.bottom')?.getBoundingClientRect().height || 270;
+    const minimumUpper = Math.min(160, Math.max(90, (centerHeight - 150) / 2));
+    const bottomHeight = Math.max(150, Math.min(preferredBottom, Math.max(150, centerHeight - minimumUpper * 2)));
+    center.style.setProperty('--split-bottom-h', `${bottomHeight}px`);
+    center.style.gridTemplateRows = `minmax(${minimumUpper}px,1fr) minmax(${minimumUpper}px,1fr) var(--split-bottom-h)`;
+  };
   const renderMode = () => {
     document.querySelectorAll('.seg').forEach(button => button.classList.toggle('active', button.dataset.mode === model.view.mode));
     const transaction = model.view.mode === 'transaction' || model.view.mode === 'split';
@@ -219,6 +245,7 @@
     setHidden(document.querySelector('.ribbon-tabs .txn-only'), model.view.mode === 'cycle');
     setHidden(document.querySelector('#cycleCanvas'), model.view.mode === 'transaction');
     setHidden(document.querySelector('#transactionCanvas'), model.view.mode === 'cycle');
+    applyCenterLayout();
   };
   const renderTab = () => tabs().forEach(button => button.classList.toggle('active', button.dataset.tab === model.view.tab));
   const renderStatus = () => { const status = document.querySelector('.status'); if (!status) return; const range = [...status.querySelectorAll('span')].find(span => span.textContent.includes('Time Range')); const zoom = [...status.querySelectorAll('span')].find(span => span.textContent.includes('Zoom')); if (range) range.textContent = `Time Range: ${model.document.timeline.start} - ${model.document.timeline.end} cycle`; if (zoom) zoom.textContent = `Zoom: ${Math.round(model.view.zoom * 100)}%`; };

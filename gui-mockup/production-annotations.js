@@ -89,16 +89,8 @@
     overlay.style.height = `${rect.height}px`;
     for (const annotation of currentModel.document.annotations || []) { const resolved = resolve(annotation); errors.push(...resolved.errors); renderSvg(annotation, resolved.result, overlay, rect); }
     currentModel.annotationValidation = errors;
-    // Keep the locked center split tied to the available workspace after an
-    // overlay is mounted. Annotation SVGs are overlays, not layout content.
-    const center = canvas.closest('.center');
-    const workspace = canvas.closest('.workspace');
-    const bottom = center?.querySelector('.bottom');
-    if (center && workspace && bottom) {
-      const bottomHeight = bottom.getBoundingClientRect().height;
-      const available = workspace.getBoundingClientRect().height;
-      center.style.gridTemplateRows = `${Math.max(320, available - bottomHeight)}px ${bottomHeight}px`;
-    }
+    // Center region sizing is owned by production-controller.renderMode().
+    // Annotation overlays must never assume a two-row Cycle layout.
   };
   const run = (label, mutation) => controller.documentHistory.run(label, mutation);
   controller.transformAnnotations = (documentValue, start, endOrCount, mode) => {

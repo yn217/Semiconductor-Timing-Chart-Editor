@@ -1,0 +1,334 @@
+{
+  "issue": 82,
+  "checks": {
+    "cycleTwoRegions": true,
+    "transactionTwoRegions": true,
+    "splitThreeRegions": true,
+    "splitInsideAndNonOverlapping": true,
+    "splitResizeChangesBottom": true,
+    "tabContentConsistent": true,
+    "switchingAndResizeDoNotMutateDocument": true,
+    "explicitLayoutOwner": true,
+    "smallViewportUsable": true
+  },
+  "geometry": {
+    "cycle": {
+      "mode": "cycle",
+      "contract": "explicit",
+      "gridRows": [
+        "428px",
+        "270px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 914,
+        "left": 330,
+        "right": 1372,
+        "width": 1042,
+        "height": 698
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 216,
+          "bottom": 644,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 428
+        },
+        "#transactionCanvas": {
+          "top": 0,
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0
+        },
+        ".bottom": {
+          "top": 644,
+          "bottom": 914,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 270
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    },
+    "transaction": {
+      "mode": "transaction",
+      "contract": "explicit",
+      "gridRows": [
+        "428px",
+        "270px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 914,
+        "left": 330,
+        "right": 1372,
+        "width": 1042,
+        "height": 698
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 0,
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0
+        },
+        "#transactionCanvas": {
+          "top": 216,
+          "bottom": 644,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 428
+        },
+        ".bottom": {
+          "top": 644,
+          "bottom": 914,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 270
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    },
+    "split": {
+      "mode": "split",
+      "contract": "explicit",
+      "gridRows": [
+        "214px",
+        "214px",
+        "270px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 914,
+        "left": 330,
+        "right": 1372,
+        "width": 1042,
+        "height": 698
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 216,
+          "bottom": 430,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 214
+        },
+        "#transactionCanvas": {
+          "top": 430,
+          "bottom": 644,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 214
+        },
+        ".bottom": {
+          "top": 644,
+          "bottom": 914,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 270
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    },
+    "splitAfterResize": {
+      "mode": "split",
+      "contract": "explicit",
+      "gridRows": [
+        "195px",
+        "195px",
+        "308px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 914,
+        "left": 330,
+        "right": 1372,
+        "width": 1042,
+        "height": 698
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 216,
+          "bottom": 411,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 195
+        },
+        "#transactionCanvas": {
+          "top": 411,
+          "bottom": 606,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 195
+        },
+        ".bottom": {
+          "top": 606,
+          "bottom": 914,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 308
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    },
+    "splitRoundTrip": {
+      "mode": "cycle",
+      "contract": "explicit",
+      "gridRows": [
+        "390px",
+        "308px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 914,
+        "left": 330,
+        "right": 1372,
+        "width": 1042,
+        "height": 698
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 216,
+          "bottom": 606,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 390
+        },
+        "#transactionCanvas": {
+          "top": 0,
+          "bottom": 0,
+          "left": 0,
+          "right": 0,
+          "width": 0,
+          "height": 0
+        },
+        ".bottom": {
+          "top": 606,
+          "bottom": 914,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 308
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    },
+    "splitAgain": {
+      "mode": "split",
+      "contract": "explicit",
+      "gridRows": [
+        "195px",
+        "195px",
+        "308px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 914,
+        "left": 330,
+        "right": 1372,
+        "width": 1042,
+        "height": 698
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 216,
+          "bottom": 411,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 195
+        },
+        "#transactionCanvas": {
+          "top": 411,
+          "bottom": 606,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 195
+        },
+        ".bottom": {
+          "top": 606,
+          "bottom": 914,
+          "left": 330,
+          "right": 1372,
+          "width": 1042,
+          "height": 308
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    },
+    "small": {
+      "mode": "split",
+      "contract": "explicit",
+      "gridRows": [
+        "160px",
+        "160px",
+        "157px"
+      ],
+      "center": {
+        "top": 216,
+        "bottom": 693,
+        "left": 280,
+        "right": 1010,
+        "width": 730,
+        "height": 477
+      },
+      "elements": {
+        "#cycleCanvas": {
+          "top": 216,
+          "bottom": 376,
+          "left": 280,
+          "right": 1010,
+          "width": 730,
+          "height": 160
+        },
+        "#transactionCanvas": {
+          "top": 376,
+          "bottom": 536,
+          "left": 280,
+          "right": 1010,
+          "width": 730,
+          "height": 160
+        },
+        ".bottom": {
+          "top": 536,
+          "bottom": 693,
+          "left": 280,
+          "right": 1010,
+          "width": 730,
+          "height": 157
+        }
+      },
+      "inside": true,
+      "nonOverlap": true
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue82-1672x941.png",
+    "issue82-1280x720.png"
+  ]
+}
