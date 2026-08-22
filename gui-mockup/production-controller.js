@@ -15,7 +15,7 @@
   ];
   const canonicalDocument = {
     formatVersion: 1,
-    document: { id: 'example.tcd', title: 'Timing Chart' },
+    document: { id: 'example.tcd', title: 'Timing Chart', header: { subtitle: '', description: '', notes: '', preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: '', revision: '', text: '' } },
     timeline: { start: 0, end: 10, timeBase: 'cycle', cycleCount: 10, referenceClock: 'clk', edge: 'rising' },
     signalGroups: [
       { id: 'group_input', name: '入力 (Input)', rows: ['clk', 'req_valid', 'req_addr[7:0]', 'comment_01'] },
@@ -61,7 +61,7 @@
   };
   const serializeDocument = documentValue => ({
     formatVersion: documentValue.formatVersion,
-    document: { id: documentValue.document.id, title: documentValue.document.title },
+    document: { id: documentValue.document.id, title: documentValue.document.title, header: structuredClone(documentValue.document.header || { subtitle: '', description: '', notes: '', preconditions: [], constraints: [], exceptions: [] }), footer: structuredClone(documentValue.document.footer || { figureNumber: '', revision: '', text: '' }) },
     timeline: { start: documentValue.timeline.start, end: documentValue.timeline.end, timeBase: documentValue.timeline.timeBase, cycleCount: documentValue.timeline.cycleCount, referenceClock: documentValue.timeline.referenceClock, edge: documentValue.timeline.edge },
     signalGroups: documentValue.signalGroups.map(group => ({ id: group.id, name: group.name, rows: [...group.rows], ...(group.style ? { style: structuredClone(group.style) } : {}), ...(group.spacers ? { spacers: structuredClone(group.spacers) } : {}), ...(group.spacingBefore ? { spacingBefore: Number(group.spacingBefore) } : {}), ...(group.spacingAfter ? { spacingAfter: Number(group.spacingAfter) } : {}), ...(group.collapsed ? { collapsed: true } : {}) })),
     signals: documentValue.signals.map(serializeSignal),
@@ -149,6 +149,8 @@
   controller.actions.moveGroup = (groupId, targetIndex) => transactionRun('Move group', () => { const index = model.document.signalGroups.findIndex(group => group.id === groupId); if (index < 0 || targetIndex < 0 || targetIndex >= model.document.signalGroups.length) return false; const [group] = model.document.signalGroups.splice(index, 1); model.document.signalGroups.splice(targetIndex, 0, group); });
   controller.actions.setGroupAppearance = (groupId, style) => transactionRun('Update group appearance', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.style = { ...(group.style || {}), ...structuredClone(style) }; });
   controller.actions.addSpacer = (groupId, height = 16, index = -1) => transactionRun('Add spacer', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.spacers ??= []; const spacer = { id: `spacer_${Date.now()}`, height: Math.max(1, Number(height)) }; if (index < 0) group.spacers.push(spacer); else group.spacers.splice(index, 0, spacer); });
+  controller.actions.updateDocumentRegion = (region, field, value) => transactionRun(`Update document ${region}.${field}`, () => { if (!['header', 'footer'].includes(region)) return false; model.document.document[region] ??= {}; model.document.document[region][field] = Array.isArray(value) ? structuredClone(value) : String(value); });
+  controller.formatDocumentText = (text, maxChars = 80) => String(text || '').split(/\r?\n/).flatMap(line => { const words = line.trim().split(/\s+/).filter(Boolean); const lines = []; let current = ''; for (const word of words) { if (current && current.length + 1 + word.length > maxChars) { lines.push(current); current = word; } else current = current ? `${current} ${word}` : word; } if (current) lines.push(current); return lines; });
   const setValidation = issues => { model.validation = issues; };
   const canonicalize = signal => signal.values.sort((a, b) => Number(a.start) - Number(b.start));
   const validateValue = (signal, index, candidate) => { const issues = []; const start = Number(candidate.start); if (!Number.isInteger(start) || start < 0) issues.push({ field: 'start', code: 'negative-or-non-integer' }); if (start >= getTimeline().cycleCount) issues.push({ field: 'start', code: 'outside-document' }); if (signal.values.some((value, valueIndex) => valueIndex !== index && Number(value.start) === start)) issues.push({ field: 'start', code: 'duplicate-start' }); if (signal.type === 'binary' && !['0', '1', 'X', 'Z', 'x', 'z'].includes(String(candidate.value))) issues.push({ field: 'value', code: 'invalid-binary' }); if (signal.type === 'bus' && signal.width && /^[0-9a-f]+$/i.test(String(candidate.value)) && String(candidate.value).replace(/^0x/i, '').length * 4 > signal.width) issues.push({ field: 'value', code: 'bus-width-overflow' }); return issues; };

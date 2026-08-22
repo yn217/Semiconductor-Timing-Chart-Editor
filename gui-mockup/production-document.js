@@ -76,7 +76,7 @@
 
   const newDocument = () => ({
     formatVersion: 1,
-    document: { id: 'untitled.tcd', title: 'Untitled' },
+    document: { id: 'untitled.tcd', title: 'Untitled', header: { subtitle: '', description: '', notes: '', preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: '', revision: '', text: '' } },
     timeline: { start: 0, end: 1, timeBase: 'cycle', cycleCount: 1, referenceClock: 'clk', edge: 'rising' },
     signalGroups: [{ id: 'group_input', name: '入力 (Input)', rows: ['clk'] }],
     signals: [{ id: 'clk', name: 'clk', type: 'clock', role: 'input', generator: { start: 0, period: 1, duty: 0.5, phase: 0, initial: 0, polarity: 'positive' }, edgeCounter: { show: true, mode: 'rising', startNumber: 1, countFrom: 'signal-start', labelEvery: 1, position: 'above', offset: { x: 0, y: -6 } } }],
