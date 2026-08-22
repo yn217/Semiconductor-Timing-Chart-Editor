@@ -33,6 +33,9 @@ try {
   const wdState = await page.evaluate(() => ({ adapter: Boolean(window.TimingWaveDromAdapter), wavedrom: Boolean(window.WaveDrom?.RenderWaveForm), skin: Boolean(window.WaveSkin), body: document.body.innerHTML.includes('waveDromGeometry_0'), host: document.querySelector('#waveDromGeometry_0')?.innerHTML.slice(0, 120) ?? '', status: document.querySelector('#statusText')?.textContent ?? '' }));
   assert.ok(await page.locator('#waveDromGeometry_0 svg').count() > 0, `WaveDrom SVG subtree missing: ${JSON.stringify(wdState)}`);
   assert.ok(await page.locator('#waveDromGeometry_0 [id^="gmark_"]').count() >= 11, 'WaveDrom cycle geometry map missing');
+  assert.ok(await page.locator('#waveDromGeometry_0 svg path, #waveDromGeometry_0 svg polyline, #waveDromGeometry_0 svg polygon').count() > 0, 'WaveDrom SVG contains no signal geometry');
+  assert.equal(await page.locator('.wave-svg .signal-path, .wave-svg .bus-path').count(), 0, 'Custom signal trace paths must not be rendered');
+  assert.equal(await page.locator('.canvas-role-icon use[href^="icons.svg#role-"]').count(), await page.locator('.canvas-role-icon').count(), 'Canvas role icons must use shared SVG symbols');
   assert.ok(await page.locator('.canvas-role-icon').count() >= 3, 'Canvas role icon column missing');
   assert.ok(await page.locator('.signal-label').evaluateAll(labels => labels.every(label => !/^\s*(i|o|wire)\s+/.test(label.textContent))), 'Role/name must not be embedded in signal labels');
   assert.ok(fs.existsSync('test-results/gui-signal-tab.png'));

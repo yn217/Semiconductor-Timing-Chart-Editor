@@ -28,12 +28,10 @@
 .canvas-scroll{position:absolute;inset:34px 0 0;padding:8px 12px;overflow:auto}
 .waveform-canvas{min-width:760px}
 .wave-svg{display:block;background:#fff;border:0}
-.wave-svg .signal-path{fill:none;stroke:#1b4869;stroke-width:2}
-.wave-svg .bus-path{fill:#eef7ff;stroke:#1b4869;stroke-width:2}
 .wave-svg .grid{stroke:#eef1f4;stroke-width:1}
 .wave-svg .signal-label{font-size:12px;fill:#25354a}
 .wave-svg .cycle-label{font-size:11px;fill:#536278}
-.wave-svg .canvas-role-icon{font-size:10px;font-weight:600}.wave-svg .canvas-role-icon.role-input{fill:#16813d}.wave-svg .canvas-role-icon.role-output{fill:#176dcc}.wave-svg .canvas-role-icon.role-internal{fill:#596574}
+.wave-svg .canvas-role-icon{display:block;overflow:visible;pointer-events:none}.wave-svg .canvas-role-icon use{pointer-events:none}
 .legend{z-index:5}
 .bottom-content{flex:1;min-height:0;overflow:auto;padding:10px}
 .tabs button,.bottom nav button{cursor:pointer}
