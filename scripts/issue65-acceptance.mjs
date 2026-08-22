@@ -89,7 +89,7 @@ try {
   assert.equal(await page.evaluate(() => window.TimingChartProductionController.model.document.document.title), 'Issue65 imported through UI');
   await page.screenshot({ path: `${root}/issue65-1672x941.png` });
   await browser.close();
-  const report = { issue: 65, ...result, clockImportExport: true, pass: result.pass, knownIncomplete: ['JSON browser file-import E2E', 'full APB/AHB/AXI/CDC matrix'] };
+  const report = { issue: 65, ...result, clockImportExport: true, jsonFileImport: true, pass: result.pass, knownIncomplete: ['full APB/AHB/AXI/CDC matrix'] };
   fs.writeFileSync(`${root}/acceptance.json`, `${JSON.stringify(report, null, 2)}\n`);
   assert.ok(report.pass, 'Issue #65 progress acceptance failed');
   console.log('Issue #65 progress acceptance passed: Signal, Comment, Annotation, Transaction, and JSON editor paths use observable canonical operations.');
