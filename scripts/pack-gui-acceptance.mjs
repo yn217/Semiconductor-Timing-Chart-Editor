@@ -26,10 +26,11 @@ try {
   const reference = PNG.sync.read(fs.readFileSync('test-results/gui-pack-reference.png'));
   const dut = PNG.sync.read(fs.readFileSync('test-results/gui-pack-production.png'));
   assert.equal(reference.width, dut.width); assert.equal(reference.height, dut.height);
-  let changed = 0;
-  for (let i = 0; i < reference.data.length; i += 4) { const delta = Math.abs(reference.data[i] - dut.data[i]) + Math.abs(reference.data[i + 1] - dut.data[i + 1]) + Math.abs(reference.data[i + 2] - dut.data[i + 2]); if (delta > 24) changed++; }
+  let changed = 0; const diff = new PNG({ width: reference.width, height: reference.height });
+  for (let i = 0; i < reference.data.length; i += 4) { const delta = Math.abs(reference.data[i] - dut.data[i]) + Math.abs(reference.data[i + 1] - dut.data[i + 1]) + Math.abs(reference.data[i + 2] - dut.data[i + 2]); if (delta > 24) { changed++; diff.data[i] = 220; diff.data[i + 1] = 40; diff.data[i + 2] = 40; diff.data[i + 3] = 220; } else diff.data[i + 3] = 0; }
+  fs.writeFileSync('test-results/gui-pack-visual-diff.png', PNG.sync.write(diff));
   const totalPixels = reference.width * reference.height; const diffPercent = changed / totalPixels;
-  const report = { viewport: { width: 1672, height: 941 }, changedPixels: changed, totalPixels, diffPercent, threshold: 0.05, pass: diffPercent <= 0.05, screenshot: 'test-results/gui-pack-production.png', reference: 'test-results/gui-pack-reference.png', goldenImage: 'references/gui-replacement-pack/00_overall_cycle_view.png' };
+  const report = { viewport: { width: 1672, height: 941 }, changedPixels: changed, totalPixels, diffPercent, threshold: 0.05, pass: diffPercent <= 0.05, screenshot: 'test-results/gui-pack-production.png', reference: 'test-results/gui-pack-reference.png', visualDiff: 'test-results/gui-pack-visual-diff.png', goldenImage: 'references/gui-replacement-pack/00_overall_cycle_view.png' };
   fs.writeFileSync('test-results/gui-pack-acceptance.json', JSON.stringify(report, null, 2));
   assert.ok(report.pass, `Replacement Pack visual diff ${(diffPercent * 100).toFixed(2)}% exceeds 5%`);
   await browser.close();
