@@ -60,6 +60,20 @@
   controller.actions.deleteRange = removeRange;
   model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
 
+  const renderEdgeCounters = currentModel => {
+    const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;
+    canvas.querySelectorAll('[data-edge-counter]').forEach(node => node.remove());
+    const canvasRect = canvas.getBoundingClientRect();
+    for (const signal of currentModel.document.signals.filter(item => item.type === 'clock' && item.edgeCounter?.show)) {
+      const counter = signal.edgeCounter; const mode = counter.mode || 'rising';
+      const rising = currentModel.waveGeometry?.signals?.[signal.id]?.risingEdge || [];
+      const falling = currentModel.waveGeometry?.signals?.[signal.id]?.fallingEdge || [];
+      const edges = (mode === 'both' ? [...rising.map(edge => ({ ...edge, edge: 'rising' })), ...falling.map(edge => ({ ...edge, edge: 'falling' }))] : mode === 'falling' ? falling.map(edge => ({ ...edge, edge: 'falling' })) : rising.map(edge => ({ ...edge, edge: 'rising' }))).sort((a, b) => a.canvasX - b.canvasX);
+      const startNumber = Number(counter.startNumber ?? 1); const every = Math.max(1, Number(counter.labelEvery ?? 1));
+      edges.forEach((edge, index) => { if (index % every) return; const label = document.createElement('span'); label.dataset.edgeCounter = signal.id; label.textContent = String(startNumber + index); label.style.cssText = `position:absolute;left:${edge.canvasX - canvasRect.left + Number(counter.offset?.x || 0)}px;top:${edge.canvasY - canvasRect.top + Number(counter.offset?.y || (counter.position === 'below' ? 8 : -8))}px;z-index:5;color:#52647a;font:11px sans-serif;pointer-events:none;`; label.title = `${signal.id} ${edge.edge} edge ${startNumber + index}`; canvas.appendChild(label); });
+    }
+  };
+
   const renderTransient = currentModel => {
     const timeline = currentModel.document.timeline;
     const ruler = document.querySelector('#cycleCanvas .ruler');
@@ -88,6 +102,7 @@
     const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
     const canvas = document.querySelector('#cycleCanvas');
     if (playhead && boundary && canvas) { const rect = canvas.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + canvas.scrollLeft}px`; }
+    renderEdgeCounters(currentModel);
   };
   controller.renderTransient = renderTransient;
   window.TimingChartProductionTimeAxis = { renderTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };

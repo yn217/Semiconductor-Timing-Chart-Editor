@@ -1,0 +1,15 @@
+{
+  "userFacingWaveString": false,
+  "semanticChangePoint": true,
+  "continuation": true,
+  "derivedEdgeNumbers": true,
+  "modes": {
+    "rising": true,
+    "both": true
+  },
+  "labelEvery": true,
+  "geometrySource": "wavedrom-svg",
+  "offsets": true,
+  "persistenceWithoutGeneratedList": true,
+  "pass": true
+}
