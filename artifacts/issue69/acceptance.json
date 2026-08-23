@@ -1,0 +1,59 @@
+{
+  "issue": 69,
+  "controls": {
+    "twoColors": true,
+    "stroke": true,
+    "fill": true,
+    "typography": true,
+    "multiline": true,
+    "wrap": true,
+    "labelOffset": true,
+    "placement": true,
+    "zOrder": true,
+    "lock": true,
+    "visibilityCommandCount": 1
+  },
+  "typeAware": true,
+  "saveOpen": {
+    "dependencyStyle": true,
+    "calloutFill": true
+  },
+  "undoRedo": {
+    "propertiesChecked": [
+      "style.strokeColor",
+      "style.strokeWidth",
+      "style.lineStyle",
+      "style.strokeOpacity",
+      "style.text.color",
+      "style.text.fontFamily",
+      "style.text.fontSize",
+      "style.text.bold",
+      "style.text.italic",
+      "style.text.underline",
+      "style.text.strikethrough",
+      "style.text.align",
+      "style.text.wrap",
+      "style.text.maxWidth",
+      "style.text.lineHeight",
+      "labelPlacement",
+      "labelOffset.x",
+      "labelOffset.y",
+      "visible",
+      "zOrder",
+      "locked",
+      "style.fillColor",
+      "style.fillOpacity"
+    ],
+    "singleHistoryEntry": true
+  },
+  "lockBlocks": [
+    "style",
+    "anchor",
+    "picker",
+    "keyboard",
+    "pointerDrag"
+  ],
+  "waveDromRegenerationDelta": 0,
+  "pageErrors": [],
+  "pass": true
+}
