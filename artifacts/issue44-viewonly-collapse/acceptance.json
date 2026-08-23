@@ -1,0 +1,24 @@
+{
+  "issue": 44,
+  "note": "view-only Left Tree group collapse must not affect the center Timing Chart rows",
+  "setup": true,
+  "collapseFlow": {
+    "leftRowsHidden": true,
+    "timingRowsStillVisible": true,
+    "timingOrderUnchanged": true,
+    "timingCountUnchanged": true,
+    "waveDromUnchanged": true,
+    "geometryUnchanged": true,
+    "leftRowsRestored": true
+  },
+  "eyeIndependence": {
+    "ok": true,
+    "hiddenByEye": true,
+    "restoredVisible": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue44-viewonly-collapse-1672x941.png"
+  ]
+}
