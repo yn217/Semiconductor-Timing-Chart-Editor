@@ -54,6 +54,10 @@
       const text = label(tool);
       const action = homeActions.find(([name]) => text.includes(name));
       if (action) { implement(tool, action[1]); return; }
+      if (text === '上へ' || text === '下へ') {
+        implement(tool, () => controller.actions.moveSignalBy(controller.model.selection?.id, text === '上へ' ? -1 : 1));
+        return;
+      }
       if (/新規|開く|保存|Undo|Redo|Cycle挿入|Cycle削除|NCycle挿入|範囲削除/.test(text)) { record(tool, 'implemented'); return; }
       if (/グリッド|スナップ|ルーラー|ミニマップ/.test(text)) return;
       if (/切取|コピー|貼付|削除|複製|上へ|下へ|別グループへ移動|表示\/非表示|行間隔|Group間隔|自動レイアウト|SVG出力|PNG出力|PDF出力/.test(text)) disable(tool, '未実装の操作です。対応予定: #32 / #34');
@@ -132,6 +136,24 @@
       }
     });
   };
+
+  const refreshReorderControls = () => {
+    const selection = controller.model.selection || {};
+    const group = controller.model.document.signalGroups?.find(item => (item.rows || []).includes(selection.id));
+    const index = group ? group.rows.indexOf(selection.id) : -1;
+    const reorderable = (selection.kind === 'signal' || selection.kind === 'comment') && Boolean(group) && index >= 0;
+    document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
+      const text = label(tool);
+      if (text !== '上へ' && text !== '下へ') return;
+      const isUp = text === '上へ';
+      const atBoundary = !reorderable || (isUp ? index === 0 : index === group.rows.length - 1);
+      tool.disabled = atBoundary;
+      tool.dataset.controlStatus = 'implemented';
+      const reason = !reorderable ? 'SignalまたはComment Rowを選択してください' : atBoundary ? (isUp ? 'このGroupの先頭行です' : 'このGroupの末尾行です') : '';
+      if (reason) tool.title = reason; else tool.removeAttribute('title');
+      record(tool, 'implemented', reason);
+    });
+  };
   const run = () => {
     inventory.metrics.controlAuditRuns++;
     applyRibbon();
@@ -150,5 +172,10 @@
   inventory.register = record;
   inventory.registerSubtree = registerSubtree;
   inventory.run = run;
+  controller.registerRenderHook?.('control-completeness-reorder', refreshReorderControls);
+  document.addEventListener('click', event => {
+    if (event.target.closest?.('#groups .row')) requestAnimationFrame(refreshReorderControls);
+  }, true);
   run();
+  refreshReorderControls();
 })();
