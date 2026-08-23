@@ -7,11 +7,9 @@
       "表示",
       "#",
       "種類",
-      "Range",
       "ラベル / 本文",
-      "配置先",
-      "X",
-      "Y",
+      "Start",
+      "End",
       "色",
       "コメント"
     ],
@@ -21,6 +19,7 @@
         "hasButton": true,
         "hasSvg": true,
         "hasUse": true,
+        "noUnicodeGlyph": true,
         "iconMatch": true,
         "annotationId": "ann_default_range",
         "annotationVisible": false,
@@ -30,6 +29,7 @@
         "hasButton": true,
         "hasSvg": true,
         "hasUse": true,
+        "noUnicodeGlyph": true,
         "iconMatch": true,
         "annotationId": "ann_default_marker",
         "annotationVisible": false,
@@ -39,6 +39,7 @@
         "hasButton": true,
         "hasSvg": true,
         "hasUse": true,
+        "noUnicodeGlyph": true,
         "iconMatch": true,
         "annotationId": "ann_default_callout",
         "annotationVisible": false,
@@ -48,6 +49,7 @@
         "hasButton": true,
         "hasSvg": true,
         "hasUse": true,
+        "noUnicodeGlyph": true,
         "iconMatch": true,
         "annotationId": "ann_default_dependency",
         "annotationVisible": false,
@@ -57,6 +59,7 @@
         "hasButton": true,
         "hasSvg": true,
         "hasUse": true,
+        "noUnicodeGlyph": true,
         "iconMatch": true,
         "annotationId": "ann_default_highlight",
         "annotationVisible": false,
@@ -65,8 +68,30 @@
     ],
     "allHaveSvgIcons": true,
     "allIconsMatch": true,
-    "firstAnnotationId": "ann_default_range",
-    "toggleWorks": true
+    "allNoUnicodeGlyph": true,
+    "selectedBefore": "ann_default_marker"
+  },
+  "afterHide": {
+    "visible": true,
+    "rowStillInTable": true,
+    "selectionUnchanged": true,
+    "dirty": true
+  },
+  "afterRestore": {
+    "visible": false,
+    "rowStillInTable": true,
+    "selectionUnchanged": true
+  },
+  "undoRedoCheck": {
+    "before": false,
+    "afterToggle": true,
+    "canUndo": true,
+    "afterUndo": false,
+    "toggledCorrectly": true,
+    "undoRestored": true
+  },
+  "persistenceCheck": {
+    "visiblePersisted": true
   },
   "errors": [],
   "pass": true,

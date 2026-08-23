@@ -2,39 +2,102 @@
   "issue": 119,
   "result": {
     "tableExists": true,
-    "headerCount": 10,
     "headers": [
-      "□",
+      "表示",
       "#",
       "種類",
-      "Range",
       "ラベル / 本文",
-      "配置先",
-      "X",
-      "Y",
+      "Start",
+      "End",
       "色",
       "コメント"
     ],
-    "hasRangeColumn": true,
-    "hasStartColumn": false,
-    "hasEndColumn": false,
-    "sampleRows": [
+    "hasStartColumn": true,
+    "hasEndColumn": true,
+    "hasStackedRangeColumn": false,
+    "rowData": [
       {
+        "id": "ann_default_range",
         "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
-        "range": "4–10"
+        "start": "req_valid ↑ (4)",
+        "end": "ready ↑ (10)",
+        "startHasInput": false,
+        "endHasInput": false
       },
       {
+        "id": "ann_default_marker",
         "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
-        "range": "4"
+        "start": "clk ↑ (4)",
+        "end": "—",
+        "startHasInput": false,
+        "endHasInput": false
       },
       {
+        "id": "ann_default_callout",
         "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
-        "range": "4"
+        "start": "req_valid ↑ (4)",
+        "end": "—",
+        "startHasInput": false,
+        "endHasInput": false
+      },
+      {
+        "id": "ann_default_dependency",
+        "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+        "start": "state[1:0] = WAIT ↕ (4)",
+        "end": "rdata[15:0] = 5678 ↕ (6)",
+        "startHasInput": false,
+        "endHasInput": false
+      },
+      {
+        "id": "ann_default_highlight",
+        "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+        "start": "4",
+        "end": "10",
+        "startHasInput": false,
+        "endHasInput": false
       }
     ],
-    "rangesConcise": true,
-    "annotationCount": 5
+    "markerRow": {
+      "id": "ann_default_marker",
+      "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+      "start": "clk ↑ (4)",
+      "end": "—",
+      "startHasInput": false,
+      "endHasInput": false
+    },
+    "dependencyRow": {
+      "id": "ann_default_dependency",
+      "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+      "start": "state[1:0] = WAIT ↕ (4)",
+      "end": "rdata[15:0] = 5678 ↕ (6)",
+      "startHasInput": false,
+      "endHasInput": false
+    },
+    "rangeRow": {
+      "id": "ann_default_range",
+      "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+      "start": "req_valid ↑ (4)",
+      "end": "ready ↑ (10)",
+      "startHasInput": false,
+      "endHasInput": false
+    },
+    "highlightRow": {
+      "id": "ann_default_highlight",
+      "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+      "start": "4",
+      "end": "10",
+      "startHasInput": false,
+      "endHasInput": false
+    },
+    "allCellsReadOnly": true,
+    "markerEndIsDash": true,
+    "dependencyStartNotEmpty": true,
+    "dependencyEndNotEmpty": true,
+    "rangeStartEndBothPresent": true,
+    "highlightStartEndBothPresent": true
   },
+  "selectionWorks": true,
+  "docUnchangedAfterRender": true,
   "errors": [],
   "pass": true,
   "artifacts": [

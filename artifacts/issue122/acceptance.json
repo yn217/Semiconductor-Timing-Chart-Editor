@@ -1,0 +1,35 @@
+{
+  "issue": 122,
+  "wideEval": {
+    "width": 1672,
+    "centerExpanded": true,
+    "centerNoOverlapLeft": true,
+    "inspectorShrunk": true,
+    "selectionPreservedDuring": true,
+    "selectionPreservedAfter": true,
+    "docIdentical": true,
+    "collapsedOnce": true,
+    "restoredOnce": true,
+    "restoreControlVisible": true,
+    "pass": true
+  },
+  "narrowEval": {
+    "width": 1280,
+    "centerExpanded": true,
+    "centerNoOverlapLeft": true,
+    "inspectorShrunk": true,
+    "selectionPreservedDuring": true,
+    "selectionPreservedAfter": true,
+    "docIdentical": true,
+    "collapsedOnce": true,
+    "restoredOnce": true,
+    "restoreControlVisible": true,
+    "pass": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue122-1672px.png",
+    "issue122-1280px.png"
+  ]
+}

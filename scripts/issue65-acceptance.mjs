@@ -47,21 +47,25 @@ try {
     annotationRow.click(); await wait(25);
     const label = annotationRow.querySelector('[data-annotation-field="label"]');
     const color = annotationRow.querySelector('[data-annotation-field="color"]');
-    const startAnchor = annotationRow.querySelector('[data-annotation-anchor-action="start"]');
     const typeSelect = annotationRow.querySelector('[data-annotation-field="type"]');
-    const endCycle = annotationRow.querySelector('[data-annotation-anchor-field="end.cycle"]');
-    if (!label || !color || !startAnchor || !typeSelect || !endCycle) throw new Error('Annotation table editor fields missing');
-    startAnchor.click(); await wait(20);
-    if (document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'anchor' && document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'start') throw new Error('Annotation Start anchor picker was not activated');
-    c.actions.cancelAnnotationAnchorSelection();
+    if (!label || !color || !typeSelect) throw new Error('Annotation table editor fields missing');
     label.value = 'Edited annotation'; label.dispatchEvent(new Event('change', { bubbles: true }));
     color.value = '#e39a25'; color.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
-    const endCycleInput = document.querySelector('#bottomContent [data-annotation-anchor-field="end.cycle"]'); const endCycleBefore = Number(endCycleInput.value); const cycleLimit = Number(c.model.document.timeline.cycleCount); endCycleInput.value = String(endCycleBefore < cycleLimit ? endCycleBefore + 1 : Math.max(0, endCycleBefore - 1)); endCycleInput.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
+    // Per #118/#124 architecture, anchor pick and per-anchor cycle editing now live in the Inspector, not the Bottom table.
+    c.actions.selectAnnotation(c.model.selection.id); await wait(50);
+    const pickButton = document.querySelector('#inspectorBody [data-inspector-anchor-pick]');
+    if (!pickButton) throw new Error('Inspector anchor pick entry point missing');
+    pickButton.click(); await wait(20);
+    if (!document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick) throw new Error('Annotation anchor picker was not activated');
+    c.actions.cancelAnnotationAnchorSelection();
+    const endCycleInput = document.querySelector('#inspectorBody [data-annotation-anchor-key="end"][data-annotation-anchor-prop="cycle"]');
+    if (!endCycleInput) throw new Error('Inspector End Anchor cycle field missing');
+    const endCycleBefore = Number(endCycleInput.value); const cycleLimit = Number(c.model.document.timeline.cycleCount); const endCycleTarget = endCycleBefore < cycleLimit ? endCycleBefore + 1 : Math.max(0, endCycleBefore - 1); endCycleInput.value = String(endCycleTarget); endCycleInput.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
     const typeAfterEdit = document.querySelector('#bottomContent tr[data-annotation-id] [data-annotation-field="type"]');
     const originalType = typeAfterEdit.value; typeAfterEdit.value = originalType === 'range' ? 'bracket' : 'range'; typeAfterEdit.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
     const typeRestore = document.querySelector('#bottomContent tr[data-annotation-id] [data-annotation-field="type"]'); typeRestore.value = originalType; typeRestore.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
     const selectedAnnotation = c.model.document.annotations.find(item => item.id === c.model.selection.id);
-    if (selectedAnnotation.label !== 'Edited annotation' || selectedAnnotation.color !== '#e39a25' || selectedAnnotation.type !== originalType || Number(selectedAnnotation.end?.cycle) !== Number(endCycleInput.value)) throw new Error('Annotation table edit did not reach canonical model');
+    if (selectedAnnotation.label !== 'Edited annotation' || selectedAnnotation.color !== '#e39a25' || selectedAnnotation.type !== originalType || Number(selectedAnnotation.end?.cycle) !== endCycleTarget) throw new Error('Annotation table/Inspector edit did not reach canonical model');
 
     await selectTab('transaction');
     c.actions.addTransaction({ id: 'issue65_txn', name: 'Initial', start: 1, end: 3 }); await wait(25);

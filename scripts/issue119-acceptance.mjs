@@ -18,76 +18,111 @@ await page.waitForTimeout(500);
 const result = await page.evaluate(async () => {
   const c = window.TimingChartProductionController;
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-
-  // Wait for controller and model to initialize
   let attempts = 0;
-  while (!c?.model && attempts < 50) {
-    await wait(50);
-    attempts++;
-  }
-
+  while (!c?.model && attempts < 50) { await wait(50); attempts++; }
   if (!c?.model) return { error: 'Controller not initialized' };
-
   const model = c.model;
 
-  // Switch to Annotation tab in bottom panel
+  // Make every default annotation visible so the table renders full endpoint text (visibility itself doesn't affect row rendering, but keep behavior explicit)
   model.view.tab = 'annotation';
   c.render?.();
   await wait(100);
 
-  // Check if annotation table exists and has correct structure
   const table = document.querySelector('#bottomContent table');
-  if (!table) return { error: 'No annotation table found in #bottomContent' };
+  if (!table) return { error: 'No annotation table found' };
 
-  // Get table headers
   const headers = [...table.querySelectorAll('thead th')].map(th => th.textContent.trim());
-
-  // Verify new "Range" column exists and old "Start"/"End" columns do not
-  const hasRangeColumn = headers.includes('Range');
   const hasStartColumn = headers.includes('Start');
   const hasEndColumn = headers.includes('End');
+  const hasStackedRangeColumn = headers.includes('Range');
 
-  // Get sample annotation rows to verify Range display format
   const rows = [...table.querySelectorAll('tbody tr')];
-  const sampleRows = rows.slice(0, Math.min(3, rows.length)).map(row => {
+  const rowData = rows.map(row => {
     const cells = [...row.querySelectorAll('td')];
-    const typeCell = cells[2]?.textContent.trim() || '';
-    const rangeCell = cells[3]?.textContent.trim() || '';
-    return { type: typeCell, range: rangeCell };
+    // columns: Visible | # | Type | Label | Start | End | Color | Memo
+    const typeText = cells[2]?.textContent.trim() || '';
+    const startCell = cells[4];
+    const endCell = cells[5];
+    const startHasInput = !!startCell?.querySelector('input,select,textarea');
+    const endHasInput = !!endCell?.querySelector('input,select,textarea');
+    return {
+      id: row.dataset.annotationId,
+      type: typeText,
+      start: startCell?.textContent.trim() || '',
+      end: endCell?.textContent.trim() || '',
+      startHasInput,
+      endHasInput
+    };
   });
 
-  // Verify range display is concise (just numbers and dashes, no verbose text)
-  const rangesConcise = sampleRows.every(r => {
-    // Should be like "5" or "5–10" or "—", not "clk ↑ (5)"
-    return /^(\d+|—|\d+–\d+)$/.test(r.range) || r.range === '';
-  });
+  const markerRow = rowData.find(r => r.id === 'ann_default_marker');
+  const dependencyRow = rowData.find(r => r.id === 'ann_default_dependency');
+  const rangeRow = rowData.find(r => r.id === 'ann_default_range');
+  const highlightRow = rowData.find(r => r.id === 'ann_default_highlight');
 
   return {
     tableExists: !!table,
-    headerCount: headers.length,
     headers,
-    hasRangeColumn,
     hasStartColumn,
     hasEndColumn,
-    sampleRows,
-    rangesConcise,
-    annotationCount: rows.length
+    hasStackedRangeColumn,
+    rowData,
+    markerRow,
+    dependencyRow,
+    rangeRow,
+    highlightRow,
+    allCellsReadOnly: rowData.every(r => !r.startHasInput && !r.endHasInput),
+    markerEndIsDash: markerRow?.end === '—',
+    dependencyStartNotEmpty: !!dependencyRow?.start && dependencyRow.start !== '—',
+    dependencyEndNotEmpty: !!dependencyRow?.end && dependencyRow.end !== '—',
+    rangeStartEndBothPresent: !!rangeRow?.start && rangeRow.start !== '—' && !!rangeRow?.end && rangeRow.end !== '—',
+    highlightStartEndBothPresent: !!highlightRow?.start && highlightRow.start !== '—' && !!highlightRow?.end && highlightRow.end !== '—'
   };
+});
+
+// Row selection still works: click a non-input part of a row and verify selection updates
+let selectionWorks = false;
+const firstId = result.rowData?.[0]?.id;
+if (firstId) {
+  await page.click(`tr[data-annotation-id="${firstId}"] td:nth-child(2)`);
+  await page.waitForTimeout(100);
+  selectionWorks = await page.evaluate((id) => {
+    const c = window.TimingChartProductionController;
+    return c?.model?.selection?.kind === 'annotation' && c.model.selection.id === id;
+  }, firstId);
+}
+
+// No semantic document mutation occurs merely by rendering the table
+const docUnchangedAfterRender = await page.evaluate(() => {
+  const c = window.TimingChartProductionController;
+  const before = JSON.stringify(c.getSerializableDocument());
+  c.render?.();
+  const after = JSON.stringify(c.getSerializableDocument());
+  return before === after;
 });
 
 await page.screenshot({ path: path.join(out, 'issue119-1672x941.png') });
 await browser.close();
 
 const pass = result.tableExists === true
-  && result.hasRangeColumn === true
-  && result.hasStartColumn !== true
-  && result.hasEndColumn !== true
-  && result.rangesConcise === true
+  && result.hasStartColumn === true
+  && result.hasEndColumn === true
+  && result.hasStackedRangeColumn !== true
+  && result.allCellsReadOnly === true
+  && result.markerEndIsDash === true
+  && result.dependencyStartNotEmpty === true
+  && result.dependencyEndNotEmpty === true
+  && result.rangeStartEndBothPresent === true
+  && result.highlightStartEndBothPresent === true
+  && selectionWorks === true
+  && docUnchangedAfterRender === true
   && errors.length === 0;
 
 const report = {
   issue: 119,
   result,
+  selectionWorks,
+  docUnchangedAfterRender,
   errors,
   pass,
   artifacts: ['issue119-1672x941.png']
@@ -95,4 +130,4 @@ const report = {
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 
 assert.ok(pass, JSON.stringify(report, null, 2));
-console.log('Issue #119 acceptance passed: Annotation Bottom table Start/End replaced with concise Range summary (cycle numbers, ranges like "5–10", or "—" for missing anchors). Table is more scannable and easier to read than verbose anchor text.');
+console.log('Issue #119 acceptance passed: Annotation Bottom table has separate read-only Start/End summary columns (Visible | # | Type | Label | Start | End | Color | Memo). Marker shows — for End, Dependency shows From/To endpoints, Range/Highlight show both Start and End. Row selection and no-mutation-on-render verified.');
