@@ -11,7 +11,8 @@
       "geometryCacheHits": 0,
       "waveCacheHits": 0,
       "rowCreates": 60,
-      "rowRemoves": 20
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 0
     },
     "afterSignalSelection": {
       "waveDromRenders": 0,
@@ -19,47 +20,77 @@
       "geometryCacheHits": 0,
       "waveCacheHits": 0,
       "rowCreates": 60,
-      "rowRemoves": 20
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 0
+    },
+    "visibility": {
+      "before": {
+        "waveDromRenders": 0,
+        "geometryBuilds": 0,
+        "geometryCacheHits": 0,
+        "waveCacheHits": 0,
+        "rowCreates": 60,
+        "rowRemoves": 20,
+        "geometryScreenRefreshes": 0
+      },
+      "after": {
+        "waveDromRenders": 0,
+        "geometryBuilds": 0,
+        "geometryCacheHits": 1,
+        "waveCacheHits": 50,
+        "rowCreates": 60,
+        "rowRemoves": 20,
+        "geometryScreenRefreshes": 1
+      },
+      "state": {
+        "timingHidden": true,
+        "unrelatedTraceRetained": true
+      }
     },
     "afterAnnotationSelection": {
-      "waveDromRenders": 0,
-      "geometryBuilds": 0,
-      "geometryCacheHits": 2,
-      "waveCacheHits": 100,
-      "rowCreates": 60,
-      "rowRemoves": 20
-    },
-    "afterAnnotationEdit": {
-      "waveDromRenders": 0,
-      "geometryBuilds": 0,
-      "geometryCacheHits": 3,
-      "waveCacheHits": 150,
-      "rowCreates": 60,
-      "rowRemoves": 20
-    },
-    "afterDisplayName": {
       "waveDromRenders": 0,
       "geometryBuilds": 0,
       "geometryCacheHits": 4,
       "waveCacheHits": 200,
       "rowCreates": 60,
-      "rowRemoves": 20
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 2
+    },
+    "afterAnnotationEdit": {
+      "waveDromRenders": 0,
+      "geometryBuilds": 0,
+      "geometryCacheHits": 5,
+      "waveCacheHits": 250,
+      "rowCreates": 60,
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 2
+    },
+    "afterDisplayName": {
+      "waveDromRenders": 0,
+      "geometryBuilds": 0,
+      "geometryCacheHits": 6,
+      "waveCacheHits": 300,
+      "rowCreates": 60,
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 2
     },
     "afterReorder": {
       "waveDromRenders": 0,
-      "geometryBuilds": 1,
-      "geometryCacheHits": 4,
-      "waveCacheHits": 250,
+      "geometryBuilds": 0,
+      "geometryCacheHits": 7,
+      "waveCacheHits": 350,
       "rowCreates": 60,
-      "rowRemoves": 20
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 3
     },
     "afterSignalEdit": {
       "waveDromRenders": 1,
-      "geometryBuilds": 2,
-      "geometryCacheHits": 4,
-      "waveCacheHits": 299,
+      "geometryBuilds": 1,
+      "geometryCacheHits": 7,
+      "waveCacheHits": 399,
       "rowCreates": 60,
-      "rowRemoves": 20
+      "rowRemoves": 20,
+      "geometryScreenRefreshes": 3
     },
     "traceRetainedAfterReorder": true,
     "signalCount": 50,

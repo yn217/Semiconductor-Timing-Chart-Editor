@@ -51,6 +51,18 @@ const result = await page.evaluate(async () => {
   for (let index = 0; index < 20; index += 1) rows[index % rows.length].click();
   const afterSignalSelection = snapshot();
 
+  const visibilityBefore = snapshot();
+  document.querySelector('#groups .row[data-signal="issue95_sig_1"] .eye')?.click();
+  await new Promise(resolve => setTimeout(resolve, 40));
+  const visibilityAfter = snapshot();
+  const visibilityState = (() => {
+    const row = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_1"]');
+    const unrelated = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_2"] .trace svg');
+    return { timingHidden: row?.hidden === true, unrelatedTraceRetained: Boolean(unrelated) };
+  })();
+  document.querySelector('#groups .row[data-signal="issue95_sig_1"] .eye')?.click();
+  await new Promise(resolve => setTimeout(resolve, 40));
+
   document.querySelector('#bottomTabs [data-tab="annotation"]')?.click();
   await new Promise(resolve => setTimeout(resolve, 30));
   document.querySelector('#bottomContent [data-annotation-id="issue95_annotation"]')?.click();
@@ -68,6 +80,7 @@ const result = await page.evaluate(async () => {
   return {
     before,
     afterSignalSelection,
+    visibility: { before: visibilityBefore, after: visibilityAfter, state: visibilityState },
     afterAnnotationSelection,
     afterAnnotationEdit,
     afterDisplayName,
@@ -86,6 +99,10 @@ const result = await page.evaluate(async () => {
 assert.equal(result.errors.length, 0);
 assert.equal(result.afterSignalSelection.waveDromRenders, 0, JSON.stringify(result));
 assert.equal(result.afterSignalSelection.geometryBuilds, 0, JSON.stringify(result));
+assert.equal(result.visibility.after.waveDromRenders - result.visibility.before.waveDromRenders, 0, JSON.stringify(result));
+assert.equal(result.visibility.after.geometryBuilds - result.visibility.before.geometryBuilds, 0, JSON.stringify(result));
+assert.equal(result.visibility.state.timingHidden, true, JSON.stringify(result));
+assert.equal(result.visibility.state.unrelatedTraceRetained, true, JSON.stringify(result));
 assert.equal(result.afterAnnotationSelection.waveDromRenders, 0, JSON.stringify(result));
 assert.equal(result.afterAnnotationSelection.geometryBuilds, 0, JSON.stringify(result));
 assert.equal(result.afterAnnotationEdit.waveDromRenders, 0, JSON.stringify(result));
