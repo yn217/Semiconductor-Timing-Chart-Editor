@@ -53,16 +53,21 @@
   const validInteger = value => Number.isInteger(Number(value)) && Number(value) >= 0;
   const renderTimelineInvalidation = currentModel => {
     const started = performance.now();
-    window.TimingChartProductionWaveform?.render?.(currentModel);
-    const waveformFinished = performance.now();
-    window.TimingChartProductionTimeAxis?.renderNow?.(currentModel);
-    const axisFinished = performance.now();
-    window.TimingChartProductionAnnotations?.render?.(currentModel);
-    const annotationFinished = performance.now();
-    if (currentModel.view.mode !== 'cycle' || currentModel.view.tab === 'transaction') window.TimingChartProductionTransactions?.render?.(currentModel);
-    if (currentModel.view.tab) window.TimingChartProductionUi?.refreshBottom?.(currentModel);
-    controller.viewRibbon?.scheduleGrid?.(); controller.viewRibbon?.scheduleMinimap?.();
-    controller.lastTimelineInvalidation = { waveformMs: waveformFinished - started, axisMs: axisFinished - waveformFinished, annotationMs: annotationFinished - axisFinished, totalMs: performance.now() - started };
+    const waveformPromise = window.TimingChartProductionWaveform?.renderTimeline?.(currentModel) || Promise.resolve(window.TimingChartProductionWaveform?.render?.(currentModel));
+    controller.waveformIdle = Promise.resolve(waveformPromise).then(result => {
+      if (result === false) return false;
+      const waveformFinished = performance.now();
+      window.TimingChartProductionTimeAxis?.renderNow?.(currentModel);
+      const axisFinished = performance.now();
+      window.TimingChartProductionAnnotations?.render?.(currentModel);
+      const annotationFinished = performance.now();
+      if (currentModel.view.mode !== 'cycle' || currentModel.view.tab === 'transaction') window.TimingChartProductionTransactions?.render?.(currentModel);
+      if (currentModel.view.tab) window.TimingChartProductionUi?.refreshBottom?.(currentModel);
+      controller.viewRibbon?.scheduleGrid?.(); controller.viewRibbon?.scheduleMinimap?.();
+      controller.lastTimelineInvalidation = { waveformMs: waveformFinished - started, axisMs: axisFinished - waveformFinished, annotationMs: annotationFinished - axisFinished, totalMs: performance.now() - started };
+      return controller.lastTimelineInvalidation;
+    });
+    return controller.waveformIdle;
   };
   const run = (label, mutation) => {
     if (model.document.timeline.timeBase !== 'cycle') { model.validation = [{ code: 'time-axis-cycle-only', message: 'Cycle操作はcycle modeでのみ有効です' }]; controller.render(); return false; }

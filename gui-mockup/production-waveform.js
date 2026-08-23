@@ -120,8 +120,11 @@
 
   function actualBoundaries(svg) {
     const lines = [...svg.querySelectorAll('[id^="gmarks_"] line[id^="gmark_"]')];
+    const svgMatrix = svg.getCTM?.();
+    const svgInverse = svgMatrix?.inverse?.();
+    const markMatrix = svgInverse && lines[0]?.getCTM?.() ? svgInverse.multiply(lines[0].getCTM()) : null;
     return lines.map(line => {
-      const matrix = rootMatrix(svg, line);
+      const matrix = markMatrix || rootMatrix(svg, line);
       return matrixPoint(matrix, { x: Number(line.getAttribute('x1')), y: Number(line.getAttribute('y1')) });
     }).filter((point, index, all) => index === 0 || Math.abs(point.x - all[index - 1].x) > 0.1);
   }
@@ -154,10 +157,10 @@
     };
   }
 
-  function boundaryRecord(signal, cycle, point, svg) {
-    const rect = svg.getBoundingClientRect();
-    const viewBox = svg.viewBox.baseVal;
-    const screen = new DOMPoint(point.x, point.y).matrixTransform(svg.getScreenCTM());
+  function boundaryRecord(signal, cycle, point, svg, transform) {
+    const rect = transform?.rect || svg.getBoundingClientRect();
+    const viewBox = transform?.viewBox || svg.viewBox.baseVal;
+    const screen = transform?.matrix ? matrixPoint(transform.matrix, point) : new DOMPoint(point.x, point.y).matrixTransform(svg.getScreenCTM());
     const canvasX = screen.x;
     const canvasY = screen.y;
     return {
@@ -182,13 +185,21 @@
     for (const item of mounted) {
       if (!item) continue;
       const { signal, svg } = item;
+      const screenMatrix = svg.getScreenCTM?.();
+      const screenRect = svg.getBoundingClientRect?.();
+      const viewBox = svg.viewBox?.baseVal;
+      const transform = {
+        matrix: screenMatrix,
+        rect: screenRect && { left: screenRect.left, top: screenRect.top, width: screenRect.width, height: screenRect.height },
+        viewBox: viewBox && { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height }
+      };
       const rawBoundaries = actualBoundaries(svg);
       const boundaries = item.subcycleFactor > 1 ? rawBoundaries.filter((point, index) => index % item.subcycleFactor === 0 || index === rawBoundaries.length - 1) : rawBoundaries;
-      if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg));
+      if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform));
       const lane = svg.querySelector('[id^="wavelane_draw_"]');
       const symbols = [...(lane?.querySelectorAll(':scope > use') || [])];
       const rowRect = item.svg.closest('.wave-row')?.getBoundingClientRect?.();
-      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null, rowRectTop: rowRect?.top ?? null };
+      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null, rowRectTop: rowRect?.top ?? null };
       symbols.forEach(use => {
         const href = hrefOf(use);
         const definition = document.getElementById(href.slice(1));
@@ -317,17 +328,55 @@
     const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
     const signal = signalForRow(model, row);
     if (!row || !signal || signal.type === 'commentRow') return false;
-    const index = [...traceRows()].indexOf(row);
-    const mounted = mountSignal(model, signal, row, Math.max(0, index));
+    const localPrefix = `${prefix}local_${String(signal.id).replace(/[^A-Za-z0-9_-]/g, '_')}_`;
+    let mounted;
+    try { mounted = mountSignal(model, signal, row, 0, localPrefix); } catch { return false; }
     if (!mounted) return false;
     const partial = buildGeometry(model, [{ ...mounted, signal, row }]);
+    const renderedId = signal.id;
+    const renderedGeometry = partial.signals[renderedId];
+    if (!renderedGeometry) { renderMetrics().renderSignalGeometryMisses = (renderMetrics().renderSignalGeometryMisses || 0) + 1; return false; }
     model.waveGeometry ||= { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
-    model.waveGeometry.signals[signalId] = partial.signals[signalId];
+    model.waveGeometry.signals[renderedId] = renderedGeometry;
     if (signal.id === model.document.timeline.referenceClock) model.waveGeometry.cycleBoundary = partial.cycleBoundary;
     model.waveGeometry.cycleCount = model.document.timeline.cycleCount;
     renderMetrics().geometryBuilds += 1;
+    renderMetrics().renderSignalGeometryUpdates = (renderMetrics().renderSignalGeometryUpdates || 0) + 1;
     window.TimingChartProductionController.waveGeometry = model.waveGeometry;
     return true;
+  }
+
+  let timelineRenderGeneration = 0;
+  function renderTimeline(model, { batchSize = 1 } = {}) {
+    if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return Promise.resolve(false);
+    const generation = ++timelineRenderGeneration;
+    const rows = traceRows();
+    const mounted = [];
+    const started = performance.now();
+    return new Promise(resolve => {
+      let index = 0;
+      const step = () => {
+        if (generation !== timelineRenderGeneration) { resolve(false); return; }
+        const end = Math.min(rows.length, index + Math.max(1, batchSize));
+        for (; index < end; index += 1) {
+          const row = rows[index];
+          const signal = signalForRow(model, row);
+          const result = mountSignal(model, signal, row, index);
+          if (result && signal) mounted.push({ ...result, signal, row });
+        }
+        if (index < rows.length) { requestAnimationFrame(step); return; }
+        model.waveGeometry = buildGeometry(model, mounted);
+        bridge.waveSignature = JSON.stringify({
+          cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
+          rows: mounted.map(item => [item.signal.id, item.key]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+        });
+        bridge.screenSignature = null;
+        renderMetrics().geometryBuilds += 1;
+        window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+        resolve({ durationMs: performance.now() - started, rows: mounted.length });
+      };
+      requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(step, 0)));
+    });
   }
 
   const bridge = {
@@ -350,6 +399,7 @@
       return true;
     },
     renderSignal,
+    renderTimeline,
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
       const mounted = traceRows().map((row, index) => {
