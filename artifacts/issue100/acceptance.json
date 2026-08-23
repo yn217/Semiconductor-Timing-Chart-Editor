@@ -1,0 +1,13 @@
+{
+  "issue": 100,
+  "cancel20": true,
+  "selectedFile": true,
+  "cleanup": true,
+  "dirtyPreserved": true,
+  "staleRace": true,
+  "artifacts": [
+    "issue100-1672x941.png"
+  ],
+  "errors": [],
+  "pass": true
+}

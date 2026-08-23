@@ -267,10 +267,31 @@
       return true;
     } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Compatibility open failed', detail: error.message }); return false; }
   };
+  let fallbackOpenSerial = 0;
+  const requestFallbackFile = ({ unsavedDecision = 'cancel' } = {}) => {
+    const serial = ++fallbackOpenSerial;
+    const input = document.createElement('input'); input.type = 'file'; input.accept = '.tcd,.tcd.json,.json,application/json'; input.hidden = true; input.dataset.openFallback = 'true'; document.body.appendChild(input);
+    return new Promise(resolve => {
+      let settled = false; let blurred = false; let focusTimer = 0;
+      const cleanup = () => { if (focusTimer) clearTimeout(focusTimer); window.removeEventListener('blur', onBlur); window.removeEventListener('focus', onFocus); window.removeEventListener('pagehide', onTeardown); input.removeEventListener('change', onChange); input.removeEventListener('cancel', onCancel); input.remove(); };
+      const settle = result => { if (settled) return; settled = true; cleanup(); resolve(result); };
+      const onFocus = () => { if (!blurred || settled) return; focusTimer = window.setTimeout(() => { if (!settled && !input.files?.length) { publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); settle(false); } }, 0); };
+      const onBlur = () => { blurred = true; };
+      const onTeardown = () => settle(false);
+      const onCancel = () => { publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); settle(false); };
+      const onChange = async () => {
+        if (settled || serial !== fallbackOpenSerial) { settle(false); return; }
+        const file = input.files?.[0];
+        if (!file) { onCancel(); return; }
+        try { settle(await loadText(await file.text(), file.name, unsavedDecision)); } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); settle(false); }
+      };
+      input.addEventListener('change', onChange, { once: true }); input.addEventListener('cancel', onCancel, { once: true }); window.addEventListener('blur', onBlur); window.addEventListener('focus', onFocus); window.addEventListener('pagehide', onTeardown, { once: true }); input.click();
+    });
+  };
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
     if (text !== undefined) return loadText(text, fileName || 'example.tcd', unsavedDecision);
     if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); else publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); return false; } }
-    const input = document.createElement('input'); input.type = 'file'; input.accept = '.tcd,application/json'; input.hidden = true; document.body.appendChild(input); input.click(); return new Promise(resolve => { input.addEventListener('change', async () => { const file = input.files?.[0]; const result = file ? await loadText(await file.text(), file.name, unsavedDecision) : false; input.remove(); resolve(result); }, { once: true }); });
+    return requestFallbackFile({ unsavedDecision });
   };
   controller.actions.saveAs = async ({ fileName = 'Untitled.tcd', allowCompatibility = false } = {}) => {
     const prepared = prepareSaveText({ allowCompatibility }); if (prepared.error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: prepared.error, action: 'problems' }); return false; }
