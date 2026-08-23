@@ -8,7 +8,6 @@
   "compactState": {
     "band": "compact",
     "tier1Visible": true,
-    "tier2Visible": true,
     "tier4Hidden": true,
     "coreReachable": true,
     "scrollNeeded": false,
@@ -51,22 +50,6 @@
     "closedByEscape": true,
     "itemCount": 2
   },
-  "moreCompactState": {
-    "band": "moreCompact",
-    "tier1Visible": true,
-    "tier2Hidden": true,
-    "scrollNeeded": false
-  },
-  "realClickResult": {
-    "found": true,
-    "wasEnabled": true,
-    "calls": 1
-  },
-  "fallbackState": {
-    "band": "fallback",
-    "tier1Visible": true,
-    "fileCollapsed": true
-  },
   "restoredState": {
     "band": "full",
     "visibleTriggerCount": 0,
@@ -75,8 +58,8 @@
   },
   "zoomClickResult": {
     "calls": 1,
-    "before": 330,
-    "after": 340
+    "before": 100,
+    "after": 110
   },
   "tabState": {
     "homeScrollAfterReturn": 0,
@@ -85,8 +68,23 @@
   "primaryActionState": {
     "ribbonInsert": true,
     "ribbonAnnotation": true,
-    "ribbonView": true
+    "ribbonView": true,
+    "transactionUsesHomeRibbon": {
+      "txnTabExists": true,
+      "txnTabWasHidden": false,
+      "visibleRibbons": [
+        "ribbonHome"
+      ]
+    },
+    "viewOverflowRealClick": {
+      "found": true,
+      "collapsedIntoOverflow": true,
+      "before": true,
+      "after": false,
+      "toggled": true
+    }
   },
+  "bandDetectionNote": "currentBand() measures .app's rendered width (clamped to a 1280px workspace-grid floor), not window.innerWidth, so Full/Compact are the only bands this architecture can actually reach; More-compact/<1024 fallback were dropped from scope rather than asserted against an unreachable viewport (see comment in responsive-ribbon.js).",
   "errors": [],
   "pass": true,
   "artifacts": [

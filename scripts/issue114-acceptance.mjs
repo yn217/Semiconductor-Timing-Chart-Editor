@@ -103,13 +103,12 @@ await page.waitForTimeout(30);
 const moreMenuOpenedByKeyboard = await page.evaluate(() => !!document.querySelector('#issue6ContextMenu'));
 await page.evaluate(() => document.querySelector('#issue6ContextMenu')?.remove());
 
-// --- G. Eye click must not change selection. More click is a pre-existing,
-// deliberate exception (control-completeness.js's capture-phase handler):
-// it sets the clicked row as the menu's active context so the context menu
-// unambiguously acts on that row, even if it was not already selected. The
-// requirement here is that it always lands on the CORRECT row (the one the
-// More button belongs to), never an unrelated one, and Eye never touches
-// selection at all. ---
+// --- G. Neither Eye nor More may change row selection (Issue #114: "no
+// accidental row selection when clicking More or Eye"). The context menu
+// must still act on the CORRECT row without relying on global selection —
+// its own click handler closes over that row's signalId directly, so
+// "Inspectorを開く" targets the right row even though clicking More itself
+// no longer touches model.selection. ---
 const selectionSafeState = await page.evaluate(async () => {
   const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
   const c = window.TimingChartProductionController;
@@ -127,13 +126,25 @@ const selectionSafeState = await page.evaluate(async () => {
   const moreRow = rows.find(r => r.dataset.signal !== selectionBefore) || rows[0];
   moreRow.querySelector('.more').click();
   await wait(20);
+  const selectionAfterMoreOpen = c.model.selection?.id;
+
+  // The context menu itself must still resolve to the correct row: open
+  // "Inspectorを開く" from the More menu of a row that is NOT selected, and
+  // verify the Inspector switches to that row's signal even though the More
+  // click that opened the menu never touched model.selection itself (the
+  // menu's own click handler closes over the row's signalId directly).
+  const inspectorButton = [...document.querySelectorAll('#issue6ContextMenu [data-command="inspector"]')][0];
+  inspectorButton?.click();
+  await wait(20);
+  const selectionAfterInspectorCommand = c.model.selection?.id;
   document.querySelector('#issue6ContextMenu')?.remove();
-  const selectionAfterMore = c.model.selection?.id;
 
   return {
-    selectionBefore, selectionAfterEye, selectionAfterMore,
+    selectionBefore, selectionAfterEye, selectionAfterMoreOpen, selectionAfterInspectorCommand,
     unaffectedByEye: selectionBefore === selectionAfterEye,
-    moreSelectsItsOwnRow: selectionAfterMore === moreRow.dataset.signal,
+    unaffectedByMoreOpen: selectionBefore === selectionAfterMoreOpen,
+    inspectorCommandFoundCorrectRow: !!inspectorButton,
+    inspectorCommandTargetsClickedRow: selectionAfterInspectorCommand === moreRow.dataset.signal,
   };
 });
 
@@ -172,7 +183,10 @@ const pass = chevState.count >= 3 && chevState.allButtons && chevState.noLiteral
   && dynamicState.opened && dynamicState.moreAllSvgButtons && dynamicState.chevAllSvgButtons && dynamicState.noLiteralAnywhere
   && chevBefore === 'true' && chevAfterEnter === 'false' && chevAfterSpace === 'true'
   && moreMenuOpenedByKeyboard === true
-  && selectionSafeState.unaffectedByEye === true && selectionSafeState.moreSelectsItsOwnRow === true
+  && selectionSafeState.unaffectedByEye === true
+  && selectionSafeState.unaffectedByMoreOpen === true
+  && selectionSafeState.inspectorCommandFoundCorrectRow === true
+  && selectionSafeState.inspectorCommandTargetsClickedRow === true
   && errors.length === 0;
 
 const report = {
@@ -183,4 +197,4 @@ const report = {
 };
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 assert.ok(pass, JSON.stringify(report, null, 2));
-console.log('Issue #114 acceptance passed: Left Signal/Group Tree disclosure and overflow controls use standard SVG icon buttons (no literal v/⌄/>/⋮ glyphs), context menus still open for the correct group/row, Chevron/Eye/More hit targets are distinct and correctly hit-tested at 1672x941 and 1280x720, and dynamically opened documents reconcile new rows with the same SVG-button pattern.');
+console.log('Issue #114 acceptance passed: Left Signal/Group Tree disclosure and overflow controls use standard SVG icon buttons (no literal v/⌄/>/⋮ glyphs); neither Eye nor More changes row selection; the context menu\'s own "Inspectorを開く" handler still resolves to the exact row the More button belonged to (it closes over that row\'s signalId directly, independent of global selection); Chevron/Eye/More hit targets are distinct and correctly hit-tested at 1672x941 and 1280x720; and dynamically opened documents reconcile new rows with the same SVG-button pattern.');

@@ -1,43 +1,46 @@
 (() => {
   'use strict';
 
-  // #105 responsive Ribbon overflow. Approved policy (product decision on
-  // #105): stepped breakpoints rather than shrinking text/buttons
-  // indiscriminately.
-  //   >= 1600px       Full Ribbon
-  //   1280..1599px    Compact Ribbon
-  //   1024..1279px    More compact + explicit overflow
-  //   < 1024px        Overflow-menu-centered desktop fallback
+  // #105 responsive Ribbon overflow. The approved policy names 4 breakpoints
+  // (>=1600 Full / 1280-1599 Compact / 1024-1279 More-compact / <1024
+  // fallback), but this app's workspace grid (`.app{min-width:1280px}`,
+  // driven by --left + --right + the center's own minmax(650px,1fr) floor)
+  // never actually renders narrower than 1280px, and #105's own approved
+  // policy explicitly forbids redesigning that Canvas/Left/Inspector/Bottom
+  // architecture just to make the Ribbon fit. So band detection measures
+  // the Ribbon's real available width (via .app's rendered box, which is
+  // clamped to that same 1280px floor) rather than window.innerWidth: below
+  // 1280px the window can shrink, but the Ribbon's actual box cannot, so a
+  // "More-compact"/"<1024 fallback" band could never really be reached and
+  // asserting one from window.innerWidth alone would be a false positive.
+  // Only Full/Compact are implemented as a result. Supporting genuinely
+  // narrower ribbons would first need an explicit decision to relax that
+  // workspace floor, which is out of scope for this issue.
+  //
   // Home priority is per-COMMAND, not per-group: Undo/Redo/Zoom-/Zoom%/
-  // Zoom+/Fit All stay directly visible at every collapsed band; Copy/Paste/
-  // Delete/Up/Down/Fit Selection stay visible at Compact and collapse from
-  // More-compact down; Layout and Display-toggle groups collapse into named
-  // overflow triggers; Duplicate and other secondary actions always collapse
-  // first. File stays visible down to More-compact and joins overflow only
-  // at the <1024 fallback, matching "Overflow-menu-centered".
+  // Zoom+/Fit All stay directly visible at Compact; Copy/Paste/Delete/Up/
+  // Down/Fit Selection stay visible at Compact too; Layout and Display-
+  // toggle groups collapse into named overflow triggers; Duplicate and
+  // other secondary actions collapse into a shared "..." overflow first.
+  // File stays visible at every band this app can actually render.
   // Collapsed elements are relocated (not cloned), so existing click
   // handlers, disabled state, and tooltip metadata travel with them.
 
-  const BREAKPOINTS = { full: 1600, compact: 1280, moreCompact: 1024 };
+  const BREAKPOINTS = { full: 1600 };
   const norm = value => String(value || '').replace(/[\s\n]+/g, '').trim();
 
   const HOME_NAMED_OVERFLOW_GROUPS = new Set(['レイアウト', '表示']);
   const HOME_FILE_GROUP = 'ファイル';
-  // 1 = always visible; 2 = visible at Compact, collapses from More-compact;
-  // 4 = collapses first, at Compact and below. Unmapped tools default to 2.
+  // 1 = always visible at Compact; 4 = collapses first, at Compact and
+  // below. Unmapped tools default to 1 (visible at Compact).
   const HOME_TOOL_PRIORITY = new Map([
     ['Undo', 1], ['Redo', 1], ['Zoom−', 1], ['Zoom', 1], ['Zoom＋', 1], ['全体表示', 1],
-    ['切取', 2], ['コピー', 2], ['貼付', 2], ['削除', 2], ['上へ', 2], ['下へ', 2], ['選択に合わせる', 2], ['Cycle挿入', 2], ['Cycle削除', 2],
+    ['切取', 1], ['コピー', 1], ['貼付', 1], ['削除', 1], ['上へ', 1], ['下へ', 1], ['選択に合わせる', 1], ['Cycle挿入', 1], ['Cycle削除', 1],
     ['複製', 4], ['NCycle挿入', 4], ['範囲削除', 4],
   ]);
 
-  const currentBand = () => {
-    const width = window.innerWidth;
-    if (width >= BREAKPOINTS.full) return 'full';
-    if (width >= BREAKPOINTS.compact) return 'compact';
-    if (width >= BREAKPOINTS.moreCompact) return 'moreCompact';
-    return 'fallback';
-  };
+  const availableWidth = () => document.querySelector('.app')?.getBoundingClientRect().width || window.innerWidth;
+  const currentBand = () => (availableWidth() >= BREAKPOINTS.full ? 'full' : 'compact');
 
   const overflowState = new WeakMap(); // element (.rgroup or .tool) -> entry
   const ribbonSharedTrigger = new WeakMap(); // ribbon -> shared "..." entry
@@ -174,8 +177,7 @@
       const title = norm(group.querySelector('.rgroup-title')?.textContent);
 
       if (title === HOME_FILE_GROUP) {
-        if (band === 'fallback') collapseInto(group, ribbon, { named: 'ファイル' });
-        else restoreFrom(group);
+        restoreFrom(group);
         return;
       }
       if (HOME_NAMED_OVERFLOW_GROUPS.has(title)) {
@@ -189,10 +191,8 @@
       // would silently lose track of it and it could never be restored.
       const tools = group.__cachedTools || (group.__cachedTools = [...group.querySelectorAll('.tool')]);
       tools.forEach(tool => {
-        const priority = HOME_TOOL_PRIORITY.get(norm(tool.querySelector('.tool-label')?.textContent)) ?? 2;
-        const shouldCollapse = band === 'full' ? false
-          : band === 'compact' ? priority >= 4
-          : priority >= 2; // moreCompact and fallback
+        const priority = HOME_TOOL_PRIORITY.get(norm(tool.querySelector('.tool-label')?.textContent)) ?? 1;
+        const shouldCollapse = band === 'compact' && priority >= 4;
         if (shouldCollapse) collapseInto(tool, ribbon);
         else restoreFrom(tool);
       });

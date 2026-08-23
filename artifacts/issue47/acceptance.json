@@ -65,6 +65,30 @@
   "clockState": {
     "minimapVisible": true
   },
+  "tallContentState": {
+    "annotation": {
+      "minimapVisible": true,
+      "pageOverflow": false
+    },
+    "problems": {
+      "minimapVisible": true,
+      "pageOverflow": false
+    }
+  },
+  "resizeState": {
+    "enlarged": {
+      "minimapVisible": true
+    },
+    "restored": {
+      "minimapVisible": true
+    }
+  },
+  "stabilityState": {
+    "inspectorScrollApplied": true,
+    "unmovedByInspectorScroll": true,
+    "unmovedByHorizontalScroll": true,
+    "unmovedByZoom": true
+  },
   "errors": [],
   "pass": true,
   "artifacts": [

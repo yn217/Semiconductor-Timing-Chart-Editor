@@ -78,9 +78,8 @@
     if (document.body.dataset.controlInspectorBound === 'true') return;
     document.body.dataset.controlInspectorBound = 'true';
     document.addEventListener('click', event => {
-      const row = event.target.closest?.('#groups .row');
-      if (row && event.target.closest('.more')) controller.model.selection = { kind: row.dataset.kind === 'comment' ? 'comment' : 'signal', id: row.dataset.commentId || row.dataset.signal };
-      const command = event.target.closest?.('#issue6ContextMenu [data-command]')?.dataset.command;
+      const commandButton = event.target.closest?.('#issue6ContextMenu [data-command]');
+      const command = commandButton?.dataset.command;
       if (command !== 'inspector') return;
       const id = controller.model.selection?.id;
       if (id) {

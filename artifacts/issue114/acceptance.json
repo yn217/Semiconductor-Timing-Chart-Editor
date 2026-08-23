@@ -45,11 +45,14 @@
     "moreMenuOpenedByKeyboard": true
   },
   "selectionSafeState": {
-    "selectionBefore": "req_valid",
-    "selectionAfterEye": "req_valid",
-    "selectionAfterMore": "clk",
+    "selectionBefore": "clk",
+    "selectionAfterEye": "clk",
+    "selectionAfterMoreOpen": "clk",
+    "selectionAfterInspectorCommand": "req_valid",
     "unaffectedByEye": true,
-    "moreSelectsItsOwnRow": true
+    "unaffectedByMoreOpen": true,
+    "inspectorCommandFoundCorrectRow": true,
+    "inspectorCommandTargetsClickedRow": true
   },
   "errors": [],
   "pass": true,
