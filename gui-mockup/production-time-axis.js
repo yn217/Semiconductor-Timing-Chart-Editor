@@ -221,10 +221,10 @@
   const renderRangeSelection = currentModel => {
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
     if (!scrollHost) return;
-    scrollHost.querySelectorAll('[data-time-range-selection]').forEach(node => node.remove());
     const start = Number(currentModel.timeSelection?.rangeStart);
     const end = Number(currentModel.timeSelection?.rangeEnd);
-    if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) return;
+    const existing = scrollHost.querySelector('[data-time-range-selection]');
+    if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) { existing?.remove(); return; }
     const referenceClock = controller.selectors.getReferenceClock();
     const first = controller.getDisplayCycleBoundary?.(start) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: start, coordinateSpace: 'canvas' });
     const last = controller.getDisplayCycleBoundary?.(end) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: end, coordinateSpace: 'canvas' });
@@ -234,14 +234,15 @@
     const left = Math.min(first.canvasX, last.canvasX) - hostRect.left + scrollHost.scrollLeft;
     const right = Math.max(first.canvasX, last.canvasX) - hostRect.left + scrollHost.scrollLeft;
     const top = Math.max(34, (rulerRect?.bottom || hostRect.top + 34) - hostRect.top + scrollHost.scrollTop);
-    const band = document.createElement('div');
+    const band = existing || document.createElement('div');
     band.dataset.timeRangeSelection = 'true';
     band.setAttribute('aria-label', `Selected cycles ${start} to ${end}`);
     band.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${Math.max(1, right-left)}px;height:${Math.max(1, scrollHost.scrollHeight-top)}px;background:rgba(45,131,239,.12);border-left:1px solid #2d83ef;border-right:1px solid #2d83ef;pointer-events:none;z-index:2;`;
-    const label = document.createElement('span');
+    const label = band.querySelector(':scope > span') || document.createElement('span');
     label.textContent = `${start}–${end} / ${end-start} cycles`;
     label.style.cssText = 'position:absolute;top:4px;left:4px;padding:2px 5px;background:#fff;border:1px solid #9fc5f3;border-radius:3px;color:#2169b6;font:11px sans-serif;white-space:nowrap;';
-    band.appendChild(label); scrollHost.appendChild(band);
+    if (!label.parentElement) band.appendChild(label);
+    if (!band.parentElement) scrollHost.appendChild(band);
     const status = document.querySelector('.status');
     if (status) status.dataset.timeRange = `${start}-${end}`;
   };
@@ -316,6 +317,10 @@
   const renderScrollTransient = currentModel => {
     metrics.scrollEvents += 1;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+    // Screen-space WaveDrom geometry changes when the timing pane scrolls.
+    // Refresh only the display mapping; do not regenerate WaveDrom or rows.
+    currentModel.displayMapping = buildDisplayMapping(currentModel);
+    controller.displayMapping = currentModel.displayMapping;
     const playhead = document.querySelector('#cycleCanvas .playhead');
     const referenceClock = controller.selectors.getReferenceClock();
     const boundary = controller.getDisplayCycleBoundary?.(currentModel.timeSelection?.cycle || 0) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
@@ -349,38 +354,55 @@
     controller.actions.selectTimeAtCanvasX(event.clientX, { shiftKey: event.shiftKey });
   });
   let rangeGesture = null;
+  const rangeMoveThresholdPx = 5;
+  controller.renderTimeRangePreview = currentModel => {
+    renderRangeSelection(currentModel);
+    const rangeStart = Number(currentModel.timeSelection?.rangeStart);
+    const rangeEnd = Number(currentModel.timeSelection?.rangeEnd);
+    const validRange = Number.isInteger(rangeStart) && Number.isInteger(rangeEnd) && rangeEnd > rangeStart;
+    const rangeTool = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes('範囲削除'));
+    if (rangeTool) { rangeTool.disabled = !validRange; rangeTool.dataset.rangeDelete = validRange ? 'enabled' : 'disabled'; }
+  };
   const isRangeTarget = target => target && !target.closest('.ruler, .canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea') && target.closest('.wave, .wave-row, .trace');
   cycleCanvas?.addEventListener('pointerdown', event => {
     if (event.button !== 0 || !isRangeTarget(event.target)) return;
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
-    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, moved: false };
+    suppressNextCanvasClick = false;
+    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, moved: false };
+    try { event.target.setPointerCapture?.(event.pointerId); } catch { /* target may not own the active pointer */ }
     try { cycleCanvas.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
     model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: resolved.cycle, rangeEnd: null, source: 'canvas-drag' };
-    renderTransient(model);
+    controller.renderTimeRangePreview(model);
   });
-  cycleCanvas?.addEventListener('pointermove', event => {
+  const updateRangeGesture = event => {
     if (!rangeGesture) return;
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
-    if (resolved.cycle !== rangeGesture.start) rangeGesture.moved = true;
-    controller.actions.selectTimeRange(rangeGesture.start, resolved.cycle, { source: 'canvas-drag' });
-  });
+    const distance = Math.hypot(event.clientX - rangeGesture.clientX, event.clientY - rangeGesture.clientY);
+    if (!rangeGesture.moved && distance < rangeMoveThresholdPx) return;
+    rangeGesture.moved = true;
+    const first = Math.min(rangeGesture.start, resolved.cycle);
+    const last = Math.max(rangeGesture.start, resolved.cycle);
+    model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: first, rangeEnd: last, source: 'canvas-drag' };
+    controller.renderTimeRangePreview(model);
+  };
   const finishRangeGesture = event => {
     if (!rangeGesture) return;
     const current = rangeGesture; rangeGesture = null; try { cycleCanvas.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be released */ }
     if (!current.moved) {
       model.timeSelection.rangeStart = null;
       model.timeSelection.rangeEnd = null;
-      renderTransient(model);
+      controller.renderTimeRangePreview(model);
       suppressNextCanvasClick = true;
       controller.actions.selectTimeAtCanvasX(current.clientX, { shiftKey: event.shiftKey });
     } else {
       suppressNextCanvasClick = true;
     }
   };
-  cycleCanvas?.addEventListener('pointerup', finishRangeGesture);
-  cycleCanvas?.addEventListener('pointercancel', finishRangeGesture);
+  document.addEventListener('pointermove', updateRangeGesture);
+  document.addEventListener('pointerup', finishRangeGesture);
+  document.addEventListener('pointercancel', finishRangeGesture);
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || (!model.timeSelection?.rangeStart && model.timeSelection?.rangeStart !== 0)) return;
     model.timeSelection.rangeStart = null; model.timeSelection.rangeEnd = null; renderTransient(model);
