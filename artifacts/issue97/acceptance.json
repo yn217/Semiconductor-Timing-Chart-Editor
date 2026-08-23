@@ -1,0 +1,27 @@
+{
+  "issue": 97,
+  "fixture": {
+    "signals": 100,
+    "cycles": 200,
+    "candidates": 30600,
+    "queries": 200
+  },
+  "result": {
+    "signalCount": 100,
+    "cycleCount": 200,
+    "candidateCount": 30600,
+    "queryCount": 200,
+    "metrics": {
+      "indexBuilds": 1,
+      "queries": 200,
+      "candidateScans": 197175,
+      "yCandidates": 197175,
+      "sortCount": 1,
+      "screenMatrixCalls": 0
+    },
+    "mismatches": [],
+    "geometryBuilds": 1,
+    "errors": []
+  },
+  "pass": true
+}

@@ -16,14 +16,38 @@
     return { ...result, semantic: clone(anchor), x: result.canvasX + Number(anchor.offset?.x || 0), y: result.canvasY + Number(anchor.offset?.y || 0), source: 'wavedrom-svg', signal: anchor.signal, cycle: Number(anchor.cycle), anchorType: result.anchorType || anchor.point };
   };
   const semanticPoint = anchorType => anchorType === 'rising-edge' || anchorType === 'rising-transition-center' ? 'rising' : anchorType === 'falling-edge' || anchorType === 'falling-transition-center' ? 'falling' : ['cycle-boundary', 'transition-start', 'transition-center', 'transition-end'].includes(anchorType) ? anchorType : 'transition-center';
+  const snapMetrics = controller.annotationSnapMetrics ||= { indexBuilds: 0, queries: 0, candidateScans: 0, yCandidates: 0, sortCount: 0, screenMatrixCalls: 0 };
+  let snapIndex = null;
   const geometryCandidates = () => Object.values(model.waveGeometry?.signals || {}).flatMap(entry => ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd'].flatMap(key => (entry[key] || []).map(item => ({ ...item, point: semanticPoint(item.anchorType) }))));
+  const lowerBound = (items, value) => { let low = 0; let high = items.length; while (low < high) { const middle = (low + high) >> 1; if (items[middle].y < value) low = middle + 1; else high = middle; } return low; };
+  const ensureSnapIndex = () => {
+    const geometry = model.waveGeometry;
+    if (!geometry) return null;
+    if (snapIndex?.geometry === geometry) return snapIndex;
+    const candidates = geometryCandidates().map((item, order) => ({ item, x: Number(item.canvasX), y: Number(item.canvasY), order }))
+      .filter(candidate => Number.isFinite(candidate.x) && Number.isFinite(candidate.y));
+    // Sort once per WaveDrom geometry revision. Pointer queries never sort or
+    // transform individual candidates; canvasX/canvasY are authoritative.
+    const byY = [...candidates].sort((a, b) => a.y - b.y || a.order - b.order);
+    snapMetrics.indexBuilds += 1;
+    snapMetrics.sortCount += 1;
+    snapIndex = { geometry, candidates, byY };
+    return snapIndex;
+  };
   const resolveAnnotationAnchorPointer = ({ x, y, annotationId = null, anchorKey = null } = {}) => {
-    const candidates = geometryCandidates().map(item => {
-      const svg = item.traceId ? document.getElementById(item.traceId)?.querySelector('svg') : null;
-      const screen = svg?.getScreenCTM ? new DOMPoint(Number(item.localX), Number(item.localY)).matrixTransform(svg.getScreenCTM()) : { x: item.canvasX, y: item.canvasY };
-      return { item, x: screen.x, y: screen.y, distance: Math.hypot(screen.x - Number(x), screen.y - Number(y)) };
-    }).filter(candidate => Number.isFinite(candidate.distance)).sort((a, b) => a.distance - b.distance);
-    const nearest = candidates[0];
+    const index = ensureSnapIndex();
+    if (!index) return null;
+    const pointerX = Number(x); const pointerY = Number(y); const radius = 28;
+    const start = lowerBound(index.byY, pointerY - radius);
+    let nearest = null; let bestD2 = Infinity; let bestOrder = Infinity;
+    snapMetrics.queries += 1;
+    for (let position = start; position < index.byY.length && index.byY[position].y <= pointerY + radius; position += 1) {
+      const candidate = index.byY[position];
+      snapMetrics.yCandidates += 1;
+      const dx = candidate.x - pointerX; const dy = candidate.y - pointerY; const d2 = dx * dx + dy * dy;
+      snapMetrics.candidateScans += 1;
+      if (d2 < bestD2 || (d2 === bestD2 && candidate.order < bestOrder)) { nearest = { item: candidate.item, x: candidate.x, y: candidate.y, distance: Math.sqrt(d2) }; bestD2 = d2; bestOrder = candidate.order; }
+    }
     if (!nearest || nearest.distance > 28) return null;
     return { signal: nearest.item.signal, cycle: Number(nearest.item.cycle), point: nearest.item.point, offset: { x: 0, y: 0 }, source: 'wavedrom-svg', anchorType: nearest.item.anchorType, annotationId, anchorKey, screenX: nearest.x, screenY: nearest.y, distance: nearest.distance };
   };
