@@ -19,7 +19,7 @@
       problemRefreshRevision: controller.model.problemRefreshRevision || 0,
       clipboardRevision: audit?.clipboardRevision || 0,
       activeRibbon: document.querySelector('.ribbon-tabs .rtab.active')?.textContent?.trim() || '',
-      visibleMenus: [...document.querySelectorAll('#issue26FileMenu, #insertNCyclesDialog, [data-scope-menu], [data-status-popup], [data-full-path-dialog], [data-insert-menu]')].filter(node => !node.hidden && (node.offsetParent !== null || getComputedStyle(node).position === 'fixed')).map(node => { const key = node.id || node.dataset.scopeMenu || node.dataset.statusPopup || node.dataset.fullPathDialog || node.dataset.insertMenu; const bulk = node.matches('[data-full-path-dialog]') ? `:${node.querySelector('[data-path-bulk]')?.style.display || ''}` : ''; return `${key}${bulk}`; }).sort().join('|'),
+      visibleMenus: [...document.querySelectorAll('#issue26FileMenu, #insertNCyclesDialog, [data-scope-menu], [data-status-popup], [data-full-path-dialog], [data-insert-menu], [data-annotation-label-editor], #issue92Popover')].filter(node => !node.hidden && (node.offsetParent !== null || getComputedStyle(node).position === 'fixed')).map(node => { const key = node.id || node.dataset.scopeMenu || node.dataset.statusPopup || node.dataset.fullPathDialog || node.dataset.insertMenu || node.dataset.annotationLabelEditor; const bulk = node.matches('[data-full-path-dialog]') ? `:${node.querySelector('[data-path-bulk]')?.style.display || ''}` : ''; return `${key}${bulk}`; }).sort().join('|'),
       status: document.querySelector('.status span')?.textContent || ''
     };
   };

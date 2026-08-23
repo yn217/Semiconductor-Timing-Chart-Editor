@@ -27,9 +27,9 @@
     ],
     signals,
     annotations: [
-      { id: 'ann_default_range', type: 'range', start: { signal: 'req_valid', cycle: 4, point: 'rising', offset: { x: 0, y: -24 } }, end: { signal: 'ready', cycle: 10, point: 'rising', offset: { x: 0, y: -24 } }, label: 'リクエスト受付からレスポンスまで 6 cycle', color: '#1473e6', position: 'top', comment: 'リード全体の期間', visible: false },
+      { id: 'ann_default_range', type: 'range', start: { signal: 'req_valid', cycle: 3, point: 'rising', offset: { x: 0, y: -24 } }, end: { signal: 'ready', cycle: 8, point: 'rising', offset: { x: 0, y: -24 } }, label: 'リクエスト受付からレスポンスまで 6 cycle', color: '#1473e6', position: 'top', comment: 'リード全体の期間', visible: false },
       { id: 'ann_default_marker', type: 'marker', anchor: { signal: 'clk', cycle: 4, point: 'rising', offset: { x: 0, y: -40 } }, label: 'REQ assert', color: '#1473e6', position: 'canvas', comment: 'リクエストアサート点', visible: false },
-      { id: 'ann_default_callout', type: 'callout', anchor: { signal: 'req_valid', cycle: 4, point: 'rising', offset: { x: 120, y: -10 } }, label: 'req_valid がHighの期間がリクエスト有効期間です', color: '#1473e6', position: 'canvas', comment: '動作説明', visible: false },
+      { id: 'ann_default_callout', type: 'callout', anchor: { signal: 'req_valid', cycle: 3, point: 'rising', offset: { x: 120, y: -10 } }, label: 'req_valid がHighの期間がリクエスト有効期間です', color: '#1473e6', position: 'canvas', comment: '動作説明', visible: false },
       { id: 'ann_default_dependency', type: 'dependency', from: { signal: 'state[1:0]', cycle: 4, point: 'transition-center', offset: { x: 0, y: 0 } }, to: { signal: 'rdata[15:0]', cycle: 6, point: 'transition-center', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'canvas', comment: 'REQ からデータ出力まで', lineType: 'straight', arrowhead: 'end', visible: false },
       { id: 'ann_default_highlight', type: 'highlight', start: { signal: 'req_valid', cycle: 4, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, end: { signal: 'ready', cycle: 10, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'background', comment: '処理期間のハイライト', visible: false }
     ],
