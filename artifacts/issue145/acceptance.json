@@ -893,6 +893,17 @@
       "validation": []
     }
   ],
+  "surfaceBatching": {
+    "rowCount": 10,
+    "deltas": {
+      "syncSurfaceCalls": 1,
+      "renderSurfaceCalls": 1,
+      "surfaceChildrenLinearScans": 0,
+      "waveRectReads": 1,
+      "rowRectReads": 10,
+      "traceRectReads": 10
+    }
+  },
   "reorderWaveDromDelta": 0,
   "reorderGeometryDelta": 0,
   "canonicalOrderExact": true,

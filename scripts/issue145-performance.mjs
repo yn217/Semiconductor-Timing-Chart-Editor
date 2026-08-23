@@ -73,6 +73,15 @@ const clickReorder = async direction => {
 const runs = [];
 for (const fixture of [{ signals: 50, cycles: 100 }, { signals: 100, cycles: 500 }]) {
   const initialVisibleReadyMs = await installFixture(fixture);
+  const surfaceBatching = await page.evaluate(() => {
+    const controller = window.TimingChartProductionController;
+    const keys = ['syncSurfaceCalls', 'renderSurfaceCalls', 'surfaceChildrenLinearScans', 'waveRectReads', 'rowRectReads', 'traceRectReads'];
+    const before = Object.fromEntries(keys.map(key => [key, Number(controller.renderMetrics[key] || 0)]));
+    const rowCount = document.querySelectorAll('#cycleCanvas .wave-row').length;
+    window.TimingChartProductionWaveform.syncSurface(controller.model);
+    const after = Object.fromEntries(keys.map(key => [key, Number(controller.renderMetrics[key] || 0)]));
+    return { rowCount, deltas: Object.fromEntries(keys.map(key => [key, after[key] - before[key]])) };
+  });
   for (let index = 0; index < 3; index += 1) { await clickReorder('up'); await clickReorder('down'); }
   const up = [];
   const down = [];
@@ -108,6 +117,7 @@ for (const fixture of [{ signals: 50, cycles: 100 }, { signals: 100, cycles: 500
   runs.push({
     fixture,
     initialVisibleReadyMs,
+    surfaceBatching,
     signalUp: summary(up),
     signalDown: summary(down),
     renderedSvgCount: state.renderedSvgCount,
@@ -131,6 +141,12 @@ for (const run of runs) {
   assert.equal(run.deltas.waveDromRenders, 0, JSON.stringify(run));
   assert.equal(run.deltas.geometryBuilds, 0, JSON.stringify(run));
   assert.equal(run.deltas.appFullRenders, 0, JSON.stringify(run));
+  assert.equal(run.surfaceBatching.deltas.syncSurfaceCalls, 1, JSON.stringify(run));
+  assert.equal(run.surfaceBatching.deltas.renderSurfaceCalls, 1, JSON.stringify(run));
+  assert.equal(run.surfaceBatching.deltas.surfaceChildrenLinearScans, 0, JSON.stringify(run));
+  assert.equal(run.surfaceBatching.deltas.waveRectReads, 1, JSON.stringify(run));
+  assert.equal(run.surfaceBatching.deltas.rowRectReads, run.surfaceBatching.rowCount, JSON.stringify(run));
+  assert.ok(run.surfaceBatching.deltas.traceRectReads <= run.surfaceBatching.rowCount, JSON.stringify(run));
 }
 assert.equal(errors.length, 0, errors.join('\n'));
 const report = { issue: 145, browser: await browser.version(), viewport: { width: 1672, height: 941 }, measuredAt: new Date().toISOString(), runs, pass: true };

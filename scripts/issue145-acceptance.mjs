@@ -18,6 +18,23 @@ const report = await page.evaluate(async () => {
   const nextPaint = () => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
   if (controller.waveformIdle) await controller.waveformIdle;
   await nextPaint();
+  const batchingMetricNames = ['syncSurfaceCalls', 'renderSurfaceCalls', 'surfaceChildrenLinearScans', 'waveRectReads', 'rowRectReads', 'traceRectReads'];
+  const batchingBefore = Object.fromEntries(batchingMetricNames.map(key => [key, Number(controller.renderMetrics[key] || 0)]));
+  const batchingRowCount = document.querySelectorAll('#cycleCanvas .wave-row').length;
+  window.TimingChartProductionWaveform.syncSurface(controller.model);
+  const batchingAfter = Object.fromEntries(batchingMetricNames.map(key => [key, Number(controller.renderMetrics[key] || 0)]));
+  const surfaceBatching = {
+    rowCount: batchingRowCount,
+    deltas: Object.fromEntries(batchingMetricNames.map(key => [key, batchingAfter[key] - batchingBefore[key]]))
+  };
+  if (surfaceBatching.deltas.syncSurfaceCalls !== 1
+    || surfaceBatching.deltas.renderSurfaceCalls !== 1
+    || surfaceBatching.deltas.surfaceChildrenLinearScans !== 0
+    || surfaceBatching.deltas.waveRectReads !== 1
+    || surfaceBatching.deltas.rowRectReads !== batchingRowCount
+    || surfaceBatching.deltas.traceRectReads > batchingRowCount) {
+    throw new Error(`Stable surface batching contract failed: ${JSON.stringify(surfaceBatching)}`);
+  }
   const canonical = () => controller.model.document.signalGroups.flatMap(group => group.rows || []);
   const ownerOrders = () => ({
     canonical: canonical(),
@@ -128,6 +145,7 @@ const report = await page.evaluate(async () => {
     waveDromDelta: metricsAfter.waveDrom - metricsBefore.waveDrom,
     geometryDelta: metricsAfter.geometry - metricsBefore.geometry,
     reorderMetricDeltas,
+    surfaceBatching,
     reorderWaveDromDelta: reorderMetricDeltas.reduce((sum, item) => sum + item.waveDrom, 0),
     reorderGeometryDelta: reorderMetricDeltas.reduce((sum, item) => sum + item.geometry, 0),
     canonicalOrderExact: checks.every(check => check.orderPass),

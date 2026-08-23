@@ -3,6 +3,7 @@
 
   const prefix = 'waveDromTrace_';
   const waveCache = new Map();
+  const laneRegistries = new WeakMap();
   let viewportFrame = 0;
   let visibleRenderFrame = 0;
   let viewportRenderSuppressed = false;
@@ -14,6 +15,18 @@
   };
   const traceRows = () => [...document.querySelectorAll('#cycleCanvas .wave-row')]
     .filter(row => row.querySelector('.trace'));
+
+  function laneRegistry(surface) {
+    let registry = laneRegistries.get(surface);
+    if (registry) return registry;
+    registry = new Map([...surface.querySelectorAll(':scope > .waveform-surface-row')]
+      .map(lane => [lane.dataset.signal, lane]));
+    laneRegistries.set(surface, registry);
+    return registry;
+  }
+
+  const currentSurface = () => document.querySelector('#cycleCanvas .waveform-render-surface');
+  const laneById = (signalId, surface = currentSurface()) => surface ? laneRegistry(surface).get(signalId) || null : null;
 
   function pruneWaveCache(model) {
     const currentIds = new Set((model?.document?.signals || []).filter(signal => signal.type !== 'commentRow').map(signal => signal.id));
@@ -69,18 +82,20 @@
 
   function activeRows(model) {
     const referenceId = model?.document?.timeline?.referenceClock;
+    const surface = currentSurface();
     return traceRows().filter(row => {
       const id = row.dataset.signalId || row.dataset.signal;
-      const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`);
+      const lane = laneById(id, surface);
       return id === referenceId || lane?.dataset.viewportState === 'active';
     });
   }
 
   function rowsForRender(model, guardRows = 4) {
     const rows = traceRows();
+    const surface = currentSurface();
     const indexes = rows.map((row, index) => {
       const id = row.dataset.signalId || row.dataset.signal;
-      const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`);
+      const lane = laneById(id, surface);
       return lane?.dataset.viewportState === 'active' ? index : -1;
     }).filter(index => index >= 0);
     if (!indexes.length) return activeRows(model);
@@ -141,7 +156,7 @@
       if (!model) return;
       const pending = rowsForRender(model).find(row => {
         const id = row.dataset.signalId || row.dataset.signal;
-        const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`);
+        const lane = laneById(id);
         const signal = signalForRow(model, row);
         return signal && (!lane?.querySelector(':scope > .trace svg') || lane.dataset.semanticKey !== semanticKey(model, signal));
       });
@@ -166,6 +181,8 @@
   }
 
   function renderSurface() {
+    const metrics = renderMetrics();
+    metrics.renderSurfaceCalls = (metrics.renderSurfaceCalls || 0) + 1;
     const wave = document.querySelector('#cycleCanvas .timing-scroll-pane > .wave') || document.querySelector('#cycleCanvas .wave');
     if (!wave) return null;
     const owner = wave.parentElement?.classList.contains('timing-scroll-pane') ? wave.parentElement : wave;
@@ -179,9 +196,14 @@
     }
     if (surface.parentElement !== owner) owner.appendChild(surface);
     bindSurfaceViewport(surface);
-    if (getComputedStyle(owner).position === 'static') owner.style.position = 'relative';
-    surface.style.width = `${wave.scrollWidth}px`;
-    surface.style.height = `${wave.scrollHeight}px`;
+    if (!owner.dataset.waveformSurfaceOwnerBound) {
+      if (getComputedStyle(owner).position === 'static') owner.style.position = 'relative';
+      owner.dataset.waveformSurfaceOwnerBound = 'true';
+    }
+    const width = `${wave.scrollWidth}px`;
+    const height = `${wave.scrollHeight}px`;
+    if (surface.style.width !== width) surface.style.width = width;
+    if (surface.style.height !== height) surface.style.height = height;
     return surface;
   }
 
@@ -189,10 +211,11 @@
     ? surface.parentElement.querySelector(':scope > .wave')
     : surface?.parentElement;
 
-  function laneFor(signal, row) {
-    const surface = renderSurface();
+  function laneFor(signal, row, context = {}) {
+    const surface = context.surface || currentSurface() || renderSurface();
     if (!surface || !signal || !row) return null;
-    let lane = [...surface.children].find(node => node.dataset.signal === signal.id);
+    const registry = context.lanes || laneRegistry(surface);
+    let lane = registry.get(signal.id);
     if (!lane) {
       lane = document.createElement('div');
       lane.className = 'waveform-surface-row';
@@ -206,39 +229,76 @@
       host.style.height = '28px';
       lane.appendChild(host);
       surface.appendChild(lane);
+      registry.set(signal.id, lane);
+      const metrics = renderMetrics();
+      metrics.surfaceLaneCreates = (metrics.surfaceLaneCreates || 0) + 1;
     }
     return lane;
   }
 
-  function positionLane(row, lane) {
+  function positionLane(row, lane, measured = null) {
     const placeholder = row?.querySelector(':scope > .trace');
     if (!row || !lane || !placeholder) return false;
-    const wave = waveForSurface(lane.parentElement);
-    const waveRect = wave?.getBoundingClientRect();
-    const placeholderRect = placeholder.getBoundingClientRect();
-    if (!waveRect) return false;
-    const top = placeholderRect.top - waveRect.top;
-    const left = placeholderRect.left - waveRect.left;
-    const width = placeholderRect.width;
+    let values = measured;
+    if (!values) {
+      const metrics = renderMetrics();
+      const wave = waveForSurface(lane.parentElement);
+      const waveRect = wave?.getBoundingClientRect();
+      metrics.waveRectReads = (metrics.waveRectReads || 0) + (waveRect ? 1 : 0);
+      const placeholderRect = placeholder.getBoundingClientRect();
+      metrics.traceRectReads = (metrics.traceRectReads || 0) + 1;
+      if (!waveRect) return false;
+      values = { top: placeholderRect.top - waveRect.top, left: placeholderRect.left - waveRect.left, width: placeholderRect.width };
+    }
+    const { top, left, width } = values;
     const hidden = row.hidden || row.style.display === 'none';
     if (lane.style.top !== `${top}px`) lane.style.top = `${top}px`;
     if (lane.style.left !== `${left}px`) lane.style.left = `${left}px`;
     if (lane.style.width !== `${width}px`) lane.style.width = `${width}px`;
     if (lane.hidden !== hidden) lane.hidden = hidden;
+    lane.dataset.surfacePositioned = 'true';
     return true;
   }
 
   function syncSurface(model, rows = traceRows(), { removeStale = true } = {}) {
     const surface = renderSurface();
     if (!surface) return [];
+    const metrics = renderMetrics();
+    metrics.syncSurfaceCalls = (metrics.syncSurfaceCalls || 0) + 1;
+    metrics.surfaceChildrenLinearScans ||= 0;
     const waveRect = waveForSurface(surface)?.getBoundingClientRect();
+    metrics.waveRectReads = (metrics.waveRectReads || 0) + (waveRect ? 1 : 0);
+    if (!waveRect) return [];
     const layoutRows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
     const slots = layoutRows.map(row => {
       const trace = row.querySelector(':scope > .trace, :scope > .comment-body, :scope > .latency');
       const rowRect = row.getBoundingClientRect();
       const traceRect = trace?.getBoundingClientRect?.() || rowRect;
-      return { row, rowTop: rowRect.top - waveRect.top, traceTop: traceRect.top - waveRect.top, rowHeight: rowRect.height };
+      metrics.rowRectReads = (metrics.rowRectReads || 0) + 1;
+      metrics.traceRectReads = (metrics.traceRectReads || 0) + (trace ? 1 : 0);
+      return {
+        row,
+        rowTop: rowRect.top - waveRect.top,
+        traceTop: traceRect.top - waveRect.top,
+        traceLeft: traceRect.left - waveRect.left,
+        traceWidth: traceRect.width,
+        rowHeight: rowRect.height
+      };
     });
+    const slotByRow = new Map(slots.map(slot => [slot.row, slot]));
+    const lanes = laneRegistry(surface);
+    const prepared = [];
+    const used = new Set();
+    for (const row of rows) {
+      const signal = signalForRow(model, row);
+      const slot = slotByRow.get(row);
+      if (!signal || signal.type === 'commentRow' || !slot) continue;
+      const lane = laneFor(signal, row, { surface, lanes });
+      used.add(signal.id);
+      prepared.push({ signal, row, lane, slot });
+    }
+
+    // All layout reads above complete before any row/lane position writes here.
     slots.forEach((slot, index) => {
       const next = slots[index + 1];
       slot.row.dataset.surfaceRowTop = String(slot.rowTop);
@@ -246,16 +306,11 @@
       slot.row.dataset.surfaceFootprint = String(next ? next.rowTop - slot.rowTop : slot.rowHeight);
     });
     const mounted = [];
-    const used = new Set();
-    for (const row of rows) {
-      const signal = signalForRow(model, row);
-      if (!signal || signal.type === 'commentRow') continue;
-      const lane = laneFor(signal, row);
-      positionLane(row, lane);
-      used.add(signal.id);
+    for (const { signal, row, lane, slot } of prepared) {
+      positionLane(row, lane, { top: slot.traceTop, left: slot.traceLeft, width: slot.traceWidth });
       mounted.push({ signal, row, lane, host: lane.querySelector(':scope > .trace'), svg: lane.querySelector(':scope > .trace svg') });
     }
-    if (removeStale) for (const lane of surface.querySelectorAll(':scope > .waveform-surface-row')) if (!used.has(lane.dataset.signal)) lane.remove();
+    if (removeStale) for (const [signalId, lane] of lanes) if (!used.has(signalId)) { lane.remove(); lanes.delete(signalId); }
     surface.dataset.rowCount = String(used.size);
     return mounted;
   }
@@ -398,7 +453,7 @@
 
   function mountSignal(model, signal, row, index, mountPrefix = prefix) {
     const lane = row?.matches?.('.wave-row') ? laneFor(signal, row) : null;
-    if (lane) positionLane(row, lane);
+    if (lane && lane.dataset.surfacePositioned !== 'true') positionLane(row, lane);
     const host = lane?.querySelector(':scope > .trace') || row.querySelector('.trace');
     if (!host || !signal) return null;
     host.id = `${mountPrefix}${index}`;
@@ -680,7 +735,8 @@
   }
 
   function refreshScreenGeometry(geometry, mounted) {
-    const svgBySignal = new Map(mounted.filter(Boolean).map(item => [item.signal.id, item.svg]));
+    const mountedBySignal = new Map(mounted.filter(Boolean).map(item => [item.signal.id, item]));
+    const svgBySignal = new Map([...mountedBySignal].map(([signalId, item]) => [signalId, item.svg]));
     const arrays = ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd', 'transition'];
     const transforms = new Map();
     const transformFor = svg => {
@@ -703,7 +759,7 @@
       if (!svg) continue;
       const transform = transformFor(svg);
       for (const key of arrays) for (const item of entry[key] || []) refreshPointScreenCoordinates(item, svg, transform);
-      const mountedItem = mounted.find(item => item?.signal.id === signalId);
+      const mountedItem = mountedBySignal.get(signalId);
       const rowTop = mountedItem?.row?.getBoundingClientRect?.().top;
       if (Number.isFinite(rowTop)) entry.rowRectTop = rowTop;
     }
