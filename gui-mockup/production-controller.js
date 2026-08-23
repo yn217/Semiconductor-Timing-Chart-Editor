@@ -170,7 +170,7 @@
     for (const bookmark of documentValue?.bookmarks || []) {
       if (!bookmark?.id || bookmarkIds.has(bookmark.id)) issues.push({ code: 'duplicate-bookmark-id', id: bookmark?.id });
       bookmarkIds.add(bookmark?.id);
-      if (!String(bookmark?.name || '').trim() || !Number.isFinite(Number(bookmark?.start))) issues.push({ code: 'invalid-bookmark', id: bookmark?.id });
+      if (!String(bookmark?.name || '').trim() || !Number.isFinite(Number(bookmark?.start)) || Number(bookmark.start) < Number(documentValue?.timeline?.start ?? 0) || Number(bookmark.start) > Number(documentValue?.timeline?.end ?? 0)) issues.push({ code: 'invalid-bookmark', id: bookmark?.id });
     }
     const timeGroupIds = new Set();
     for (const group of documentValue?.timeGroups || []) {
@@ -441,6 +441,38 @@
     wave.style.transform = zoom === 1 ? '' : `scaleX(${zoom})`;
   };
   controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
+  const getBookmark = id => (model.document.bookmarks || []).find(bookmark => bookmark.id === id);
+  const nextBookmarkId = () => { const used = new Set((model.document.bookmarks || []).map(bookmark => bookmark.id)); for (let index = 1; index < 1_000_000; index += 1) { const id = `bm_${String(index).padStart(3, '0')}`; if (!used.has(id)) return id; } return null; };
+  const validBookmarkStart = value => Number.isFinite(Number(value)) && Number(value) >= Number(model.document.timeline.start) && Number(value) <= Number(model.document.timeline.end);
+  const bookmarkMutation = (label, mutation) => { const result = controller.documentHistory.run(label, mutation, { render: false }); if (result) { controller.renderBookmarkUi?.(model); controller.renderTransient?.(model); } return result; };
+  controller.selectors.getBookmarks = () => model.document.bookmarks || [];
+  controller.actions.addBookmark = (start = controller.actions.getCurrentCycle?.() ?? model.timeSelection?.cycle ?? model.document.timeline.start, seed = {}) => {
+    const numericStart = Number(start);
+    if (!validBookmarkStart(numericStart)) return false;
+    const id = seed.id || nextBookmarkId();
+    const name = String(seed.name || `Bookmark ${((model.document.bookmarks || []).length || 0) + 1}`).trim();
+    if (!id || !name) return false;
+    const bookmark = { id, name, start: numericStart, ...(seed.comment !== undefined ? { comment: String(seed.comment) } : {}) };
+    return bookmarkMutation('Add bookmark', () => { model.document.bookmarks ??= []; if (model.document.bookmarks.some(item => item.id === id)) return false; model.document.bookmarks.push(bookmark); model.document.bookmarks.sort((a, b) => Number(a.start) - Number(b.start) || String(a.id).localeCompare(String(b.id))); model.selection = { kind: 'bookmark', id }; model.view.tab = 'bookmarks'; });
+  };
+  controller.actions.updateBookmark = (id, field, value) => {
+    const bookmark = getBookmark(id);
+    if (!bookmark || !['name', 'comment', 'start'].includes(field)) return false;
+    if (field === 'name' && !String(value).trim()) return false;
+    if (field === 'start' && !validBookmarkStart(value)) return false;
+    return bookmarkMutation(`Update bookmark ${field}`, () => { bookmark[field] = field === 'start' ? Number(value) : String(value); model.document.bookmarks.sort((a, b) => Number(a.start) - Number(b.start) || String(a.id).localeCompare(String(b.id))); model.selection = { kind: 'bookmark', id }; });
+  };
+  controller.actions.deleteBookmark = id => { if (!getBookmark(id)) return false; return bookmarkMutation('Delete bookmark', () => { model.document.bookmarks = model.document.bookmarks.filter(bookmark => bookmark.id !== id); if (model.selection?.kind === 'bookmark' && model.selection.id === id) model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; }); };
+  controller.actions.revealBookmark = id => {
+    const bookmark = getBookmark(id); if (!bookmark) return false;
+    model.selection = { kind: 'bookmark', id };
+    controller.actions.setCurrentCycle?.(Number(bookmark.start));
+    const boundary = controller.getCycleBoundary?.({ signal: model.document.timeline.referenceClock, cycle: Number(bookmark.start), coordinateSpace: 'canvas' });
+    const host = window.TimingChartTimingViewport?.getScrollHost?.();
+    if (boundary && host) { const rect = host.getBoundingClientRect(); const target = boundary.canvasX - rect.left + host.scrollLeft; if (target < host.scrollLeft || target > host.scrollLeft + host.clientWidth) host.scrollLeft = Math.max(0, target - host.clientWidth / 2); }
+    document.dispatchEvent(new CustomEvent('timingchart:bookmark-selected', { detail: { id, start: bookmark.start } }));
+    return true;
+  };
   const nextTransactionId = () => { const used = new Set((model.document.transactions || []).map(transaction => transaction.id)); for (let index = 1; index <= used.size + 1_000_000; index++) { const id = `txn_${String(index).padStart(3, '0')}`; if (!used.has(id)) return id; } return null; };
   const defaultTransactionPhases = (start, end) => { if (end - start < 2) return [{ name: 'Transaction', start, end }]; const split = start + 1; return [{ name: 'Request', start, end: split }, { name: 'Response', start: split, end }]; };
   const transactionCandidate = seed => {
