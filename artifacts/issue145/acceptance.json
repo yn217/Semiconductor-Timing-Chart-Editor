@@ -1,0 +1,903 @@
+{
+  "issue": 145,
+  "checks": [
+    {
+      "label": "initial",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-1",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-1",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-2",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-2",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-3",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-3",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-4",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-4",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-5",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-5",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-6",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-6",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-7",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-7",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-8",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-8",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-9",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-9",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-10",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-10",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-11",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-11",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-12",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-12",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-13",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-13",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-14",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-14",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-15",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-15",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-16",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-16",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-17",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-17",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-18",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-18",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-19",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-19",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "up-20",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "down-20",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "comment-up",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "comment-down",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "hidden-interleave-up",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "hidden-interleave-down",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "collapsed-interleave-up",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "undo",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "redo",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    },
+    {
+      "label": "hierarchy-round-trip",
+      "orderPass": true,
+      "identityPass": true,
+      "surfaceOrderStable": true,
+      "maxYError": 0
+    }
+  ],
+  "operations": 48,
+  "movedSvgNodes": 0,
+  "svgIdentityStable": true,
+  "maxYError": 0,
+  "waveDromDelta": 0,
+  "geometryDelta": 2,
+  "reorderMetricDeltas": [
+    {
+      "label": "up-1",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-1",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-2",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-2",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-3",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-3",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-4",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-4",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-5",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-5",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-6",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-6",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-7",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-7",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-8",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-8",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-9",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-9",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-10",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-10",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-11",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-11",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-12",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-12",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-13",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-13",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-14",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-14",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-15",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-15",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-16",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-16",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-17",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-17",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-18",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-18",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-19",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-19",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "up-20",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "down-20",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "comment-up",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 3,
+      "indexAfter": 2,
+      "validation": []
+    },
+    {
+      "label": "comment-down",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 2,
+      "indexAfter": 3,
+      "validation": []
+    },
+    {
+      "label": "hidden-interleave-up",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    },
+    {
+      "label": "hidden-interleave-down",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 0,
+      "indexAfter": 1,
+      "validation": []
+    },
+    {
+      "label": "collapsed-interleave-up",
+      "waveDrom": 0,
+      "geometry": 0,
+      "fullRenders": 0,
+      "screenRefreshes": 0,
+      "timelineActiveBefore": false,
+      "timelineActiveAfter": false,
+      "indexBefore": 1,
+      "indexAfter": 0,
+      "validation": []
+    }
+  ],
+  "reorderWaveDromDelta": 0,
+  "reorderGeometryDelta": 0,
+  "canonicalOrderExact": true,
+  "surfaceLaneOrderStable": true,
+  "renderer": true,
+  "pageErrors": [],
+  "pass": true
+}

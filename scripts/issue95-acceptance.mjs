@@ -57,7 +57,7 @@ const result = await page.evaluate(async () => {
   const visibilityAfter = snapshot();
   const visibilityState = (() => {
     const row = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_1"]');
-    const unrelated = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_2"] .trace svg');
+    const unrelated = document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_2"] .trace svg');
     return { timingHidden: row?.hidden === true, unrelatedTraceRetained: Boolean(unrelated) };
   })();
   document.querySelector('#groups .row[data-signal="issue95_sig_1"] .eye')?.click();
@@ -76,7 +76,7 @@ const result = await page.evaluate(async () => {
   const afterReorder = snapshot();
   const signalEditResult = controller.actions.updateSignalValue('issue95_sig_0', 1, 'value', '0');
   const afterSignalEdit = snapshot();
-  const trace = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_1"] .trace svg');
+  const trace = document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_1"] .trace svg');
   return {
     before,
     afterSignalSelection,
@@ -87,7 +87,7 @@ const result = await page.evaluate(async () => {
     afterReorder,
     afterSignalEdit,
     traceRetainedAfterReorder: Boolean(trace),
-    signalCount: document.querySelectorAll('#cycleCanvas .wave-row .trace').length,
+    signalCount: document.querySelectorAll('#cycleCanvas .waveform-surface-row .trace svg').length,
     documentSignalCount: controller.model.document.signals.length,
     rowIds: [...document.querySelectorAll('#cycleCanvas .wave-row[data-signal-id]')].map(row => row.dataset.signalId),
     signalEditResult,

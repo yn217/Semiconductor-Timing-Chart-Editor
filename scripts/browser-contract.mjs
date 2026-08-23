@@ -35,7 +35,7 @@ try {
   assert.ok(runtime.scripts.some(src => src === 'generated/waveskin-default-3.6.2.js'));
   assert.equal(await page.locator('#cycleCanvas .trace [data-static-mock="true"]').count(), 0, 'Static mock trace remains mounted');
   assert.equal(await page.locator('#cycleCanvas .trace svg:not([data-renderer="wavedrom"])').count(), 0, 'Custom signal trace is mounted');
-  assert.equal(await page.locator('#cycleCanvas .trace').evaluateAll(hosts => hosts.filter(host => host.dataset.renderer !== 'wavedrom').length), 0);
+  assert.equal(await page.locator('#cycleCanvas .trace').evaluateAll(hosts => hosts.filter(host => host.querySelector('svg') && host.dataset.renderer !== 'wavedrom').length), 0);
   await browser.close();
   console.log('Browser GUI contract passed at 1672x941; view switching, bottom tabs, and WaveDrom DOM verified.');
 } finally { server.kill(); }

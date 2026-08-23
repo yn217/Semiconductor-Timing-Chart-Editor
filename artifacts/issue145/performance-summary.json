@@ -1,0 +1,36 @@
+{
+  "issue": 145,
+  "browser": "Chromium 151.0.7922.34",
+  "viewport": "1672x941",
+  "fixture": {
+    "signals": 50,
+    "cycles": 100
+  },
+  "runs": [
+    {
+      "command": "signal-up",
+      "commandMs": 13.9,
+      "surfaceShiftMs": 1.7,
+      "browserReadyMs": 211.1,
+      "layerizeMs": 61.016,
+      "waveDromRenderDelta": 0,
+      "geometryBuildDelta": 0,
+      "appFullRenderDelta": 0
+    },
+    {
+      "command": "signal-down",
+      "commandMs": 7.7,
+      "surfaceShiftMs": 0.8,
+      "browserReadyMs": 222.4,
+      "layerizeMs": 76.168,
+      "waveDromRenderDelta": 0,
+      "geometryBuildDelta": 0,
+      "appFullRenderDelta": 0
+    }
+  ],
+  "structuralAcceptance": true,
+  "commandToPaintTargetMs": 50,
+  "commandToPaintAcceptance": false,
+  "largeFixture100Signals500Cycles": "profile did not complete within the bounded run",
+  "issueRemainsOpen": true
+}

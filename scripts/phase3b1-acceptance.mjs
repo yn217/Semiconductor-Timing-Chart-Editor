@@ -44,7 +44,8 @@ try {
     };
     const hit = (signal, anchors, hrefs) => {
       const row = [...document.querySelectorAll('#cycleCanvas .wave-row')].find(item => item.querySelector('.signal-label')?.textContent.trim() === signal);
-      const svg = row.querySelector('.trace svg');
+      const id = row.dataset.signalId || row.dataset.signal;
+      const svg = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"] .trace svg`);
       const points = [...svg.querySelectorAll('[id^="wavelane_draw_"] use')].filter(use => hrefs.includes(use.getAttribute('href') || use.getAttributeNS('http://www.w3.org/1999/xlink', 'href'))).flatMap(use => pointsFor(svg, use));
       return anchors.map(anchor => Math.min(...points.map(point => distance(anchor, point))));
     };

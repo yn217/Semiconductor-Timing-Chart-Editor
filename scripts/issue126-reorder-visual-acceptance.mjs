@@ -18,6 +18,7 @@ const result = await page.evaluate(async () => {
   const frozenWaveRect = window.TimingChartFrozenLabels.frozenWave.getBoundingClientRect();
   const frozenBefore = new Map([...window.TimingChartFrozenLabels.frozenWave.querySelectorAll(':scope > .frozen-label-row')].map(row => [row.dataset.signalId, row.getBoundingClientRect().top]));
   const initialTiming = new Map([...timingWave.querySelectorAll(':scope > .wave-row')].map(row => [row.dataset.signalId, row.getBoundingClientRect().top]));
+  const svgBefore = new Map([...document.querySelectorAll('#cycleCanvas .waveform-surface-row')].map(lane => [lane.dataset.signal, lane.querySelector('.trace svg')]));
   const geometryBefore = model.waveGeometry;
   const before = { waveDrom: controller.renderMetrics.waveDromRenders, geometry: controller.renderMetrics.geometryBuilds };
   if (!controller.actions.moveSignalBy(targetId, -1)) throw new Error('reorder command failed');
@@ -28,10 +29,12 @@ const result = await page.evaluate(async () => {
   const frozenById = new Map(frozenRows.map(row => [row.dataset.signalId, row]));
   const visible = timingRows.filter(row => !row.hidden && row.style.display !== 'none');
   const yErrors = visible.map(row => ({ id: row.dataset.signalId, error: Math.abs(row.getBoundingClientRect().top - (frozenById.get(row.dataset.signalId)?.getBoundingClientRect().top ?? NaN)) }));
+  const traceYErrors = visible.filter(row => row.querySelector('.trace')).map(row => { const id=row.dataset.signalId; const lane=document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`); return {id,error:Math.abs(row.querySelector('.trace').getBoundingClientRect().top-(lane?.querySelector('.trace')?.getBoundingClientRect().top??NaN))}; });
   const maxYDelta = Math.max(...visible.map(row => Math.abs((row.getBoundingClientRect().top - (frozenById.get(row.dataset.signalId)?.getBoundingClientRect().top ?? NaN)) - (initialTiming.get(row.dataset.signalId) - frozenBefore.get(row.dataset.signalId)))));
   const visualOrder = [...visible].sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top).map(row => row.dataset.signalId);
   const after = { waveDrom: controller.renderMetrics.waveDromRenders, geometry: controller.renderMetrics.geometryBuilds };
-  const svgNodes = timingRows.filter(row => row.querySelector('.trace')).map(row => row.querySelector('.trace svg'));
+  const svgNodes = [...document.querySelectorAll('#cycleCanvas .waveform-surface-row .trace svg')];
+  const stableSvgIdentity = [...svgBefore].every(([id,svg]) => document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"] .trace svg`) === svg);
   return {
     modelOrder: group.rows.slice(0, 3),
     targetId,
@@ -48,7 +51,9 @@ const result = await page.evaluate(async () => {
     geometrySame: geometryBefore === model.waveGeometry,
     yErrors,
     maxYError: Math.max(...yErrors.map(item => item.error)),
+    maxTraceYError: Math.max(...traceYErrors.map(item => item.error)),
     maxYDelta,
+    stableSvgIdentity,
     waveDromDelta: after.waveDrom - before.waveDrom,
     geometryDelta: after.geometry - before.geometry,
     wavedromSvgCount: svgNodes.filter(svg => svg?.dataset.renderer === 'wavedrom').length,
@@ -57,10 +62,12 @@ const result = await page.evaluate(async () => {
 });
 assert.deepEqual(result.modelOrder.slice(0, 2), [result.targetId, result.neighborId]);
 assert.deepEqual(result.visualOrder.slice(0, 2), [result.targetId, result.neighborId], JSON.stringify(result));
-assert.equal(result.timingBefore.indexOf(result.targetId), result.timingAfter.indexOf(result.targetId));
-assert.equal(result.targetVisual, 'layout-order');
+assert.deepEqual(result.timingAfter.slice(0, 2), [result.targetId, result.neighborId], JSON.stringify(result));
+assert.equal(result.targetVisual, 'dom-order');
 assert.equal(result.geometrySame, true);
 assert.ok(result.maxYDelta <= 0.1, JSON.stringify(result));
+assert.ok(result.maxTraceYError <= 0.1, JSON.stringify(result));
+assert.equal(result.stableSvgIdentity, true, JSON.stringify(result));
 assert.equal(result.waveDromDelta, 0, JSON.stringify(result));
 assert.equal(result.geometryDelta, 0, JSON.stringify(result));
 assert.equal(result.wavedromSvgCount, result.traceCount, JSON.stringify(result));

@@ -28,8 +28,8 @@ try {
       const doc = c.getSerializableDocument();
       const expectedRows = doc.signalGroups.flatMap(group => group.rows);
       const centerRows = [...document.querySelectorAll('#cycleCanvas .wave-row')].map(row => row.dataset.signalId);
-      const traces = [...document.querySelectorAll('#cycleCanvas .wave-row[data-signal-id] .trace')];
-      const traceIds = traces.map(trace => trace.closest('.wave-row')?.dataset.signalId);
+      const traces = [...document.querySelectorAll('#cycleCanvas .waveform-surface-row[data-signal-id] .trace svg')];
+      const traceIds = traces.map(trace => trace.closest('.waveform-surface-row')?.dataset.signalId);
       const visibleSignals = doc.signals.filter(signal => signal.type !== 'commentRow').map(signal => signal.id);
       return { opened, doc, expectedRows, centerRows, traceIds, visibleSignals, geometrySignals: Object.keys(c.model.waveGeometry?.signals || {}) };
     }, { text, file });
