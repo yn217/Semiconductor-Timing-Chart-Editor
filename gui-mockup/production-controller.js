@@ -492,34 +492,40 @@
       const visibleIds = new Set(visibleRows.map(row => row.dataset.signalId || row.dataset.signal));
       const orderedIds = (model.document.signalGroups || []).flatMap(item => item.rows || []).filter(id => visibleIds.has(id));
       if (!visibleRows.length || !orderedIds.length) return false;
-      const baseTop = new Map(visibleRows.map(row => [row, row.offsetTop]));
-      const outerHeight = row => row.offsetHeight + parseFloat(getComputedStyle(row).marginTop || '0') + parseFloat(getComputedStyle(row).marginBottom || '0');
-      let targetTop = Math.min(...visibleRows.map(row => row.offsetTop));
-      const target = new Map();
-      for (const id of orderedIds) { const row = byId.get(id); target.set(row, targetTop); targetTop += outerHeight(row); }
-      for (const row of visibleRows) {
-        const dy = (target.get(row) ?? baseTop.get(row)) - baseTop.get(row);
-        const transform = Math.abs(dy) < 0.1 ? '' : `translate3d(0, ${dy}px, 0)`;
-        const willChange = transform ? 'transform' : '';
-        if (row.style.transform !== transform) row.style.transform = transform;
-        if (row.style.willChange !== willChange) row.style.willChange = willChange;
-        const visual = transform ? 'transform' : 'none';
-        if (row.dataset.reorderVisual !== visual) row.dataset.reorderVisual = visual;
+      // Keep the WaveDrom SVG subtrees in place, but let one layout container
+      // determine visual order. Per-row transforms promote every SVG-heavy row
+      // to a compositor layer on large documents.
+      host.style.display = 'flex';
+      host.style.flexDirection = 'column';
+      host.style.alignItems = 'stretch';
+      const ruler = host.querySelector(':scope > .ruler');
+      if (ruler) {
+        // The locked GUI's initial DOM places the ruler after the rows. Keep
+        // that established geometry while assigning flex order to signals.
+        ruler.style.order = String(orderedIds.length + 1);
+        ruler.style.flex = '0 0 auto';
       }
-      for (const row of rows) if (!visibleIds.has(row.dataset.signalId || row.dataset.signal)) {
-        if (row.style.transform) row.style.removeProperty('transform');
-        if (row.style.willChange) row.style.removeProperty('will-change');
-        if (row.dataset.reorderVisual !== 'none') row.dataset.reorderVisual = 'none';
+      const baseTop = new Map(visibleRows.map(row => [row, row.offsetTop]));
+      const orderById = new Map(orderedIds.map((id, index) => [id, index + 1]));
+      for (const row of rows) {
+        const id = row.dataset.signalId || row.dataset.signal;
+        const order = orderById.get(id);
+        row.style.order = order === undefined ? '0' : String(order);
+        row.style.flex = '0 0 auto';
+        row.style.transform = '';
+        row.style.willChange = '';
+        row.dataset.reorderVisual = order === undefined ? 'none' : 'layout-order';
       }
       controller.renderMetrics.rowMoves += 1;
       controller.renderMetrics.cycleRowMoves += 1;
+      host.dataset.reorderLayout = 'flex-order';
       return true;
     };
     const reorder = host => {
       if (!host) return;
       const started = performance.now();
       if (host.matches('#cycleCanvas .timing-scroll-pane > .wave') && applyTimingVisualOrder(host)) {
-        reorderTimings.push({ host: host.className || host.id || 'host', mode: 'transform', ms: performance.now() - started });
+        reorderTimings.push({ host: host.className || host.id || 'host', mode: 'layout-order', ms: performance.now() - started });
         return;
       }
       const row = host.querySelector(`[data-signal="${CSS.escape(signalId)}"]`);

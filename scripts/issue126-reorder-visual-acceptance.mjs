@@ -58,7 +58,7 @@ const result = await page.evaluate(async () => {
 assert.deepEqual(result.modelOrder.slice(0, 2), [result.targetId, result.neighborId]);
 assert.deepEqual(result.visualOrder.slice(0, 2), [result.targetId, result.neighborId], JSON.stringify(result));
 assert.equal(result.timingBefore.indexOf(result.targetId), result.timingAfter.indexOf(result.targetId));
-assert.equal(result.targetVisual, 'transform');
+assert.equal(result.targetVisual, 'layout-order');
 assert.equal(result.geometrySame, true);
 assert.ok(result.maxYDelta <= 0.1, JSON.stringify(result));
 assert.equal(result.waveDromDelta, 0, JSON.stringify(result));
