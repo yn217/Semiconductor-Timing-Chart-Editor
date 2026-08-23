@@ -914,6 +914,25 @@
   };
   controller.actions.cutSelection = () => { if (!controller.actions.copySelection()) return false; return controller.actions.deleteSelection(); };
   controller.actions.duplicateSelection = () => { if (!controller.actions.copySelection()) return false; return controller.actions.pasteSelection(); };
+  controller.actions.updateSignalValue = (signalId, index, field, rawValue) => {
+    const signal = getSignal(signalId); if (!signal || !signal.values?.[index]) return false;
+    const candidate = { ...signal.values[index], [field]: valueFromInput(signal, rawValue, field) };
+    const issues = validateValue(signal, index, candidate);
+    if (issues.length) { setValidation(issues); render(); return false; }
+    const result = controller.documentHistory.run(`Change signal ${field}`, () => {
+      signal.values[index] = candidate; canonicalize(signal); model.editor.rowIndex = signal.values.indexOf(candidate); setValidation([]);
+    }, { render: false });
+    if (!result) return result;
+    controller.cancelTransientLayout?.();
+    controller.skipTimeAxisResizeRevision = model.documentRevision;
+    controller.skipTimeAxisResizeUntil = performance.now() + 250;
+    controller.skipTimingZoomUntil = performance.now() + 250;
+    window.TimingChartProductionWaveform?.renderSignal?.(model, signalId);
+    window.TimingChartProductionAnnotations?.render?.(model);
+    if (field === 'start') window.TimingChartProductionUi?.refreshBottom?.(model);
+    controller.viewRibbon?.scheduleMinimap?.();
+    return true;
+  };
   const initialGroupsHost = document.querySelector('#groups'); if (initialGroupsHost && !initialGroupsHost.dataset.groupMarkup) initialGroupsHost.dataset.groupMarkup = initialGroupsHost.innerHTML;
   document.querySelectorAll('.seg').forEach(button => button.addEventListener('click', () => controller.actions.setViewMode(button.dataset.mode)));
   tabs().forEach(button => button.addEventListener('click', () => controller.actions.setBottomTab(button.dataset.tab)));

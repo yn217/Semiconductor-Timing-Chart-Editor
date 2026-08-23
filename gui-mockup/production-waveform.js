@@ -313,6 +313,23 @@
     return true;
   }
 
+  function renderSignal(model, signalId) {
+    const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
+    const signal = signalForRow(model, row);
+    if (!row || !signal || signal.type === 'commentRow') return false;
+    const index = [...traceRows()].indexOf(row);
+    const mounted = mountSignal(model, signal, row, Math.max(0, index));
+    if (!mounted) return false;
+    const partial = buildGeometry(model, [{ ...mounted, signal, row }]);
+    model.waveGeometry ||= { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
+    model.waveGeometry.signals[signalId] = partial.signals[signalId];
+    if (signal.id === model.document.timeline.referenceClock) model.waveGeometry.cycleBoundary = partial.cycleBoundary;
+    model.waveGeometry.cycleCount = model.document.timeline.cycleCount;
+    renderMetrics().geometryBuilds += 1;
+    window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+    return true;
+  }
+
   const bridge = {
     refreshScreenGeometry(model) {
       if (!model?.waveGeometry) return false;
@@ -332,6 +349,7 @@
       window.TimingChartProductionController.waveGeometry = model.waveGeometry;
       return true;
     },
+    renderSignal,
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
       const mounted = traceRows().map((row, index) => {

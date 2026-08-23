@@ -34,7 +34,7 @@ assert.equal(editDelta.commands, 1);
 assert.equal(editDelta.serializableSnapshots, 2);
 assert.equal(editDelta.structuredClones, 2);
 assert.equal(editDelta.validations, 1);
-assert.equal(editDelta.fullRenders, 1);
+assert.equal(editDelta.fullRenders, 0, 'single signal edits use localized rendering');
 assert.equal(editDelta.fullDocumentStringifies, 0, 'history equality still stringifies full snapshots');
 assert.ok(editDelta.comparisonNodes > 0, 'canonical snapshot comparison was not measured');
 assert.equal(afterEdit.history, beforeEdit.history + 1);

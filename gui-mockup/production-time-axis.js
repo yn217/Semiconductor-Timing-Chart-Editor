@@ -330,6 +330,11 @@
     transientFrame = requestAnimationFrame(() => { transientFrame = 0; renderTransient(pendingTransientModel); });
   };
   controller.scheduleTransientLayout = scheduleTransientLayout;
+  controller.cancelTransientLayout = () => {
+    if (transientFrame) cancelAnimationFrame(transientFrame);
+    transientFrame = 0;
+    pendingTransientModel = model;
+  };
   let verticalExtentFrame = 0;
   let pendingVerticalExtentModel = model;
   const renderVerticalExtent = currentModel => {
@@ -441,7 +446,19 @@
     model.timeSelection.rangeStart = null; model.timeSelection.rangeEnd = null; renderTransient(model);
   });
   (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderScrollTransient(model), { passive: true });
-  if (cycleCanvas && window.ResizeObserver) new ResizeObserver(() => scheduleTransientLayout(model)).observe(cycleCanvas);
+  if (cycleCanvas && window.ResizeObserver) {
+    let observedCanvasSize = null;
+    new ResizeObserver(entries => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      const size = `${rect.width}x${rect.height}`;
+      if (size === observedCanvasSize) return;
+      observedCanvasSize = size;
+      if (controller.skipTimeAxisResizeUntil && performance.now() < controller.skipTimeAxisResizeUntil) { controller.skipTimeAxisResizeUntil = 0; return; }
+      if (controller.skipTimeAxisResizeRevision === controller.model.documentRevision) { controller.skipTimeAxisResizeRevision = null; return; }
+      scheduleTransientLayout(model);
+    }).observe(cycleCanvas);
+  }
 
   const tool = text => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(text));
   const promptCycle = (message, fallback) => Number(window.prompt(message, String(fallback)));
