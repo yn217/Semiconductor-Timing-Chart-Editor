@@ -17,9 +17,9 @@
     { id: 'comment_03', type: 'commentRow', title: 'Read latency', body: 'リクエスト受付からレスポンス出力まで 6 cycle', groupId: 'group_output' }
   ];
   const canonicalDocument = {
-    formatVersion: 1,
+    formatVersion: 2,
     document: { id: 'example.tcd', title: 'Timing Chart', header: { subtitle: '', description: '', notes: '', preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: '', revision: '', text: '' } },
-    timeline: { start: 0, end: 10, timeBase: 'cycle', cycleCount: 10, referenceClock: 'clk', edge: 'rising' },
+    timeline: { start: 0, end: 10, timeBase: 'cycle', cycleCount: 10, referenceClock: 'clk', edge: 'rising', labelAnchors: [] },
     signalGroups: [
       { id: 'group_input', name: '入力 (Input)', rows: ['clk', 'req_valid', 'req_addr[7:0]', 'comment_01'] },
       { id: 'group_internal', name: '内部制御 (Internal Control)', rows: ['busy', 'state[1:0]', 'comment_02'] },
@@ -36,7 +36,10 @@
     legend: { orientation: 'horizontal', usedRolesOnly: true, position: { x: 0, y: 0 } },
     layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', busWidthAlign: 'left', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis', pathDisplayMode: 'signalOnly', instancePathAlign: 'left', instancePathWidth: 180, busWidthMode: 'inline', scope: [] },
     transactions: [],
-    constraints: []
+    constraints: [],
+    bookmarks: [],
+    timeGroups: [],
+    checkSettings: {}
   };
   const parseStructuredName = name => {
     const match = String(name || '').match(/^(.*)\[(\d+)(?::(\d+))?\]$/);
@@ -58,7 +61,7 @@
     return signal;
   };
   canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
-  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
+  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
   const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() } };
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
@@ -125,26 +128,66 @@
     } else result.values = (signal.values || []).map(value => ({ start: value.start, value: value.value, ...(value.comment !== undefined ? { comment: value.comment } : {}) }));
     return result;
   };
+  const finiteNumber = (value, field) => {
+    const number = Number(value);
+    if (!Number.isFinite(number)) throw new Error(`Non-finite number at ${field}`);
+    return number;
+  };
   const serializeDocument = documentValue => ({
-    formatVersion: documentValue.formatVersion,
+    formatVersion: 2,
     document: { id: documentValue.document.id, title: documentValue.document.title, header: structuredClone(documentValue.document.header || { subtitle: '', description: '', notes: '', preconditions: [], constraints: [], exceptions: [] }), footer: structuredClone(documentValue.document.footer || { figureNumber: '', revision: '', text: '' }) },
-    timeline: { start: documentValue.timeline.start, end: documentValue.timeline.end, timeBase: documentValue.timeline.timeBase, cycleCount: documentValue.timeline.cycleCount, referenceClock: documentValue.timeline.referenceClock, edge: documentValue.timeline.edge },
+    timeline: { start: finiteNumber(documentValue.timeline.start, '$.timeline.start'), end: finiteNumber(documentValue.timeline.end, '$.timeline.end'), timeBase: documentValue.timeline.timeBase, cycleCount: finiteNumber(documentValue.timeline.cycleCount, '$.timeline.cycleCount'), referenceClock: documentValue.timeline.referenceClock, edge: documentValue.timeline.edge, labelAnchors: (documentValue.timeline.labelAnchors || []).map(anchor => ({ id: anchor.id, source: finiteNumber(anchor.source, `$.timeline.labelAnchors[${anchor.id}].source`), display: finiteNumber(anchor.display, `$.timeline.labelAnchors[${anchor.id}].display`), ...(anchor.ownerTimeGroupId ? { ownerTimeGroupId: anchor.ownerTimeGroupId } : {}) })) },
     signalGroups: documentValue.signalGroups.map(group => ({ id: group.id, name: group.name, rows: [...group.rows], ...(group.style ? { style: structuredClone(group.style) } : {}), ...(group.spacers ? { spacers: structuredClone(group.spacers) } : {}), ...(group.spacingBefore ? { spacingBefore: Number(group.spacingBefore) } : {}), ...(group.spacingAfter ? { spacingAfter: Number(group.spacingAfter) } : {}), ...(group.collapsed ? { collapsed: true } : {}) })),
     signals: documentValue.signals.map(serializeSignal),
     annotations: (documentValue.annotations || []).map(serializeAnnotation),
     legend: structuredClone(documentValue.legend),
     layout: structuredClone(documentValue.layout),
     transactions: structuredClone(documentValue.transactions),
-    constraints: structuredClone(documentValue.constraints)
+    constraints: structuredClone(documentValue.constraints),
+    bookmarks: (documentValue.bookmarks || []).map(bookmark => ({ id: bookmark.id, name: bookmark.name, start: finiteNumber(bookmark.start, `$.bookmarks[${bookmark.id}].start`), ...(bookmark.comment ? { comment: bookmark.comment } : {}) })),
+    timeGroups: (documentValue.timeGroups || []).map(group => ({ id: group.id, name: group.name, ...(group.category ? { category: group.category } : {}), start: finiteNumber(group.start, `$.timeGroups[${group.id}].start`), end: finiteNumber(group.end, `$.timeGroups[${group.id}].end`), ...(group.comment ? { comment: group.comment } : {}), ...(group.presentation ? { presentation: structuredClone(group.presentation) } : {}) })),
+    checkSettings: structuredClone(documentValue.checkSettings || {})
   });
   controller.selectors = { getSignals, getSignal, getTimeline, getComments, getGroupRows, getReferenceClock };
   controller.getSerializableDocument = () => serializeDocument(model.document);
+  controller.getCompatibilityPreview = () => model.compatibility ? structuredClone(model.compatibility) : null;
   controller.validateDocument = documentValue => {
     const issues = [];
     const candidateSignals = documentValue?.signals || [];
     const candidateSignal = id => candidateSignals.find(signal => signal.id === id);
-    if (documentValue?.formatVersion !== 1) issues.push({ code: 'format-version' });
+    if (![1, 2].includes(documentValue?.formatVersion)) issues.push({ code: 'format-version' });
     for (const field of ['document', 'timeline', 'signalGroups', 'signals', 'annotations', 'legend', 'layout', 'transactions', 'constraints']) if (!(field in (documentValue || {}))) issues.push({ code: `missing-${field}` });
+    if (documentValue?.formatVersion === 2) for (const field of ['bookmarks', 'timeGroups', 'checkSettings']) if (!(field in (documentValue || {}))) issues.push({ code: `missing-${field}` });
+    const anchors = documentValue?.timeline?.labelAnchors || [];
+    const anchorIds = new Set();
+    for (const anchor of anchors) {
+      if (!anchor?.id || anchorIds.has(anchor.id)) issues.push({ code: 'duplicate-label-anchor-id', id: anchor?.id });
+      anchorIds.add(anchor?.id);
+      if (!Number.isFinite(Number(anchor.source)) || !Number.isFinite(Number(anchor.display))) issues.push({ code: 'invalid-label-anchor', id: anchor?.id });
+      if (Number(anchor.source) < Number(documentValue?.timeline?.start ?? 0) || Number(anchor.source) > Number(documentValue?.timeline?.end ?? 0)) issues.push({ code: 'label-anchor-outside-timeline', id: anchor?.id });
+    }
+    const bookmarkIds = new Set();
+    for (const bookmark of documentValue?.bookmarks || []) {
+      if (!bookmark?.id || bookmarkIds.has(bookmark.id)) issues.push({ code: 'duplicate-bookmark-id', id: bookmark?.id });
+      bookmarkIds.add(bookmark?.id);
+      if (!String(bookmark?.name || '').trim() || !Number.isFinite(Number(bookmark?.start))) issues.push({ code: 'invalid-bookmark', id: bookmark?.id });
+    }
+    const timeGroupIds = new Set();
+    for (const group of documentValue?.timeGroups || []) {
+      if (!group?.id || timeGroupIds.has(group.id)) issues.push({ code: 'duplicate-time-group-id', id: group?.id });
+      timeGroupIds.add(group?.id);
+      if (!String(group?.name || '').trim() || !Number.isFinite(Number(group?.start)) || !Number.isFinite(Number(group?.end)) || Number(group.start) >= Number(group.end)) issues.push({ code: 'invalid-time-group', id: group?.id });
+      const presentation = group.presentation || {};
+      if (presentation.foldStyle !== undefined && !['none', 'compact', 'axis-break'].includes(presentation.foldStyle)) issues.push({ code: 'invalid-time-group-fold-style', id: group?.id });
+      if (presentation.resumeLabelAnchorId && !anchorIds.has(presentation.resumeLabelAnchorId)) issues.push({ code: 'invalid-resume-label-anchor', id: group?.id });
+    }
+    for (const anchor of anchors) if (anchor.ownerTimeGroupId && !timeGroupIds.has(anchor.ownerTimeGroupId)) issues.push({ code: 'invalid-label-anchor-owner', id: anchor.id });
+    const walkFinite = (value, path = '$') => {
+      if (typeof value === 'number' && !Number.isFinite(value)) issues.push({ code: 'non-finite-number', path });
+      else if (Array.isArray(value)) value.forEach((entry, index) => walkFinite(entry, `${path}[${index}]`));
+      else if (value && typeof value === 'object') Object.entries(value).forEach(([key, entry]) => walkFinite(entry, `${path}.${key}`));
+    };
+    walkFinite(documentValue);
     const annotationIds = new Set();
     for (const annotation of documentValue?.annotations || []) {
       if (!annotation.id || annotationIds.has(annotation.id)) issues.push({ code: 'duplicate-annotation-id', id: annotation.id }); annotationIds.add(annotation.id);
@@ -186,7 +229,7 @@
         if (signal.type === 'clock') {
           const generator = signal.generator || {};
           const counter = signal.edgeCounter || {};
-          if (generator.edgeReference !== undefined || generator.duty !== 0.5 || generator.period <= 0 || !Number.isFinite(generator.phase)) issues.push({ code: 'invalid-clock-generator', id: signal.id });
+          if (generator.edgeReference !== undefined || !Number.isFinite(Number(generator.duty)) || Number(generator.duty) <= 0 || Number(generator.duty) >= 1 || generator.period <= 0 || !Number.isFinite(generator.phase)) issues.push({ code: 'invalid-clock-generator', id: signal.id });
           if (!['rising', 'falling', 'both'].includes(counter.mode) || !['above', 'below'].includes(counter.position) || !['signal-start', 'selected-edge', 'marker', 'visible-range-start'].includes(counter.countFrom) || !Number.isInteger(counter.labelEvery) || counter.labelEvery < 1) issues.push({ code: 'invalid-edge-counter', id: signal.id });
         } else if (signal.type !== 'commentRow') {
         let previous = -1;
@@ -220,7 +263,7 @@
       }
     }
     const paths = issue => ({
-      'format-version': '$.formatVersion',
+      'format-version': '$.formatVersion', 'duplicate-label-anchor-id': '$.timeline.labelAnchors', 'invalid-label-anchor': '$.timeline.labelAnchors', 'label-anchor-outside-timeline': '$.timeline.labelAnchors', 'duplicate-bookmark-id': '$.bookmarks', 'invalid-bookmark': '$.bookmarks', 'duplicate-time-group-id': '$.timeGroups', 'invalid-time-group': '$.timeGroups', 'invalid-time-group-fold-style': '$.timeGroups', 'invalid-resume-label-anchor': '$.timeGroups', 'invalid-label-anchor-owner': '$.timeline.labelAnchors', 'non-finite-number': '$',
       'missing-document': '$.document', 'missing-timeline': '$.timeline', 'missing-signalGroups': '$.signalGroups', 'missing-signals': '$.signals', 'missing-annotations': '$.annotations', 'missing-legend': '$.legend', 'missing-layout': '$.layout', 'missing-transactions': '$.transactions', 'missing-constraints': '$.constraints',
       'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`, 'duplicate-transaction-id': `$.transactions[${issue.id}]`, 'invalid-transaction-bounds': `$.transactions[${issue.id}]`, 'invalid-transaction-links': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-link': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-phases': `$.transactions[${issue.id}].phases`, 'invalid-transaction-phase-bounds': `$.transactions[${issue.id}].phases`
     }[issue.code] || '$');

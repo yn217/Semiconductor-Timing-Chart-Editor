@@ -1,0 +1,10 @@
+{
+  "issue": 111,
+  "migrationV1": true,
+  "v2RoundTrip": true,
+  "futureVersionPreservesState": true,
+  "deterministicSave": true,
+  "nonFiniteRejected": true,
+  "errors": [],
+  "pass": true
+}

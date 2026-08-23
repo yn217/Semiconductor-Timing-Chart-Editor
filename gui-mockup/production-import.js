@@ -12,6 +12,13 @@
   const normalizeExternalDocument = parsed => {
     const warnings = [];
     const warn = (path, reason) => warnings.push({ code: 'unsupported-import-field', path, reason, severity: 'warning' });
+    if (Number(parsed?.formatVersion) > 2) {
+      const error = new Error(`Unsupported future formatVersion ${parsed.formatVersion}`);
+      error.code = 'future-format-version';
+      error.parsed = clone(parsed);
+      throw error;
+    }
+    const sourceIsCanonical = Number(parsed?.formatVersion) === 1 || Number(parsed?.formatVersion) === 2;
     const cycleView = parsed?.cycleView || {};
     const transactionView = parsed?.transactionView || {};
     const sourceSignals = Array.isArray(parsed?.signals) ? parsed.signals : (Array.isArray(cycleView.signals) ? cycleView.signals : []);
@@ -113,7 +120,30 @@
     const legendSource = clone(parsed?.legend) || {};
     const legend = { ...legendSource, orientation: legendSource.orientation || 'horizontal', usedRolesOnly: legendSource.usedRolesOnly ?? (legendSource.items === undefined ? true : legendSource.items === 'usedRolesOnly'), position: clone(legendSource.position || legendSource.offset || { x: 0, y: 0 }) };
     if (legendSource.offset && !legendSource.position) warn('$.legend.offset', 'Legacy legend offset was mapped to canonical position');
-    const result = { formatVersion: 1, document: documentValue, timeline: { start: numberOr(timebase.start, 0), end: numberOr(firstDefined(timebase.end, cycleCount), cycleCount), timeBase: timebase.timeBase || timebase.unit || 'cycle', cycleCount, referenceClock, edge: timebase.edge || 'rising' }, signalGroups: groups.length ? groups : [{ id: 'group_default', name: 'Signals', rows: signals.map(signal => signal.id) }], signals, annotations, legend, layout, transactions, constraints: clone(parsed?.constraints || sourceDocument.constraints || []) };
+    const sourceTimeline = clone(parsed?.timeline) || {};
+    const labelAnchors = (Array.isArray(sourceTimeline.labelAnchors) ? sourceTimeline.labelAnchors : []).map((anchor, index) => ({
+      id: anchor?.id || `label_anchor_${index + 1}`,
+      source: numberOr(anchor?.source, 0),
+      display: numberOr(anchor?.display, 0),
+      ...(anchor?.ownerTimeGroupId ? { ownerTimeGroupId: anchor.ownerTimeGroupId } : {})
+    }));
+    const bookmarks = (Array.isArray(parsed?.bookmarks) ? parsed.bookmarks : []).map((bookmark, index) => ({
+      id: bookmark?.id || `bookmark_${index + 1}`,
+      name: String(bookmark?.name || `Bookmark ${index + 1}`),
+      start: numberOr(bookmark?.start, 0),
+      ...(bookmark?.comment ? { comment: String(bookmark.comment) } : {})
+    }));
+    const timeGroups = (Array.isArray(parsed?.timeGroups) ? parsed.timeGroups : []).map((group, index) => ({
+      id: group?.id || `time_group_${index + 1}`,
+      name: String(group?.name || `Time Group ${index + 1}`),
+      ...(group?.category ? { category: String(group.category) } : {}),
+      start: numberOr(group?.start, 0),
+      end: numberOr(group?.end, cycleCount),
+      ...(group?.comment ? { comment: String(group.comment) } : {}),
+      ...(group?.presentation ? { presentation: clone(group.presentation) } : {})
+    }));
+    const result = { formatVersion: 2, document: documentValue, timeline: { start: numberOr(timebase.start, 0), end: numberOr(firstDefined(timebase.end, cycleCount), cycleCount), timeBase: timebase.timeBase || timebase.unit || 'cycle', cycleCount, referenceClock, edge: timebase.edge || 'rising', labelAnchors }, signalGroups: groups.length ? groups : [{ id: 'group_default', name: 'Signals', rows: signals.map(signal => signal.id) }], signals, annotations, legend, layout, transactions, constraints: clone(parsed?.constraints || sourceDocument.constraints || []), bookmarks, timeGroups, checkSettings: clone(parsed?.checkSettings) || {} };
+    if (sourceIsCanonical && Number(parsed.formatVersion) === 1) warnings.push({ code: 'migrated-v1-to-v2', path: '$.formatVersion', reason: 'Canonical v1 document was normalized to v2 defaults', severity: 'info' });
     model.importWarnings = warnings;
     return result;
   };

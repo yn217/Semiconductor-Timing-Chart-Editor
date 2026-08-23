@@ -70,6 +70,7 @@
 
   const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
     model.document = clone(nextDocument);
+    model.compatibility = null;
     if (resetHistory) { model.history = { undo: [], redo: [] }; controller.history = model.history; }
     model.validation = [];
     model.crossHighlight = [];
@@ -136,12 +137,12 @@
   };
 
   const newDocument = () => ({
-    formatVersion: 1,
+    formatVersion: 2,
     document: { id: 'untitled.tcd', title: 'Untitled', header: { subtitle: '', description: '', notes: '', preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: '', revision: '', text: '' } },
-    timeline: { start: 0, end: 1, timeBase: 'cycle', cycleCount: 1, referenceClock: 'clk', edge: 'rising' },
+    timeline: { start: 0, end: 1, timeBase: 'cycle', cycleCount: 1, referenceClock: 'clk', edge: 'rising', labelAnchors: [] },
     signalGroups: [{ id: 'group_input', name: '入力 (Input)', rows: ['clk'] }],
     signals: [{ id: 'clk', name: 'clk', type: 'clock', role: 'input', generator: { start: 0, period: 1, duty: 0.5, phase: 0, initial: 0, polarity: 'positive' }, edgeCounter: { show: true, mode: 'rising', startNumber: 1, countFrom: 'signal-start', labelEvery: 1, position: 'above', offset: { x: 0, y: -6 } } }],
-    annotations: [], legend: { orientation: 'horizontal', usedRolesOnly: true }, layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', busWidthAlign: 'left', pathDisplayMode: 'signalOnly', instancePathAlign: 'left', instancePathWidth: 180, busWidthMode: 'inline', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis' }, transactions: [], constraints: []
+    annotations: [], legend: { orientation: 'horizontal', usedRolesOnly: true }, layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: 'left', busWidthAlign: 'left', pathDisplayMode: 'signalOnly', instancePathAlign: 'left', instancePathWidth: 180, busWidthMode: 'inline', rowHeight: 28, signalSpacing: 6, overflow: 'ellipsis' }, transactions: [], constraints: [], bookmarks: [], timeGroups: [], checkSettings: {}
   });
   const commitSaveSuccess = ({ fileHandle = model.persistence.fileHandle, fileName = model.persistence.fileName, documentHash }) => {
     model.persistence.fileHandle = fileHandle;
@@ -152,7 +153,9 @@
     updateDirty();
   };
   const prepareSaveText = () => {
-    const serializable = controller.getSerializableDocument();
+    if (model.compatibility?.saveBlocked) return { error: 'Cannot save a Compatibility Mode document until a compatible target is explicitly established.' };
+    let serializable;
+    try { serializable = controller.getSerializableDocument(); } catch (error) { return { error: `Cannot save invalid document: ${error.message}` }; }
     const issues = controller.validateDocument(serializable);
     if (issues.length) return { error: `Cannot save invalid document: ${issues.map(issue => issue.code).join(', ')}` };
     return { text: `${JSON.stringify(serializable, null, 2)}\n`, documentHash: hash(serializable) };
@@ -183,12 +186,30 @@
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
-    try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
+    try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; if (future) model.compatibility = { mode: 'preview', sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'newer-format-version', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), expected: 2, recommendation: 'Open in Compatibility Mode or cancel.' }] }; publishOperation({ type: 'open', result: 'error', message: future ? '✕ Newer file format' : '✕ Could not open file', detail: future ? `${error.message}. The current document was left unchanged.` : `Invalid JSON: ${error.message}` }); return false; }
     const issues = controller.validateDocument(parsed);
-    if (parsed?.formatVersion !== 1 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
+    if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
     replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
+  controller.actions.openCompatibilityText = async (text, options = {}) => {
+    let parsed;
+    try {
+      parsed = JSON.parse(text);
+      if (Number(parsed?.formatVersion) <= 2) return false;
+      const sourceVersion = Number(parsed.formatVersion);
+      parsed = controller.normalizeExternalDocument({ ...parsed, formatVersion: 2 });
+      const issues = controller.validateDocument(parsed);
+      if (issues.length) return false;
+      replaceDocument(parsed);
+      model.compatibility = { mode: 'compatibility', sourceFormatVersion: sourceVersion, saveBlocked: true, diagnostics: [{ code: 'opened-in-compatibility-mode', severity: 'warning', path: '$.formatVersion', actual: sourceVersion, expected: 2, recommendation: 'Save is blocked until a new compatible target is explicitly established.' }] };
+      model.persistence.fileName = options.fileName || 'compatibility-preview.tcd';
+      model.persistence.dirty = false;
+      publishOperation({ type: 'open', result: 'warning', message: `⚠ Opened in Compatibility Mode: ${model.persistence.fileName}`, detail: 'Save is blocked to protect newer fields.' });
+      updateDirty();
+      return true;
+    } catch (error) { publishOperation({ type: 'open', result: 'error', message: '✕ Compatibility open failed', detail: error.message }); return false; }
+  };
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
     if (text !== undefined) return loadText(text, fileName || 'example.tcd', unsavedDecision);
     if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); else publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); return false; } }

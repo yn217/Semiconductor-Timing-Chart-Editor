@@ -3,10 +3,21 @@
 ## File policy
 1 diagram = 1 `.tcd` file。中身はUTF-8 JSON。`formatVersion`必須。WaveDrom用一時WaveJSONは保存しない。
 
-## Top level
+## Top level (current v2)
 ```json
-{"formatVersion":1,"document":{},"timeline":{},"signalGroups":[],"signals":[],"annotations":[],"legend":{},"layout":{},"transactions":[],"constraints":[]}
+{"formatVersion":2,"document":{},"timeline":{"labelAnchors":[]},"signalGroups":[],"signals":[],"bookmarks":[],"timeGroups":[],"annotations":[],"legend":{},"layout":{},"transactions":[],"constraints":[],"checkSettings":{}}
 ```
+
+`formatVersion: 1` remains readable. On Open it is deterministically normalized to v2; the first successful Save writes v2. Unknown future versions produce a blocking compatibility preview without replacing the current document. An explicit Compatibility Mode open is read-only/protected until a compatible target is established; newer fields are never silently dropped. WaveJSON, SVG geometry, DOM/view state, scroll/zoom/selection, Problems results, and generated edge lists are never persisted.
+
+### v2 persisted additions
+
+- `bookmarks[]`: stable `id`, non-empty `name`, source-time `start`, optional `comment`.
+- `timeGroups[]`: source-time `[start,end)` interval and optional `presentation` (`collapsed`, `foldStyle`, `foldLabel`, `resumeLabelAnchorId`). Derived duration and pixel geometry are excluded.
+- `timeline.labelAnchors[]`: stable `id`, source-time `source`, authored ruler `display`, optional `ownerTimeGroupId`.
+- `checkSettings`: validator configuration only; Problems results and filters are derived.
+
+All v2 additions are owned by the canonical serializer/validator. IDs and cross references are checked before Save/Open, non-finite numbers are rejected, and arrays retain semantic order.
 
 ## Signal change-point model
 ```json
