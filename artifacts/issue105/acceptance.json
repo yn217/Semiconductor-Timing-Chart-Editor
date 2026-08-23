@@ -2,28 +2,23 @@
   "issue": 105,
   "fullState": {
     "band": "full",
-    "triggerCount": 0,
-    "scrollNeeded": true
+    "visibleTriggerCount": 0,
+    "toolsInMenus": 0
   },
   "compactState": {
     "band": "compact",
+    "tier1Visible": true,
+    "tier2Visible": true,
+    "tier4Hidden": true,
     "coreReachable": true,
     "scrollNeeded": false,
     "triggers": [
-      "行操作",
-      "行操作",
-      "時間軸",
       "レイアウト",
-      "表示"
-    ],
-    "visibleGroupTitles": [
-      "ファイル",
-      "編集",
-      "ズーム"
-    ],
-    "coreToolCount": 6
+      "表示",
+      "その他"
+    ]
   },
-  "overflowResult": {
+  "namedOverflowResult": {
     "opened": true,
     "withinViewport": true,
     "tools": [
@@ -49,24 +44,52 @@
     "openCount": 0,
     "focusedIsTrigger": true
   },
+  "keyboardResult": {
+    "openedByKeyboard": true,
+    "firstFocused": true,
+    "movedToSecond": true,
+    "closedByEscape": true,
+    "itemCount": 2
+  },
+  "moreCompactState": {
+    "band": "moreCompact",
+    "tier1Visible": true,
+    "tier2Hidden": true,
+    "scrollNeeded": false
+  },
+  "realClickResult": {
+    "found": true,
+    "wasEnabled": true,
+    "calls": 1
+  },
+  "fallbackState": {
+    "band": "fallback",
+    "tier1Visible": true,
+    "fileCollapsed": true
+  },
   "restoredState": {
     "band": "full",
-    "triggerCount": 0,
-    "scrollNeeded": true
+    "visibleTriggerCount": 0,
+    "homeToolCount": 29,
+    "toolsStrandedInMenus": 0
   },
   "zoomClickResult": {
     "calls": 1,
-    "before": 100,
-    "after": 110
+    "before": 330,
+    "after": 340
   },
-  "tabSwitchState": {
+  "tabState": {
     "homeScrollAfterReturn": 0,
-    "insertScrollAfterShow": 0
+    "homeScrollAfterHide": 0
+  },
+  "primaryActionState": {
+    "ribbonInsert": true,
+    "ribbonAnnotation": true,
+    "ribbonView": true
   },
   "errors": [],
   "pass": true,
   "artifacts": [
-    "issue105-1672x941.png",
-    "issue105-1280x720.png"
+    "issue105-1672x941.png"
   ]
 }

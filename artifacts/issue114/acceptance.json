@@ -38,6 +38,19 @@
     "chevAllSvgButtons": true,
     "noLiteralAnywhere": true
   },
+  "keyboard": {
+    "chevBefore": "true",
+    "chevAfterEnter": "false",
+    "chevAfterSpace": "true",
+    "moreMenuOpenedByKeyboard": true
+  },
+  "selectionSafeState": {
+    "selectionBefore": "req_addr[7:0]",
+    "selectionAfterEye": "req_addr[7:0]",
+    "selectionAfterMore": "req_valid",
+    "unaffectedByEye": true,
+    "moreSelectsItsOwnRow": true
+  },
   "errors": [],
   "pass": true,
   "artifacts": [

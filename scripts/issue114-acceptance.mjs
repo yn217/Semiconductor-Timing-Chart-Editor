@@ -100,6 +100,61 @@ const dynamicState = await page.evaluate(async () => {
   };
 });
 
+// --- F. Keyboard activation (Enter/Space) for Chevron and More buttons.
+// These are real native <button> elements with no keydown handler of their
+// own, so a genuine focused Enter/Space keypress (not a synthetic click())
+// must reach them through normal browser button-activation semantics.
+const chevHandle = await page.$('#groups .group .chev');
+await chevHandle.focus();
+const chevBefore = await page.evaluate(el => el.getAttribute('aria-expanded'), chevHandle);
+await page.keyboard.press('Enter');
+await page.waitForTimeout(30);
+const chevAfterEnter = await page.evaluate(el => el.getAttribute('aria-expanded'), chevHandle);
+await page.keyboard.press(' ');
+await page.waitForTimeout(30);
+const chevAfterSpace = await page.evaluate(el => el.getAttribute('aria-expanded'), chevHandle);
+
+const moreHandle = await page.$('#groups .row[data-signal] .more');
+await moreHandle.focus();
+await page.keyboard.press('Enter');
+await page.waitForTimeout(30);
+const moreMenuOpenedByKeyboard = await page.evaluate(() => !!document.querySelector('#issue6ContextMenu'));
+await page.evaluate(() => document.querySelector('#issue6ContextMenu')?.remove());
+
+// --- G. Eye click must not change selection. More click is a pre-existing,
+// deliberate exception (control-completeness.js's capture-phase handler):
+// it sets the clicked row as the menu's active context so the context menu
+// unambiguously acts on that row, even if it was not already selected. The
+// requirement here is that it always lands on the CORRECT row (the one the
+// More button belongs to), never an unrelated one, and Eye never touches
+// selection at all. ---
+const selectionSafeState = await page.evaluate(async () => {
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const c = window.TimingChartProductionController;
+  const rows = [...document.querySelectorAll('#groups .row[data-signal]')];
+  const targetRow = rows.find(r => r.dataset.signal !== c.model.selection?.id) || rows[0];
+  targetRow.click();
+  await wait(20);
+  const selectionBefore = c.model.selection?.id;
+
+  const eyeRow = rows.find(r => r.dataset.signal !== selectionBefore) || rows[0];
+  eyeRow.querySelector('.eye').click();
+  await wait(20);
+  const selectionAfterEye = c.model.selection?.id;
+
+  const moreRow = rows.find(r => r.dataset.signal !== selectionBefore) || rows[0];
+  moreRow.querySelector('.more').click();
+  await wait(20);
+  document.querySelector('#issue6ContextMenu')?.remove();
+  const selectionAfterMore = c.model.selection?.id;
+
+  return {
+    selectionBefore, selectionAfterEye, selectionAfterMore,
+    unaffectedByEye: selectionBefore === selectionAfterEye,
+    moreSelectsItsOwnRow: selectionAfterMore === moreRow.dataset.signal,
+  };
+});
+
 await page.screenshot({ path: path.join(out, 'issue114-1672x941.png') });
 await browser.close();
 
@@ -112,9 +167,17 @@ const pass = chevState.count >= 3 && chevState.allButtons && chevState.noLiteral
   && hit1280.eyeResolves && hit1280.moreResolves && hit1280.chevResolves && hit1280.groupMoreResolves
   && !hit1280.eyeMoreOverlap && !hit1280.chevGroupMoreOverlap
   && dynamicState.opened && dynamicState.moreAllSvgButtons && dynamicState.chevAllSvgButtons && dynamicState.noLiteralAnywhere
+  && chevBefore === 'true' && chevAfterEnter === 'false' && chevAfterSpace === 'true'
+  && moreMenuOpenedByKeyboard === true
+  && selectionSafeState.unaffectedByEye === true && selectionSafeState.moreSelectsItsOwnRow === true
   && errors.length === 0;
 
-const report = { issue: 114, chevState, moreState, hit1672, hit1280, dynamicState, errors, pass, artifacts: ['issue114-1672x941.png'] };
+const report = {
+  issue: 114, chevState, moreState, hit1672, hit1280, dynamicState,
+  keyboard: { chevBefore, chevAfterEnter, chevAfterSpace, moreMenuOpenedByKeyboard },
+  selectionSafeState,
+  errors, pass, artifacts: ['issue114-1672x941.png'],
+};
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 assert.ok(pass, JSON.stringify(report, null, 2));
 console.log('Issue #114 acceptance passed: Left Signal/Group Tree disclosure and overflow controls use standard SVG icon buttons (no literal v/⌄/>/⋮ glyphs), context menus still open for the correct group/row, Chevron/Eye/More hit targets are distinct and correctly hit-tested at 1672x941 and 1280x720, and dynamically opened documents reconcile new rows with the same SVG-button pattern.');
