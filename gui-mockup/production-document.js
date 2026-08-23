@@ -4,8 +4,8 @@
   if (!controller) return;
   const model = controller.model;
   const clone = value => structuredClone(value);
-  const metrics = model.persistenceMetrics = { commands: 0, serializableSnapshots: 0, structuredClones: 0, fullDocumentStringifies: 0, validations: 0, fullRenders: 0 };
-  const stable = value => { metrics.fullDocumentStringifies += 1; return JSON.stringify(value); };
+  const metrics = model.persistenceMetrics = { commands: 0, serializableSnapshots: 0, structuredClones: 0, fullDocumentStringifies: 0, fullDocumentStringifyBytes: 0, comparisonNodes: 0, validations: 0, fullRenders: 0, commandElapsedMs: 0, lastCommandMs: 0, maxCommandMs: 0 };
+  const stable = value => { const text = JSON.stringify(value); metrics.fullDocumentStringifies += 1; metrics.fullDocumentStringifyBytes += text.length; return text; };
   const hash = value => stable(value);
   const canonicalSnapshot = () => { metrics.serializableSnapshots += 1; metrics.structuredClones += 1; return clone(controller.getSerializableDocument()); };
   model.documentRevision = 0;
@@ -13,6 +13,28 @@
   model.history = { undo: [], redo: [] };
   const renderWithMetrics = controller.render;
   controller.render = (...args) => { metrics.fullRenders += 1; return renderWithMetrics(...args); };
+  const canonicalEqual = (left, right) => {
+    const stack = [[left, right]];
+    while (stack.length) {
+      const [a, b] = stack.pop();
+      metrics.comparisonNodes += 1;
+      if (Object.is(a, b)) continue;
+      if (typeof a !== typeof b || a === null || b === null) return false;
+      if (Array.isArray(a) || Array.isArray(b)) {
+        if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) stack.push([a[index], b[index]]);
+        continue;
+      }
+      if (typeof a === 'object') {
+        const aKeys = Object.keys(a); const bKeys = Object.keys(b);
+        if (aKeys.length !== bKeys.length) return false;
+        for (const key of aKeys) { if (!Object.prototype.hasOwnProperty.call(b, key)) return false; stack.push([a[key], b[key]]); }
+        continue;
+      }
+      return false;
+    }
+    return true;
+  };
   let unloadGuardActive = false;
   const beforeUnload = event => { if (!model.persistence.dirty) return; event.preventDefault(); event.returnValue = ''; };
   const renderOperationStatus = () => {
@@ -95,7 +117,7 @@
   };
   const validateCurrent = () => controller.validateDocumentRaw(model.document);
   const record = (label, before, after) => {
-    if (stable(before) === stable(after)) return false;
+    if (canonicalEqual(before, after)) return false;
     const revisionBefore = model.documentRevision;
     const revisionAfter = revisionBefore + 1;
     model.documentRevision = revisionAfter;
@@ -186,6 +208,8 @@
     updateDirty();
   };
   controller.documentHistory = { run(label, mutation, options = {}) {
+    const commandStarted = performance.now();
+    const finishCommand = () => { const elapsed = performance.now() - commandStarted; metrics.commandElapsedMs += elapsed; metrics.lastCommandMs = elapsed; metrics.maxCommandMs = Math.max(metrics.maxCommandMs, elapsed); };
     metrics.commands += 1;
     const before = canonicalSnapshot();
     let result = true;
@@ -198,13 +222,15 @@
     } catch (error) {
       const diagnostic = { code: 'validator-exception', path: '$', message: error?.message || 'Document validation failed unexpectedly' };
       restore(before, { validation: [diagnostic], render: options.render !== false });
+      finishCommand();
       return false;
     }
-    if (!result || issues.length) { restore(before, { validation: issues, render: options.render !== false }); return false; }
+    if (!result || issues.length) { restore(before, { validation: issues, render: options.render !== false }); finishCommand(); return false; }
     const after = canonicalSnapshot();
     record(label, before, after);
     controller.cacheValidationResult?.(model.document, issues, model.documentRevision);
     if (options.render !== false) controller.render();
+    finishCommand();
     return true;
   } };
   controller.actions.undo = () => {

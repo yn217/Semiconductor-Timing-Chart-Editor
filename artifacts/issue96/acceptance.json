@@ -5,31 +5,70 @@
   "atomicInvalidEdit": true,
   "oneRenderOnFailure": true,
   "undoRedoContext": true,
-  "largeFixture100Signals": true,
+  "largeFixture": {
+    "signals": 129,
+    "cycles": 600,
+    "annotations": 1,
+    "transactions": 1,
+    "bookmarks": 1,
+    "timeGroups": 1
+  },
+  "repeatedEdits": {
+    "count": 60,
+    "elapsedMs": 413.2999999523163,
+    "metrics": {
+      "commands": 60,
+      "serializableSnapshots": 120,
+      "structuredClones": 120,
+      "fullDocumentStringifies": 0,
+      "fullDocumentStringifyBytes": 0,
+      "comparisonNodes": 258150,
+      "validations": 60,
+      "fullRenders": 0,
+      "commandElapsedMs": 411.8000000715256,
+      "lastCommandMs": 6,
+      "maxCommandMs": 10.700000047683716
+    }
+  },
   "metrics": {
     "edit": {
       "commands": 1,
       "serializableSnapshots": 2,
       "structuredClones": 2,
-      "fullDocumentStringifies": 2,
+      "fullDocumentStringifies": 0,
+      "fullDocumentStringifyBytes": 0,
+      "comparisonNodes": 288,
       "validations": 1,
-      "fullRenders": 1
+      "fullRenders": 1,
+      "commandElapsedMs": 725.6000000238419,
+      "lastCommandMs": 725.6000000238419,
+      "maxCommandMs": 725.6000000238419
     },
     "invalid": {
       "commands": 1,
       "serializableSnapshots": 1,
       "structuredClones": 1,
       "fullDocumentStringifies": 0,
+      "fullDocumentStringifyBytes": 0,
+      "comparisonNodes": 0,
       "validations": 1,
-      "fullRenders": 1
+      "fullRenders": 1,
+      "commandElapsedMs": 671,
+      "lastCommandMs": 671,
+      "maxCommandMs": 671
     },
     "large": {
       "commands": 1,
       "serializableSnapshots": 2,
       "structuredClones": 2,
-      "fullDocumentStringifies": 2,
+      "fullDocumentStringifies": 0,
+      "fullDocumentStringifyBytes": 0,
+      "comparisonNodes": 3715,
       "validations": 1,
-      "fullRenders": 1
+      "fullRenders": 0,
+      "commandElapsedMs": 11.200000047683716,
+      "lastCommandMs": 11.200000047683716,
+      "maxCommandMs": 11.200000047683716
     }
   },
   "errors": [],

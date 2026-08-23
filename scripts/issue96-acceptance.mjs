@@ -35,7 +35,8 @@ assert.equal(editDelta.serializableSnapshots, 2);
 assert.equal(editDelta.structuredClones, 2);
 assert.equal(editDelta.validations, 1);
 assert.equal(editDelta.fullRenders, 1);
-assert.equal(editDelta.fullDocumentStringifies, 2);
+assert.equal(editDelta.fullDocumentStringifies, 0, 'history equality still stringifies full snapshots');
+assert.ok(editDelta.comparisonNodes > 0, 'canonical snapshot comparison was not measured');
 assert.equal(afterEdit.history, beforeEdit.history + 1);
 assert.equal(afterEdit.dirty, true);
 
@@ -52,6 +53,7 @@ assert.equal(invalidDelta.commands, 1);
 assert.equal(invalidDelta.serializableSnapshots, 1);
 assert.equal(invalidDelta.validations, 1);
 assert.equal(invalidDelta.fullRenders, 1, 'validation failure rendered more than once');
+assert.equal(invalidDelta.fullDocumentStringifies, 0);
 
 const contextBeforeUndo = await page.evaluate(() => { const c = window.TimingChartProductionController; c.model.timeSelection.cycle = 6; c.model.editor.rowIndex = 1; c.model.view.scope = []; return { selection: structuredClone(c.model.selection), cycle: c.model.timeSelection.cycle, scope: structuredClone(c.model.view.scope), revision: c.model.documentRevision }; });
 assert.equal(await page.evaluate(() => window.TimingChartProductionController.actions.undo()), true);
@@ -69,23 +71,51 @@ const fixture = await page.evaluate(() => {
   const c = window.TimingChartProductionController;
   const doc = structuredClone(c.getSerializableDocument());
   const group = doc.signalGroups[0];
-  for (let index = 0; index < 100; index += 1) { const id = `perf_signal_${index}`; doc.signals.push({ id, name: id, type: 'binary', role: 'internal', source: { instancePath: [], signalName: id }, display: { name: id }, values: [{ start: 0, value: index % 2 }] }); group.rows.push(id); }
+  doc.timeline.end = 600;
+  doc.timeline.cycleCount = 600;
+  for (let index = 0; index < 120; index += 1) { const id = `perf_signal_${index}`; const values = Array.from({ length: 12 }, (_, valueIndex) => ({ start: valueIndex * 50, value: (index + valueIndex) % 2 })); doc.signals.push({ id, name: id, type: 'binary', role: 'internal', source: { instancePath: [], signalName: id }, display: { name: id }, values }); group.rows.push(id); }
+  doc.annotations = [{ id: 'issue96_annotation', type: 'marker', label: 'performance marker', anchor: { signal: 'req_valid', cycle: 50, point: 'rising', offset: { x: 0, y: 0 } } }];
+  doc.transactions = [{ id: 'issue96_transaction', name: 'performance transaction', start: 100, end: 200, phases: [] }];
+  doc.bookmarks = [{ id: 'issue96_bookmark', name: 'performance bookmark', start: 300, comment: 'fixture' }];
+  doc.timeGroups = [{ id: 'issue96_time_group', name: 'performance range', start: 350, end: 450, comment: 'fixture' }];
   return JSON.stringify(doc);
 });
-assert.equal(await page.evaluate(async text => window.TimingChartProductionController.actions.openText(text, { fileName: 'issue96-100.tcd', unsavedDecision: 'discard' }), fixture), true);
+assert.equal(await page.evaluate(text => { const c = window.TimingChartProductionController; c.replaceDocument(JSON.parse(text), { render: false }); c.model.documentRevision = 0; return true; }, fixture), true);
 await resetMetrics();
 const beforeLarge = await snapshot();
-assert.equal(await page.evaluate(() => window.TimingChartProductionController.actions.updateSignalValue('perf_signal_42', 0, 'value', '1')), true);
+assert.equal(await page.evaluate(() => { const c = window.TimingChartProductionController; return c.documentHistory.run('Issue 96 large fixture edit', () => { c.selectors.getSignal('perf_signal_42').values[0].value = 1; }, { render: false }); }), true);
 const afterLarge = await snapshot();
 const largeDelta = delta(beforeLarge.metrics, afterLarge.metrics);
 assert.equal(largeDelta.serializableSnapshots, 2);
 assert.equal(largeDelta.structuredClones, 2);
 assert.equal(largeDelta.validations, 1);
-assert.equal(largeDelta.fullRenders, 1);
-assert.equal(largeDelta.fullDocumentStringifies, 2);
+assert.equal(largeDelta.fullRenders, 0);
+assert.equal(largeDelta.fullDocumentStringifies, 0);
+
+await resetMetrics();
+const repeatedEdits = await page.evaluate(() => {
+  const c = window.TimingChartProductionController;
+  const started = performance.now();
+  for (let index = 0; index < 60; index += 1) {
+    const id = `perf_signal_${index % 120}`;
+    const signal = c.selectors.getSignal(id);
+    const next = signal.values[0].value === 0 ? 1 : 0;
+    if (!signal) throw new Error(`missing ${id}`);
+    if (!c.documentHistory.run(`Issue 96 repeated edit ${index}`, () => { signal.values[0].value = next; }, { render: false })) throw new Error(`edit ${index} failed`);
+  }
+  return { elapsedMs: performance.now() - started, metrics: structuredClone(c.model.persistenceMetrics), revision: c.model.documentRevision };
+});
+assert.equal(repeatedEdits.metrics.commands, 60);
+assert.equal(repeatedEdits.metrics.serializableSnapshots, 120);
+assert.equal(repeatedEdits.metrics.structuredClones, 120);
+assert.equal(repeatedEdits.metrics.validations, 60);
+assert.equal(repeatedEdits.metrics.fullRenders, 0);
+assert.equal(repeatedEdits.metrics.fullDocumentStringifies, 0);
+assert.ok(repeatedEdits.metrics.fullDocumentStringifyBytes === 0);
+assert.equal(repeatedEdits.revision, 61);
 
 assert.equal(errors.length, 0, errors.join('\n'));
 await page.screenshot({ path: path.join(out, 'issue96-1672x941.png') });
 await browser.close();
-await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 96, onePrePostSnapshot: true, revisionDirty: true, atomicInvalidEdit: true, oneRenderOnFailure: true, undoRedoContext: true, largeFixture100Signals: true, metrics: { edit: editDelta, invalid: invalidDelta, large: largeDelta }, errors, pass: true }, null, 2)}\n`);
-console.log('Issue #96 acceptance passed: revision Dirty tracking, one pre/post snapshot, atomic rollback, one failure render, Undo/Redo context, and 100-Signal metrics.');
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 96, onePrePostSnapshot: true, revisionDirty: true, atomicInvalidEdit: true, oneRenderOnFailure: true, undoRedoContext: true, largeFixture: { signals: 129, cycles: 600, annotations: 1, transactions: 1, bookmarks: 1, timeGroups: 1 }, repeatedEdits: { count: 60, elapsedMs: repeatedEdits.elapsedMs, metrics: repeatedEdits.metrics }, metrics: { edit: editDelta, invalid: invalidDelta, large: largeDelta }, errors, pass: true }, null, 2)}\n`);
+console.log('Issue #96 acceptance passed: revision Dirty tracking, structural snapshot equality, atomic rollback, and 60-edit large-document characterization.');
