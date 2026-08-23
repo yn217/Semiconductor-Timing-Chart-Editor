@@ -125,15 +125,46 @@
   const restore = snapshot => {
     const previousSelection = clone(model.selection);
     const previousView = clone(model.view);
+    const previousTimeSelection = clone(model.timeSelection);
+    const previousEditor = clone(model.editor);
+    const previousDocument = clone(model.document);
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.();
+    const previousScroll = scrollHost ? { left: scrollHost.scrollLeft, top: scrollHost.scrollTop } : null;
     replaceDocument(snapshot, { resetHistory: false, render: false });
-    const selectionExists = previousSelection?.kind === 'annotation'
-      ? model.document.annotations.some(annotation => annotation.id === previousSelection.id)
-      : previousSelection?.kind === 'signal'
-        ? model.document.signals.some(signal => signal.id === previousSelection.id)
-        : false;
-    if (selectionExists) model.selection = previousSelection;
+    const exists = selection => {
+      if (!selection?.id) return false;
+      if (selection.kind === 'annotation') return model.document.annotations.some(item => item.id === selection.id);
+      if (selection.kind === 'transaction') return model.document.transactions.some(item => item.id === selection.id);
+      if (selection.kind === 'bookmark') return (model.document.bookmarks || []).some(item => item.id === selection.id);
+      if (selection.kind === 'group') return model.document.signalGroups.some(item => item.id === selection.id);
+      return model.document.signals.some(item => item.id === selection.id);
+    };
+    const fallbackObject = () => {
+      const oldId = previousSelection?.id;
+      const oldGroup = previousDocument.signalGroups?.find(group => (group.rows || []).includes(oldId));
+      const oldRows = oldGroup?.rows || [];
+      const oldIndex = oldRows.indexOf(oldId);
+      const previous = oldRows.slice(0, Math.max(0, oldIndex)).reverse().find(id => model.document.signals.some(signal => signal.id === id));
+      const next = oldRows.slice(Math.max(0, oldIndex + 1)).find(id => model.document.signals.some(signal => signal.id === id));
+      const id = previous || next || model.document.signals.find(signal => signal.type !== 'commentRow')?.id;
+      return id ? { kind: model.document.signals.find(signal => signal.id === id)?.type === 'commentRow' ? 'comment' : 'signal', id } : { kind: 'signal', id: null };
+    };
+    if (exists(previousSelection)) model.selection = previousSelection;
+    else if (previousSelection?.kind === 'signal' || previousSelection?.kind === 'comment') model.selection = fallbackObject();
     model.view = { ...model.view, ...previousView };
+    const timeline = model.document.timeline;
+    const clamp = value => Math.max(Number(timeline.start ?? 0), Math.min(Number(timeline.end ?? timeline.cycleCount ?? 0), Number(value)));
+    const restoredCycle = clamp(previousTimeSelection?.cycle ?? 0);
+    const restoredStart = previousTimeSelection?.rangeStart === null || previousTimeSelection?.rangeStart === undefined ? null : clamp(previousTimeSelection.rangeStart);
+    const restoredEnd = previousTimeSelection?.rangeEnd === null || previousTimeSelection?.rangeEnd === undefined ? null : clamp(previousTimeSelection.rangeEnd);
+    model.timeSelection = { ...model.timeSelection, ...previousTimeSelection, cycle: restoredCycle, rangeStart: restoredStart, rangeEnd: restoredEnd };
+    if (model.timeSelection.rangeStart !== null && model.timeSelection.rangeEnd !== null && model.timeSelection.rangeEnd < model.timeSelection.rangeStart) model.timeSelection.rangeEnd = model.timeSelection.rangeStart;
+    const selectedSignal = model.document.signals.find(signal => signal.id === model.selection?.id);
+    model.editor = { ...model.editor, ...previousEditor, rowIndex: selectedSignal?.values?.length ? Math.max(0, Math.min(Number(previousEditor?.rowIndex ?? 0), selectedSignal.values.length - 1)) : 0 };
+    model.view.hiddenSignals = (previousView.hiddenSignals || []).filter(id => model.document.signals.some(signal => signal.id === id));
+    controller.repairScope?.();
     controller.render();
+    if (previousScroll) requestAnimationFrame(() => { const host = window.TimingChartTimingViewport?.getScrollHost?.(); if (host) { host.scrollLeft = Math.max(0, Math.min(previousScroll.left, host.scrollWidth - host.clientWidth)); host.scrollTop = Math.max(0, Math.min(previousScroll.top, host.scrollHeight - host.clientHeight)); } });
     updateDirty();
   };
   controller.documentHistory = { run(label, mutation, options = {}) {
