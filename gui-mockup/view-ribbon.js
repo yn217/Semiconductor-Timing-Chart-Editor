@@ -172,11 +172,13 @@
     document.querySelectorAll('.row-name .signal-name-part,.signal-label .signal-name-part').forEach(node => { node.style.display = view.columns.signalName ? '' : 'none'; });
     document.querySelectorAll('.bus-width-column,.hierarchy-bus-column,.bus-width-part').forEach(node => { node.style.display = view.columns.busWidth ? '' : 'none'; });
     document.querySelectorAll('.hierarchy-instance-column,.instance-path-part').forEach(node => { node.style.display = view.columns.instancePath ? '' : 'none'; });
-    const left = document.querySelector('.left-panel'); const inspector = document.querySelector('.inspector'); const bottom = document.querySelector('.bottom');
+    const left = document.querySelector('.left-panel'); const inspector = document.querySelector('.inspector'); const bottom = document.querySelector('.bottom'); const minimap = document.querySelector('.inspector .minimap');
     if (bottom && view.panels.bottom) view.bottomHeight = Number(view.bottomHeight || model.view.bottomHeight || bottom.getBoundingClientRect().height || 270);
     if (left) { left.hidden = !view.panels.left; left.classList.toggle('hidden', !view.panels.left); }
     if (inspector) { inspector.hidden = !view.panels.inspector; inspector.classList.toggle('hidden', !view.panels.inspector); }
     if (bottom) { bottom.hidden = !view.panels.bottom; bottom.classList.toggle('hidden', !view.panels.bottom); }
+    if (inspector) inspector.dataset.viewMinimap = view.guides.minimap ? 'on' : 'off';
+    if (minimap) { minimap.hidden = !view.guides.minimap; minimap.dataset.viewState = view.guides.minimap ? 'on' : 'off'; }
     applyPanelLayout();
     ribbon.dataset.viewState = JSON.stringify({ guides: view.guides, columns: view.columns, overlays: view.overlays, panels: view.panels });
   }

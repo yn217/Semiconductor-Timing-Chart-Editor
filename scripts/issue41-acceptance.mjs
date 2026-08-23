@@ -32,6 +32,16 @@ async function runViewport(browser, viewport) {
     command('grid').click(); command('snap').click(); command('ruler').click(); command('minimap').click(); await wait(10);
     expect(c.model.view.guides.grid === false && c.model.view.guides.snap === false && c.model.view.guides.ruler === false && c.model.view.guides.minimap === false, 'guide state did not change');
     expect(document.querySelector('#cycleCanvas').dataset.viewGrid === 'off' && document.querySelector('#cycleCanvas').dataset.viewRuler === 'off', 'guide DOM state missing');
+    expect(document.querySelector('.inspector .minimap')?.hidden === true && document.querySelector('.inspector')?.dataset.viewMinimap === 'off', 'MiniMap visibility did not reach the Inspector minimap');
+    command('minimap').click(); command('snap').click(); await wait(10);
+    expect(document.querySelector('.inspector .minimap')?.hidden === false && c.model.view.guides.snap === true, 'MiniMap/Snap restore did not apply');
+    c.actions.updateAnnotationAnchor('ann_default_marker', 'anchor', 'offset.x', 7);
+    c.model.view.guides.snap = false;
+    expect(c.actions.snapAnnotationAnchor('ann_default_marker', 'anchor') === false, 'Snap disabled state still performed a snap');
+    expect(c.model.document.annotations.find(item => item.id === 'ann_default_marker').anchor.offset.x === 7, 'Snap disabled state mutated the anchor');
+    c.model.view.guides.snap = true;
+    expect(c.actions.snapAnnotationAnchor('ann_default_marker', 'anchor') === true, 'Snap enabled state did not snap the annotation to WaveDrom geometry');
+    expect(c.model.document.annotations.find(item => item.id === 'ann_default_marker').anchor.offset.x === 0, 'Snap enabled state did not clear the pixel offset');
     command('signal-name').click(); command('role').click(); command('bus-width').click(); command('instance-path').click(); await wait(10);
     expect(Object.values(c.model.view.columns).every(value => value === false), 'column state did not change');
     command('comment-overlay').click(); command('annotation-overlay').click(); command('edge-counter').click(); await wait(10);
@@ -39,6 +49,14 @@ async function runViewport(browser, viewport) {
     expect(document.querySelector('#cycleCanvas').dataset.viewAnnotations === 'off', 'annotation overlay DOM state missing');
 
     const beforeView = JSON.stringify(c.getSerializableDocument());
+    const addedHierarchy = c.actions.addSignalsFromPaths('u_top.u_dma.req_valid', { type: 'binary', role: 'internal' });
+    expect(addedHierarchy.added.length === 1, 'hierarchical Full Path fixture was not added');
+    const hierarchySignal = c.model.document.signals.find(signal => signal.id === addedHierarchy.added[0]);
+    command('full-path').click(); await wait(20);
+    expect(c.model.document.layout.pathDisplayMode === 'full' && c.hierarchy.getDisplayLabel(hierarchySignal, 'full').includes('u_top.u_dma.req_valid'), 'Full Path did not use the live hierarchy path');
+    const availableScopes = c.hierarchy.getScopePaths(); expect(availableScopes.some(scope => scope.join('.') === 'u_top'), 'Scope did not enumerate the live hierarchy');
+    expect(c.actions.setScope(['u_top']) === true && c.model.view.scope.join('.') === 'u_top', 'Scope did not apply the selected hierarchy');
+    c.actions.setScope([]);
     command('relative').click(); await wait(20); command('full-path').click(); await wait(20); command('split-columns').click(); await wait(20); command('signal-only').click(); await wait(20);
     expect(JSON.stringify(c.getSerializableDocument()) !== beforeView || c.model.document.layout.pathDisplayMode === 'signalOnly', 'hierarchy action did not use existing presentation action');
     command('zoom-plus').click(); command('zoom-minus').click(); command('fit-selection').click(); command('fit-all').click(); await wait(50);
