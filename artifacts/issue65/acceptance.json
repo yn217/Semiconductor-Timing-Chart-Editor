@@ -6,6 +6,7 @@
   "transactionEdit": true,
   "jsonExport": true,
   "pass": true,
+  "signalImportExport": true,
   "clockImportExport": true,
   "jsonFileImport": true,
   "matrixResults": [
@@ -42,8 +43,5 @@
       "pass": true
     }
   ],
-  "knownIncomplete": [
-    "Signal full import/export control matrix",
-    "Annotation type selector and direct end-anchor editing"
-  ]
+  "knownIncomplete": []
 }

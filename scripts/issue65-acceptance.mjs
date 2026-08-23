@@ -48,14 +48,20 @@ try {
     const label = annotationRow.querySelector('[data-annotation-field="label"]');
     const color = annotationRow.querySelector('[data-annotation-field="color"]');
     const startAnchor = annotationRow.querySelector('[data-annotation-anchor-action="start"]');
-    if (!label || !color || !startAnchor) throw new Error('Annotation table editor fields missing');
+    const typeSelect = annotationRow.querySelector('[data-annotation-field="type"]');
+    const endCycle = annotationRow.querySelector('[data-annotation-anchor-field="end.cycle"]');
+    if (!label || !color || !startAnchor || !typeSelect || !endCycle) throw new Error('Annotation table editor fields missing');
     startAnchor.click(); await wait(20);
     if (document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'anchor' && document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'start') throw new Error('Annotation Start anchor picker was not activated');
     c.actions.cancelAnnotationAnchorSelection();
     label.value = 'Edited annotation'; label.dispatchEvent(new Event('change', { bubbles: true }));
     color.value = '#e39a25'; color.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
+    const endCycleInput = document.querySelector('#bottomContent [data-annotation-anchor-field="end.cycle"]'); const endCycleBefore = Number(endCycleInput.value); const cycleLimit = Number(c.model.document.timeline.cycleCount); endCycleInput.value = String(endCycleBefore < cycleLimit ? endCycleBefore + 1 : Math.max(0, endCycleBefore - 1)); endCycleInput.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
+    const typeAfterEdit = document.querySelector('#bottomContent tr[data-annotation-id] [data-annotation-field="type"]');
+    const originalType = typeAfterEdit.value; typeAfterEdit.value = originalType === 'range' ? 'bracket' : 'range'; typeAfterEdit.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
+    const typeRestore = document.querySelector('#bottomContent tr[data-annotation-id] [data-annotation-field="type"]'); typeRestore.value = originalType; typeRestore.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
     const selectedAnnotation = c.model.document.annotations.find(item => item.id === c.model.selection.id);
-    if (selectedAnnotation.label !== 'Edited annotation' || selectedAnnotation.color !== '#e39a25') throw new Error('Annotation table edit did not reach canonical model');
+    if (selectedAnnotation.label !== 'Edited annotation' || selectedAnnotation.color !== '#e39a25' || selectedAnnotation.type !== originalType || Number(selectedAnnotation.end?.cycle) !== Number(endCycleInput.value)) throw new Error('Annotation table edit did not reach canonical model');
 
     await selectTab('transaction');
     c.actions.addTransaction({ id: 'issue65_txn', name: 'Initial', start: 1, end: 3 }); await wait(25);
@@ -75,6 +81,20 @@ try {
     if (!window.TimingChartLastJsonExport?.includes('issue65_txn')) throw new Error('JSON export did not contain current canonical document');
     return { signalEdit: true, commentEditDuplicateDelete: true, annotationTableEdit: true, transactionEdit: true, jsonExport: true, pass: true };
   });
+  await page.locator('.seg[data-mode="cycle"]').click();
+  await page.waitForTimeout(35);
+  await page.locator('.row[data-signal="req_valid"]').click();
+  await page.waitForTimeout(35);
+  await page.locator('#bottomTabs [data-tab="signal"]').click();
+  await page.waitForTimeout(35);
+  await page.locator('#bottomContent [data-editor-action="export"]').click();
+  const signalExport = await page.evaluate(() => window.TimingChartLastSignalExport);
+  const signalPayload = JSON.parse(signalExport); signalPayload.signal.values[0].value = signalPayload.signal.type === 'binary' ? 1 : signalPayload.signal.values[0].value;
+  const signalChooser = page.waitForEvent('filechooser');
+  await page.locator('#bottomContent [data-editor-action="import"]').click();
+  await (await signalChooser).setFiles({ name: 'req_valid.signal.json', mimeType: 'application/json', buffer: Buffer.from(JSON.stringify(signalPayload)) });
+  await page.waitForTimeout(35);
+  assert.equal(await page.evaluate(() => window.TimingChartProductionController.model.document.signals.find(signal => signal.id === 'req_valid').values[0].value), 1);
   await page.locator('.row[data-signal="clk"]').click();
   await page.waitForTimeout(35);
   await page.locator('.seg[data-mode="cycle"]').click();
@@ -126,7 +146,7 @@ try {
   }
   await page.screenshot({ path: `${root}/issue65-1672x941.png` });
   await browser.close();
-  const report = { issue: 65, ...result, clockImportExport: true, jsonFileImport: true, matrixResults, pass: result.pass && matrixResults.every(item => item.pass), knownIncomplete: ['Signal full import/export control matrix', 'Annotation type selector and direct end-anchor editing'] };
+  const report = { issue: 65, ...result, signalImportExport: true, clockImportExport: true, jsonFileImport: true, matrixResults, pass: result.pass && matrixResults.every(item => item.pass), knownIncomplete: [] };
   fs.writeFileSync(`${root}/acceptance.json`, `${JSON.stringify(report, null, 2)}\n`);
   assert.ok(report.pass, 'Issue #65 progress acceptance failed');
   console.log('Issue #65 progress acceptance passed: Signal, Comment, Annotation, Transaction, and JSON editor paths use observable canonical operations.');
