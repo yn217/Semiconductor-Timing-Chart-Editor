@@ -542,6 +542,33 @@
     wave.style.transform = zoom === 1 ? '' : `scaleX(${zoom})`;
   };
   controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
+  controller.actions.revealSelection = (options = {}) => {
+    const { leftTree = true, cycleRow = true, behavior = 'nearest', id: explicitId } = options;
+    const id = explicitId ?? model.selection?.id;
+    if (!id) return { revealed: false, reason: 'no-selection' };
+    const staleGuard = (model.document.signals.some(item => item.id === id) || (model.document.annotations || []).some(item => item.id === id) || (model.document.transactions || []).some(item => item.id === id));
+    if (!staleGuard) return { revealed: false, reason: 'stale-id' };
+    const result = { revealed: false, leftTree: null, cycleRow: null };
+    if (leftTree) {
+      const row = document.querySelector(`#groups .row[data-signal="${CSS.escape(id)}"]`);
+      if (!row) result.leftTree = 'not-found';
+      else if (row.dataset.filterHidden === 'true') result.leftTree = 'filtered';
+      else if (row.hidden && row.closest('.group')?.classList.contains('collapsed')) {
+        const header = row.closest('.group')?.querySelector('.group-h');
+        header?.scrollIntoView({ block: behavior, inline: 'nearest', behavior: 'auto' });
+        if (header) { header.classList.remove('reveal-pulse'); void header.offsetWidth; header.classList.add('reveal-pulse'); }
+        result.leftTree = 'group-collapsed';
+      } else if (row.hidden) result.leftTree = 'hidden';
+      else { row.scrollIntoView({ block: behavior, inline: 'nearest', behavior: 'auto' }); result.leftTree = 'revealed'; result.revealed = true; }
+    }
+    if (cycleRow) {
+      const canvasRow = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(id)}"]`);
+      if (!canvasRow) result.cycleRow = 'not-found';
+      else if (canvasRow.hidden) result.cycleRow = 'hidden';
+      else { canvasRow.scrollIntoView({ block: behavior, inline: 'nearest', behavior: 'auto' }); result.cycleRow = 'revealed'; result.revealed = true; }
+    }
+    return result;
+  };
   const getBookmark = id => (model.document.bookmarks || []).find(bookmark => bookmark.id === id);
   const nextBookmarkId = () => { const used = new Set((model.document.bookmarks || []).map(bookmark => bookmark.id)); for (let index = 1; index < 1_000_000; index += 1) { const id = `bm_${String(index).padStart(3, '0')}`; if (!used.has(id)) return id; } return null; };
   const validBookmarkStart = value => Number.isFinite(Number(value)) && Number(value) >= Number(model.document.timeline.start) && Number(value) <= Number(model.document.timeline.end);
