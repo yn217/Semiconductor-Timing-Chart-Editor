@@ -30,6 +30,23 @@
     record(element, 'implemented');
   };
 
+  const selectedGroup = () => {
+    const selection = controller.model.selection || {};
+    return controller.model.document.signalGroups?.find(group => group.id === controller.model.view.currentGroupId) || controller.model.document.signalGroups?.find(group => (group.rows || []).includes(selection.id)) || controller.model.document.signalGroups?.[0] || null;
+  };
+  const openLayoutPopup = (kind, target) => {
+    document.querySelector('[data-layout-popup]')?.remove();
+    const popup = document.createElement('div'); popup.dataset.layoutPopup = kind; popup.style.cssText = 'position:fixed;z-index:2200;min-width:230px;padding:12px;background:#fff;border:1px solid #b8c5d4;border-radius:5px;box-shadow:0 6px 18px #0003;font:12px sans-serif;color:#243047;';
+    const rect = target.getBoundingClientRect(); popup.style.left = `${Math.max(4, Math.min(innerWidth - 250, rect.left))}px`; popup.style.top = `${Math.min(innerHeight - 210, rect.bottom + 4)}px`;
+    const field = (labelText, name, value) => `<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0"><span>${labelText}</span><input data-layout-field="${name}" type="number" min="0" max="48" step="1" value="${Number(value) || 0}" style="width:76px"></label>`;
+    if (kind === 'row') popup.innerHTML = `<b>行間隔</b>${field('Signal / Comment', 'signalSpacing', controller.model.document.layout.signalSpacing ?? 6)}<div style="display:flex;gap:5px;justify-content:flex-end;margin-top:10px"><button type="button" data-layout-action="minus" data-control-status="implemented">−</button><button type="button" data-layout-action="plus" data-control-status="implemented">＋</button><button type="button" data-layout-action="reset" data-control-status="implemented">Reset</button><button type="button" data-layout-action="apply" data-control-status="implemented">Apply</button></div>`;
+    else { const group = selectedGroup(); if (!group) return; popup.dataset.groupId = group.id; popup.innerHTML = `<b>Group間隔: ${String(group.name || group.id)}</b>${field('Before', 'spacingBefore', group.spacingBefore)}${field('After', 'spacingAfter', group.spacingAfter)}<div style="display:flex;gap:5px;justify-content:flex-end;margin-top:10px"><button type="button" data-layout-action="reset" data-control-status="implemented">Reset</button><button type="button" data-layout-action="apply" data-control-status="implemented">Apply</button></div>`; }
+    const close = () => popup.remove();
+    popup.addEventListener('click', event => { const action = event.target.closest('[data-layout-action]')?.dataset.layoutAction; if (!action) return; if (kind === 'row') { const input = popup.querySelector('[data-layout-field="signalSpacing"]'); if (action === 'minus') input.value = Math.max(0, Number(input.value) - 1); if (action === 'plus') input.value = Math.min(48, Number(input.value) + 1); if (action === 'reset') input.value = 6; if (action === 'apply') { if (controller.actions.setGlobalSignalSpacing(input.value)) close(); } } else { const before = popup.querySelector('[data-layout-field="spacingBefore"]'); const after = popup.querySelector('[data-layout-field="spacingAfter"]'); if (action === 'reset') { before.value = 0; after.value = 0; } if (action === 'apply') { if (controller.actions.setGroupSpacingValues(popup.dataset.groupId, before.value, after.value)) close(); } } });
+    popup.addEventListener('keydown', event => { if (event.key === 'Escape') close(); if (event.key === 'Enter') popup.querySelector('[data-layout-action="apply"]')?.click(); });
+    document.body.appendChild(popup); controller.controlAudit?.registerSubtree?.(popup); popup.querySelector('input')?.focus();
+  };
+
   const applyRibbon = () => {
     document.querySelectorAll('.ribbon-tabs .rtab').forEach(tab => {
       const text = normalize(tab.textContent);
@@ -57,12 +74,19 @@
       ['削除', ['delete', () => controller.actions.deleteSelection()]],
       ['複製', ['duplicate', () => controller.actions.duplicateSelection()]]
     ]);
+    const layoutActions = new Map([
+      ['行間隔', currentTool => openLayoutPopup('row', currentTool)],
+      ['Group間隔', currentTool => openLayoutPopup('group', currentTool)],
+      ['自動レイアウト', () => controller.actions.autoLayout()]
+    ]);
     document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
       const text = label(tool);
       const action = homeActions.find(([name]) => text.includes(name));
       if (action) { implement(tool, action[1]); return; }
       const edit = [...editActions.entries()].find(([name]) => text === name || (name === '切取' && text.startsWith(name)) || (name === '貼付' && text.startsWith(name)));
       if (edit) { tool.dataset.editCommand = edit[1][0]; implement(tool, edit[1][1]); return; }
+      const layout = [...layoutActions.entries()].find(([name]) => text.includes(name));
+      if (layout) { implement(tool, () => layout[1](tool)); return; }
       if (text === '上へ' || text === '下へ') {
         implement(tool, () => controller.actions.moveSignalBy(controller.model.selection?.id, text === '上へ' ? -1 : 1));
         return;

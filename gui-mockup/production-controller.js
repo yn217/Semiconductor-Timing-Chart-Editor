@@ -574,6 +574,20 @@
   controller.actions.moveSignalBy = (signalId, delta) => transactionRun('Reorder signal', () => { const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!group) return false; const from = group.rows.indexOf(signalId); const to = Math.max(0, Math.min(group.rows.length - 1, from + Number(delta))); if (from === to) return false; group.rows.splice(from, 1); group.rows.splice(to, 0, signalId); });
   controller.actions.setSignalSpacing = (signalId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update signal spacing', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; signal[field] = Number(value); }); };
   controller.actions.setGroupSpacing = (groupId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update group spacing', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group[field] = Number(value); }); };
+  controller.actions.setGlobalSignalSpacing = value => { const spacing = Number(value); if (!Number.isFinite(spacing) || spacing < 0 || spacing > 48) return false; return transactionRun('Update row spacing', () => { model.document.layout.signalSpacing = spacing; }); };
+  controller.actions.setGroupSpacingValues = (groupId, before, after) => { const spacingBefore = Number(before); const spacingAfter = Number(after); if (!Number.isFinite(spacingBefore) || !Number.isFinite(spacingAfter) || spacingBefore < 0 || spacingAfter < 0 || spacingBefore > 48 || spacingAfter > 48) return false; return transactionRun('Update group spacing', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.spacingBefore = spacingBefore; group.spacingAfter = spacingAfter; }); };
+  controller.actions.autoLayout = () => transactionRun('Auto layout', () => {
+    const layout = model.document.layout;
+    const clamp = (value, min, max, fallback) => { const number = Number(value); return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback; };
+    layout.signalSpacing = 6;
+    layout.rowHeight = clamp(layout.rowHeight, 20, 80, 28);
+    layout.roleColumnWidth = clamp(layout.roleColumnWidth, 24, 64, 32);
+    layout.signalNameWidth = clamp(layout.signalNameWidth, 120, 360, 168);
+    layout.instancePathWidth = clamp(layout.instancePathWidth, 120, 360, 180);
+    for (const group of model.document.signalGroups || []) { group.spacingBefore = clamp(group.spacingBefore, 0, 48, 0); group.spacingAfter = clamp(group.spacingAfter, 0, 48, 0); }
+    for (const signal of model.document.signals || []) { if (signal.spacingBefore !== undefined) signal.spacingBefore = clamp(signal.spacingBefore, 0, 48, 0); if (signal.spacingAfter !== undefined) signal.spacingAfter = clamp(signal.spacingAfter, 0, 48, 0); }
+    return true;
+  });
   controller.actions.setGroupCollapsed = (groupId, collapsed) => transactionRun('Toggle group collapse', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.collapsed = Boolean(collapsed); });
   controller.actions.setGroupName = (groupId, name) => { if (!String(name || '').trim()) return false; return transactionRun('Rename group', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.name = String(name).trim(); }); };
   controller.actions.moveGroupBy = (groupId, delta) => transactionRun('Reorder group', () => { const from = model.document.signalGroups.findIndex(item => item.id === groupId); const to = Math.max(0, Math.min(model.document.signalGroups.length - 1, from + Number(delta))); if (from < 0 || from === to) return false; const [group] = model.document.signalGroups.splice(from, 1); model.document.signalGroups.splice(to, 0, group); });
