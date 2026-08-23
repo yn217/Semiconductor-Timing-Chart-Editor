@@ -166,8 +166,8 @@ function bindIssue64Menus(model=getProductionModel()) {
       const button = event.target.closest('[data-command]');
       if (!button || !menu.contains(button)) return;
       event.preventDefault(); event.stopPropagation();
-      execute(button.dataset.command, context);
       close();
+      execute(button.dataset.command, context);
     });
     menu.addEventListener('keydown', event => {
       const buttons = [...menu.querySelectorAll('[data-command]')];

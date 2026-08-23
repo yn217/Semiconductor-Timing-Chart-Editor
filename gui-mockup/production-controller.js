@@ -479,19 +479,22 @@
     }
   };
   const reconcileSignalOrder = (signalId, delta) => {
+    const group = (model.document.signalGroups || []).find(item => (item.rows || []).includes(signalId));
+    const index = group ? group.rows.indexOf(signalId) : -1;
+    const reorderTimings = [];
     const reorder = host => {
       if (!host) return;
-      const group = (model.document.signalGroups || []).find(item => (item.rows || []).includes(signalId));
+      const started = performance.now();
       const row = host.querySelector(`[data-signal="${CSS.escape(signalId)}"]`);
-      if (!group || !row) return;
-      const index = group.rows.indexOf(signalId);
+      if (!group || !row) { reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started }); return; }
       const nextId = group.rows[index + 1];
       const next = nextId ? host.querySelector(`[data-signal="${CSS.escape(nextId)}"]`) : null;
-      if (next) { host.insertBefore(row, next); controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1; return; }
+      if (next) { host.insertBefore(row, next); controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1; reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started }); return; }
       const groupIds = new Set(group.rows);
       const last = [...host.children].reverse().find(node => groupIds.has(node.dataset.signal));
       if (last?.nextSibling) host.insertBefore(row, last.nextSibling); else if (last) host.appendChild(row);
       controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1;
+      reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started });
     };
     reorder(document.querySelector('#cycleCanvas .wave'));
     reorder(window.TimingChartFrozenLabels?.frozenWave);
@@ -501,8 +504,13 @@
     const axisFinished = performance.now();
     if ((model.document.annotations || []).length) window.TimingChartProductionAnnotations?.render?.(model);
     const annotationFinished = performance.now();
-    controller.viewRibbon?.scheduleMinimap?.();
-    controller.lastIncrementalTraceParts = { shiftMs: shiftFinished - shiftStarted, timeAxisMs: axisFinished - shiftFinished, annotationsMs: annotationFinished - axisFinished };
+    const neighborIndex = Number(delta) < 0 ? index + 1 : index - 1;
+    const minimapRows = group && group.rows[neighborIndex] ? [signalId, group.rows[neighborIndex]] : [];
+    if (controller.viewRibbon?.reconcileMinimapRows?.(minimapRows)) {
+      controller.viewMetrics ||= {};
+      controller.viewMetrics.minimapLocalizedUpdates = (controller.viewMetrics.minimapLocalizedUpdates || 0) + 1;
+    }
+    controller.lastIncrementalTraceParts = { shiftMs: shiftFinished - shiftStarted, timeAxisMs: axisFinished - shiftFinished, annotationsMs: annotationFinished - axisFinished, reorderTimings };
   };
   const incrementalRun = (label, mutation, reconcile) => {
     const started = performance.now();

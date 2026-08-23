@@ -45,6 +45,11 @@ const state = await page.evaluate(() => {
   const controller = window.TimingChartProductionController;
   return { signalCount: controller.model.document.signals.length, rows: document.querySelectorAll('#cycleCanvas .wave-row').length };
 });
+await page.evaluate(async () => {
+  const idle = window.TimingChartProductionController?.waveformIdle;
+  if (idle) await idle;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+});
 
 const actions = await page.evaluate(() => {
   const controller = window.TimingChartProductionController;
@@ -52,6 +57,7 @@ const actions = await page.evaluate(() => {
   const row = id => document.querySelector(`#groups .row[data-signal="${id}"]`);
   const run = async (name, fn) => {
     const metricsBefore = { ...controller.renderMetrics };
+    window.__lastReorderClickDispatchMs = null;
     const cycleBefore = controller.model.document.timeline.cycleCount;
     const revisionBefore = controller.model.documentRevision;
     const start = performance.now();
@@ -64,23 +70,25 @@ const actions = await page.evaluate(() => {
     const paint = performance.now();
     if (waveformIdle) await waveformIdle;
     const settledPaint = performance.now();
-    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, settledPaintMs: settledPaint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, timelineTrace: controller.lastTimelineInvalidation || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
+    return { name, result, commandMs: commandEnd - start, clickDispatchMs: window.__lastReorderClickDispatchMs || null, paintMs: paint - start, settledPaintMs: settledPaint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, timelineTrace: controller.lastTimelineInvalidation || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
   };
   return (async () => {
     controller.actions.selectObject(row('ctp_sig_10'));
     await new Promise(resolve => requestAnimationFrame(resolve));
     for (const key of Object.keys(controller.renderMetrics)) controller.renderMetrics[key] = 0;
-    const clickReorder = async command => {
+    const prepareReorder = async command => {
       row('ctp_sig_10')?.querySelector('.more')?.click();
       await new Promise(resolve => requestAnimationFrame(resolve));
-      const button = document.querySelector(`#issue6ContextMenu [data-command="${command}"]`);
-      if (!button) return false;
-      button.click();
-      return true;
+      return Boolean(document.querySelector(`#issue6ContextMenu [data-command="${command}"]`));
     };
+    const clickPreparedReorder = command => { const button = document.querySelector(`#issue6ContextMenu [data-command="${command}"]`); if (!button) return false; const started = performance.now(); button.click(); window.__lastReorderClickDispatchMs = performance.now() - started; return true; };
+    const signalUpReady = await prepareReorder('up');
+    const signalUp = await run('signal-up', () => signalUpReady && clickPreparedReorder('up'));
+    const signalDownReady = await prepareReorder('down');
+    const signalDown = await run('signal-down', () => signalDownReady && clickPreparedReorder('down'));
     const results = [
-    await run('signal-up', () => clickReorder('up')),
-    await run('signal-down', () => clickReorder('down')),
+    signalUp,
+    signalDown,
     await run('eye-off', () => document.querySelector('#groups .row[data-signal="ctp_sig_10"] .eye')?.click()),
     await run('eye-on', () => document.querySelector('#groups .row[data-signal="ctp_sig_10"] .eye')?.click()),
     await run('cycle-insert', () => {
