@@ -1,5 +1,128 @@
 {
   "issue": 91,
+  "realSourcePath": true,
+  "catalogResults": [
+    {
+      "file": "01_apb_register_access.tcd.json",
+      "loaded": true,
+      "signals": 10,
+      "groups": 3
+    },
+    {
+      "file": "02_ahb_lite_pipelined_transfer.tcd.json",
+      "loaded": true,
+      "signals": 11,
+      "groups": 2
+    },
+    {
+      "file": "03_axi4_full_write_burst.tcd.json",
+      "loaded": true,
+      "signals": 18,
+      "groups": 3
+    },
+    {
+      "file": "04_axi4_full_read_outstanding.tcd.json",
+      "loaded": true,
+      "signals": 14,
+      "groups": 2
+    },
+    {
+      "file": "05_sram_1p_sync_read_write.tcd.json",
+      "loaded": true,
+      "signals": 7,
+      "groups": 2
+    },
+    {
+      "file": "06_sram_2p_parallel_and_conflict.tcd.json",
+      "loaded": true,
+      "signals": 12,
+      "groups": 3
+    },
+    {
+      "file": "07_axi_to_dram_read_path.tcd.json",
+      "loaded": true,
+      "signals": 17,
+      "groups": 3
+    },
+    {
+      "file": "08_async_fifo_cdc.tcd.json",
+      "loaded": true,
+      "signals": 12,
+      "groups": 2
+    },
+    {
+      "file": "09_accelerator_request_response.tcd.json",
+      "loaded": true,
+      "signals": 12,
+      "groups": 3
+    },
+    {
+      "file": "10_axi4_stream_packet_backpressure.tcd.json",
+      "loaded": true,
+      "signals": 8,
+      "groups": 1
+    },
+    {
+      "file": "11_signal_types_roles_legend.tcd.json",
+      "loaded": true,
+      "signals": 6,
+      "groups": 2
+    },
+    {
+      "file": "12_group_bands_and_spacing.tcd.json",
+      "loaded": true,
+      "signals": 7,
+      "groups": 3
+    },
+    {
+      "file": "13_signal_name_layout.tcd.json",
+      "loaded": true,
+      "signals": 5,
+      "groups": 1
+    },
+    {
+      "file": "14_annotation_overlay_all_types.tcd.json",
+      "loaded": true,
+      "signals": 4,
+      "groups": 1
+    },
+    {
+      "file": "15_transition_arrows_anchor_styles.tcd.json",
+      "loaded": true,
+      "signals": 4,
+      "groups": 1
+    },
+    {
+      "file": "16_clock_phase_gating_gap.tcd.json",
+      "loaded": true,
+      "signals": 5,
+      "groups": 1
+    },
+    {
+      "file": "17_cycle_insert_delete_ripple.tcd.json",
+      "loaded": true,
+      "signals": 4,
+      "groups": 1
+    },
+    {
+      "file": "18_legend_and_group_reorder.tcd.json",
+      "loaded": true,
+      "signals": 4,
+      "groups": 4
+    },
+    {
+      "file": "19_header_footer_export.tcd.json",
+      "loaded": true,
+      "signals": 3,
+      "groups": 1
+    },
+    {
+      "file": "20_transaction_cycle_linked_views.tcd.json",
+      "loaded": true,
+      "signals": 6,
+      "groups": 3
+    }
+  ],
   "sampleBrowser": true,
   "extensionPolicy": true,
   "replaceLifecycle": true,
