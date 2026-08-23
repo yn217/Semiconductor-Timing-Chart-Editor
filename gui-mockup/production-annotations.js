@@ -125,14 +125,29 @@
       overlay.style.height = `${initialRect.height}px`;
       overlayHost.appendChild(overlay);
     }
-    overlay.innerHTML = ''; const rect = overlayHost.getBoundingClientRect(); const errors = [];
+    const rect = overlayHost.getBoundingClientRect(); const errors = [];
     // Percentage height on an absolutely positioned SVG can participate in the
     // center grid's min-content calculation when annotation selection changes.
     // Pin the overlay to the measured canvas box so overlays cannot resize the
     // locked waveform/bottom split.
     overlay.style.width = `${rect.width}px`;
     overlay.style.height = `${rect.height}px`;
-    for (const annotation of [...(currentModel.document.annotations || [])].sort((a, b) => Number(a.zOrder || 0) - Number(b.zOrder || 0))) { const resolved = resolve(annotation); errors.push(...resolved.errors); renderSvg(annotation, resolved.result, overlay, rect); }
+    const expected = new Set();
+    for (const annotation of [...(currentModel.document.annotations || [])].sort((a, b) => Number(a.zOrder || 0) - Number(b.zOrder || 0))) {
+      const resolved = resolve(annotation); errors.push(...resolved.errors); expected.add(annotation.id);
+      let group = overlay.querySelector(`g[data-annotation-id="${CSS.escape(annotation.id)}"]`);
+      if (!group) { group = document.createElementNS('http://www.w3.org/2000/svg', 'g'); group.dataset.annotationId = annotation.id; overlay.appendChild(group); }
+      const renderKey = JSON.stringify({ annotation, resolved: resolved.result });
+      if (group.dataset.renderKey !== renderKey) {
+        const oldCount = group.childNodes.length;
+        group.replaceChildren();
+        if (controller.renderMetrics) { controller.renderMetrics.annotationNodeRemoves += oldCount; }
+        renderSvg(annotation, resolved.result, group, rect);
+        group.dataset.renderKey = renderKey;
+        if (controller.renderMetrics) controller.renderMetrics.annotationNodeCreates += group.childNodes.length;
+      }
+    }
+    for (const group of [...overlay.querySelectorAll(':scope > g[data-annotation-id]')]) if (!expected.has(group.dataset.annotationId)) { if (controller.renderMetrics) controller.renderMetrics.annotationNodeRemoves += group.childNodes.length + 1; group.remove(); }
     currentModel.annotationValidation = errors;
     // Center region sizing is owned by production-controller.renderMode().
     // Annotation overlays must never assume a two-row Cycle layout.

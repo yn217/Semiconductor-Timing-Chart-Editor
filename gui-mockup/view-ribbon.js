@@ -185,6 +185,7 @@
     const width = Math.max(1, mini.clientWidth); const height = Math.max(1, mini.clientHeight); const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.replaceChildren();
     const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
+    if (controller.renderMetrics) controller.renderMetrics.minimapRowRectReads += rows.length;
     rows.forEach((row, index) => { const rect = row.getBoundingClientRect(); const x = Math.max(0, (rect.left - hostRect.left + host.scrollLeft) / contentWidth * width); const y = Math.max(0, (rect.top - hostRect.top + host.scrollTop) / contentHeight * height); const w = Math.max(2, Math.min(width - x, (row.querySelector('.trace')?.getBoundingClientRect().width || contentWidth * 0.7) / contentWidth * width)); const line = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); line.dataset.minimapRow = row.dataset.signalId || row.dataset.signal || String(index); line.setAttribute('x', x); line.setAttribute('y', y); line.setAttribute('width', w); line.setAttribute('height', Math.max(1, Math.min(4, rect.height / contentHeight * height))); line.setAttribute('fill', row.classList.contains('band-output') ? '#b887ee' : row.classList.contains('band-internal') ? '#63b56b' : '#5a99ee'); svg.appendChild(line); });
     updateMinimapViewport();
   };
@@ -204,7 +205,9 @@
   const hostForEvents = scrollHost();
   hostForEvents?.addEventListener('scroll', () => { scheduleMinimapViewport(); }, { passive: true });
   window.addEventListener('resize', () => { scheduleMinimap(); scheduleGrid(); });
-  if (hostForEvents && window.MutationObserver) new MutationObserver(mutations => { if (mutations.some(mutation => !mutation.target?.closest?.('[data-live-grid]'))) { scheduleMinimap(); scheduleGrid(); } }).observe(hostForEvents, { childList: true, subtree: true });
+  // Semantic commands explicitly invalidate the overview.  A subtree
+  // MutationObserver caused every WaveDrom/row mutation to schedule a second
+  // Grid + MiniMap rebuild after the owning render had already completed.
   bindMiniMap();
 
   function applyPanelLayout() {
@@ -335,7 +338,7 @@
 
   controller.registerRenderHook?.('view-ribbon', () => { apply(); refresh(); });
   document.querySelectorAll('#ribbonHome .toggles label input').forEach(input => { if (input.dataset.viewGuideBound) return; input.dataset.viewGuideBound = 'true'; input.addEventListener('change', () => controller.actions.setGuide(input.dataset.viewGuide, input.checked)); });
-  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu };
+  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu, scheduleGrid, scheduleMinimap, scheduleMinimapViewport };
   setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
   apply(); refresh();
 })();

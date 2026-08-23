@@ -5,7 +5,7 @@
   const waveCache = new Map();
   const renderMetrics = () => {
     const controller = window.TimingChartProductionController;
-    const metrics = controller.renderMetrics ||= { appFullRenders: 0, rowMoves: 0, cycleRowCreates: 0, cycleRowRemoves: 0, cycleRowMoves: 0, wavePayloadBuilds: 0, waveCacheLookups: 0, waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0, annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0, transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
+    const metrics = controller.renderMetrics ||= { appFullRenders: 0, rowMoves: 0, cycleRowCreates: 0, cycleRowRemoves: 0, cycleRowMoves: 0, wavePayloadBuilds: 0, waveCacheLookups: 0, waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0, annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0, inspectorInnerHtmlRebuilds: 0, signalStyleFullScans: 0, layoutRowLookups: 0, minimapRowRectReads: 0, transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
     metrics.geometryScreenRefreshes ??= 0;
     return metrics;
   };
@@ -36,15 +36,31 @@
     return { wave, waveJson, key, subcycleFactor };
   }
 
+  // Build a cheap semantic cache key without invoking the adapter.  The adapter
+  // is only called when this key changes (signal waveform data or timeline
+  // semantics changed), so presentation-only renders do not regenerate every
+  // signal just to discover an SVG cache hit.
+  function semanticKey(model, signal) {
+    const timeline = model.document.timeline || {};
+    return JSON.stringify({
+      id: signal.id, type: signal.type, values: signal.values || [],
+      generator: signal.generator || null, period: signal.period,
+      phase: signal.phase, polarity: signal.polarity || signal.generator?.polarity,
+      cycleCount: timeline.cycleCount ?? model.document.cycleCount,
+      subcycleFactor: window.TimingWaveDromAdapter.subcycleFactor?.(model.document) || 1
+    });
+  }
+
   function mountSignal(model, signal, row, index, mountPrefix = prefix) {
     const host = row.querySelector('.trace');
     if (!host || !signal) return null;
     host.id = `${mountPrefix}${index}`;
     host.dataset.renderer = 'wavedrom';
     host.dataset.staticMock = 'removed';
-    const payload = wavePayload(model, signal);
     renderMetrics().waveCacheLookups += 1;
     const cached = waveCache.get(signal.id);
+    const semantic = semanticKey(model, signal);
+    const payload = cached?.semantic === semantic && cached.payload ? cached.payload : wavePayload(model, signal);
     let cacheHit = false;
     if (cached?.key === payload.key) {
       const current = host.querySelector('svg');
@@ -70,7 +86,8 @@
     if (height) svg.style.height = `${height}px`;
     svg.dataset.renderer = 'wavedrom';
     svg.dataset.waveKey = payload.key;
-    if (!cacheHit) waveCache.set(signal.id, { key: payload.key, svg: svg.cloneNode(true) });
+    if (!cacheHit) waveCache.set(signal.id, { semantic, key: payload.key, payload, svg: svg.cloneNode(true) });
+    else if (cached && cached.semantic !== semantic) waveCache.set(signal.id, { semantic, key: payload.key, payload, svg: svg.cloneNode(true) });
     return { host, svg, width, height, subcycleFactor: payload.subcycleFactor || 1, key: payload.key, cacheHit };
   }
 

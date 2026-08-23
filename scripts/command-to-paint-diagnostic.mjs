@@ -100,7 +100,9 @@ for (const action of actions) {
   const waveDelta = action.metricsAfter.waveDromRenders - action.metricsBefore.waveDromRenders;
   const geometryDelta = action.metricsAfter.geometryBuilds - action.metricsBefore.geometryBuilds;
   const fullRenderDelta = action.metricsAfter.appFullRenders - action.metricsBefore.appFullRenders;
-  if (!['cycle-insert', 'cycle-delete'].includes(action.name) && (waveDelta !== 0 || geometryDelta !== 0 || fullRenderDelta !== 0)) throw new Error(JSON.stringify(action));
+  const prohibited = ['wavePayloadBuilds', 'waveCacheLookups', 'rulerRebuilds', 'gridRebuilds', 'bottomRenders', 'inspectorRenders', 'transactionRenders'];
+  const prohibitedDelta = prohibited.reduce((sum,key)=>sum+Math.max(0,(action.metricsAfter[key]||0)-(action.metricsBefore[key]||0)),0);
+  if (!['cycle-insert', 'cycle-delete'].includes(action.name) && (waveDelta !== 0 || geometryDelta !== 0 || fullRenderDelta !== 0 || prohibitedDelta !== 0)) throw new Error(JSON.stringify(action));
   if (action.name === 'signal-up' || action.name === 'signal-down') {
     const rowMoveDelta = action.metricsAfter.rowMoves - action.metricsBefore.rowMoves;
     if (rowMoveDelta < 2) throw new Error(JSON.stringify(action));

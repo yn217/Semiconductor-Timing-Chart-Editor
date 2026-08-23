@@ -315,6 +315,23 @@
     transientFrame = requestAnimationFrame(() => { transientFrame = 0; renderTransient(pendingTransientModel); });
   };
   controller.scheduleTransientLayout = scheduleTransientLayout;
+  let verticalExtentFrame = 0;
+  let pendingVerticalExtentModel = model;
+  const renderVerticalExtent = currentModel => {
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+    if (!scrollHost) return;
+    const overlay = document.querySelector('#cycleCanvas svg[data-production-overlay="annotations"]');
+    const rect = scrollHost.getBoundingClientRect();
+    if (overlay) { overlay.style.width = `${rect.width}px`; overlay.style.height = `${rect.height}px`; }
+    alignCommentRowsToCycleZero(currentModel);
+    renderEdgeCounters(currentModel);
+  };
+  const scheduleVerticalExtent = currentModel => {
+    pendingVerticalExtentModel = currentModel || model;
+    if (verticalExtentFrame) return;
+    verticalExtentFrame = requestAnimationFrame(() => { verticalExtentFrame = 0; renderVerticalExtent(pendingVerticalExtentModel); });
+  };
+  controller.scheduleVerticalExtent = scheduleVerticalExtent;
   const renderScrollTransient = currentModel => {
     metrics.scrollEvents += 1;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
@@ -331,7 +348,7 @@
     }
   };
   controller.renderScrollTransient = renderScrollTransient;
-  window.TimingChartProductionTimeAxis = { renderTransient: scheduleTransientLayout, renderNow: renderTransient, renderScrollTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
+  window.TimingChartProductionTimeAxis = { renderTransient: scheduleTransientLayout, renderNow: renderTransient, renderScrollTransient, scheduleVerticalExtent, renderVerticalExtent, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
   window.addEventListener('resize', () => scheduleTransientLayout(model));
   const cycleCanvas = document.querySelector('#cycleCanvas');
   document.querySelector('#cycleCanvas .ruler')?.addEventListener('contextmenu', event => {

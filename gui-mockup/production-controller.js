@@ -98,6 +98,7 @@
     geometryScreenRefreshes: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0,
     rulerRebuilds: 0, gridRebuilds: 0, gridBoundaryResolutions: 0,
     annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0,
+    inspectorInnerHtmlRebuilds: 0, signalStyleFullScans: 0, layoutRowLookups: 0, minimapRowRectReads: 0,
     transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0,
     minimapOverviewRebuilds: 0, minimapViewportUpdates: 0
   } };
@@ -500,6 +501,7 @@
     const axisFinished = performance.now();
     if ((model.document.annotations || []).length) window.TimingChartProductionAnnotations?.render?.(model);
     const annotationFinished = performance.now();
+    controller.viewRibbon?.scheduleMinimap?.();
     controller.lastIncrementalTraceParts = { shiftMs: shiftFinished - shiftStarted, timeAxisMs: axisFinished - shiftFinished, annotationsMs: annotationFinished - axisFinished };
   };
   const incrementalRun = (label, mutation, reconcile) => {
