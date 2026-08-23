@@ -4,6 +4,8 @@
   const prefix = 'waveDromTrace_';
   const waveCache = new Map();
   let viewportFrame = 0;
+  let visibleRenderFrame = 0;
+  let viewportRenderSuppressed = false;
   const renderMetrics = () => {
     const controller = window.TimingChartProductionController;
     const metrics = controller.renderMetrics ||= { appFullRenders: 0, rowMoves: 0, cycleRowCreates: 0, cycleRowRemoves: 0, cycleRowMoves: 0, wavePayloadBuilds: 0, waveCacheLookups: 0, waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0, annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0, inspectorInnerHtmlRebuilds: 0, signalStyleFullScans: 0, layoutRowLookups: 0, minimapRowRectReads: 0, transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
@@ -13,7 +15,7 @@
   const traceRows = () => [...document.querySelectorAll('#cycleCanvas .wave-row')]
     .filter(row => row.querySelector('.trace'));
 
-  function updateSurfaceViewport(surface = document.querySelector('#cycleCanvas .waveform-render-surface')) {
+  function updateSurfaceViewport(surface = document.querySelector('#cycleCanvas .waveform-render-surface'), { render = true } = {}) {
     const host = window.TimingChartTimingViewport?.getScrollHost?.();
     if (!surface || !host) return false;
     const metrics = renderMetrics();
@@ -25,19 +27,109 @@
       const laneTop = Number.parseFloat(lane.style.top) || 0;
       const laneHeight = Number.parseFloat(lane.style.height) || 28;
       const active = !lane.hidden && laneTop + laneHeight >= top && laneTop <= bottom;
-      const next = active ? 'visible' : 'hidden';
-      if (lane.style.contentVisibility === next) continue;
-      lane.style.contentVisibility = next;
+      const next = active ? 'block' : 'none';
+      if (lane.style.display === next) continue;
+      lane.style.display = next;
       lane.dataset.viewportState = active ? 'active' : 'virtualized';
       const key = active ? 'viewportLanesActivated' : 'viewportLanesDeactivated';
       metrics[key] = (metrics[key] || 0) + 1;
     }
+    if (render && !viewportRenderSuppressed) scheduleVisibleSurfaceRender();
     return true;
   }
 
-  function scheduleSurfaceViewport() {
+  function scheduleSurfaceViewport(options = {}) {
     if (viewportFrame) return;
-    viewportFrame = requestAnimationFrame(() => { viewportFrame = 0; updateSurfaceViewport(); });
+    const render = options?.render !== false;
+    viewportFrame = requestAnimationFrame(() => { viewportFrame = 0; updateSurfaceViewport(undefined, { render }); });
+  }
+
+  function activeRows(model) {
+    const referenceId = model?.document?.timeline?.referenceClock;
+    return traceRows().filter(row => {
+      const id = row.dataset.signalId || row.dataset.signal;
+      const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`);
+      return id === referenceId || lane?.dataset.viewportState === 'active';
+    });
+  }
+
+  function rowsForRender(model, guardRows = 4) {
+    const rows = traceRows();
+    const indexes = rows.map((row, index) => {
+      const id = row.dataset.signalId || row.dataset.signal;
+      const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`);
+      return lane?.dataset.viewportState === 'active' ? index : -1;
+    }).filter(index => index >= 0);
+    if (!indexes.length) return activeRows(model);
+    const first = Math.max(0, Math.min(...indexes) - guardRows);
+    const last = Math.min(rows.length - 1, Math.max(...indexes) + guardRows);
+    const selected = rows.slice(first, last + 1);
+    const reference = rows.find(row => (row.dataset.signalId || row.dataset.signal) === model?.document?.timeline?.referenceClock);
+    if (reference && !selected.includes(reference)) selected.unshift(reference);
+    return selected;
+  }
+
+  function mergeSignalGeometry(model, mounted) {
+    if (!mounted?.signal || !mounted?.svg) return false;
+    const partial = buildGeometry(model, [mounted]);
+    const signalId = mounted.signal.id;
+    const entry = partial.signals[signalId];
+    if (!entry) return false;
+    model.waveGeometry ||= { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
+    model.waveGeometry.signals ||= {};
+    model.waveGeometry.signals[signalId] = entry;
+    if (signalId === model.document.timeline.referenceClock) model.waveGeometry.cycleBoundary = partial.cycleBoundary;
+    model.waveGeometry.cycleCount = model.document.timeline.cycleCount;
+    window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+    return true;
+  }
+
+  function ensureSignalGeometry(model, signalId) {
+    const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
+    const signal = signalForRow(model, row);
+    if (!row || !signal || signal.type === 'commentRow') return null;
+    const lane = laneFor(signal, row);
+    const expectedSemantic = semanticKey(model, signal);
+    const existingSvg = lane?.querySelector(':scope > .trace svg');
+    if (existingSvg && lane.dataset.semanticKey === expectedSemantic && model.waveGeometry?.signals?.[signalId]) {
+      return { signal, row, lane, host: lane.querySelector(':scope > .trace'), svg: existingSvg, key: existingSvg.dataset.waveKey };
+    }
+    const restoreDisplay = lane.style.display;
+    lane.style.display = 'block';
+    const index = Math.max(0, traceRows().indexOf(row));
+    let result;
+    try { result = mountSignal(model, signal, row, index); } catch { result = null; }
+    if (!result) { lane.style.display = restoreDisplay; return null; }
+    lane.dataset.semanticKey = expectedSemantic;
+    const mounted = { ...result, signal, row };
+    if (!mergeSignalGeometry(model, mounted)) { lane.style.display = restoreDisplay; return null; }
+    lane.style.display = restoreDisplay;
+    renderMetrics().geometryBuilds += 1;
+    return mounted;
+  }
+
+  function scheduleVisibleSurfaceRender() {
+    if (visibleRenderFrame || viewportRenderSuppressed) return;
+    visibleRenderFrame = requestAnimationFrame(function step() {
+      visibleRenderFrame = 0;
+      const controller = window.TimingChartProductionController;
+      const model = controller?.model;
+      if (!model) return;
+      const pending = rowsForRender(model).find(row => {
+        const id = row.dataset.signalId || row.dataset.signal;
+        const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(id)}"]`);
+        const signal = signalForRow(model, row);
+        return signal && (!lane?.querySelector(':scope > .trace svg') || lane.dataset.semanticKey !== semanticKey(model, signal));
+      });
+      if (!pending) return;
+      const id = pending.dataset.signalId || pending.dataset.signal;
+      if (ensureSignalGeometry(model, id)) {
+        const metrics = renderMetrics();
+        metrics.lazyVisibleRenders = (metrics.lazyVisibleRenders || 0) + 1;
+        (metrics.lazyVisibleSignalIds ||= []).push(id);
+      }
+      visibleRenderFrame = requestAnimationFrame(step);
+    });
   }
 
   function bindSurfaceViewport(surface) {
@@ -82,7 +174,7 @@
       lane.className = 'waveform-surface-row';
       lane.dataset.signal = signal.id;
       lane.dataset.signalId = signal.id;
-      lane.style.cssText = 'position:absolute;left:0;top:0;height:28px;pointer-events:none;content-visibility:auto;contain-intrinsic-size:28px 100%;';
+      lane.style.cssText = 'position:absolute;left:0;top:0;height:28px;pointer-events:none;';
       const host = document.createElement('span');
       host.className = 'trace';
       host.dataset.surfaceTrace = 'true';
@@ -237,7 +329,7 @@
       }
     }
     model.waveGeometry.screenGeometryStale = false;
-    scheduleSurfaceViewport();
+    scheduleSurfaceViewport({ render: false });
     return true;
   }
 
@@ -412,9 +504,9 @@
     return { cycle: boundaries.length - 2, phase: 1 };
   }
 
-  function anchor(signal, cycleInfo, point, anchorType, svg, coordinate) {
-    const rect = svg.getBoundingClientRect();
-    const viewBox = svg.viewBox.baseVal;
+  function anchor(signal, cycleInfo, point, anchorType, svg, coordinate, recordContext) {
+    const rect = recordContext?.rect || svg.getBoundingClientRect();
+    const viewBox = recordContext?.viewBox || svg.viewBox.baseVal;
     const canvas = {
       x: rect.left + (point.x - viewBox.x) * rect.width / viewBox.width,
       y: rect.top + (point.y - viewBox.y) * rect.height / viewBox.height
@@ -426,11 +518,16 @@
       localY: point.y,
       canvasX: canvas.x,
       canvasY: canvas.y,
+      traceId: svg.parentElement?.id || null,
+      svgRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
+      viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
+      laneOffsetX: Number(recordContext?.laneOffsetX || 0),
+      laneOffsetY: Number(recordContext?.laneOffsetY || 0),
       source: 'wavedrom-svg', signal: signal.id, cycle: cycleInfo.cycle, phase: cycleInfo.phase, anchorType
     };
   }
 
-  function boundaryRecord(signal, cycle, point, svg, transform) {
+  function boundaryRecord(signal, cycle, point, svg, transform, recordContext) {
     const rect = transform?.rect || svg.getBoundingClientRect();
     const viewBox = transform?.viewBox || svg.viewBox.baseVal;
     const screen = transform?.matrix ? matrixPoint(transform.matrix, point) : new DOMPoint(point.x, point.y).matrixTransform(svg.getScreenCTM());
@@ -449,7 +546,23 @@
       anchorType: 'cycle-boundary',
       traceId: svg.parentElement?.id || null,
       svgRect: { left: rect.left, top: rect.top, width: rect.width, height: rect.height },
-      viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height }
+      viewBox: { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height },
+      laneOffsetX: Number(recordContext?.laneOffsetX || 0),
+      laneOffsetY: Number(recordContext?.laneOffsetY || 0)
+    };
+  }
+
+  function hiddenSurfacePoint(item, svg) {
+    const lane = svg?.closest?.('.waveform-surface-row');
+    const surface = lane?.parentElement;
+    const surfaceRect = surface?.getBoundingClientRect?.();
+    const viewBox = item?.viewBox;
+    const width = Number.parseFloat(svg?.style?.width) || Number(svg?.getAttribute?.('width')) || Number(item?.svgRect?.width);
+    const height = Number.parseFloat(svg?.style?.height) || Number(svg?.getAttribute?.('height')) || Number(item?.svgRect?.height);
+    if (!surfaceRect || !viewBox?.width || !viewBox?.height || !width || !height) return null;
+    return {
+      x: surfaceRect.left + (Number.parseFloat(lane.style.left) || 0) + Number(item.laneOffsetX || 0) + (Number(item.localX) - Number(viewBox.x || 0)) * width / Number(viewBox.width),
+      y: surfaceRect.top + (Number.parseFloat(lane.style.top) || 0) + Number(item.laneOffsetY || 0) + (Number(item.localY) - Number(viewBox.y || 0)) * height / Number(viewBox.height)
     };
   }
 
@@ -468,15 +581,22 @@
         rect: screenRect && { left: screenRect.left, top: screenRect.top, width: screenRect.width, height: screenRect.height },
         viewBox: viewBox && { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height }
       };
+      const laneRect = svg.closest?.('.waveform-surface-row')?.getBoundingClientRect?.();
+      const recordContext = {
+        rect: transform.rect,
+        viewBox: transform.viewBox,
+        laneOffsetX: laneRect && transform.rect ? transform.rect.left - laneRect.left : 0,
+        laneOffsetY: laneRect && transform.rect ? transform.rect.top - laneRect.top : 0
+      };
       const boundaryStarted = performance.now();
       const rawBoundaries = actualBoundaries(svg);
       const boundaries = item.subcycleFactor > 1 ? rawBoundaries.filter((point, index) => index % item.subcycleFactor === 0 || index === rawBoundaries.length - 1) : rawBoundaries;
-      if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform));
+      if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform, recordContext));
       const lane = svg.querySelector('[id^="wavelane_draw_"]');
       const symbols = [...(lane?.querySelectorAll(':scope > use') || [])];
       profile.boundaryMs += performance.now() - boundaryStarted;
       const rowRect = item.row?.getBoundingClientRect?.();
-      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null, rowRectTop: rowRect?.top ?? null };
+      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform, recordContext)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null, rowRectTop: rowRect?.top ?? null };
       const symbolStarted = performance.now();
       symbols.forEach(use => {
         const href = hrefOf(use);
@@ -495,16 +615,16 @@
           const segment = segments[0];
           if (!segment) return;
           const point = { x: (segment.start.x + segment.end.x) / 2, y: (segment.start.y + segment.end.y) / 2 };
-          const item = anchor(signal, cycleInfo, point, href === '#pclk' ? 'rising-edge' : 'falling-edge', svg);
+          const item = anchor(signal, cycleInfo, point, href === '#pclk' ? 'rising-edge' : 'falling-edge', svg, undefined, recordContext);
           item.index = (href === '#pclk' ? entry.risingEdge : entry.fallingEdge).length + 1;
           (href === '#pclk' ? entry.risingEdge : entry.fallingEdge).push(item);
           return;
         }
         if (!segments.length || !/^#(?:0m1|1m0|vmv|dmv|umv|zmv)/.test(href)) return;
         const segment = segments[0];
-        const start = anchor(signal, cycleInfo, segment.start, 'transition-start', svg);
-        const center = anchor(signal, cycleInfo, segment.center, 'transition-center', svg);
-        const end = anchor(signal, cycleInfo, segment.end, 'transition-end', svg);
+        const start = anchor(signal, cycleInfo, segment.start, 'transition-start', svg, undefined, recordContext);
+        const center = anchor(signal, cycleInfo, segment.center, 'transition-center', svg, undefined, recordContext);
+        const end = anchor(signal, cycleInfo, segment.end, 'transition-end', svg, undefined, recordContext);
         entry.transitionStart.push(start);
         entry.transitionCenter.push(center);
         entry.transitionEnd.push(end);
@@ -613,20 +733,20 @@
     const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
     const signal = signalForRow(model, row);
     if (!row || !signal || signal.type === 'commentRow') return false;
-    const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(signalId)}"]`);
-    if (lane) lane.style.contentVisibility = 'visible';
+    const lane = laneFor(signal, row);
+    const restoreDisplay = lane.style.display;
+    lane.style.display = 'block';
     const localPrefix = `${prefix}local_${String(signal.id).replace(/[^A-Za-z0-9_-]/g, '_')}_`;
     let mounted;
-    try { mounted = mountSignal(model, signal, row, 0, localPrefix); } catch { return false; }
-    if (!mounted) return false;
-    const partial = buildGeometry(model, [{ ...mounted, signal, row }]);
-    const renderedId = signal.id;
-    const renderedGeometry = partial.signals[renderedId];
-    if (!renderedGeometry) { renderMetrics().renderSignalGeometryMisses = (renderMetrics().renderSignalGeometryMisses || 0) + 1; return false; }
-    model.waveGeometry ||= { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
-    model.waveGeometry.signals[renderedId] = renderedGeometry;
-    if (signal.id === model.document.timeline.referenceClock) model.waveGeometry.cycleBoundary = partial.cycleBoundary;
-    model.waveGeometry.cycleCount = model.document.timeline.cycleCount;
+    try { mounted = mountSignal(model, signal, row, 0, localPrefix); } catch { lane.style.display = restoreDisplay; return false; }
+    if (!mounted) { lane.style.display = restoreDisplay; return false; }
+    lane.dataset.semanticKey = semanticKey(model, signal);
+    if (!mergeSignalGeometry(model, { ...mounted, signal, row })) {
+      lane.style.display = restoreDisplay;
+      renderMetrics().renderSignalGeometryMisses = (renderMetrics().renderSignalGeometryMisses || 0) + 1;
+      return false;
+    }
+    lane.style.display = restoreDisplay;
     renderMetrics().geometryBuilds += 1;
     renderMetrics().renderSignalGeometryUpdates = (renderMetrics().renderSignalGeometryUpdates || 0) + 1;
     window.TimingChartProductionController.waveGeometry = model.waveGeometry;
@@ -640,8 +760,22 @@
     const generation = ++timelineRenderGeneration;
     const controller = window.TimingChartProductionController;
     controller.timelineRenderActive = true;
-    const rows = traceRows();
-    syncSurface(model, rows);
+    const allRows = traceRows();
+    viewportRenderSuppressed = true;
+    syncSurface(model, allRows);
+    updateSurfaceViewport();
+    const rows = rowsForRender(model);
+    const activeIds = new Set(rows.map(row => row.dataset.signalId || row.dataset.signal));
+    for (const row of allRows) {
+      const signal = signalForRow(model, row);
+      const lane = signal && laneFor(signal, row);
+      if (!signal || !lane) continue;
+      const semantic = semanticKey(model, signal);
+      if (lane.dataset.semanticKey === semantic) continue;
+      lane.querySelector(':scope > .trace')?.replaceChildren();
+      delete lane.dataset.semanticKey;
+      if (model.waveGeometry?.signals) delete model.waveGeometry.signals[signal.id];
+    }
     const mounted = [];
     const started = performance.now();
     let mountMs = 0;
@@ -655,7 +789,10 @@
           const row = rows[index];
           const signal = signalForRow(model, row);
           const result = mountSignal(model, signal, row, index);
-          if (result && signal) mounted.push({ ...result, signal, row });
+          if (result && signal) {
+            result.lane.dataset.semanticKey = semanticKey(model, signal);
+            mounted.push({ ...result, signal, row });
+          }
         }
         mountMs += performance.now() - mountStarted;
         if (index < rows.length) { requestAnimationFrame(step); return; }
@@ -664,7 +801,10 @@
         const geometryMs = performance.now() - geometryStarted;
         bridge.waveSignature = JSON.stringify({
           cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
-          rows: mounted.map(item => [item.signal.id, item.key]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+          rows: allRows.map(row => {
+            const signal = signalForRow(model, row);
+            return signal ? [signal.id, semanticKey(model, signal)] : null;
+          }).filter(Boolean).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
         });
         bridge.screenSignature = null;
         renderMetrics().geometryBuilds += 1;
@@ -672,6 +812,9 @@
         controller.timelineRenderActive = false;
         controller.applyTimingOnlyZoom?.();
         controller.lastWaveformTimelineProfile = { mountMs, geometryMs, totalMs: performance.now() - started, rows: mounted.length, geometry: model.waveGeometry.profile || null };
+        controller.lastWaveformTimelineProfile.totalRows = allRows.length;
+        controller.lastWaveformTimelineProfile.deferredRows = allRows.length - activeIds.size;
+        viewportRenderSuppressed = false;
         updateSurfaceViewport();
         resolve({ durationMs: performance.now() - started, rows: mounted.length });
       };
@@ -712,18 +855,35 @@
     renderTimeline,
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
-      const rows = traceRows();
-      syncSurface(model, rows);
+      const allRows = traceRows();
+      viewportRenderSuppressed = true;
+      syncSurface(model, allRows);
+      updateSurfaceViewport();
+      const rows = rowsForRender(model);
+      const fullWaveSignature = JSON.stringify({
+        cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
+        rows: allRows.map(row => {
+          const signal = signalForRow(model, row);
+          return signal ? [signal.id, semanticKey(model, signal)] : null;
+        }).filter(Boolean).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+      });
+      for (const row of allRows) {
+        const signal = signalForRow(model, row);
+        const lane = signal && laneFor(signal, row);
+        if (!signal || !lane) continue;
+        const semantic = semanticKey(model, signal);
+        if (lane.dataset.semanticKey === semantic) continue;
+        lane.querySelector(':scope > .trace')?.replaceChildren();
+        delete lane.dataset.semanticKey;
+        if (model.waveGeometry?.signals) delete model.waveGeometry.signals[signal.id];
+      }
       const mounted = rows.map((row, index) => {
         const signal = signalForRow(model, row);
         const result = mountSignal(model, signal, row, index);
+        if (result?.lane && signal) result.lane.dataset.semanticKey = semanticKey(model, signal);
         return result && { ...result, signal, row };
       });
       const canvas = document.querySelector('#cycleCanvas');
-      const waveSignature = JSON.stringify({
-        cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
-        rows: mounted.filter(Boolean).map(item => [item.signal.id, item.key]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
-      });
       const screenSignature = JSON.stringify({
         layout: {
           signalNameWidth: model.document.layout?.signalNameWidth,
@@ -735,7 +895,7 @@
         scroll: [canvas?.scrollLeft || 0, canvas?.scrollTop || 0],
         rows: mounted.filter(Boolean).map(item => [item.signal.id, item.key])
       });
-      if (model.waveGeometry && bridge.waveSignature === waveSignature) {
+      if (model.waveGeometry && bridge.waveSignature === fullWaveSignature) {
         if (bridge.screenSignature !== screenSignature) {
           refreshScreenGeometry(model.waveGeometry, mounted);
           renderMetrics().geometryScreenRefreshes += 1;
@@ -743,14 +903,16 @@
         }
         renderMetrics().geometryCacheHits += 1;
         window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+        viewportRenderSuppressed = false;
         updateSurfaceViewport();
         return;
       }
       model.waveGeometry = buildGeometry(model, mounted);
-      bridge.waveSignature = waveSignature;
+      bridge.waveSignature = fullWaveSignature;
       bridge.screenSignature = screenSignature;
       renderMetrics().geometryBuilds += 1;
       window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+      viewportRenderSuppressed = false;
       updateSurfaceViewport();
     },
     renderTestDocument(testDocument) {
@@ -774,21 +936,29 @@
       }) };
     },
     getAnchor({ signal, cycle, edge, coordinateSpace = 'local' }) {
-      const geometry = window.TimingChartProductionController?.model?.waveGeometry?.signals?.[signal];
+      const model = window.TimingChartProductionController?.model;
+      if (!model?.waveGeometry?.signals?.[signal]) ensureSignalGeometry(model, signal);
+      const geometry = model?.waveGeometry?.signals?.[signal];
       const list = edge === 'rising' ? geometry?.risingEdge : edge === 'falling' ? geometry?.fallingEdge : edge === 'transition-start' ? geometry?.transitionStart : edge === 'transition-end' ? geometry?.transitionEnd : edge === 'transition-center' ? geometry?.transitionCenter : undefined;
       const match = list?.find(item => item.cycle === cycle);
       if (!match) return undefined;
       const svg = match.traceId ? document.getElementById(match.traceId)?.querySelector('svg') : null;
-      const screen = svg?.getScreenCTM ? new DOMPoint(match.localX, match.localY).matrixTransform(svg.getScreenCTM()) : null;
+      const hiddenSurfaceLane = svg?.closest?.('.waveform-surface-row')?.style.display === 'none';
+      const matrix = hiddenSurfaceLane ? null : svg?.getScreenCTM?.();
+      const screen = matrix ? new DOMPoint(match.localX, match.localY).matrixTransform(matrix) : hiddenSurfacePoint(match, svg);
       const canvasX = screen?.x ?? match.canvasX;
       const canvasY = screen?.y ?? match.canvasY;
       return { ...match, canvasX, canvasY, x: coordinateSpace === 'canvas' ? canvasX : match.localX, y: coordinateSpace === 'canvas' ? canvasY : match.localY };
     },
     getCycleBoundary({ signal, cycle, coordinateSpace = 'canvas' }) {
-      const item = window.TimingChartProductionController?.model?.waveGeometry?.signals?.[signal]?.cycleBoundary?.[cycle];
+      const model = window.TimingChartProductionController?.model;
+      if (!model?.waveGeometry?.signals?.[signal]) ensureSignalGeometry(model, signal);
+      const item = model?.waveGeometry?.signals?.[signal]?.cycleBoundary?.[cycle];
       if (!item) return undefined;
       const svg = item.traceId ? document.getElementById(item.traceId)?.querySelector('svg') : null;
-      const screen = svg?.getScreenCTM ? new DOMPoint(item.localX, item.localY).matrixTransform(svg.getScreenCTM()) : { x: item.canvasX, y: item.canvasY };
+      const hiddenSurfaceLane = svg?.closest?.('.waveform-surface-row')?.style.display === 'none';
+      const matrix = hiddenSurfaceLane ? null : svg?.getScreenCTM?.();
+      const screen = matrix ? new DOMPoint(item.localX, item.localY).matrixTransform(matrix) : hiddenSurfacePoint(item, svg) || { x: item.canvasX, y: item.canvasY };
       const canvasX = screen.x; const canvasY = screen.y;
       return { ...item, canvasX, canvasY, x: coordinateSpace === 'canvas' ? canvasX : item.localX, y: coordinateSpace === 'canvas' ? canvasY : item.localY };
     }

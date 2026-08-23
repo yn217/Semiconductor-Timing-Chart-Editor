@@ -45,12 +45,11 @@ const result = await page.evaluate(async fixtureSignalCount => {
   controller.renderMetrics.geometryBuilds = 0;
   controller.renderMetrics.geometryCacheHits = 0;
   controller.renderMetrics.waveCacheHits = 0;
-  const snapshot = () => ({ ...controller.renderMetrics });
-  const before = snapshot();
+  const snapshot = () => structuredClone(controller.renderMetrics);
 
   const viewportSurface = document.querySelector('#cycleCanvas .waveform-render-surface');
   const viewportHost = window.TimingChartTimingViewport.getScrollHost();
-  const viewportSvgById = new Map([...viewportSurface.querySelectorAll(':scope > .waveform-surface-row')].map(lane => [lane.dataset.signal, lane.querySelector('.trace svg')]));
+  const viewportSvgById = new Map([...viewportSurface.querySelectorAll(':scope > .waveform-surface-row')].map(lane => [lane.dataset.signal, lane.querySelector('.trace svg')]).filter(([, svg]) => svg));
   const viewportState = () => ({
     active: [...viewportSurface.querySelectorAll(':scope > .waveform-surface-row[data-viewport-state="active"]')].map(lane => lane.dataset.signal),
     virtualized: [...viewportSurface.querySelectorAll(':scope > .waveform-surface-row[data-viewport-state="virtualized"]')].map(lane => lane.dataset.signal)
@@ -59,27 +58,50 @@ const result = await page.evaluate(async fixtureSignalCount => {
   viewportHost.scrollTop = viewportHost.scrollHeight;
   controller.actions.selectObject(document.querySelector('#groups .row[data-signal="issue95_sig_98"]'));
   window.TimingChartProductionWaveform.updateSurfaceViewport();
-  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const lazyDeadline = performance.now() + 30000;
+  while ([...viewportSurface.querySelectorAll(':scope > .waveform-surface-row[data-viewport-state="active"]')].some(lane => !lane.querySelector('.trace svg'))) {
+    if (performance.now() > lazyDeadline) throw new Error('visible WaveDrom lanes did not finish lazy rendering');
+    await new Promise(resolve => requestAnimationFrame(resolve));
+  }
   const viewportAfterScroll = viewportState();
   const viewportIdentityStable = [...viewportSvgById].every(([id, svg]) => viewportSurface.querySelector(`:scope > .waveform-surface-row[data-signal="${CSS.escape(id)}"] .trace svg`) === svg);
+  const renderedAfterScroll = viewportSurface.querySelectorAll(':scope > .waveform-surface-row .trace svg').length;
   const viewportAlignmentErrors = viewportAfterScroll.active.map(id => {
     const svg = viewportSurface.querySelector(`:scope > .waveform-surface-row[data-signal="${CSS.escape(id)}"] .trace svg`);
     const shell = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(id)}"] .trace`);
     return Math.abs((svg?.getBoundingClientRect().top || 0) - (shell?.getBoundingClientRect().top || 0));
   });
+  viewportHost.scrollLeft = 0;
   const clockBoundaryAtBottom = controller.getCycleBoundary({ signal: 'issue95_clk', cycle: 10, coordinateSpace: 'canvas' });
+  viewportHost.scrollLeft = Math.min(300, viewportHost.scrollWidth - viewportHost.clientWidth);
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const horizontalScrollLeft = viewportHost.scrollLeft;
+  const clockBoundaryAfterHorizontalScroll = controller.getCycleBoundary({ signal: 'issue95_clk', cycle: 10, coordinateSpace: 'canvas' });
+  viewportHost.scrollLeft = 0;
   viewportHost.scrollTop = 0;
   window.TimingChartProductionWaveform.updateSurfaceViewport();
   await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(resolve, 80))));
   const clockBoundaryAtTop = controller.getCycleBoundary({ signal: 'issue95_clk', cycle: 10, coordinateSpace: 'canvas' });
+  const onDemandBefore = viewportSurface.querySelectorAll(':scope > .waveform-surface-row .trace svg').length;
+  const onDemandAnchor = controller.getAnchor({ signal: 'issue95_sig_50', cycle: 40, edge: 'rising', coordinateSpace: 'canvas' });
+  const onDemandAfter = viewportSurface.querySelectorAll(':scope > .waveform-surface-row .trace svg').length;
   const viewportVirtualization = {
     before: viewportBefore,
     afterScroll: viewportAfterScroll,
     identityStable: viewportIdentityStable,
+    renderedInitially: viewportSvgById.size,
+    renderedAfterScroll,
     maxActiveAlignmentErrorPx: Math.max(0, ...viewportAlignmentErrors),
     offscreenReferenceGeometryFinite: Number.isFinite(clockBoundaryAtBottom?.canvasX),
-    referenceBoundaryScrollDeltaPx: Math.abs((clockBoundaryAtBottom?.canvasX || 0) - (clockBoundaryAtTop?.canvasX || 0))
+    referenceBoundaryAtBottomX: clockBoundaryAtBottom?.canvasX,
+    referenceBoundaryAtTopX: clockBoundaryAtTop?.canvasX,
+    referenceBoundaryScrollDeltaPx: Math.abs((clockBoundaryAtBottom?.canvasX || 0) - (clockBoundaryAtTop?.canvasX || 0)),
+    hiddenGeometryHorizontalScrollErrorPx: Math.abs(((clockBoundaryAtBottom?.canvasX || 0) - horizontalScrollLeft) - (clockBoundaryAfterHorizontalScroll?.canvasX || 0)),
+    onDemandGeometry: { before: onDemandBefore, after: onDemandAfter, source: onDemandAnchor?.source, finite: Number.isFinite(onDemandAnchor?.canvasX) && Number.isFinite(onDemandAnchor?.canvasY) }
   };
+  controller.renderMetrics.waveDromRenders = 0;
+  controller.renderMetrics.geometryBuilds = 0;
+  const before = snapshot();
 
   const rows = [...document.querySelectorAll('#groups .row[data-signal]')];
   for (let index = 0; index < 20; index += 1) rows[index % rows.length].click();
@@ -157,14 +179,37 @@ const result = await page.evaluate(async fixtureSignalCount => {
   };
 }, fixtureSignalCount);
 
+console.log(JSON.stringify({
+  viewport: {
+    activeBefore: result.viewportVirtualization.before.active.length,
+    activeAfterScroll: result.viewportVirtualization.afterScroll.active.length,
+    renderedInitially: result.viewportVirtualization.renderedInitially,
+    renderedAfterScroll: result.viewportVirtualization.renderedAfterScroll,
+    identityStable: result.viewportVirtualization.identityStable,
+    maxActiveAlignmentErrorPx: result.viewportVirtualization.maxActiveAlignmentErrorPx,
+    referenceBoundaryScrollDeltaPx: result.viewportVirtualization.referenceBoundaryScrollDeltaPx
+  },
+  visibilityDelta: {
+    waveDromRenders: result.visibility.after.waveDromRenders - result.visibility.before.waveDromRenders,
+    geometryBuilds: result.visibility.after.geometryBuilds - result.visibility.before.geometryBuilds,
+    lazyVisibleRenders: (result.visibility.after.lazyVisibleRenders || 0) - (result.visibility.before.lazyVisibleRenders || 0),
+    lazySignalIds: (result.visibility.after.lazyVisibleSignalIds || []).slice((result.visibility.before.lazyVisibleSignalIds || []).length)
+  }
+}));
 assert.equal(result.errors.length, 0);
 assert.ok(result.viewportVirtualization.before.active.length > 0 && result.viewportVirtualization.before.virtualized.length > 0, JSON.stringify(result.viewportVirtualization));
 assert.ok(result.viewportVirtualization.afterScroll.active.length > 0 && result.viewportVirtualization.afterScroll.virtualized.length > 0, JSON.stringify(result.viewportVirtualization));
 assert.notDeepEqual(result.viewportVirtualization.afterScroll.active, result.viewportVirtualization.before.active, JSON.stringify(result.viewportVirtualization));
 assert.equal(result.viewportVirtualization.identityStable, true, JSON.stringify(result.viewportVirtualization));
+assert.ok(result.viewportVirtualization.renderedInitially < fixtureSignalCount, JSON.stringify(result.viewportVirtualization));
+assert.ok(result.viewportVirtualization.renderedAfterScroll > result.viewportVirtualization.renderedInitially, JSON.stringify(result.viewportVirtualization));
 assert.ok(result.viewportVirtualization.maxActiveAlignmentErrorPx <= 0.1, JSON.stringify(result.viewportVirtualization));
 assert.equal(result.viewportVirtualization.offscreenReferenceGeometryFinite, true, JSON.stringify(result.viewportVirtualization));
 assert.ok(result.viewportVirtualization.referenceBoundaryScrollDeltaPx <= 0.1, JSON.stringify(result.viewportVirtualization));
+assert.ok(result.viewportVirtualization.hiddenGeometryHorizontalScrollErrorPx <= 0.1, JSON.stringify(result.viewportVirtualization));
+assert.equal(result.viewportVirtualization.onDemandGeometry.after - result.viewportVirtualization.onDemandGeometry.before, 1, JSON.stringify(result.viewportVirtualization));
+assert.equal(result.viewportVirtualization.onDemandGeometry.source, 'wavedrom-svg', JSON.stringify(result.viewportVirtualization));
+assert.equal(result.viewportVirtualization.onDemandGeometry.finite, true, JSON.stringify(result.viewportVirtualization));
 assert.equal(result.afterSignalSelection.waveDromRenders, 0, JSON.stringify(result));
 assert.equal(result.afterSignalSelection.geometryBuilds, 0, JSON.stringify(result));
 assert.equal(result.visibility.after.waveDromRenders - result.visibility.before.waveDromRenders, 0, JSON.stringify(result));
@@ -188,7 +233,7 @@ assert.equal(result.signalEditResult, true, JSON.stringify(result));
 assert.equal(result.editedValue, 0, JSON.stringify(result));
 assert.equal(result.afterSignalEdit.waveDromRenders, 1, JSON.stringify(result));
 assert.equal(result.afterSignalEdit.geometryBuilds - result.afterReorder.geometryBuilds, 1, JSON.stringify(result));
-assert.equal(result.signalCount, fixtureSignalCount);
+assert.ok(result.signalCount < fixtureSignalCount, JSON.stringify({ signalCount: result.signalCount, fixtureSignalCount }));
 assert.equal(errors.length, 0, errors.join('\n'));
 await page.screenshot({ path: path.join(out, 'issue95-1672x941.png') });
 const finalPaintTarget = { thresholdMs: 50, measuredMs: result.visibility.state.clickToPaintMs, pass: result.visibility.state.clickToPaintMs < 50 };

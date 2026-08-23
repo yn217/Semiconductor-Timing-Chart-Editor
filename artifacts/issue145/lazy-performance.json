@@ -1,0 +1,70 @@
+{
+  "issue": 145,
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "measuredAt": "2026-08-23T21:21:24.464Z",
+  "runs": [
+    {
+      "fixture": {
+        "signals": 50,
+        "cycles": 100
+      },
+      "initialVisibleReadyMs": 8450,
+      "signalUp": {
+        "samples": 20,
+        "medianMs": 218,
+        "p95Ms": 267.5,
+        "maxMs": 284.3
+      },
+      "signalDown": {
+        "samples": 20,
+        "medianMs": 235,
+        "p95Ms": 267.6,
+        "maxMs": 286.4
+      },
+      "renderedSvgCount": 21,
+      "totalSignalCount": 50,
+      "canonicalOrder": true,
+      "identityStable": true,
+      "maxYErrorPx": 0,
+      "deltas": {
+        "waveDromRenders": 0,
+        "geometryBuilds": 0,
+        "appFullRenders": 0
+      }
+    },
+    {
+      "fixture": {
+        "signals": 100,
+        "cycles": 500
+      },
+      "initialVisibleReadyMs": 43162,
+      "signalUp": {
+        "samples": 20,
+        "medianMs": 941.2,
+        "p95Ms": 1500.3,
+        "maxMs": 1583
+      },
+      "signalDown": {
+        "samples": 20,
+        "medianMs": 959.9,
+        "p95Ms": 1533.9,
+        "maxMs": 1566.9
+      },
+      "renderedSvgCount": 21,
+      "totalSignalCount": 100,
+      "canonicalOrder": true,
+      "identityStable": true,
+      "maxYErrorPx": 0,
+      "deltas": {
+        "waveDromRenders": 0,
+        "geometryBuilds": 0,
+        "appFullRenders": 0
+      }
+    }
+  ],
+  "pass": true
+}

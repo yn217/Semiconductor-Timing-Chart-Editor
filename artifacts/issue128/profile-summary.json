@@ -14,154 +14,154 @@
       "scenarios": [
         {
           "name": "signal-up",
-          "browserReadyMs": 240.20000004768372,
+          "browserReadyMs": 122.10000002384186,
           "userTiming": [
             {
               "name": "tc:command:start",
-              "startTime": 21918.699999928474
+              "startTime": 11137.299999952316
             },
             {
               "name": "tc:history:start",
-              "startTime": 21918.899999976158
+              "startTime": 11137.399999976158
             },
             {
               "name": "tc:history:end",
-              "startTime": 21929.399999976158
+              "startTime": 11145
             },
             {
               "name": "tc:reconcile:start",
-              "startTime": 21929.399999976158
+              "startTime": 11145
             },
             {
               "name": "tc:reconcile:end",
-              "startTime": 21937.799999952316
+              "startTime": 11148.100000023842
             },
             {
               "name": "tc:command:dom-ready",
-              "startTime": 21937.899999976158
+              "startTime": 11148.299999952316
             },
             {
               "name": "tc:command:raf-1",
-              "startTime": 22079.099999904633
+              "startTime": 11212.700000047684
             }
           ],
           "traceBounds": {
-            "commandStartTs": 981318238930,
-            "commandRaf1Ts": 981318399297
+            "commandStartTs": 984067136754,
+            "commandRaf1Ts": 984067212128
           },
           "totals": {
-            "scriptingMs": 401.177,
-            "styleMs": 66.569,
-            "layoutMs": 47.561,
-            "paintMs": 19.969,
-            "compositeMs": 0,
-            "longTasks": 2,
-            "topHotspots": [
-              {
-                "name": "RunTask",
-                "ms": 247.343
-              },
-              {
-                "name": "UpdateLayoutTree",
-                "ms": 66.569
-              },
-              {
-                "name": "EventDispatch",
-                "ms": 63.029
-              },
-              {
-                "name": "Layout",
-                "ms": 47.561
-              },
-              {
-                "name": "Layerize",
-                "ms": 31.248
-              },
-              {
-                "name": "FireAnimationFrame",
-                "ms": 27.383
-              },
-              {
-                "name": "FunctionCall",
-                "ms": 26.73
-              },
-              {
-                "name": "Paint",
-                "ms": 15.583
-              },
-              {
-                "name": "PrePaint",
-                "ms": 4.33
-              },
-              {
-                "name": "RasterTask",
-                "ms": 3.081
-              },
-              {
-                "name": "HitTest",
-                "ms": 1.013
-              },
-              {
-                "name": "IntersectionObserverController::computeIntersections",
-                "ms": 0.693
-              }
-            ]
-          },
-          "commandInterval": {
-            "scriptingMs": 40.335,
-            "styleMs": 65.289,
-            "layoutMs": 18.457,
-            "paintMs": 19.011,
+            "scriptingMs": 219.905,
+            "styleMs": 19.335,
+            "layoutMs": 33.856,
+            "paintMs": 14.801,
             "compositeMs": 0,
             "longTasks": 1,
             "topHotspots": [
               {
-                "name": "UpdateLayoutTree",
-                "ms": 65.289
+                "name": "RunTask",
+                "ms": 128.03
               },
               {
-                "name": "Layerize",
-                "ms": 31.126
+                "name": "EventDispatch",
+                "ms": 39.073
               },
               {
                 "name": "Layout",
-                "ms": 18.457
+                "ms": 33.856
               },
               {
-                "name": "Paint",
-                "ms": 15.583
+                "name": "UpdateLayoutTree",
+                "ms": 19.335
               },
               {
-                "name": "RunTask",
-                "ms": 4.765
-              },
-              {
-                "name": "PrePaint",
-                "ms": 3.372
-              },
-              {
-                "name": "RasterTask",
-                "ms": 3.081
-              },
-              {
-                "name": "IntersectionObserverController::computeIntersections",
-                "ms": 0.645
-              },
-              {
-                "name": "Commit",
-                "ms": 0.33
-              },
-              {
-                "name": "FunctionCall",
-                "ms": 0.167
+                "name": "Layerize",
+                "ms": 18.267
               },
               {
                 "name": "FireAnimationFrame",
-                "ms": 0.16
+                "ms": 15.719
               },
               {
-                "name": "UpdateLayer",
-                "ms": 0.061
+                "name": "FunctionCall",
+                "ms": 15.126
+              },
+              {
+                "name": "Paint",
+                "ms": 12.478
+              },
+              {
+                "name": "RasterTask",
+                "ms": 2.403
+              },
+              {
+                "name": "PrePaint",
+                "ms": 2.282
+              },
+              {
+                "name": "HitTest",
+                "ms": 0.455
+              },
+              {
+                "name": "Commit",
+                "ms": 0.452
+              }
+            ]
+          },
+          "commandInterval": {
+            "scriptingMs": 24.824,
+            "styleMs": 18.721,
+            "layoutMs": 13.274,
+            "paintMs": 14.219,
+            "compositeMs": 0,
+            "longTasks": 0,
+            "topHotspots": [
+              {
+                "name": "UpdateLayoutTree",
+                "ms": 18.721
+              },
+              {
+                "name": "Layerize",
+                "ms": 18.261
+              },
+              {
+                "name": "Layout",
+                "ms": 13.274
+              },
+              {
+                "name": "Paint",
+                "ms": 12.478
+              },
+              {
+                "name": "RunTask",
+                "ms": 3.244
+              },
+              {
+                "name": "RasterTask",
+                "ms": 2.403
+              },
+              {
+                "name": "PrePaint",
+                "ms": 1.7
+              },
+              {
+                "name": "IntersectionObserverController::computeIntersections",
+                "ms": 0.31
+              },
+              {
+                "name": "Commit",
+                "ms": 0.228
+              },
+              {
+                "name": "FunctionCall",
+                "ms": 0.192
+              },
+              {
+                "name": "FireAnimationFrame",
+                "ms": 0.151
+              },
+              {
+                "name": "PaintImage",
+                "ms": 0.041
               }
             ]
           },
@@ -198,20 +198,270 @@
             "rowRemoves": 0,
             "viewportReconciles": 0,
             "viewportLanesActivated": 0,
+            "lazyVisibleRenders": 0,
+            "lazyVisibleSignalIds": 0,
             "viewportLanesDeactivated": 0
           },
           "incrementalTrace": {
             "trace": {
               "label": "Reorder signal",
-              "historyMs": 10.700000047683716,
-              "reconcileMs": 8.700000047683716,
-              "totalMs": 19.40000009536743,
+              "historyMs": 7.899999976158142,
+              "reconcileMs": 3.299999952316284,
+              "totalMs": 11.199999928474426,
               "parts": {
-                "shiftMs": 4.799999952316284,
+                "shiftMs": 1.100000023841858,
                 "timeAxisMs": 0,
                 "annotationsMs": 0,
-                "minimapMs": 1.9000000953674316,
-                "controlsMs": 0.19999992847442627,
+                "minimapMs": 0.6999999284744263,
+                "controlsMs": 0.20000004768371582,
+                "reorderTimings": [
+                  {
+                    "host": "group",
+                    "mode": "dom-move",
+                    "ms": 0.19999992847442627
+                  },
+                  {
+                    "host": "wave",
+                    "mode": "dom-move",
+                    "ms": 0.10000002384185791
+                  },
+                  {
+                    "host": "frozen-label-wave",
+                    "mode": "dom-move",
+                    "ms": 0.10000002384185791
+                  }
+                ]
+              }
+            },
+            "parts": {
+              "shiftMs": 1.100000023841858,
+              "timeAxisMs": 0,
+              "annotationsMs": 0,
+              "minimapMs": 0.6999999284744263,
+              "controlsMs": 0.20000004768371582,
+              "reorderTimings": [
+                {
+                  "host": "group",
+                  "mode": "dom-move",
+                  "ms": 0.19999992847442627
+                },
+                {
+                  "host": "wave",
+                  "mode": "dom-move",
+                  "ms": 0.10000002384185791
+                },
+                {
+                  "host": "frozen-label-wave",
+                  "mode": "dom-move",
+                  "ms": 0.10000002384185791
+                }
+              ]
+            }
+          },
+          "traceEvents": 340
+        },
+        {
+          "name": "signal-down",
+          "browserReadyMs": 92.19999992847443,
+          "userTiming": [
+            {
+              "name": "tc:command:start",
+              "startTime": 11313.399999976158
+            },
+            {
+              "name": "tc:history:start",
+              "startTime": 11313.399999976158
+            },
+            {
+              "name": "tc:history:end",
+              "startTime": 11316.899999976158
+            },
+            {
+              "name": "tc:reconcile:start",
+              "startTime": 11317
+            },
+            {
+              "name": "tc:reconcile:end",
+              "startTime": 11318.399999976158
+            },
+            {
+              "name": "tc:command:dom-ready",
+              "startTime": 11318.5
+            },
+            {
+              "name": "tc:command:raf-1",
+              "startTime": 11369.899999976158
+            }
+          ],
+          "traceBounds": {
+            "commandStartTs": 984067312869,
+            "commandRaf1Ts": 984067369390
+          },
+          "totals": {
+            "scriptingMs": 142.737,
+            "styleMs": 13.493,
+            "layoutMs": 23.998,
+            "paintMs": 11.654,
+            "compositeMs": 0,
+            "longTasks": 1,
+            "topHotspots": [
+              {
+                "name": "RunTask",
+                "ms": 92.441
+              },
+              {
+                "name": "Layout",
+                "ms": 23.998
+              },
+              {
+                "name": "EventDispatch",
+                "ms": 19.51
+              },
+              {
+                "name": "Layerize",
+                "ms": 14.018
+              },
+              {
+                "name": "UpdateLayoutTree",
+                "ms": 13.493
+              },
+              {
+                "name": "Paint",
+                "ms": 9.191
+              },
+              {
+                "name": "FireAnimationFrame",
+                "ms": 7.601
+              },
+              {
+                "name": "FunctionCall",
+                "ms": 7.111
+              },
+              {
+                "name": "PrePaint",
+                "ms": 2.444
+              },
+              {
+                "name": "RasterTask",
+                "ms": 0.787
+              },
+              {
+                "name": "Commit",
+                "ms": 0.457
+              },
+              {
+                "name": "HitTest",
+                "ms": 0.405
+              }
+            ]
+          },
+          "commandInterval": {
+            "scriptingMs": 18.64,
+            "styleMs": 13.1,
+            "layoutMs": 12.797,
+            "paintMs": 11.104,
+            "compositeMs": 0,
+            "longTasks": 0,
+            "topHotspots": [
+              {
+                "name": "Layerize",
+                "ms": 14.01
+              },
+              {
+                "name": "UpdateLayoutTree",
+                "ms": 13.1
+              },
+              {
+                "name": "Layout",
+                "ms": 12.797
+              },
+              {
+                "name": "Paint",
+                "ms": 9.191
+              },
+              {
+                "name": "RunTask",
+                "ms": 3.049
+              },
+              {
+                "name": "PrePaint",
+                "ms": 1.894
+              },
+              {
+                "name": "RasterTask",
+                "ms": 0.787
+              },
+              {
+                "name": "IntersectionObserverController::computeIntersections",
+                "ms": 0.329
+              },
+              {
+                "name": "Commit",
+                "ms": 0.205
+              },
+              {
+                "name": "FireAnimationFrame",
+                "ms": 0.117
+              },
+              {
+                "name": "FunctionCall",
+                "ms": 0.105
+              },
+              {
+                "name": "UpdateLayer",
+                "ms": 0.038
+              }
+            ]
+          },
+          "metrics": {
+            "appFullRenders": 0,
+            "rowMoves": 3,
+            "cycleRowCreates": 0,
+            "cycleRowRemoves": 0,
+            "cycleRowMoves": 3,
+            "wavePayloadBuilds": 0,
+            "waveCacheLookups": 0,
+            "waveDromRenders": 0,
+            "geometryBuilds": 0,
+            "geometryScreenRefreshes": 0,
+            "screenMatrixReads": 0,
+            "boundingRectReads": 0,
+            "geometryPointsTransformed": 0,
+            "rulerRebuilds": 0,
+            "gridRebuilds": 0,
+            "gridBoundaryResolutions": 0,
+            "annotationFullRenders": 0,
+            "annotationNodeCreates": 0,
+            "annotationNodeRemoves": 0,
+            "inspectorInnerHtmlRebuilds": 0,
+            "signalStyleFullScans": 0,
+            "layoutRowLookups": 0,
+            "minimapRowRectReads": 0,
+            "transactionRenders": 0,
+            "bottomRenders": 0,
+            "inspectorRenders": 0,
+            "minimapOverviewRebuilds": 0,
+            "minimapViewportUpdates": 0,
+            "rowCreates": 0,
+            "rowRemoves": 0,
+            "viewportReconciles": 0,
+            "viewportLanesActivated": 0,
+            "lazyVisibleRenders": 0,
+            "lazyVisibleSignalIds": 0,
+            "viewportLanesDeactivated": 0
+          },
+          "incrementalTrace": {
+            "trace": {
+              "label": "Reorder signal",
+              "historyMs": 3.5,
+              "reconcileMs": 1.600000023841858,
+              "totalMs": 5.100000023841858,
+              "parts": {
+                "shiftMs": 0.5,
+                "timeAxisMs": 0,
+                "annotationsMs": 0,
+                "minimapMs": 0.5,
+                "controlsMs": 0.10000002384185791,
                 "reorderTimings": [
                   {
                     "host": "group",
@@ -221,22 +471,22 @@
                   {
                     "host": "wave",
                     "mode": "dom-move",
-                    "ms": 0.2999999523162842
+                    "ms": 0
                   },
                   {
                     "host": "frozen-label-wave",
                     "mode": "dom-move",
-                    "ms": 0.10000002384185791
+                    "ms": 0.09999990463256836
                   }
                 ]
               }
             },
             "parts": {
-              "shiftMs": 4.799999952316284,
+              "shiftMs": 0.5,
               "timeAxisMs": 0,
               "annotationsMs": 0,
-              "minimapMs": 1.9000000953674316,
-              "controlsMs": 0.19999992847442627,
+              "minimapMs": 0.5,
+              "controlsMs": 0.10000002384185791,
               "reorderTimings": [
                 {
                   "host": "group",
@@ -246,168 +496,176 @@
                 {
                   "host": "wave",
                   "mode": "dom-move",
-                  "ms": 0.2999999523162842
+                  "ms": 0
                 },
                 {
                   "host": "frozen-label-wave",
                   "mode": "dom-move",
-                  "ms": 0.10000002384185791
+                  "ms": 0.09999990463256836
                 }
               ]
             }
           },
-          "traceEvents": 363
-        },
+          "traceEvents": 365
+        }
+      ]
+    },
+    {
+      "fixture": {
+        "signals": 100,
+        "cycles": 500
+      },
+      "scenarios": [
         {
-          "name": "signal-down",
-          "browserReadyMs": 181.89999997615814,
+          "name": "signal-up",
+          "browserReadyMs": 355.1999999284744,
           "userTiming": [
             {
               "name": "tc:command:start",
-              "startTime": 22219.199999928474
+              "startTime": 55105.799999952316
             },
             {
               "name": "tc:history:start",
-              "startTime": 22219.199999928474
+              "startTime": 55105.799999952316
             },
             {
               "name": "tc:history:end",
-              "startTime": 22228
+              "startTime": 55112.5
             },
             {
               "name": "tc:reconcile:start",
-              "startTime": 22230.299999952316
+              "startTime": 55112.5
             },
             {
               "name": "tc:reconcile:end",
-              "startTime": 22235.799999952316
+              "startTime": 55114.700000047684
             },
             {
               "name": "tc:command:dom-ready",
-              "startTime": 22235.899999976158
+              "startTime": 55114.700000047684
             },
             {
               "name": "tc:command:raf-1",
-              "startTime": 22353.799999952316
+              "startTime": 55380.60000002384
             }
           ],
           "traceBounds": {
-            "commandStartTs": 981318539395,
-            "commandRaf1Ts": 981318674059
+            "commandStartTs": 984111105255,
+            "commandRaf1Ts": 984111380014
           },
           "totals": {
-            "scriptingMs": 309.365,
-            "styleMs": 55.143,
-            "layoutMs": 29.988,
-            "paintMs": 19.199,
+            "scriptingMs": 573.201,
+            "styleMs": 83.824,
+            "layoutMs": 108.865,
+            "paintMs": 38.449,
             "compositeMs": 0,
-            "longTasks": 2,
+            "longTasks": 5,
             "topHotspots": [
               {
                 "name": "RunTask",
-                "ms": 190.423
-              },
-              {
-                "name": "UpdateLayoutTree",
-                "ms": 55.143
-              },
-              {
-                "name": "EventDispatch",
-                "ms": 42.237
+                "ms": 385.451
               },
               {
                 "name": "Layout",
-                "ms": 29.988
+                "ms": 108.865
               },
               {
                 "name": "Layerize",
-                "ms": 26.868
+                "ms": 90.395
               },
               {
-                "name": "FireAnimationFrame",
-                "ms": 23.921
+                "name": "UpdateLayoutTree",
+                "ms": 83.824
               },
               {
-                "name": "FunctionCall",
-                "ms": 22.949
+                "name": "EventDispatch",
+                "ms": 66.793
               },
               {
                 "name": "Paint",
-                "ms": 14.226
+                "ms": 33.13
+              },
+              {
+                "name": "FireAnimationFrame",
+                "ms": 13.297
+              },
+              {
+                "name": "FunctionCall",
+                "ms": 12.779
               },
               {
                 "name": "PrePaint",
-                "ms": 4.939
-              },
-              {
-                "name": "HitTest",
-                "ms": 0.968
+                "ms": 5.291
               },
               {
                 "name": "RasterTask",
-                "ms": 0.754
+                "ms": 2.638
               },
               {
-                "name": "Commit",
-                "ms": 0.612
+                "name": "HitTest",
+                "ms": 0.72
+              },
+              {
+                "name": "IntersectionObserverController::computeIntersections",
+                "ms": 0.66
               }
             ]
           },
           "commandInterval": {
-            "scriptingMs": 32.903,
-            "styleMs": 54.05,
-            "layoutMs": 13.752,
-            "paintMs": 17.023,
+            "scriptingMs": 95.966,
+            "styleMs": 83.329,
+            "layoutMs": 56.777,
+            "paintMs": 37.199,
             "compositeMs": 0,
-            "longTasks": 1,
+            "longTasks": 2,
             "topHotspots": [
               {
-                "name": "UpdateLayoutTree",
-                "ms": 54.05
-              },
-              {
                 "name": "Layerize",
-                "ms": 26.86
+                "ms": 90.388
               },
               {
-                "name": "Paint",
-                "ms": 14.226
+                "name": "UpdateLayoutTree",
+                "ms": 83.329
               },
               {
                 "name": "Layout",
-                "ms": 13.752
+                "ms": 56.777
+              },
+              {
+                "name": "Paint",
+                "ms": 33.13
               },
               {
                 "name": "RunTask",
-                "ms": 4.175
+                "ms": 4.541
               },
               {
                 "name": "PrePaint",
-                "ms": 2.763
-              },
-              {
-                "name": "RasterTask",
-                "ms": 0.754
+                "ms": 4.041
               },
               {
                 "name": "IntersectionObserverController::computeIntersections",
-                "ms": 0.515
+                "ms": 0.611
               },
               {
                 "name": "Commit",
-                "ms": 0.312
-              },
-              {
-                "name": "FunctionCall",
-                "ms": 0.116
+                "ms": 0.228
               },
               {
                 "name": "FireAnimationFrame",
-                "ms": 0.107
+                "ms": 0.08
+              },
+              {
+                "name": "FunctionCall",
+                "ms": 0.078
               },
               {
                 "name": "UpdateLayer",
-                "ms": 0.064
+                "ms": 0.04
+              },
+              {
+                "name": "PaintImage",
+                "ms": 0.028
               }
             ]
           },
@@ -444,447 +702,227 @@
             "rowRemoves": 0,
             "viewportReconciles": 0,
             "viewportLanesActivated": 0,
+            "lazyVisibleRenders": 0,
+            "lazyVisibleSignalIds": 0,
             "viewportLanesDeactivated": 0
           },
           "incrementalTrace": {
             "trace": {
               "label": "Reorder signal",
-              "historyMs": 8.900000095367432,
-              "reconcileMs": 8,
-              "totalMs": 16.90000009536743,
+              "historyMs": 6.700000047683716,
+              "reconcileMs": 2.200000047683716,
+              "totalMs": 8.900000095367432,
               "parts": {
-                "shiftMs": 2.1999999284744263,
+                "shiftMs": 0.6000000238418579,
                 "timeAxisMs": 0,
                 "annotationsMs": 0,
-                "minimapMs": 1.8000000715255737,
-                "controlsMs": 0.2999999523162842,
+                "minimapMs": 1,
+                "controlsMs": 0.10000002384185791,
                 "reorderTimings": [
                   {
                     "host": "group",
                     "mode": "dom-move",
-                    "ms": 0.6999999284744263
+                    "ms": 0.10000002384185791
                   },
                   {
                     "host": "wave",
                     "mode": "dom-move",
-                    "ms": 0.10000002384185791
+                    "ms": 0.09999990463256836
                   },
                   {
                     "host": "frozen-label-wave",
                     "mode": "dom-move",
-                    "ms": 0.10000002384185791
+                    "ms": 0
                   }
                 ]
               }
             },
             "parts": {
-              "shiftMs": 2.1999999284744263,
+              "shiftMs": 0.6000000238418579,
               "timeAxisMs": 0,
               "annotationsMs": 0,
-              "minimapMs": 1.8000000715255737,
-              "controlsMs": 0.2999999523162842,
+              "minimapMs": 1,
+              "controlsMs": 0.10000002384185791,
               "reorderTimings": [
                 {
                   "host": "group",
                   "mode": "dom-move",
-                  "ms": 0.6999999284744263
+                  "ms": 0.10000002384185791
                 },
                 {
                   "host": "wave",
                   "mode": "dom-move",
-                  "ms": 0.10000002384185791
+                  "ms": 0.09999990463256836
                 },
                 {
                   "host": "frozen-label-wave",
                   "mode": "dom-move",
-                  "ms": 0.10000002384185791
+                  "ms": 0
                 }
               ]
             }
           },
-          "traceEvents": 379
+          "traceEvents": 449
         },
         {
-          "name": "eye-off",
-          "browserReadyMs": 825.3999999761581,
+          "name": "signal-down",
+          "browserReadyMs": 289.89999997615814,
           "userTiming": [
             {
               "name": "tc:command:start",
-              "startTime": 23008.799999952316
+              "startTime": 55527.700000047684
             },
             {
               "name": "tc:history:start",
-              "startTime": 23008.899999976158
+              "startTime": 55527.799999952316
             },
             {
               "name": "tc:history:end",
-              "startTime": 23017.899999976158
+              "startTime": 55533.10000002384
             },
             {
               "name": "tc:reconcile:start",
-              "startTime": 23018
+              "startTime": 55533.10000002384
             },
             {
               "name": "tc:reconcile:end",
-              "startTime": 23022.899999976158
+              "startTime": 55535.799999952316
             },
             {
               "name": "tc:command:dom-ready",
-              "startTime": 23022.899999976158
+              "startTime": 55535.799999952316
             },
             {
               "name": "tc:command:raf-1",
-              "startTime": 23144.799999952316
+              "startTime": 55746
             }
           ],
           "traceBounds": {
-            "commandStartTs": 981319328995,
-            "commandRaf1Ts": 981319465020
+            "commandStartTs": 984111527275,
+            "commandRaf1Ts": 984111745563
           },
           "totals": {
-            "scriptingMs": 1151.18,
-            "styleMs": 54.524,
-            "layoutMs": 10.651,
-            "paintMs": 219.53,
+            "scriptingMs": 471.235,
+            "styleMs": 54.881,
+            "layoutMs": 95.652,
+            "paintMs": 37.638,
             "compositeMs": 0,
-            "longTasks": 12,
+            "longTasks": 3,
             "topHotspots": [
               {
                 "name": "RunTask",
-                "ms": 802.075
-              },
-              {
-                "name": "Layerize",
-                "ms": 278.561
-              },
-              {
-                "name": "Paint",
-                "ms": 146.93
-              },
-              {
-                "name": "PrePaint",
-                "ms": 72.6
-              },
-              {
-                "name": "UpdateLayoutTree",
-                "ms": 54.524
-              },
-              {
-                "name": "FunctionCall",
-                "ms": 19.878
-              },
-              {
-                "name": "EventDispatch",
-                "ms": 19.836
-              },
-              {
-                "name": "EvaluateScript",
-                "ms": 16.354
+                "ms": 320.106
               },
               {
                 "name": "Layout",
-                "ms": 10.651
+                "ms": 95.652
+              },
+              {
+                "name": "Layerize",
+                "ms": 69.531
+              },
+              {
+                "name": "EventDispatch",
+                "ms": 57.084
+              },
+              {
+                "name": "UpdateLayoutTree",
+                "ms": 54.881
+              },
+              {
+                "name": "Paint",
+                "ms": 31.497
+              },
+              {
+                "name": "FireAnimationFrame",
+                "ms": 11.039
+              },
+              {
+                "name": "FunctionCall",
+                "ms": 10.567
+              },
+              {
+                "name": "PrePaint",
+                "ms": 6.115
+              },
+              {
+                "name": "IntersectionObserverController::computeIntersections",
+                "ms": 0.909
               },
               {
                 "name": "RasterTask",
-                "ms": 4.379
-              },
-              {
-                "name": "Commit",
-                "ms": 3.742
+                "ms": 0.864
               },
               {
                 "name": "HitTest",
-                "ms": 3.013
+                "ms": 0.635
               }
             ]
           },
           "commandInterval": {
-            "scriptingMs": 96.097,
-            "styleMs": 54.382,
-            "layoutMs": 10.651,
-            "paintMs": 54.523,
+            "scriptingMs": 75.597,
+            "styleMs": 54.445,
+            "layoutMs": 50.71,
+            "paintMs": 36.875,
             "compositeMs": 0,
-            "longTasks": 3,
+            "longTasks": 2,
             "topHotspots": [
               {
-                "name": "RunTask",
-                "ms": 92.952
-              },
-              {
-                "name": "PrePaint",
-                "ms": 54.523
+                "name": "Layerize",
+                "ms": 69.523
               },
               {
                 "name": "UpdateLayoutTree",
-                "ms": 54.382
+                "ms": 54.445
               },
               {
                 "name": "Layout",
-                "ms": 10.651
-              },
-              {
-                "name": "FunctionCall",
-                "ms": 0.923
-              },
-              {
-                "name": "FireAnimationFrame",
-                "ms": 0.917
-              },
-              {
-                "name": "ParseHTML",
-                "ms": 0.759
-              },
-              {
-                "name": "HitTest",
-                "ms": 0.394
-              },
-              {
-                "name": "EventDispatch",
-                "ms": 0.152
-              }
-            ]
-          },
-          "metrics": {
-            "appFullRenders": 0,
-            "rowMoves": 0,
-            "cycleRowCreates": 0,
-            "cycleRowRemoves": 0,
-            "cycleRowMoves": 0,
-            "wavePayloadBuilds": 0,
-            "waveCacheLookups": 0,
-            "waveDromRenders": 0,
-            "geometryBuilds": 0,
-            "geometryScreenRefreshes": 0,
-            "screenMatrixReads": 0,
-            "boundingRectReads": 0,
-            "geometryPointsTransformed": 0,
-            "rulerRebuilds": 0,
-            "gridRebuilds": 0,
-            "gridBoundaryResolutions": 0,
-            "annotationFullRenders": 0,
-            "annotationNodeCreates": 0,
-            "annotationNodeRemoves": 0,
-            "inspectorInnerHtmlRebuilds": 0,
-            "signalStyleFullScans": 0,
-            "layoutRowLookups": 0,
-            "minimapRowRectReads": 0,
-            "transactionRenders": 0,
-            "bottomRenders": 0,
-            "inspectorRenders": 0,
-            "minimapOverviewRebuilds": 0,
-            "minimapViewportUpdates": 0,
-            "rowCreates": 0,
-            "rowRemoves": 0,
-            "viewportReconciles": 1,
-            "viewportLanesActivated": 0,
-            "viewportLanesDeactivated": 0
-          },
-          "incrementalTrace": {
-            "trace": {
-              "label": "Change signal visibility",
-              "historyMs": 9.100000023841858,
-              "reconcileMs": 5,
-              "totalMs": 14.100000023841858,
-              "parts": {
-                "shiftMs": 2.1999999284744263,
-                "timeAxisMs": 0,
-                "annotationsMs": 0,
-                "minimapMs": 1.8000000715255737,
-                "controlsMs": 0.2999999523162842,
-                "reorderTimings": [
-                  {
-                    "host": "group",
-                    "mode": "dom-move",
-                    "ms": 0.6999999284744263
-                  },
-                  {
-                    "host": "wave",
-                    "mode": "dom-move",
-                    "ms": 0.10000002384185791
-                  },
-                  {
-                    "host": "frozen-label-wave",
-                    "mode": "dom-move",
-                    "ms": 0.10000002384185791
-                  }
-                ]
-              }
-            },
-            "parts": {
-              "shiftMs": 2.1999999284744263,
-              "timeAxisMs": 0,
-              "annotationsMs": 0,
-              "minimapMs": 1.8000000715255737,
-              "controlsMs": 0.2999999523162842,
-              "reorderTimings": [
-                {
-                  "host": "group",
-                  "mode": "dom-move",
-                  "ms": 0.6999999284744263
-                },
-                {
-                  "host": "wave",
-                  "mode": "dom-move",
-                  "ms": 0.10000002384185791
-                },
-                {
-                  "host": "frozen-label-wave",
-                  "mode": "dom-move",
-                  "ms": 0.10000002384185791
-                }
-              ]
-            }
-          },
-          "traceEvents": 999
-        },
-        {
-          "name": "eye-on",
-          "browserReadyMs": 303,
-          "userTiming": [
-            {
-              "name": "tc:command:start",
-              "startTime": 23517.699999928474
-            },
-            {
-              "name": "tc:history:start",
-              "startTime": 23517.799999952316
-            },
-            {
-              "name": "tc:history:end",
-              "startTime": 23524.5
-            },
-            {
-              "name": "tc:reconcile:start",
-              "startTime": 23524.5
-            },
-            {
-              "name": "tc:reconcile:end",
-              "startTime": 23530.699999928474
-            },
-            {
-              "name": "tc:command:dom-ready",
-              "startTime": 23530.799999952316
-            },
-            {
-              "name": "tc:command:raf-1",
-              "startTime": 23544.199999928474
-            }
-          ],
-          "traceBounds": {
-            "commandStartTs": 981319837868,
-            "commandRaf1Ts": 981319864393
-          },
-          "totals": {
-            "scriptingMs": 522.119,
-            "styleMs": 1.224,
-            "layoutMs": 14.804,
-            "paintMs": 28.236,
-            "compositeMs": 0,
-            "longTasks": 3,
-            "topHotspots": [
-              {
-                "name": "RunTask",
-                "ms": 290.395
-              },
-              {
-                "name": "Layerize",
-                "ms": 58.265
-              },
-              {
-                "name": "MinorGC",
-                "ms": 26.97
-              },
-              {
-                "name": "V8.GC_SCAVENGER",
-                "ms": 26.87
-              },
-              {
-                "name": "V8.GC_SCAVENGER_SCAVENGE",
-                "ms": 26.846
+                "ms": 50.71
               },
               {
                 "name": "Paint",
-                "ms": 24.479
-              },
-              {
-                "name": "V8.GC_SCAVENGER_SCAVENGE_WEAK_GLOBAL_HANDLES_PROCESS",
-                "ms": 22.649
-              },
-              {
-                "name": "EventDispatch",
-                "ms": 17.467
-              },
-              {
-                "name": "FunctionCall",
-                "ms": 16.906
-              },
-              {
-                "name": "Layout",
-                "ms": 14.804
-              },
-              {
-                "name": "V8.GC_SCAVENGER_BACKGROUND_TRACED_HANDLES_RESET_PARALLEL",
-                "ms": 5.416
-              },
-              {
-                "name": "V8.GC_SCAVENGER_BACKGROUND_SCAVENGE_PARALLEL",
-                "ms": 5.314
-              }
-            ]
-          },
-          "commandInterval": {
-            "scriptingMs": 97.531,
-            "styleMs": 0.646,
-            "layoutMs": 8.085,
-            "paintMs": 2.425,
-            "compositeMs": 0,
-            "longTasks": 1,
-            "topHotspots": [
-              {
-                "name": "RunTask",
-                "ms": 92.391
-              },
-              {
-                "name": "Layout",
-                "ms": 8.085
-              },
-              {
-                "name": "ParseHTML",
-                "ms": 2.615
+                "ms": 31.497
               },
               {
                 "name": "PrePaint",
-                "ms": 2.425
+                "ms": 5.352
               },
               {
-                "name": "FireAnimationFrame",
-                "ms": 1.032
+                "name": "RunTask",
+                "ms": 4.074
+              },
+              {
+                "name": "IntersectionObserverController::computeIntersections",
+                "ms": 0.86
+              },
+              {
+                "name": "RasterTask",
+                "ms": 0.698
+              },
+              {
+                "name": "Commit",
+                "ms": 0.235
               },
               {
                 "name": "FunctionCall",
-                "ms": 1.004
+                "ms": 0.086
               },
               {
-                "name": "UpdateLayoutTree",
-                "ms": 0.646
+                "name": "FireAnimationFrame",
+                "ms": 0.083
               },
               {
-                "name": "HitTest",
-                "ms": 0.365
-              },
-              {
-                "name": "EventDispatch",
-                "ms": 0.124
+                "name": "UpdateLayer",
+                "ms": 0.038
               }
             ]
           },
           "metrics": {
             "appFullRenders": 0,
-            "rowMoves": 0,
+            "rowMoves": 3,
             "cycleRowCreates": 0,
             "cycleRowRemoves": 0,
-            "cycleRowMoves": 0,
+            "cycleRowMoves": 3,
             "wavePayloadBuilds": 0,
             "waveCacheLookups": 0,
             "waveDromRenders": 0,
@@ -910,27 +948,29 @@
             "minimapViewportUpdates": 0,
             "rowCreates": 0,
             "rowRemoves": 0,
-            "viewportReconciles": 1,
+            "viewportReconciles": 0,
             "viewportLanesActivated": 0,
+            "lazyVisibleRenders": 0,
+            "lazyVisibleSignalIds": 0,
             "viewportLanesDeactivated": 0
           },
           "incrementalTrace": {
             "trace": {
-              "label": "Change signal visibility",
-              "historyMs": 6.800000071525574,
-              "reconcileMs": 6.399999976158142,
-              "totalMs": 13.200000047683716,
+              "label": "Reorder signal",
+              "historyMs": 5.299999952316284,
+              "reconcileMs": 2.799999952316284,
+              "totalMs": 8.099999904632568,
               "parts": {
-                "shiftMs": 2.1999999284744263,
+                "shiftMs": 0.6000000238418579,
                 "timeAxisMs": 0,
                 "annotationsMs": 0,
-                "minimapMs": 1.8000000715255737,
-                "controlsMs": 0.2999999523162842,
+                "minimapMs": 1.5,
+                "controlsMs": 0.19999992847442627,
                 "reorderTimings": [
                   {
                     "host": "group",
                     "mode": "dom-move",
-                    "ms": 0.6999999284744263
+                    "ms": 0.09999990463256836
                   },
                   {
                     "host": "wave",
@@ -946,16 +986,16 @@
               }
             },
             "parts": {
-              "shiftMs": 2.1999999284744263,
+              "shiftMs": 0.6000000238418579,
               "timeAxisMs": 0,
               "annotationsMs": 0,
-              "minimapMs": 1.8000000715255737,
-              "controlsMs": 0.2999999523162842,
+              "minimapMs": 1.5,
+              "controlsMs": 0.19999992847442627,
               "reorderTimings": [
                 {
                   "host": "group",
                   "mode": "dom-move",
-                  "ms": 0.6999999284744263
+                  "ms": 0.09999990463256836
                 },
                 {
                   "host": "wave",
@@ -970,7 +1010,7 @@
               ]
             }
           },
-          "traceEvents": 677
+          "traceEvents": 410
         }
       ]
     }
