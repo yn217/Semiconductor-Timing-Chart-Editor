@@ -99,6 +99,92 @@ function bindIssue6Menus(model=getProductionModel()){const controller=window.Tim
   const close=()=>document.querySelector('#issue6ContextMenu')?.remove();const show=(items,x,y,context)=>{close();const menu=document.createElement('div');menu.id='issue6ContextMenu';menu.style.cssText=`position:fixed;z-index:2100;left:${x}px;top:${y}px;background:#fff;border:1px solid #b8c5d4;box-shadow:0 5px 16px #0003;padding:4px;display:grid;min-width:150px;font:12px sans-serif`;items.forEach(([command,label])=>{const button=document.createElement('button');button.type='button';button.dataset.command=command;button.textContent=label;button.style.cssText='border:0;background:#fff;text-align:left;padding:5px 8px;';menu.appendChild(button);});menu.addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command;if(!command)return;close();const signalId=context.signalId,groupId=context.groupId;const signal=signalId?model.document.signals.find(item=>item.id===signalId):null;if(command==='rename'&&signal){const name=window.prompt('名前を変更',signal.display?.name||signal.name);if(name)controller.actions.setDisplayName(signalId,name);}else if(command==='duplicate'&&signal)controller.actions.duplicateSignal(signalId);else if(command==='delete'&&signal)controller.actions.deleteSignal(signalId);else if(command==='up'&&signal)controller.actions.moveSignalBy(signalId,-1);else if(command==='down'&&signal)controller.actions.moveSignalBy(signalId,1);else if(command==='visible'&&signal)controller.actions.setSignalVisibility(signalId,hiddenSignalIds(model).has(signalId));else if(command.startsWith('role-')&&signal)controller.actions.setSignalRole(signalId,command.slice(5));else if(command==='edit-comment'&&signal){const title=window.prompt('コメント行を編集',signal.title);if(title)controller.actions.updateComment(signalId,'title',title);}else if(command==='duplicate-comment'&&signal)controller.actions.addCommentRow({title:`${signal.title} copy`,body:signal.body},groupId);else if(command==='rename-group') {const name=window.prompt('グループ名を変更',model.document.signalGroups.find(item=>item.id===groupId)?.name);if(name)controller.actions.setGroupName(groupId,name);}else if(command==='collapse-group')controller.actions.setGroupCollapsed(groupId,!model.document.signalGroups.find(item=>item.id===groupId)?.collapsed);else if(command==='up-group')controller.actions.moveGroupBy(groupId,-1);else if(command==='down-group')controller.actions.moveGroupBy(groupId,1);else if(command==='add-signal')controller.actions.addSignal({name:`signal_${Date.now()}`},groupId);else if(command==='add-comment')controller.actions.addCommentRow({},groupId);else if(command==='add-spacer')controller.actions.addSpacer(groupId,16);else if(command==='group-spacing')controller.actions.setGroupSpacing(groupId,'spacingAfter',Number(window.prompt('グループ間隔(px)',model.document.signalGroups.find(item=>item.id===groupId)?.spacingAfter||0)));else if(command==='group-appearance'){const group=model.document.signalGroups.find(item=>item.id===groupId);const background=window.prompt('Group Band背景色',group?.style?.background||'#eef5ff');if(background)controller.actions.setGroupAppearance(groupId,{background});}else if(command==='delete-group')controller.actions.deleteGroup(groupId);});document.body.appendChild(menu);};if(document.body.dataset.issue6Menus!=='true'){document.body.dataset.issue6Menus='true';document.addEventListener('click',event=>{if(!event.target.closest('#issue6ContextMenu,.more,.group-h'))close();});}
   $$('#groups .row .more').forEach(more=>{if(more.dataset.issue6Bound)return;more.dataset.issue6Bound='true';more.addEventListener('click',event=>{event.stopPropagation();const row=more.closest('.row');const signal=model.document.signals.find(item=>item.id===row.dataset.signal);const items=signal?.type==='commentRow'?[['edit-comment','編集'],['duplicate-comment','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示']]:[['rename','名前を変更'],['duplicate','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示'],['role-input','Role: Input'],['role-output','Role: Output'],['role-internal','Role: Internal'],['inspector','Inspectorを開く']];show(items,event.clientX,event.clientY,{signalId:row.dataset.signal,groupId:row.closest('.group')?.dataset.groupId});});});
   $$('#groups .group-h').forEach(header=>{const button=header.lastElementChild;if(!button||button.dataset.issue6Bound)return;button.dataset.issue6Bound='true';button.style.cursor='pointer';button.addEventListener('click',event=>{event.stopPropagation();const group=header.closest('.group');const groupId=group?.dataset.groupId;show([['rename-group','名前を変更'],['collapse-group','グループを折りたたむ / 展開'],['up-group','上へ移動'],['down-group','下へ移動'],['add-signal','Signalを追加'],['add-comment','Comment Rowを追加'],['add-spacer','Spacerを追加'],['group-appearance','Group Band / 背景設定'],['group-spacing','グループ間隔設定'],['delete-group','グループ削除']],event.clientX,event.clientY,{groupId});});});}
+function issue92ClosePopover(){document.querySelector('#issue92Popover')?.remove();document.removeEventListener('pointerdown',window.__issue92PopoverOutside||(()=>{}),true);}
+function issue92ShowFieldPopover({anchor,title,fields,onApply,dangerous}){
+  issue92ClosePopover();
+  const popover=document.createElement('div');
+  popover.id='issue92Popover';
+  popover.setAttribute('role','dialog');
+  popover.setAttribute('aria-label',title);
+  popover.style.cssText='position:fixed;z-index:2200;background:#fff;border:1px solid #b8c5d4;border-radius:6px;box-shadow:0 8px 24px #0003;padding:12px;min-width:220px;max-width:280px;font:12px sans-serif;color:#243047;';
+  const titleEl=document.createElement('div');
+  titleEl.textContent=title;
+  titleEl.style.cssText='font-weight:600;margin-bottom:8px;';
+  popover.appendChild(titleEl);
+  const inputs={};
+  fields.forEach(field=>{
+    const row=document.createElement('div');
+    row.style.cssText='margin-bottom:8px;';
+    const label=document.createElement('label');
+    label.textContent=field.label;
+    label.style.cssText='display:block;margin-bottom:3px;color:#58677a;';
+    const input=document.createElement('input');
+    input.type=field.type==='color'?'color':field.type==='number'?'number':'text';
+    input.value=field.value??'';
+    if(field.type==='number'){if(field.min!==undefined)input.min=String(field.min);if(field.max!==undefined)input.max=String(field.max);if(field.step!==undefined)input.step=String(field.step);}
+    input.style.cssText='width:100%;border:1px solid #cbd6e4;border-radius:4px;padding:6px;box-sizing:border-box;';
+    input.dataset.field=field.key;
+    inputs[field.key]=input;
+    row.append(label,input);
+    popover.appendChild(row);
+  });
+  const errorEl=document.createElement('div');
+  errorEl.setAttribute('role','alert');
+  errorEl.style.cssText='color:#c43a3a;font-size:11px;min-height:14px;margin-bottom:6px;';
+  popover.appendChild(errorEl);
+  const buttonRow=document.createElement('div');
+  buttonRow.style.cssText='display:flex;gap:6px;justify-content:flex-end;';
+  const cancelButton=document.createElement('button');
+  cancelButton.type='button';cancelButton.textContent='キャンセル';
+  cancelButton.style.cssText='border:1px solid #cbd6e4;background:#fff;border-radius:4px;padding:6px 12px;cursor:pointer;';
+  const applyButton=document.createElement('button');
+  applyButton.type='button';applyButton.textContent='適用';
+  applyButton.style.cssText=`border:0;background:${dangerous?'#df4d4d':'#1473e6'};color:#fff;border-radius:4px;padding:6px 12px;cursor:pointer;`;
+  buttonRow.append(cancelButton,applyButton);
+  popover.appendChild(buttonRow);
+  document.body.appendChild(popover);
+
+  const anchorRect=anchor?.getBoundingClientRect?anchor.getBoundingClientRect():{left:anchor?.x||0,top:anchor?.y||0,bottom:anchor?.y||0,right:anchor?.x||0};
+  const margin=6;
+  const popRect=popover.getBoundingClientRect();
+  let left=anchorRect.left;
+  let top=anchorRect.bottom+4;
+  if(left+popRect.width+margin>innerWidth)left=Math.max(margin,innerWidth-popRect.width-margin);
+  if(left<margin)left=margin;
+  if(top+popRect.height+margin>innerHeight)top=Math.max(margin,anchorRect.top-popRect.height-4);
+  if(top<margin)top=margin;
+  popover.style.left=`${left}px`;
+  popover.style.top=`${top}px`;
+
+  const previouslyFocused=document.activeElement;
+  const close=()=>{popover.remove();document.removeEventListener('pointerdown',onOutside,true);if(previouslyFocused&&previouslyFocused.focus&&document.contains(previouslyFocused))previouslyFocused.focus();};
+  const onOutside=event=>{if(!popover.contains(event.target))close();};
+  document.addEventListener('pointerdown',onOutside,true);
+  window.__issue92PopoverOutside=onOutside;
+
+  const apply=()=>{
+    const values={};
+    for(const field of fields)values[field.key]=field.type==='number'?Number(inputs[field.key].value):inputs[field.key].value;
+    for(const field of fields){
+      if(field.validate){
+        const message=field.validate(values[field.key],values);
+        if(message){errorEl.textContent=message;inputs[field.key].focus();return;}
+      }
+    }
+    onApply(values);
+    close();
+  };
+  applyButton.addEventListener('click',apply);
+  cancelButton.addEventListener('click',close);
+  popover.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}
+    else if(event.key==='Enter'){event.preventDefault();apply();}
+    else if(event.key==='Tab'){const focusable=[...popover.querySelectorAll('input,button')];const index=focusable.indexOf(document.activeElement);if(event.shiftKey&&index===0){event.preventDefault();focusable[focusable.length-1].focus();}else if(!event.shiftKey&&index===focusable.length-1){event.preventDefault();focusable[0].focus();}}
+  });
+  const firstInput=inputs[fields[0].key];
+  firstInput.focus();
+  firstInput.select?.();
+}
 function bindIssue64Menus(model=getProductionModel()) {
   const controller = window.TimingChartProductionController;
   const addMenu = $('#addMenu');
@@ -121,29 +207,73 @@ function bindIssue64Menus(model=getProductionModel()) {
   const menuState = document.body.__issue64MenuState || (document.body.__issue64MenuState = { openMenu: null });
   const close = () => { menuState.openMenu?.remove(); menuState.openMenu = null; };
   const findGroup = groupId => model.document.signalGroups.find(group => group.id === groupId);
-  const execute = (command, context) => {
+  const execute = (command, context, anchor) => {
     const { signalId, groupId } = context;
     const signal = signalId ? model.document.signals.find(item => item.id === signalId) : null;
     const group = findGroup(groupId);
-    if (command === 'rename' && signal) { const name = window.prompt('名前を変更', signal.display?.name || signal.name); if (name) controller.actions.setDisplayName(signalId, name); }
+    if (command === 'rename' && signal) {
+      issue92ShowFieldPopover({
+        anchor, title: '名前を変更',
+        fields: [{ key: 'name', label: '信号名', type: 'text', value: signal.display?.name || signal.name, validate: value => {
+          if (!value || !value.trim()) return '名前を入力してください';
+          const trimmed = value.trim();
+          if (model.document.signals.some(item => item.id !== signalId && (item.display?.name || item.name) === trimmed)) return 'この名前は既に使用されています';
+          return null;
+        } }],
+        onApply: values => controller.actions.setDisplayName(signalId, values.name.trim())
+      });
+    }
     else if (command === 'duplicate' && signal) controller.actions.duplicateSignal(signalId);
     else if (command === 'delete' && signal) controller.actions.deleteSignal(signalId);
     else if (command === 'up' && signal) controller.actions.moveSignalBy(signalId, -1);
     else if (command === 'down' && signal) controller.actions.moveSignalBy(signalId, 1);
     else if (command === 'visible' && signal) controller.actions.setSignalVisibility(signalId, signal.display?.visible === false);
     else if (command.startsWith('role-') && signal) controller.actions.setSignalRole(signalId, command.slice(5));
-    else if (command === 'edit-comment' && signal) { const title = window.prompt('コメント行を編集', signal.title); if (title) controller.actions.updateComment(signalId, 'title', title); }
+    else if (command === 'edit-comment' && signal) {
+      issue92ShowFieldPopover({
+        anchor, title: 'コメント行を編集',
+        fields: [{ key: 'title', label: 'タイトル', type: 'text', value: signal.title, validate: value => (!value || !value.trim()) ? 'タイトルを入力してください' : null }],
+        onApply: values => controller.actions.updateComment(signalId, 'title', values.title.trim())
+      });
+    }
     else if (command === 'duplicate-comment' && signal) controller.actions.addCommentRow({ title: `${signal.title} copy`, body: signal.body }, groupId);
     else if (command === 'inspector' && signal) controller.actions.selectObject({ dataset: { signal: signalId, kind: signal.type === 'commentRow' ? 'comment' : 'signal' } });
-    else if (command === 'rename-group' && group) { const name = window.prompt('グループ名を変更', group.name); if (name) controller.actions.setGroupName(groupId, name); }
+    else if (command === 'rename-group' && group) {
+      issue92ShowFieldPopover({
+        anchor, title: 'グループ名を変更',
+        fields: [{ key: 'name', label: 'グループ名', type: 'text', value: group.name, validate: value => {
+          if (!value || !value.trim()) return '名前を入力してください';
+          const trimmed = value.trim();
+          if (model.document.signalGroups.some(item => item.id !== groupId && item.name === trimmed)) return 'この名前は既に使用されています';
+          return null;
+        } }],
+        onApply: values => controller.actions.setGroupName(groupId, values.name.trim())
+      });
+    }
     else if (command === 'collapse-group' && group) controller.actions.setGroupCollapsed(groupId, !group.collapsed);
     else if (command === 'up-group') controller.actions.moveGroupBy(groupId, -1);
     else if (command === 'down-group') controller.actions.moveGroupBy(groupId, 1);
     else if (command === 'add-signal') controller.actions.addSignal({ name: `signal_${Date.now()}` }, groupId);
     else if (command === 'add-comment') controller.actions.addCommentRow({}, groupId);
     else if (command === 'add-spacer') controller.actions.addSpacer(groupId, 16);
-    else if (command === 'group-spacing' && group) { const value = Number(window.prompt('グループ間隔(px)', group.spacingAfter || 0)); if (Number.isFinite(value)) controller.actions.setGroupSpacing(groupId, 'spacingAfter', value); }
-    else if (command === 'group-appearance' && group) { const background = window.prompt('Group Band背景色', group.style?.background || '#eef5ff'); if (background) controller.actions.setGroupAppearance(groupId, { background }); }
+    else if (command === 'group-spacing' && group) {
+      issue92ShowFieldPopover({
+        anchor, title: 'グループ間隔設定',
+        fields: [{ key: 'spacing', label: '間隔 (px)', type: 'number', min: 0, max: 200, step: 1, value: group.spacingAfter || 0, validate: value => {
+          if (!Number.isFinite(value) || Number.isNaN(value)) return '数値を入力してください';
+          if (value < 0) return '0以上の値を入力してください';
+          return null;
+        } }],
+        onApply: values => controller.actions.setGroupSpacing(groupId, 'spacingAfter', values.spacing)
+      });
+    }
+    else if (command === 'group-appearance' && group) {
+      issue92ShowFieldPopover({
+        anchor, title: 'Group Band 背景設定',
+        fields: [{ key: 'background', label: '背景色', type: 'color', value: group.style?.background || '#eef5ff', validate: value => (!/^#[0-9a-fA-F]{6}$/.test(value)) ? '有効な色を選択してください' : null }],
+        onApply: values => controller.actions.setGroupAppearance(groupId, { background: values.background })
+      });
+    }
     else if (command === 'delete-group') controller.actions.deleteGroup(groupId);
   };
   const show = (items, x, y, context) => {
@@ -166,7 +296,7 @@ function bindIssue64Menus(model=getProductionModel()) {
       const button = event.target.closest('[data-command]');
       if (!button || !menu.contains(button)) return;
       event.preventDefault(); event.stopPropagation();
-      execute(button.dataset.command, context);
+      execute(button.dataset.command, context, button);
       close();
     });
     menu.addEventListener('keydown', event => {
