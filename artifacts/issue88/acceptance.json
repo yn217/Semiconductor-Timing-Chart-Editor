@@ -1,0 +1,60 @@
+{
+  "issue": 88,
+  "setup": {
+    "opened": true,
+    "binaryId": "req_valid",
+    "rowCount": 22
+  },
+  "clickFlow": {
+    "focusRetained": true,
+    "rowIndexAfterFieldClick": 3,
+    "selectedRowClassOk": true,
+    "expectedIndex": 3
+  },
+  "nonInputClick": {
+    "rowIsFocused": true,
+    "rowIndex": 5,
+    "expectedIndex": 5
+  },
+  "keyboardNav": {
+    "afterFiveDown": 5,
+    "afterOneUp": 4,
+    "atEnd": 21,
+    "atHome": 0,
+    "totalRows": 22,
+    "selectedRowVisible": true
+  },
+  "enterF2Flow": {
+    "focusedInputAfterEnter": true,
+    "rowIndexUnchangedByArrowInInput": true,
+    "stillFocusedOnInput": true,
+    "focusedInputAfterF2": true
+  },
+  "addFlow": {
+    "added": true,
+    "rowIndex": 22,
+    "lastIndex": 22
+  },
+  "dupDeleteFlow": {
+    "dupOk": true,
+    "deleteOk": true
+  },
+  "keyboardDeleteDup": {
+    "before": 23,
+    "afterCtrlD": 24,
+    "afterDelete": 23,
+    "rowFocusedAfterDup": true
+  },
+  "signalSwitch": {
+    "inRange": true,
+    "rowIndex": 0
+  },
+  "undoFlow": {
+    "valid": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue88-1672x941.png"
+  ]
+}

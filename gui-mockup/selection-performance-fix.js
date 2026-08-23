@@ -95,13 +95,34 @@
       }
     });
 
-    content.addEventListener('click', event => {
+    content.addEventListener('mousedown', event => {
       const editorRow = event.target.closest?.('tbody tr[data-editor-index]');
-      if (editorRow) {
-        model.editor.rowIndex = Number(editorRow.dataset.editorIndex);
-        controller.render();
+      if (!editorRow) return;
+      const index = Number(editorRow.dataset.editorIndex);
+      const isFieldClick = Boolean(event.target.closest('input,select,textarea'));
+      if (index === model.editor.rowIndex) {
+        if (!isFieldClick) editorRow.focus();
         return;
       }
+      model.editor.rowIndex = index;
+      if (isFieldClick) {
+        // Field clicks must not trigger a full re-render: rebuilding the
+        // table's innerHTML would detach the input the browser is about to
+        // focus, discarding the caret the user just clicked into.
+        content.querySelectorAll('tbody tr[data-editor-index]').forEach(row => {
+          const isSelected = Number(row.dataset.editorIndex) === index;
+          row.classList.toggle('selected-row', isSelected);
+          row.tabIndex = isSelected ? 0 : -1;
+          const marker = row.querySelector('td:first-child');
+          if (marker) marker.textContent = isSelected ? '☑' : '□';
+        });
+      } else {
+        controller.render();
+        document.querySelector(`#bottomContent tbody tr[data-editor-index="${index}"]`)?.focus();
+      }
+    });
+
+    content.addEventListener('click', event => {
       const button = event.target.closest?.('[data-editor-action]');
       if (!button) return;
       const signalId = model.selection?.id;
@@ -111,6 +132,49 @@
       else if (action === 'delete') controller.actions.deleteSignalValue(signalId, model.editor?.rowIndex ?? 0);
     });
   };
+
+  const issue88RowFocusWhen = event => {
+    const row = event.target.closest?.('#bottomContent tbody tr[data-editor-index]');
+    return Boolean(row) && !event.target.matches?.('input,select,textarea');
+  };
+  const issue88Rows = () => [...document.querySelectorAll('#bottomContent tbody tr[data-editor-index]')];
+  const issue88FocusRow = index => document.querySelector(`#bottomContent tbody tr[data-editor-index="${index}"]`)?.focus();
+  const issue88SetRow = index => {
+    const rows = issue88Rows();
+    if (!rows.length) return;
+    const clamped = Math.max(0, Math.min(rows.length - 1, index));
+    model.editor.rowIndex = clamped;
+    controller.render();
+    issue88FocusRow(clamped);
+  };
+  const issue88PrimaryField = row => row?.querySelector('input[data-editor-field="start"],input[data-editor-field="value"]');
+  const installBottomEditorKeyboardNav = () => {
+    const router = window.TimingChartShortcutRouter;
+    if (!router || document.body.dataset.issue88Bound) return;
+    document.body.dataset.issue88Bound = 'true';
+    const when = issue88RowFocusWhen;
+    router.register({ id: 'issue88-up', owner: 'issue88', shortcut: 'ArrowUp', scope: 'application', when, execute: () => { issue88SetRow((model.editor?.rowIndex ?? 0) - 1); return true; } });
+    router.register({ id: 'issue88-down', owner: 'issue88', shortcut: 'ArrowDown', scope: 'application', when, execute: () => { issue88SetRow((model.editor?.rowIndex ?? 0) + 1); return true; } });
+    router.register({ id: 'issue88-home', owner: 'issue88', shortcut: 'Home', scope: 'application', when, execute: () => { issue88SetRow(0); return true; } });
+    router.register({ id: 'issue88-end', owner: 'issue88', shortcut: 'End', scope: 'application', when, execute: () => { issue88SetRow(issue88Rows().length - 1); return true; } });
+    router.register({ id: 'issue88-enter', owner: 'issue88', shortcut: 'Enter', scope: 'application', when, execute: (event) => { const field = issue88PrimaryField(event.target.closest('tbody tr[data-editor-index]')); field?.focus(); field?.select?.(); return true; } });
+    router.register({ id: 'issue88-f2', owner: 'issue88', shortcut: 'F2', scope: 'application', when, execute: (event) => { const field = issue88PrimaryField(event.target.closest('tbody tr[data-editor-index]')); field?.focus(); field?.select?.(); return true; } });
+    router.register({ id: 'issue88-delete', owner: 'issue88', shortcut: 'Delete', scope: 'application', priority: 10, when, execute: () => {
+      const signalId = model.selection?.id;
+      const index = model.editor?.rowIndex ?? 0;
+      if (!controller.actions.deleteSignalValue(signalId, index)) return false;
+      issue88FocusRow(model.editor?.rowIndex ?? 0);
+      return true;
+    } });
+    router.register({ id: 'issue88-duplicate', owner: 'issue88', shortcut: 'Ctrl+D', scope: 'application', priority: 10, when, execute: () => {
+      const signalId = model.selection?.id;
+      const index = model.editor?.rowIndex ?? 0;
+      if (!controller.actions.duplicateSignalValue(signalId, index)) return false;
+      issue88FocusRow(model.editor?.rowIndex ?? 0);
+      return true;
+    } });
+  };
+  installBottomEditorKeyboardNav();
 
   const busRange = signal => {
     if (!signal) return '';
