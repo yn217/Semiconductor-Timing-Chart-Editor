@@ -5,7 +5,7 @@
   },
   "replace": {
     "result": true,
-    "elapsedMs": 7025
+    "elapsedMs": 6408
   },
   "state": {
     "signalCount": 50,
@@ -15,47 +15,49 @@
     {
       "name": "signal-up",
       "result": true,
-      "commandMs": 74.80000007152557,
-      "clickDispatchMs": 74.70000004768372,
-      "paintMs": 1687.5,
-      "settledPaintMs": 1687.5,
+      "commandMs": 16.100000023841858,
+      "clickDispatchMs": 16,
+      "paintMs": 106.19999992847443,
+      "settledPaintMs": 106.19999992847443,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 0,
       "revisionAfter": 1,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 9.5,
-        "reconcileMs": 63.300000071525574,
-        "totalMs": 72.80000007152557,
+        "historyMs": 7.100000023841858,
+        "reconcileMs": 7.600000023841858,
+        "totalMs": 14.700000047683716,
         "parts": {
-          "shiftMs": 0.20000004768371582,
+          "shiftMs": 0.09999990463256836,
           "timeAxisMs": 0,
           "annotationsMs": 0,
           "reorderTimings": [
             {
               "host": "wave",
-              "ms": 60.700000047683716
+              "mode": "transform",
+              "ms": 5
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.09999990463256836
+              "ms": 0.20000004768371582
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0.20000004768371582,
+        "shiftMs": 0.09999990463256836,
         "timeAxisMs": 0,
         "annotationsMs": 0,
         "reorderTimings": [
           {
             "host": "wave",
-            "ms": 60.700000047683716
+            "mode": "transform",
+            "ms": 5
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.09999990463256836
+            "ms": 0.20000004768371582
           }
         ]
       },
@@ -128,31 +130,32 @@
     {
       "name": "signal-down",
       "result": true,
-      "commandMs": 55.89999997615814,
-      "clickDispatchMs": 55.799999952316284,
-      "paintMs": 1636.3999999761581,
-      "settledPaintMs": 1636.3999999761581,
+      "commandMs": 7.799999952316284,
+      "clickDispatchMs": 7.799999952316284,
+      "paintMs": 77.5,
+      "settledPaintMs": 77.5,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 1,
       "revisionAfter": 2,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 5.599999904632568,
-        "reconcileMs": 49.10000002384186,
-        "totalMs": 54.799999952316284,
+        "historyMs": 4.900000095367432,
+        "reconcileMs": 2.299999952316284,
+        "totalMs": 7.200000047683716,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0.10000002384185791,
+          "annotationsMs": 0,
           "reorderTimings": [
             {
               "host": "wave",
-              "ms": 47.90000009536743
+              "mode": "transform",
+              "ms": 1.6999999284744263
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.09999990463256836
+              "ms": 0.10000002384185791
             }
           ]
         }
@@ -160,15 +163,16 @@
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0.10000002384185791,
+        "annotationsMs": 0,
         "reorderTimings": [
           {
             "host": "wave",
-            "ms": 47.90000009536743
+            "mode": "transform",
+            "ms": 1.6999999284744263
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.09999990463256836
+            "ms": 0.10000002384185791
           }
         ]
       },
@@ -241,31 +245,32 @@
     {
       "name": "eye-off",
       "result": true,
-      "commandMs": 7.399999976158142,
+      "commandMs": 8.700000047683716,
       "clickDispatchMs": null,
-      "paintMs": 186,
-      "settledPaintMs": 186,
+      "paintMs": 201.60000002384186,
+      "settledPaintMs": 201.60000002384186,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 2,
       "revisionAfter": 3,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.899999976158142,
+        "historyMs": 5.899999976158142,
         "reconcileMs": 1.600000023841858,
-        "totalMs": 6.5,
+        "totalMs": 7.5,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0.10000002384185791,
+          "annotationsMs": 0,
           "reorderTimings": [
             {
               "host": "wave",
-              "ms": 47.90000009536743
+              "mode": "transform",
+              "ms": 1.6999999284744263
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.09999990463256836
+              "ms": 0.10000002384185791
             }
           ]
         }
@@ -273,15 +278,16 @@
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0.10000002384185791,
+        "annotationsMs": 0,
         "reorderTimings": [
           {
             "host": "wave",
-            "ms": 47.90000009536743
+            "mode": "transform",
+            "ms": 1.6999999284744263
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.09999990463256836
+            "ms": 0.10000002384185791
           }
         ]
       },
@@ -354,31 +360,32 @@
     {
       "name": "eye-on",
       "result": true,
-      "commandMs": 5.900000095367432,
+      "commandMs": 5.600000023841858,
       "clickDispatchMs": null,
-      "paintMs": 215.70000004768372,
-      "settledPaintMs": 215.70000004768372,
+      "paintMs": 199.60000002384186,
+      "settledPaintMs": 199.60000002384186,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 3,
       "revisionAfter": 4,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.700000047683716,
+        "historyMs": 4.199999928474426,
         "reconcileMs": 0.7000000476837158,
-        "totalMs": 5.400000095367432,
+        "totalMs": 4.899999976158142,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0.10000002384185791,
+          "annotationsMs": 0,
           "reorderTimings": [
             {
               "host": "wave",
-              "ms": 47.90000009536743
+              "mode": "transform",
+              "ms": 1.6999999284744263
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.09999990463256836
+              "ms": 0.10000002384185791
             }
           ]
         }
@@ -386,15 +393,16 @@
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0.10000002384185791,
+        "annotationsMs": 0,
         "reorderTimings": [
           {
             "host": "wave",
-            "ms": 47.90000009536743
+            "mode": "transform",
+            "ms": 1.6999999284744263
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.09999990463256836
+            "ms": 0.10000002384185791
           }
         ]
       },
@@ -467,31 +475,32 @@
     {
       "name": "cycle-insert",
       "result": true,
-      "commandMs": 22.299999952316284,
+      "commandMs": 27,
       "clickDispatchMs": null,
-      "paintMs": 81.89999997615814,
-      "settledPaintMs": 12248.100000023842,
+      "paintMs": 104.79999995231628,
+      "settledPaintMs": 11876.299999952316,
       "cycleBefore": 100,
       "cycleAfter": 101,
       "revisionBefore": 4,
       "revisionAfter": 5,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.700000047683716,
+        "historyMs": 4.199999928474426,
         "reconcileMs": 0.7000000476837158,
-        "totalMs": 5.400000095367432,
+        "totalMs": 4.899999976158142,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0.10000002384185791,
+          "annotationsMs": 0,
           "reorderTimings": [
             {
               "host": "wave",
-              "ms": 47.90000009536743
+              "mode": "transform",
+              "ms": 1.6999999284744263
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.09999990463256836
+              "ms": 0.10000002384185791
             }
           ]
         }
@@ -499,33 +508,34 @@
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0.10000002384185791,
+        "annotationsMs": 0,
         "reorderTimings": [
           {
             "host": "wave",
-            "ms": 47.90000009536743
+            "mode": "transform",
+            "ms": 1.6999999284744263
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.09999990463256836
+            "ms": 0.10000002384185791
           }
         ]
       },
       "timelineTrace": {
-        "waveformMs": 12207,
-        "axisMs": 18,
-        "annotationMs": 0.5,
-        "totalMs": 12227.399999976158,
+        "waveformMs": 11830.700000047684,
+        "axisMs": 17.299999952316284,
+        "annotationMs": 0.40000009536743164,
+        "totalMs": 11850.400000095367,
         "waveformProfile": {
-          "mountMs": 3008.2000000476837,
-          "geometryMs": 4175.200000047684,
-          "totalMs": 12205.600000023842,
+          "mountMs": 2837.5,
+          "geometryMs": 4295,
+          "totalMs": 11829.600000023842,
           "rows": 50,
           "geometry": {
-            "boundaryMs": 89.8999993801117,
-            "symbolMs": 2964.600000500679,
+            "boundaryMs": 88.69999992847443,
+            "symbolMs": 3033.9999998807907,
             "rowRectMs": 0,
-            "signalMs": 4174.800000071526
+            "signalMs": 4294.799999952316
           }
         }
       },
@@ -597,31 +607,32 @@
     {
       "name": "cycle-delete",
       "result": true,
-      "commandMs": 178.89999997615814,
+      "commandMs": 149.70000004768372,
       "clickDispatchMs": null,
-      "paintMs": 969.5,
-      "settledPaintMs": 13617.899999976158,
+      "paintMs": 885.8999999761581,
+      "settledPaintMs": 12318.200000047684,
       "cycleBefore": 101,
       "cycleAfter": 100,
       "revisionBefore": 5,
       "revisionAfter": 6,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.700000047683716,
+        "historyMs": 4.199999928474426,
         "reconcileMs": 0.7000000476837158,
-        "totalMs": 5.400000095367432,
+        "totalMs": 4.899999976158142,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0.10000002384185791,
+          "annotationsMs": 0,
           "reorderTimings": [
             {
               "host": "wave",
-              "ms": 47.90000009536743
+              "mode": "transform",
+              "ms": 1.6999999284744263
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.09999990463256836
+              "ms": 0.10000002384185791
             }
           ]
         }
@@ -629,33 +640,34 @@
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0.10000002384185791,
+        "annotationsMs": 0,
         "reorderTimings": [
           {
             "host": "wave",
-            "ms": 47.90000009536743
+            "mode": "transform",
+            "ms": 1.6999999284744263
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.09999990463256836
+            "ms": 0.10000002384185791
           }
         ]
       },
       "timelineTrace": {
-        "waveformMs": 13438.600000023842,
-        "axisMs": 17.700000047683716,
-        "annotationMs": 0.5,
-        "totalMs": 13458.600000023842,
+        "waveformMs": 12159.100000023842,
+        "axisMs": 21.899999976158142,
+        "annotationMs": 1.2000000476837158,
+        "totalMs": 12184.899999976158,
         "waveformProfile": {
-          "mountMs": 2948.100000023842,
-          "geometryMs": 4877.700000047684,
-          "totalMs": 13438.099999904633,
+          "mountMs": 2753.3000000715256,
+          "geometryMs": 4279.399999976158,
+          "totalMs": 12158.5,
           "rows": 50,
           "geometry": {
-            "boundaryMs": 126.30000019073486,
-            "symbolMs": 3392.800000190735,
+            "boundaryMs": 95.50000059604645,
+            "symbolMs": 3037.2999995946884,
             "rowRectMs": 0,
-            "signalMs": 4877.200000047684
+            "signalMs": 4279.000000119209
           }
         }
       },
