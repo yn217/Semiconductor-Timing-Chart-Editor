@@ -8,6 +8,7 @@ const outputDir = path.join(root, 'artifacts', 'issue128');
 const sizes = process.argv.includes('--normal-only') ? [{ signals: 50, cycles: 100 }] : [{ signals: 50, cycles: 100 }, { signals: 100, cycles: 500 }];
 const tryRowContainment = process.argv.includes('--try-row-containment');
 const reorderOnly = process.argv.includes('--reorder-only');
+const skipTimeline = process.argv.includes('--skip-timeline');
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 const client = await page.context().newCDPSession(page);
@@ -141,7 +142,7 @@ for (const size of sizes) {
     await traceOnce('signal-down', () => reorder('down'))
   ];
   if (!reorderOnly) scenarios.push(await traceOnce('eye-off', () => eye(false)), await traceOnce('eye-on', () => eye(true)));
-  if (!reorderOnly && size.signals === 50) scenarios.push(await traceOnce('cycle-insert', cycleInsert));
+  if (!reorderOnly && !skipTimeline && size.signals === 50) scenarios.push(await traceOnce('cycle-insert', cycleInsert));
   runs.push({ fixture: size, scenarios });
 }
 

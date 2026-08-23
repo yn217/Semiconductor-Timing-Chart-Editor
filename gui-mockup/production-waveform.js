@@ -3,6 +3,7 @@
 
   const prefix = 'waveDromTrace_';
   const waveCache = new Map();
+  let viewportFrame = 0;
   const renderMetrics = () => {
     const controller = window.TimingChartProductionController;
     const metrics = controller.renderMetrics ||= { appFullRenders: 0, rowMoves: 0, cycleRowCreates: 0, cycleRowRemoves: 0, cycleRowMoves: 0, wavePayloadBuilds: 0, waveCacheLookups: 0, waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0, annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0, inspectorInnerHtmlRebuilds: 0, signalStyleFullScans: 0, layoutRowLookups: 0, minimapRowRectReads: 0, transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
@@ -11,6 +12,42 @@
   };
   const traceRows = () => [...document.querySelectorAll('#cycleCanvas .wave-row')]
     .filter(row => row.querySelector('.trace'));
+
+  function updateSurfaceViewport(surface = document.querySelector('#cycleCanvas .waveform-render-surface')) {
+    const host = window.TimingChartTimingViewport?.getScrollHost?.();
+    if (!surface || !host) return false;
+    const metrics = renderMetrics();
+    metrics.viewportReconciles = (metrics.viewportReconciles || 0) + 1;
+    const overscan = Math.max(84, Number(host.clientHeight || 0) * 0.5);
+    const top = Number(host.scrollTop || 0) - overscan;
+    const bottom = Number(host.scrollTop || 0) + Number(host.clientHeight || 0) + overscan;
+    for (const lane of surface.querySelectorAll(':scope > .waveform-surface-row')) {
+      const laneTop = Number.parseFloat(lane.style.top) || 0;
+      const laneHeight = Number.parseFloat(lane.style.height) || 28;
+      const active = !lane.hidden && laneTop + laneHeight >= top && laneTop <= bottom;
+      const next = active ? 'visible' : 'hidden';
+      if (lane.style.contentVisibility === next) continue;
+      lane.style.contentVisibility = next;
+      lane.dataset.viewportState = active ? 'active' : 'virtualized';
+      const key = active ? 'viewportLanesActivated' : 'viewportLanesDeactivated';
+      metrics[key] = (metrics[key] || 0) + 1;
+    }
+    return true;
+  }
+
+  function scheduleSurfaceViewport() {
+    if (viewportFrame) return;
+    viewportFrame = requestAnimationFrame(() => { viewportFrame = 0; updateSurfaceViewport(); });
+  }
+
+  function bindSurfaceViewport(surface) {
+    const host = window.TimingChartTimingViewport?.getScrollHost?.();
+    if (!surface || !host || host.dataset.waveformViewportBound) return;
+    host.dataset.waveformViewportBound = 'true';
+    host.addEventListener('scroll', scheduleSurfaceViewport, { passive: true });
+    window.addEventListener('resize', scheduleSurfaceViewport, { passive: true });
+    if (window.ResizeObserver) new ResizeObserver(scheduleSurfaceViewport).observe(host);
+  }
 
   function renderSurface() {
     const wave = document.querySelector('#cycleCanvas .timing-scroll-pane > .wave') || document.querySelector('#cycleCanvas .wave');
@@ -25,6 +62,7 @@
       surface.style.cssText = 'position:absolute;left:0;top:0;z-index:1;pointer-events:none;overflow:visible;contain:layout style paint;';
     }
     if (surface.parentElement !== owner) owner.appendChild(surface);
+    bindSurfaceViewport(surface);
     if (getComputedStyle(owner).position === 'static') owner.style.position = 'relative';
     surface.style.width = `${wave.scrollWidth}px`;
     surface.style.height = `${wave.scrollHeight}px`;
@@ -199,6 +237,7 @@
       }
     }
     model.waveGeometry.screenGeometryStale = false;
+    scheduleSurfaceViewport();
     return true;
   }
 
@@ -574,6 +613,8 @@
     const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
     const signal = signalForRow(model, row);
     if (!row || !signal || signal.type === 'commentRow') return false;
+    const lane = document.querySelector(`#cycleCanvas .waveform-surface-row[data-signal="${CSS.escape(signalId)}"]`);
+    if (lane) lane.style.contentVisibility = 'visible';
     const localPrefix = `${prefix}local_${String(signal.id).replace(/[^A-Za-z0-9_-]/g, '_')}_`;
     let mounted;
     try { mounted = mountSignal(model, signal, row, 0, localPrefix); } catch { return false; }
@@ -589,6 +630,7 @@
     renderMetrics().geometryBuilds += 1;
     renderMetrics().renderSignalGeometryUpdates = (renderMetrics().renderSignalGeometryUpdates || 0) + 1;
     window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+    scheduleSurfaceViewport();
     return true;
   }
 
@@ -630,6 +672,7 @@
         controller.timelineRenderActive = false;
         controller.applyTimingOnlyZoom?.();
         controller.lastWaveformTimelineProfile = { mountMs, geometryMs, totalMs: performance.now() - started, rows: mounted.length, geometry: model.waveGeometry.profile || null };
+        updateSurfaceViewport();
         resolve({ durationMs: performance.now() - started, rows: mounted.length });
       };
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(step, 0)));
@@ -653,6 +696,7 @@
       shiftScreenGeometryAfterRowReorder(model.waveGeometry, mounted);
       model.waveGeometry.screenGeometryStale = false;
       window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+      updateSurfaceViewport();
       return true;
     },
     syncSurface(model, signalIds = []) {
@@ -663,6 +707,7 @@
     captureRowReorder,
     applyCapturedRowReorder,
     applyVisibilityLayout,
+    updateSurfaceViewport,
     renderSignal,
     renderTimeline,
     render(model) {
@@ -698,6 +743,7 @@
         }
         renderMetrics().geometryCacheHits += 1;
         window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+        updateSurfaceViewport();
         return;
       }
       model.waveGeometry = buildGeometry(model, mounted);
@@ -705,6 +751,7 @@
       bridge.screenSignature = screenSignature;
       renderMetrics().geometryBuilds += 1;
       window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+      updateSurfaceViewport();
     },
     renderTestDocument(testDocument) {
       const stage = document.createElement('div');
