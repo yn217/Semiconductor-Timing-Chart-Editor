@@ -1,0 +1,528 @@
+{
+  "issue": 110,
+  "sharedMapping": true,
+  "wavedromSourceGeometry": true,
+  "sourceDisplaySeparated": true,
+  "pairedAxisBreak": true,
+  "canonicalUnchanged": true,
+  "saveOpen": true,
+  "browserErrors": [],
+  "artifacts": [
+    "issue110-1672x941.png"
+  ],
+  "result": {
+    "sourceBefore": [
+      {
+        "id": "clk",
+        "values": null,
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0,
+          "polarity": "positive"
+        }
+      },
+      {
+        "id": "req_valid",
+        "values": [
+          {
+            "start": 0,
+            "value": 0,
+            "comment": "初期値"
+          },
+          {
+            "start": 3,
+            "value": 1,
+            "comment": "リクエスト有効"
+          },
+          {
+            "start": 7,
+            "value": 0,
+            "comment": "リクエスト無効（終了）"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "req_addr[7:0]",
+        "values": [
+          {
+            "start": 0,
+            "value": "00",
+            "comment": "初期値"
+          },
+          {
+            "start": 2,
+            "value": "12",
+            "comment": "アドレス1"
+          },
+          {
+            "start": 4,
+            "value": "34",
+            "comment": "アドレス2"
+          },
+          {
+            "start": 7,
+            "value": "9A",
+            "comment": "最終値"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "comment_01",
+        "values": null,
+        "generator": null
+      },
+      {
+        "id": "busy",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "state[1:0]",
+        "values": [
+          {
+            "start": 0,
+            "value": "IDLE",
+            "comment": "初期状態"
+          },
+          {
+            "start": 2,
+            "value": "REQ",
+            "comment": "リクエスト受付"
+          },
+          {
+            "start": 4,
+            "value": "WAIT",
+            "comment": "応答待ち"
+          },
+          {
+            "start": 6,
+            "value": "EXEC",
+            "comment": "実行中"
+          },
+          {
+            "start": 8,
+            "value": "DONE",
+            "comment": "完了"
+          },
+          {
+            "start": 9,
+            "value": "IDLE",
+            "comment": "待機へ復帰"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "comment_02",
+        "values": null,
+        "generator": null
+      },
+      {
+        "id": "ready",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "rdata[15:0]",
+        "values": [
+          {
+            "start": 0,
+            "value": "XXXX"
+          },
+          {
+            "start": 3,
+            "value": "0000"
+          },
+          {
+            "start": 6,
+            "value": "5678"
+          },
+          {
+            "start": 8,
+            "value": "ABCD"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "comment_03",
+        "values": null,
+        "generator": null
+      }
+    ],
+    "sourceAfter": [
+      {
+        "id": "clk",
+        "values": null,
+        "generator": {
+          "start": 0,
+          "period": 1,
+          "duty": 0.5,
+          "phase": 0,
+          "initial": 0,
+          "polarity": "positive"
+        }
+      },
+      {
+        "id": "req_valid",
+        "values": [
+          {
+            "start": 0,
+            "value": 0,
+            "comment": "初期値"
+          },
+          {
+            "start": 3,
+            "value": 1,
+            "comment": "リクエスト有効"
+          },
+          {
+            "start": 7,
+            "value": 0,
+            "comment": "リクエスト無効（終了）"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "req_addr[7:0]",
+        "values": [
+          {
+            "start": 0,
+            "value": "00",
+            "comment": "初期値"
+          },
+          {
+            "start": 2,
+            "value": "12",
+            "comment": "アドレス1"
+          },
+          {
+            "start": 4,
+            "value": "34",
+            "comment": "アドレス2"
+          },
+          {
+            "start": 7,
+            "value": "9A",
+            "comment": "最終値"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "comment_01",
+        "values": null,
+        "generator": null
+      },
+      {
+        "id": "busy",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 2,
+            "value": 1
+          },
+          {
+            "start": 8,
+            "value": 0
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "state[1:0]",
+        "values": [
+          {
+            "start": 0,
+            "value": "IDLE",
+            "comment": "初期状態"
+          },
+          {
+            "start": 2,
+            "value": "REQ",
+            "comment": "リクエスト受付"
+          },
+          {
+            "start": 4,
+            "value": "WAIT",
+            "comment": "応答待ち"
+          },
+          {
+            "start": 6,
+            "value": "EXEC",
+            "comment": "実行中"
+          },
+          {
+            "start": 8,
+            "value": "DONE",
+            "comment": "完了"
+          },
+          {
+            "start": 9,
+            "value": "IDLE",
+            "comment": "待機へ復帰"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "comment_02",
+        "values": null,
+        "generator": null
+      },
+      {
+        "id": "ready",
+        "values": [
+          {
+            "start": 0,
+            "value": 0
+          },
+          {
+            "start": 8,
+            "value": 1
+          },
+          {
+            "start": 9,
+            "value": 0
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "rdata[15:0]",
+        "values": [
+          {
+            "start": 0,
+            "value": "XXXX"
+          },
+          {
+            "start": 3,
+            "value": "0000"
+          },
+          {
+            "start": 6,
+            "value": "5678"
+          },
+          {
+            "start": 8,
+            "value": "ABCD"
+          }
+        ],
+        "generator": null
+      },
+      {
+        "id": "comment_03",
+        "values": null,
+        "generator": null
+      }
+    ],
+    "fold": {
+      "groupId": "tg_001",
+      "sourceStart": 2,
+      "sourceEnd": 7,
+      "sourceStartX": 857.5,
+      "sourceEndX": 1657.5,
+      "displayStartX": 857.5,
+      "displayEndX": 889.5,
+      "tokenWidth": 32,
+      "omittedWidth": 800,
+      "reductionBefore": 0
+    },
+    "sourceStart": {
+      "x": 857.5,
+      "y": 298,
+      "localX": 340.5,
+      "localY": 0.5,
+      "canvasX": 857.5,
+      "canvasY": 298,
+      "source": "wavedrom-svg",
+      "signal": "clk",
+      "cycle": 2,
+      "anchorType": "cycle-boundary",
+      "traceId": "waveDromTrace_0",
+      "svgRect": {
+        "left": 517,
+        "top": 297.5,
+        "width": 1640,
+        "height": 30
+      },
+      "viewBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1640,
+        "height": 30
+      }
+    },
+    "sourceEnd": {
+      "x": 1657.5,
+      "y": 298,
+      "localX": 1140.5,
+      "localY": 0.5,
+      "canvasX": 1657.5,
+      "canvasY": 298,
+      "source": "wavedrom-svg",
+      "signal": "clk",
+      "cycle": 7,
+      "anchorType": "cycle-boundary",
+      "traceId": "waveDromTrace_0",
+      "svgRect": {
+        "left": 517,
+        "top": 297.5,
+        "width": 1640,
+        "height": 30
+      },
+      "viewBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1640,
+        "height": 30
+      }
+    },
+    "displayStart": {
+      "x": 857.5,
+      "y": 298,
+      "localX": 340.5,
+      "localY": 0.5,
+      "canvasX": 857.5,
+      "canvasY": 298,
+      "source": "wavedrom-svg-folded-mapping",
+      "signal": "clk",
+      "cycle": 2,
+      "anchorType": "cycle-boundary",
+      "traceId": "waveDromTrace_0",
+      "svgRect": {
+        "left": 517,
+        "top": 297.5,
+        "width": 1640,
+        "height": 30
+      },
+      "viewBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1640,
+        "height": 30
+      },
+      "displayLabel": 2
+    },
+    "displayEnd": {
+      "x": 889.5,
+      "y": 298,
+      "localX": 1140.5,
+      "localY": 0.5,
+      "canvasX": 889.5,
+      "canvasY": 298,
+      "source": "wavedrom-svg-folded-mapping",
+      "signal": "clk",
+      "cycle": 7,
+      "anchorType": "cycle-boundary",
+      "traceId": "waveDromTrace_0",
+      "svgRect": {
+        "left": 517,
+        "top": 297.5,
+        "width": 1640,
+        "height": 30
+      },
+      "viewBox": {
+        "x": 0,
+        "y": 0,
+        "width": 1640,
+        "height": 30
+      },
+      "displayLabel": 0
+    },
+    "axisBreaks": [
+      {
+        "range": "2-7",
+        "svg": "<svg aria-label=\"Axis break\" width=\"32\" height=\"424\" viewBox=\"0 0 32 424\" style=\"position: absolute; inset: 0px; overflow: visible;\"><path d=\"M3 0 C 7 8, -1 16, 3 24 S 7 40, 3 48 S -1 64, 3 72 S 7 88, 3 96 M29 0 C 33 8, 25 16, 29 24 S 33 40, 29 48 S 25 64, 29 72 S 33 88, 29 96\" stroke=\"#64748b\" stroke-width=\"1.4\" fill=\"none\" vector-effect=\"non-scaling-stroke\"></path></svg>",
+        "label": "PLL wait"
+      }
+    ],
+    "rows": 7,
+    "labels": [
+      {
+        "source": 2,
+        "display": 2,
+        "x": null
+      },
+      {
+        "source": 3,
+        "display": 3,
+        "x": null
+      },
+      {
+        "source": 7,
+        "display": 0,
+        "x": null
+      },
+      {
+        "source": 8,
+        "display": 1,
+        "x": null
+      },
+      {
+        "source": 9,
+        "display": 2,
+        "x": null
+      }
+    ],
+    "opened": true,
+    "reopenedGroup": {
+      "id": "tg_001",
+      "name": "PLL stabilization wait",
+      "category": "Wait",
+      "start": 2,
+      "end": 7,
+      "comment": "Long wait",
+      "presentation": {
+        "collapsed": true,
+        "foldStyle": "axis-break",
+        "foldLabel": "PLL wait",
+        "displayAfter": {
+          "mode": "rebase",
+          "value": 0
+        }
+      }
+    },
+    "mapping": {
+      "totalReduction": 768,
+      "foldCount": 1
+    },
+    "validation": []
+  },
+  "pass": true
+}

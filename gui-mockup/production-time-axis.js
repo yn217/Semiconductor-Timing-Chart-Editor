@@ -111,8 +111,53 @@
     const referenceClock = controller.selectors.getReferenceClock();
     const count = Number(model.document.timeline?.cycleCount ?? 0);
     if (!referenceClock || !controller.getCycleBoundary) return [];
-    return Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary({ signal: referenceClock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
+    return Array.from({ length: count + 1 }, (_, cycle) => controller.getDisplayCycleBoundary?.(cycle) || controller.getCycleBoundary({ signal: referenceClock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
   };
+  const foldTokenWidth = 32;
+  const buildDisplayMapping = currentModel => {
+    const referenceClock = controller.selectors.getReferenceClock();
+    const count = Number(currentModel.document.timeline?.cycleCount ?? 0);
+    const actual = referenceClock ? Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary?.({ signal: referenceClock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean) : [];
+    const sourceX = cycle => actual[cycle]?.canvasX;
+    const groups = (currentModel.document.timeGroups || []).filter(group => group.presentation?.collapsed && ['compact', 'axis-break'].includes(group.presentation?.foldStyle || 'axis-break') && Number.isInteger(Number(group.start)) && Number.isInteger(Number(group.end)) && Number(group.start) >= 0 && Number(group.end) <= count && Number(group.start) < Number(group.end)).sort((a, b) => Number(a.start) - Number(b.start));
+    const folds = []; let reduction = 0;
+    for (const group of groups) {
+      const startX = sourceX(Number(group.start)); const endX = sourceX(Number(group.end));
+      if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) continue;
+      const width = endX - startX; const token = Math.min(foldTokenWidth, Math.max(12, width)); const displayStartX = startX - reduction; const displayEndX = displayStartX + token;
+      folds.push({ groupId: group.id, sourceStart: Number(group.start), sourceEnd: Number(group.end), sourceStartX: startX, sourceEndX: endX, displayStartX, displayEndX, tokenWidth: token, omittedWidth: width, reductionBefore: reduction });
+      reduction += width - token;
+    }
+    const mapSourceX = value => {
+      const x = Number(value); let shifted = x;
+      for (const fold of folds) {
+        if (x < fold.sourceStartX) break;
+        if (x <= fold.sourceEndX) return fold.displayStartX + ((x - fold.sourceStartX) / Math.max(0.0001, fold.omittedWidth)) * fold.tokenWidth;
+        shifted -= fold.omittedWidth - fold.tokenWidth;
+      }
+      return shifted;
+    };
+    const mapSourceTime = cycle => { const boundary = actual[Number(cycle)]; return boundary ? mapSourceX(boundary.canvasX) : null; };
+    const labelForSource = source => {
+      let label = Number(source);
+      for (const fold of folds) if (Number(source) >= fold.sourceEnd) { const group = currentModel.document.timeGroups.find(item => item.id === fold.groupId); const resume = group?.presentation?.displayAfter; if (resume?.mode === 'rebase' && Number.isFinite(Number(resume.value))) label = Number(resume.value) + Number(source) - fold.sourceEnd; }
+      return label;
+    };
+    return { source: actual, folds, totalReduction: reduction, mapSourceX, mapSourceTime, labelForSource, mapBoundary: cycle => { const item = actual[Number(cycle)]; if (!item) return null; return { ...item, canvasX: mapSourceX(item.canvasX), x: mapSourceX(item.canvasX), source: 'wavedrom-svg-folded-mapping', displayLabel: labelForSource(cycle) }; } };
+  };
+  const renderAxisBreaks = (currentModel, mapping) => {
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas'); if (!scrollHost) return;
+    scrollHost.querySelectorAll('[data-axis-break]').forEach(node => node.remove());
+    if (!mapping.folds.length) return;
+    const hostRect = scrollHost.getBoundingClientRect(); const rulerRect = document.querySelector('#cycleCanvas .ruler')?.getBoundingClientRect(); const top = Math.max(0, (rulerRect?.bottom || hostRect.top + 30) - hostRect.top + scrollHost.scrollTop); const height = Math.max(32, scrollHost.scrollHeight - top);
+    for (const fold of mapping.folds) {
+      const group = currentModel.document.timeGroups.find(item => item.id === fold.groupId); const overlay = document.createElement('div'); overlay.dataset.axisBreak = fold.groupId; overlay.dataset.sourceRange = `${fold.sourceStart}-${fold.sourceEnd}`; overlay.style.cssText = `position:absolute;left:${fold.displayStartX - hostRect.left + scrollHost.scrollLeft}px;top:${top}px;width:${Math.max(12, fold.tokenWidth)}px;height:${height}px;z-index:7;pointer-events:none;`;
+      const label = document.createElement('span'); label.textContent = group?.presentation?.foldLabel || `${group?.name || 'omitted'} / ${fold.sourceEnd - fold.sourceStart} ${currentModel.document.timeline.timeBase || 'cycles'} omitted`; label.style.cssText = 'position:absolute;left:50%;top:4px;transform:translateX(-50%);padding:2px 4px;background:#fff;border:1px solid #7c8798;border-radius:3px;color:#4a5668;font:10px sans-serif;white-space:nowrap;';
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('aria-label', 'Axis break'); svg.setAttribute('width', String(Math.max(12, fold.tokenWidth))); svg.setAttribute('height', String(height)); svg.setAttribute('viewBox', `0 0 ${Math.max(12, fold.tokenWidth)} ${height}`); svg.style.cssText = 'position:absolute;inset:0;overflow:visible;'; const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); const w = Math.max(12, fold.tokenWidth); const wave = x => `M${x} 0 C ${x + 4} 8, ${x - 4} 16, ${x} 24 S ${x + 4} 40, ${x} 48 S ${x - 4} 64, ${x} 72 S ${x + 4} 88, ${x} 96`; path.setAttribute('d', `${wave(3)} ${wave(w - 3)}`); path.setAttribute('stroke', '#64748b'); path.setAttribute('stroke-width', '1.4'); path.setAttribute('fill', 'none'); path.setAttribute('vector-effect', 'non-scaling-stroke'); svg.appendChild(path); overlay.append(label, svg); scrollHost.appendChild(overlay);
+    }
+  };
+  controller.buildDisplayMapping = buildDisplayMapping;
+  controller.getDisplayCycleBoundary = cycle => controller.displayMapping?.mapBoundary?.(cycle) || null;
   controller.actions.resolveSnapAtCanvasX = clientX => {
     const boundaries = screenCycleBoundaries();
     if (!boundaries.length || !Number.isFinite(Number(clientX))) return null;
@@ -154,7 +199,7 @@
       const falling = currentModel.waveGeometry?.signals?.[signal.id]?.fallingEdge || [];
       const edges = (mode === 'both' ? [...rising.map(edge => ({ ...edge, edge: 'rising' })), ...falling.map(edge => ({ ...edge, edge: 'falling' }))] : mode === 'falling' ? falling.map(edge => ({ ...edge, edge: 'falling' })) : rising.map(edge => ({ ...edge, edge: 'rising' }))).sort((a, b) => a.canvasX - b.canvasX);
       const startNumber = Number(counter.startNumber ?? 1); const every = Math.max(1, Number(counter.labelEvery ?? 1));
-      edges.forEach((edge, index) => { if (index % every) return; const label = document.createElement('span'); label.dataset.edgeCounter = signal.id; label.textContent = String(startNumber + index); label.style.cssText = `position:absolute;left:${edge.canvasX - canvasRect.left + Number(counter.offset?.x || 0) + scrollHost.scrollLeft}px;top:${edge.canvasY - canvasRect.top + Number(counter.offset?.y || (counter.position === 'below' ? 8 : -8))}px;z-index:5;color:#52647a;font:11px sans-serif;pointer-events:none;`; label.title = `${signal.id} ${edge.edge} edge ${startNumber + index}`; scrollHost.appendChild(label); });
+      edges.forEach((edge, index) => { if (index % every) return; const label = document.createElement('span'); label.dataset.edgeCounter = signal.id; const mappedX = currentModel.displayMapping?.mapSourceX?.(edge.canvasX) ?? edge.canvasX; label.textContent = String(startNumber + index); label.style.cssText = `position:absolute;left:${mappedX - canvasRect.left + Number(counter.offset?.x || 0) + scrollHost.scrollLeft}px;top:${edge.canvasY - canvasRect.top + Number(counter.offset?.y || (counter.position === 'below' ? 8 : -8))}px;z-index:5;color:#52647a;font:11px sans-serif;pointer-events:none;`; label.title = `${signal.id} ${edge.edge} edge ${startNumber + index}`; scrollHost.appendChild(label); });
     }
   };
   const alignCommentRowsToCycleZero = currentModel => {
@@ -181,8 +226,8 @@
     const end = Number(currentModel.timeSelection?.rangeEnd);
     if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) return;
     const referenceClock = controller.selectors.getReferenceClock();
-    const first = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: start, coordinateSpace: 'canvas' });
-    const last = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: end, coordinateSpace: 'canvas' });
+    const first = controller.getDisplayCycleBoundary?.(start) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: start, coordinateSpace: 'canvas' });
+    const last = controller.getDisplayCycleBoundary?.(end) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: end, coordinateSpace: 'canvas' });
     if (!first || !last) return;
     const hostRect = scrollHost.getBoundingClientRect();
     const rulerRect = document.querySelector('#cycleCanvas .ruler')?.getBoundingClientRect();
@@ -204,6 +249,8 @@
   const renderTransient = currentModel => {
     metrics.transientFrames += 1;
     metrics.rulerRebuilds += 1;
+    currentModel.displayMapping = buildDisplayMapping(currentModel);
+    controller.displayMapping = currentModel.displayMapping;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
     const timeline = currentModel.document.timeline;
     const ruler = document.querySelector('#cycleCanvas .ruler');
@@ -215,10 +262,10 @@
       const labelWidth = Number(currentModel.view.previewSignalNameWidth ?? timeline.signalNameWidth ?? currentModel.document.layout?.signalNameWidth ?? 168) + 7;
       ruler.style.gridTemplateColumns = `${labelWidth}px repeat(${count + 1}, 1fr)`;
       ruler.appendChild(document.createElement('span'));
-      for (let cycle = 0; cycle < count; cycle += 1) { const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = cycle; tick.dataset.cycle = cycle; tick.addEventListener('click', event => { selectCycle(cycle, { range: event.shiftKey, source: 'ruler' }); }); ruler.appendChild(tick); }
-      if (Number(currentModel.timeSelection?.cycle) === count) { const finalTick = document.createElement('span'); finalTick.className = 'tick'; finalTick.textContent = count; finalTick.dataset.cycle = count; finalTick.addEventListener('click', event => { selectCycle(count, { range: event.shiftKey, source: 'ruler' }); }); ruler.appendChild(finalTick); }
+      for (let cycle = 0; cycle < count; cycle += 1) { const tick = document.createElement('span'); tick.className = 'tick'; tick.textContent = currentModel.displayMapping.labelForSource(cycle); tick.dataset.cycle = cycle; tick.dataset.sourceCycle = cycle; tick.addEventListener('click', event => { selectCycle(cycle, { range: event.shiftKey, source: 'ruler' }); }); ruler.appendChild(tick); }
+      if (Number(currentModel.timeSelection?.cycle) === count) { const finalTick = document.createElement('span'); finalTick.className = 'tick'; finalTick.textContent = currentModel.displayMapping.labelForSource(count); finalTick.dataset.cycle = count; finalTick.dataset.sourceCycle = count; finalTick.addEventListener('click', event => { selectCycle(count, { range: event.shiftKey, source: 'ruler' }); }); ruler.appendChild(finalTick); }
       const referenceClock = controller.selectors.getReferenceClock();
-      const boundaries = Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
+      const boundaries = Array.from({ length: count + 1 }, (_, cycle) => controller.getDisplayCycleBoundary?.(cycle) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
       if (boundaries.length >= count) {
         const rulerRect = ruler.getBoundingClientRect();
         ruler.style.position = 'relative';
@@ -234,7 +281,7 @@
         const boundary = boundaries[Number(bookmark.start)];
         if (!boundary) continue;
         const flag = document.createElement('button');
-        flag.type = 'button'; flag.dataset.bookmarkFlag = bookmark.id; flag.title = `${bookmark.name} (${bookmark.start})`; flag.textContent = '⚑';
+        flag.type = 'button'; flag.dataset.bookmarkFlag = bookmark.id; flag.title = `${bookmark.name} (source ${bookmark.start}, display ${currentModel.displayMapping.labelForSource(bookmark.start)})`; flag.textContent = '⚑';
         flag.style.cssText = `position:absolute;left:${boundary.canvasX - ruler.getBoundingClientRect().left}px;top:-14px;border:0;background:transparent;color:#c47a00;padding:0;line-height:12px;cursor:pointer;transform:translateX(-50%);`;
         flag.addEventListener('click', event => { event.stopPropagation(); controller.actions.revealBookmark(bookmark.id); });
         ruler.appendChild(flag);
@@ -242,11 +289,12 @@
     }
     const playhead = document.querySelector('#cycleCanvas .playhead');
     const referenceClock = controller.selectors.getReferenceClock();
-    const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
+    const boundary = controller.getDisplayCycleBoundary?.(currentModel.timeSelection?.cycle || 0) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
     const canvas = document.querySelector('#cycleCanvas');
     if (playhead && boundary && canvas) { const rect = scrollHost.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + scrollHost.scrollLeft}px`; playhead.style.pointerEvents = 'none'; playhead.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); playhead.title = `挿入位置: Cycle ${currentModel.timeSelection?.cycle ?? 0} の直前`; }
     if (ruler) { ruler.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); ruler.querySelectorAll('.tick').forEach(tick => { const selected = Number(tick.dataset.cycle) === Number(currentModel.timeSelection?.cycle); tick.dataset.selected = selected ? 'true' : 'false'; tick.style.fontWeight = selected ? '700' : ''; tick.style.color = selected ? '#1473e6' : ''; }); }
     if (canvas) { canvas.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); canvas.title = `挿入位置: Cycle ${currentModel.timeSelection?.cycle ?? 0} の直前`; }
+    renderAxisBreaks(currentModel, currentModel.displayMapping);
     renderRangeSelection(currentModel);
     const rangeTool = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes('範囲削除'));
     const rangeStart = Number(currentModel.timeSelection?.rangeStart); const rangeEnd = Number(currentModel.timeSelection?.rangeEnd);
@@ -270,7 +318,7 @@
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
     const playhead = document.querySelector('#cycleCanvas .playhead');
     const referenceClock = controller.selectors.getReferenceClock();
-    const boundary = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
+    const boundary = controller.getDisplayCycleBoundary?.(currentModel.timeSelection?.cycle || 0) || controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: currentModel.timeSelection?.cycle || 0, coordinateSpace: 'canvas' });
     if (playhead && boundary && scrollHost) {
       const rect = scrollHost.getBoundingClientRect();
       playhead.style.left = `${boundary.canvasX - rect.left + scrollHost.scrollLeft}px`;
