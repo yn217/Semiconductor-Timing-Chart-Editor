@@ -60,9 +60,40 @@
     if (signal.width === undefined && signal.source.msb !== undefined) signal.width = Math.abs(signal.source.msb - signal.source.lsb) + 1;
     return signal;
   };
+  const parseSignalLiteral = (rawValue, signal = {}) => {
+    const raw = String(rawValue ?? '').trim();
+    const format = String(signal.displayFormat || 'hex').toLowerCase();
+    const width = Number(signal.width);
+    const invalid = (error, extra = {}) => ({ valid: false, kind: 'invalid', numericValue: null, requiredBits: null, containsUnknown: false, normalizedText: raw, error, ...extra });
+    if (!raw) return invalid('値が空です');
+    let digits = raw;
+    let base = format === 'binary' ? 2 : 16;
+    if (/^0x/i.test(digits)) { base = 16; digits = digits.slice(2); }
+    else if (/^0b/i.test(digits)) { base = 2; digits = digits.slice(2); }
+    if (!digits) return invalid('基数 prefix の後に値が必要です');
+    if (/(^_|_$|__)/.test(digits)) return invalid('桁区切りの位置が不正です');
+    digits = digits.replaceAll('_', '');
+    const digitPattern = base === 2 ? /^[01xz]+$/i : /^[0-9a-fxz]+$/i;
+    if (digitPattern.test(digits)) {
+      const containsUnknown = /[xz]/i.test(digits);
+      const bitsPerDigit = base === 2 ? 1 : 4;
+      let requiredBits = digits.length * bitsPerDigit;
+      let numericValue = null;
+      if (!containsUnknown) {
+        numericValue = BigInt(base === 2 ? `0b${digits}` : `0x${digits}`);
+        requiredBits = numericValue === 0n ? 0 : numericValue.toString(2).length;
+      }
+      const overflow = Number.isFinite(width) && width > 0 && requiredBits > width;
+      return { valid: !overflow, kind: base === 2 ? 'binary' : 'hex', numericValue: numericValue === null ? null : numericValue.toString(), requiredBits, containsUnknown, normalizedText: digits.toUpperCase(), base, width: Number.isFinite(width) ? width : null, overflow, error: overflow ? `${requiredBits}ビット必要ですが幅は${width}ビットです` : null };
+    }
+    if (/^[A-Za-z_][A-Za-z0-9_$]*$/.test(digits) && /[g-wy]/i.test(digits)) return { valid: true, kind: 'symbolic', numericValue: null, requiredBits: null, containsUnknown: false, normalizedText: digits, base: null, width: Number.isFinite(width) ? width : null, overflow: false, error: null };
+    return invalid('許可されていないBus literalです');
+  };
+  window.TimingChartLiteralParser = parseSignalLiteral;
   canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
   const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
   const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() } };
+  controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
   const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
@@ -207,14 +238,10 @@
       ids.add(signal.id);
         if (signal.type !== 'commentRow') {
           if (signal.type === 'bus' && Number(signal.width) > 0) {
-            const format = String(signal.displayFormat || 'hex').toLowerCase();
             for (const value of signal.values || []) {
               const raw = String(value.value ?? '').trim();
-              const numeric = format === 'binary' || /^0b[01]+$/i.test(raw) ? raw.replace(/^0b/i, '') : raw.replace(/^0x/i, '');
-              const numericLike = format === 'binary' ? /^[01]+$/.test(numeric) : /^[0-9a-f]+$/i.test(numeric);
-              if (!numericLike) continue;
-              const capacity = format === 'binary' || /^0b/i.test(raw) ? numeric.length : numeric.length * 4;
-              if (capacity > Number(signal.width)) issues.push({ code: 'bus-width-overflow', severity: 'error', id: signal.id, field: 'value', range: String(value.start), value: raw, message: `値 '${raw}' は${signal.width}ビット幅を超えています`, recommendation: `${signal.width}ビット以内の値にしてください`, path: `$.signals[${signal.id}].values[${value.start}]` });
+              const literal = parseSignalLiteral(raw, signal);
+              if (!literal.valid) issues.push({ code: literal.overflow ? 'bus-width-overflow' : 'invalid-bus-literal', severity: 'error', id: signal.id, field: 'value', range: String(value.start), value: raw, requiredBits: literal.requiredBits, message: literal.overflow ? `値 '${raw}' は${signal.width}ビット幅を超えています` : `値 '${raw}' は有効なBus literalではありません`, recommendation: literal.overflow ? `${signal.width}ビット以内の値にしてください` : 'Hex/Binaryの値、X/Z、または識別子を指定してください', path: `$.signals[${signal.id}].values[${value.start}]` });
             }
           }
           const source = signal.source;
@@ -267,7 +294,7 @@
     const paths = issue => ({
       'format-version': '$.formatVersion', 'duplicate-label-anchor-id': '$.timeline.labelAnchors', 'invalid-label-anchor': '$.timeline.labelAnchors', 'label-anchor-outside-timeline': '$.timeline.labelAnchors', 'duplicate-bookmark-id': '$.bookmarks', 'invalid-bookmark': '$.bookmarks', 'duplicate-time-group-id': '$.timeGroups', 'invalid-time-group': '$.timeGroups', 'invalid-time-group-fold-style': '$.timeGroups', 'invalid-resume-label-anchor': '$.timeGroups', 'invalid-label-anchor-owner': '$.timeline.labelAnchors', 'non-finite-number': '$',
       'missing-document': '$.document', 'missing-timeline': '$.timeline', 'missing-signalGroups': '$.signalGroups', 'missing-signals': '$.signals', 'missing-annotations': '$.annotations', 'missing-legend': '$.legend', 'missing-layout': '$.layout', 'missing-transactions': '$.transactions', 'missing-constraints': '$.constraints',
-      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`, 'duplicate-transaction-id': `$.transactions[${issue.id}]`, 'invalid-transaction-bounds': `$.transactions[${issue.id}]`, 'invalid-transaction-links': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-link': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-phases': `$.transactions[${issue.id}].phases`, 'invalid-transaction-phase-bounds': `$.transactions[${issue.id}].phases`
+      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-bus-literal': `$.signals[${issue.id}].values`, 'bus-width-overflow': `$.signals[${issue.id}].values`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`, 'duplicate-transaction-id': `$.transactions[${issue.id}]`, 'invalid-transaction-bounds': `$.transactions[${issue.id}]`, 'invalid-transaction-links': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-link': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-phases': `$.transactions[${issue.id}].phases`, 'invalid-transaction-phase-bounds': `$.transactions[${issue.id}].phases`
     }[issue.code] || '$');
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
@@ -532,7 +559,7 @@
   controller.export = async (format, options = {}) => { const svg = controller.exportSvg(options); if (format === 'svg' || format === 'clipboard-svg') return { format, text: svg }; if (format === 'pdf') return { format, action: 'print', text: svg }; if (format === 'png' || format === 'clipboard-png') { const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; return { format, dataUrl, source: svg }; } return { format, text: svg }; };
   const setValidation = issues => { model.validation = issues; };
   const canonicalize = signal => signal.values.sort((a, b) => Number(a.start) - Number(b.start));
-  const validateValue = (signal, index, candidate) => { const issues = []; const start = Number(candidate.start); if (!Number.isInteger(start) || start < 0) issues.push({ field: 'start', code: 'negative-or-non-integer' }); if (start >= getTimeline().cycleCount) issues.push({ field: 'start', code: 'outside-document' }); if (signal.values.some((value, valueIndex) => valueIndex !== index && Number(value.start) === start)) issues.push({ field: 'start', code: 'duplicate-start' }); if (signal.type === 'binary' && !['0', '1', 'X', 'Z', 'x', 'z'].includes(String(candidate.value))) issues.push({ field: 'value', code: 'invalid-binary' }); if (signal.type === 'bus' && signal.width && /^[0-9a-f]+$/i.test(String(candidate.value)) && String(candidate.value).replace(/^0x/i, '').length * 4 > signal.width) issues.push({ field: 'value', code: 'bus-width-overflow' }); return issues; };
+  const validateValue = (signal, index, candidate) => { const issues = []; const start = Number(candidate.start); if (!Number.isInteger(start) || start < 0) issues.push({ field: 'start', code: 'negative-or-non-integer' }); if (start >= getTimeline().cycleCount) issues.push({ field: 'start', code: 'outside-document' }); if (signal.values.some((value, valueIndex) => valueIndex !== index && Number(value.start) === start)) issues.push({ field: 'start', code: 'duplicate-start' }); if (signal.type === 'binary' && !['0', '1', 'X', 'Z', 'x', 'z'].includes(String(candidate.value))) issues.push({ field: 'value', code: 'invalid-binary' }); if (signal.type === 'bus') { const literal = parseSignalLiteral(candidate.value, signal); if (!literal.valid) issues.push({ field: 'value', code: literal.overflow ? 'bus-width-overflow' : 'invalid-bus-literal', requiredBits: literal.requiredBits, message: literal.error }); } return issues; };
   const valueFromInput = (signal, value, field) => field === 'start' ? Number(value) : field === 'value' && signal.type === 'binary' && /^[01]$/.test(value) ? Number(value) : value;
    controller.actions.updateSignalValue = (signalId, index, field, rawValue) => { const signal = getSignal(signalId); if (!signal || !signal.values[index]) return false; const candidate = { ...signal.values[index], [field]: valueFromInput(signal, rawValue, field) }; const issues = validateValue(signal, index, candidate); if (issues.length) { setValidation(issues); render(); return false; } return transactionRun(`Change signal ${field}`, () => { signal.values[index] = candidate; canonicalize(signal); model.editor.rowIndex = signal.values.indexOf(candidate); setValidation([]); }); };
    controller.getSignalConfig = signalId => { const signal = getSignal(signalId); return signal ? structuredClone({ formatVersion: '1.0.0', signal }) : null; };
