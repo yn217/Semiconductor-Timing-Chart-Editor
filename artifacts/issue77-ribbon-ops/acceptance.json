@@ -1,0 +1,63 @@
+{
+  "issue": "77 (Transaction operations Ribbon group only -- not the full Transaction Ribbon spec)",
+  "setup": true,
+  "buttons": [
+    {
+      "action": "add",
+      "status": "implemented",
+      "label": "Transaction追加"
+    },
+    {
+      "action": "duplicate",
+      "status": "implemented",
+      "label": "Transaction複製"
+    },
+    {
+      "action": "delete",
+      "status": "implemented",
+      "label": "Transaction削除"
+    },
+    {
+      "action": "up",
+      "status": "implemented",
+      "label": "前に移動"
+    },
+    {
+      "action": "down",
+      "status": "implemented",
+      "label": "後に移動"
+    }
+  ],
+  "disabledState": {
+    "disabledWithoutSelection": true,
+    "addEnabled": true,
+    "enabledWithSelection": true
+  },
+  "duplicateFlow": {
+    "addedOne": true,
+    "undoDelta": 1,
+    "newIdDifferent": true,
+    "sourceStillExists": true
+  },
+  "reorderFlow": {
+    "indexBefore": 2,
+    "indexAfterUp": 1,
+    "upUndoDelta": 1,
+    "stillSelected": true,
+    "atTop": true,
+    "boundaryNoOpUndoDelta": 0
+  },
+  "deleteFlow": {
+    "removed": true,
+    "undoDelta": 1
+  },
+  "homeRegression": {
+    "foundHomeButtons": true,
+    "signalDuplicateStillWorks": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue77-ribbon-ops-1672x941.png"
+  ]
+}

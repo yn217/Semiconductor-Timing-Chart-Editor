@@ -509,6 +509,18 @@
     };
     reorder(document.querySelector('#cycleCanvas .wave'));
     reorder(window.TimingChartFrozenLabels?.frozenWave);
+    const group = (model.document.signalGroups || []).find(item => (item.rows || []).includes(signalId));
+    const treeHost = group ? document.querySelector(`#groups .group[data-group-id="${CSS.escape(group.id)}"]`) : null;
+    if (treeHost) {
+      const row = treeHost.querySelector(`.row[data-signal="${CSS.escape(signalId)}"]`);
+      const index = group.rows.indexOf(signalId);
+      const nextId = group.rows[index + 1];
+      const next = nextId ? treeHost.querySelector(`.row[data-signal="${CSS.escape(nextId)}"]`) : null;
+      if (row) {
+        if (next) treeHost.insertBefore(row, next);
+        else { const rowIds = new Set(group.rows); const last = [...treeHost.querySelectorAll(':scope > .row[data-signal]')].reverse().find(node => rowIds.has(node.dataset.signal)); if (last?.nextSibling) treeHost.insertBefore(row, last.nextSibling); else treeHost.appendChild(row); }
+      }
+    }
     const shiftStarted = performance.now();
     window.TimingChartProductionWaveform?.shiftScreenGeometryAfterRowReorder?.(model);
     const shiftFinished = performance.now();
@@ -709,6 +721,7 @@
   controller.actions.duplicateTransaction = id => { const source = model.document.transactions.find(transaction => transaction.id === id); if (!source) return false; const duration = Number(source.end) - Number(source.start); const start = Number(source.end); const end = start + duration; const offset = start - Number(source.start); const phases = (source.phases || []).map(phase => ({ ...structuredClone(phase), start: Number(phase.start) + offset, end: Number(phase.end) + offset })); return controller.actions.addTransaction({ ...structuredClone(source), id: undefined, name: `${source.name} copy`, start, end, phases }); };
   controller.actions.deleteTransaction = id => transactionRun('Delete transaction', () => { const index = model.document.transactions.findIndex(item => item.id === id); if (index < 0) return false; model.document.transactions.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; model.crossHighlight = []; });
   controller.actions.updateTransaction = (id, field, value) => transactionRun(`Update transaction ${field}`, () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction || !['name', 'start', 'end', 'lane', 'source', 'destination', 'comment', 'linkedSignals', 'phases'].includes(field)) return false; if (field === 'linkedSignals') { const ids = Array.isArray(value) ? value : []; transaction.linkedSignals = ids.filter(signalId => { const signal = getSignal(signalId); return signal && signal.type !== 'commentRow'; }); model.crossHighlight = [...transaction.linkedSignals]; return true; } if (field === 'phases') { if (!Array.isArray(value)) return false; transaction.phases = value.map(phase => ({ name: String(phase.name || ''), start: Number(phase.start), end: Number(phase.end) })); return true; } transaction[field] = ['start', 'end'].includes(field) ? Number(value) : String(value); });
+  controller.actions.moveTransactionBy = (id, delta) => transactionRun('Reorder transaction', () => { const from = model.document.transactions.findIndex(item => item.id === id); if (from < 0) return false; const to = Math.max(0, Math.min(model.document.transactions.length - 1, from + Number(delta))); if (from === to) return false; const [transaction] = model.document.transactions.splice(from, 1); model.document.transactions.splice(to, 0, transaction); model.selection = { kind: 'transaction', id }; });
   controller.actions.setBusWidthAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align bus width column', () => { model.document.layout.busWidthAlign = alignment; }); };
   controller.actions.setBusWidthMode = mode => { if (!['inline', 'alignedColumn'].includes(mode)) return false; return transactionRun('Change bus width display', () => { model.document.layout.busWidthMode = mode; }); };
   controller.actions.setSignalNameAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align signal name column', () => { model.document.layout.signalNameAlign = alignment; }); };
@@ -980,7 +993,26 @@
   rows().forEach(row => row.addEventListener('click', () => controller.actions.selectObject(row)));
   const follow = document.querySelector('#bottomTabs input[type="checkbox"]'); follow?.addEventListener('change', () => controller.actions.setFollowSelection(follow.checked));
   const pin = document.querySelector('#bottomTabs .follow button'); pin?.addEventListener('click', () => controller.actions.setPinned(!model.view.pinned));
-  document.querySelector('.ribbon .txn-only .tool')?.addEventListener('click', () => controller.actions.addTransaction());
+  document.querySelectorAll('.ribbon .txn-only [data-txn-action]').forEach(button => {
+    button.dataset.controlStatus = 'implemented';
+    button.addEventListener('click', () => {
+      const action = button.dataset.txnAction;
+      const id = model.selection?.kind === 'transaction' ? model.selection.id : null;
+      if (action === 'add') controller.actions.addTransaction();
+      else if (id && action === 'duplicate') controller.actions.duplicateTransaction(id);
+      else if (id && action === 'delete') controller.actions.deleteTransaction(id);
+      else if (id && action === 'up') controller.actions.moveTransactionBy(id, -1);
+      else if (id && action === 'down') controller.actions.moveTransactionBy(id, 1);
+    });
+  });
+  controller.registerRenderHook?.('txn-ribbon-buttons', () => {
+    const hasSelection = model.selection?.kind === 'transaction';
+    document.querySelectorAll('.ribbon .txn-only [data-txn-action]').forEach(button => {
+      if (button.dataset.txnAction === 'add') return;
+      button.disabled = !hasSelection;
+      button.title = hasSelection ? '' : 'Transactionを選択してください';
+    });
+  });
   document.querySelectorAll('.export-tool').forEach(button => button.addEventListener('click', async () => { const format = button.querySelector('.filetype')?.textContent?.toLowerCase() || 'svg'; const result = await controller.export(format); window.TimingChartLastExport = result; if (format === 'pdf') { window.print(); return; } const blob = new Blob([format === 'svg' ? result.text : result.dataUrl], { type: format === 'svg' ? 'image/svg+xml' : 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `timing-chart.${format}`; link.click(); URL.revokeObjectURL(link.href); }));
   render();
 })();
