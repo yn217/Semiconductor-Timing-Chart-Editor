@@ -99,6 +99,140 @@ function bindIssue6Menus(model=getProductionModel()){const controller=window.Tim
   const close=()=>document.querySelector('#issue6ContextMenu')?.remove();const show=(items,x,y,context)=>{close();const menu=document.createElement('div');menu.id='issue6ContextMenu';menu.style.cssText=`position:fixed;z-index:2100;left:${x}px;top:${y}px;background:#fff;border:1px solid #b8c5d4;box-shadow:0 5px 16px #0003;padding:4px;display:grid;min-width:150px;font:12px sans-serif`;items.forEach(([command,label])=>{const button=document.createElement('button');button.type='button';button.dataset.command=command;button.textContent=label;button.style.cssText='border:0;background:#fff;text-align:left;padding:5px 8px;';menu.appendChild(button);});menu.addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command;if(!command)return;close();const signalId=context.signalId,groupId=context.groupId;const signal=signalId?model.document.signals.find(item=>item.id===signalId):null;if(command==='rename'&&signal){const name=window.prompt('名前を変更',signal.display?.name||signal.name);if(name)controller.actions.setDisplayName(signalId,name);}else if(command==='duplicate'&&signal)controller.actions.duplicateSignal(signalId);else if(command==='delete'&&signal)controller.actions.deleteSignal(signalId);else if(command==='up'&&signal)controller.actions.moveSignalBy(signalId,-1);else if(command==='down'&&signal)controller.actions.moveSignalBy(signalId,1);else if(command==='visible'&&signal)controller.actions.setSignalVisibility(signalId,hiddenSignalIds(model).has(signalId));else if(command.startsWith('role-')&&signal)controller.actions.setSignalRole(signalId,command.slice(5));else if(command==='edit-comment'&&signal){const title=window.prompt('コメント行を編集',signal.title);if(title)controller.actions.updateComment(signalId,'title',title);}else if(command==='duplicate-comment'&&signal)controller.actions.addCommentRow({title:`${signal.title} copy`,body:signal.body},groupId);else if(command==='rename-group') {const name=window.prompt('グループ名を変更',model.document.signalGroups.find(item=>item.id===groupId)?.name);if(name)controller.actions.setGroupName(groupId,name);}else if(command==='collapse-group')controller.actions.setGroupCollapsed(groupId,!model.document.signalGroups.find(item=>item.id===groupId)?.collapsed);else if(command==='up-group')controller.actions.moveGroupBy(groupId,-1);else if(command==='down-group')controller.actions.moveGroupBy(groupId,1);else if(command==='add-signal')controller.actions.addSignal({name:`signal_${Date.now()}`},groupId);else if(command==='add-comment')controller.actions.addCommentRow({},groupId);else if(command==='add-spacer')controller.actions.addSpacer(groupId,16);else if(command==='group-spacing')controller.actions.setGroupSpacing(groupId,'spacingAfter',Number(window.prompt('グループ間隔(px)',model.document.signalGroups.find(item=>item.id===groupId)?.spacingAfter||0)));else if(command==='group-appearance'){const group=model.document.signalGroups.find(item=>item.id===groupId);const background=window.prompt('Group Band背景色',group?.style?.background||'#eef5ff');if(background)controller.actions.setGroupAppearance(groupId,{background});}else if(command==='delete-group')controller.actions.deleteGroup(groupId);});document.body.appendChild(menu);};if(document.body.dataset.issue6Menus!=='true'){document.body.dataset.issue6Menus='true';document.addEventListener('click',event=>{if(!event.target.closest('#issue6ContextMenu,.more,.group-h'))close();});}
   $$('#groups .row .more').forEach(more=>{if(more.dataset.issue6Bound)return;more.dataset.issue6Bound='true';more.addEventListener('click',event=>{event.stopPropagation();const row=more.closest('.row');const signal=model.document.signals.find(item=>item.id===row.dataset.signal);const items=signal?.type==='commentRow'?[['edit-comment','編集'],['duplicate-comment','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示']]:[['rename','名前を変更'],['duplicate','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示'],['role-input','Role: Input'],['role-output','Role: Output'],['role-internal','Role: Internal'],['inspector','Inspectorを開く']];show(items,event.clientX,event.clientY,{signalId:row.dataset.signal,groupId:row.closest('.group')?.dataset.groupId});});});
   $$('#groups .group-h').forEach(header=>{const button=header.lastElementChild;if(!button||button.dataset.issue6Bound)return;button.dataset.issue6Bound='true';button.style.cursor='pointer';button.addEventListener('click',event=>{event.stopPropagation();const group=header.closest('.group');const groupId=group?.dataset.groupId;show([['rename-group','名前を変更'],['collapse-group','グループを折りたたむ / 展開'],['up-group','上へ移動'],['down-group','下へ移動'],['add-signal','Signalを追加'],['add-comment','Comment Rowを追加'],['add-spacer','Spacerを追加'],['group-appearance','Group Band / 背景設定'],['group-spacing','グループ間隔設定'],['delete-group','グループ削除']],event.clientX,event.clientY,{groupId});});});}
+function issue104TreeItems(){
+  const host=document.querySelector('#groups');
+  if(!host)return [];
+  const items=[];
+  for(const group of host.querySelectorAll(':scope > .group')){
+    const header=group.querySelector('.group-h');
+    if(header)items.push({el:header,type:'group',groupId:group.dataset.groupId});
+    for(const row of group.querySelectorAll('.row[data-signal]')){
+      if(row.hidden)continue;
+      items.push({el:row,type:'row',signalId:row.dataset.signal});
+    }
+  }
+  return items;
+}
+function issue104SetRovingTabindex(activeEl){
+  document.querySelectorAll('#groups .row[data-signal],#groups .group-h').forEach(el=>{el.tabIndex=-1;});
+  if(activeEl)activeEl.tabIndex=0;
+}
+function issue104FocusItem(el){
+  if(!el)return;
+  issue104SetRovingTabindex(el);
+  el.focus();
+  el.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function issue104Move(delta){
+  const items=issue104TreeItems();
+  if(!items.length)return;
+  const current=document.activeElement;
+  const index=items.findIndex(item=>item.el===current);
+  const nextIndex=index<0?0:Math.max(0,Math.min(items.length-1,index+delta));
+  issue104FocusItem(items[nextIndex].el);
+}
+function applyIssue104TreeA11y(model=getProductionModel()){
+  const host=document.querySelector('#groups');
+  if(!host)return;
+  host.setAttribute('role','tree');
+  host.querySelectorAll('.group').forEach(group=>group.setAttribute('role','group'));
+  host.querySelectorAll('.group-h').forEach(header=>{
+    header.setAttribute('role','treeitem');
+    const collapsed=header.closest('.group')?.classList.contains('collapsed');
+    header.setAttribute('aria-expanded',String(!collapsed));
+  });
+  host.querySelectorAll('.row[data-signal]').forEach(row=>{
+    row.setAttribute('role','treeitem');
+    const isSelected=(model.selection?.kind==='signal'||model.selection?.kind==='comment')&&model.selection.id===row.dataset.signal;
+    row.setAttribute('aria-selected',String(isSelected));
+  });
+  const items=issue104TreeItems();
+  if(!items.length)return;
+  const selectedItem=items.find(item=>item.type==='row'&&item.signalId===model.selection?.id)?.el;
+  const currentTabbable=host.querySelector('[tabindex="0"]');
+  const stillVisible=currentTabbable&&items.some(item=>item.el===currentTabbable);
+  const active=selectedItem||(stillVisible?currentTabbable:items[0].el);
+  const focusNeedsRepair=window.__issue104NeedsFocusRepair===true&&!stillVisible;
+  issue104SetRovingTabindex(active);
+  if(focusNeedsRepair&&active){active.focus();window.__issue104NeedsFocusRepair=false;}
+}
+function issue104Install(){
+  const router=window.TimingChartShortcutRouter;
+  if(!router||document.body.dataset.issue104Bound)return;
+  document.body.dataset.issue104Bound='true';
+  const inTree=event=>Boolean(event.target?.closest?.('#groups'));
+  const controllerOf=()=>window.TimingChartProductionController;
+  const host=document.querySelector('#groups');
+  host?.addEventListener('focusout',event=>{if(!event.relatedTarget)window.__issue104NeedsFocusRepair=true;});
+  host?.addEventListener('focusin',()=>{window.__issue104NeedsFocusRepair=false;});
+  router.register({id:'issue104-down',shortcut:'ArrowDown',owner:'issue104',scope:'application',when:inTree,execute:()=>{issue104Move(1);return true;}});
+  router.register({id:'issue104-up',shortcut:'ArrowUp',owner:'issue104',scope:'application',when:inTree,execute:()=>{issue104Move(-1);return true;}});
+  router.register({id:'issue104-home',shortcut:'Home',owner:'issue104',scope:'application',when:inTree,execute:()=>{const items=issue104TreeItems();if(items.length)issue104FocusItem(items[0].el);return true;}});
+  router.register({id:'issue104-end',shortcut:'End',owner:'issue104',scope:'application',when:inTree,execute:()=>{const items=issue104TreeItems();if(items.length)issue104FocusItem(items[items.length-1].el);return true;}});
+  router.register({id:'issue104-left',shortcut:'ArrowLeft',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(el?.classList.contains('group-h')){
+      const groupId=el.closest('.group')?.dataset.groupId;
+      const group=controller.model.document.signalGroups.find(g=>g.id===groupId);
+      if(group&&!group.collapsed)controller.actions.setGroupCollapsed(groupId,true);
+      return true;
+    }
+    if(el?.matches('.row[data-signal]')){const header=el.closest('.group')?.querySelector('.group-h');if(header)issue104FocusItem(header);return true;}
+    return false;
+  }});
+  router.register({id:'issue104-right',shortcut:'ArrowRight',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(el?.classList.contains('group-h')){
+      const groupId=el.closest('.group')?.dataset.groupId;
+      const group=controller.model.document.signalGroups.find(g=>g.id===groupId);
+      if(group?.collapsed){controller.actions.setGroupCollapsed(groupId,false);return true;}
+      const firstRow=el.closest('.group')?.querySelector('.row[data-signal]:not([hidden])');
+      if(firstRow)issue104FocusItem(firstRow);
+      return true;
+    }
+    return false;
+  }});
+  router.register({id:'issue104-enter',shortcut:'Enter',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(el?.matches('.row[data-signal]')){controller.actions.selectObject(el);controller.actions.revealSelection?.({});return true;}
+    if(el?.classList.contains('group-h')){
+      const groupId=el.closest('.group')?.dataset.groupId;
+      const group=controller.model.document.signalGroups.find(g=>g.id===groupId);
+      controller.actions.setGroupCollapsed(groupId,!group?.collapsed);
+      return true;
+    }
+    return false;
+  }});
+  router.register({id:'issue104-f2',shortcut:'F2',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;
+    if(!el?.matches('.row[data-signal]'))return false;
+    const more=el.querySelector('.more');
+    if(!more)return false;
+    more.click();
+    requestAnimationFrame(()=>{const menu=document.querySelector('#issue6ContextMenu');const target=menu?.querySelector('[data-command="rename"],[data-command="edit-comment"]');target?.click();});
+    return true;
+  }});
+  router.register({id:'issue104-delete',shortcut:'Delete',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(!el?.matches('.row[data-signal]'))return false;
+    const signalId=el.dataset.signal;
+    const signal=controller.model.document.signals.find(item=>item.id===signalId);
+    if(signal)controller.actions.deleteSignal(signalId);
+    return true;
+  }});
+  router.register({id:'issue104-contextmenu',shortcut:'Shift+F10',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;
+    const more=el?.matches('.row[data-signal]')?el.querySelector('.more'):(el?.classList.contains('group-h')?el.lastElementChild:null);
+    more?.click();
+    return true;
+  }});
+  router.register({id:'issue104-contextmenu-key',shortcut:'ContextMenu',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;
+    const more=el?.matches('.row[data-signal]')?el.querySelector('.more'):(el?.classList.contains('group-h')?el.lastElementChild:null);
+    more?.click();
+    return true;
+  }});
+}
 function issue92ClosePopover(){document.querySelector('#issue92Popover')?.remove();document.removeEventListener('pointerdown',window.__issue92PopoverOutside||(()=>{}),true);}
 function issue92ShowFieldPopover({anchor,title,fields,onApply,dangerous}){
   issue92ClosePopover();
@@ -205,7 +339,7 @@ function bindIssue64Menus(model=getProductionModel()) {
     });
   }
   const menuState = document.body.__issue64MenuState || (document.body.__issue64MenuState = { openMenu: null });
-  const close = () => { menuState.openMenu?.remove(); menuState.openMenu = null; };
+  const close = () => { menuState.openMenu?.remove(); menuState.openMenu = null; const invoker = menuState.invoker; menuState.invoker = null; if (invoker && invoker.focus && document.contains(invoker)) invoker.focus(); };
   const findGroup = groupId => model.document.signalGroups.find(group => group.id === groupId);
   const execute = (command, context, anchor) => {
     const { signalId, groupId } = context;
@@ -277,7 +411,9 @@ function bindIssue64Menus(model=getProductionModel()) {
     else if (command === 'delete-group') controller.actions.deleteGroup(groupId);
   };
   const show = (items, x, y, context) => {
+    const invoker = document.activeElement;
     close();
+    menuState.invoker = invoker;
     const menu = document.createElement('div');
     menu.id = 'issue6ContextMenu';
     menu.setAttribute('role', 'menu');
@@ -504,7 +640,7 @@ function modelDrivenInspector(model=getProductionModel()){const host=$('#inspect
 const renderModelDrivenInspector=modelDrivenInspector;
 renderInspector=model=>{if(model.view.tab==='annotation'){const host=$('#inspectorBody');const annotation=(model.document.annotations||[]).find(item=>item.id===model.selection?.id);if(!annotation){host.innerHTML='<div class="section"><h3>Annotation</h3><span>注釈を選択してください</span></div>';return;}renderAnnotationInspector(model,annotation);return;}renderModelDrivenInspector(model);};
 if(!document.body.dataset.issue108BookmarksBound){document.body.dataset.issue108BookmarksBound='true';document.addEventListener('click',event=>{const row=event.target.closest?.('[data-bookmark-id]');const action=event.target.closest?.('[data-bookmark-action]')?.dataset.bookmarkAction;const controller=window.TimingChartProductionController;if(!controller)return;if(action==='add'){controller.actions.addBookmark();return;}if(action==='delete'){if(controller.model.selection?.kind==='bookmark')controller.actions.deleteBookmark(controller.model.selection.id);return;}if(!row||event.target.closest('input,textarea,select'))return;controller.actions.revealBookmark(row.dataset.bookmarkId);});document.addEventListener('change',event=>{const input=event.target.closest?.('[data-bookmark-field]');const row=input?.closest('[data-bookmark-id]');if(!input||!row)return;window.TimingChartProductionController?.actions.updateBookmark(row.dataset.bookmarkId,input.dataset.bookmarkField,input.value);});}
- window.TimingChartGoldenRenderer={render(model){reconcileCycleRows(model);renderComments(model);ensureIssue6Rows(model);ensureIssue44GroupDisclosure(model);renderLayoutBindings(model);applyIssue25VisualPolish();syncIssue26Groups(model);bindIssue26LeftPanel(model);bindIssue73LeftPanel(model);applyIssue26Ribbon();applyIssue29LabelWidth(model);bindIssue29LabelSplitter(model);bindBottomResize(model);bindSplitBottomResize(model);applyIssue6Layout(model);applyIssue73Filter(model);applyIssue73CycleVisibility(model);bindIssue64Menus(model);renderIssue6Legend(model);renderBottom(model);renderInspector(model);bindEditor(model);const bottom=document.querySelector('#bottomContent');const inspector=document.querySelector('#inspectorBody');window.TimingChartProductionController?.controlAudit?.registerSubtree?.(bottom);window.TimingChartProductionController?.controlAudit?.registerSubtree?.(inspector);window.TimingChartTooltipContract?.registerSubtree?.(bottom);window.TimingChartTooltipContract?.registerSubtree?.(inspector);}};
+ window.TimingChartGoldenRenderer={render(model){reconcileCycleRows(model);renderComments(model);ensureIssue6Rows(model);ensureIssue44GroupDisclosure(model);renderLayoutBindings(model);applyIssue25VisualPolish();syncIssue26Groups(model);bindIssue26LeftPanel(model);bindIssue73LeftPanel(model);applyIssue26Ribbon();applyIssue29LabelWidth(model);bindIssue29LabelSplitter(model);bindBottomResize(model);bindSplitBottomResize(model);applyIssue6Layout(model);applyIssue73Filter(model);applyIssue73CycleVisibility(model);applyIssue104TreeA11y(model);issue104Install();bindIssue64Menus(model);renderIssue6Legend(model);renderBottom(model);renderInspector(model);bindEditor(model);const bottom=document.querySelector('#bottomContent');const inspector=document.querySelector('#inspectorBody');window.TimingChartProductionController?.controlAudit?.registerSubtree?.(bottom);window.TimingChartProductionController?.controlAudit?.registerSubtree?.(inspector);window.TimingChartTooltipContract?.registerSubtree?.(bottom);window.TimingChartTooltipContract?.registerSubtree?.(inspector);}};
 window.TimingChartProductionTransactions={render:model=>renderTransactionCanvas(model)};
 
 // Bottom splitter controller for the locked workspace. This declaration intentionally

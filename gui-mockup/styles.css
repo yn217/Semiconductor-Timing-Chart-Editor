@@ -36,3 +36,5 @@ button,input,select,textarea{font:inherit}.app{height:100%;min-width:1280px;disp
 .ribbon-overflow-menu .toggles{padding:4px 2px}
 .reveal-pulse{animation:issue90-reveal-pulse 1.2s ease-out}
 @keyframes issue90-reveal-pulse{0%{background-color:#dbeafe}100%{background-color:transparent}}
+#groups .row:focus-visible,#groups .group-h:focus-visible{outline:2px solid var(--blue);outline-offset:-2px;position:relative;z-index:1}
+#groups .row:focus,#groups .group-h:focus{outline:2px solid var(--blue);outline-offset:-2px}

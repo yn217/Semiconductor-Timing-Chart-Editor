@@ -1,0 +1,53 @@
+{
+  "issue": 104,
+  "setup": {
+    "opened": true,
+    "totalSignals": 62
+  },
+  "navFlow": {
+    "startedOnFirst": true,
+    "focusUnchangedByEditableArrow": true,
+    "reachedLast": true,
+    "steps": 66,
+    "undoLenAfterNav": 0,
+    "atHome": true,
+    "atEnd": true,
+    "docUnchangedByPureNav": true
+  },
+  "filterSkip": {
+    "hiddenRowFilteredOut": true,
+    "skippedToNextVisible": true
+  },
+  "collapseFlow": {
+    "collapsedAfterLeft": true,
+    "ariaExpandedFalse": true,
+    "expandedAfterRight": true
+  },
+  "enterFlow": {
+    "selectedId": "kb_sig_10",
+    "selectedKind": "signal"
+  },
+  "collapseWithFocusedChild": {
+    "focusRepaired": true,
+    "activeIsVisible": true
+  },
+  "contextMenuFlow": {
+    "menuOpened": true,
+    "menuClosed": true,
+    "focusReturned": true
+  },
+  "f2Flow": {
+    "popoverOpened": true
+  },
+  "ariaCheck": {
+    "hasTreeRole": true,
+    "rowHasTreeitem": true,
+    "headerHasAriaExpanded": true,
+    "singleTabStop": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue104-1672x941.png"
+  ]
+}
