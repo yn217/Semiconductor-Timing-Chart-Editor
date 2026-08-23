@@ -1,0 +1,13 @@
+{
+  "issue": 59,
+  "gridIndependent": true,
+  "rulerIndependent": true,
+  "snapUsesWaveGeometry": true,
+  "minimapLiveRows": true,
+  "minimapScrollSync": true,
+  "minimapZoomSync": true,
+  "minimapClickPan": true,
+  "rendersUnchangedOnGuideToggle": true,
+  "errors": [],
+  "pass": true
+}

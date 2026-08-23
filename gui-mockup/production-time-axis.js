@@ -105,16 +105,21 @@
     if (!referenceClock || !controller.getCycleBoundary) return [];
     return Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary({ signal: referenceClock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
   };
-  controller.actions.selectTimeAtCanvasX = (clientX, { shiftKey = false } = {}) => {
+  controller.actions.resolveSnapAtCanvasX = clientX => {
     const boundaries = screenCycleBoundaries();
-    if (!boundaries.length || !Number.isFinite(Number(clientX))) return false;
-    let selected = boundaries[0].cycle;
-    let distance = Math.abs(boundaries[0].canvasX - Number(clientX));
-    for (const boundary of boundaries.slice(1)) {
-      const candidateDistance = Math.abs(boundary.canvasX - Number(clientX));
-      if (candidateDistance < distance) { selected = boundary.cycle; distance = candidateDistance; }
-    }
-    return selectCycle(selected, { range: shiftKey, source: 'waveform-geometry' });
+    if (!boundaries.length || !Number.isFinite(Number(clientX))) return null;
+    const x = Number(clientX); let lower = boundaries[0]; let upper = boundaries.at(-1);
+    for (let index = 0; index < boundaries.length - 1; index += 1) if (x >= boundaries[index].canvasX && x <= boundaries[index + 1].canvasX) { lower = boundaries[index]; upper = boundaries[index + 1]; break; }
+    const width = Math.max(0.0001, upper.canvasX - lower.canvasX); const phase = Math.max(0, Math.min(1, (x - lower.canvasX) / width));
+    const nearest = Math.abs(x - lower.canvasX) <= Math.abs(upper.canvasX - x) ? lower : upper;
+    return { cycle: model.view.guides?.snap === false ? lower.cycle : nearest.cycle, phase, snapped: model.view.guides?.snap !== false, source: 'wavedrom-geometry', boundaryX: nearest.canvasX };
+  };
+  controller.actions.selectTimeAtCanvasX = (clientX, { shiftKey = false } = {}) => {
+    const resolved = controller.actions.resolveSnapAtCanvasX(clientX);
+    if (!resolved) return false;
+    const result = selectCycle(resolved.cycle, { range: shiftKey, source: resolved.source });
+    if (result) { model.timeSelection.phase = resolved.phase; model.timeSelection.snapped = resolved.snapped; }
+    return result;
   };
 
   const renderEdgeCounters = currentModel => {

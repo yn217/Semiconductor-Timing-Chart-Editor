@@ -23,7 +23,7 @@
   };
   const toggle = (id, label, iconId, group, key, description) => {
     const node = button(id, label, iconId, description, () => {
-      if (group === 'guides') view.guides[key] = !view.guides[key];
+      if (group === 'guides') return controller.actions.toggleGuide(key);
       if (group === 'columns') view.columns[key] = !view.columns[key];
       if (group === 'overlays') view.overlays[key] = !view.overlays[key];
       apply(); refresh();
@@ -80,6 +80,12 @@
   );
   document.querySelector('#ribbonHome')?.after(ribbon);
 
+  controller.actions.setGuide = (key, enabled) => {
+    if (!Object.prototype.hasOwnProperty.call(view.guides, key)) return false;
+    view.guides[key] = Boolean(enabled); apply(); refresh(); return true;
+  };
+  controller.actions.toggleGuide = key => controller.actions.setGuide(key, !view.guides[key]);
+
   const PATH = window.TimingChartPathDisplayModes;
   const setPath = mode => controller.actions.setPathDisplayMode?.(mode);
   const openScopeMenu = () => {
@@ -111,14 +117,81 @@
   const style = document.createElement('style');
   style.dataset.viewRibbonRuntime = 'true';
   style.textContent = `
-    #cycleCanvas[data-view-grid="off"] .ruler .tick:after{display:none!important}
     #cycleCanvas[data-view-ruler="off"] .ruler{visibility:hidden!important}
-    #cycleCanvas[data-view-minimap="off"] .minimap{display:none!important}
+    #cycleCanvas[data-view-grid="off"] [data-live-grid]{display:none!important}
     #cycleCanvas[data-view-comments="off"] .comment-body,#cycleCanvas[data-view-comments="off"] .latency{visibility:hidden!important}
     #cycleCanvas[data-view-annotations="off"] svg[data-production-overlay="annotations"]{display:none!important}
     #cycleCanvas[data-view-edge-counter="off"] [data-edge-counter],[data-view-edge-counter="off"] .edge-counter{display:none!important}
   `;
   document.head.appendChild(style);
+
+  const scrollHost = () => window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+  let gridFrame = 0;
+  let minimapFrame = 0;
+  const scheduleGrid = () => { if (gridFrame) return; gridFrame = requestAnimationFrame(() => { gridFrame = 0; renderGrid(); }); };
+  const scheduleMinimap = () => { if (minimapFrame) return; minimapFrame = requestAnimationFrame(() => { minimapFrame = 0; renderMinimap(); }); };
+  const boundaryPoints = () => {
+    const clock = controller.selectors?.getReferenceClock?.();
+    const count = Number(model.document.timeline?.cycleCount || 0);
+    if (!clock || !controller.getCycleBoundary) return [];
+    return Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary({ signal: clock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
+  };
+  const renderGrid = () => {
+    const host = scrollHost(); if (!host) return;
+    let grid = document.querySelector('#cycleCanvas [data-live-grid]');
+    if (!grid) { grid = document.createElement('div'); grid.dataset.liveGrid = 'true'; grid.setAttribute('aria-hidden', 'true'); host.appendChild(grid); }
+    if (!view.guides.grid) { grid.hidden = true; return; }
+    grid.hidden = false; grid.replaceChildren();
+    const hostRect = host.getBoundingClientRect();
+    grid.style.cssText = `position:absolute;left:0;top:0;width:${Math.max(host.scrollWidth, host.clientWidth)}px;height:${Math.max(host.scrollHeight, host.clientHeight)}px;pointer-events:none;z-index:1;overflow:hidden;`;
+    const top = Math.max(32, document.querySelector('#cycleCanvas .ruler')?.offsetHeight || 34);
+    for (const boundary of boundaryPoints()) {
+      const line = document.createElement('i');
+      line.dataset.gridCycle = String(boundary.cycle);
+      line.style.cssText = `position:absolute;left:${boundary.canvasX - hostRect.left + host.scrollLeft}px;top:${top}px;height:${Math.max(0, host.scrollHeight - top)}px;border-left:1px dotted #dde4ed;`;
+      grid.appendChild(line);
+    }
+  };
+  const renderMinimap = () => {
+    const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
+    if (!host || !mini) return;
+    if (!view.guides.minimap) { mini.dataset.live = 'false'; return; }
+    mini.dataset.live = 'true'; mini.style.position = 'relative';
+    const wave = document.querySelector('#cycleCanvas .wave'); const hostRect = host.getBoundingClientRect();
+    if (wave) {
+      const rowsForExtent = [...document.querySelectorAll('#cycleCanvas .wave-row')];
+      const maxRight = Math.max(wave.getBoundingClientRect().right - hostRect.left + host.scrollLeft, ...rowsForExtent.map(row => row.getBoundingClientRect().right - hostRect.left + host.scrollLeft));
+      const maxBottom = Math.max(wave.getBoundingClientRect().bottom - hostRect.top + host.scrollTop, ...rowsForExtent.map(row => row.getBoundingClientRect().bottom - hostRect.top + host.scrollTop));
+      wave.style.minWidth = `${Math.max(920, Math.ceil(maxRight + 24))}px`;
+      wave.style.minHeight = `${Math.max(0, Math.ceil(maxBottom + 20))}px`;
+    }
+    let svg = mini.querySelector('[data-live-minimap]');
+    if (!svg) { svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.dataset.liveMinimap = 'true'; svg.setAttribute('aria-label', 'Live timing overview'); svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;'; mini.appendChild(svg); }
+    const width = Math.max(1, mini.clientWidth); const height = Math.max(1, mini.clientHeight); const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
+    svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.replaceChildren();
+    const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
+    rows.forEach((row, index) => { const rect = row.getBoundingClientRect(); const x = Math.max(0, (rect.left - hostRect.left + host.scrollLeft) / contentWidth * width); const y = Math.max(0, (rect.top - hostRect.top + host.scrollTop) / contentHeight * height); const w = Math.max(2, Math.min(width - x, (row.querySelector('.trace')?.getBoundingClientRect().width || contentWidth * 0.7) / contentWidth * width)); const line = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); line.dataset.minimapRow = row.dataset.signalId || row.dataset.signal || String(index); line.setAttribute('x', x); line.setAttribute('y', y); line.setAttribute('width', w); line.setAttribute('height', Math.max(1, Math.min(4, rect.height / contentHeight * height))); line.setAttribute('fill', row.classList.contains('band-output') ? '#b887ee' : row.classList.contains('band-internal') ? '#63b56b' : '#5a99ee'); svg.appendChild(line); });
+    const windowNode = mini.querySelector('.mini-window'); if (!windowNode) return;
+    windowNode.dataset.viewport = 'true'; windowNode.style.left = `${Math.max(0, host.scrollLeft / contentWidth * 100)}%`; windowNode.style.top = `${Math.max(0, host.scrollTop / contentHeight * 100)}%`; windowNode.style.width = `${Math.min(100, host.clientWidth / contentWidth * 100)}%`; windowNode.style.height = `${Math.min(100, host.clientHeight / contentHeight * 100)}%`; windowNode.title = `Viewport ${Math.round(host.scrollLeft)},${Math.round(host.scrollTop)}`;
+  };
+  const panMiniMap = (clientX, clientY, drag = false) => {
+    const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); if (!host || !mini) return false;
+    const rect = mini.getBoundingClientRect(); const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)); const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
+    if (!drag) { host.scrollLeft = Math.max(0, Math.min(host.scrollWidth - host.clientWidth, x * host.scrollWidth - host.clientWidth / 2)); host.scrollTop = Math.max(0, Math.min(host.scrollHeight - host.clientHeight, y * host.scrollHeight - host.clientHeight / 2)); }
+    return true;
+  };
+  const bindMiniMap = () => {
+    const mini = document.querySelector('.inspector .mini-canvas'); if (!mini || mini.dataset.liveBound) return;
+    mini.dataset.liveBound = 'true'; let drag = null;
+    mini.addEventListener('pointerdown', event => { if (!view.guides.minimap) return; event.preventDefault(); const windowNode = event.target.closest('.mini-window'); drag = { x: event.clientX, y: event.clientY, scrollLeft: scrollHost()?.scrollLeft || 0, scrollTop: scrollHost()?.scrollTop || 0, windowNode: Boolean(windowNode) }; mini.setPointerCapture?.(event.pointerId); if (!windowNode) panMiniMap(event.clientX, event.clientY); });
+    mini.addEventListener('pointermove', event => { if (!drag || !drag.windowNode) return; const host = scrollHost(); if (!host) return; const rect = mini.getBoundingClientRect(); host.scrollLeft = Math.max(0, Math.min(host.scrollWidth - host.clientWidth, drag.scrollLeft + (event.clientX - drag.x) / rect.width * host.scrollWidth)); host.scrollTop = Math.max(0, Math.min(host.scrollHeight - host.clientHeight, drag.scrollTop + (event.clientY - drag.y) / rect.height * host.scrollHeight)); scheduleMinimap(); });
+    const release = event => { if (drag) { drag = null; mini.releasePointerCapture?.(event.pointerId); } }; mini.addEventListener('pointerup', release); mini.addEventListener('pointercancel', release);
+  };
+  const hostForEvents = scrollHost();
+  hostForEvents?.addEventListener('scroll', () => { scheduleMinimap(); scheduleGrid(); }, { passive: true });
+  window.addEventListener('resize', () => { scheduleMinimap(); scheduleGrid(); });
+  if (hostForEvents && window.MutationObserver) new MutationObserver(mutations => { if (mutations.some(mutation => !mutation.target?.closest?.('[data-live-grid]'))) { scheduleMinimap(); scheduleGrid(); } }).observe(hostForEvents, { childList: true, subtree: true });
+  bindMiniMap();
 
   function applyPanelLayout() {
     const workspace = document.querySelector('.workspace');
@@ -173,6 +246,8 @@
     document.querySelectorAll('.bus-width-column,.hierarchy-bus-column,.bus-width-part').forEach(node => { node.style.display = view.columns.busWidth ? '' : 'none'; });
     document.querySelectorAll('.hierarchy-instance-column,.instance-path-part').forEach(node => { node.style.display = view.columns.instancePath ? '' : 'none'; });
     const left = document.querySelector('.left-panel'); const inspector = document.querySelector('.inspector'); const bottom = document.querySelector('.bottom'); const minimap = document.querySelector('.inspector .minimap');
+    const ruler = document.querySelector('#cycleCanvas .ruler');
+    if (ruler) { ruler.style.visibility = view.guides.ruler ? 'visible' : 'hidden'; ruler.dataset.viewState = view.guides.ruler ? 'on' : 'off'; }
     if (bottom && view.panels.bottom) view.bottomHeight = Number(view.bottomHeight || model.view.bottomHeight || bottom.getBoundingClientRect().height || 270);
     if (left) { left.hidden = !view.panels.left; left.classList.toggle('hidden', !view.panels.left); }
     if (inspector) { inspector.hidden = !view.panels.inspector; inspector.classList.toggle('hidden', !view.panels.inspector); }
@@ -180,6 +255,7 @@
     if (inspector) inspector.dataset.viewMinimap = view.guides.minimap ? 'on' : 'off';
     if (minimap) { minimap.hidden = !view.guides.minimap; minimap.dataset.viewState = view.guides.minimap ? 'on' : 'off'; }
     applyPanelLayout();
+    bindMiniMap(); renderGrid(); renderMinimap();
     ribbon.dataset.viewState = JSON.stringify({ guides: view.guides, columns: view.columns, overlays: view.overlays, panels: view.panels });
   }
   function refresh() {
@@ -195,6 +271,8 @@
       const node = ribbon.querySelector(`[data-view-command="${id}"]`); if (node) { node.dataset.state = pathMode === mode ? 'on' : 'off'; node.setAttribute('aria-pressed', pathMode === mode ? 'true' : 'false'); }
     }
     const scopeButton = ribbon.querySelector('[data-view-command="scope"]'); const scopes = controller.hierarchy?.getScopePaths?.() || []; const hasHierarchy = scopes.some(scope => scope.length); const scopeLabel = model.view.scope?.length ? `Scope: ${model.view.scope.join('.')}` : 'Scope: Root'; if (scopeButton) { const label = scopeButton.querySelector('.tool-label'); if (label) label.textContent = scopeLabel; scopeButton.disabled = !hasHierarchy; scopeButton.dataset.disabledReason = hasHierarchy ? '' : 'Current document has no instance hierarchy'; scopeButton.title = hasHierarchy ? `Current Scope: ${scopeLabel}` : 'Scope unavailable: current document has no instance hierarchy'; }
+    const homeGuideKeys = [['グリッド', 'grid'], ['スナップ', 'snap'], ['ルーラー', 'ruler'], ['ミニマップ', 'minimap']];
+    document.querySelectorAll('#ribbonHome .toggles label').forEach(labelNode => { const key = homeGuideKeys.find(([label]) => normalize(labelNode.textContent).includes(normalize(label)))?.[1]; const input = labelNode.querySelector('input'); if (!key || !input) return; input.checked = Boolean(view.guides[key]); input.dataset.viewGuide = key; input.dataset.controlStatus = 'implemented'; });
   }
 
   const home = document.querySelector('#ribbonHome'); const insert = document.querySelector('#ribbonInsert'); const annotation = document.querySelector('#ribbonAnnotation');
@@ -217,6 +295,7 @@
   tabs.filter(tab => tab !== viewTab).forEach(tab => tab.addEventListener('click', () => setRibbon(tab)));
 
   controller.registerRenderHook?.('view-ribbon', () => { apply(); refresh(); });
+  document.querySelectorAll('#ribbonHome .toggles label input').forEach(input => { if (input.dataset.viewGuideBound) return; input.dataset.viewGuideBound = 'true'; input.addEventListener('change', () => controller.actions.setGuide(input.dataset.viewGuide, input.checked)); });
   controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu };
   setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
   apply(); refresh();
