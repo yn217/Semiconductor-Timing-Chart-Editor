@@ -136,15 +136,15 @@
     controller.render();
     updateDirty();
   };
-  controller.documentHistory = { run(label, mutation) {
+  controller.documentHistory = { run(label, mutation, options = {}) {
     const before = clone(controller.getSerializableDocument());
     let result = true;
     try { result = mutation() !== false; } catch (error) { model.persistence.lastError = error.message; result = false; }
     const issues = controller.validateDocument(model.document);
-    if (!result || issues.length) { restore(before); model.validation = issues; controller.render(); return false; }
+    if (!result || issues.length) { restore(before); model.validation = issues; if (options.render !== false) controller.render(); return false; }
     const after = clone(controller.getSerializableDocument());
     record(label, before, after);
-    controller.render();
+    if (options.render !== false) controller.render();
     return true;
   } };
   controller.actions.undo = () => {

@@ -1,0 +1,87 @@
+{
+  "issue": 102,
+  "invalidAtomic": {
+    "labelEveryZero": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "labelEveryDecimal": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "labelEveryNaN": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "offsetNaN": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "mode": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "position": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "countFrom": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "initial": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    },
+    "startNumber": {
+      "result": false,
+      "unchanged": true,
+      "historyUnchanged": true,
+      "dirtyUnchanged": true
+    }
+  },
+  "validClock": {
+    "duty": 0.25,
+    "initial": 1,
+    "counter": {
+      "show": false,
+      "mode": "both",
+      "startNumber": 0,
+      "countFrom": "signal-start",
+      "labelEvery": 2,
+      "position": "below",
+      "offset": {
+        "x": 4.5,
+        "y": -6
+      }
+    }
+  },
+  "gaps": [
+    3,
+    4,
+    9
+  ],
+  "saveOpen": true,
+  "noGeneratedEdgeList": true,
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue102-1672x941.png"
+  ]
+}

@@ -31,7 +31,7 @@
       signal.role ||= 'internal';
       signal.type ||= 'binary';
       if (signal.type === 'clock') {
-        signal.generator = { start: numberOr(signal.generator?.start, 0), period: Math.max(0.0001, numberOr(signal.generator?.period, 1)), duty: numberOr(signal.generator?.duty, 0.5), phase: numberOr(signal.generator?.phase, 0), initial: numberOr(signal.generator?.initial, 0), polarity: signal.generator?.polarity === 'negative' ? 'negative' : 'positive' };
+        signal.generator = { start: numberOr(signal.generator?.start, 0), period: Math.max(0.0001, numberOr(signal.generator?.period, 1)), duty: numberOr(signal.generator?.duty, 0.5), phase: numberOr(signal.generator?.phase, 0), initial: numberOr(signal.generator?.initial, 0), polarity: signal.generator?.polarity === 'negative' ? 'negative' : 'positive', ...(Array.isArray(signal.generator?.suppressedPeriods) ? { suppressedPeriods: [...signal.generator.suppressedPeriods] } : {}) };
         signal.edgeCounter ||= { show: false, mode: 'rising', startNumber: 1, countFrom: 'signal-start', labelEvery: 1, position: 'above', offset: { x: 0, y: -6 } };
       } else if (signal.type !== 'commentRow' && !Array.isArray(signal.values)) signal.values = [{ start: 0, value: signal.type === 'state' ? 'IDLE' : signal.type === 'bus' ? '00' : 0 }];
       return signal.type === 'commentRow' ? signal : (controller.ensureCanonicalSource?.(signal) || signal);

@@ -13,6 +13,7 @@
     const next = clone(documentValue);
     for (const signal of eventSignals(next)) for (const value of signal.values || []) if (Number(value.start) >= start && Number(value.start) !== 0) value.start += count;
     for (const transaction of next.transactions || []) { if (Number(transaction.start) >= start) transaction.start += count; if (Number(transaction.end) >= start) transaction.end += count; for (const phase of transaction.phases || []) { if (Number(phase.start) >= start) phase.start += count; if (Number(phase.end) >= start) phase.end += count; } }
+    for (const bookmark of next.bookmarks || []) if (Number(bookmark.start) >= start) bookmark.start += count;
     controller.transformAnnotations?.(next, start, count, 'insert');
     next.timeline.cycleCount += count;
     next.timeline.end = next.timeline.cycleCount;
@@ -40,6 +41,7 @@
       transaction.start = map(transaction.start).mapped; transaction.end = Math.max(transaction.start, map(transaction.end).mapped);
       for (const phase of transaction.phases || []) { phase.start = map(phase.start).mapped; phase.end = Math.max(phase.start, map(phase.end).mapped); }
     }
+    for (const bookmark of next.bookmarks || []) bookmark.start = mapPointForDelete(Number(bookmark.start), start, end).mapped;
     controller.transformAnnotations?.(next, start, end, 'delete');
     next.timeline.cycleCount -= count;
     next.timeline.end = next.timeline.cycleCount;
@@ -181,6 +183,16 @@
           tick.style.position = 'absolute'; tick.style.left = `${x}px`; tick.style.top = '0px'; tick.style.transform = 'translateX(-50%)';
         });
       }
+      ruler.querySelectorAll('[data-bookmark-flag]').forEach(flag => flag.remove());
+      for (const bookmark of currentModel.document.bookmarks || []) {
+        const boundary = boundaries[Number(bookmark.start)];
+        if (!boundary) continue;
+        const flag = document.createElement('button');
+        flag.type = 'button'; flag.dataset.bookmarkFlag = bookmark.id; flag.title = `${bookmark.name} (${bookmark.start})`; flag.textContent = '⚑';
+        flag.style.cssText = `position:absolute;left:${boundary.canvasX - ruler.getBoundingClientRect().left}px;top:-14px;border:0;background:transparent;color:#c47a00;padding:0;line-height:12px;cursor:pointer;transform:translateX(-50%);`;
+        flag.addEventListener('click', event => { event.stopPropagation(); controller.actions.revealBookmark(bookmark.id); });
+        ruler.appendChild(flag);
+      }
     }
     const playhead = document.querySelector('#cycleCanvas .playhead');
     const referenceClock = controller.selectors.getReferenceClock();
@@ -217,6 +229,13 @@
   window.TimingChartProductionTimeAxis = { renderTransient: scheduleTransientLayout, renderNow: renderTransient, renderScrollTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
   window.addEventListener('resize', () => scheduleTransientLayout(model));
   const cycleCanvas = document.querySelector('#cycleCanvas');
+  document.querySelector('#cycleCanvas .ruler')?.addEventListener('contextmenu', event => {
+    event.preventDefault();
+    const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
+    if (!resolved) return;
+    const name = window.prompt?.('Bookmark名', `Bookmark ${((model.document.bookmarks || []).length || 0) + 1}`);
+    if (name !== null && String(name).trim()) controller.actions.addBookmark(resolved.cycle, { name: String(name).trim() });
+  });
   cycleCanvas?.addEventListener('click', event => {
     if (event.button !== 0 || event.defaultPrevented) return;
     const target = event.target;
