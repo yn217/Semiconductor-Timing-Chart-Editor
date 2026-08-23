@@ -410,6 +410,11 @@
   shortcuts?.register({ id: 'document.save-as', owner: 'production-document', shortcut: 'Ctrl+Shift+S', scope: 'application', execute: () => controller.actions.saveAs() });
   shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: async () => controller.actions.requestOpen({ unsavedDecision: await uiDecision() }) });
   shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: async () => controller.actions.requestNew({ unsavedDecision: await uiDecision() }) });
+  shortcuts?.register({ id: 'selection.copy', owner: 'production-document', shortcut: 'Ctrl+C', scope: 'application', execute: () => controller.actions.copySelection() });
+  shortcuts?.register({ id: 'selection.cut', owner: 'production-document', shortcut: 'Ctrl+X', scope: 'application', execute: () => controller.actions.cutSelection() });
+  shortcuts?.register({ id: 'selection.paste', owner: 'production-document', shortcut: 'Ctrl+V', scope: 'application', execute: () => controller.actions.pasteSelection() });
+  shortcuts?.register({ id: 'selection.delete', owner: 'production-document', shortcut: 'Delete', scope: 'application', execute: () => controller.actions.deleteSelection() });
+  shortcuts?.register({ id: 'selection.duplicate', owner: 'production-document', shortcut: 'Ctrl+D', scope: 'application', execute: () => controller.actions.duplicateSelection() });
   const installSampleBrowser = () => {
     const menu = document.querySelector('#issue26FileMenu');
     if (!menu || menu.querySelector('[data-sample-browser]')) return Boolean(menu);

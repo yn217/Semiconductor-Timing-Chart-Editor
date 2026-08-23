@@ -663,6 +663,89 @@
   controller.actions.updateComment = (commentId, field, value) => { const comment = getComments().find(item => item.id === commentId); if (!comment || !['title', 'body'].includes(field)) return false; return transactionRun(`Change comment ${field}`, () => { comment[field] = String(value); }); };
   controller.actions.duplicateComment = commentId => transactionRun('Duplicate comment row', () => { const source = getComments().find(comment => comment.id === commentId); if (!source) return false; const copy = structuredClone(source); let id = `${source.id}_copy`; let suffix = 2; while (getComments().some(comment => comment.id === id)) id = `${source.id}_copy${suffix++}`; copy.id = id; copy.title = `${source.title || 'Comment'} copy`; const group = model.document.signalGroups.find(item => (item.rows || []).includes(commentId)); model.document.signals.push(copy); if (group) group.rows.splice(group.rows.indexOf(commentId) + 1, 0, id); model.selection = { kind: 'comment', id }; });
   controller.actions.deleteComment = commentId => transactionRun('Delete comment row', () => { const index = model.document.signals.findIndex(signal => signal.id === commentId && signal.type === 'commentRow'); if (index < 0) return false; for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== commentId); model.document.signals.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
+  const selectionEntry = () => {
+    const selection = model.selection || {};
+    if (selection.kind === 'signal' || selection.kind === 'comment') return model.document.signals.find(item => item.id === selection.id) || null;
+    if (selection.kind === 'annotation') return (model.document.annotations || []).find(item => item.id === selection.id) || null;
+    if (selection.kind === 'transaction') return (model.document.transactions || []).find(item => item.id === selection.id) || null;
+    if (selection.kind === 'spacer') { for (const group of model.document.signalGroups || []) { const spacer = (group.spacers || []).find(item => item.id === selection.id); if (spacer) return { ...spacer, groupId: group.id, type: 'spacer' }; } }
+    return null;
+  };
+  const supportedSelection = () => { const entry = selectionEntry(); const kind = model.selection?.kind; return Boolean(entry && (kind === 'transaction' || kind === 'spacer' || ['clock', 'binary', 'bus', 'state', 'comment', 'annotation'].includes(kind) || ['clock', 'binary', 'bus', 'state', 'commentRow', 'range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight'].includes(entry.type))); };
+  const uniqueId = (base, used) => { let id = `${base}_copy`; let suffix = 2; while (used.has(id)) id = `${base}_copy${suffix++}`; used.add(id); return id; };
+  const groupForRow = id => (model.document.signalGroups || []).find(group => (group.rows || []).includes(id));
+  const clipboardPayload = (entry, selectionKind = model.selection?.kind) => {
+    if (entry.type === 'commentRow') return { version: 1, kind: 'comment', sourceDocumentId: model.document.document.id, payload: serializeSignal(structuredClone(entry)) };
+    if (['clock', 'binary', 'bus', 'state'].includes(entry.type)) return { version: 1, kind: 'signal', sourceDocumentId: model.document.document.id, payload: serializeSignal(structuredClone(entry)) };
+    if (entry.type === 'spacer') return { version: 1, kind: 'spacer', sourceDocumentId: model.document.document.id, payload: { id: entry.id, height: Number(entry.height) } };
+    if (['range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight'].includes(entry.type)) return { version: 1, kind: 'annotation', sourceDocumentId: model.document.document.id, payload: serializeAnnotation(entry) };
+    if (selectionKind === 'transaction') {
+      const allowed = ['name', 'lane', 'start', 'end', 'source', 'destination', 'comment', 'linkedSignals', 'phases'];
+      return { version: 1, kind: 'transaction', sourceDocumentId: model.document.document.id, payload: Object.fromEntries(allowed.filter(key => Object.prototype.hasOwnProperty.call(entry, key)).map(key => [key, structuredClone(entry[key])])) };
+    }
+    return null;
+  };
+  controller.actions.getSelectionCommandState = () => {
+    const supported = supportedSelection();
+    const payload = model.clipboard;
+    const targetGroup = groupForRow(model.selection?.id) || model.document.signalGroups?.[0];
+    const paste = Boolean(payload && targetGroup && ['signal', 'comment', 'spacer', 'annotation', 'transaction'].includes(payload.kind));
+    const protectedReferenceClock = model.selection?.kind === 'signal' && model.selection.id === model.document.timeline.referenceClock;
+    return { copy: supported, cut: supported && !protectedReferenceClock, delete: supported && !protectedReferenceClock, duplicate: supported, paste };
+  };
+  controller.actions.copySelection = () => {
+    const payload = clipboardPayload(selectionEntry(), model.selection?.kind);
+    if (!payload) return false;
+    model.clipboard = structuredClone(payload);
+    controller.lastClipboard = model.clipboard;
+    controller.refreshCommandState?.();
+    return true;
+  };
+  const insertPastedSignal = payload => {
+    const source = structuredClone(payload);
+    const isComment = payload.type === 'commentRow';
+    const used = new Set(model.document.signals.map(signal => signal.id));
+    const id = uniqueId(source.id || (isComment ? 'comment' : 'signal'), used);
+    source.id = id;
+    if (isComment) { source.groupId = undefined; }
+    else ensureCanonicalSource(source);
+    const targetGroup = groupForRow(model.selection?.id) || model.document.signalGroups?.[0];
+    if (!targetGroup) return false;
+    const selectedIndex = targetGroup.rows.indexOf(model.selection?.id);
+    const insertAt = selectedIndex >= 0 ? selectedIndex + 1 : targetGroup.rows.length;
+    model.document.signals.push(source); targetGroup.rows.splice(insertAt, 0, id);
+    if (isComment) source.groupId = targetGroup.id;
+    model.selection = { kind: isComment ? 'comment' : 'signal', id };
+    return true;
+  };
+  controller.actions.pasteSelection = (targetContext = {}) => {
+    const payload = model.clipboard;
+    if (!payload || !['signal', 'comment', 'spacer', 'annotation', 'transaction'].includes(payload.kind)) return false;
+    return transactionRun('Paste selection', () => {
+      if (payload.kind === 'signal' || payload.kind === 'comment') return insertPastedSignal(payload.payload);
+      if (payload.kind === 'spacer') {
+        const group = model.document.signalGroups.find(item => item.id === targetContext.groupId) || groupForRow(model.selection?.id) || model.document.signalGroups?.[0];
+        if (!group) return false; group.spacers ??= []; const used = new Set(group.spacers.map(item => item.id)); const spacer = structuredClone(payload.payload); spacer.id = uniqueId(spacer.id || 'spacer', used); spacer.height = Math.max(1, Number(spacer.height) || 16); group.spacers.push(spacer); model.selection = { kind: 'spacer', id: spacer.id }; return true;
+      }
+      if (payload.kind === 'annotation') {
+        const annotation = structuredClone(payload.payload); const anchors = ['anchor', 'start', 'end', 'from', 'to'].map(key => annotation[key]).filter(Boolean);
+        if (anchors.some(anchor => !model.document.signals.some(signal => signal.id === anchor.signal))) return false;
+        annotation.id = uniqueId(annotation.id || 'annotation', new Set((model.document.annotations || []).map(item => item.id))); model.document.annotations.push(annotation); model.selection = { kind: 'annotation', id: annotation.id }; return true;
+      }
+      const transaction = structuredClone(payload.payload); const linked = (transaction.linkedSignals || []).filter(id => model.document.signals.some(signal => signal.id === id && signal.type !== 'commentRow')); if (linked.length !== (transaction.linkedSignals || []).length) return false; transaction.linkedSignals = linked; transaction.id = uniqueId(transaction.name || 'transaction', new Set((model.document.transactions || []).map(item => item.id))); model.document.transactions.push(transaction); model.selection = { kind: 'transaction', id: transaction.id }; model.crossHighlight = [...linked]; return true;
+    });
+  };
+  controller.actions.deleteSelection = () => {
+    const selection = model.selection || {}; const entry = selectionEntry(); if (!entry) return false;
+    if (selection.kind === 'signal' && entry.type !== 'commentRow') return transactionRun('Delete selection', () => { for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== entry.id); model.document.signals = model.document.signals.filter(signal => signal.id !== entry.id); model.document.transactions = (model.document.transactions || []).map(transaction => ({ ...transaction, linkedSignals: (transaction.linkedSignals || []).filter(id => id !== entry.id) })); model.document.annotations = (model.document.annotations || []).filter(annotation => !['anchor', 'start', 'end', 'from', 'to'].some(key => annotation[key]?.signal === entry.id)); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
+    if (selection.kind === 'comment') return controller.actions.deleteComment(entry.id);
+    if (selection.kind === 'annotation') return controller.actions.deleteAnnotation?.(entry.id) || false;
+    if (selection.kind === 'transaction') return controller.actions.deleteTransaction(entry.id);
+    if (selection.kind === 'spacer') return transactionRun('Delete selection', () => { const group = model.document.signalGroups.find(item => (item.spacers || []).some(spacer => spacer.id === entry.id)); if (!group) return false; group.spacers = group.spacers.filter(spacer => spacer.id !== entry.id); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
+    return false;
+  };
+  controller.actions.cutSelection = () => { if (!controller.actions.copySelection()) return false; return controller.actions.deleteSelection(); };
+  controller.actions.duplicateSelection = () => { if (!controller.actions.copySelection()) return false; return controller.actions.pasteSelection(); };
   const initialGroupsHost = document.querySelector('#groups'); if (initialGroupsHost && !initialGroupsHost.dataset.groupMarkup) initialGroupsHost.dataset.groupMarkup = initialGroupsHost.innerHTML;
   document.querySelectorAll('.seg').forEach(button => button.addEventListener('click', () => controller.actions.setViewMode(button.dataset.mode)));
   tabs().forEach(button => button.addEventListener('click', () => controller.actions.setBottomTab(button.dataset.tab)));

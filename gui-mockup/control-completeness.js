@@ -50,10 +50,19 @@
       ['全体表示', () => controller.actions.fitAll()],
       ['選択に合わせる', () => controller.actions.fitSelection()]
     ];
+    const editActions = new Map([
+      ['切取', ['cut', () => controller.actions.cutSelection()]],
+      ['コピー', ['copy', () => controller.actions.copySelection()]],
+      ['貼付', ['paste', () => controller.actions.pasteSelection()]],
+      ['削除', ['delete', () => controller.actions.deleteSelection()]],
+      ['複製', ['duplicate', () => controller.actions.duplicateSelection()]]
+    ]);
     document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
       const text = label(tool);
       const action = homeActions.find(([name]) => text.includes(name));
       if (action) { implement(tool, action[1]); return; }
+      const edit = [...editActions.entries()].find(([name]) => text === name || (name === '切取' && text.startsWith(name)) || (name === '貼付' && text.startsWith(name)));
+      if (edit) { tool.dataset.editCommand = edit[1][0]; implement(tool, edit[1][1]); return; }
       if (text === '上へ' || text === '下へ') {
         implement(tool, () => controller.actions.moveSignalBy(controller.model.selection?.id, text === '上へ' ? -1 : 1));
         return;
@@ -154,6 +163,17 @@
       record(tool, 'implemented', reason);
     });
   };
+  const refreshEditControls = () => {
+    const state = controller.actions.getSelectionCommandState?.() || {};
+    const reasons = { copy: 'コピー対象を選択してください', cut: '切取り可能な対象を選択してください', delete: '削除可能な対象を選択してください', duplicate: '複製可能な対象を選択してください', paste: '貼付可能なアプリ内Clipboardがありません' };
+    document.querySelectorAll('#ribbonHome .tool[data-edit-command]').forEach(tool => {
+      const command = tool.dataset.editCommand; const enabled = Boolean(state[command]);
+      tool.disabled = !enabled; tool.dataset.controlStatus = 'implemented';
+      if (enabled) tool.removeAttribute('title'); else tool.title = reasons[command] || '現在の選択では使用できません';
+      record(tool, 'implemented', enabled ? '' : tool.title);
+    });
+  };
+  controller.refreshCommandState = refreshEditControls;
   const run = () => {
     inventory.metrics.controlAuditRuns++;
     applyRibbon();
@@ -173,9 +193,11 @@
   inventory.registerSubtree = registerSubtree;
   inventory.run = run;
   controller.registerRenderHook?.('control-completeness-reorder', refreshReorderControls);
+  controller.registerRenderHook?.('control-completeness-edit', refreshEditControls);
   document.addEventListener('click', event => {
     if (event.target.closest?.('#groups .row')) requestAnimationFrame(refreshReorderControls);
   }, true);
   run();
   refreshReorderControls();
+  refreshEditControls();
 })();
