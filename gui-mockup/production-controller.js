@@ -446,6 +446,20 @@
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
   controller.actions.setProblemFilter = (severity = 'all', signalId = 'all') => { if (!['all', 'err', 'warn', 'info'].includes(severity)) return false; model.view.problemSeverityFilter = severity; model.view.problemSignalFilter = signalId || 'all'; render(); return true; };
   controller.actions.refreshProblems = () => { model.problemRefreshRevision = (model.problemRefreshRevision || 0) + 1; controller.clearValidationCache(); model.validation = controller.getProblems(model.document, { force: true }); render(); return true; };
+  const PROBLEM_CATEGORIES = {
+    schema: ['format-version', 'missing-document', 'missing-timeline', 'missing-signalGroups', 'missing-signals', 'missing-annotations', 'missing-legend', 'missing-layout', 'missing-transactions', 'missing-constraints'],
+    signal: ['invalid-start-order', 'duplicate-signal-id', 'invalid-signal-source', 'invalid-display-name', 'transient-or-unsupported-field', 'non-finite-number', 'invalid-signal-spacing'],
+    bus: ['invalid-bus-range', 'invalid-bus-literal', 'bus-width-overflow'],
+    timeline: ['duplicate-label-anchor-id', 'invalid-label-anchor', 'label-anchor-outside-timeline', 'invalid-resume-label-anchor', 'invalid-label-anchor-owner', 'duplicate-bookmark-id', 'invalid-bookmark', 'duplicate-time-group-id', 'invalid-time-group', 'invalid-time-group-fold-style'],
+    clock: ['invalid-reference-clock', 'invalid-timeline-edge', 'invalid-clock-generator'],
+    annotation: ['invalid-annotation-anchor', 'duplicate-annotation-id', 'invalid-annotation-type', 'invalid-dependency-style', 'invalid-label-offset', 'invalid-label-style'],
+    transaction: ['duplicate-transaction-id', 'invalid-transaction-bounds', 'invalid-transaction-links', 'invalid-transaction-link', 'invalid-transaction-phases', 'invalid-transaction-phase-bounds']
+  };
+  const problemCategoryOf = code => Object.keys(PROBLEM_CATEGORIES).find(category => PROBLEM_CATEGORIES[category].includes(code)) || 'schema';
+  controller.problemCategories = PROBLEM_CATEGORIES;
+  controller.problemCategoryOf = problemCategoryOf;
+  controller.actions.setProblemObjectFilter = (ids = null) => { model.view.problemObjectFilter = Array.isArray(ids) && ids.length ? [...ids] : null; render(); return true; };
+  controller.actions.setProblemCategoryFilter = (categories = null) => { const valid = Array.isArray(categories) ? categories.filter(category => Object.prototype.hasOwnProperty.call(PROBLEM_CATEGORIES, category)) : null; model.view.problemCategoryFilter = valid && valid.length ? valid : null; render(); return true; };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
   controller.actions.setSignalVisibility = (signalId, visible) => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; return incrementalRun('Change signal visibility', () => { signal.display ||= { name: signal.name }; if (visible) delete signal.display.visible; else signal.display.visible = false; model.view.hiddenSignals = model.document.signals.filter(item => item.display?.visible === false).map(item => item.id); }, () => reconcileSignalVisibility(signalId)); };

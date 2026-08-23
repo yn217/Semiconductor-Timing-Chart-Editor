@@ -328,7 +328,7 @@
       ribbon.hidden = false; ribbon.style.display = 'flex';
     } else {
       ribbon.hidden = true; ribbon.style.display = 'none';
-      if (home && normalize(active?.textContent) !== '挿入' && normalize(active?.textContent) !== '注釈') { home.hidden = false; home.style.display = 'flex'; }
+      if (home && !['挿入', '注釈', 'チェック'].includes(normalize(active?.textContent))) { home.hidden = false; home.style.display = 'flex'; }
     }
     viewTab?.classList.toggle('active', showing);
     if (showing) { refresh(); apply(); }

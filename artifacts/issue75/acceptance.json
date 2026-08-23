@@ -1,0 +1,89 @@
+{
+  "issue": 75,
+  "setup": true,
+  "activation": {
+    "visible": true,
+    "homeHidden": true,
+    "commandCount": 16,
+    "allHaveMetadata": true
+  },
+  "fixtureLoaded": {
+    "problemCount": 2
+  },
+  "runAllFlow": {
+    "tab": "problems",
+    "severity": "all",
+    "signalFilter": "all",
+    "objectFilter": null,
+    "rows": 2,
+    "totalProblems": 2
+  },
+  "categoryFlow": {
+    "before": 2,
+    "afterCount": 1,
+    "allTransactionCategory": true,
+    "rowsRestored": 2
+  },
+  "selectionFlow": {
+    "tab": "problems",
+    "rowCount": 1,
+    "allMatchSelection": true,
+    "unchanged": true
+  },
+  "groupFlow": {
+    "disabledBeforeContext": true,
+    "enabledAfterContext": true,
+    "rowCount": 1,
+    "allInGroup": true
+  },
+  "openOnlyFlow": {
+    "tab": "problems",
+    "revisionDelta": 0
+  },
+  "refreshFlow": {
+    "revisionDelta": 1
+  },
+  "ribbonSwitching": [
+    {
+      "label": "チェック",
+      "visible": [
+        "ribbonCheck"
+      ]
+    },
+    {
+      "label": "表示",
+      "visible": [
+        "ribbonView"
+      ]
+    },
+    {
+      "label": "注釈",
+      "visible": [
+        "ribbonAnnotation"
+      ]
+    },
+    {
+      "label": "チェック",
+      "visible": [
+        "ribbonCheck"
+      ]
+    },
+    {
+      "label": "ホーム",
+      "visible": [
+        "ribbonHome"
+      ]
+    },
+    {
+      "label": "チェック",
+      "visible": [
+        "ribbonCheck"
+      ]
+    }
+  ],
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue75-1672x941.png"
+  ]
+}
