@@ -1,0 +1,11 @@
+{
+  "issue": 91,
+  "sampleBrowser": true,
+  "extensionPolicy": true,
+  "replaceLifecycle": true,
+  "dirtyCancel": true,
+  "sampleSaveAsBoundary": true,
+  "saveAsCancelPreservesSampleState": true,
+  "errors": [],
+  "pass": true
+}

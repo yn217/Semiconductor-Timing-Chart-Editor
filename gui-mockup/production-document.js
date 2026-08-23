@@ -6,7 +6,7 @@
   const clone = value => structuredClone(value);
   const stable = value => JSON.stringify(value);
   const hash = value => stable(value);
-  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null, operation: { type: 'document', result: 'ready', message: 'Ready', detail: '', action: '' } };
+  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null, source: { kind: 'user', sample: false }, operation: { type: 'document', result: 'ready', message: 'Ready', detail: '', action: '' } };
   model.history = { undo: [], redo: [] };
   let unloadGuardActive = false;
   const beforeUnload = event => { if (!model.persistence.dirty) return; event.preventDefault(); event.returnValue = ''; };
@@ -73,7 +73,7 @@
     const title = document.querySelector('.titlebar strong');
     const saved = document.querySelector('.titlebar .saved');
     if (title) title.textContent = `タイミングチャートエディタ - ${model.persistence.fileName}`;
-    if (saved) saved.textContent = model.persistence.dirty ? 'Modified' : 'Saved';
+    if (saved) saved.textContent = model.persistence.dirty ? 'Modified' : model.persistence.source?.kind === 'sample' ? 'Sample source — Save As required' : 'Saved';
     document.querySelectorAll('.tool').forEach(button => {
       const label = button.querySelector('.tool-label')?.textContent?.trim();
       if (label === 'Undo') button.disabled = model.history.undo.length === 0;
@@ -204,6 +204,7 @@
   const commitSaveSuccess = ({ fileHandle = model.persistence.fileHandle, fileName = model.persistence.fileName, documentHash }) => {
     model.persistence.fileHandle = fileHandle;
     model.persistence.fileName = fileName;
+    model.persistence.source = { kind: 'user', sample: false };
     model.compatibility = null;
     removeCompatibilityPreview();
     model.persistence.savedRevisionHash = documentHash;
@@ -240,17 +241,52 @@
   };
   controller.actions.requestNew = async ({ unsavedDecision = 'cancel' } = {}) => {
     if (!await protect(unsavedDecision)) { publishOperation({ type: 'new', result: 'neutral', message: 'New canceled', detail: 'Unsaved changes were kept.' }); return false; }
-    replaceDocument(newDocument()); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'new', result: 'success', message: '✓ New document created' }); updateDirty(); return true;
+    replaceDocument(newDocument()); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.source = { kind: 'user', sample: false }; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'new', result: 'success', message: '✓ New document created' }); updateDirty(); return true;
   };
-  const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
+  const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel', source = { kind: 'user', sample: false }) => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
     try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; const preview = controller.analyzeCompatibility?.(text); if (future || preview?.diagnostics?.length) { const fallback = preview || { sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'OPEN_FORMAT_VERSION', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), message: error.message, reason: 'The source is newer than the supported format.', recommendation: 'Open in Compatibility Mode or cancel.' }], canOpen: false, rawText: text }; model.compatibility = { mode: 'preview', ...fallback, fileName }; controller.renderCompatibilityPreview?.(); publishOperation({ type: 'open', result: 'error', message: future ? '✕ Compatibility Preview' : '✕ Open diagnostics', detail: `${fallback.diagnostics?.length || 1} diagnostics available.` }); return false; } publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
     const issues = controller.validateDocument(parsed);
     if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
-    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
+    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.source = { kind: source.kind || 'user', sample: Boolean(source.sample), sampleId: source.sampleId || null, sampleTitle: source.sampleTitle || null }; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: source.sample ? 'Bundled sample loaded. Save As is required before saving.' : importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
   };
-  controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
+  controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel', options.source || { kind: 'user', sample: false });
+  const sampleCatalog = [
+    ['protocol','01_apb_register_access.tcd.json','APB register write/read with wait state'],
+    ['protocol','02_ahb_lite_pipelined_transfer.tcd.json','AHB-Lite pipelined transfers with stall'],
+    ['protocol','03_axi4_full_write_burst.tcd.json','AXI4 Full write burst with backpressure'],
+    ['protocol','04_axi4_full_read_outstanding.tcd.json','AXI4 Full read: multiple outstanding IDs'],
+    ['protocol','05_sram_1p_sync_read_write.tcd.json','Single-port SRAM synchronous read/write'],
+    ['protocol','06_sram_2p_parallel_and_conflict.tcd.json','Dual-port SRAM parallel access and conflict'],
+    ['protocol','07_axi_to_dram_read_path.tcd.json','AXI-to-DRAM read path'],
+    ['protocol','08_async_fifo_cdc.tcd.json','Asynchronous FIFO CDC'],
+    ['protocol','09_accelerator_request_response.tcd.json','Accelerator request/response'],
+    ['protocol','10_axi4_stream_packet_backpressure.tcd.json','AXI4-Stream packet backpressure'],
+    ['feature','11_signal_types_roles_legend.tcd.json','Feature 11 - Signal types, roles and legend'],
+    ['feature','12_group_bands_and_spacing.tcd.json','Feature 12 - Group bands and vertical spacing'],
+    ['feature','13_signal_name_layout.tcd.json','Feature 13 - Signal label layout'],
+    ['feature','14_annotation_overlay_all_types.tcd.json','Feature 14 - Annotation overlay'],
+    ['feature','15_transition_arrows_anchor_styles.tcd.json','Feature 15 - Transition arrows and exact anchors'],
+    ['feature','16_clock_phase_gating_gap.tcd.json','Feature 16 - Clock phase, gating and gap'],
+    ['feature','17_cycle_insert_delete_ripple.tcd.json','Feature 17 - Cycle insert/delete ripple'],
+    ['feature','18_legend_and_group_reorder.tcd.json','Feature 18 - Legend and group reorder'],
+    ['feature','19_header_footer_export.tcd.json','Feature 19 - Header/footer and export'],
+    ['feature','20_transaction_cycle_linked_views.tcd.json','Feature 20 - Transaction/cycle linked views']
+  ].map(([category,file,title]) => ({ category, file, title, path: category === 'protocol' ? `../samples/golden-protocol/timing_chart_sample_pack/samples/${file}` : `../samples/golden-feature-coverage/timing_chart_feature_coverage_pack/samples/${file}` }));
+  controller.sampleCatalog = sampleCatalog;
+  controller.actions.openSample = async (sample, options = {}) => {
+    const entry = typeof sample === 'string' ? sampleCatalog.find(item => item.file === sample) : sample;
+    if (!entry) return false;
+    try {
+      let text = window.TimingChartSampleSources?.[entry.file];
+      if (text === undefined) { const response = await fetch(entry.path, { cache: 'no-store' }); if (!response.ok) throw new Error(`HTTP ${response.status}`); text = await response.text(); }
+      return loadText(text, entry.file, options.unsavedDecision || 'cancel', { kind: 'sample', sample: true, sampleId: entry.file, sampleTitle: entry.title });
+    } catch (error) {
+      publishOperation({ type: 'open', result: 'error', message: '✕ Could not open sample', detail: `${entry.file}: ${error.message}` });
+      return false;
+    }
+  };
   controller.actions.openCompatibilityText = async (text, options = {}) => {
     try {
       const analysis = controller.analyzeCompatibility?.(text);
@@ -290,7 +326,7 @@
   };
   controller.actions.requestOpen = async ({ text, fileName, unsavedDecision = 'cancel' } = {}) => {
     if (text !== undefined) return loadText(text, fileName || 'example.tcd', unsavedDecision);
-    if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); else publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); return false; } }
+    if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart JSON', accept: { 'application/json': ['.tcd', '.tcd.json', '.json'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); else publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); return false; } }
     return requestFallbackFile({ unsavedDecision });
   };
   controller.actions.saveAs = async ({ fileName = 'Untitled.tcd', allowCompatibility = false } = {}) => {
@@ -324,5 +360,37 @@
   shortcuts?.register({ id: 'document.save-as', owner: 'production-document', shortcut: 'Ctrl+Shift+S', scope: 'application', execute: () => controller.actions.saveAs() });
   shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: () => controller.actions.requestOpen({ unsavedDecision: uiDecision() }) });
   shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: () => controller.actions.requestNew({ unsavedDecision: uiDecision() }) });
+  const installSampleBrowser = () => {
+    const menu = document.querySelector('#issue26FileMenu');
+    if (!menu || menu.querySelector('[data-sample-browser]')) return Boolean(menu);
+    const button = document.createElement('button');
+    button.type = 'button'; button.dataset.sampleBrowser = 'true'; button.textContent = 'サンプルを開く…';
+    button.style.cssText = 'text-align:left;border:0;background:#fff;padding:6px 10px;';
+    button.addEventListener('click', event => { event.stopPropagation(); controller.sampleBrowser?.open(); });
+    menu.appendChild(button);
+    const dialog = document.createElement('section');
+    dialog.id = 'sampleBrowser'; dialog.hidden = true; dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-labelledby', 'sampleBrowserTitle');
+    dialog.style.cssText = 'position:fixed;z-index:3000;inset:10% 18%;background:#fff;border:1px solid #9aaabd;border-radius:6px;box-shadow:0 16px 48px #10243b55;padding:16px;overflow:auto;font:13px sans-serif;color:#243047;';
+    const heading = document.createElement('div'); heading.style.cssText = 'display:flex;align-items:center;gap:8px;border-bottom:1px solid #d7e0ea;padding-bottom:8px;margin-bottom:10px;';
+    const title = document.createElement('h2'); title.id = 'sampleBrowserTitle'; title.textContent = 'サンプルを開く'; title.style.margin = '0';
+    const close = document.createElement('button'); close.type = 'button'; close.textContent = '閉じる'; close.style.marginLeft = 'auto'; close.addEventListener('click', () => { dialog.hidden = true; });
+    heading.append(title, close); dialog.appendChild(heading);
+    const intro = document.createElement('p'); intro.textContent = 'サンプルは読み取り専用の参照元です。編集後の保存には Save As が必要です。'; dialog.appendChild(intro);
+    const list = document.createElement('div'); list.dataset.sampleList = 'true'; list.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:8px;';
+    for (const category of ['protocol', 'feature']) {
+      const section = document.createElement('div'); section.dataset.sampleCategory = category; section.style.cssText = 'border:1px solid #d7e0ea;border-radius:4px;padding:8px;';
+      const label = document.createElement('h3'); label.textContent = category === 'protocol' ? 'Protocol' : 'Feature coverage'; label.style.margin = '0 0 6px'; section.appendChild(label);
+      for (const sample of sampleCatalog.filter(item => item.category === category)) {
+        const item = document.createElement('button'); item.type = 'button'; item.dataset.sampleFile = sample.file; item.textContent = sample.title; item.title = sample.file; item.style.cssText = 'display:block;width:100%;text-align:left;border:0;background:#fff;padding:6px;border-radius:3px;';
+        item.addEventListener('mouseenter', () => { item.style.background = '#eef5ff'; }); item.addEventListener('mouseleave', () => { item.style.background = '#fff'; });
+        item.addEventListener('click', async () => { const ok = await controller.actions.openSample(sample, { unsavedDecision: uiDecision() }); if (ok) dialog.hidden = true; }); section.appendChild(item);
+      }
+      list.appendChild(section);
+    }
+    dialog.appendChild(list); document.body.appendChild(dialog);
+    controller.sampleBrowser = { open: () => { dialog.hidden = false; }, close: () => { dialog.hidden = true; }, dialog, list };
+    return true;
+  };
+  if (!installSampleBrowser()) setTimeout(installSampleBrowser, 0);
   updateDirty();
 })();
