@@ -323,6 +323,7 @@
   if (canvas && window.MutationObserver) {
     new MutationObserver(mutations => {
       const traceChanged = mutations.some(mutation => mutation.type === 'childList' && mutation.target?.closest?.('.trace'));
+      if (traceChanged && controller.timelineRenderActive) return;
       if (traceChanged && controller.skipTimingZoomUntil && performance.now() < controller.skipTimingZoomUntil) { controller.skipTimingZoomUntil = 0; return; }
       if (traceChanged) scheduleZoom();
     }).observe(canvas, { subtree: true, childList: true });

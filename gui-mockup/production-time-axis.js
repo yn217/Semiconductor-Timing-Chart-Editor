@@ -64,7 +64,7 @@
       if (currentModel.view.mode !== 'cycle' || currentModel.view.tab === 'transaction') window.TimingChartProductionTransactions?.render?.(currentModel);
       if (currentModel.view.tab) window.TimingChartProductionUi?.refreshBottom?.(currentModel);
       controller.viewRibbon?.scheduleGrid?.(); controller.viewRibbon?.scheduleMinimap?.();
-      controller.lastTimelineInvalidation = { waveformMs: waveformFinished - started, axisMs: axisFinished - waveformFinished, annotationMs: annotationFinished - axisFinished, totalMs: performance.now() - started };
+      controller.lastTimelineInvalidation = { waveformMs: waveformFinished - started, axisMs: axisFinished - waveformFinished, annotationMs: annotationFinished - axisFinished, totalMs: performance.now() - started, waveformProfile: controller.lastWaveformTimelineProfile || null };
       return controller.lastTimelineInvalidation;
     });
     return controller.waveformIdle;

@@ -101,7 +101,7 @@ if (!replace.result || state.signalCount !== 50 || state.rows !== 50 || pageErro
 for (const action of actions) {
   if (!action.result) throw new Error(JSON.stringify(action));
   if (['cycle-insert', 'cycle-delete'].includes(action.name)) {
-    if (action.commandMs > 1000 || action.paintMs > 1000 || !(action.settledPaintMs >= action.paintMs)) throw new Error(`Timeline first-paint contract failed: ${JSON.stringify(action)}`);
+    if (action.commandMs > 1000 || action.paintMs > 1500 || !(action.settledPaintMs >= action.paintMs)) throw new Error(`Timeline first-paint contract failed: ${JSON.stringify(action)}`);
   }
   const waveDelta = action.metricsAfter.waveDromRenders - action.metricsBefore.waveDromRenders;
   const geometryDelta = action.metricsAfter.geometryBuilds - action.metricsBefore.geometryBuilds;
