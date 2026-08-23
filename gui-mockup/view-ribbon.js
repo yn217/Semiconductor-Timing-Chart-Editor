@@ -165,6 +165,22 @@
     const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
     windowNode.dataset.viewport = 'true'; windowNode.style.left = `${Math.max(0, host.scrollLeft / contentWidth * 100)}%`; windowNode.style.top = `${Math.max(0, host.scrollTop / contentHeight * 100)}%`; windowNode.style.width = `${Math.min(100, host.clientWidth / contentWidth * 100)}%`; windowNode.style.height = `${Math.min(100, host.clientHeight / contentHeight * 100)}%`; windowNode.title = `Viewport ${Math.round(host.scrollLeft)},${Math.round(host.scrollTop)}`;
   };
+  const reconcileMinimapRows = signalIds => {
+    const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
+    const svg = mini?.querySelector('[data-live-minimap]');
+    if (!host || !mini || !svg || !view.guides.minimap) return false;
+    const ids = (signalIds || []).filter(Boolean).map(String);
+    if (ids.length < 2) return false;
+    const first = svg.querySelector(`[data-minimap-row="${CSS.escape(ids[0])}"]`);
+    const second = svg.querySelector(`[data-minimap-row="${CSS.escape(ids[1])}"]`);
+    if (!first || !second) return false;
+    const firstY = first.getAttribute('y');
+    const secondY = second.getAttribute('y');
+    first.setAttribute('y', secondY);
+    second.setAttribute('y', firstY);
+    viewMetrics.minimapLocalizedUpdates = (viewMetrics.minimapLocalizedUpdates || 0) + 1;
+    return true;
+  };
   const renderMinimap = () => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
     if (!host || !mini) return;
@@ -338,7 +354,7 @@
 
   controller.registerRenderHook?.('view-ribbon', () => { apply(); refresh(); });
   document.querySelectorAll('#ribbonHome .toggles label input').forEach(input => { if (input.dataset.viewGuideBound) return; input.dataset.viewGuideBound = 'true'; input.addEventListener('change', () => controller.actions.setGuide(input.dataset.viewGuide, input.checked)); });
-  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu, scheduleGrid, scheduleMinimap, scheduleMinimapViewport };
+  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu, scheduleGrid, scheduleMinimap, scheduleMinimapViewport, reconcileMinimapRows };
   setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
   apply(); refresh();
 })();

@@ -5,7 +5,7 @@
   },
   "replace": {
     "result": true,
-    "elapsedMs": 6689.800000071526
+    "elapsedMs": 7025
   },
   "state": {
     "signalCount": 50,
@@ -15,28 +15,49 @@
     {
       "name": "signal-up",
       "result": true,
-      "commandMs": 1528.2999999523163,
-      "paintMs": 2087.5999999046326,
-      "settledPaintMs": 2087.5999999046326,
+      "commandMs": 74.80000007152557,
+      "clickDispatchMs": 74.70000004768372,
+      "paintMs": 1687.5,
+      "settledPaintMs": 1687.5,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 0,
       "revisionAfter": 1,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 8.400000095367432,
-        "reconcileMs": 56.699999928474426,
-        "totalMs": 65.10000002384186,
+        "historyMs": 9.5,
+        "reconcileMs": 63.300000071525574,
+        "totalMs": 72.80000007152557,
         "parts": {
-          "shiftMs": 0.10000002384185791,
+          "shiftMs": 0.20000004768371582,
           "timeAxisMs": 0,
-          "annotationsMs": 0
+          "annotationsMs": 0,
+          "reorderTimings": [
+            {
+              "host": "wave",
+              "ms": 60.700000047683716
+            },
+            {
+              "host": "frozen-label-wave",
+              "ms": 0.09999990463256836
+            }
+          ]
         }
       },
       "traceParts": {
-        "shiftMs": 0.10000002384185791,
+        "shiftMs": 0.20000004768371582,
         "timeAxisMs": 0,
-        "annotationsMs": 0
+        "annotationsMs": 0,
+        "reorderTimings": [
+          {
+            "host": "wave",
+            "ms": 60.700000047683716
+          },
+          {
+            "host": "frozen-label-wave",
+            "ms": 0.09999990463256836
+          }
+        ]
       },
       "timelineTrace": null,
       "metricsBefore": {
@@ -94,12 +115,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 50,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 1,
-        "minimapViewportUpdates": 1,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       }
@@ -107,28 +128,49 @@
     {
       "name": "signal-down",
       "result": true,
-      "commandMs": 1314.1000000238419,
-      "paintMs": 1741.5,
-      "settledPaintMs": 1741.5,
+      "commandMs": 55.89999997615814,
+      "clickDispatchMs": 55.799999952316284,
+      "paintMs": 1636.3999999761581,
+      "settledPaintMs": 1636.3999999761581,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 1,
       "revisionAfter": 2,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 7.399999976158142,
-        "reconcileMs": 55,
-        "totalMs": 62.39999997615814,
+        "historyMs": 5.599999904632568,
+        "reconcileMs": 49.10000002384186,
+        "totalMs": 54.799999952316284,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0
+          "annotationsMs": 0.10000002384185791,
+          "reorderTimings": [
+            {
+              "host": "wave",
+              "ms": 47.90000009536743
+            },
+            {
+              "host": "frozen-label-wave",
+              "ms": 0.09999990463256836
+            }
+          ]
         }
       },
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0
+        "annotationsMs": 0.10000002384185791,
+        "reorderTimings": [
+          {
+            "host": "wave",
+            "ms": 47.90000009536743
+          },
+          {
+            "host": "frozen-label-wave",
+            "ms": 0.09999990463256836
+          }
+        ]
       },
       "timelineTrace": null,
       "metricsBefore": {
@@ -154,12 +196,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 50,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 1,
-        "minimapViewportUpdates": 1,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       },
@@ -186,12 +228,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       }
@@ -199,28 +241,49 @@
     {
       "name": "eye-off",
       "result": true,
-      "commandMs": 6.899999976158142,
-      "paintMs": 162.79999995231628,
-      "settledPaintMs": 162.79999995231628,
+      "commandMs": 7.399999976158142,
+      "clickDispatchMs": null,
+      "paintMs": 186,
+      "settledPaintMs": 186,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 2,
       "revisionAfter": 3,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.399999976158142,
+        "historyMs": 4.899999976158142,
         "reconcileMs": 1.600000023841858,
-        "totalMs": 6,
+        "totalMs": 6.5,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0
+          "annotationsMs": 0.10000002384185791,
+          "reorderTimings": [
+            {
+              "host": "wave",
+              "ms": 47.90000009536743
+            },
+            {
+              "host": "frozen-label-wave",
+              "ms": 0.09999990463256836
+            }
+          ]
         }
       },
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0
+        "annotationsMs": 0.10000002384185791,
+        "reorderTimings": [
+          {
+            "host": "wave",
+            "ms": 47.90000009536743
+          },
+          {
+            "host": "frozen-label-wave",
+            "ms": 0.09999990463256836
+          }
+        ]
       },
       "timelineTrace": null,
       "metricsBefore": {
@@ -246,12 +309,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       },
@@ -278,12 +341,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       }
@@ -291,28 +354,49 @@
     {
       "name": "eye-on",
       "result": true,
-      "commandMs": 5.700000047683716,
-      "paintMs": 196.70000004768372,
-      "settledPaintMs": 196.70000004768372,
+      "commandMs": 5.900000095367432,
+      "clickDispatchMs": null,
+      "paintMs": 215.70000004768372,
+      "settledPaintMs": 215.70000004768372,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 3,
       "revisionAfter": 4,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.299999952316284,
+        "historyMs": 4.700000047683716,
         "reconcileMs": 0.7000000476837158,
-        "totalMs": 5,
+        "totalMs": 5.400000095367432,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0
+          "annotationsMs": 0.10000002384185791,
+          "reorderTimings": [
+            {
+              "host": "wave",
+              "ms": 47.90000009536743
+            },
+            {
+              "host": "frozen-label-wave",
+              "ms": 0.09999990463256836
+            }
+          ]
         }
       },
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0
+        "annotationsMs": 0.10000002384185791,
+        "reorderTimings": [
+          {
+            "host": "wave",
+            "ms": 47.90000009536743
+          },
+          {
+            "host": "frozen-label-wave",
+            "ms": 0.09999990463256836
+          }
+        ]
       },
       "timelineTrace": null,
       "metricsBefore": {
@@ -338,12 +422,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       },
@@ -370,12 +454,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       }
@@ -383,44 +467,65 @@
     {
       "name": "cycle-insert",
       "result": true,
-      "commandMs": 29.5,
-      "paintMs": 111.70000004768372,
-      "settledPaintMs": 11741.300000071526,
+      "commandMs": 22.299999952316284,
+      "clickDispatchMs": null,
+      "paintMs": 81.89999997615814,
+      "settledPaintMs": 12248.100000023842,
       "cycleBefore": 100,
       "cycleAfter": 101,
       "revisionBefore": 4,
       "revisionAfter": 5,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.299999952316284,
+        "historyMs": 4.700000047683716,
         "reconcileMs": 0.7000000476837158,
-        "totalMs": 5,
+        "totalMs": 5.400000095367432,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0
+          "annotationsMs": 0.10000002384185791,
+          "reorderTimings": [
+            {
+              "host": "wave",
+              "ms": 47.90000009536743
+            },
+            {
+              "host": "frozen-label-wave",
+              "ms": 0.09999990463256836
+            }
+          ]
         }
       },
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0
+        "annotationsMs": 0.10000002384185791,
+        "reorderTimings": [
+          {
+            "host": "wave",
+            "ms": 47.90000009536743
+          },
+          {
+            "host": "frozen-label-wave",
+            "ms": 0.09999990463256836
+          }
+        ]
       },
       "timelineTrace": {
-        "waveformMs": 11693,
-        "axisMs": 17.799999952316284,
+        "waveformMs": 12207,
+        "axisMs": 18,
         "annotationMs": 0.5,
-        "totalMs": 11713.299999952316,
+        "totalMs": 12227.399999976158,
         "waveformProfile": {
-          "mountMs": 2948.2999999523163,
-          "geometryMs": 3851.100000023842,
-          "totalMs": 11691.600000023842,
+          "mountMs": 3008.2000000476837,
+          "geometryMs": 4175.200000047684,
+          "totalMs": 12205.600000023842,
           "rows": 50,
           "geometry": {
-            "boundaryMs": 90.40000009536743,
-            "symbolMs": 2665.0000002384186,
+            "boundaryMs": 89.8999993801117,
+            "symbolMs": 2964.600000500679,
             "rowRectMs": 0,
-            "signalMs": 3850.8000000715256
+            "signalMs": 4174.800000071526
           }
         }
       },
@@ -447,12 +552,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 0,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       },
@@ -479,12 +584,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 1,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       }
@@ -492,44 +597,65 @@
     {
       "name": "cycle-delete",
       "result": true,
-      "commandMs": 162.69999992847443,
-      "paintMs": 1038.6000000238419,
-      "settledPaintMs": 12891.5,
+      "commandMs": 178.89999997615814,
+      "clickDispatchMs": null,
+      "paintMs": 969.5,
+      "settledPaintMs": 13617.899999976158,
       "cycleBefore": 101,
       "cycleAfter": 100,
       "revisionBefore": 5,
       "revisionAfter": 6,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.299999952316284,
+        "historyMs": 4.700000047683716,
         "reconcileMs": 0.7000000476837158,
-        "totalMs": 5,
+        "totalMs": 5.400000095367432,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
-          "annotationsMs": 0
+          "annotationsMs": 0.10000002384185791,
+          "reorderTimings": [
+            {
+              "host": "wave",
+              "ms": 47.90000009536743
+            },
+            {
+              "host": "frozen-label-wave",
+              "ms": 0.09999990463256836
+            }
+          ]
         }
       },
       "traceParts": {
         "shiftMs": 0,
         "timeAxisMs": 0,
-        "annotationsMs": 0
+        "annotationsMs": 0.10000002384185791,
+        "reorderTimings": [
+          {
+            "host": "wave",
+            "ms": 47.90000009536743
+          },
+          {
+            "host": "frozen-label-wave",
+            "ms": 0.09999990463256836
+          }
+        ]
       },
       "timelineTrace": {
-        "waveformMs": 12726,
-        "axisMs": 18.200000047683716,
+        "waveformMs": 13438.600000023842,
+        "axisMs": 17.700000047683716,
         "annotationMs": 0.5,
-        "totalMs": 12746.600000023842,
+        "totalMs": 13458.600000023842,
         "waveformProfile": {
-          "mountMs": 2938.600000143051,
-          "geometryMs": 4468.899999976158,
-          "totalMs": 12725,
+          "mountMs": 2948.100000023842,
+          "geometryMs": 4877.700000047684,
+          "totalMs": 13438.099999904633,
           "rows": 50,
           "geometry": {
-            "boundaryMs": 96.1000007390976,
-            "symbolMs": 3082.2999997138977,
+            "boundaryMs": 126.30000019073486,
+            "symbolMs": 3392.800000190735,
             "rowRectMs": 0,
-            "signalMs": 4468.599999904633
+            "signalMs": 4877.200000047684
           }
         }
       },
@@ -556,12 +682,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 100,
+        "minimapRowRectReads": 0,
         "transactionRenders": 0,
         "bottomRenders": 1,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 2,
-        "minimapViewportUpdates": 2,
+        "minimapOverviewRebuilds": 0,
+        "minimapViewportUpdates": 0,
         "rowCreates": 0,
         "rowRemoves": 0
       },
@@ -588,12 +714,12 @@
         "inspectorInnerHtmlRebuilds": 0,
         "signalStyleFullScans": 0,
         "layoutRowLookups": 0,
-        "minimapRowRectReads": 150,
+        "minimapRowRectReads": 50,
         "transactionRenders": 0,
         "bottomRenders": 2,
         "inspectorRenders": 0,
-        "minimapOverviewRebuilds": 3,
-        "minimapViewportUpdates": 3,
+        "minimapOverviewRebuilds": 1,
+        "minimapViewportUpdates": 1,
         "rowCreates": 0,
         "rowRemoves": 0
       }
