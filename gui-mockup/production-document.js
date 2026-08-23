@@ -189,10 +189,14 @@
     let result = true;
     try { result = mutation() !== false; } catch (error) { model.persistence.lastError = error.message; result = false; }
     metrics.validations += 1;
+    model.validationReadContext = false;
+    model.validationMetrics.validationRuns += 1;
     const issues = controller.validateDocument(model.document);
+    model.validationReadContext = true;
     if (!result || issues.length) { restore(before, { validation: issues, render: options.render !== false }); return false; }
     const after = canonicalSnapshot();
     record(label, before, after);
+    controller.cacheValidationResult?.(model.document, issues, model.documentRevision);
     if (options.render !== false) controller.render();
     return true;
   } };
@@ -236,7 +240,10 @@
     let serializable;
     try { serializable = controller.getSerializableDocument(); } catch (error) { return { error: `Cannot save invalid document: ${error.message}` }; }
     metrics.validations += 1;
+    model.validationReadContext = false;
+    model.validationMetrics.validationRuns += 1;
     const issues = controller.validateDocument(serializable);
+    model.validationReadContext = true;
     if (issues.length) return { error: `Cannot save invalid document: ${issues.map(issue => issue.code).join(', ')}` };
     return { text: `${JSON.stringify(serializable, null, 2)}\n`, documentHash: hash(serializable) };
   };

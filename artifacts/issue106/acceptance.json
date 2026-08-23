@@ -1,0 +1,39 @@
+{
+  "issue": 106,
+  "fixture": {
+    "signals": 100,
+    "cycles": 200,
+    "annotations": 1,
+    "transactions": 1
+  },
+  "viewOnly": {
+    "validationRuns": 0,
+    "validationCacheHits": 324,
+    "validationCacheMisses": 0
+  },
+  "largeFixtureViewOnly": {
+    "validationRuns": 0,
+    "validationCacheHits": 20,
+    "validationCacheMisses": 0
+  },
+  "settingsInvalidation": {
+    "afterChange": {
+      "validationRuns": 1,
+      "validationCacheHits": 0,
+      "validationCacheMisses": 1
+    },
+    "afterReuse": {
+      "validationRuns": 1,
+      "validationCacheHits": 1,
+      "validationCacheMisses": 1
+    }
+  },
+  "semanticEdit": {
+    "validationRuns": 1,
+    "validationCacheHits": 2,
+    "validationCacheMisses": 0
+  },
+  "jsonProblemsReuse": true,
+  "errors": [],
+  "pass": true
+}

@@ -91,7 +91,7 @@
   };
   window.TimingChartLiteralParser = parseSignalLiteral;
   canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
-  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
+  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, validationCache: { documentRef: null, documentRevision: null, settingsKey: null, refreshRevision: 0, issues: [] }, validationMetrics: { validationRuns: 0, validationCacheHits: 0, validationCacheMisses: 0 }, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
   const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() } };
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
@@ -298,8 +298,36 @@
     }[issue.code] || '$');
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
-  controller.getProblems = documentValue => {
-    return controller.validateDocument(documentValue);
+  const rawValidateDocument = controller.validateDocument;
+  controller.validateDocument = documentValue => {
+    if (model.validationReadContext && documentValue === model.document) return controller.getProblems(documentValue);
+    return rawValidateDocument(documentValue);
+  };
+  const validationSettingsKey = documentValue => JSON.stringify(documentValue?.checkSettings || {});
+  const cloneIssues = issues => issues.map(issue => ({ ...issue }));
+  controller.clearValidationCache = () => {
+    model.validationCache = { documentRef: null, documentRevision: null, settingsKey: null, refreshRevision: null, issues: [] };
+  };
+  controller.cacheValidationResult = (documentValue, issues, revision = model.documentRevision) => {
+    if (documentValue !== model.document) return false;
+    model.validationCache = { documentRef: documentValue, documentRevision: revision ?? 0, settingsKey: validationSettingsKey(documentValue), refreshRevision: model.problemRefreshRevision || 0, issues: cloneIssues(issues) };
+    return true;
+  };
+  controller.getValidationMetrics = () => ({ ...model.validationMetrics });
+  controller.getProblems = (documentValue = model.document, { force = false } = {}) => {
+    if (documentValue !== model.document) return controller.validateDocument(documentValue);
+    const revision = model.documentRevision ?? 0;
+    const settingsKey = validationSettingsKey(documentValue);
+    const cache = model.validationCache;
+    if (!force && cache.documentRef === documentValue && cache.documentRevision === revision && cache.settingsKey === settingsKey && cache.refreshRevision === (model.problemRefreshRevision || 0)) {
+      model.validationMetrics.validationCacheHits += 1;
+      return cloneIssues(cache.issues);
+    }
+    model.validationMetrics.validationCacheMisses += 1;
+    model.validationMetrics.validationRuns += 1;
+    const issues = rawValidateDocument(documentValue);
+    controller.cacheValidationResult(documentValue, issues, revision);
+    return cloneIssues(issues);
   };
   window.TimingChartProductionController = controller;
 
@@ -363,6 +391,7 @@
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
   controller.actions.setProblemFilter = (severity = 'all', signalId = 'all') => { if (!['all', 'err', 'warn', 'info'].includes(severity)) return false; model.view.problemSeverityFilter = severity; model.view.problemSignalFilter = signalId || 'all'; render(); return true; };
+  controller.actions.refreshProblems = () => { model.problemRefreshRevision = (model.problemRefreshRevision || 0) + 1; controller.clearValidationCache(); model.validation = controller.getProblems(model.document, { force: true }); render(); return true; };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
   controller.actions.setSignalVisibility = (signalId, visible) => { if (!model.document.signals.some(signal => signal.id === signalId)) return false; model.view.hiddenSignals = model.view.hiddenSignals.filter(id => id !== signalId); if (!visible) model.view.hiddenSignals.push(signalId); render(); document.querySelectorAll(`#groups .row[data-signal="${CSS.escape(signalId)}"], #cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`).forEach(row => { row.style.display = visible ? '' : 'none'; }); return true; };
@@ -642,5 +671,6 @@
   const pin = document.querySelector('#bottomTabs .follow button'); pin?.addEventListener('click', () => controller.actions.setPinned(!model.view.pinned));
   document.querySelector('.ribbon .txn-only .tool')?.addEventListener('click', () => controller.actions.addTransaction());
   document.querySelectorAll('.export-tool').forEach(button => button.addEventListener('click', async () => { const format = button.querySelector('.filetype')?.textContent?.toLowerCase() || 'svg'; const result = await controller.export(format); window.TimingChartLastExport = result; if (format === 'pdf') { window.print(); return; } const blob = new Blob([format === 'svg' ? result.text : result.dataUrl], { type: format === 'svg' ? 'image/svg+xml' : 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `timing-chart.${format}`; link.click(); URL.revokeObjectURL(link.href); }));
+  model.validationReadContext = true;
   render();
 })();
