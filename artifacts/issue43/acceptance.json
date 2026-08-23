@@ -1,0 +1,25 @@
+{
+  "issue": 43,
+  "result": {
+    "cancel": false,
+    "cancelClean": false,
+    "discard": true,
+    "discardClean": true,
+    "save": true,
+    "saveClean": true,
+    "escape": false,
+    "escapeDirty": true,
+    "dialogAfter": false,
+    "actualOpenButton": true,
+    "actualDialog": true,
+    "actualDiscard": true,
+    "actualOpenClean": true
+  },
+  "keyboard": {
+    "escape": true,
+    "enterDefaultsToSafeSave": true
+  },
+  "textPromptRemoved": true,
+  "errors": [],
+  "pass": true
+}

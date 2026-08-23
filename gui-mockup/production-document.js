@@ -370,10 +370,33 @@
   controller.persistence = model.persistence;
   controller.history = model.history;
   const tool = label => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(label));
-  const askUnsavedDecision = () => { const answer = window.prompt('未保存の変更があります。Save / Discard / Cancel を入力してください。', 'Cancel')?.trim().toLowerCase(); return answer === 'save' || answer === 'discard' ? answer : 'cancel'; };
-  const uiDecision = () => model.persistence.dirty ? askUnsavedDecision() : 'discard';
-  tool('新規')?.addEventListener('click', () => controller.actions.requestNew({ unsavedDecision: uiDecision() }));
-  tool('開く')?.addEventListener('click', () => controller.actions.requestOpen({ unsavedDecision: uiDecision() }));
+  let unsavedDialogPromise = null;
+  const askUnsavedDecision = () => {
+    if (unsavedDialogPromise) return unsavedDialogPromise;
+    const dialog = document.createElement('section');
+    dialog.id = 'unsavedChangesDialog'; dialog.dataset.unsavedDialog = 'true'; dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true'); dialog.setAttribute('aria-labelledby', 'unsavedChangesTitle');
+    dialog.style.cssText = 'position:fixed;inset:0;z-index:4000;display:flex;align-items:center;justify-content:center;background:rgba(20,35,55,.28);font:13px sans-serif;color:#243047;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'width:410px;background:#fff;border:1px solid #9aaabd;border-radius:6px;box-shadow:0 16px 48px rgba(16,36,59,.28);padding:20px;';
+    const title = document.createElement('h2'); title.id = 'unsavedChangesTitle'; title.textContent = '未保存の変更'; title.style.cssText = 'margin:0 0 10px;font-size:16px;';
+    const message = document.createElement('p'); message.textContent = '現在のドキュメントに未保存の変更があります。どうしますか？'; message.style.cssText = 'margin:0 0 18px;line-height:1.5;';
+    const actions = document.createElement('div'); actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+    const makeButton = (id, label, decision, destructive = false) => { const button = document.createElement('button'); button.type = 'button'; button.id = id; button.dataset.unsavedDecision = decision; button.textContent = label; button.style.cssText = `min-width:112px;padding:8px 12px;border:1px solid ${destructive ? '#c55b5b' : '#9aaabd'};border-radius:4px;background:${destructive ? '#fff5f5' : '#fff'};color:${destructive ? '#9b2525' : '#243047'};`; button.addEventListener('click', () => settle(decision)); return button; };
+    let settled = false; let settle;
+    const save = makeButton('unsavedSave', '保存して続行', 'save');
+    const discard = makeButton('unsavedDiscard', '保存せず続行', 'discard', true);
+    const cancel = makeButton('unsavedCancel', 'キャンセル', 'cancel');
+    actions.append(save, discard, cancel); panel.append(title, message, actions); dialog.appendChild(panel); document.body.appendChild(dialog);
+    const onKey = event => { if (event.key === 'Escape') { event.preventDefault(); settle('cancel'); } else if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); settle(document.activeElement?.dataset?.unsavedDecision || 'save'); } };
+    document.addEventListener('keydown', onKey, true);
+    unsavedDialogPromise = new Promise(resolve => { settle = decision => { if (settled) return; settled = true; document.removeEventListener('keydown', onKey, true); dialog.remove(); unsavedDialogPromise = null; resolve(decision); }; });
+    save.focus();
+    return unsavedDialogPromise;
+  };
+  window.TimingChartUnsavedChangesDialog = { open: askUnsavedDecision };
+  const uiDecision = () => model.persistence.dirty ? askUnsavedDecision() : Promise.resolve('discard');
+  tool('新規')?.addEventListener('click', async () => controller.actions.requestNew({ unsavedDecision: await uiDecision() }));
+  tool('開く')?.addEventListener('click', async () => controller.actions.requestOpen({ unsavedDecision: await uiDecision() }));
   tool('保存')?.addEventListener('click', () => controller.actions.save());
   const saveAsButton = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.includes('名前を付けて'));
   saveAsButton?.addEventListener('click', () => controller.actions.saveAs());
@@ -385,8 +408,8 @@
   shortcuts?.register({ id: 'document.redo-shift', owner: 'production-document', shortcut: 'Ctrl+Shift+Z', execute: () => controller.actions.redo() });
   shortcuts?.register({ id: 'document.save', owner: 'production-document', shortcut: 'Ctrl+S', scope: 'any', allowEditable: true, execute: () => controller.actions.save() });
   shortcuts?.register({ id: 'document.save-as', owner: 'production-document', shortcut: 'Ctrl+Shift+S', scope: 'application', execute: () => controller.actions.saveAs() });
-  shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: () => controller.actions.requestOpen({ unsavedDecision: uiDecision() }) });
-  shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: () => controller.actions.requestNew({ unsavedDecision: uiDecision() }) });
+  shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: async () => controller.actions.requestOpen({ unsavedDecision: await uiDecision() }) });
+  shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: async () => controller.actions.requestNew({ unsavedDecision: await uiDecision() }) });
   const installSampleBrowser = () => {
     const menu = document.querySelector('#issue26FileMenu');
     if (!menu || menu.querySelector('[data-sample-browser]')) return Boolean(menu);
