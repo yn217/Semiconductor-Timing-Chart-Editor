@@ -96,10 +96,21 @@
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
-  const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
-  const getSignal = id => getSignals().find(signal => signal.id === id);
+  const rebuildObjectIndex = () => {
+    const signalsById = new Map();
+    const commentsById = new Map();
+    for (const signal of model.document.signals || []) {
+      signalsById.set(signal.id, signal);
+      if (signal.type === 'commentRow') commentsById.set(signal.id, signal);
+    }
+    model.index = { signalsById, commentsById, documentRef: model.document };
+    return model.index;
+  };
+  const objectIndex = () => model.index?.documentRef === model.document ? model.index : rebuildObjectIndex();
+  const getSignals = () => (model.document.signals || []).filter(signal => signal.type !== 'commentRow');
+  const getSignal = id => { const signal = objectIndex().signalsById.get(id); return signal?.type === 'commentRow' ? undefined : signal; };
   const getTimeline = () => model.document.timeline;
-  const getComments = () => model.document.signals.filter(signal => signal.type === 'commentRow');
+  const getComments = () => [...objectIndex().commentsById.values()];
   const getGroupRows = groupId => model.document.signalGroups.find(group => group.id === groupId)?.rows || [];
   const getReferenceClock = () => getSignal(getTimeline().referenceClock);
   const getSource = signal => signal?.source || { instancePath: [], signalName: signal?.name || signal?.id || '' };
@@ -180,6 +191,8 @@
     timeGroups: (documentValue.timeGroups || []).map(group => ({ id: group.id, name: group.name, ...(group.category ? { category: group.category } : {}), start: finiteNumber(group.start, `$.timeGroups[${group.id}].start`), end: finiteNumber(group.end, `$.timeGroups[${group.id}].end`), ...(group.comment ? { comment: group.comment } : {}), ...(group.presentation ? { presentation: structuredClone(group.presentation) } : {}) })),
     checkSettings: structuredClone(documentValue.checkSettings || {})
   });
+  rebuildObjectIndex();
+  controller.rebuildObjectIndex = rebuildObjectIndex;
   controller.selectors = { getSignals, getSignal, getTimeline, getComments, getGroupRows, getReferenceClock };
   controller.getSerializableDocument = () => serializeDocument(model.document);
   controller.getCompatibilityPreview = () => { if (!model.compatibility) return null; const { rawText, ...publicPreview } = model.compatibility; return structuredClone(publicPreview); };
@@ -387,7 +400,7 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
+  const render = () => { rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };

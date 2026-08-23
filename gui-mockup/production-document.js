@@ -110,6 +110,7 @@
 
   const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
     model.document = clone(nextDocument);
+    controller.rebuildObjectIndex?.();
     model.compatibility = null;
     if (resetHistory) { model.history = { undo: [], redo: [] }; controller.history = model.history; }
     model.validation = [];
