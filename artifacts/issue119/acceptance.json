@@ -1,0 +1,43 @@
+{
+  "issue": 119,
+  "result": {
+    "tableExists": true,
+    "headerCount": 10,
+    "headers": [
+      "□",
+      "#",
+      "種類",
+      "Range",
+      "ラベル / 本文",
+      "配置先",
+      "X",
+      "Y",
+      "色",
+      "コメント"
+    ],
+    "hasRangeColumn": true,
+    "hasStartColumn": false,
+    "hasEndColumn": false,
+    "sampleRows": [
+      {
+        "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+        "range": "4–10"
+      },
+      {
+        "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+        "range": "4"
+      },
+      {
+        "type": "↔ 範囲↕ マーカー▣ テキスト▣ コールアウト↝ 依存関係│ 縦線⌜ ブラケット□ 背景",
+        "range": "4"
+      }
+    ],
+    "rangesConcise": true,
+    "annotationCount": 5
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue119-1672x941.png"
+  ]
+}
