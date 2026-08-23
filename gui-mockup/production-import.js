@@ -187,7 +187,7 @@
     if (timeBase !== undefined && !['cycle', 'ns'].includes(timeBase)) diagnostics.push({ code: 'OPEN_UNKNOWN_TIME_BASE', severity: 'blocking', path: '$.timeline.timeBase', actual: timeBase, message: `Mandatory time base '${timeBase}' cannot be interpreted safely.`, reason: 'Source-time positions cannot be mapped to cycle/ns semantics.', recommendation: 'Convert the file to cycle or ns using the producing application.' });
     try {
       const projected = normalizeExternalDocument(projectedSource);
-      const issues = controller.validateDocument(projected);
+      const issues = controller.validateDocumentRaw(projected);
       for (const issue of issues) diagnostics.push(issueDiagnostic(issue));
       const blocking = diagnostics.some(item => item.severity === 'blocking');
       const signalCount = (projected.signals || []).filter(signal => signal.type !== 'commentRow').length;
@@ -202,8 +202,8 @@
   };
   controller.analyzeCompatibility = analyzeCompatibility;
   const originalGetProblems = controller.getProblems;
-  controller.getProblems = documentValue => {
-    const issues = originalGetProblems(documentValue);
+  controller.getProblems = (documentValue, options) => {
+    const issues = originalGetProblems(documentValue, options);
     if (documentValue === model.document) for (const warning of model.importWarnings || []) issues.push({ ...warning, displayType: 'Import warning', id: warning.path, path: warning.path, message: warning.reason });
     return issues;
   };

@@ -93,7 +93,7 @@
     if (!exists) model.selection = { kind: 'signal', id: controller.selectors.getSignals()[0]?.id || null };
     model.editor.rowIndex = 0;
   };
-  const validateCurrent = () => controller.validateDocument(model.document);
+  const validateCurrent = () => controller.validateDocumentRaw(model.document);
   const record = (label, before, after) => {
     if (stable(before) === stable(after)) return false;
     const revisionBefore = model.documentRevision;
@@ -111,6 +111,7 @@
   const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
     model.document = clone(nextDocument);
     controller.rebuildObjectIndex?.();
+    controller.clearValidationCache?.();
     model.compatibility = null;
     if (resetHistory) { model.history = { undo: [], redo: [] }; controller.history = model.history; }
     model.validation = [];
@@ -190,10 +191,15 @@
     let result = true;
     try { result = mutation() !== false; } catch (error) { model.persistence.lastError = error.message; result = false; }
     metrics.validations += 1;
-    model.validationReadContext = false;
     model.validationMetrics.validationRuns += 1;
-    const issues = controller.validateDocument(model.document);
-    model.validationReadContext = true;
+    let issues;
+    try {
+      issues = controller.validateDocumentRaw(model.document);
+    } catch (error) {
+      const diagnostic = { code: 'validator-exception', path: '$', message: error?.message || 'Document validation failed unexpectedly' };
+      restore(before, { validation: [diagnostic], render: options.render !== false });
+      return false;
+    }
     if (!result || issues.length) { restore(before, { validation: issues, render: options.render !== false }); return false; }
     const after = canonicalSnapshot();
     record(label, before, after);
@@ -241,10 +247,9 @@
     let serializable;
     try { serializable = controller.getSerializableDocument(); } catch (error) { return { error: `Cannot save invalid document: ${error.message}` }; }
     metrics.validations += 1;
-    model.validationReadContext = false;
     model.validationMetrics.validationRuns += 1;
-    const issues = controller.validateDocument(serializable);
-    model.validationReadContext = true;
+    let issues;
+    try { issues = controller.validateDocumentRaw(serializable); } catch (error) { return { error: `Cannot save invalid document: ${error?.message || 'validation failed'}` }; }
     if (issues.length) return { error: `Cannot save invalid document: ${issues.map(issue => issue.code).join(', ')}` };
     return { text: `${JSON.stringify(serializable, null, 2)}\n`, documentHash: hash(serializable) };
   };
@@ -275,7 +280,7 @@
     if (!await protect(unsavedDecision)) return false;
     let parsed;
     try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; const preview = controller.analyzeCompatibility?.(text); if (future || preview?.diagnostics?.length) { const fallback = preview || { sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'OPEN_FORMAT_VERSION', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), message: error.message, reason: 'The source is newer than the supported format.', recommendation: 'Open in Compatibility Mode or cancel.' }], canOpen: false, rawText: text }; model.compatibility = { mode: 'preview', ...fallback, fileName }; controller.renderCompatibilityPreview?.(); publishOperation({ type: 'open', result: 'error', message: future ? '✕ Compatibility Preview' : '✕ Open diagnostics', detail: `${fallback.diagnostics?.length || 1} diagnostics available.` }); return false; } publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
-    const issues = controller.validateDocument(parsed);
+    const issues = controller.validateDocumentRaw(parsed);
     if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
     replaceDocument(parsed); model.documentRevision = 0; model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.source = { kind: source.kind || 'user', sample: Boolean(source.sample), sampleId: source.sampleId || null, sampleTitle: source.sampleTitle || null }; model.persistence.savedRevision = 0; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: source.sample ? 'Bundled sample loaded. Save As is required before saving.' : importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
   };

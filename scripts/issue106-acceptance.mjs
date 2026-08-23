@@ -68,7 +68,6 @@ assert.equal(await page.evaluate(text => {
   const c = window.TimingChartProductionController;
   c.replaceDocument(JSON.parse(text), { render: false });
   c.model.documentRevision = 0;
-  c.model.validationReadContext = true;
   return true;
 }, fixtureText), true);
 await page.evaluate(() => window.TimingChartProductionController.getProblems(window.TimingChartProductionController.model.document));
@@ -90,6 +89,39 @@ const settingsMetrics = await page.evaluate(() => {
 });
 assert.equal(settingsMetrics.afterChange.validationRuns, 1, 'check-setting change did not invalidate Problems cache');
 assert.equal(settingsMetrics.afterReuse.validationRuns, 1, 'check-setting cache was not reused');
+
+// A validator exception must not leave an ambient cache/read mode behind.
+const exceptionState = await page.evaluate(() => {
+  const c = window.TimingChartProductionController;
+  c.validationTestHook = () => { throw new Error('forced issue106 validator failure'); };
+  let caught = false;
+  try { c.getProblems(c.model.document, { force: true }); } catch (error) { caught = error.message === 'forced issue106 validator failure'; }
+  delete c.validationTestHook;
+  const afterException = { ...c.model.validationMetrics };
+  const recovered = c.getProblems(c.model.document);
+  const afterRecovery = { ...c.model.validationMetrics };
+  return { caught, afterException, afterRecovery, recoveredCount: recovered.length, validationReadContext: c.model.validationReadContext };
+});
+assert.equal(exceptionState.caught, true, 'forced validator exception was not observed');
+assert.equal(exceptionState.validationReadContext, undefined, 'legacy ambient validation mode remains');
+assert.equal(exceptionState.afterRecovery.validationRuns, exceptionState.afterException.validationRuns, 'valid cache was corrupted after validator exception');
+assert.ok(exceptionState.afterRecovery.validationCacheHits > exceptionState.afterException.validationCacheHits, 'cache did not recover after validator exception');
+
+const failedMutation = await page.evaluate(() => {
+  const c = window.TimingChartProductionController;
+  const before = JSON.stringify(c.getSerializableDocument());
+  c.validationTestHook = () => { throw new Error('forced mutation validator failure'); };
+  const result = c.documentHistory.run('Issue 106 forced validator failure', () => {
+    const signal = c.selectors.getSignal('issue106_signal_42');
+    signal.values[0].value = signal.values[0].value === 0 ? 1 : 0;
+  }, { render: false });
+  delete c.validationTestHook;
+  return { result, rolledBack: JSON.stringify(c.getSerializableDocument()) === before, diagnostic: c.model.validation?.[0]?.code, validationReadContext: c.model.validationReadContext };
+});
+assert.equal(failedMutation.result, false, 'validator exception was reported as a committed mutation');
+assert.equal(failedMutation.rolledBack, true, 'validator exception left a mutated canonical document');
+assert.equal(failedMutation.diagnostic, 'validator-exception', 'validator exception diagnostic was not exposed');
+assert.equal(failedMutation.validationReadContext, undefined, 'mutation exception recreated legacy ambient mode');
 
 // One semantic mutation: exactly one validator execution, then all consumers reuse it.
 await resetMetrics();
@@ -116,8 +148,29 @@ await page.evaluate(() => {
 const afterJson = await metrics();
 assert.equal(afterJson.validationRuns, beforeJson.validationRuns, 'JSON/Problems consumers rescanned the unchanged revision');
 
+const lifecycleState = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  const tiny = structuredClone(c.getSerializableDocument());
+  tiny.document.id = 'issue106-post-exception.tcd';
+  tiny.timeline.end = 1;
+  tiny.timeline.cycleCount = 1;
+  tiny.signalGroups = [{ id: 'issue106-post-exception-group', name: 'post-exception', rows: ['clk'] }];
+  tiny.signals = tiny.signals.filter(signal => signal.id === 'clk').map(signal => ({ ...signal, generator: { ...signal.generator, start: 0, period: 1 } }));
+  tiny.timeline.referenceClock = 'clk';
+  tiny.annotations = [];
+  tiny.transactions = [];
+  const opened = await c.actions.openText(JSON.stringify(tiny), { fileName: 'issue106-post-exception.tcd', unsavedDecision: 'discard' });
+  const undo = c.actions.undo();
+  const redo = c.actions.redo();
+  const newDocument = await c.actions.requestNew({ unsavedDecision: 'discard' });
+  return { opened, undo, redo, newDocument, validationReadContext: c.model.validationReadContext, validationRuns: c.model.validationMetrics.validationRuns };
+});
+assert.equal(lifecycleState.opened, true, 'Open failed after validator exception');
+assert.equal(lifecycleState.newDocument, true, 'New failed after validator exception');
+assert.equal(lifecycleState.validationReadContext, undefined, 'Open/New/Undo/Redo inherited legacy validation mode');
+
 assert.equal(errors.length, 0, errors.join('\n'));
 await page.screenshot({ path: path.join(out, 'issue106-1672x941.png') });
 await browser.close();
-await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 106, fixture: { signals: 100, cycles: 200, annotations: 1, transactions: 1 }, viewOnly: viewOnlyMetrics, largeFixtureViewOnly: largeViewMetrics, settingsInvalidation: settingsMetrics, semanticEdit: editMetrics, jsonProblemsReuse: true, errors, pass: true }, null, 2)}\n`);
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 106, fixture: { signals: 100, cycles: 200, annotations: 1, transactions: 1 }, viewOnly: viewOnlyMetrics, largeFixtureViewOnly: largeViewMetrics, settingsInvalidation: settingsMetrics, exceptionState, failedMutation, semanticEdit: editMetrics, lifecycleState, jsonProblemsReuse: true, errors, pass: true }, null, 2)}\n`);
 console.log('Issue #106 acceptance passed: cached Problems validation across 100 signals/200 cycles, view-only zero-run behavior, and one-run semantic edit reuse.');

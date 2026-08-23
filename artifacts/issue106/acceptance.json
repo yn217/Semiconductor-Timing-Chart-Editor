@@ -28,10 +28,36 @@
       "validationCacheMisses": 1
     }
   },
+  "exceptionState": {
+    "caught": true,
+    "afterException": {
+      "validationRuns": 2,
+      "validationCacheHits": 1,
+      "validationCacheMisses": 2
+    },
+    "afterRecovery": {
+      "validationRuns": 2,
+      "validationCacheHits": 2,
+      "validationCacheMisses": 2
+    },
+    "recoveredCount": 0
+  },
+  "failedMutation": {
+    "result": false,
+    "rolledBack": true,
+    "diagnostic": "validator-exception"
+  },
   "semanticEdit": {
     "validationRuns": 1,
     "validationCacheHits": 2,
     "validationCacheMisses": 0
+  },
+  "lifecycleState": {
+    "opened": true,
+    "undo": false,
+    "redo": false,
+    "newDocument": true,
+    "validationRuns": 3
   },
   "jsonProblemsReuse": true,
   "errors": [],

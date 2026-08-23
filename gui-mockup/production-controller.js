@@ -313,10 +313,12 @@
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
   const rawValidateDocument = controller.validateDocument;
-  controller.validateDocument = documentValue => {
-    if (model.validationReadContext && documentValue === model.document) return controller.getProblems(documentValue);
+  const validateDocumentRaw = documentValue => {
+    if (typeof controller.validationTestHook === 'function') controller.validationTestHook(documentValue);
     return rawValidateDocument(documentValue);
   };
+  controller.validateDocumentRaw = validateDocumentRaw;
+  controller.validateDocument = validateDocumentRaw;
   const validationSettingsKey = documentValue => JSON.stringify(documentValue?.checkSettings || {});
   const cloneIssues = issues => issues.map(issue => ({ ...issue }));
   controller.clearValidationCache = () => {
@@ -329,7 +331,7 @@
   };
   controller.getValidationMetrics = () => ({ ...model.validationMetrics });
   controller.getProblems = (documentValue = model.document, { force = false } = {}) => {
-    if (documentValue !== model.document) return controller.validateDocument(documentValue);
+    if (documentValue !== model.document) return validateDocumentRaw(documentValue);
     const revision = model.documentRevision ?? 0;
     const settingsKey = validationSettingsKey(documentValue);
     const cache = model.validationCache;
@@ -339,7 +341,7 @@
     }
     model.validationMetrics.validationCacheMisses += 1;
     model.validationMetrics.validationRuns += 1;
-    const issues = rawValidateDocument(documentValue);
+    const issues = validateDocumentRaw(documentValue);
     controller.cacheValidationResult(documentValue, issues, revision);
     return cloneIssues(issues);
   };
@@ -782,6 +784,5 @@
   const pin = document.querySelector('#bottomTabs .follow button'); pin?.addEventListener('click', () => controller.actions.setPinned(!model.view.pinned));
   document.querySelector('.ribbon .txn-only .tool')?.addEventListener('click', () => controller.actions.addTransaction());
   document.querySelectorAll('.export-tool').forEach(button => button.addEventListener('click', async () => { const format = button.querySelector('.filetype')?.textContent?.toLowerCase() || 'svg'; const result = await controller.export(format); window.TimingChartLastExport = result; if (format === 'pdf') { window.print(); return; } const blob = new Blob([format === 'svg' ? result.text : result.dataUrl], { type: format === 'svg' ? 'image/svg+xml' : 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `timing-chart.${format}`; link.click(); URL.revokeObjectURL(link.href); }));
-  model.validationReadContext = true;
   render();
 })();
