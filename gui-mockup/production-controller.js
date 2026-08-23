@@ -102,6 +102,9 @@
     transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0,
     minimapOverviewRebuilds: 0, minimapViewportUpdates: 0
   } };
+  const profileMark = name => { if (!controller.profileEnabled || !window.performance?.mark) return; performance.mark(`tc:${name}`); };
+  controller.enableProfiling = enabled => { controller.profileEnabled = Boolean(enabled); if (controller.profileEnabled) performance.clearMarks?.('tc:'); return controller.profileEnabled; };
+  controller.profileMark = profileMark;
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
@@ -440,7 +443,7 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
+  const render = () => { profileMark('render:start'); controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); profileMark('waveform:start'); window.TimingChartProductionWaveform?.render(model); profileMark('waveform:end'); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); profileMark('render:end'); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
@@ -496,9 +499,54 @@
     const group = (model.document.signalGroups || []).find(item => (item.rows || []).includes(signalId));
     const index = group ? group.rows.indexOf(signalId) : -1;
     const reorderTimings = [];
+    const applyTimingVisualOrder = host => {
+      const rows = [...host.querySelectorAll(':scope > .wave-row')];
+      const byId = new Map(rows.map(row => [row.dataset.signalId || row.dataset.signal, row]));
+      const visibleRows = rows.filter(row => !row.hidden && row.style.display !== 'none');
+      const visibleIds = new Set(visibleRows.map(row => row.dataset.signalId || row.dataset.signal));
+      const orderedIds = (model.document.signalGroups || []).flatMap(item => item.rows || []).filter(id => visibleIds.has(id));
+      if (!visibleRows.length || !orderedIds.length) return false;
+      // Keep the WaveDrom SVG subtrees in place, but let one layout container
+      // determine visual order. Per-row transforms promote every SVG-heavy row
+      // to a compositor layer on large documents.
+      host.style.display = 'flex';
+      host.style.flexDirection = 'column';
+      host.style.alignItems = 'stretch';
+      const ruler = host.querySelector(':scope > .ruler');
+      if (ruler) {
+        // The locked GUI's initial DOM places the ruler after the rows. Keep
+        // that established geometry while assigning flex order to signals.
+        ruler.style.order = String(orderedIds.length + 1);
+        ruler.style.flex = '0 0 auto';
+      }
+      const baseTop = new Map(visibleRows.map(row => [row, row.offsetTop]));
+      const orderById = new Map(orderedIds.map((id, index) => [id, index + 1]));
+      for (const row of rows) {
+        const id = row.dataset.signalId || row.dataset.signal;
+        const order = orderById.get(id);
+        row.style.order = order === undefined ? '0' : String(order);
+        row.style.flex = '0 0 auto';
+        // Do not rasterize off-screen SVG rows during large-document reorder.
+        // The intrinsic size preserves the existing row geometry until the
+        // browser brings a row into the viewport.
+        row.style.contentVisibility = 'auto';
+        row.style.containIntrinsicSize = '35px 100%';
+        row.style.transform = '';
+        row.style.willChange = '';
+        row.dataset.reorderVisual = order === undefined ? 'none' : 'layout-order';
+      }
+      controller.renderMetrics.rowMoves += 1;
+      controller.renderMetrics.cycleRowMoves += 1;
+      host.dataset.reorderLayout = 'flex-order';
+      return true;
+    };
     const reorder = host => {
       if (!host) return;
       const started = performance.now();
+      if (host.matches('#cycleCanvas .timing-scroll-pane > .wave') && applyTimingVisualOrder(host)) {
+        reorderTimings.push({ host: host.className || host.id || 'host', mode: 'layout-order', ms: performance.now() - started });
+        return;
+      }
       const row = host.querySelector(`[data-signal="${CSS.escape(signalId)}"]`);
       if (!group || !row) { reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started }); return; }
       const nextId = group.rows[index + 1];
@@ -538,10 +586,17 @@
   };
   const incrementalRun = (label, mutation, reconcile) => {
     const started = performance.now();
+    profileMark('command:start');
+    profileMark('history:start');
     const result = controller.documentHistory?.run ? controller.documentHistory.run(label, mutation, { render: false }) : (() => { try { return mutation() !== false; } catch { return false; } })();
     const historyFinished = performance.now();
+    profileMark('history:end');
     if (!result) { render(); controller.lastIncrementalTrace = { label, historyMs: historyFinished - started, reconcileMs: 0, totalMs: performance.now() - started }; return false; }
+    profileMark('reconcile:start');
     reconcile?.();
+    profileMark('reconcile:end');
+    if (controller.profileEnabled) requestAnimationFrame(() => profileMark('command:raf-1'));
+    profileMark('command:dom-ready');
     controller.lastIncrementalTrace = { label, historyMs: historyFinished - started, reconcileMs: performance.now() - historyFinished, totalMs: performance.now() - started, parts: controller.lastIncrementalTraceParts || null };
     return true;
   };

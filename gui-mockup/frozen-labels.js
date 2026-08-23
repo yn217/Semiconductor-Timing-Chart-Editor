@@ -20,7 +20,7 @@
     #cycleCanvas[data-frozen-labels] .timing-scroll-pane .comment-body,
     #cycleCanvas[data-frozen-labels] .timing-scroll-pane .latency { grid-column:1; min-width:0; }
     #cycleCanvas[data-frozen-labels] .timing-scroll-pane .ruler { min-width:920px; }
-    #cycleCanvas[data-frozen-labels] .frozen-label-wave { position:relative; min-width:var(--frozen-label-width); padding:44px 0 14px; transform:translateY(0); will-change:transform; }
+    #cycleCanvas[data-frozen-labels] .frozen-label-wave { position:relative; min-width:var(--frozen-label-width); padding:10px 0 14px; transform:translateY(0); will-change:transform; }
     #cycleCanvas[data-frozen-labels] .frozen-label-row { display:grid; grid-template-columns:28px minmax(0,1fr); min-height:35px; align-items:center; position:relative; padding:0; overflow:hidden; background:#fff; }
     #cycleCanvas[data-frozen-labels] .frozen-label-row .canvas-icon { z-index:2; justify-self:center; }
     #cycleCanvas[data-frozen-labels] .frozen-label-row .signal-label { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; z-index:2; padding-right:5px; }
@@ -107,6 +107,7 @@
   };
 
   const syncFrozenLabels = model => {
+    window.TimingChartProductionController?.profileMark?.('frozen-labels:start');
     applyPaneWidth();
     const rows = [...wave.querySelectorAll(':scope > .wave-row')];
     const current = new Map([...frozenWave.querySelectorAll(':scope > .frozen-label-row')].map(row => [row.dataset.signal, row]));
@@ -141,6 +142,7 @@
     frozenWave.dataset.scrollTop = String(timingPane.scrollTop);
     frozenPane.dataset.rowCount = String(rows.length);
     frozenPane.dataset.frozen = 'true';
+    window.TimingChartProductionController?.profileMark?.('frozen-labels:end');
   };
 
   window.TimingChartTimingViewport = { canvas, timingPane, frozenPane, getScrollHost: () => timingPane, getScrollLeft: () => timingPane.scrollLeft, getScrollTop: () => timingPane.scrollTop, getViewportRect: () => timingPane.getBoundingClientRect() };

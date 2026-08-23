@@ -141,6 +141,7 @@
     return Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary({ signal: clock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
   };
   const renderGrid = () => {
+    controller.profileMark?.('grid:start');
     const host = scrollHost(); if (!host) return;
     viewMetrics.gridRebuilds += 1;
     if (controller.renderMetrics) { controller.renderMetrics.gridRebuilds += 1; controller.renderMetrics.gridBoundaryResolutions += 1; }
@@ -157,6 +158,7 @@
       line.style.cssText = `position:absolute;left:${boundary.canvasX - hostRect.left + host.scrollLeft}px;top:${top}px;height:${Math.max(0, host.scrollHeight - top)}px;border-left:1px dotted #dde4ed;`;
       grid.appendChild(line);
     }
+    controller.profileMark?.('grid:end');
   };
   const updateMinimapViewport = () => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); const windowNode = mini?.querySelector('.mini-window'); if (!host || !mini || !windowNode || !view.guides.minimap) return;
@@ -182,6 +184,7 @@
     return true;
   };
   const renderMinimap = () => {
+    controller.profileMark?.('minimap:start');
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
     if (!host || !mini) return;
     viewMetrics.minimapOverviewRebuilds += 1;
@@ -204,6 +207,7 @@
     if (controller.renderMetrics) controller.renderMetrics.minimapRowRectReads += rows.length;
     rows.forEach((row, index) => { const rect = row.getBoundingClientRect(); const x = Math.max(0, (rect.left - hostRect.left + host.scrollLeft) / contentWidth * width); const y = Math.max(0, (rect.top - hostRect.top + host.scrollTop) / contentHeight * height); const w = Math.max(2, Math.min(width - x, (row.querySelector('.trace')?.getBoundingClientRect().width || contentWidth * 0.7) / contentWidth * width)); const line = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); line.dataset.minimapRow = row.dataset.signalId || row.dataset.signal || String(index); line.setAttribute('x', x); line.setAttribute('y', y); line.setAttribute('width', w); line.setAttribute('height', Math.max(1, Math.min(4, rect.height / contentHeight * height))); line.setAttribute('fill', row.classList.contains('band-output') ? '#b887ee' : row.classList.contains('band-internal') ? '#63b56b' : '#5a99ee'); svg.appendChild(line); });
     updateMinimapViewport();
+    controller.profileMark?.('minimap:end');
   };
   const panMiniMap = (clientX, clientY, drag = false) => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); if (!host || !mini) return false;
