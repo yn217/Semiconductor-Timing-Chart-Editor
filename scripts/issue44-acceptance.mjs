@@ -7,87 +7,113 @@ import { chromium } from 'playwright';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'artifacts', 'issue44');
 await fs.mkdir(out, { recursive: true });
+
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 const errors = [];
-page.on('pageerror', error => errors.push(error.stack || error.message));
+const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
+page.on('pageerror', error => errors.push(error.message));
 await page.goto(`file://${path.join(root, 'gui-mockup', 'index.html').replaceAll('\\', '/')}`);
 await page.waitForTimeout(300);
 
-const result = await page.evaluate(async () => {
-  const c = window.TimingChartProductionController;
-  const source = c.getSerializableDocument();
-  const groups = source.signalGroups.map((group, groupIndex) => ({ ...group, rows: [...group.rows] }));
-  const signals = [...source.signals];
-  for (let groupIndex = 0; groupIndex < groups.length; groupIndex += 1) {
-    for (let rowIndex = 0; rowIndex < 24; rowIndex += 1) {
-      const id = `issue44_g${groupIndex}_${rowIndex}`;
-      signals.push({ id, name: id, type: rowIndex % 3 === 0 ? 'bus' : 'binary', role: groupIndex === 0 ? 'input' : groupIndex === 2 ? 'output' : 'internal', source: { instancePath: [], signalName: id }, display: { name: id }, ...(rowIndex % 3 === 0 ? { width: 8, displayFormat: 'hex', values: [{ start: 0, value: '00' }, { start: 4, value: 'FF' }] } : { values: [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }] }) });
-      groups[groupIndex].rows.push(id);
-    }
-  }
-  const fixture = { ...source, signalGroups: groups, signals, document: { ...source.document, id: 'issue44-large.tcd', title: 'Issue 44 large tree' } };
-  if (!await c.actions.openText(JSON.stringify(fixture), { fileName: 'issue44-large.tcd', unsavedDecision: 'discard' })) throw new Error('fixture open failed');
-  await new Promise(resolve => setTimeout(resolve, 50));
-  const host = document.querySelector('#groups');
-  const treeBefore = { clientHeight: host.clientHeight, scrollHeight: host.scrollHeight, scrollTop: host.scrollTop, bodyScrollTop: document.documentElement.scrollTop };
-  const canvasBefore = document.querySelector('#cycleCanvas').scrollTop;
-  const inspectorBefore = document.querySelector('.inspector-body').scrollTop;
-  const headers = [...document.querySelectorAll('#groups .group')].map(group => group.querySelector('.group-h'));
-  const disclosure = headers[0].querySelector('.group-disclosure');
-  const firstRowsBefore = headers[0].parentElement.querySelectorAll('.row').length;
-  const firstHeightBefore = headers[0].parentElement.getBoundingClientRect().height;
-  disclosure.click();
-  await new Promise(resolve => setTimeout(resolve, 30));
-  const collapsed = { model: c.model.document.signalGroups[0].collapsed, aria: disclosure.getAttribute('aria-expanded'), icon: disclosure.querySelector('use')?.getAttribute('href'), rowsHidden: [...headers[0].parentElement.querySelectorAll('.row')].every(row => row.hidden), height: headers[0].parentElement.getBoundingClientRect().height, followingTop: headers[1].parentElement.getBoundingClientRect().top };
-  disclosure.click();
-  await new Promise(resolve => setTimeout(resolve, 30));
-  const expanded = { model: Boolean(c.model.document.signalGroups[0].collapsed), aria: disclosure.getAttribute('aria-expanded'), icon: disclosure.querySelector('use')?.getAttribute('href'), rowsVisible: [...headers[0].parentElement.querySelectorAll('.row')].every(row => !row.hidden), height: headers[0].parentElement.getBoundingClientRect().height };
-  const otherGroups = [];
-  for (const index of [1, 2]) {
-    const button = headers[index].querySelector('.group-disclosure');
-    button.click(); await new Promise(resolve => setTimeout(resolve, 20));
-    otherGroups.push({ index, collapsed: Boolean(c.model.document.signalGroups[index].collapsed), rowsHidden: [...headers[index].parentElement.querySelectorAll('.row')].every(row => row.hidden), aria: button.getAttribute('aria-expanded'), icon: button.querySelector('use')?.getAttribute('href') });
-    button.click(); await new Promise(resolve => setTimeout(resolve, 20));
-  }
-  const finalGroup = headers[2].parentElement;
-  headers[2].scrollIntoView({ block: 'start', inline: 'nearest' });
-  await new Promise(resolve => setTimeout(resolve, 20));
-  const groupReach = (() => { const rect = headers[2].getBoundingClientRect(); const hostRect = host.getBoundingClientRect(); return rect.top >= hostRect.top - 1 && rect.bottom <= hostRect.bottom + 1; })();
-  host.scrollTop = host.scrollHeight;
-  await new Promise(resolve => setTimeout(resolve, 20));
-  const treeAfter = { scrollTop: host.scrollTop, finalGroupVisible: groupReach, finalSignalVisible: (() => { const row = headers[2].parentElement.querySelector('.row:last-child'); const rect = row.getBoundingClientRect(); const hostRect = host.getBoundingClientRect(); return rect.bottom <= hostRect.bottom + 1 && rect.top >= hostRect.top - 1; })() };
-  host.dispatchEvent(new WheelEvent('wheel', { deltaY: 260, bubbles: true }));
-  await new Promise(resolve => setTimeout(resolve, 20));
-  const wheelMoved = host.scrollTop > 0;
-  const roundTrip = JSON.parse(c.prepareSaveText().text);
-  return { treeBefore, treeAfter, wheelMoved, firstRowsBefore, firstHeightBefore, collapsed, expanded, otherGroups, canvasBefore, canvasAfter: document.querySelector('#cycleCanvas').scrollTop, inspectorBefore, inspectorAfter: document.querySelector('.inspector-body').scrollTop, persistedCollapsed: roundTrip.signalGroups[0].collapsed === undefined, iconCount: document.querySelectorAll('#groups .group-disclosure use').length };
+// --- No literal mockup chevron text; standard SVG icon used ---
+const iconState = await page.evaluate(() => {
+  const chevs = [...document.querySelectorAll('#groups .group-h .chev')];
+  return {
+    count: chevs.length,
+    noLiteralText: chevs.every(c => !/[vV><▼▶]/.test(c.textContent.trim())),
+    allHaveSvgUse: chevs.every(c => !!c.querySelector('svg use[href*="i-chevron"]')),
+    allExpandedIcon: chevs.every(c => c.querySelector('use').getAttribute('href').includes('i-chevron-down')),
+    hitAreas: chevs.map(c => c.getBoundingClientRect()).map(r => ({ w: r.width, h: r.height })),
+  };
 });
 
-assert.ok(result.treeBefore.scrollHeight > result.treeBefore.clientHeight, 'left tree must have an independent scroll range');
-assert.ok(result.treeAfter.scrollTop > 0);
-assert.equal(result.treeAfter.finalGroupVisible, true);
-assert.equal(result.treeAfter.finalSignalVisible, true);
-assert.equal(result.wheelMoved, true);
-assert.equal(result.collapsed.model, true);
-assert.equal(result.collapsed.aria, 'false');
-assert.equal(result.collapsed.icon, 'icons.svg#i-chevron-right');
-assert.equal(result.collapsed.rowsHidden, true);
-assert.ok(result.collapsed.height < result.firstHeightBefore);
-assert.equal(result.expanded.model, false);
-assert.equal(result.expanded.aria, 'true');
-assert.equal(result.expanded.icon, 'icons.svg#i-chevron-down');
-assert.equal(result.expanded.rowsVisible, true);
-assert.deepEqual(result.otherGroups.map(group => group.collapsed), [true, true]);
-assert.deepEqual(result.otherGroups.map(group => group.rowsHidden), [true, true]);
-assert.deepEqual(result.otherGroups.map(group => group.aria), ['false', 'false']);
-assert.deepEqual(result.otherGroups.map(group => group.icon), ['icons.svg#i-chevron-right', 'icons.svg#i-chevron-right']);
-assert.ok(Math.abs(result.canvasAfter - result.canvasBefore) <= 0);
-assert.ok(Math.abs(result.inspectorAfter - result.inspectorBefore) <= 0);
-assert.equal(result.persistedCollapsed, true);
-assert.equal(result.iconCount, 3);
-assert.equal(errors.length, 0, errors.join('\n'));
-await page.screenshot({ path: path.join(out, 'issue44-large-tree-1672x941.png') });
+// --- Click chevron toggles exactly one group; icon + aria-expanded flip; rows hide/show ---
+const toggleState = await page.evaluate(async () => {
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const groups = [...document.querySelectorAll('#groups .group')];
+  const inputGroup = groups.find(g => g.querySelector('.group-title')?.textContent.includes('入力'));
+  const otherGroup = groups.find(g => g !== inputGroup);
+  const chev = inputGroup.querySelector('.chev');
+  const otherRowsBefore = [...otherGroup.querySelectorAll('.row[data-signal]')].map(r => r.hidden);
+  chev.click();
+  await wait(40);
+  const rowsHidden = [...inputGroup.querySelectorAll('.row[data-signal]')].every(r => r.hidden);
+  const ariaCollapsed = chev.getAttribute('aria-expanded') === 'false';
+  const iconCollapsed = chev.querySelector('use').getAttribute('href').includes('i-chevron-right');
+  const otherRowsUnaffected = [...otherGroup.querySelectorAll('.row[data-signal]')].map(r => r.hidden).every((v, i) => v === otherRowsBefore[i]);
+  chev.click();
+  await wait(40);
+  const rowsShown = [...inputGroup.querySelectorAll('.row[data-signal]')].every(r => !r.hidden);
+  const ariaExpanded = chev.getAttribute('aria-expanded') === 'true';
+  const iconExpanded = chev.querySelector('use').getAttribute('href').includes('i-chevron-down');
+  // clicking the group title (not the chevron) must not collapse
+  const titleRowHiddenBefore = inputGroup.querySelector('.row[data-signal]').hidden;
+  inputGroup.querySelector('.group-title').click();
+  await wait(20);
+  const titleRowHiddenAfter = inputGroup.querySelector('.row[data-signal]').hidden;
+  return { rowsHidden, ariaCollapsed, iconCollapsed, otherRowsUnaffected, rowsShown, ariaExpanded, iconExpanded, titleClickSafe: titleRowHiddenBefore === titleRowHiddenAfter };
+});
+
+// --- Large document: left panel scrolls independently to the last Output row, canvas untouched ---
+const scrollState = await page.evaluate(async () => {
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const c = window.TimingChartProductionController;
+  const doc = structuredClone(c.getSerializableDocument());
+  const outputGroup = doc.signalGroups.find(g => /出力|Output/.test(g.name)) || doc.signalGroups[doc.signalGroups.length - 1];
+  const seed = doc.signals[0];
+  for (let i = 0; i < 40; i += 1) {
+    const id = `perf_sig_${i}`;
+    doc.signals.push({ ...structuredClone(seed), id, name: id, source: { instancePath: ['top'], signalName: id }, display: { name: id }, values: [{ start: 0, value: i % 2 }] });
+    outputGroup.rows.push(id);
+  }
+  const opened = await c.actions.openText(JSON.stringify(doc), { fileName: 'issue44-large.tcd', unsavedDecision: 'discard' });
+  await wait(100);
+  const canvas = document.querySelector('#cycleCanvas');
+  const canvasScrollBefore = canvas ? canvas.scrollTop : 0;
+  const groupsEl = document.querySelector('#groups');
+  const lastRow = [...document.querySelectorAll('#groups .row[data-signal]')].pop();
+  lastRow.scrollIntoView();
+  await wait(30);
+  const rect = lastRow.getBoundingClientRect();
+  const groupsRect = groupsEl.getBoundingClientRect();
+  const lastRowReachable = rect.top >= groupsRect.top - 1 && rect.bottom <= groupsRect.bottom + 1;
+  const canvasScrollAfter = canvas ? canvas.scrollTop : 0;
+  const pageOverflow = document.documentElement.scrollHeight > window.innerHeight + 1;
+  // collapsing a group after scroll recalculates reachability of the final row
+  const outputGroupEl = [...document.querySelectorAll('#groups .group')].find(g => /出力|Output/.test(g.querySelector('.group-title')?.textContent || ''));
+  outputGroupEl.querySelector('.chev').click();
+  await wait(40);
+  const outputRowsHiddenAfterCollapse = [...outputGroupEl.querySelectorAll('.row[data-signal]')].every(r => r.hidden);
+  outputGroupEl.querySelector('.chev').click();
+  await wait(40);
+  return { opened, lastRowId: lastRow.dataset.signal, lastRowReachable, canvasUnaffected: canvasScrollBefore === canvasScrollAfter, pageOverflow, outputRowsHiddenAfterCollapse };
+});
+
+await page.screenshot({ path: path.join(out, 'issue44-1672x941.png') });
 await browser.close();
-await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 44, result, independentTreeScroll: true, svgDisclosure: true, errors, pass: true }, null, 2)}\n`);
-console.log('Issue #44 acceptance passed: SVG group disclosure, collapse/expand, independent tree scroll, wheel reachability, and persistence.');
+
+const pass = iconState.count >= 3
+  && iconState.noLiteralText === true
+  && iconState.allHaveSvgUse === true
+  && iconState.allExpandedIcon === true
+  && iconState.hitAreas.every(box => box.w >= 20 && box.h >= 20)
+  && toggleState.rowsHidden === true
+  && toggleState.ariaCollapsed === true
+  && toggleState.iconCollapsed === true
+  && toggleState.otherRowsUnaffected === true
+  && toggleState.rowsShown === true
+  && toggleState.ariaExpanded === true
+  && toggleState.iconExpanded === true
+  && toggleState.titleClickSafe === true
+  && scrollState.opened === true
+  && scrollState.lastRowId === 'perf_sig_39'
+  && scrollState.lastRowReachable === true
+  && scrollState.canvasUnaffected === true
+  && scrollState.pageOverflow === false
+  && scrollState.outputRowsHiddenAfterCollapse === true
+  && errors.length === 0;
+
+const report = { issue: 44, iconState, toggleState, scrollState, errors, pass, artifacts: ['issue44-1672x941.png'] };
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
+assert.ok(pass, JSON.stringify(report, null, 2));
+console.log('Issue #44 acceptance passed: standard SVG disclosure chevrons toggle exactly one Group (rows hide/show, other Groups unaffected, aria-expanded + icon stay in sync, title click does not collapse), and the left Signal Tree scrolls independently to the final Output row without moving the Canvas or overflowing the page.');

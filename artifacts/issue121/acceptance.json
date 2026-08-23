@@ -1,0 +1,29 @@
+{
+  "issue": 121,
+  "setup": {
+    "sections": [
+      "basic",
+      "start",
+      "end",
+      "style",
+      "label",
+      "advanced"
+    ],
+    "labelBefore": "リクエスト受付からレスポンスまで 6 cycle"
+  },
+  "afterCollapseBasic": {
+    "basicHidden": true,
+    "startStillVisible": true
+  },
+  "afterReopen": {
+    "basicVisible": true,
+    "labelValue": "リクエスト受付からレスポンスまで 6 cycle"
+  },
+  "docUnchanged": true,
+  "historyCheck": {},
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue121-1672x941.png"
+  ]
+}

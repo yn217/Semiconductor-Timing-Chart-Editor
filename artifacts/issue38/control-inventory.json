@@ -1,6 +1,6 @@
 {
-  "enabledControlCount": 45,
-  "disabledControlCount": 24,
+  "enabledControlCount": 80,
+  "disabledControlCount": 22,
   "inventory": [
     {
       "label": "ファイル",
@@ -77,28 +77,28 @@
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "新規\n新しいTiming Documentを作成します。\nAffects: Document state\nShortcut: Ctrl+N"
     },
     {
       "label": "開く",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "開く\n保存済みの.tcd Documentを開きます。\nAffects: Document state\nShortcut: Ctrl+O"
     },
     {
       "label": "保存",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "保存\n現在のDocumentを保存します。\nAffects: Document state\nShortcut: Ctrl+S"
     },
     {
       "label": "名前を付けて保存",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "名前を付けて保存\n現在のDocumentを保存します。\nAffects: Document state\nShortcut: Ctrl+S"
     },
     {
       "label": "Undo",
@@ -168,28 +168,28 @@
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Cycle挿入\n現在位置に1 Cycleを追加します。\nAffects: Timeline and following semantic time; Undo対応"
     },
     {
       "label": "Cycle削除",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Cycle削除\n選択Cycleを削除し、後続のsemantic timeを追従させます。\nAffects: Timeline and following semantic time; Undo対応"
     },
     {
       "label": "N Cycle挿入",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "NCycle挿入\n現在位置に1 Cycleを追加します。\nAffects: Timeline and following semantic time; Undo対応"
     },
     {
       "label": "範囲削除",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "範囲削除\n選択した時間範囲を削除します。\nAffects: Timeline and following semantic time; Undo対応"
     },
     {
       "label": "行間隔",
@@ -217,32 +217,39 @@
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Zoom−\nTiming geometryだけを縮小します。Signal labels/UIは拡大縮小しません。\nAffects: View only; timing region"
     },
     {
       "label": "Zoom",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Zoom\nTiming Zoomを指定します。\nAffects: View only; timing region"
     },
     {
       "label": "Zoom＋",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Zoom＋\nTiming geometryだけを拡大します。Signal labels/UIは拡大縮小しません。\nAffects: View only; timing region"
     },
     {
       "label": "全体表示",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "全体表示\n全時間軸が見えるようTiming Zoomを調整します。\nAffects: View only"
     },
     {
       "label": "選択に合わせる",
       "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "選択に合わせる\n選択対象が見える範囲へTiming Zoomを調整します。\nAffects: View only"
+    },
+    {
+      "label": "on",
+      "tag": "input",
       "disabled": false,
       "status": "implemented",
       "reason": ""
@@ -250,30 +257,23 @@
     {
       "label": "on",
       "tag": "input",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "on",
       "tag": "input",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "on",
       "tag": "input",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
-    },
-    {
-      "label": "on",
-      "tag": "input",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "追加",
@@ -302,6 +302,118 @@
       "disabled": true,
       "status": "disabled",
       "reason": "フィルター条件UIは未実装です。対応予定: #32"
+    },
+    {
+      "label": "グループを折りたたむ",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "グループメニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "グループを折りたたむ",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "グループメニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "グループを折りたたむ",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "グループメニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
+    },
+    {
+      "label": "信号メニュー",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "Signal",
@@ -343,14 +455,14 @@
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Pin context"
     },
     {
       "label": "＋ 変更点を追加",
       "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": ""
+      "reason": "Cycle 8 に変更点を追加"
     },
     {
       "label": "▣ 行を複製",
@@ -369,23 +481,23 @@
     {
       "label": "⇩ インポート...",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "この操作は未実装です。対応Issue: #38以降"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "⇧ エクスポート...",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "この操作は未実装です。対応Issue: #38以降"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "⟳ プレビュー更新",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "この操作は未実装です。対応Issue: #38以降"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "0",
@@ -458,14 +570,14 @@
       "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
     },
     {
-      "label": "binary",
-      "tag": "input",
-      "disabled": false,
+      "label": "binarybusstateclock",
+      "tag": "select",
+      "disabled": true,
       "status": "disabled",
       "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
     },
     {
-      "label": "表示非表示",
+      "label": "inputinternaloutput",
       "tag": "select",
       "disabled": true,
       "status": "disabled",
@@ -479,11 +591,130 @@
       "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
     },
     {
+      "label": "#172033",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "#ffffff",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "13",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
       "label": "on",
       "tag": "input",
       "disabled": true,
       "status": "disabled",
       "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "tag": "input",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "leftcenterright",
+      "tag": "select",
+      "disabled": true,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "#000000",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "#ffffff",
+      "tag": "input",
+      "disabled": false,
+      "status": "disabled",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "Binary",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Binary信号を追加"
+    },
+    {
+      "label": "Bus",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Bus信号を追加"
+    },
+    {
+      "label": "State",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "State信号を追加"
+    },
+    {
+      "label": "Clock",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Clock信号を追加"
+    },
+    {
+      "label": "Vertical Line",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "縦線注釈を追加"
+    },
+    {
+      "label": "Bracket",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "ブラケット注釈を追加"
+    },
+    {
+      "label": "Highlight",
+      "tag": "button",
+      "disabled": false,
+      "status": "implemented",
+      "reason": "背景ハイライト注釈を追加"
     }
   ],
   "unknownEnabledControls": [],
@@ -542,22 +773,6 @@
       "reason": "未実装の操作です。対応予定: #32 / #34"
     },
     {
-      "label": "on",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
-    },
-    {
-      "label": "on",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
-    },
-    {
-      "label": "on",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
-    },
-    {
-      "label": "on",
-      "reason": "表示設定のSemantic Model接続は未実装です。対応予定: #32"
-    },
-    {
       "label": "",
       "reason": "左パネルの追加メニュー以外の操作は未実装です。対応予定: #32"
     },
@@ -566,19 +781,11 @@
       "reason": "フィルター条件UIは未実装です。対応予定: #32"
     },
     {
-      "label": "⇩ インポート...",
-      "reason": "この操作は未実装です。対応Issue: #38以降"
+      "label": "binarybusstateclock",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
     },
     {
-      "label": "⇧ エクスポート...",
-      "reason": "この操作は未実装です。対応Issue: #38以降"
-    },
-    {
-      "label": "⟳ プレビュー更新",
-      "reason": "この操作は未実装です。対応Issue: #38以降"
-    },
-    {
-      "label": "表示非表示",
+      "label": "inputinternaloutput",
       "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
     },
     {
@@ -587,6 +794,22 @@
     },
     {
       "label": "on",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "on",
+      "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
+    },
+    {
+      "label": "leftcenterright",
       "reason": "Inspector項目はread-onlyです。対応予定: #38以降"
     }
   ],

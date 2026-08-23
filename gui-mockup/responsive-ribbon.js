@@ -1,0 +1,239 @@
+(() => {
+  'use strict';
+
+  // #105 responsive Ribbon overflow. The approved policy names 4 breakpoints
+  // (>=1600 Full / 1280-1599 Compact / 1024-1279 More-compact / <1024
+  // fallback), but this app's workspace grid (`.app{min-width:1280px}`,
+  // driven by --left + --right + the center's own minmax(650px,1fr) floor)
+  // never actually renders narrower than 1280px, and #105's own approved
+  // policy explicitly forbids redesigning that Canvas/Left/Inspector/Bottom
+  // architecture just to make the Ribbon fit. So band detection measures
+  // the Ribbon's real available width (via .app's rendered box, which is
+  // clamped to that same 1280px floor) rather than window.innerWidth: below
+  // 1280px the window can shrink, but the Ribbon's actual box cannot, so a
+  // "More-compact"/"<1024 fallback" band could never really be reached and
+  // asserting one from window.innerWidth alone would be a false positive.
+  // Only Full/Compact are implemented as a result. Supporting genuinely
+  // narrower ribbons would first need an explicit decision to relax that
+  // workspace floor, which is out of scope for this issue.
+  //
+  // Home priority is per-COMMAND, not per-group: Undo/Redo/Zoom-/Zoom%/
+  // Zoom+/Fit All stay directly visible at Compact; Copy/Paste/Delete/Up/
+  // Down/Fit Selection stay visible at Compact too; Layout and Display-
+  // toggle groups collapse into named overflow triggers; Duplicate and
+  // other secondary actions collapse into a shared "..." overflow first.
+  // File stays visible at every band this app can actually render.
+  // Collapsed elements are relocated (not cloned), so existing click
+  // handlers, disabled state, and tooltip metadata travel with them.
+
+  const BREAKPOINTS = { full: 1600 };
+  const norm = value => String(value || '').replace(/[\s\n]+/g, '').trim();
+
+  const HOME_NAMED_OVERFLOW_GROUPS = new Set(['レイアウト', '表示']);
+  const HOME_FILE_GROUP = 'ファイル';
+  // 1 = always visible at Compact; 4 = collapses first, at Compact and
+  // below. Unmapped tools default to 1 (visible at Compact).
+  const HOME_TOOL_PRIORITY = new Map([
+    ['Undo', 1], ['Redo', 1], ['Zoom−', 1], ['Zoom', 1], ['Zoom＋', 1], ['全体表示', 1],
+    ['切取', 1], ['コピー', 1], ['貼付', 1], ['削除', 1], ['上へ', 1], ['下へ', 1], ['選択に合わせる', 1], ['Cycle挿入', 1], ['Cycle削除', 1],
+    ['複製', 4], ['NCycle挿入', 4], ['範囲削除', 4],
+  ]);
+
+  const availableWidth = () => document.querySelector('.app')?.getBoundingClientRect().width || window.innerWidth;
+  const currentBand = () => (availableWidth() >= BREAKPOINTS.full ? 'full' : 'compact');
+
+  const overflowState = new WeakMap(); // element (.rgroup or .tool) -> entry
+  const ribbonSharedTrigger = new WeakMap(); // ribbon -> shared "..." entry
+  const ribbonGroupsCache = new WeakMap(); // ribbon -> discovered .rgroup[]
+
+  function closeMenu(entry) {
+    entry.menu.classList.remove('open');
+    entry.trigger.setAttribute('aria-expanded', 'false');
+    if (entry._onDocDown) document.removeEventListener('mousedown', entry._onDocDown, true);
+    if (entry._onDocKey) document.removeEventListener('keydown', entry._onDocKey, true);
+  }
+
+  function openMenu(entry) {
+    document.querySelectorAll('.ribbon-overflow-menu.open').forEach(openEl => {
+      const other = openEl.__ribbonEntry;
+      if (other && other !== entry) closeMenu(other);
+    });
+    entry.menu.style.left = '-9999px';
+    entry.menu.style.top = '-9999px';
+    entry.menu.classList.add('open');
+    entry.trigger.setAttribute('aria-expanded', 'true');
+    const triggerRect = entry.trigger.getBoundingClientRect();
+    const menuRect = entry.menu.getBoundingClientRect();
+    let left = triggerRect.left;
+    let top = triggerRect.bottom + 4;
+    if (left + menuRect.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - 8 - menuRect.width);
+    if (top + menuRect.height > window.innerHeight - 8) top = Math.max(8, triggerRect.top - menuRect.height - 4);
+    entry.menu.style.left = `${Math.round(left)}px`;
+    entry.menu.style.top = `${Math.round(top)}px`;
+    entry._onDocDown = event => {
+      if (!entry.menu.contains(event.target) && event.target !== entry.trigger) closeMenu(entry);
+    };
+    entry._onDocKey = event => {
+      if (event.key === 'Escape') { closeMenu(entry); entry.trigger.focus(); return; }
+      const items = [...entry.menu.querySelectorAll('button:not([disabled]), input:not([disabled])')];
+      if (!items.length) return;
+      const idx = items.indexOf(document.activeElement);
+      if (event.key === 'ArrowDown') { event.preventDefault(); items[(idx + 1 + items.length) % items.length].focus(); }
+      else if (event.key === 'ArrowUp') { event.preventDefault(); items[(idx - 1 + items.length) % items.length].focus(); }
+    };
+    document.addEventListener('mousedown', entry._onDocDown, true);
+    document.addEventListener('keydown', entry._onDocKey, true);
+    const first = entry.menu.querySelector('button:not([disabled]), input:not([disabled])');
+    (first || entry.trigger).focus();
+  }
+
+  function makeTrigger(label, title) {
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'ribbon-overflow-trigger';
+    trigger.dataset.controlStatus = 'implemented';
+    trigger.dataset.ribbonOverflowTrigger = label;
+    trigger.innerHTML = `<span class="tool-label">${label}<br>▾</span>`;
+    trigger.setAttribute('aria-haspopup', 'true');
+    trigger.setAttribute('aria-expanded', 'false');
+    trigger.title = title;
+    const menu = document.createElement('div');
+    menu.className = 'ribbon-overflow-menu';
+    menu.setAttribute('role', 'menu');
+    document.body.appendChild(menu);
+    const entry = { trigger, menu, items: new Map() };
+    menu.__ribbonEntry = entry;
+    trigger.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (entry.menu.classList.contains('open')) closeMenu(entry); else openMenu(entry);
+    });
+    trigger.addEventListener('keydown', event => {
+      if ((event.key === 'ArrowDown' || event.key === 'Enter' || event.key === ' ') && !entry.menu.classList.contains('open')) {
+        event.preventDefault();
+        openMenu(entry);
+      }
+    });
+    return entry;
+  }
+
+  function getSharedEntry(ribbon) {
+    let entry = ribbonSharedTrigger.get(ribbon);
+    if (!entry) {
+      entry = makeTrigger('その他', 'その他の追加コマンド');
+      entry.trigger.hidden = true;
+      ribbon.appendChild(entry.trigger);
+      ribbonSharedTrigger.set(ribbon, entry);
+    }
+    return entry;
+  }
+
+  // Collapse a single element (a whole .rgroup, or one .tool) behind an
+  // overflow trigger. `named` gives the element its own dedicated trigger;
+  // otherwise it is relocated into the ribbon's single shared "..." trigger.
+  function collapseInto(element, ribbon, { named } = {}) {
+    let state = overflowState.get(element);
+    if (state?.collapsed) return;
+    const entry = named
+      ? (state?.entry || makeTrigger(named, `${named} の追加コマンド`))
+      : getSharedEntry(ribbon);
+    if (!state) {
+      const placeholder = document.createComment('ribbon-overflow-placeholder');
+      state = { entry, placeholder, collapsed: false, named: Boolean(named) };
+      overflowState.set(element, state);
+    }
+    element.parentNode.insertBefore(state.placeholder, element);
+    if (named && !entry.trigger.isConnected) {
+      element.parentNode.insertBefore(entry.trigger, state.placeholder);
+    }
+    entry.menu.appendChild(element);
+    state.collapsed = true;
+    if (!named) {
+      entry.trigger.hidden = false;
+      entry.items.set(element, true);
+    }
+  }
+
+  function restoreFrom(element) {
+    const state = overflowState.get(element);
+    if (!state || !state.collapsed) return;
+    closeMenu(state.entry);
+    state.placeholder.parentNode.insertBefore(element, state.placeholder);
+    if (state.named) state.entry.trigger.remove();
+    else state.entry.items.delete(element);
+    state.placeholder.remove();
+    state.collapsed = false;
+    if (!state.named && state.entry.items.size === 0) {
+      state.entry.trigger.hidden = true;
+      closeMenu(state.entry);
+    }
+  }
+
+  function layoutHomeRibbon(ribbon, band) {
+    const groups = ribbon.__cachedGroups || (ribbon.__cachedGroups = [...ribbon.querySelectorAll('.rgroup')]);
+    const shared = getSharedEntry(ribbon);
+    groups.forEach(group => {
+      if (group.classList.contains('hidden')) return;
+      const title = norm(group.querySelector('.rgroup-title')?.textContent);
+
+      if (title === HOME_FILE_GROUP) {
+        restoreFrom(group);
+        return;
+      }
+      if (HOME_NAMED_OVERFLOW_GROUPS.has(title)) {
+        if (band === 'full') restoreFrom(group);
+        else collapseInto(group, ribbon, { named: title });
+        return;
+      }
+      // Command-level tiering for every other group (編集/行操作/時間軸/ズーム/...).
+      // Tools are cached once: after a tool is relocated into an overflow
+      // menu it is no longer a descendant of `group`, so a live query here
+      // would silently lose track of it and it could never be restored.
+      const tools = group.__cachedTools || (group.__cachedTools = [...group.querySelectorAll('.tool')]);
+      tools.forEach(tool => {
+        const priority = HOME_TOOL_PRIORITY.get(norm(tool.querySelector('.tool-label')?.textContent)) ?? 1;
+        const shouldCollapse = band === 'compact' && priority >= 4;
+        if (shouldCollapse) collapseInto(tool, ribbon);
+        else restoreFrom(tool);
+      });
+    });
+    if (shared.items.size === 0) shared.trigger.hidden = true;
+  }
+
+  function layoutGenericRibbon(ribbon, band) {
+    const groups = ribbon.__cachedGroups || (ribbon.__cachedGroups = [...ribbon.querySelectorAll('.rgroup')]);
+    const visible = groups.filter(group => !group.classList.contains('hidden'));
+    visible.forEach((group, index) => {
+      const alwaysVisible = index === 0;
+      if (band !== 'full' && !alwaysVisible) collapseInto(group, ribbon, { named: norm(group.querySelector('.rgroup-title')?.textContent) || 'その他' });
+      else restoreFrom(group);
+    });
+  }
+
+  function layoutRibbon(ribbon) {
+    if (!ribbon || ribbon.hidden || ribbon.style.display === 'none') return;
+    const band = currentBand();
+    if (ribbon.id === 'ribbonHome') layoutHomeRibbon(ribbon, band);
+    else layoutGenericRibbon(ribbon, band);
+    ribbon.scrollLeft = 0;
+  }
+
+  function layoutAll() {
+    document.querySelectorAll('.ribbon').forEach(layoutRibbon);
+  }
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(layoutAll, 80);
+  });
+  document.addEventListener('click', event => {
+    if (event.target.closest?.('.rtab, .seg')) setTimeout(layoutAll, 0);
+  }, true);
+
+  window.TimingChartResponsiveRibbon = { layoutAll, layoutRibbon, currentBand, BREAKPOINTS };
+
+  const start = () => { layoutAll(); setTimeout(layoutAll, 60); setTimeout(layoutAll, 200); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  else start();
+})();

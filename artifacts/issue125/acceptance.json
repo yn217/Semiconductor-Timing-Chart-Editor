@@ -1,0 +1,24 @@
+{
+  "issue": "125-merge",
+  "result": {
+    "leftRowVisibleWhenEyeOff": true,
+    "canvasRowHiddenWhenEyeOff": true,
+    "signalVisibleFieldAfterOff": false,
+    "canvasRowRestoredWhenEyeOn": true,
+    "canvasOrderMatchesCanonical": true,
+    "signalVisibleAfterRoundtrip": false,
+    "canvasRowHiddenAfterRoundtrip": true,
+    "leftRowVisibleAfterRoundtrip": true,
+    "canUndo": true,
+    "afterRedoVisible": false,
+    "staleCheck": {
+      "href": "icons.svg#i-eye-off",
+      "matchesCanonical": true
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue125-1672x941.png"
+  ]
+}

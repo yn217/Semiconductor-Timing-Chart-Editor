@@ -1,9 +1,99 @@
 {
   "issue": 47,
-  "largeSignalOpen": true,
-  "inspectorBodyScrolls": true,
-  "minimapPinned": true,
-  "minimapToggle": true,
+  "startupState": {
+    "innerHeight": 941,
+    "inspector": {
+      "top": 216,
+      "bottom": 914,
+      "height": 698
+    },
+    "minimap": {
+      "top": 812,
+      "bottom": 914,
+      "height": 102
+    },
+    "minimapVisible": true,
+    "minimapHeight": 102,
+    "bodyScrollable": true,
+    "pageOverflow": false
+  },
+  "largeState": {
+    "innerHeight": 941,
+    "inspector": {
+      "top": 216,
+      "bottom": 914,
+      "height": 698
+    },
+    "minimap": {
+      "top": 812,
+      "bottom": 914,
+      "height": 102
+    },
+    "minimapVisible": true,
+    "minimapHeight": 102,
+    "bodyScrollable": true,
+    "pageOverflow": false
+  },
+  "toggleState": {
+    "off": {
+      "hidden": true,
+      "visible": false
+    },
+    "on": {
+      "hidden": false,
+      "visible": true,
+      "bottom": 914
+    }
+  },
+  "compactState": {
+    "innerHeight": 720,
+    "inspector": {
+      "top": 216,
+      "bottom": 693,
+      "height": 477
+    },
+    "minimap": {
+      "top": 591,
+      "bottom": 693,
+      "height": 102
+    },
+    "minimapVisible": true,
+    "minimapHeight": 102,
+    "bodyScrollable": true,
+    "pageOverflow": false
+  },
+  "clockState": {
+    "minimapVisible": true
+  },
+  "tallContentState": {
+    "annotation": {
+      "minimapVisible": true,
+      "pageOverflow": false
+    },
+    "problems": {
+      "minimapVisible": true,
+      "pageOverflow": false
+    }
+  },
+  "resizeState": {
+    "enlarged": {
+      "minimapVisible": true
+    },
+    "restored": {
+      "minimapVisible": true
+    }
+  },
+  "stabilityState": {
+    "inspectorScrollApplied": true,
+    "unmovedByInspectorScroll": true,
+    "unmovedByHorizontalScroll": true,
+    "unmovedByZoom": true
+  },
   "errors": [],
-  "pass": true
+  "pass": true,
+  "artifacts": [
+    "issue47-startup-1672x941.png",
+    "issue47-large-1672x941.png",
+    "issue47-large-1280x720.png"
+  ]
 }

@@ -212,7 +212,8 @@
     const rootStyle = getComputedStyle(document.documentElement);
     const leftWidth = rootStyle.getPropertyValue('--left').trim() || '330px';
     const rightWidth = rootStyle.getPropertyValue('--right').trim() || '300px';
-    workspace.style.gridTemplateColumns = `${view.panels.left ? leftWidth : '0px'} minmax(0,1fr) ${view.panels.inspector ? rightWidth : '0px'}`;
+    const inspectorColumnWidth = !view.panels.inspector ? '0px' : (model.view.inspectorPaneCollapsed ? '36px' : rightWidth);
+    workspace.style.gridTemplateColumns = `${view.panels.left ? leftWidth : '0px'} minmax(0,1fr) ${inspectorColumnWidth}`;
     workspace.dataset.panelLayout = 'explicit';
     const left = document.querySelector('.left-panel');
     const inspector = document.querySelector('.inspector');
@@ -284,7 +285,7 @@
     if (ruler) { ruler.style.visibility = view.guides.ruler ? 'visible' : 'hidden'; ruler.dataset.viewState = view.guides.ruler ? 'on' : 'off'; }
     if (bottom && view.panels.bottom) view.bottomHeight = Number(view.bottomHeight || model.view.bottomHeight || bottom.getBoundingClientRect().height || 270);
     if (left) { left.hidden = !view.panels.left; left.classList.toggle('hidden', !view.panels.left); }
-    if (inspector) { inspector.hidden = !view.panels.inspector; inspector.classList.toggle('hidden', !view.panels.inspector); }
+    if (inspector) { inspector.hidden = !view.panels.inspector; inspector.classList.toggle('hidden', !view.panels.inspector); inspector.dataset.inspectorCollapsed = (view.panels.inspector && model.view.inspectorPaneCollapsed) ? 'true' : 'false'; }
     if (bottom) { bottom.hidden = !view.panels.bottom; bottom.classList.toggle('hidden', !view.panels.bottom); }
     if (inspector) inspector.dataset.viewMinimap = view.guides.minimap ? 'on' : 'off';
     if (minimap) { minimap.hidden = !view.guides.minimap; minimap.dataset.viewState = view.guides.minimap ? 'on' : 'off'; }

@@ -1,0 +1,62 @@
+{
+  "issue": 114,
+  "chevState": {
+    "count": 3,
+    "allButtons": true,
+    "noLiteralText": true,
+    "allHaveSvg": true
+  },
+  "moreState": {
+    "groupMoreCount": 3,
+    "rowMoreCount": 10,
+    "noLiteralGlyph": true,
+    "allButtons": true,
+    "allHaveSvg": true,
+    "expectedGroupId": "group_input",
+    "groupMenuOpenedForRightGroup": true,
+    "rowMenuOpened": true
+  },
+  "hit1672": {
+    "eyeResolves": true,
+    "moreResolves": true,
+    "chevResolves": true,
+    "groupMoreResolves": true,
+    "eyeMoreOverlap": false,
+    "chevGroupMoreOverlap": false
+  },
+  "hit1280": {
+    "eyeResolves": true,
+    "moreResolves": true,
+    "chevResolves": true,
+    "groupMoreResolves": true,
+    "eyeMoreOverlap": false,
+    "chevGroupMoreOverlap": false
+  },
+  "dynamicState": {
+    "opened": true,
+    "moreAllSvgButtons": true,
+    "chevAllSvgButtons": true,
+    "noLiteralAnywhere": true
+  },
+  "keyboard": {
+    "chevBefore": "true",
+    "chevAfterEnter": "false",
+    "chevAfterSpace": "true",
+    "moreMenuOpenedByKeyboard": true
+  },
+  "selectionSafeState": {
+    "selectionBefore": "clk",
+    "selectionAfterEye": "clk",
+    "selectionAfterMoreOpen": "clk",
+    "selectionAfterInspectorCommand": "req_valid",
+    "unaffectedByEye": true,
+    "unaffectedByMoreOpen": true,
+    "inspectorCommandFoundCorrectRow": true,
+    "inspectorCommandTargetsClickedRow": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue114-1672x941.png"
+  ]
+}

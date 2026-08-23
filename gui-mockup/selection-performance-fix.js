@@ -236,6 +236,6 @@
 
   controller.renderSelectionFast = () => {
     renderHighlight();
-    scheduleDetails();
+    scheduleDetails(performance.now(), counterSnapshot());
   };
 })();
