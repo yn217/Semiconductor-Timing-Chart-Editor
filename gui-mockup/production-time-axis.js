@@ -14,6 +14,7 @@
     for (const signal of eventSignals(next)) for (const value of signal.values || []) if (Number(value.start) >= start && Number(value.start) !== 0) value.start += count;
     for (const transaction of next.transactions || []) { if (Number(transaction.start) >= start) transaction.start += count; if (Number(transaction.end) >= start) transaction.end += count; for (const phase of transaction.phases || []) { if (Number(phase.start) >= start) phase.start += count; if (Number(phase.end) >= start) phase.end += count; } }
     for (const bookmark of next.bookmarks || []) if (Number(bookmark.start) >= start) bookmark.start += count;
+    for (const group of next.timeGroups || []) { if (Number(group.start) >= start) group.start += count; if (Number(group.end) >= start) group.end += count; }
     controller.transformAnnotations?.(next, start, count, 'insert');
     next.timeline.cycleCount += count;
     next.timeline.end = next.timeline.cycleCount;
@@ -42,6 +43,7 @@
       for (const phase of transaction.phases || []) { phase.start = map(phase.start).mapped; phase.end = Math.max(phase.start, map(phase.end).mapped); }
     }
     for (const bookmark of next.bookmarks || []) bookmark.start = mapPointForDelete(Number(bookmark.start), start, end).mapped;
+    for (const group of next.timeGroups || []) { group.start = mapPointForDelete(Number(group.start), start, end).mapped; group.end = mapPointForDelete(Number(group.end), start, end).mapped; }
     controller.transformAnnotations?.(next, start, end, 'delete');
     next.timeline.cycleCount -= count;
     next.timeline.end = next.timeline.cycleCount;
@@ -61,6 +63,8 @@
   const removeRange = (start, end) => {
     const timeline = model.document.timeline;
     if (!validInteger(start) || !validInteger(end) || Number(start) >= Number(end) || Number(end) > timeline.cycleCount || Number(end) - Number(start) >= timeline.cycleCount) { model.validation = [{ code: 'invalid-cycle-range' }]; controller.render(); return false; }
+    const deletesTimeGroup = (model.document.timeGroups || []).find(group => Number(group.start) >= Number(start) && Number(group.end) <= Number(end));
+    if (deletesTimeGroup) { model.validation = [{ code: 'time-group-delete-requires-explicit-removal', id: deletesTimeGroup.id, message: '削除範囲がTime Group全体を含むため、先にTime Groupを削除してください' }]; controller.render(); return false; }
     const result = run(`Delete cycles ${start}-${end}`, () => { model.document = deleteRange(model.document, Number(start), Number(end)); });
     if (result) { model.timeSelection = { ...model.timeSelection, cycle: Math.min(Number(start), model.document.timeline.cycleCount), rangeStart: null, rangeEnd: null, source: 'range-delete' }; renderTransient(model); }
     return result;

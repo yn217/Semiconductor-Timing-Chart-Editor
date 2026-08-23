@@ -218,13 +218,21 @@
       if (!String(bookmark?.name || '').trim() || !Number.isFinite(Number(bookmark?.start)) || Number(bookmark.start) < Number(documentValue?.timeline?.start ?? 0) || Number(bookmark.start) > Number(documentValue?.timeline?.end ?? 0)) issues.push({ code: 'invalid-bookmark', id: bookmark?.id });
     }
     const timeGroupIds = new Set();
-    for (const group of documentValue?.timeGroups || []) {
+    const timeGroups = documentValue?.timeGroups || [];
+    for (const group of timeGroups) {
       if (!group?.id || timeGroupIds.has(group.id)) issues.push({ code: 'duplicate-time-group-id', id: group?.id });
       timeGroupIds.add(group?.id);
       if (!String(group?.name || '').trim() || !Number.isFinite(Number(group?.start)) || !Number.isFinite(Number(group?.end)) || Number(group.start) >= Number(group.end)) issues.push({ code: 'invalid-time-group', id: group?.id });
       const presentation = group.presentation || {};
       if (presentation.foldStyle !== undefined && !['none', 'compact', 'axis-break'].includes(presentation.foldStyle)) issues.push({ code: 'invalid-time-group-fold-style', id: group?.id });
       if (presentation.resumeLabelAnchorId && !anchorIds.has(presentation.resumeLabelAnchorId)) issues.push({ code: 'invalid-resume-label-anchor', id: group?.id });
+    }
+    const validTimeGroups = timeGroups.filter(group => Number.isFinite(Number(group?.start)) && Number.isFinite(Number(group?.end)) && Number(group.start) < Number(group.end));
+    for (let index = 0; index < validTimeGroups.length; index += 1) for (let other = index + 1; other < validTimeGroups.length; other += 1) {
+      const left = validTimeGroups[index]; const right = validTimeGroups[other];
+      const partial = Number(left.start) < Number(right.start) && Number(right.start) < Number(left.end) && Number(left.end) < Number(right.end)
+        || Number(right.start) < Number(left.start) && Number(left.start) < Number(right.end) && Number(right.end) < Number(left.end);
+      if (partial) issues.push({ code: 'overlapping-time-groups', id: left.id, relatedId: right.id, message: `Time Group ${left.id} and ${right.id} partially overlap` });
     }
     for (const anchor of anchors) if (anchor.ownerTimeGroupId && !timeGroupIds.has(anchor.ownerTimeGroupId)) issues.push({ code: 'invalid-label-anchor-owner', id: anchor.id });
     const walkFinite = (value, path = '$') => {
@@ -605,6 +613,50 @@
     return true;
   });
   controller.actions.setGroupCollapsed = (groupId, collapsed) => transactionRun('Toggle group collapse', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.collapsed = Boolean(collapsed); });
+  const timeGroupById = id => (model.document.timeGroups || []).find(group => group.id === id);
+  const timeGroupRange = (start, end) => Number.isFinite(Number(start)) && Number.isFinite(Number(end)) && Number(start) >= Number(model.document.timeline.start ?? 0) && Number(end) <= Number(model.document.timeline.end ?? model.document.timeline.cycleCount ?? 0) && Number(start) < Number(end);
+  const partiallyOverlapsTimeGroup = (start, end, ignoreId = '') => (model.document.timeGroups || []).some(group => {
+    if (group.id === ignoreId) return false;
+    const a = Number(start); const b = Number(end); const c = Number(group.start); const d = Number(group.end);
+    return a < d && c < b && !((a === c && b === d) || b === c || d === a) && ((a < c && c < b && b < d) || (c < a && a < d && d < b));
+  });
+  const nextTimeGroupId = () => { let index = (model.document.timeGroups || []).length + 1; let id = `tg_${String(index).padStart(3, '0')}`; while ((model.document.timeGroups || []).some(group => group.id === id)) id = `tg_${String(++index).padStart(3, '0')}`; return id; };
+  const normalizeTimeGroupPresentation = presentation => {
+    const value = structuredClone(presentation || {});
+    if (value.collapsed !== undefined) value.collapsed = Boolean(value.collapsed);
+    if (value.foldStyle !== undefined && !['none', 'compact', 'axis-break'].includes(value.foldStyle)) value.foldStyle = 'none';
+    if (value.displayAfter) {
+      value.displayAfter = { mode: value.displayAfter.mode === 'rebase' ? 'rebase' : 'source', ...(value.displayAfter.value === undefined ? {} : { value: Number(value.displayAfter.value) }) };
+    }
+    return value;
+  };
+  controller.selectors.getTimeGroups = ({ sort = 'start', category = '' } = {}) => {
+    const groups = (model.document.timeGroups || []).filter(group => !category || String(group.category || '') === String(category));
+    const sorted = groups.map((group, index) => ({ ...group, duration: Number(group.end) - Number(group.start), state: group.presentation?.collapsed ? 'Collapsed' : 'Expanded', order: index }));
+    const compare = sort === 'name' ? (a, b) => String(a.name).localeCompare(String(b.name)) : sort === 'category' ? (a, b) => String(a.category || '').localeCompare(String(b.category || '')) : sort === 'duration' ? (a, b) => a.duration - b.duration : (a, b) => Number(a.start) - Number(b.start) || a.order - b.order;
+    return sorted.sort(compare).map((group, index, all) => ({ ...group, gap: index ? Number(group.start) - Number(all[index - 1].end) : null, sameCategoryDurationDelta: index && String(group.category || '') === String(all[index - 1].category || '') ? group.duration - all[index - 1].duration : null }));
+  };
+  controller.actions.addTimeGroup = (seed = {}) => {
+    const start = Number(seed.start ?? model.timeSelection?.rangeStart); const end = Number(seed.end ?? model.timeSelection?.rangeEnd);
+    if (!timeGroupRange(start, end)) { model.validation = [{ code: 'invalid-time-group', message: '有効な時間範囲を選択してください' }]; controller.render(); return false; }
+    if (partiallyOverlapsTimeGroup(start, end)) { model.validation = [{ code: 'overlapping-time-groups', message: 'Time Groupの部分重複は許可されません' }]; controller.render(); return false; }
+    return transactionRun('Create time group', () => {
+      const group = { id: seed.id || nextTimeGroupId(), name: String(seed.name || `Time Group ${(model.document.timeGroups || []).length + 1}`).trim(), start, end, ...(seed.category ? { category: String(seed.category) } : {}), ...(seed.comment ? { comment: String(seed.comment) } : {}), ...(seed.presentation ? { presentation: normalizeTimeGroupPresentation(seed.presentation) } : {}) };
+      if (!group.name || (model.document.timeGroups || []).some(item => item.id === group.id)) return false;
+      model.document.timeGroups ??= []; model.document.timeGroups.push(group); model.selection = { kind: 'timeGroup', id: group.id }; return true;
+    });
+  };
+  controller.actions.updateTimeGroup = (id, field, value) => {
+    const group = timeGroupById(id); if (!group) return false;
+    const next = structuredClone(group); const presentationFields = new Set(['collapsed', 'foldStyle', 'foldLabel', 'displayAfter.mode', 'displayAfter.value']);
+    if (presentationFields.has(field)) { next.presentation = normalizeTimeGroupPresentation(next.presentation); if (field === 'collapsed') next.presentation.collapsed = Boolean(value); else if (field === 'foldStyle') next.presentation.foldStyle = String(value); else if (field === 'foldLabel') next.presentation.foldLabel = String(value); else { next.presentation.displayAfter ??= { mode: 'source' }; if (field === 'displayAfter.mode') next.presentation.displayAfter.mode = value === 'rebase' ? 'rebase' : 'source'; else next.presentation.displayAfter.value = Number(value); } }
+    else if (field === 'start' || field === 'end') next[field] = Number(value); else if (field === 'name') next.name = String(value).trim(); else if (field === 'category' || field === 'comment') next[field] = String(value ?? ''); else return false;
+    if (!next.name || !timeGroupRange(next.start, next.end) || partiallyOverlapsTimeGroup(next.start, next.end, id)) { model.validation = [{ code: 'invalid-time-group-edit', id, message: 'Time Groupの範囲または重複が不正です' }]; controller.render(); return false; }
+    return transactionRun(`Update time group ${field}`, () => { Object.assign(group, next); });
+  };
+  controller.actions.setTimeGroupCollapsed = (id, collapsed) => controller.actions.updateTimeGroup(id, 'collapsed', collapsed);
+  controller.actions.deleteTimeGroup = id => transactionRun('Delete time group', () => { const index = (model.document.timeGroups || []).findIndex(group => group.id === id); if (index < 0) return false; model.document.timeGroups.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
+  controller.actions.revealTimeGroup = id => { const group = timeGroupById(id); if (!group) return false; model.timeSelection = { ...(model.timeSelection || {}), cycle: Number(group.start), rangeStart: Number(group.start), rangeEnd: Number(group.end), source: 'time-group-reveal' }; controller.scheduleTransientLayout?.(model); return true; };
   controller.actions.setGroupName = (groupId, name) => { if (!String(name || '').trim()) return false; return transactionRun('Rename group', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.name = String(name).trim(); }); };
   controller.actions.moveGroupBy = (groupId, delta) => transactionRun('Reorder group', () => { const from = model.document.signalGroups.findIndex(item => item.id === groupId); const to = Math.max(0, Math.min(model.document.signalGroups.length - 1, from + Number(delta))); if (from < 0 || from === to) return false; const [group] = model.document.signalGroups.splice(from, 1); model.document.signalGroups.splice(to, 0, group); });
   controller.actions.deleteGroup = groupId => transactionRun('Delete group', () => { if (model.document.signalGroups.length <= 1) return false; const index = model.document.signalGroups.findIndex(item => item.id === groupId); if (index < 0 || (model.document.signalGroups[index].rows || []).length) return false; model.document.signalGroups.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
