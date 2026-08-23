@@ -46,7 +46,7 @@ await page.locator('[data-layout-popup="group"] [data-layout-field="spacingAfter
 await page.locator('[data-layout-popup="group"] [data-layout-action="apply"]').click();
 await page.waitForTimeout(80);
 const groupAfter = await page.evaluate(() => { const c = window.TimingChartProductionController; const internal = document.querySelectorAll('#groups .group')[1]; const output = document.querySelectorAll('#groups .group')[2]; return { order: [...document.querySelectorAll('#groups .group')].map(group => group.dataset.groupId), boundary: output.getBoundingClientRect().top - internal.querySelector('.row:last-of-type').getBoundingClientRect().bottom, spacing: c.model.document.signalGroups.find(group => group.id === 'group_internal').spacingAfter, rows: c.model.document.signalGroups.map(group => [...group.rows]) }; });
-const internalDisclosure = page.locator('#groups .group:nth-child(2) .group-disclosure');
+const internalDisclosure = page.locator('#groups .group:nth-child(2) .chev');
 await internalDisclosure.click(); await page.waitForTimeout(40);
 const collapsedSpacing = await page.evaluate(() => { const c = window.TimingChartProductionController; return { collapsed: c.model.document.signalGroups.find(group => group.id === 'group_internal').collapsed, spacing: c.model.document.signalGroups.find(group => group.id === 'group_internal').spacingAfter, hidden: [...document.querySelectorAll('#groups .group:nth-child(2) .row')].every(row => row.hidden) }; });
 await internalDisclosure.click(); await page.waitForTimeout(40);
