@@ -132,21 +132,27 @@ const colorFlow = await page.evaluate(async () => {
 });
 
 // --- 5. N-Cycle insert popover ---
+// Home Ribbon no longer exposes 挿入-labeled Cycle commands (moved to the Insert Ribbon
+// per #32's approved composition); the app-owned N Cycle追加 dialog now lives there.
+await page.locator('.rtab', { hasText: '挿入' }).click();
+await page.waitForTimeout(40);
 const nCycleFlow = await page.evaluate(async () => {
   const wait = ms => new Promise(r => setTimeout(r, ms));
   const c = window.TimingChartProductionController;
   const before = c.model.document.timeline.cycleCount;
-  const btn = [...document.querySelectorAll('.tool')].find(b => b.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes('NCycle挿入'));
+  const btn = [...document.querySelectorAll('.tool')].find(b => b.offsetParent !== null && b.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes('NCycle追加'));
   btn.click();
   await wait(60);
-  const popover = document.querySelector('#issue92Popover');
-  const input = popover?.querySelector('input[data-field="count"]');
-  const applyBtn = popover ? [...popover.querySelectorAll('button')].find(b => b.textContent.includes('適用')) : null;
+  const popover = document.querySelector('#insertNCyclesDialog');
+  const input = popover?.querySelector('[data-insert-count]');
+  const applyBtn = popover ? popover.querySelector('[data-insert-apply]') : null;
   if (input) { input.value = '3'; applyBtn.click(); }
   await wait(60);
   const after = c.model.document.timeline.cycleCount;
   return { hasPopover: !!popover, before, after, delta: after - before };
 });
+await page.locator('.rtab', { hasText: 'ホーム' }).click();
+await page.waitForTimeout(40);
 
 // --- 6. Context menu viewport clamping near bottom-right ---
 const menuClamp = await page.evaluate(async () => {
