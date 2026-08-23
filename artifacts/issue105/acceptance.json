@@ -1,0 +1,93 @@
+{
+  "issue": 105,
+  "fullState": {
+    "band": "full",
+    "visibleTriggerCount": 0,
+    "toolsInMenus": 0
+  },
+  "compactState": {
+    "band": "compact",
+    "tier1Visible": true,
+    "tier4Hidden": true,
+    "coreReachable": true,
+    "scrollNeeded": false,
+    "triggers": [
+      "レイアウト",
+      "表示",
+      "その他"
+    ]
+  },
+  "namedOverflowResult": {
+    "opened": true,
+    "withinViewport": true,
+    "tools": [
+      {
+        "label": "行間隔",
+        "disabled": true,
+        "hasTitle": true
+      },
+      {
+        "label": "Group間隔",
+        "disabled": true,
+        "hasTitle": true
+      },
+      {
+        "label": "自動レイアウト",
+        "disabled": true,
+        "hasTitle": true
+      }
+    ],
+    "ariaExpanded": "true"
+  },
+  "afterEscape": {
+    "openCount": 0,
+    "focusedIsTrigger": true
+  },
+  "keyboardResult": {
+    "openedByKeyboard": true,
+    "firstFocused": true,
+    "movedToSecond": true,
+    "closedByEscape": true,
+    "itemCount": 2
+  },
+  "restoredState": {
+    "band": "full",
+    "visibleTriggerCount": 0,
+    "homeToolCount": 29,
+    "toolsStrandedInMenus": 0
+  },
+  "zoomClickResult": {
+    "calls": 1,
+    "before": 100,
+    "after": 110
+  },
+  "tabState": {
+    "homeScrollAfterReturn": 0,
+    "homeScrollAfterHide": 0
+  },
+  "primaryActionState": {
+    "ribbonInsert": true,
+    "ribbonAnnotation": true,
+    "ribbonView": true,
+    "transactionUsesHomeRibbon": {
+      "txnTabExists": true,
+      "txnTabWasHidden": false,
+      "visibleRibbons": [
+        "ribbonHome"
+      ]
+    },
+    "viewOverflowRealClick": {
+      "found": true,
+      "collapsedIntoOverflow": true,
+      "before": true,
+      "after": false,
+      "toggled": true
+    }
+  },
+  "bandDetectionNote": "currentBand() measures .app's rendered width (clamped to a 1280px workspace-grid floor), not window.innerWidth, so Full/Compact are the only bands this architecture can actually reach; More-compact/<1024 fallback were dropped from scope rather than asserted against an unreachable viewport (see comment in responsive-ribbon.js).",
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue105-1672x941.png"
+  ]
+}

@@ -1,0 +1,88 @@
+{
+  "issue": 123,
+  "result": {
+    "captures": {
+      "ann_default_marker": {
+        "sectionKeys": [
+          "basic",
+          "anchor",
+          "style",
+          "label",
+          "advanced"
+        ],
+        "sectionTitles": [
+          "Basic",
+          "Anchor",
+          "Style",
+          "Label Layout",
+          "Advanced"
+        ]
+      },
+      "ann_default_dependency": {
+        "sectionKeys": [
+          "basic",
+          "from",
+          "to",
+          "layout",
+          "style",
+          "label",
+          "advanced"
+        ],
+        "sectionTitles": [
+          "Basic",
+          "From Anchor",
+          "To Anchor",
+          "Type-specific Layout",
+          "Style",
+          "Label Layout",
+          "Advanced"
+        ]
+      },
+      "ann_default_highlight": {
+        "sectionKeys": [
+          "basic",
+          "start",
+          "end",
+          "style",
+          "label",
+          "advanced"
+        ],
+        "sectionTitles": [
+          "Basic",
+          "Start Anchor",
+          "End Anchor",
+          "Style",
+          "Label Layout",
+          "Advanced"
+        ]
+      },
+      "ann_default_callout": {
+        "sectionKeys": [
+          "basic",
+          "anchor",
+          "style",
+          "label",
+          "advanced"
+        ],
+        "sectionTitles": [
+          "Basic",
+          "Anchor",
+          "Style",
+          "Label Layout",
+          "Advanced"
+        ]
+      }
+    },
+    "docUnchanged": true
+  },
+  "markerNoEnd": true,
+  "dependencyHasFromTo": true,
+  "dependencyTitlesDistinct": true,
+  "highlightHasStartEnd": true,
+  "calloutOneAnchor": true,
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue123-1672x941.png"
+  ]
+}

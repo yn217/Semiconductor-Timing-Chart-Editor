@@ -1,0 +1,101 @@
+{
+  "issue": 120,
+  "result": {
+    "tableExists": true,
+    "hasVisibilityHeader": true,
+    "headers": [
+      "表示",
+      "#",
+      "種類",
+      "ラベル / 本文",
+      "Start",
+      "End",
+      "色",
+      "コメント"
+    ],
+    "rowCount": 5,
+    "visibilityChecks": [
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "noUnicodeGlyph": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_range",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "noUnicodeGlyph": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_marker",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "noUnicodeGlyph": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_callout",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "noUnicodeGlyph": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_dependency",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "noUnicodeGlyph": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_highlight",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      }
+    ],
+    "allHaveSvgIcons": true,
+    "allIconsMatch": true,
+    "allNoUnicodeGlyph": true,
+    "selectedBefore": "ann_default_marker"
+  },
+  "afterHide": {
+    "visible": true,
+    "rowStillInTable": true,
+    "selectionUnchanged": true,
+    "dirty": true
+  },
+  "afterRestore": {
+    "visible": false,
+    "rowStillInTable": true,
+    "selectionUnchanged": true
+  },
+  "undoRedoCheck": {
+    "before": false,
+    "afterToggle": true,
+    "canUndo": true,
+    "afterUndo": false,
+    "toggledCorrectly": true,
+    "undoRestored": true
+  },
+  "persistenceCheck": {
+    "visiblePersisted": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue120-1672x941.png"
+  ]
+}

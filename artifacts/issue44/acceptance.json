@@ -1,60 +1,46 @@
 {
   "issue": 44,
-  "result": {
-    "treeBefore": {
-      "clientHeight": 607,
-      "scrollHeight": 3050,
-      "scrollTop": 0,
-      "bodyScrollTop": 0
-    },
-    "treeAfter": {
-      "scrollTop": 2443,
-      "finalGroupVisible": true,
-      "finalSignalVisible": true
-    },
-    "wheelMoved": true,
-    "firstRowsBefore": 28,
-    "firstHeightBefore": 1040,
-    "collapsed": {
-      "model": true,
-      "aria": "false",
-      "icon": "icons.svg#i-chevron-right",
-      "rowsHidden": true,
-      "height": 32,
-      "followingTop": 339
-    },
-    "expanded": {
-      "model": false,
-      "aria": "true",
-      "icon": "icons.svg#i-chevron-down",
-      "rowsVisible": true,
-      "height": 1040
-    },
-    "otherGroups": [
+  "iconState": {
+    "count": 3,
+    "noLiteralText": true,
+    "allHaveSvgUse": true,
+    "allExpandedIcon": true,
+    "hitAreas": [
       {
-        "index": 1,
-        "collapsed": true,
-        "rowsHidden": true,
-        "aria": "false",
-        "icon": "icons.svg#i-chevron-right"
+        "w": 26,
+        "h": 26
       },
       {
-        "index": 2,
-        "collapsed": true,
-        "rowsHidden": true,
-        "aria": "false",
-        "icon": "icons.svg#i-chevron-right"
+        "w": 26,
+        "h": 26
+      },
+      {
+        "w": 26,
+        "h": 26
       }
-    ],
-    "canvasBefore": 0,
-    "canvasAfter": 0,
-    "inspectorBefore": 0,
-    "inspectorAfter": 0,
-    "persistedCollapsed": true,
-    "iconCount": 3
+    ]
   },
-  "independentTreeScroll": true,
-  "svgDisclosure": true,
+  "toggleState": {
+    "rowsHidden": true,
+    "ariaCollapsed": true,
+    "iconCollapsed": true,
+    "otherRowsUnaffected": true,
+    "rowsShown": true,
+    "ariaExpanded": true,
+    "iconExpanded": true,
+    "titleClickSafe": true
+  },
+  "scrollState": {
+    "opened": true,
+    "lastRowId": "perf_sig_39",
+    "lastRowReachable": true,
+    "canvasUnaffected": true,
+    "pageOverflow": false,
+    "outputRowsHiddenAfterCollapse": true
+  },
   "errors": [],
-  "pass": true
+  "pass": true,
+  "artifacts": [
+    "issue44-1672x941.png"
+  ]
 }

@@ -1,0 +1,52 @@
+{
+  "issue": 124,
+  "result": {
+    "markerSummaries": [
+      {
+        "key": "anchor",
+        "summaryText": "clk / Rising @ cycle 4",
+        "hasPickButton": true
+      }
+    ],
+    "dependencySummaries": [
+      {
+        "key": "from",
+        "summaryText": "state[1:0] / Transition @ cycle 4",
+        "hasPickButton": true
+      },
+      {
+        "key": "to",
+        "summaryText": "rdata[15:0] / Transition @ cycle 6",
+        "hasPickButton": true
+      }
+    ],
+    "highlightSummaries": [
+      {
+        "key": "start",
+        "summaryText": "req_valid / Cycle boundary @ cycle 4",
+        "hasPickButton": true
+      },
+      {
+        "key": "end",
+        "summaryText": "ready / Cycle boundary @ cycle 10",
+        "hasPickButton": true
+      }
+    ],
+    "pickActionExists": true,
+    "pickInvoked": true,
+    "docUnchangedByRender": true
+  },
+  "markerHasOneSummary": true,
+  "markerSummaryReadable": true,
+  "dependencyHasTwoSummaries": true,
+  "dependencyDistinct": true,
+  "dependencyNoJunk": true,
+  "highlightHasTwoSummaries": true,
+  "highlightNoJunk": true,
+  "pickWiredCorrectly": true,
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue124-1672x941.png"
+  ]
+}
