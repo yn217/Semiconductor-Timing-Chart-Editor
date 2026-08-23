@@ -1,5 +1,5 @@
 {
-  "issue": "77 (Transaction operations + Time + Links Ribbon groups only -- not the full Transaction Ribbon spec)",
+  "issue": "77 (Transaction operations + Time + Links Ribbon groups, plus Split-mode Cycle View cross-highlight -- not the full Transaction Ribbon spec)",
   "setup": true,
   "buttons": [
     {
@@ -92,6 +92,11 @@
     "start": 1,
     "end": 6,
     "phaseIssue": false
+  },
+  "splitCrossHighlight": {
+    "cycleHighlighted": true,
+    "treeHighlighted": true,
+    "clearedAfterDelete": true
   },
   "homeRegression": {
     "foundHomeButtons": true,

@@ -196,6 +196,31 @@ assert.equal(rangeFlow.start, rangeFlow.before.start + 1);
 assert.equal(rangeFlow.end, rangeFlow.before.end + 4);
 assert.equal(rangeFlow.phaseIssue, false, 'applying a new range must never leave the document with out-of-bounds phases');
 
+// --- Split mode: selecting a Transaction cross-highlights its linked Signal in BOTH the Left Tree and the Cycle View (found via real DOM inspection that only the Left Tree was actually highlighted -- production-controller.js's own local `render` resolves to app-ui.js's keyed incremental reconciler, `modelDrivenReconcileCycleRowsKeyed`, which builds each Cycle View row's className without any cross-highlight awareness); clears once the Transaction is gone ---
+const splitCrossHighlight = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const signal = c.model.document.signals.find(s => s.type === 'binary');
+  c.actions.addTransaction();
+  await wait(60);
+  const txn = c.model.document.transactions.find(t => t.id === c.model.selection.id);
+  c.actions.updateTransaction(txn.id, 'linkedSignals', [signal.id]);
+  await wait(60);
+  c.actions.setViewMode('split');
+  await wait(100);
+  c.actions.selectTransaction(txn.id);
+  await wait(60);
+  const cycleHighlighted = document.querySelector(`#cycleCanvas .wave-row[data-signal="${signal.id}"]`)?.classList.contains('selected');
+  const treeHighlighted = document.querySelector(`.row[data-signal="${signal.id}"]`)?.classList.contains('selected');
+  c.actions.deleteTransaction(txn.id);
+  await wait(60);
+  const clearedAfterDelete = !document.querySelector(`#cycleCanvas .wave-row[data-signal="${signal.id}"]`)?.classList.contains('selected');
+  return { cycleHighlighted, treeHighlighted, clearedAfterDelete };
+});
+assert.equal(splitCrossHighlight.cycleHighlighted, true, 'a linked Signal must be cross-highlighted in the Cycle View, not only the Left Tree');
+assert.equal(splitCrossHighlight.treeHighlighted, true);
+assert.equal(splitCrossHighlight.clearedAfterDelete, true, 'cross-highlight must not persist as a stale class once the Transaction is gone');
+
 // --- Regression guard: this must not have collided with the unrelated Home Ribbon Signal reorder / Cut/Copy/Paste/Delete/Duplicate buttons ---
 const homeRegression = await page.evaluate(async () => {
   const c = window.TimingChartProductionController;
@@ -229,11 +254,12 @@ const pass = setup
   && deleteFlow.removed && deleteFlow.undoDelta === 1
   && revealFlow.disabledNoSelection && revealFlow.disabledNoLinks && revealFlow.enabledWithLinks && revealFlow.modeAfterClick === 'split' && revealFlow.unchanged
   && rangeFlow.disabledNoSelection && rangeFlow.disabledNoRange && rangeFlow.enabledWithRange && rangeFlow.undoDelta === 1 && rangeFlow.start === rangeFlow.before.start + 1 && rangeFlow.end === rangeFlow.before.end + 4 && !rangeFlow.phaseIssue
+  && splitCrossHighlight.cycleHighlighted && splitCrossHighlight.treeHighlighted && splitCrossHighlight.clearedAfterDelete
   && homeRegression.foundHomeButtons && homeRegression.signalDuplicateStillWorks
   && errors.length === 0;
 
-const report = { issue: '77 (Transaction operations + Time + Links Ribbon groups only -- not the full Transaction Ribbon spec)', setup, buttons, disabledState, duplicateFlow, reorderFlow, deleteFlow, revealFlow, rangeFlow, homeRegression, errors, pass, artifacts: ['issue77-ribbon-ops-1672x941.png'] };
+const report = { issue: '77 (Transaction operations + Time + Links Ribbon groups, plus Split-mode Cycle View cross-highlight -- not the full Transaction Ribbon spec)', setup, buttons, disabledState, duplicateFlow, reorderFlow, deleteFlow, revealFlow, rangeFlow, splitCrossHighlight, homeRegression, errors, pass, artifacts: ['issue77-ribbon-ops-1672x941.png'] };
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 
 assert.ok(pass, JSON.stringify(report, null, 2));
-console.log('Issue #77 Transaction-operations + Time + Links Ribbon groups acceptance passed: Transaction追加/複製/削除/上へ/下へ/選択範囲を適用/Cycle Viewで表示 are seven distinct real commands (not the previous single-button "順序変更" ambiguity, and not only 追加 wired); Duplicate/Delete/Up/Down are disabled without a Transaction selection and enabled with one; Duplicate inserts a unique-id transaction and selects it with exactly one Undo entry; Up/Down reorder the canonical array by one position with one Undo entry each, are a true no-op at the array boundary (no spurious Undo entry), and keep selection stable; Delete removes the selected transaction with one Undo entry; 選択範囲を適用 is disabled without a real current time-range selection and, once applied, sets start/end from that shared semantic timeline range (not pixel/fixed-pitch inference) with exactly one Undo entry while shifting or safely clearing any existing phases so the document never ends up with out-of-bounds phases; Cycle Viewで表示 is disabled both without a selection and for a Transaction with no real linkedSignals, and once enabled switches out of pure Transaction mode to reveal the linked Cycle signal without mutating the canonical document; and none of this regresses the unrelated Home Ribbon Signal Cut/Copy/Paste/Delete/Duplicate/Up/Down commands that happen to share the same button labels.');
+console.log('Issue #77 Transaction-operations + Time + Links Ribbon groups (plus Split-mode Cycle View cross-highlight) acceptance passed: Transaction追加/複製/削除/上へ/下へ/選択範囲を適用/Cycle Viewで表示 are seven distinct real commands (not the previous single-button "順序変更" ambiguity, and not only 追加 wired); Duplicate/Delete/Up/Down are disabled without a Transaction selection and enabled with one; Duplicate inserts a unique-id transaction and selects it with exactly one Undo entry; Up/Down reorder the canonical array by one position with one Undo entry each, are a true no-op at the array boundary (no spurious Undo entry), and keep selection stable; Delete removes the selected transaction with one Undo entry; 選択範囲を適用 is disabled without a real current time-range selection and, once applied, sets start/end from that shared semantic timeline range (not pixel/fixed-pitch inference) with exactly one Undo entry while shifting or safely clearing any existing phases so the document never ends up with out-of-bounds phases; Cycle Viewで表示 is disabled both without a selection and for a Transaction with no real linkedSignals, and once enabled switches out of pure Transaction mode to reveal the linked Cycle signal without mutating the canonical document; selecting a Transaction in Split mode cross-highlights its linked Signal in BOTH the Left Tree and the Cycle View (a real gap found where only the Tree was actually highlighted, traced to the keyed incremental Cycle-row reconciler building row classNames with no cross-highlight awareness) and the highlight clears once the Transaction is gone; and none of this regresses the unrelated Home Ribbon Signal Cut/Copy/Paste/Delete/Duplicate/Up/Down commands that happen to share the same button labels.');

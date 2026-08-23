@@ -497,6 +497,7 @@ function modelDrivenReconcileCycleRowsKeyed(model=getProductionModel()){
   const metrics=window.TimingChartProductionController.renderMetrics ||= {waveDromRenders:0,geometryBuilds:0,geometryCacheHits:0,waveCacheHits:0,rowCreates:0,rowRemoves:0};
   const used=new Set();
   const groupClass=signal=>signal.role==='output'?'band-output':signal.role==='internal'?'band-internal':'band-command';
+  const crossHighlighted=signalId=>model.selection?.id===signalId||(model.crossHighlight||[]).includes(signalId);
   const createRow=signal=>{
     const row=document.createElement('div');metrics.rowCreates+=1;metrics.cycleRowCreates=(metrics.cycleRowCreates||0)+1;
     row.className=`wave-row ${groupClass(signal)}`;
@@ -510,7 +511,7 @@ function modelDrivenReconcileCycleRowsKeyed(model=getProductionModel()){
   const updateRow=(row,signal,group)=>{
     const kind=signal.type==='commentRow'?'comment':signal.type;
     if(row.dataset.kind!==kind || Boolean(row.querySelector('.trace'))!== (kind!=='comment')){const replacement=createRow(signal);row.replaceWith(replacement);row=replacement;}
-    row.className=`wave-row ${groupClass(signal)}`;row.dataset.signalId=signal.id;row.dataset.signal=signal.id;row.dataset.kind=kind;row.dataset.groupId=group.id;
+    row.className=`wave-row ${groupClass(signal)}${crossHighlighted(signal.id)?' selected':''}`;row.dataset.signalId=signal.id;row.dataset.signal=signal.id;row.dataset.kind=kind;row.dataset.groupId=group.id;
     const icon=row.querySelector('.canvas-icon');if(icon)issue25RenderRoleIcon(icon,signal);
     const label=row.querySelector('.signal-label');if(label){label.textContent=kind==='comment'?signal.title:signal.display?.name||signal.name||signal.id;label.dataset.signalId=signal.id;}
     const body=row.querySelector('.comment-body');if(body)body.textContent=signal.body||'';

@@ -23,6 +23,7 @@
   let detailTimer = 0;
   let generation = 0;
   let previousPrimaryRow = document.querySelector('.row[data-signal].selected');
+  let previousCrossHighlightActive = false;
 
   const esc = value => String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -62,13 +63,21 @@
     }
 
     // Transaction cross-highlights are normally empty during ordinary signal
-    // selection. Only touch those rows when the cross-highlight set is active.
+    // selection. Applied to both the Left Tree and the Cycle View rows so a
+    // selected Transaction's linked Signals are visible in Split/Cycle mode,
+    // not only in the tree. Always reconciled (even when empty) so a
+    // previous cross-highlight set never leaves stale 'selected' rows behind
+    // once the Transaction selection changes or clears.
     const cross = model.crossHighlight || [];
-    if (cross.length) {
+    if (cross.length || previousCrossHighlightActive) {
       document.querySelectorAll('.row[data-signal]').forEach(row => {
         const rowId = row.dataset.commentId || row.dataset.signal;
         if (rowId !== id) row.classList.toggle('selected', cross.includes(rowId));
       });
+      document.querySelectorAll('#cycleCanvas .wave-row[data-signal]').forEach(row => {
+        row.classList.toggle('selected', cross.includes(row.dataset.signal));
+      });
+      previousCrossHighlightActive = cross.length > 0;
     }
 
     document.querySelectorAll('#bottomTabs [data-tab].active').forEach(button => {
