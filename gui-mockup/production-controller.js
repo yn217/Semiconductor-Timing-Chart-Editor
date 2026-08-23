@@ -1003,12 +1003,27 @@
       else if (id && action === 'delete') controller.actions.deleteTransaction(id);
       else if (id && action === 'up') controller.actions.moveTransactionBy(id, -1);
       else if (id && action === 'down') controller.actions.moveTransactionBy(id, 1);
+      else if (id && action === 'reveal-links') {
+        const transaction = model.document.transactions.find(item => item.id === id);
+        const targetId = (transaction?.linkedSignals || [])[0];
+        if (!targetId) return;
+        if (model.view.mode === 'transaction') controller.actions.setViewMode('split');
+        controller.actions.revealSelection?.({ id: targetId });
+      }
     });
   });
   controller.registerRenderHook?.('txn-ribbon-buttons', () => {
     const hasSelection = model.selection?.kind === 'transaction';
+    const selectedTransaction = hasSelection ? model.document.transactions.find(item => item.id === model.selection.id) : null;
+    const hasLinks = Boolean(selectedTransaction?.linkedSignals?.length);
     document.querySelectorAll('.ribbon .txn-only [data-txn-action]').forEach(button => {
-      if (button.dataset.txnAction === 'add') return;
+      const action = button.dataset.txnAction;
+      if (action === 'add') return;
+      if (action === 'reveal-links') {
+        button.disabled = !hasSelection || !hasLinks;
+        button.title = !hasSelection ? 'Transactionを選択してください' : !hasLinks ? 'このTransactionにはLinked Signalがありません' : '';
+        return;
+      }
       button.disabled = !hasSelection;
       button.title = hasSelection ? '' : 'Transactionを選択してください';
     });

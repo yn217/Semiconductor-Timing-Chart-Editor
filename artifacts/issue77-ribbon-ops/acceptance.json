@@ -1,5 +1,5 @@
 {
-  "issue": "77 (Transaction operations Ribbon group only -- not the full Transaction Ribbon spec)",
+  "issue": "77 (Transaction operations + Links Ribbon groups only -- not the full Transaction Ribbon spec)",
   "setup": true,
   "buttons": [
     {
@@ -26,6 +26,11 @@
       "action": "down",
       "status": "implemented",
       "label": "後に移動"
+    },
+    {
+      "action": "reveal-links",
+      "status": "implemented",
+      "label": "Cycle Viewで表示"
     }
   ],
   "disabledState": {
@@ -50,6 +55,13 @@
   "deleteFlow": {
     "removed": true,
     "undoDelta": 1
+  },
+  "revealFlow": {
+    "disabledNoSelection": true,
+    "disabledNoLinks": true,
+    "enabledWithLinks": true,
+    "modeAfterClick": "split",
+    "unchanged": true
   },
   "homeRegression": {
     "foundHomeButtons": true,
