@@ -59,9 +59,12 @@ const actions = await page.evaluate(() => {
     const resultValue = rawResult && typeof rawResult.then === 'function' ? await rawResult : rawResult;
     const result = resultValue === undefined ? true : resultValue;
     const commandEnd = performance.now();
+    const waveformIdle = controller.waveformIdle;
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const paint = performance.now();
-    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, timelineTrace: controller.lastTimelineInvalidation || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
+    if (waveformIdle) await waveformIdle;
+    const settledPaint = performance.now();
+    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, settledPaintMs: settledPaint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, timelineTrace: controller.lastTimelineInvalidation || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
   };
   return (async () => {
     controller.actions.selectObject(row('ctp_sig_10'));
@@ -97,6 +100,9 @@ await fs.writeFile(path.join(root, 'artifacts', 'command-to-paint', 'acceptance.
 if (!replace.result || state.signalCount !== 50 || state.rows !== 50 || pageErrors.length) throw new Error(JSON.stringify(result));
 for (const action of actions) {
   if (!action.result) throw new Error(JSON.stringify(action));
+  if (['cycle-insert', 'cycle-delete'].includes(action.name)) {
+    if (action.commandMs > 1000 || action.paintMs > 1000 || !(action.settledPaintMs >= action.paintMs)) throw new Error(`Timeline first-paint contract failed: ${JSON.stringify(action)}`);
+  }
   const waveDelta = action.metricsAfter.waveDromRenders - action.metricsBefore.waveDromRenders;
   const geometryDelta = action.metricsAfter.geometryBuilds - action.metricsBefore.geometryBuilds;
   const fullRenderDelta = action.metricsAfter.appFullRenders - action.metricsBefore.appFullRenders;
