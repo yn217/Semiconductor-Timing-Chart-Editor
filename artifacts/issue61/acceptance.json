@@ -5,8 +5,14 @@
   "deleteWithoutPrompt": true,
   "undo": true,
   "afterOpen": true,
-  "zoom150": true,
+  "zoom": [
+    50,
+    100,
+    150,
+    200
+  ],
   "scroll": true,
+  "edgeAutoScroll": true,
   "viewport1280": true,
   "waveDromRegenerationsDuringDrag": 0,
   "errors": [],
