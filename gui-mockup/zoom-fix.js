@@ -213,6 +213,7 @@
       window.TimingChartProductionAnnotations?.render?.(model);
       positionTimedBandLabels();
       updateStatus();
+      controller.viewRibbon?.scheduleMinimap?.();
       metrics.frames += 1;
       controller.profileMark?.('zoom:end');
     } finally {
