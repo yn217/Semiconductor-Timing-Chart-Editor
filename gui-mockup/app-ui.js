@@ -245,6 +245,7 @@ function modelDrivenReconcileCycleRowsKeyed(model=getProductionModel()){
     const kind=signal.type==='commentRow'?'comment':signal.type;
     if(row.dataset.kind!==kind || Boolean(row.querySelector('.trace'))!== (kind!=='comment')){const replacement=createRow(signal);row.replaceWith(replacement);row=replacement;}
     row.className=`wave-row ${groupClass(signal)}`;row.dataset.signalId=signal.id;row.dataset.signal=signal.id;row.dataset.kind=kind;row.dataset.groupId=group.id;
+    row.style.removeProperty('transform');row.style.removeProperty('will-change');row.dataset.reorderVisual='none';
     const icon=row.querySelector('.canvas-icon');if(icon)issue25RenderRoleIcon(icon,signal);
     const label=row.querySelector('.signal-label');if(label){label.textContent=kind==='comment'?signal.title:signal.display?.name||signal.name||signal.id;label.dataset.signalId=signal.id;}
     const body=row.querySelector('.comment-body');if(body)body.textContent=signal.body||'';

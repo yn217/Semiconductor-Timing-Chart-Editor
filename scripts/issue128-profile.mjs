@@ -71,6 +71,7 @@ const traceOnce = async (name, action) => {
   client.off('Tracing.dataCollected', onData);
   const userTiming = await page.evaluate(() => performance.getEntriesByType('mark').filter(entry => entry.name.startsWith('tc:')).map(entry => ({ name: entry.name, startTime: entry.startTime }))); 
   const metrics = await page.evaluate(() => ({ ...window.TimingChartProductionController.renderMetrics }));
+  const incrementalTrace = await page.evaluate(() => ({ trace: window.TimingChartProductionController.lastIncrementalTrace || null, parts: window.TimingChartProductionController.lastIncrementalTraceParts || null }));
   const traceBounds = {
     commandStartTs: traceMarkTimestamp(trace, 'tc:command:start'),
     commandRaf1Ts: traceMarkTimestamp(trace, 'tc:command:raf-1')
@@ -79,7 +80,7 @@ const traceOnce = async (name, action) => {
   const commandInterval = traceBounds.commandStartTs !== null && traceBounds.commandRaf1Ts !== null
     ? summarizeTrace(trace, { startTs: traceBounds.commandStartTs, endTs: traceBounds.commandRaf1Ts })
     : null;
-  return { name, browserReadyMs: browserReady - started, userTiming, traceBounds, totals, commandInterval, metrics, traceEvents: trace.length };
+  return { name, browserReadyMs: browserReady - started, userTiming, traceBounds, totals, commandInterval, metrics, incrementalTrace, traceEvents: trace.length };
 };
 
 const traceMarkTimestamp = (events, markName) => {
