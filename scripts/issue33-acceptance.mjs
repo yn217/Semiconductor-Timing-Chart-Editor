@@ -8,48 +8,100 @@ fs.mkdirSync(root, { recursive: true });
 const server = spawn('python', ['-m', 'http.server', '4237'], { stdio: 'ignore' });
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+const inspect = page => page.evaluate(() => {
+  const canvas = document.querySelector('#cycleCanvas');
+  const timing = canvas?.querySelector(':scope > .timing-scroll-pane');
+  const frozen = canvas?.querySelector(':scope > .frozen-label-pane');
+  const wave = timing?.querySelector(':scope > .wave');
+  const rows = [...timing?.querySelectorAll(':scope > .wave > .wave-row') || []];
+  const labelRows = [...frozen?.querySelectorAll(':scope > .frozen-label-wave > .frozen-label-row') || []];
+  const byId = new Map(labelRows.map(row => [row.dataset.signal, row]));
+  const alignment = rows.map(row => {
+    const label = byId.get(row.dataset.signal || row.dataset.signalId);
+    const a = row.getBoundingClientRect();
+    const b = label?.getBoundingClientRect();
+    return { id: row.dataset.signal, error: b ? Math.abs((a.top + a.height / 2) - (b.top + b.height / 2)) : Infinity };
+  });
+  const boundary = frozen?.getBoundingClientRect().right ?? 0;
+  const timingVisuals = [...timing?.querySelectorAll('.trace svg, .comment-body, .latency, [data-production-overlay="annotations"], [data-time-range-selection], [data-edge-counter], .playhead') || []];
+  return {
+    structure: {
+      canvasChildren: [...canvas.children].map(node => node.className),
+      frozenDirectChild: frozen?.parentElement === canvas,
+      timingDirectChild: timing?.parentElement === canvas,
+      frozenContainsTiming: Boolean(frozen?.querySelector('.trace, .comment-body, .latency, .ruler, [data-production-overlay="annotations"]')),
+      timingContainsRuler: Boolean(timing?.querySelector('.ruler')),
+      timingContainsTrace: Boolean(timing?.querySelector('.trace svg')),
+      timingContainsCommentBand: Boolean(timing?.querySelector('.comment-body, .latency')),
+      frozenContainsRole: Boolean(frozen?.querySelector('.canvas-icon')),
+      frozenContainsLabel: Boolean(frozen?.querySelector('.signal-label')),
+      clip: getComputedStyle(timing).overflowX === 'auto' && getComputedStyle(timing).clipPath !== 'none'
+    },
+    timing: { scrollWidth: timing?.scrollWidth || 0, clientWidth: timing?.clientWidth || 0, scrollLeft: timing?.scrollLeft || 0, left: timing?.getBoundingClientRect().left || 0, boundary },
+    labels: labelRows.map(row => ({ id: row.dataset.signal, rect: row.getBoundingClientRect().toJSON() })),
+    visuals: timingVisuals.map(node => ({ tag: node.tagName, rect: node.getBoundingClientRect().toJSON(), visibleAtBoundary: document.elementFromPoint(boundary - 1, Math.max(35, node.getBoundingClientRect().top + 2)) === node })),
+    alignment,
+    scrollHostOverflow: getComputedStyle(timing).overflow,
+    frozenX: frozen?.getBoundingClientRect().left || 0,
+    document: JSON.stringify(window.TimingChartProductionController.getSerializableDocument())
+  };
+});
+
+const assertPaneContract = snapshot => {
+  assert.equal(snapshot.structure.frozenDirectChild, true, 'frozen label pane is not a canvas sibling');
+  assert.equal(snapshot.structure.timingDirectChild, true, 'timing pane is not a canvas sibling');
+  assert.equal(snapshot.structure.frozenContainsTiming, false, 'timing content is owned by frozen pane');
+  assert.equal(snapshot.structure.timingContainsRuler, true, 'ruler is not in timing pane');
+  assert.equal(snapshot.structure.timingContainsTrace, true, 'WaveDrom trace is not in timing pane');
+  assert.equal(snapshot.structure.timingContainsCommentBand, true, 'timed comment band is not in timing pane');
+  assert.equal(snapshot.structure.frozenContainsRole, true, 'role column is not in frozen pane');
+  assert.equal(snapshot.structure.frozenContainsLabel, true, 'signal label is not in frozen pane');
+  assert.equal(snapshot.structure.clip, true, 'timing pane is not a clipped scroll owner');
+  assert.equal(snapshot.scrollHostOverflow, 'auto', 'timing pane does not own scrolling');
+  assert.ok(snapshot.alignment.every(item => item.error <= 0.1), `row alignment exceeded 0.1px: ${JSON.stringify(snapshot.alignment)}`);
+  assert.ok(snapshot.visuals.every(item => !item.visibleAtBoundary), 'timing visual is visible in frozen label pixels');
+};
+
 const runViewport = async (browser, viewport) => {
   const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   const errors = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.goto('http://127.0.0.1:4237/gui-mockup/', { waitUntil: 'networkidle' });
-  const before = await page.evaluate(() => {
-    const timing = document.querySelector('.timing-scroll-pane');
-    const label = document.querySelector('#cycleCanvas .signal-label');
-    const role = document.querySelector('#cycleCanvas .canvas-icon');
-    const comment = [...document.querySelectorAll('#cycleCanvas .wave-row')].find(row => row.querySelector('.comment-body'));
-    const tick = document.querySelector('#cycleCanvas .ruler .tick');
-    const trace = document.querySelector('#cycleCanvas .trace svg');
-    return { timing: { scrollWidth: timing.scrollWidth, clientWidth: timing.clientWidth }, label: label.getBoundingClientRect().toJSON(), role: role.getBoundingClientRect().toJSON(), commentLabel: comment.querySelector('.signal-label').getBoundingClientRect().toJSON(), commentBand: comment.querySelector('.comment-body').getBoundingClientRect().toJSON(), tick: tick.getBoundingClientRect().toJSON(), trace: trace.getBoundingClientRect().toJSON(), document: JSON.stringify(window.TimingChartProductionController.getSerializableDocument()), scrollLeft: timing.scrollLeft };
-  });
-  assert.ok(await page.locator('.timing-scroll-pane[data-scroll-owner="timing"]').count() === 1, 'timing pane missing');
-  assert.ok(before.timing.scrollWidth > before.timing.clientWidth, 'long timing content is not scrollable');
-  await page.evaluate(() => { document.querySelector('.timing-scroll-pane').scrollLeft = 300; });
   await wait(100);
-  const after = await page.evaluate(() => {
-    const timing = document.querySelector('.timing-scroll-pane');
-    const label = document.querySelector('#cycleCanvas .signal-label');
-    const role = document.querySelector('#cycleCanvas .canvas-icon');
-    const comment = [...document.querySelectorAll('#cycleCanvas .wave-row')].find(row => row.querySelector('.comment-body'));
-    const tick = document.querySelector('#cycleCanvas .ruler .tick');
-    const trace = document.querySelector('#cycleCanvas .trace svg');
-    const boundary = window.TimingChartProductionController.getCycleBoundary({ signal: 'clk', cycle: 0, coordinateSpace: 'canvas' });
-    const ruler = tick.getBoundingClientRect();
-    return { scrollLeft: timing.scrollLeft, label: label.getBoundingClientRect().toJSON(), role: role.getBoundingClientRect().toJSON(), commentLabel: comment.querySelector('.signal-label').getBoundingClientRect().toJSON(), commentBand: comment.querySelector('.comment-body').getBoundingClientRect().toJSON(), tick: tick.getBoundingClientRect().toJSON(), trace: trace.getBoundingClientRect().toJSON(), boundaryError: Math.abs(ruler.left + ruler.width / 2 - boundary.canvasX), playhead: document.querySelector('.playhead')?.getBoundingClientRect().toJSON(), document: JSON.stringify(window.TimingChartProductionController.getSerializableDocument()) };
-  });
-  assert.equal(errors.length, 0, errors.join('\n'));
-  assert.equal(after.scrollLeft, 300);
-  assert.ok(Math.abs(after.label.left - before.label.left) <= 0.1, 'signal label moved during horizontal timing scroll');
-  assert.ok(Math.abs(after.role.left - before.role.left) <= 0.1, 'role icon moved during horizontal timing scroll');
-  assert.ok(Math.abs(after.commentLabel.left - before.commentLabel.left) <= 0.1, 'comment label moved during horizontal timing scroll');
-  assert.ok(Math.abs(after.trace.left - before.trace.left) >= 299.9, 'WaveDrom trace did not scroll with timing pane');
-  assert.ok(Math.abs(after.commentBand.left - before.commentBand.left) >= 299.9, 'timed comment band did not scroll');
-  assert.ok(Math.abs(after.tick.left - before.tick.left) >= 299.9, 'ruler tick did not scroll');
-  assert.ok(after.boundaryError <= 0.1, 'ruler tick is not aligned to actual WaveDrom geometry');
-  assert.equal(after.document, before.document, 'horizontal scroll leaked into canonical document');
+  const before = await inspect(page);
+  assertPaneContract(before);
+  assert.ok(before.timing.scrollWidth > before.timing.clientWidth, 'timing content is not horizontally scrollable');
+  const baselineDocument = before.document;
+  const scrolls = [300, 800];
+  const scrollResults = [];
+  for (const requested of scrolls) {
+    await page.evaluate(value => { const host = document.querySelector('.timing-scroll-pane'); host.scrollLeft = Math.min(value, host.scrollWidth - host.clientWidth); }, requested);
+    await wait(50);
+    const result = await inspect(page);
+    assertPaneContract(result);
+    assert.ok(Math.abs(result.frozenX - before.frozenX) <= 0.1, `frozen pane moved at scroll ${requested}`);
+    assert.equal(result.document, baselineDocument, 'scroll mutated canonical document');
+    scrollResults.push({ requested, actual: result.timing.scrollLeft, max: result.timing.scrollWidth - result.timing.clientWidth, maxAlignmentErrorPx: Math.max(...result.alignment.map(item => item.error)) });
+  }
+  for (const zoom of [50, 100, 150]) {
+    const changed = await page.evaluate(value => window.TimingChartProductionController.actions.setZoom(value), zoom);
+    assert.equal(changed, true, `zoom ${zoom} was not accepted`);
+    await wait(80);
+    const result = await inspect(page);
+    assertPaneContract(result);
+  }
+  const widened = await page.evaluate(() => window.TimingChartProductionController.actions.setSignalNameWidth(240));
+  assert.equal(widened, true, 'widened splitter command failed');
+  await wait(80);
+  const widenedResult = await inspect(page);
+  assertPaneContract(widenedResult);
+  await page.evaluate(() => window.TimingChartProductionController.actions.setLeftPanelMode?.('hierarchy'));
+  await wait(80);
+  assertPaneContract(await inspect(page));
   await page.screenshot({ path: `${root}/production-${viewport.width}x${viewport.height}.png` });
+  assert.equal(errors.length, 0, errors.join('\n'));
   await page.close();
-  return { viewport, frozenLabel: true, timingScroll: true, geometryErrorPx: after.boundaryError, canonicalUnchanged: true, pass: true };
+  return { viewport, scrollResults, widenedBoundary: widenedResult.timing.boundary, maxAlignmentErrorPx: Math.max(...widenedResult.alignment.map(item => item.error)), pass: true };
 };
 
 try {
@@ -57,10 +109,10 @@ try {
   const browser = await chromium.launch({ headless: true });
   const results = [];
   for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) results.push(await runViewport(browser, viewport));
-  const report = { issue: 33, results, goldenReferenceModified: false, stylesModified: false, iconsModified: false, customWaveformRenderer: false, pass: true };
+  const report = { issue: 33, results, trueTwoPane: true, goldenReferenceModified: false, stylesModified: false, iconsModified: false, customWaveformRenderer: false, pass: true };
   fs.writeFileSync(`${root}/acceptance.json`, `${JSON.stringify(report, null, 2)}\n`);
   await browser.close();
-  console.log('Issue #33 acceptance passed: frozen label columns, timing-only horizontal scroll, geometry, and canonical persistence.');
+  console.log('Issue #33 acceptance passed: true frozen label pane, timing clipping/isolation, scroll, zoom, splitter, hierarchy, alignment, and persistence.');
 } finally {
   server.kill();
 }

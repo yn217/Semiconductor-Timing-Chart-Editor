@@ -6,10 +6,22 @@
         "width": 1672,
         "height": 941
       },
-      "frozenLabel": true,
-      "timingScroll": true,
-      "geometryErrorPx": 0,
-      "canonicalUnchanged": true,
+      "scrollResults": [
+        {
+          "requested": 300,
+          "actual": 300,
+          "max": 833,
+          "maxAlignmentErrorPx": 0
+        },
+        {
+          "requested": 800,
+          "actual": 800,
+          "max": 833,
+          "maxAlignmentErrorPx": 0
+        }
+      ],
+      "widenedBoundary": 575,
+      "maxAlignmentErrorPx": 0,
       "pass": true
     },
     {
@@ -17,13 +29,26 @@
         "width": 1280,
         "height": 720
       },
-      "frozenLabel": true,
-      "timingScroll": true,
-      "geometryErrorPx": 0,
-      "canonicalUnchanged": true,
+      "scrollResults": [
+        {
+          "requested": 300,
+          "actual": 300,
+          "max": 1145,
+          "maxAlignmentErrorPx": 0
+        },
+        {
+          "requested": 800,
+          "actual": 800,
+          "max": 1169,
+          "maxAlignmentErrorPx": 0
+        }
+      ],
+      "widenedBoundary": 525,
+      "maxAlignmentErrorPx": 0,
       "pass": true
     }
   ],
+  "trueTwoPane": true,
   "goldenReferenceModified": false,
   "stylesModified": false,
   "iconsModified": false,

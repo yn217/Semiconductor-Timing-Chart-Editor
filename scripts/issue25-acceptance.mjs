@@ -32,7 +32,7 @@ async function inspectRenderedRows(page) {
     const backgroundByRole = { input: 'rgb(223, 242, 223)', output: 'rgb(226, 239, 255)', internal: 'rgb(255, 255, 255)' };
     const roles = [];
     for (const signal of c.model.document.signals.filter(item => item.type !== 'commentRow')) {
-      for (const [surface, selector] of [['left', `#groups .row[data-signal="${CSS.escape(signal.id)}"] .role`], ['canvas', `#cycleCanvas .wave-row[data-signal="${CSS.escape(signal.id)}"] .canvas-icon.role`]]) {
+      for (const [surface, selector] of [['left', `#groups .row[data-signal="${CSS.escape(signal.id)}"] .role`], ['canvas', `#cycleCanvas .frozen-label-row[data-signal="${CSS.escape(signal.id)}"] .canvas-icon.role`]]) {
         const node = document.querySelector(selector); if (!node || !node.getClientRects().length) continue;
         const box = node.getBoundingClientRect(); const style = getComputedStyle(node);
         roles.push({ id: signal.id, role: signal.role, surface, background: style.backgroundColor, expectedBackground: backgroundByRole[signal.role], width: box.width, height: box.height, text: node.textContent.trim() });
@@ -40,7 +40,7 @@ async function inspectRenderedRows(page) {
     }
     const comments = [];
     for (const comment of c.model.document.signals.filter(item => item.type === 'commentRow')) {
-      for (const [surface, selector] of [['left', `#groups .row[data-signal="${CSS.escape(comment.id)}"] .role`], ['canvas', `#cycleCanvas .wave-row[data-signal="${CSS.escape(comment.id)}"] .canvas-icon.role`]]) {
+      for (const [surface, selector] of [['left', `#groups .row[data-signal="${CSS.escape(comment.id)}"] .role`], ['canvas', `#cycleCanvas .frozen-label-row[data-signal="${CSS.escape(comment.id)}"] .canvas-icon.role`]]) {
         const node = document.querySelector(selector); if (!node || !node.getClientRects().length) continue;
         const box = node.getBoundingClientRect();
         comments.push({ id: comment.id, title: comment.title, surface, use: node.querySelector('use')?.getAttribute('href'), text: node.textContent.trim(), aria: node.getAttribute('aria-label'), width: box.width, height: box.height });
