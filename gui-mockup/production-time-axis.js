@@ -51,9 +51,24 @@
   };
   const deleteCycles = (documentValue, start, count) => deleteRange(documentValue, start, start + count);
   const validInteger = value => Number.isInteger(Number(value)) && Number(value) >= 0;
+  const renderTimelineInvalidation = currentModel => {
+    const started = performance.now();
+    window.TimingChartProductionWaveform?.render?.(currentModel);
+    const waveformFinished = performance.now();
+    window.TimingChartProductionTimeAxis?.renderNow?.(currentModel);
+    const axisFinished = performance.now();
+    window.TimingChartProductionAnnotations?.render?.(currentModel);
+    const annotationFinished = performance.now();
+    if (currentModel.view.mode !== 'cycle' || currentModel.view.tab === 'transaction') window.TimingChartProductionTransactions?.render?.(currentModel);
+    if (currentModel.view.tab) window.TimingChartProductionUi?.refreshBottom?.(currentModel);
+    controller.viewRibbon?.scheduleGrid?.(); controller.viewRibbon?.scheduleMinimap?.();
+    controller.lastTimelineInvalidation = { waveformMs: waveformFinished - started, axisMs: axisFinished - waveformFinished, annotationMs: annotationFinished - axisFinished, totalMs: performance.now() - started };
+  };
   const run = (label, mutation) => {
     if (model.document.timeline.timeBase !== 'cycle') { model.validation = [{ code: 'time-axis-cycle-only', message: 'Cycle操作はcycle modeでのみ有効です' }]; controller.render(); return false; }
-    return controller.documentHistory.run(label, mutation);
+    const result = controller.documentHistory.run(label, mutation, { render: false });
+    if (result) renderTimelineInvalidation(model);
+    return result;
   };
   const insert = (start, count = 1) => {
     const timeline = model.document.timeline;
@@ -250,6 +265,7 @@
   const renderTransient = currentModel => {
     metrics.transientFrames += 1;
     metrics.rulerRebuilds += 1;
+    if (controller.renderMetrics) controller.renderMetrics.rulerRebuilds += 1;
     currentModel.displayMapping = buildDisplayMapping(currentModel);
     controller.displayMapping = currentModel.displayMapping;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
@@ -314,6 +330,28 @@
     transientFrame = requestAnimationFrame(() => { transientFrame = 0; renderTransient(pendingTransientModel); });
   };
   controller.scheduleTransientLayout = scheduleTransientLayout;
+  controller.cancelTransientLayout = () => {
+    if (transientFrame) cancelAnimationFrame(transientFrame);
+    transientFrame = 0;
+    pendingTransientModel = model;
+  };
+  let verticalExtentFrame = 0;
+  let pendingVerticalExtentModel = model;
+  const renderVerticalExtent = currentModel => {
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+    if (!scrollHost) return;
+    const overlay = document.querySelector('#cycleCanvas svg[data-production-overlay="annotations"]');
+    const rect = scrollHost.getBoundingClientRect();
+    if (overlay) { overlay.style.width = `${rect.width}px`; overlay.style.height = `${rect.height}px`; }
+    alignCommentRowsToCycleZero(currentModel);
+    renderEdgeCounters(currentModel);
+  };
+  const scheduleVerticalExtent = currentModel => {
+    pendingVerticalExtentModel = currentModel || model;
+    if (verticalExtentFrame) return;
+    verticalExtentFrame = requestAnimationFrame(() => { verticalExtentFrame = 0; renderVerticalExtent(pendingVerticalExtentModel); });
+  };
+  controller.scheduleVerticalExtent = scheduleVerticalExtent;
   const renderScrollTransient = currentModel => {
     metrics.scrollEvents += 1;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
@@ -330,7 +368,7 @@
     }
   };
   controller.renderScrollTransient = renderScrollTransient;
-  window.TimingChartProductionTimeAxis = { renderTransient: scheduleTransientLayout, renderNow: renderTransient, renderScrollTransient, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
+  window.TimingChartProductionTimeAxis = { renderTransient: scheduleTransientLayout, renderNow: renderTransient, renderScrollTransient, scheduleVerticalExtent, renderVerticalExtent, insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
   window.addEventListener('resize', () => scheduleTransientLayout(model));
   const cycleCanvas = document.querySelector('#cycleCanvas');
   document.querySelector('#cycleCanvas .ruler')?.addEventListener('contextmenu', event => {
@@ -408,7 +446,19 @@
     model.timeSelection.rangeStart = null; model.timeSelection.rangeEnd = null; renderTransient(model);
   });
   (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderScrollTransient(model), { passive: true });
-  if (cycleCanvas && window.ResizeObserver) new ResizeObserver(() => scheduleTransientLayout(model)).observe(cycleCanvas);
+  if (cycleCanvas && window.ResizeObserver) {
+    let observedCanvasSize = null;
+    new ResizeObserver(entries => {
+      const rect = entries[0]?.contentRect;
+      if (!rect) return;
+      const size = `${rect.width}x${rect.height}`;
+      if (size === observedCanvasSize) return;
+      observedCanvasSize = size;
+      if (controller.skipTimeAxisResizeUntil && performance.now() < controller.skipTimeAxisResizeUntil) { controller.skipTimeAxisResizeUntil = 0; return; }
+      if (controller.skipTimeAxisResizeRevision === controller.model.documentRevision) { controller.skipTimeAxisResizeRevision = null; return; }
+      scheduleTransientLayout(model);
+    }).observe(cycleCanvas);
+  }
 
   const tool = text => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(text));
   tool('Cycle挿入')?.addEventListener('click', () => insert(model.timeSelection.cycle, 1));

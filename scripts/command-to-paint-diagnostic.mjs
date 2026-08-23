@@ -56,20 +56,28 @@ const actions = await page.evaluate(() => {
     const revisionBefore = controller.model.documentRevision;
     const start = performance.now();
     const rawResult = fn();
-    const result = rawResult === undefined ? true : rawResult;
+    const resultValue = rawResult && typeof rawResult.then === 'function' ? await rawResult : rawResult;
+    const result = resultValue === undefined ? true : resultValue;
     const commandEnd = performance.now();
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const paint = performance.now();
-    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
+    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, timelineTrace: controller.lastTimelineInvalidation || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
   };
   return (async () => {
     controller.actions.selectObject(row('ctp_sig_10'));
     await new Promise(resolve => requestAnimationFrame(resolve));
-    controller.renderMetrics.waveDromRenders = 0;
-    controller.renderMetrics.geometryBuilds = 0;
+    for (const key of Object.keys(controller.renderMetrics)) controller.renderMetrics[key] = 0;
+    const clickReorder = async command => {
+      row('ctp_sig_10')?.querySelector('.more')?.click();
+      await new Promise(resolve => requestAnimationFrame(resolve));
+      const button = document.querySelector(`#issue6ContextMenu [data-command="${command}"]`);
+      if (!button) return false;
+      button.click();
+      return true;
+    };
     const results = [
-    await run('signal-up', () => controller.actions.moveSignalBy('ctp_sig_10', -1)),
-    await run('signal-down', () => controller.actions.moveSignalBy('ctp_sig_10', 1)),
+    await run('signal-up', () => clickReorder('up')),
+    await run('signal-down', () => clickReorder('down')),
     await run('eye-off', () => document.querySelector('#groups .row[data-signal="ctp_sig_10"] .eye')?.click()),
     await run('eye-on', () => document.querySelector('#groups .row[data-signal="ctp_sig_10"] .eye')?.click()),
     await run('cycle-insert', () => {
@@ -91,7 +99,14 @@ for (const action of actions) {
   if (!action.result) throw new Error(JSON.stringify(action));
   const waveDelta = action.metricsAfter.waveDromRenders - action.metricsBefore.waveDromRenders;
   const geometryDelta = action.metricsAfter.geometryBuilds - action.metricsBefore.geometryBuilds;
-  if (!['cycle-insert', 'cycle-delete'].includes(action.name) && (waveDelta !== 0 || geometryDelta !== 0)) throw new Error(JSON.stringify(action));
+  const fullRenderDelta = action.metricsAfter.appFullRenders - action.metricsBefore.appFullRenders;
+  const prohibited = ['wavePayloadBuilds', 'waveCacheLookups', 'rulerRebuilds', 'gridRebuilds', 'bottomRenders', 'inspectorRenders', 'transactionRenders'];
+  const prohibitedDelta = prohibited.reduce((sum,key)=>sum+Math.max(0,(action.metricsAfter[key]||0)-(action.metricsBefore[key]||0)),0);
+  if (!['cycle-insert', 'cycle-delete'].includes(action.name) && (waveDelta !== 0 || geometryDelta !== 0 || fullRenderDelta !== 0 || prohibitedDelta !== 0)) throw new Error(JSON.stringify(action));
+  if (action.name === 'signal-up' || action.name === 'signal-down') {
+    const rowMoveDelta = action.metricsAfter.rowMoves - action.metricsBefore.rowMoves;
+    if (rowMoveDelta < 2) throw new Error(JSON.stringify(action));
+  }
 }
 if (finalState.cycleCount !== 100) throw new Error(JSON.stringify(result));
 if (actions.find(action => action.name === 'cycle-insert')?.cycleAfter !== 101) throw new Error(JSON.stringify(result));

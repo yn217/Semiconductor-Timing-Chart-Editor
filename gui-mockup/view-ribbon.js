@@ -143,6 +143,7 @@
   const renderGrid = () => {
     const host = scrollHost(); if (!host) return;
     viewMetrics.gridRebuilds += 1;
+    if (controller.renderMetrics) { controller.renderMetrics.gridRebuilds += 1; controller.renderMetrics.gridBoundaryResolutions += 1; }
     let grid = document.querySelector('#cycleCanvas [data-live-grid]');
     if (!grid) { grid = document.createElement('div'); grid.dataset.liveGrid = 'true'; grid.setAttribute('aria-hidden', 'true'); host.appendChild(grid); }
     if (!view.guides.grid) { grid.hidden = true; return; }
@@ -160,6 +161,7 @@
   const updateMinimapViewport = () => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); const windowNode = mini?.querySelector('.mini-window'); if (!host || !mini || !windowNode || !view.guides.minimap) return;
     viewMetrics.minimapViewportUpdates += 1;
+    if (controller.renderMetrics) controller.renderMetrics.minimapViewportUpdates += 1;
     const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
     windowNode.dataset.viewport = 'true'; windowNode.style.left = `${Math.max(0, host.scrollLeft / contentWidth * 100)}%`; windowNode.style.top = `${Math.max(0, host.scrollTop / contentHeight * 100)}%`; windowNode.style.width = `${Math.min(100, host.clientWidth / contentWidth * 100)}%`; windowNode.style.height = `${Math.min(100, host.clientHeight / contentHeight * 100)}%`; windowNode.title = `Viewport ${Math.round(host.scrollLeft)},${Math.round(host.scrollTop)}`;
   };
@@ -167,6 +169,7 @@
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
     if (!host || !mini) return;
     viewMetrics.minimapOverviewRebuilds += 1;
+    if (controller.renderMetrics) controller.renderMetrics.minimapOverviewRebuilds += 1;
     if (!view.guides.minimap) { mini.dataset.live = 'false'; return; }
     mini.dataset.live = 'true'; mini.style.position = 'relative';
     const wave = document.querySelector('#cycleCanvas .wave'); const hostRect = host.getBoundingClientRect();
@@ -182,6 +185,7 @@
     const width = Math.max(1, mini.clientWidth); const height = Math.max(1, mini.clientHeight); const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.replaceChildren();
     const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
+    if (controller.renderMetrics) controller.renderMetrics.minimapRowRectReads += rows.length;
     rows.forEach((row, index) => { const rect = row.getBoundingClientRect(); const x = Math.max(0, (rect.left - hostRect.left + host.scrollLeft) / contentWidth * width); const y = Math.max(0, (rect.top - hostRect.top + host.scrollTop) / contentHeight * height); const w = Math.max(2, Math.min(width - x, (row.querySelector('.trace')?.getBoundingClientRect().width || contentWidth * 0.7) / contentWidth * width)); const line = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); line.dataset.minimapRow = row.dataset.signalId || row.dataset.signal || String(index); line.setAttribute('x', x); line.setAttribute('y', y); line.setAttribute('width', w); line.setAttribute('height', Math.max(1, Math.min(4, rect.height / contentHeight * height))); line.setAttribute('fill', row.classList.contains('band-output') ? '#b887ee' : row.classList.contains('band-internal') ? '#63b56b' : '#5a99ee'); svg.appendChild(line); });
     updateMinimapViewport();
   };
@@ -201,7 +205,9 @@
   const hostForEvents = scrollHost();
   hostForEvents?.addEventListener('scroll', () => { scheduleMinimapViewport(); }, { passive: true });
   window.addEventListener('resize', () => { scheduleMinimap(); scheduleGrid(); });
-  if (hostForEvents && window.MutationObserver) new MutationObserver(mutations => { if (mutations.some(mutation => !mutation.target?.closest?.('[data-live-grid]'))) { scheduleMinimap(); scheduleGrid(); } }).observe(hostForEvents, { childList: true, subtree: true });
+  // Semantic commands explicitly invalidate the overview.  A subtree
+  // MutationObserver caused every WaveDrom/row mutation to schedule a second
+  // Grid + MiniMap rebuild after the owning render had already completed.
   bindMiniMap();
 
   function applyPanelLayout() {
@@ -332,7 +338,7 @@
 
   controller.registerRenderHook?.('view-ribbon', () => { apply(); refresh(); });
   document.querySelectorAll('#ribbonHome .toggles label input').forEach(input => { if (input.dataset.viewGuideBound) return; input.dataset.viewGuideBound = 'true'; input.addEventListener('change', () => controller.actions.setGuide(input.dataset.viewGuide, input.checked)); });
-  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu };
+  controller.viewRibbon = { ribbon, apply, refresh, setRibbon, applyPanelLayout, openScopeMenu, scheduleGrid, scheduleMinimap, scheduleMinimapViewport };
   setTimeout(() => { controller.controlAudit?.registerSubtree?.(ribbon); window.TimingChartTooltipContract?.registerSubtree?.(ribbon); }, 0);
   apply(); refresh();
 })();

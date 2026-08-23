@@ -5,7 +5,7 @@
   const waveCache = new Map();
   const renderMetrics = () => {
     const controller = window.TimingChartProductionController;
-    const metrics = controller.renderMetrics ||= { waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, rowCreates: 0, rowRemoves: 0 };
+    const metrics = controller.renderMetrics ||= { appFullRenders: 0, rowMoves: 0, cycleRowCreates: 0, cycleRowRemoves: 0, cycleRowMoves: 0, wavePayloadBuilds: 0, waveCacheLookups: 0, waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0, annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0, inspectorInnerHtmlRebuilds: 0, signalStyleFullScans: 0, layoutRowLookups: 0, minimapRowRectReads: 0, transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
     metrics.geometryScreenRefreshes ??= 0;
     return metrics;
   };
@@ -20,6 +20,7 @@
   }
 
   function wavePayload(model, signal) {
+    renderMetrics().wavePayloadBuilds += 1;
     const subcycleFactor = window.TimingWaveDromAdapter.subcycleFactor?.(model.document) || 1;
     const wave = window.TimingWaveDromAdapter.waveFor(signal, model.document.timeline?.cycleCount ?? model.document.cycleCount, { subcycleFactor });
     const waveJson = {
@@ -35,14 +36,31 @@
     return { wave, waveJson, key, subcycleFactor };
   }
 
+  // Build a cheap semantic cache key without invoking the adapter.  The adapter
+  // is only called when this key changes (signal waveform data or timeline
+  // semantics changed), so presentation-only renders do not regenerate every
+  // signal just to discover an SVG cache hit.
+  function semanticKey(model, signal) {
+    const timeline = model.document.timeline || {};
+    return JSON.stringify({
+      id: signal.id, type: signal.type, values: signal.values || [],
+      generator: signal.generator || null, period: signal.period,
+      phase: signal.phase, polarity: signal.polarity || signal.generator?.polarity,
+      cycleCount: timeline.cycleCount ?? model.document.cycleCount,
+      subcycleFactor: window.TimingWaveDromAdapter.subcycleFactor?.(model.document) || 1
+    });
+  }
+
   function mountSignal(model, signal, row, index, mountPrefix = prefix) {
     const host = row.querySelector('.trace');
     if (!host || !signal) return null;
     host.id = `${mountPrefix}${index}`;
     host.dataset.renderer = 'wavedrom';
     host.dataset.staticMock = 'removed';
-    const payload = wavePayload(model, signal);
+    renderMetrics().waveCacheLookups += 1;
     const cached = waveCache.get(signal.id);
+    const semantic = semanticKey(model, signal);
+    const payload = cached?.semantic === semantic && cached.payload ? cached.payload : wavePayload(model, signal);
     let cacheHit = false;
     if (cached?.key === payload.key) {
       const current = host.querySelector('svg');
@@ -68,7 +86,8 @@
     if (height) svg.style.height = `${height}px`;
     svg.dataset.renderer = 'wavedrom';
     svg.dataset.waveKey = payload.key;
-    if (!cacheHit) waveCache.set(signal.id, { key: payload.key, svg: svg.cloneNode(true) });
+    if (!cacheHit) waveCache.set(signal.id, { semantic, key: payload.key, payload, svg: svg.cloneNode(true) });
+    else if (cached && cached.semantic !== semantic) waveCache.set(signal.id, { semantic, key: payload.key, payload, svg: svg.cloneNode(true) });
     return { host, svg, width, height, subcycleFactor: payload.subcycleFactor || 1, key: payload.key, cacheHit };
   }
 
@@ -208,6 +227,7 @@
   function refreshPointScreenCoordinates(item, svg, transform) {
     if (!item || !svg || !transform?.matrix || !Number.isFinite(Number(item.localX)) || !Number.isFinite(Number(item.localY))) return;
     const screen = matrixPoint(transform.matrix, { x: Number(item.localX), y: Number(item.localY) });
+    renderMetrics().geometryPointsTransformed += 1;
     item.canvasX = screen.x;
     item.canvasY = screen.y;
     item.x = screen.x;
@@ -226,6 +246,8 @@
       if (transforms.has(svg)) return transforms.get(svg);
       const matrix = svg?.getScreenCTM?.();
       const rectValue = svg?.getBoundingClientRect?.();
+      renderMetrics().screenMatrixReads += matrix ? 1 : 0;
+      renderMetrics().boundingRectReads += rectValue ? 1 : 0;
       const viewBoxValue = svg?.viewBox?.baseVal;
       const transform = {
         matrix,
@@ -291,6 +313,23 @@
     return true;
   }
 
+  function renderSignal(model, signalId) {
+    const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
+    const signal = signalForRow(model, row);
+    if (!row || !signal || signal.type === 'commentRow') return false;
+    const index = [...traceRows()].indexOf(row);
+    const mounted = mountSignal(model, signal, row, Math.max(0, index));
+    if (!mounted) return false;
+    const partial = buildGeometry(model, [{ ...mounted, signal, row }]);
+    model.waveGeometry ||= { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
+    model.waveGeometry.signals[signalId] = partial.signals[signalId];
+    if (signal.id === model.document.timeline.referenceClock) model.waveGeometry.cycleBoundary = partial.cycleBoundary;
+    model.waveGeometry.cycleCount = model.document.timeline.cycleCount;
+    renderMetrics().geometryBuilds += 1;
+    window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+    return true;
+  }
+
   const bridge = {
     refreshScreenGeometry(model) {
       if (!model?.waveGeometry) return false;
@@ -310,6 +349,7 @@
       window.TimingChartProductionController.waveGeometry = model.waveGeometry;
       return true;
     },
+    renderSignal,
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
       const mounted = traceRows().map((row, index) => {
