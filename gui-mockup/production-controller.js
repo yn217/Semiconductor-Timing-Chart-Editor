@@ -92,7 +92,15 @@
   window.TimingChartLiteralParser = parseSignalLiteral;
   canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
   const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, validationCache: { documentRef: null, documentRevision: null, settingsKey: null, refreshRevision: 0, issues: [] }, validationMetrics: { validationRuns: 0, validationCacheHits: 0, validationCacheMisses: 0 }, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
-  const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() } };
+  const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() }, renderMetrics: {
+    appFullRenders: 0, rowMoves: 0, cycleRowCreates: 0, cycleRowRemoves: 0, cycleRowMoves: 0,
+    wavePayloadBuilds: 0, waveCacheLookups: 0, waveDromRenders: 0, geometryBuilds: 0,
+    geometryScreenRefreshes: 0, screenMatrixReads: 0, boundingRectReads: 0, geometryPointsTransformed: 0,
+    rulerRebuilds: 0, gridRebuilds: 0, gridBoundaryResolutions: 0,
+    annotationFullRenders: 0, annotationNodeCreates: 0, annotationNodeRemoves: 0,
+    transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0,
+    minimapOverviewRebuilds: 0, minimapViewportUpdates: 0
+  } };
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
@@ -431,7 +439,7 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
+  const render = () => { controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
@@ -478,10 +486,11 @@
       const index = group.rows.indexOf(signalId);
       const nextId = group.rows[index + 1];
       const next = nextId ? host.querySelector(`[data-signal="${CSS.escape(nextId)}"]`) : null;
-      if (next) { host.insertBefore(row, next); return; }
+      if (next) { host.insertBefore(row, next); controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1; return; }
       const groupIds = new Set(group.rows);
       const last = [...host.children].reverse().find(node => groupIds.has(node.dataset.signal));
       if (last?.nextSibling) host.insertBefore(row, last.nextSibling); else if (last) host.appendChild(row);
+      controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1;
     };
     reorder(document.querySelector('#cycleCanvas .wave'));
     reorder(window.TimingChartFrozenLabels?.frozenWave);

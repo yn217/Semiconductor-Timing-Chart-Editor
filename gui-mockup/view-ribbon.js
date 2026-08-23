@@ -143,6 +143,7 @@
   const renderGrid = () => {
     const host = scrollHost(); if (!host) return;
     viewMetrics.gridRebuilds += 1;
+    if (controller.renderMetrics) { controller.renderMetrics.gridRebuilds += 1; controller.renderMetrics.gridBoundaryResolutions += 1; }
     let grid = document.querySelector('#cycleCanvas [data-live-grid]');
     if (!grid) { grid = document.createElement('div'); grid.dataset.liveGrid = 'true'; grid.setAttribute('aria-hidden', 'true'); host.appendChild(grid); }
     if (!view.guides.grid) { grid.hidden = true; return; }
@@ -160,6 +161,7 @@
   const updateMinimapViewport = () => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); const windowNode = mini?.querySelector('.mini-window'); if (!host || !mini || !windowNode || !view.guides.minimap) return;
     viewMetrics.minimapViewportUpdates += 1;
+    if (controller.renderMetrics) controller.renderMetrics.minimapViewportUpdates += 1;
     const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
     windowNode.dataset.viewport = 'true'; windowNode.style.left = `${Math.max(0, host.scrollLeft / contentWidth * 100)}%`; windowNode.style.top = `${Math.max(0, host.scrollTop / contentHeight * 100)}%`; windowNode.style.width = `${Math.min(100, host.clientWidth / contentWidth * 100)}%`; windowNode.style.height = `${Math.min(100, host.clientHeight / contentHeight * 100)}%`; windowNode.title = `Viewport ${Math.round(host.scrollLeft)},${Math.round(host.scrollTop)}`;
   };
@@ -167,6 +169,7 @@
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
     if (!host || !mini) return;
     viewMetrics.minimapOverviewRebuilds += 1;
+    if (controller.renderMetrics) controller.renderMetrics.minimapOverviewRebuilds += 1;
     if (!view.guides.minimap) { mini.dataset.live = 'false'; return; }
     mini.dataset.live = 'true'; mini.style.position = 'relative';
     const wave = document.querySelector('#cycleCanvas .wave'); const hostRect = host.getBoundingClientRect();

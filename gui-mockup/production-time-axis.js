@@ -250,6 +250,7 @@
   const renderTransient = currentModel => {
     metrics.transientFrames += 1;
     metrics.rulerRebuilds += 1;
+    if (controller.renderMetrics) controller.renderMetrics.rulerRebuilds += 1;
     currentModel.displayMapping = buildDisplayMapping(currentModel);
     controller.displayMapping = currentModel.displayMapping;
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');

@@ -111,6 +111,7 @@
   };
   const render = currentModel => {
     if (controller.timeAxisMetrics) controller.timeAxisMetrics.annotationFullRenders += 1;
+    if (controller.renderMetrics) controller.renderMetrics.annotationFullRenders += 1;
     let overlay = document.querySelector('#cycleCanvas svg[data-production-overlay="annotations"]');
     const canvas = document.querySelector('#cycleCanvas'); if (!canvas) return;
     const overlayHost = window.TimingChartTimingViewport?.getScrollHost?.() || canvas;
