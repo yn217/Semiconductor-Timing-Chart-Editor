@@ -189,7 +189,67 @@ function modelDrivenJsonPanel(model=getProductionModel()){const controller=windo
 jsonPanel=modelDrivenJsonPanel;
 function modelDrivenReconcileCycleRows(model=getProductionModel()){const canvas=$('#cycleCanvas'),wave=$('.wave',canvas);if(!wave)return;wave.querySelectorAll('.wave-row').forEach(row=>row.remove());const signals=new Map((model.document.signals||[]).map(signal=>[signal.id,signal]));for(const group of model.document.signalGroups||[]){for(const id of group.rows||[]){const signal=signals.get(id);if(!signal)continue;const row=document.createElement('div');row.className=`wave-row ${signal.role==='output'?'band-output':signal.role==='internal'?'band-internal':'band-command'}`;row.dataset.signalId=signal.id;row.dataset.signal=signal.id;row.dataset.kind=signal.type==='commentRow'?'comment':signal.type;row.dataset.groupId=group.id;const icon=document.createElement('span');icon.className=`canvas-icon role ${signal.type==='commentRow'?'comment':signal.role==='output'?'out':signal.role==='internal'?'wire':'in'}`;icon.textContent=signal.type==='commentRow'?'▣':signal.role==='output'?'o':signal.role==='internal'?'wire':'i';const label=document.createElement('span');label.className='signal-label';label.textContent=signal.type==='commentRow'?signal.title:signal.display?.name||signal.name||signal.id;row.append(icon,label);if(signal.type==='commentRow'){const body=document.createElement('span');body.className='comment-body';body.textContent=signal.body||'';row.append(body);}else{const trace=document.createElement('span');trace.className='trace';row.append(trace);}wave.append(row);}}}
 reconcileCycleRows=modelDrivenReconcileCycleRows;
-function ensureIssue6RowsSafe(model=getProductionModel()){const controller=window.TimingChartProductionController;const host=$('#groups');if(!host)return;const containers=$$('#groups .group');(model.document.signalGroups||[]).forEach((group,index)=>{let container=containers[index];if(!container){container=document.createElement('div');container.className='group';const header=document.createElement('div');header.className='group-h';header.innerHTML='<span class="chev">⌄</span><span class="group-title"></span><div class="spacer"></div><span>⋮</span>';container.appendChild(header);host.appendChild(container);}container.dataset.groupId=group.id;const title=$('.group-title',container);if(title)title.textContent=String(group.name??'');for(const id of group.rows||[]){if(document.querySelector(`#groups .row[data-signal="${CSS.escape(id)}"]`))continue;const signal=(model.document.signals||[]).find(item=>item.id===id);if(!signal)continue;const row=document.createElement('div');row.className='row';row.dataset.signal=signal.id;row.dataset.kind=signal.type==='commentRow'?'comment':signal.type;const role=document.createElement('span');role.className=`role ${signal.role==='output'?'out':signal.role==='internal'?'wire':'in'}`;role.textContent=signal.type==='commentRow'?'▣':signal.role==='output'?'o':signal.role==='internal'?'wire':'i';const name=document.createElement('span');name.className='row-name';name.textContent=signal.type==='commentRow'?signal.title:signal.display?.name||signal.name||signal.id;const eye=document.createElement('span');eye.className='eye';eye.innerHTML='<svg><use href="icons.svg#i-eye"></use></svg>';const more=document.createElement('span');more.className='more';more.textContent='⋮';row.append(role,name,eye,more);row.addEventListener('click',()=>controller.actions.selectObject(row));container.appendChild(row);}});}
+function ensureIssue6RowsSafe(model=getProductionModel()){
+  const controller=window.TimingChartProductionController;
+  const host=$('#groups');
+  if(!host)return;
+  const groups=model.document?.signalGroups||[];
+  const signals=model.document?.signals||[];
+  const byId=new Map(signals.map(signal=>[signal.id,signal]));
+  const expected=groups.map(group=>({id:group.id,name:String(group.name??''),rows:(group.rows||[]).filter(id=>byId.has(id))}));
+  const containers=[...host.children].filter(node=>node.classList.contains('group'));
+  const current=containers.map(container=>({id:container.dataset.groupId||'',name:container.querySelector('.group-title')?.textContent?.trim()||container.querySelector('.group-h')?.textContent?.replace(/[⌄⋮]/g,'').trim()||'',rows:[...container.children].filter(node=>node.classList.contains('row')).map(row=>row.dataset.signal)}));
+  const aligned=expected.length===current.length&&expected.every((group,index)=>group.id===current[index].id&&group.name===current[index].name&&group.rows.length===current[index].rows.length&&group.rows.every((id,rowIndex)=>id===current[index].rows[rowIndex]));
+  const createRow=signal=>{
+    const row=document.createElement('div');
+    row.className='row';
+    row.dataset.signal=signal.id;
+    row.dataset.kind=signal.type==='commentRow'?'comment':signal.type;
+    const role=document.createElement('span');
+    role.className=`role ${signal.role==='output'?'out':signal.role==='internal'?'wire':'in'}`;
+    role.textContent=signal.type==='commentRow'?'▣':signal.role==='output'?'o':signal.role==='internal'?'wire':'i';
+    const name=document.createElement('span');
+    name.className='row-name';
+    name.textContent=signal.type==='commentRow'?signal.title:signal.display?.name||signal.name||signal.id;
+    const eye=document.createElement('span');
+    eye.className='eye';
+    eye.innerHTML='<svg><use href="icons.svg#i-eye"></use></svg>';
+    const more=document.createElement('span');
+    more.className='more';
+    more.textContent='⋮';
+    row.append(role,name,eye,more);
+    row.addEventListener('click',()=>controller.actions.selectObject(row));
+    return row;
+  };
+  if(!aligned){
+    containers.forEach(container=>container.remove());
+    expected.forEach(group=>{
+      const container=document.createElement('div');
+      container.className='group';
+      container.dataset.groupId=group.id;
+      const header=document.createElement('div');
+      header.className='group-h';
+      header.innerHTML='<span class="chev">⌄</span><span class="group-title"></span><div class="spacer"></div><span>⋮</span>';
+      $('.group-title',header).textContent=group.name;
+      container.appendChild(header);
+      group.rows.forEach(id=>container.appendChild(createRow(byId.get(id))));
+      host.appendChild(container);
+    });
+  }else{
+    containers.forEach((container,index)=>{
+      container.dataset.groupId=expected[index].id;
+      const group=groups[index];
+      const title=$('.group-title',container);
+      if(title)title.textContent=String(group.name??'');
+      container.querySelectorAll('.row').forEach(row=>{
+        const signal=byId.get(row.dataset.signal);
+        if(!signal)return;
+        row.dataset.kind=signal.type==='commentRow'?'comment':signal.type;
+      });
+    });
+  }
+  host.__issue6DocumentSignature=JSON.stringify(expected);
+}
 ensureIssue6Rows=ensureIssue6RowsSafe;
 function modelDrivenInspector(model=getProductionModel()){const host=$('#inspectorBody');if(!host)return;const controller=window.TimingChartProductionController;const documentValue=model.document||{};const timeline=documentValue.timeline||{};const signals=documentValue.signals||[];const annotations=documentValue.annotations||[];const transactions=documentValue.transactions||[];const issues=controller?.getProblems?.(documentValue)||[];if(model.view.tab==='problems'){const errors=issues.filter(issue=>problemSeverity(issue)==='err').length;const warnings=issues.filter(issue=>problemSeverity(issue)==='warn').length;const infos=issues.filter(issue=>problemSeverity(issue)==='info').length;host.innerHTML=`<div class="section"><h3>概要</h3>🔴 エラー　${errors}<br><br>🟠 警告　${warnings}<br><br>🔵 情報　${infos}</div><div class="section"><h3>自動チェック設定</h3><label><input type=checkbox checked> 幅チェック</label><br><label><input type=checkbox checked> 未定義値チェック</label><br><label><input type=checkbox checked> レイテンシチェック</label></div>`;return;}if(model.view.tab==='json'){host.innerHTML=`<div class="section"><h3>JSON Document</h3><div class="prop"><span>Time base</span><b>${esc(timeline.timeBase||'')}</b></div><div class="prop"><span>Ref clock</span><b>${esc(timeline.referenceClock||'')}</b></div><div class="prop"><span>Signals</span><b>${signals.length}</b></div><div class="prop"><span>Annotations</span><b>${annotations.length}</b></div><div class="prop"><span>Transactions</span><b>${transactions.length}</b></div><div class="prop"><span>Problems</span><b>${issues.length}</b></div></div><div class="section"><h3>検証</h3><span style="color:${issues.length?'#b22':'#2e9550'}">● ${issues.length?`${issues.length}件の問題`:'有効なJSONです'}</span></div>`;return;}const signal=controller?.selectors?.getSignal?.(selectedSignal(model));const name=signal?.display?.name||signal?.name||signal?.id||'—';const kind=signal?.type||selectedKind(model);host.innerHTML=`<div class="section"><h3>信号プロパティ</h3><div class="prop"><span>名前</span><input value="${esc(name)}"></div><div class="prop"><span>種別</span><input value="${esc(kind)}"></div><div class="prop"><span>Role</span><input value="${esc(signal?.role||'')}" readonly></div><div class="prop"><span>可視性</span><select><option>表示</option><option>非表示</option></select></div></div><div class="section"><h3>表示</h3><label><input type=checkbox checked> 波形を表示</label><br><label><input type=checkbox checked> ラベルを表示</label></div>`;}
 const renderModelDrivenInspector=modelDrivenInspector;
