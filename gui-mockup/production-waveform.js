@@ -96,8 +96,42 @@
     return { x: transformed.x, y: transformed.y };
   }
 
+  const sampledPathCache = new WeakMap();
+  const definitionPathCache = new Map();
+
   function rootMatrix(svg, node) {
+    const local = localTransform(svg, node);
+    if (local) return local;
+    const svgMatrix = svg.getCTM?.();
+    const nodeMatrix = node.getCTM?.();
+    if (svgMatrix && nodeMatrix) return svgMatrix.inverse().multiply(nodeMatrix);
     return svg.getScreenCTM().inverse().multiply(node.getScreenCTM());
+  }
+
+  function localTransform(svg, node) {
+    if (!svg || !node) return null;
+    let current = node;
+    let matrix = new DOMMatrix();
+    let found = false;
+    while (current && current !== svg) {
+      const value = current.getAttribute?.('transform');
+      if (value) { matrix = parseSvgTransform(value).multiply(matrix); found = true; }
+      current = current.parentElement;
+    }
+    return current === svg && found ? matrix : null;
+  }
+
+  function parseSvgTransform(value) {
+    let matrix = new DOMMatrix();
+    for (const match of String(value).matchAll(/([a-z]+)\s*\(([^)]*)\)/gi)) {
+      const name = match[1].toLowerCase();
+      const values = match[2].trim().split(/[\s,]+/).filter(Boolean).map(Number);
+      if (name === 'translate') matrix = matrix.translate(values[0] || 0, values[1] || 0);
+      else if (name === 'scale') matrix = matrix.scale(values[0] ?? 1, values[1] ?? values[0] ?? 1);
+      else if (name === 'rotate') matrix = matrix.rotate(values[0] || 0, values[1] || 0, values[2] || 0);
+      else if (name === 'matrix' && values.length >= 6) matrix = matrix.multiply(new DOMMatrix(values));
+    }
+    return matrix;
   }
 
   function hrefOf(use) {
@@ -105,9 +139,19 @@
   }
 
   function sampledSegments(path, matrix) {
-    const length = path.getTotalLength();
-    if (!length) return [];
-    const samples = Array.from({ length: 161 }, (_, index) => matrixPoint(matrix, path.getPointAtLength(length * index / 160)));
+    // WaveDrom's transition/clock primitives are short piecewise-linear paths.
+    // Keep sampling on the actual SVG path, but avoid the previous 161 path
+    // queries per primitive; 5 points capture the endpoints, quarter points,
+    // and midpoint used by WaveDrom's piecewise-linear primitives.
+    const sampleCount = 5;
+    let localSamples = sampledPathCache.get(path);
+    if (!localSamples) {
+      const length = path.getTotalLength();
+      if (!length) return [];
+      localSamples = Array.from({ length: sampleCount }, (_, index) => path.getPointAtLength(length * index / (sampleCount - 1))).map(point => ({ x: point.x, y: point.y }));
+      sampledPathCache.set(path, localSamples);
+    }
+    const samples = localSamples.map(point => matrixPoint(matrix, point));
     const changing = [];
     for (let index = 1; index < samples.length; index += 1) {
       const previous = samples[index - 1];
@@ -120,9 +164,7 @@
 
   function actualBoundaries(svg) {
     const lines = [...svg.querySelectorAll('[id^="gmarks_"] line[id^="gmark_"]')];
-    const svgMatrix = svg.getCTM?.();
-    const svgInverse = svgMatrix?.inverse?.();
-    const markMatrix = svgInverse && lines[0]?.getCTM?.() ? svgInverse.multiply(lines[0].getCTM()) : null;
+    const markMatrix = localTransform(svg, lines[0]);
     return lines.map(line => {
       const matrix = markMatrix || rootMatrix(svg, line);
       return matrixPoint(matrix, { x: Number(line.getAttribute('x1')), y: Number(line.getAttribute('y1')) });
@@ -182,8 +224,10 @@
 
   function buildGeometry(model, mounted) {
     const geometry = { cycleCount: model.document.timeline.cycleCount, signals: {}, cycleBoundary: [] };
+    const profile = { boundaryMs: 0, symbolMs: 0, rowRectMs: 0, signalMs: 0 };
     for (const item of mounted) {
       if (!item) continue;
+      const signalStarted = performance.now();
       const { signal, svg } = item;
       const screenMatrix = svg.getScreenCTM?.();
       const screenRect = svg.getBoundingClientRect?.();
@@ -193,17 +237,24 @@
         rect: screenRect && { left: screenRect.left, top: screenRect.top, width: screenRect.width, height: screenRect.height },
         viewBox: viewBox && { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height }
       };
+      const boundaryStarted = performance.now();
       const rawBoundaries = actualBoundaries(svg);
       const boundaries = item.subcycleFactor > 1 ? rawBoundaries.filter((point, index) => index % item.subcycleFactor === 0 || index === rawBoundaries.length - 1) : rawBoundaries;
       if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform));
       const lane = svg.querySelector('[id^="wavelane_draw_"]');
       const symbols = [...(lane?.querySelectorAll(':scope > use') || [])];
+      profile.boundaryMs += performance.now() - boundaryStarted;
       const rowRect = item.svg.closest('.wave-row')?.getBoundingClientRect?.();
       const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg, transform)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null, rowRectTop: rowRect?.top ?? null };
+      const symbolStarted = performance.now();
       symbols.forEach(use => {
         const href = hrefOf(use);
-        const definition = document.getElementById(href.slice(1));
-        const path = definition?.querySelector('path');
+        let path = definitionPathCache.get(href);
+        if (path === undefined) {
+          const definition = document.getElementById(href.slice(1));
+          path = definition?.querySelector('path') || null;
+          definitionPathCache.set(href, path);
+        }
         if (!path) return;
         const matrix = rootMatrix(svg, use);
         const origin = matrixPoint(matrix, { x: 0, y: 0 });
@@ -230,8 +281,11 @@
         if (href === '#0m1') entry.risingEdge.push({ ...center, anchorType: 'rising-transition-center' });
         if (href === '#1m0') entry.fallingEdge.push({ ...center, anchorType: 'falling-transition-center' });
       });
+      profile.symbolMs += performance.now() - symbolStarted;
       geometry.signals[signal.id] = entry;
+      profile.signalMs += performance.now() - signalStarted;
     }
+    geometry.profile = profile;
     return geometry;
   }
 
@@ -347,32 +401,42 @@
   }
 
   let timelineRenderGeneration = 0;
-  function renderTimeline(model, { batchSize = 1 } = {}) {
+  function renderTimeline(model, { batchSize = 10 } = {}) {
     if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return Promise.resolve(false);
     const generation = ++timelineRenderGeneration;
+    const controller = window.TimingChartProductionController;
+    controller.timelineRenderActive = true;
     const rows = traceRows();
     const mounted = [];
     const started = performance.now();
+    let mountMs = 0;
     return new Promise(resolve => {
       let index = 0;
       const step = () => {
         if (generation !== timelineRenderGeneration) { resolve(false); return; }
         const end = Math.min(rows.length, index + Math.max(1, batchSize));
+        const mountStarted = performance.now();
         for (; index < end; index += 1) {
           const row = rows[index];
           const signal = signalForRow(model, row);
           const result = mountSignal(model, signal, row, index);
           if (result && signal) mounted.push({ ...result, signal, row });
         }
+        mountMs += performance.now() - mountStarted;
         if (index < rows.length) { requestAnimationFrame(step); return; }
+        const geometryStarted = performance.now();
         model.waveGeometry = buildGeometry(model, mounted);
+        const geometryMs = performance.now() - geometryStarted;
         bridge.waveSignature = JSON.stringify({
           cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
           rows: mounted.map(item => [item.signal.id, item.key]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
         });
         bridge.screenSignature = null;
         renderMetrics().geometryBuilds += 1;
-        window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+        controller.waveGeometry = model.waveGeometry;
+        controller.timelineRenderActive = false;
+        controller.applyTimingOnlyZoom?.();
+        controller.lastWaveformTimelineProfile = { mountMs, geometryMs, totalMs: performance.now() - started, rows: mounted.length, geometry: model.waveGeometry.profile || null };
         resolve({ durationMs: performance.now() - started, rows: mounted.length });
       };
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(step, 0)));

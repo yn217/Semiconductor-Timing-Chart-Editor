@@ -5,7 +5,7 @@
   },
   "replace": {
     "result": true,
-    "elapsedMs": 56366.799999952316
+    "elapsedMs": 6689.800000071526
   },
   "state": {
     "signalCount": 50,
@@ -15,26 +15,26 @@
     {
       "name": "signal-up",
       "result": true,
-      "commandMs": 1355.2000000476837,
-      "paintMs": 1798.8999999761581,
-      "settledPaintMs": 1798.8999999761581,
+      "commandMs": 1528.2999999523163,
+      "paintMs": 2087.5999999046326,
+      "settledPaintMs": 2087.5999999046326,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 0,
       "revisionAfter": 1,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 6.600000023841858,
-        "reconcileMs": 52.799999952316284,
-        "totalMs": 59.39999997615814,
+        "historyMs": 8.400000095367432,
+        "reconcileMs": 56.699999928474426,
+        "totalMs": 65.10000002384186,
         "parts": {
-          "shiftMs": 0.09999990463256836,
+          "shiftMs": 0.10000002384185791,
           "timeAxisMs": 0,
           "annotationsMs": 0
         }
       },
       "traceParts": {
-        "shiftMs": 0.09999990463256836,
+        "shiftMs": 0.10000002384185791,
         "timeAxisMs": 0,
         "annotationsMs": 0
       },
@@ -107,18 +107,18 @@
     {
       "name": "signal-down",
       "result": true,
-      "commandMs": 1188.3999999761581,
-      "paintMs": 1607,
-      "settledPaintMs": 1607,
+      "commandMs": 1314.1000000238419,
+      "paintMs": 1741.5,
+      "settledPaintMs": 1741.5,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 1,
       "revisionAfter": 2,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 5.199999928474426,
-        "reconcileMs": 47.60000002384186,
-        "totalMs": 52.799999952316284,
+        "historyMs": 7.399999976158142,
+        "reconcileMs": 55,
+        "totalMs": 62.39999997615814,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
@@ -199,18 +199,18 @@
     {
       "name": "eye-off",
       "result": true,
-      "commandMs": 7.700000047683716,
-      "paintMs": 206.89999997615814,
-      "settledPaintMs": 206.89999997615814,
+      "commandMs": 6.899999976158142,
+      "paintMs": 162.79999995231628,
+      "settledPaintMs": 162.79999995231628,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 2,
       "revisionAfter": 3,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 5.100000023841858,
+        "historyMs": 4.399999976158142,
         "reconcileMs": 1.600000023841858,
-        "totalMs": 6.700000047683716,
+        "totalMs": 6,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
@@ -291,18 +291,18 @@
     {
       "name": "eye-on",
       "result": true,
-      "commandMs": 7.600000023841858,
-      "paintMs": 249.39999997615814,
-      "settledPaintMs": 249.39999997615814,
+      "commandMs": 5.700000047683716,
+      "paintMs": 196.70000004768372,
+      "settledPaintMs": 196.70000004768372,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 3,
       "revisionAfter": 4,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 5.899999976158142,
-        "reconcileMs": 0.8999999761581421,
-        "totalMs": 6.799999952316284,
+        "historyMs": 4.299999952316284,
+        "reconcileMs": 0.7000000476837158,
+        "totalMs": 5,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
@@ -383,18 +383,18 @@
     {
       "name": "cycle-insert",
       "result": true,
-      "commandMs": 23,
-      "paintMs": 102.20000004768372,
-      "settledPaintMs": 136817.70000004768,
+      "commandMs": 29.5,
+      "paintMs": 111.70000004768372,
+      "settledPaintMs": 11741.300000071526,
       "cycleBefore": 100,
       "cycleAfter": 101,
       "revisionBefore": 4,
       "revisionAfter": 5,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 5.899999976158142,
-        "reconcileMs": 0.8999999761581421,
-        "totalMs": 6.799999952316284,
+        "historyMs": 4.299999952316284,
+        "reconcileMs": 0.7000000476837158,
+        "totalMs": 5,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
@@ -407,10 +407,22 @@
         "annotationsMs": 0
       },
       "timelineTrace": {
-        "waveformMs": 136769.89999997616,
-        "axisMs": 19.700000047683716,
-        "annotationMs": 0.8999999761581421,
-        "totalMs": 136795.79999995232
+        "waveformMs": 11693,
+        "axisMs": 17.799999952316284,
+        "annotationMs": 0.5,
+        "totalMs": 11713.299999952316,
+        "waveformProfile": {
+          "mountMs": 2948.2999999523163,
+          "geometryMs": 3851.100000023842,
+          "totalMs": 11691.600000023842,
+          "rows": 50,
+          "geometry": {
+            "boundaryMs": 90.40000009536743,
+            "symbolMs": 2665.0000002384186,
+            "rowRectMs": 0,
+            "signalMs": 3850.8000000715256
+          }
+        }
       },
       "metricsBefore": {
         "appFullRenders": 0,
@@ -458,10 +470,10 @@
         "screenMatrixReads": 0,
         "boundingRectReads": 0,
         "geometryPointsTransformed": 0,
-        "rulerRebuilds": 25,
+        "rulerRebuilds": 1,
         "gridRebuilds": 0,
         "gridBoundaryResolutions": 0,
-        "annotationFullRenders": 25,
+        "annotationFullRenders": 1,
         "annotationNodeCreates": 0,
         "annotationNodeRemoves": 0,
         "inspectorInnerHtmlRebuilds": 0,
@@ -480,18 +492,18 @@
     {
       "name": "cycle-delete",
       "result": true,
-      "commandMs": 166.39999997615814,
-      "paintMs": 616.2999999523163,
-      "settledPaintMs": 141148.79999995232,
+      "commandMs": 162.69999992847443,
+      "paintMs": 1038.6000000238419,
+      "settledPaintMs": 12891.5,
       "cycleBefore": 101,
       "cycleAfter": 100,
       "revisionBefore": 5,
       "revisionAfter": 6,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 5.899999976158142,
-        "reconcileMs": 0.8999999761581421,
-        "totalMs": 6.799999952316284,
+        "historyMs": 4.299999952316284,
+        "reconcileMs": 0.7000000476837158,
+        "totalMs": 5,
         "parts": {
           "shiftMs": 0,
           "timeAxisMs": 0,
@@ -504,10 +516,22 @@
         "annotationsMs": 0
       },
       "timelineTrace": {
-        "waveformMs": 140989.89999997616,
-        "axisMs": 14.300000071525574,
+        "waveformMs": 12726,
+        "axisMs": 18.200000047683716,
         "annotationMs": 0.5,
-        "totalMs": 141007.70000004768
+        "totalMs": 12746.600000023842,
+        "waveformProfile": {
+          "mountMs": 2938.600000143051,
+          "geometryMs": 4468.899999976158,
+          "totalMs": 12725,
+          "rows": 50,
+          "geometry": {
+            "boundaryMs": 96.1000007390976,
+            "symbolMs": 3082.2999997138977,
+            "rowRectMs": 0,
+            "signalMs": 4468.599999904633
+          }
+        }
       },
       "metricsBefore": {
         "appFullRenders": 0,
@@ -523,10 +547,10 @@
         "screenMatrixReads": 0,
         "boundingRectReads": 0,
         "geometryPointsTransformed": 0,
-        "rulerRebuilds": 25,
+        "rulerRebuilds": 1,
         "gridRebuilds": 0,
         "gridBoundaryResolutions": 0,
-        "annotationFullRenders": 25,
+        "annotationFullRenders": 1,
         "annotationNodeCreates": 0,
         "annotationNodeRemoves": 0,
         "inspectorInnerHtmlRebuilds": 0,
@@ -555,10 +579,10 @@
         "screenMatrixReads": 0,
         "boundingRectReads": 0,
         "geometryPointsTransformed": 0,
-        "rulerRebuilds": 52,
+        "rulerRebuilds": 4,
         "gridRebuilds": 1,
         "gridBoundaryResolutions": 1,
-        "annotationFullRenders": 51,
+        "annotationFullRenders": 3,
         "annotationNodeCreates": 0,
         "annotationNodeRemoves": 0,
         "inspectorInnerHtmlRebuilds": 0,
