@@ -1,0 +1,75 @@
+{
+  "issue": 47,
+  "startupState": {
+    "innerHeight": 941,
+    "inspector": {
+      "top": 216,
+      "bottom": 914,
+      "height": 698
+    },
+    "minimap": {
+      "top": 796,
+      "bottom": 914,
+      "height": 118
+    },
+    "minimapVisible": true,
+    "minimapHeight": 118,
+    "bodyScrollable": true,
+    "pageOverflow": false
+  },
+  "largeState": {
+    "innerHeight": 941,
+    "inspector": {
+      "top": 216,
+      "bottom": 914,
+      "height": 698
+    },
+    "minimap": {
+      "top": 796,
+      "bottom": 914,
+      "height": 118
+    },
+    "minimapVisible": true,
+    "minimapHeight": 118,
+    "bodyScrollable": true,
+    "pageOverflow": false
+  },
+  "toggleState": {
+    "off": {
+      "hidden": true,
+      "visible": false
+    },
+    "on": {
+      "hidden": false,
+      "visible": true,
+      "bottom": 914
+    }
+  },
+  "compactState": {
+    "innerHeight": 720,
+    "inspector": {
+      "top": 216,
+      "bottom": 693,
+      "height": 477
+    },
+    "minimap": {
+      "top": 575,
+      "bottom": 693,
+      "height": 118
+    },
+    "minimapVisible": true,
+    "minimapHeight": 118,
+    "bodyScrollable": true,
+    "pageOverflow": false
+  },
+  "clockState": {
+    "minimapVisible": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue47-startup-1672x941.png",
+    "issue47-large-1672x941.png",
+    "issue47-large-1280x720.png"
+  ]
+}
