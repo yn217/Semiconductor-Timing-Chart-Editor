@@ -1,0 +1,250 @@
+{
+  "issue": 65,
+  "transitions": [
+    {
+      "id": "issue65_marker_range",
+      "before": {
+        "id": "issue65_marker_range",
+        "type": "marker",
+        "label": "marker source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "anchor": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "after": {
+        "id": "issue65_marker_range",
+        "type": "range",
+        "label": "marker source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "start": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 1,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "changed": true,
+      "historyDelta": 1
+    },
+    {
+      "id": "issue65_range_dependency",
+      "before": {
+        "id": "issue65_range_dependency",
+        "type": "range",
+        "label": "range source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "start": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 1,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "after": {
+        "id": "issue65_range_dependency",
+        "type": "dependency",
+        "label": "range source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "from": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "to": {
+          "signal": "clk",
+          "cycle": 1,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "lineType": "straight",
+        "arrowhead": "end"
+      },
+      "changed": true,
+      "historyDelta": 1
+    },
+    {
+      "id": "issue65_dependency_marker",
+      "before": {
+        "id": "issue65_dependency_marker",
+        "type": "dependency",
+        "label": "dependency source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "anchor": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "after": {
+        "id": "issue65_dependency_marker",
+        "type": "marker",
+        "label": "dependency source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "anchor": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "changed": true,
+      "historyDelta": 1
+    },
+    {
+      "id": "issue65_text_callout",
+      "before": {
+        "id": "issue65_text_callout",
+        "type": "text",
+        "label": "text source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "anchor": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "after": {
+        "id": "issue65_text_callout",
+        "type": "callout",
+        "label": "text source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "anchor": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "changed": true,
+      "historyDelta": 1
+    },
+    {
+      "id": "issue65_callout_highlight",
+      "before": {
+        "id": "issue65_callout_highlight",
+        "type": "callout",
+        "label": "callout source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "anchor": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "after": {
+        "id": "issue65_callout_highlight",
+        "type": "highlight",
+        "label": "callout source",
+        "color": "#1473e6",
+        "position": "canvas",
+        "comment": "",
+        "visible": true,
+        "start": {
+          "signal": "clk",
+          "cycle": 0,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        },
+        "end": {
+          "signal": "clk",
+          "cycle": 1,
+          "point": "cycle-boundary",
+          "offset": {
+            "x": 0,
+            "y": 0
+          }
+        }
+      },
+      "changed": true,
+      "historyDelta": 1
+    }
+  ],
+  "errors": [],
+  "pass": true
+}
