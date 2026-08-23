@@ -443,7 +443,40 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { profileMark('render:start'); controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); profileMark('waveform:start'); window.TimingChartProductionWaveform?.render(model); profileMark('waveform:end'); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); profileMark('render:end'); };
+  const render = () => {
+    profileMark('render:start');
+    const started = performance.now();
+    const profile = {};
+    const timed = (name, callback) => { const phaseStarted = performance.now(); const result = callback(); profile[name] = performance.now() - phaseStarted; return result; };
+    controller.renderMetrics.appFullRenders += 1;
+    timed('stateAndHierarchyMs', () => { rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); });
+    timed('rowReconcileMs', () => window.TimingChartGoldenRenderer?.render(model));
+    timed('hierarchyInspectorMs', () => { appendHierarchyInspector(); ensurePathMenu(); });
+    profileMark('waveform:start');
+    controller.waveformSynchronizedForRender = false;
+    timed('waveformMs', () => window.TimingChartProductionWaveform?.render(model));
+    controller.waveformSynchronizedForRender = true;
+    profileMark('waveform:end');
+    timed('timeAxisMs', () => window.TimingChartProductionTimeAxis?.renderTransient(model));
+    timed('annotationsMs', () => window.TimingChartProductionAnnotations?.render(model));
+    timed('transactionsMs', () => window.TimingChartProductionTransactions?.render(model));
+    timed('zoomMs', applyZoom);
+    timed('statusMs', bindStatus);
+    profile.hooks = [];
+    timed('hooksMs', () => {
+      for (const [name, callback] of controller.renderHooks.after) {
+        const hookStarted = performance.now();
+        callback(model);
+        profile.hooks.push({ name, ms: performance.now() - hookStarted });
+      }
+    });
+    controller.waveformSynchronizedForRender = false;
+    profile.totalMs = performance.now() - started;
+    profile.signalCount = model.document.signals?.length || 0;
+    profile.cycleCount = model.document.timeline?.cycleCount || 0;
+    controller.lastFullRenderProfile = profile;
+    profileMark('render:end');
+  };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };

@@ -317,7 +317,9 @@
     if (minimap) { minimap.hidden = !view.guides.minimap; minimap.dataset.viewState = view.guides.minimap ? 'on' : 'off'; }
     applyInspectorLayout();
     applyPanelLayout();
-    bindMiniMap(); renderGrid(); renderMinimap();
+    bindMiniMap();
+    if (controller.waveformSynchronizedForRender) requestAnimationFrame(() => { scheduleGrid(); scheduleMinimap(); });
+    else { renderGrid(); renderMinimap(); }
     ribbon.dataset.viewState = JSON.stringify({ guides: view.guides, columns: view.columns, overlays: view.overlays, panels: view.panels });
   }
   function refresh() {

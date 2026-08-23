@@ -294,6 +294,52 @@
     return { formatVersion: 1, document: { id: parsed.document?.id || 'sample.tcd', title: parsed.document?.title || 'Timing Chart Sample', header: { subtitle: parsed.document?.description || '', description: parsed.document?.description || '', notes: '', preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: '', revision: '', text: '' } }, timeline: { start: 0, end: cycleCount, timeBase: 'cycle', cycleCount, referenceClock, edge: 'rising' }, signalGroups: groups, signals: normalizedSignals, annotations: [], legend: { orientation: parsed.legend?.orientation || 'horizontal', usedRolesOnly: true, position: { x: Number(parsed.legend?.offset?.x || 0), y: Number(parsed.legend?.offset?.y || 0) } }, layout: { roleColumnWidth: 32, signalNameWidth: Number(parsed.layout?.signalNameWidth || 168), signalNameAlign: ['left', 'center', 'right'].includes(parsed.layout?.signalNameAlign) ? parsed.layout.signalNameAlign : 'left', busWidthAlign: ['left', 'center', 'right'].includes(parsed.layout?.busWidthAlign) ? parsed.layout.busWidthAlign : 'left', pathDisplayMode, instancePathAlign: ['left', 'center', 'right'].includes(parsed.layout?.instancePathAlign) ? parsed.layout.instancePathAlign : 'left', instancePathWidth: Number(parsed.layout?.instancePathWidth || 180), busWidthMode: parsed.layout?.busWidthMode === 'alignedColumn' ? 'alignedColumn' : 'inline', rowHeight: Number(parsed.layout?.rowHeight || 28), signalSpacing: Number(parsed.layout?.signalSpacing || 6), overflow: 'ellipsis' }, transactions: parsed.transactions || [], constraints: [] };
   };
   controller.normalizeExternalDocument = normalizeExternalDocument;
+  let openSequence = 0;
+  const openNow = () => performance.now();
+  const openMark = name => controller.profileMark?.(`open:${name}`);
+  const openPhase = (profile, name, callback) => {
+    openMark(`${name}:start`);
+    const started = openNow();
+    try { return callback(); }
+    finally { profile[`${name}Ms`] = openNow() - started; openMark(`${name}:end`); }
+  };
+  const finishFailedOpenProfile = (profile, result) => {
+    profile.result = result;
+    profile.domReadyMs = openNow() - profile.startedAt;
+    profile.pass = false;
+    controller.lastOpenProfile = profile;
+    controller.openIdle = Promise.resolve(profile);
+  };
+  const scheduleOpenPaintProfile = (profile, sequence, documentIdentity) => {
+    controller.openIdle = new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => {
+      const canonicalIds = model.document.signalGroups.flatMap(group => group.rows || []);
+      const leftIds = [...document.querySelectorAll('#groups .row[data-signal]')].map(row => row.dataset.signal);
+      const timingIds = [...document.querySelectorAll('#cycleCanvas .wave-row[data-signal]')].map(row => row.dataset.signalId || row.dataset.signal);
+      const visibleTraceIds = [...document.querySelectorAll('#cycleCanvas .waveform-surface-row[data-signal]')]
+        .filter(lane => !lane.hidden && lane.style.display !== 'none')
+        .map(lane => lane.dataset.signal);
+      const geometryIds = new Set(Object.keys(model.waveGeometry?.signals || {}));
+      const current = sequence === openSequence && model.document === documentIdentity;
+      profile.paintReadyMs = openNow() - profile.startedAt;
+      profile.currentDocument = current;
+      profile.consistency = {
+        canonicalLeftExact: JSON.stringify(canonicalIds) === JSON.stringify(leftIds),
+        canonicalTimingExact: JSON.stringify(canonicalIds) === JSON.stringify(timingIds),
+        visibleGeometryComplete: visibleTraceIds.every(id => geometryIds.has(id)),
+        staleGeometryIds: [...geometryIds].filter(id => !model.document.signals.some(signal => signal.id === id))
+      };
+      profile.firstConsistentPaint = current
+        && profile.consistency.canonicalLeftExact
+        && profile.consistency.canonicalTimingExact
+        && profile.consistency.visibleGeometryComplete
+        && profile.consistency.staleGeometryIds.length === 0;
+      profile.pass = profile.firstConsistentPaint;
+      controller.lastOpenProfile = profile;
+      openMark('paint-ready');
+      resolve(profile);
+    })));
+    return controller.openIdle;
+  };
   const protect = async decision => {
     if (!model.persistence.dirty || decision === 'discard') return true;
     if (decision === 'save') return Boolean(await controller.actions.save());
@@ -304,12 +350,31 @@
     replaceDocument(newDocument()); model.documentRevision = 0; model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.source = { kind: 'user', sample: false }; model.persistence.lastError = null; model.persistence.savedRevision = 0; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'new', result: 'success', message: '✓ New document created' }); updateDirty(); return true;
   };
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel', source = { kind: 'user', sample: false }) => {
-    if (!await protect(unsavedDecision)) return false;
+    const sequence = ++openSequence;
+    const profile = { sequence, fileName, startedAt: openNow(), textBytes: new TextEncoder().encode(String(text)).length };
+    openMark('start');
+    const protectStarted = openNow();
+    if (!await protect(unsavedDecision)) { profile.protectMs = openNow() - protectStarted; finishFailedOpenProfile(profile, 'canceled'); return false; }
+    profile.protectMs = openNow() - protectStarted;
     let parsed;
-    try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; const preview = controller.analyzeCompatibility?.(text); if (future || preview?.diagnostics?.length) { const fallback = preview || { sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'OPEN_FORMAT_VERSION', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), message: error.message, reason: 'The source is newer than the supported format.', recommendation: 'Open in Compatibility Mode or cancel.' }], canOpen: false, rawText: text }; model.compatibility = { mode: 'preview', ...fallback, fileName }; controller.renderCompatibilityPreview?.(); publishOperation({ type: 'open', result: 'error', message: future ? '✕ Compatibility Preview' : '✕ Open diagnostics', detail: `${fallback.diagnostics?.length || 1} diagnostics available.` }); return false; } publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
-    const issues = controller.validateDocumentRaw(parsed);
-    if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
-    replaceDocument(parsed); model.documentRevision = 0; model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.source = { kind: source.kind || 'user', sample: Boolean(source.sample), sampleId: source.sampleId || null, sampleTitle: source.sampleTitle || null }; model.persistence.savedRevision = 0; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: source.sample ? 'Bundled sample loaded. Save As is required before saving.' : importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
+    try {
+      parsed = openPhase(profile, 'parse', () => JSON.parse(text));
+      parsed = openPhase(profile, 'normalize', () => controller.normalizeExternalDocument(parsed));
+    } catch (error) { const future = error?.code === 'future-format-version'; const preview = controller.analyzeCompatibility?.(text); if (future || preview?.diagnostics?.length) { const fallback = preview || { sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'OPEN_FORMAT_VERSION', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), message: error.message, reason: 'The source is newer than the supported format.', recommendation: 'Open in Compatibility Mode or cancel.' }], canOpen: false, rawText: text }; model.compatibility = { mode: 'preview', ...fallback, fileName }; controller.renderCompatibilityPreview?.(); publishOperation({ type: 'open', result: 'error', message: future ? '✕ Compatibility Preview' : '✕ Open diagnostics', detail: `${fallback.diagnostics?.length || 1} diagnostics available.` }); finishFailedOpenProfile(profile, 'compatibility-preview'); return false; } publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); finishFailedOpenProfile(profile, 'invalid-json'); return false; }
+    const issues = openPhase(profile, 'validate', () => controller.validateDocumentRaw(parsed));
+    if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); finishFailedOpenProfile(profile, 'invalid-document'); return false; }
+    openPhase(profile, 'replaceDocument', () => replaceDocument(parsed));
+    profile.render = clone(controller.lastFullRenderProfile || {});
+    model.documentRevision = 0; model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.source = { kind: source.kind || 'user', sample: Boolean(source.sample), sampleId: source.sampleId || null, sampleTitle: source.sampleTitle || null }; model.persistence.savedRevision = 0;
+    model.persistence.savedRevisionHash = openPhase(profile, 'serializeHash', () => hash(controller.getSerializableDocument()));
+    model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: source.sample ? 'Bundled sample loaded. Save As is required before saving.' : importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty();
+    profile.domReadyMs = openNow() - profile.startedAt;
+    profile.result = 'success';
+    profile.signalCount = model.document.signals.length;
+    profile.cycleCount = model.document.timeline.cycleCount;
+    openMark('dom-ready');
+    scheduleOpenPaintProfile(profile, sequence, model.document);
+    return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel', options.source || { kind: 'user', sample: false });
   const sampleCatalog = [
