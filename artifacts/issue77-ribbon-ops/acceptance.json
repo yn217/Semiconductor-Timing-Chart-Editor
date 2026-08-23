@@ -1,5 +1,5 @@
 {
-  "issue": "77 (Transaction operations + Links Ribbon groups only -- not the full Transaction Ribbon spec)",
+  "issue": "77 (Transaction operations + Time + Links Ribbon groups only -- not the full Transaction Ribbon spec)",
   "setup": true,
   "buttons": [
     {
@@ -26,6 +26,11 @@
       "action": "down",
       "status": "implemented",
       "label": "後に移動"
+    },
+    {
+      "action": "apply-range",
+      "status": "implemented",
+      "label": "選択範囲を適用"
     },
     {
       "action": "reveal-links",
@@ -62,6 +67,31 @@
     "enabledWithLinks": true,
     "modeAfterClick": "split",
     "unchanged": true
+  },
+  "rangeFlow": {
+    "before": {
+      "start": 0,
+      "end": 2,
+      "phases": [
+        {
+          "name": "Request",
+          "start": 0,
+          "end": 1
+        },
+        {
+          "name": "Response",
+          "start": 1,
+          "end": 2
+        }
+      ]
+    },
+    "disabledNoSelection": true,
+    "disabledNoRange": true,
+    "enabledWithRange": true,
+    "undoDelta": 1,
+    "start": 1,
+    "end": 6,
+    "phaseIssue": false
   },
   "homeRegression": {
     "foundHomeButtons": true,

@@ -35,7 +35,7 @@ const buttons = await page.evaluate(() => {
   const nodes = [...document.querySelectorAll('.ribbon .txn-only [data-txn-action]')];
   return nodes.map(node => ({ action: node.dataset.txnAction, status: node.dataset.controlStatus, label: node.querySelector('.tool-label')?.textContent.trim() }));
 });
-assert.deepEqual(buttons.map(b => b.action).sort(), ['add', 'delete', 'down', 'duplicate', 'reveal-links', 'up']);
+assert.deepEqual(buttons.map(b => b.action).sort(), ['add', 'apply-range', 'delete', 'down', 'duplicate', 'reveal-links', 'up']);
 assert.ok(buttons.every(b => b.status === 'implemented'));
 assert.ok(buttons.find(b => b.action === 'up').label && buttons.find(b => b.action === 'down').label, 'up/down must be distinct commands, not one ambiguous button');
 assert.notEqual(buttons.find(b => b.action === 'up').label, buttons.find(b => b.action === 'down').label);
@@ -157,6 +157,45 @@ assert.equal(revealFlow.enabledWithLinks, true);
 assert.equal(revealFlow.modeAfterClick, 'split', 'reveal must switch out of pure Transaction mode so the linked Cycle signal is actually visible');
 assert.equal(revealFlow.unchanged, true, 'a view-only reveal command must never mutate the canonical document');
 
+// --- Time group: 選択範囲を適用 is disabled without a Transaction selection and without a valid current time-range selection; applies the range with one Undo entry; shifts (or safely clears, never leaves invalid) any existing phases so the document stays valid ---
+const rangeFlow = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  c.actions.setViewMode('transaction');
+  await wait(30);
+  c.actions.addTransaction();
+  await wait(60);
+  const txn = c.model.document.transactions.find(t => t.id === c.model.selection.id);
+  const before = { start: txn.start, end: txn.end, phases: structuredClone(txn.phases || []) };
+  const applyBtn = document.querySelector('[data-txn-action="apply-range"]');
+  c.model.selection = { kind: 'signal', id: c.model.document.timeline.referenceClock };
+  c.render();
+  await wait(30);
+  const disabledNoSelection = applyBtn.disabled;
+  c.actions.selectTransaction(txn.id);
+  await wait(30);
+  const disabledNoRange = applyBtn.disabled;
+  c.model.timeSelection = { ...(c.model.timeSelection || {}), rangeStart: Number(before.start) + 1, rangeEnd: Number(before.end) + 4 };
+  c.render();
+  await wait(30);
+  const enabledWithRange = !applyBtn.disabled;
+  const undoBefore = c.model.history.undo.length;
+  applyBtn.click();
+  await wait(60);
+  const undoDelta = c.model.history.undo.length - undoBefore;
+  const after = c.model.document.transactions.find(t => t.id === txn.id);
+  const issues = c.getProblems(c.model.document);
+  const phaseIssue = issues.some(issue => issue.code === 'invalid-transaction-phase-bounds' && issue.id === txn.id);
+  return { before, disabledNoSelection, disabledNoRange, enabledWithRange, undoDelta, start: after.start, end: after.end, phaseIssue };
+});
+assert.equal(rangeFlow.disabledNoSelection, true);
+assert.equal(rangeFlow.disabledNoRange, true, 'apply-range must stay disabled until a real current time-range selection exists');
+assert.equal(rangeFlow.enabledWithRange, true);
+assert.equal(rangeFlow.undoDelta, 1, 'one applied range = one Undo entry, not one per field');
+assert.equal(rangeFlow.start, rangeFlow.before.start + 1);
+assert.equal(rangeFlow.end, rangeFlow.before.end + 4);
+assert.equal(rangeFlow.phaseIssue, false, 'applying a new range must never leave the document with out-of-bounds phases');
+
 // --- Regression guard: this must not have collided with the unrelated Home Ribbon Signal reorder / Cut/Copy/Paste/Delete/Duplicate buttons ---
 const homeRegression = await page.evaluate(async () => {
   const c = window.TimingChartProductionController;
@@ -183,17 +222,18 @@ await page.screenshot({ path: path.join(out, 'issue77-ribbon-ops-1672x941.png') 
 await browser.close();
 
 const pass = setup
-  && buttons.length === 6 && buttons.every(b => b.status === 'implemented')
+  && buttons.length === 7 && buttons.every(b => b.status === 'implemented')
   && disabledState.disabledWithoutSelection && disabledState.addEnabled && disabledState.enabledWithSelection
   && duplicateFlow.addedOne && duplicateFlow.undoDelta === 1 && duplicateFlow.newIdDifferent && duplicateFlow.sourceStillExists
   && reorderFlow.indexAfterUp === reorderFlow.indexBefore - 1 && reorderFlow.upUndoDelta === 1 && reorderFlow.atTop && reorderFlow.boundaryNoOpUndoDelta === 0
   && deleteFlow.removed && deleteFlow.undoDelta === 1
   && revealFlow.disabledNoSelection && revealFlow.disabledNoLinks && revealFlow.enabledWithLinks && revealFlow.modeAfterClick === 'split' && revealFlow.unchanged
+  && rangeFlow.disabledNoSelection && rangeFlow.disabledNoRange && rangeFlow.enabledWithRange && rangeFlow.undoDelta === 1 && rangeFlow.start === rangeFlow.before.start + 1 && rangeFlow.end === rangeFlow.before.end + 4 && !rangeFlow.phaseIssue
   && homeRegression.foundHomeButtons && homeRegression.signalDuplicateStillWorks
   && errors.length === 0;
 
-const report = { issue: '77 (Transaction operations + Links Ribbon groups only -- not the full Transaction Ribbon spec)', setup, buttons, disabledState, duplicateFlow, reorderFlow, deleteFlow, revealFlow, homeRegression, errors, pass, artifacts: ['issue77-ribbon-ops-1672x941.png'] };
+const report = { issue: '77 (Transaction operations + Time + Links Ribbon groups only -- not the full Transaction Ribbon spec)', setup, buttons, disabledState, duplicateFlow, reorderFlow, deleteFlow, revealFlow, rangeFlow, homeRegression, errors, pass, artifacts: ['issue77-ribbon-ops-1672x941.png'] };
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 
 assert.ok(pass, JSON.stringify(report, null, 2));
-console.log('Issue #77 Transaction-operations + Links Ribbon groups acceptance passed: Transaction追加/複製/削除/上へ/下へ/Cycle Viewで表示 are six distinct real commands (not the previous single-button "順序変更" ambiguity, and not only 追加 wired); Duplicate/Delete/Up/Down are disabled without a Transaction selection and enabled with one; Duplicate inserts a unique-id transaction and selects it with exactly one Undo entry; Up/Down reorder the canonical array by one position with one Undo entry each, are a true no-op at the array boundary (no spurious Undo entry), and keep selection stable; Delete removes the selected transaction with one Undo entry; Cycle Viewで表示 is disabled both without a selection and for a Transaction with no real linkedSignals (no fake enabled affordance for a link that does not exist), and once enabled switches out of pure Transaction mode to reveal the linked Cycle signal without mutating the canonical document; and none of this regresses the unrelated Home Ribbon Signal Cut/Copy/Paste/Delete/Duplicate/Up/Down commands that happen to share the same button labels.');
+console.log('Issue #77 Transaction-operations + Time + Links Ribbon groups acceptance passed: Transaction追加/複製/削除/上へ/下へ/選択範囲を適用/Cycle Viewで表示 are seven distinct real commands (not the previous single-button "順序変更" ambiguity, and not only 追加 wired); Duplicate/Delete/Up/Down are disabled without a Transaction selection and enabled with one; Duplicate inserts a unique-id transaction and selects it with exactly one Undo entry; Up/Down reorder the canonical array by one position with one Undo entry each, are a true no-op at the array boundary (no spurious Undo entry), and keep selection stable; Delete removes the selected transaction with one Undo entry; 選択範囲を適用 is disabled without a real current time-range selection and, once applied, sets start/end from that shared semantic timeline range (not pixel/fixed-pitch inference) with exactly one Undo entry while shifting or safely clearing any existing phases so the document never ends up with out-of-bounds phases; Cycle Viewで表示 is disabled both without a selection and for a Transaction with no real linkedSignals, and once enabled switches out of pure Transaction mode to reveal the linked Cycle signal without mutating the canonical document; and none of this regresses the unrelated Home Ribbon Signal Cut/Copy/Paste/Delete/Duplicate/Up/Down commands that happen to share the same button labels.');

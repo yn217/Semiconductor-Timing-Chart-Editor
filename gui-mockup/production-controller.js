@@ -722,6 +722,7 @@
   controller.actions.deleteTransaction = id => transactionRun('Delete transaction', () => { const index = model.document.transactions.findIndex(item => item.id === id); if (index < 0) return false; model.document.transactions.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; model.crossHighlight = []; });
   controller.actions.updateTransaction = (id, field, value) => transactionRun(`Update transaction ${field}`, () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction || !['name', 'start', 'end', 'lane', 'source', 'destination', 'comment', 'linkedSignals', 'phases'].includes(field)) return false; if (field === 'linkedSignals') { const ids = Array.isArray(value) ? value : []; transaction.linkedSignals = ids.filter(signalId => { const signal = getSignal(signalId); return signal && signal.type !== 'commentRow'; }); model.crossHighlight = [...transaction.linkedSignals]; return true; } if (field === 'phases') { if (!Array.isArray(value)) return false; transaction.phases = value.map(phase => ({ name: String(phase.name || ''), start: Number(phase.start), end: Number(phase.end) })); return true; } transaction[field] = ['start', 'end'].includes(field) ? Number(value) : String(value); });
   controller.actions.moveTransactionBy = (id, delta) => transactionRun('Reorder transaction', () => { const from = model.document.transactions.findIndex(item => item.id === id); if (from < 0) return false; const to = Math.max(0, Math.min(model.document.transactions.length - 1, from + Number(delta))); if (from === to) return false; const [transaction] = model.document.transactions.splice(from, 1); model.document.transactions.splice(to, 0, transaction); model.selection = { kind: 'transaction', id }; });
+  controller.actions.setTransactionRange = (id, start, end) => transactionRun('Set transaction range', () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; const startValue = Number(start); const endValue = Number(end); if (!Number.isInteger(startValue) || !Number.isInteger(endValue) || endValue <= startValue) return false; const offset = startValue - Number(transaction.start); transaction.start = startValue; transaction.end = endValue; if (Array.isArray(transaction.phases) && transaction.phases.length) { const shifted = transaction.phases.map(phase => ({ ...phase, start: Number(phase.start) + offset, end: Number(phase.end) + offset })); const fits = shifted.every(phase => phase.start >= startValue && phase.end <= endValue); transaction.phases = fits ? shifted : []; } });
   controller.actions.setBusWidthAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align bus width column', () => { model.document.layout.busWidthAlign = alignment; }); };
   controller.actions.setBusWidthMode = mode => { if (!['inline', 'alignedColumn'].includes(mode)) return false; return transactionRun('Change bus width display', () => { model.document.layout.busWidthMode = mode; }); };
   controller.actions.setSignalNameAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align signal name column', () => { model.document.layout.signalNameAlign = alignment; }); };
@@ -1010,18 +1011,31 @@
         if (model.view.mode === 'transaction') controller.actions.setViewMode('split');
         controller.actions.revealSelection?.({ id: targetId });
       }
+      else if (id && action === 'apply-range') {
+        const start = model.timeSelection?.rangeStart;
+        const end = model.timeSelection?.rangeEnd;
+        controller.actions.setTransactionRange(id, start, end);
+      }
     });
   });
   controller.registerRenderHook?.('txn-ribbon-buttons', () => {
     const hasSelection = model.selection?.kind === 'transaction';
     const selectedTransaction = hasSelection ? model.document.transactions.find(item => item.id === model.selection.id) : null;
     const hasLinks = Boolean(selectedTransaction?.linkedSignals?.length);
+    const rangeStart = model.timeSelection?.rangeStart;
+    const rangeEnd = model.timeSelection?.rangeEnd;
+    const hasValidRange = Number.isInteger(rangeStart) && Number.isInteger(rangeEnd) && rangeEnd > rangeStart;
     document.querySelectorAll('.ribbon .txn-only [data-txn-action]').forEach(button => {
       const action = button.dataset.txnAction;
       if (action === 'add') return;
       if (action === 'reveal-links') {
         button.disabled = !hasSelection || !hasLinks;
         button.title = !hasSelection ? 'Transactionを選択してください' : !hasLinks ? 'このTransactionにはLinked Signalがありません' : '';
+        return;
+      }
+      if (action === 'apply-range') {
+        button.disabled = !hasSelection || !hasValidRange;
+        button.title = !hasSelection ? 'Transactionを選択してください' : !hasValidRange ? '時間軸で範囲を選択してください' : '';
         return;
       }
       button.disabled = !hasSelection;
