@@ -58,7 +58,7 @@
       if (/グリッド|スナップ|ルーラー|ミニマップ/.test(text)) return;
       if (/切取|コピー|貼付|削除|複製|上へ|下へ|別グループへ移動|表示\/非表示|行間隔|Group間隔|自動レイアウト|SVG出力|PNG出力|PDF出力/.test(text)) disable(tool, '未実装の操作です。対応予定: #32 / #34');
     });
-    document.querySelectorAll('#ribbonHome .toggles input').forEach(input => disable(input, '表示設定のSemantic Model接続は未実装です。対応予定: #32'));
+    document.querySelectorAll('#ribbonHome .toggles input').forEach(input => { if (input.dataset.viewGuideBound || input.dataset.controlStatus === 'implemented') record(input, 'implemented'); });
   };
 
   const applyLeftPanel = () => {
