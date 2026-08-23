@@ -1,0 +1,76 @@
+{
+  "issue": 120,
+  "result": {
+    "tableExists": true,
+    "hasVisibilityHeader": true,
+    "headers": [
+      "表示",
+      "#",
+      "種類",
+      "Range",
+      "ラベル / 本文",
+      "配置先",
+      "X",
+      "Y",
+      "色",
+      "コメント"
+    ],
+    "rowCount": 5,
+    "visibilityChecks": [
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_range",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_marker",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_callout",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_dependency",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      },
+      {
+        "hasButton": true,
+        "hasSvg": true,
+        "hasUse": true,
+        "iconMatch": true,
+        "annotationId": "ann_default_highlight",
+        "annotationVisible": false,
+        "icon": "icons.svg#i-eye-off"
+      }
+    ],
+    "allHaveSvgIcons": true,
+    "allIconsMatch": true,
+    "firstAnnotationId": "ann_default_range",
+    "toggleWorks": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue120-1672x941.png"
+  ]
+}
