@@ -51,9 +51,24 @@
   };
   const deleteCycles = (documentValue, start, count) => deleteRange(documentValue, start, start + count);
   const validInteger = value => Number.isInteger(Number(value)) && Number(value) >= 0;
+  const renderTimelineInvalidation = currentModel => {
+    const started = performance.now();
+    window.TimingChartProductionWaveform?.render?.(currentModel);
+    const waveformFinished = performance.now();
+    window.TimingChartProductionTimeAxis?.renderNow?.(currentModel);
+    const axisFinished = performance.now();
+    window.TimingChartProductionAnnotations?.render?.(currentModel);
+    const annotationFinished = performance.now();
+    if (currentModel.view.mode !== 'cycle' || currentModel.view.tab === 'transaction') window.TimingChartProductionTransactions?.render?.(currentModel);
+    if (currentModel.view.tab) window.TimingChartProductionUi?.refreshBottom?.(currentModel);
+    controller.viewRibbon?.scheduleGrid?.(); controller.viewRibbon?.scheduleMinimap?.();
+    controller.lastTimelineInvalidation = { waveformMs: waveformFinished - started, axisMs: axisFinished - waveformFinished, annotationMs: annotationFinished - axisFinished, totalMs: performance.now() - started };
+  };
   const run = (label, mutation) => {
     if (model.document.timeline.timeBase !== 'cycle') { model.validation = [{ code: 'time-axis-cycle-only', message: 'Cycle操作はcycle modeでのみ有効です' }]; controller.render(); return false; }
-    return controller.documentHistory.run(label, mutation);
+    const result = controller.documentHistory.run(label, mutation, { render: false });
+    if (result) renderTimelineInvalidation(model);
+    return result;
   };
   const insert = (start, count = 1) => {
     const timeline = model.document.timeline;
