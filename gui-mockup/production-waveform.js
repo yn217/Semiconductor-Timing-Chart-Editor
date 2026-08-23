@@ -20,12 +20,13 @@
     host.dataset.staticMock = 'removed';
     host.innerHTML = '';
 
-    const wave = window.TimingWaveDromAdapter.waveFor(signal, model.document.timeline?.cycleCount ?? model.document.cycleCount);
+    const subcycleFactor = window.TimingWaveDromAdapter.subcycleFactor?.(model.document) || 1;
+    const wave = window.TimingWaveDromAdapter.waveFor(signal, model.document.timeline?.cycleCount ?? model.document.cycleCount, { subcycleFactor });
     const waveJson = {
       signal: [{ name: '', wave: wave.wave, ...(wave.data ? { data: wave.data } : {}) }],
       config: { hscale: 3.7 }
     };
-    if (signal.type === 'clock') {
+    if (signal.type === 'clock' && !wave.binaryClock) {
       waveJson.signal[0].period = wave.period;
       waveJson.signal[0].phase = wave.phase;
       waveJson.signal[0].polarity = signal.generator?.polarity || 'positive';
@@ -43,7 +44,7 @@
     if (width) svg.style.width = `${width}px`;
     if (height) svg.style.height = `${height}px`;
     svg.dataset.renderer = 'wavedrom';
-    return { host, svg, width, height };
+    return { host, svg, width, height, subcycleFactor: wave.subcycleFactor || 1 };
   }
 
   function matrixPoint(matrix, point) {
@@ -137,7 +138,8 @@
     for (const item of mounted) {
       if (!item) continue;
       const { signal, svg } = item;
-      const boundaries = actualBoundaries(svg);
+      const rawBoundaries = actualBoundaries(svg);
+      const boundaries = item.subcycleFactor > 1 ? rawBoundaries.filter((point, index) => index % item.subcycleFactor === 0 || index === rawBoundaries.length - 1) : rawBoundaries;
       if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg));
       const lane = svg.querySelector('[id^="wavelane_draw_"]');
       const symbols = [...(lane?.querySelectorAll(':scope > use') || [])];
@@ -197,12 +199,14 @@
         const host = document.createElement('span');
         host.className = 'trace';
         stage.appendChild(host);
-        return { ...mountSignal({ document: testDocument }, signal, { querySelector: () => host }, index, mountPrefix), signal };
+        const subcycleFactor = window.TimingWaveDromAdapter.subcycleFactor?.(testDocument) || 1;
+        return { ...mountSignal({ document: testDocument }, signal, { querySelector: () => host }, index, mountPrefix), signal, subcycleFactor };
       });
       const geometry = buildGeometry({ document: { timeline: { cycleCount: testDocument.timeline?.cycleCount ?? testDocument.cycleCount } } }, mounted);
       stage.remove();
       return { geometry, waveJson: testDocument.signals.map(signal => {
-        const wave = window.TimingWaveDromAdapter.waveFor(signal, testDocument.timeline?.cycleCount ?? testDocument.cycleCount);
+        const subcycleFactor = window.TimingWaveDromAdapter.subcycleFactor?.(testDocument) || 1;
+        const wave = window.TimingWaveDromAdapter.waveFor(signal, testDocument.timeline?.cycleCount ?? testDocument.cycleCount, { subcycleFactor });
         return { id: signal.id, wave: wave.wave, period: wave.period, phase: wave.phase, polarity: signal.generator?.polarity || signal.polarity };
       }) };
     },

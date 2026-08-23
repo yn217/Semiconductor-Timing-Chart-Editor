@@ -79,6 +79,29 @@
   ],
   "saveOpen": true,
   "noGeneratedEdgeList": true,
+  "dutyGeometry": {
+    "0.25": {
+      "phase": 0.2594090923666954,
+      "factor": 4,
+      "wave": "10..10..10..10..10..10.."
+    },
+    "0.5": {
+      "phase": 0.5,
+      "factor": 1,
+      "wave": "p....."
+    },
+    "0.75": {
+      "phase": 0.7594090923666954,
+      "factor": 4,
+      "wave": "1..01..01..01..01..01..0"
+    }
+  },
+  "gapAcceptance": {
+    "factor": 2,
+    "noEdgesInSuppressedPeriods": true,
+    "resumesAfterGap": true,
+    "wave": "101010....1010101010"
+  },
   "errors": [],
   "pass": true,
   "artifacts": [
