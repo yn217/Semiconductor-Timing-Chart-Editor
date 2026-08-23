@@ -43,7 +43,19 @@ const result = await page.evaluate(async () => {
   const saved = c.prepareSaveText();
   const reopened = await c.actions.openText(saved.text, { fileName: 'issue102-roundtrip.tcd', unsavedDecision: 'discard' });
   const roundTrip = c.getSerializableDocument().signals.find(signal => signal.id === id);
-  return { id, invalid, valid, imported, after, reopened, roundTrip, validation: c.model.validation, historyBefore, source: serial() };
+  const phaseForDuty = duty => {
+    const rendered = window.TimingChartProductionWaveform.renderTestDocument({ timeline: { cycleCount: 6 }, signals: [{ id: `duty_${duty}`, name: `duty_${duty}`, type: 'clock', generator: { start: 0, period: 1, phase: 0, duty, initial: 0, polarity: 'positive', suppressedPeriods: [] } }] });
+    const geometry = rendered.geometry.signals[`duty_${duty}`];
+    const boundaries = geometry.cycleBoundary;
+    const edge = geometry.fallingEdge.find(item => item.cycle === 0);
+    return { phase: (edge.localX - boundaries[0].localX) / (boundaries[1].localX - boundaries[0].localX), factor: window.TimingWaveDromAdapter.subcycleFactor({ signals: [{ type: 'clock', generator: { duty, period: 1, phase: 0, suppressedPeriods: [] } }] }), wave: rendered.waveJson[0].wave };
+  };
+  const dutyGeometry = { '0.25': phaseForDuty(0.25), '0.5': phaseForDuty(0.5), '0.75': phaseForDuty(0.75) };
+  const gapRendered = window.TimingChartProductionWaveform.renderTestDocument({ timeline: { cycleCount: 10 }, signals: [{ id: 'gap_clock', name: 'gap_clock', type: 'clock', generator: { start: 0, period: 1, phase: 0, duty: 0.5, initial: 0, polarity: 'positive', suppressedPeriods: [3, 4] } }] });
+  const gapGeometry = gapRendered.geometry.signals.gap_clock;
+  const gapEdges = [...gapGeometry.risingEdge, ...gapGeometry.fallingEdge];
+  const gapAcceptance = { factor: window.TimingWaveDromAdapter.subcycleFactor({ signals: [{ type: 'clock', generator: { duty: 0.5, period: 1, phase: 0, suppressedPeriods: [3, 4] } }] }), noEdgesInSuppressedPeriods: !gapEdges.some(edge => edge.cycle === 3 || edge.cycle === 4), resumesAfterGap: gapEdges.some(edge => edge.cycle >= 5), wave: gapRendered.waveJson[0].wave };
+  return { id, invalid, valid, imported, after, reopened, roundTrip, validation: c.model.validation, historyBefore, source: serial(), dutyGeometry, gapAcceptance };
 });
 
 assert.ok(Object.values(result.invalid).every(item => item.result === false && item.unchanged), JSON.stringify(result.invalid));
@@ -58,9 +70,14 @@ assert.equal(result.reopened, true);
 assert.equal(result.roundTrip.generator.duty, 0.25);
 assert.deepEqual(result.roundTrip.generator.suppressedPeriods, [3, 4, 9]);
 assert.equal(result.validation.length, 0);
+for (const [duty, expected] of [[0.25, 0.25], [0.5, 0.5], [0.75, 0.75]]) {
+  assert.ok(Math.abs(result.dutyGeometry[String(duty)].phase - expected) <= 0.05, JSON.stringify(result.dutyGeometry));
+}
+assert.equal(result.gapAcceptance.noEdgesInSuppressedPeriods, true, JSON.stringify(result.gapAcceptance));
+assert.equal(result.gapAcceptance.resumesAfterGap, true, JSON.stringify(result.gapAcceptance));
 assert.equal(errors.length, 0, errors.join('\n'));
 await page.screenshot({ path: path.join(out, 'issue102-1672x941.png') });
 await browser.close();
-const acceptance = { issue: 102, invalidAtomic: result.invalid, validClock: { duty: result.after.generator.duty, initial: result.after.generator.initial, counter: result.after.edgeCounter }, gaps: result.after.generator.suppressedPeriods, saveOpen: result.reopened, noGeneratedEdgeList: result.roundTrip.edgeCounter.edgeNumbers === undefined, errors, pass: true, artifacts: ['issue102-1672x941.png'] };
+const acceptance = { issue: 102, invalidAtomic: result.invalid, validClock: { duty: result.after.generator.duty, initial: result.after.generator.initial, counter: result.after.edgeCounter }, gaps: result.after.generator.suppressedPeriods, saveOpen: result.reopened, noGeneratedEdgeList: result.roundTrip.edgeCounter.edgeNumbers === undefined, dutyGeometry: result.dutyGeometry, gapAcceptance: result.gapAcceptance, errors, pass: true, artifacts: ['issue102-1672x941.png'] };
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(acceptance, null, 2)}\n`);
 console.log(`Issue #102 acceptance passed: validation atomicity, duty, edge counter, gap metadata, and Save/Open.`);

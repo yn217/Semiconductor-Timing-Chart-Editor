@@ -16,7 +16,7 @@ await page.waitForTimeout(500);
 
 const snapshot = () => page.evaluate(() => {
   const c = window.TimingChartProductionController; const host = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas'); const mini = document.querySelector('.mini-canvas'); const viewport = mini?.querySelector('.mini-window');
-  return { document: JSON.stringify(c.getSerializableDocument()), renders: c.timeAxisMetrics?.waveDromRenders || 0, rows: document.querySelectorAll('#cycleCanvas .wave-row').length, miniRows: mini?.querySelectorAll('[data-minimap-row]').length || 0, scroll: { left: host?.scrollLeft || 0, top: host?.scrollTop || 0, width: host?.scrollWidth || 0, height: host?.scrollHeight || 0, clientWidth: host?.clientWidth || 0, clientHeight: host?.clientHeight || 0 }, miniRect: viewport ? { left: viewport.style.left, top: viewport.style.top, width: viewport.style.width, height: viewport.style.height } : null, grid: { visible: !document.querySelector('[data-live-grid]')?.hidden, lines: document.querySelectorAll('[data-live-grid] [data-grid-cycle]').length }, rulerVisible: getComputedStyle(document.querySelector('#cycleCanvas .ruler')).visibility !== 'hidden' };
+  return { document: JSON.stringify(c.getSerializableDocument()), renders: c.timeAxisMetrics?.waveDromRenders || 0, rows: document.querySelectorAll('#cycleCanvas .wave-row').length, miniRows: mini?.querySelectorAll('[data-minimap-row]').length || 0, scroll: { left: host?.scrollLeft || 0, top: host?.scrollTop || 0, width: host?.scrollWidth || 0, height: host?.scrollHeight || 0, clientWidth: host?.clientWidth || 0, clientHeight: host?.clientHeight || 0 }, miniRect: viewport ? { left: viewport.style.left, top: viewport.style.top, width: viewport.style.width, height: viewport.style.height } : null, grid: { visible: !document.querySelector('[data-live-grid]')?.hidden, lines: document.querySelectorAll('[data-live-grid] [data-grid-cycle]').length }, viewMetrics: { ...(c.viewMetrics || {}) }, rulerVisible: getComputedStyle(document.querySelector('#cycleCanvas .ruler')).visibility !== 'hidden' };
 });
 const base = await snapshot();
 assert.ok(base.grid.lines >= 10, 'Grid is not based on actual cycle boundaries');
@@ -61,6 +61,10 @@ await page.waitForTimeout(80);
 const scrolled = await snapshot();
 assert.notEqual(scrolled.miniRect.left, state.miniRect.left, 'MiniMap viewport X did not follow horizontal scroll');
 assert.notEqual(scrolled.miniRect.top, state.miniRect.top, 'MiniMap viewport Y did not follow vertical scroll');
+assert.equal(scrolled.viewMetrics.gridRebuilds, state.viewMetrics.gridRebuilds, 'Grid rebuilt during ordinary scroll');
+assert.equal(scrolled.viewMetrics.gridBoundaryResolutions, state.viewMetrics.gridBoundaryResolutions, 'Grid resolved WaveDrom boundaries during ordinary scroll');
+assert.equal(scrolled.viewMetrics.minimapOverviewRebuilds, state.viewMetrics.minimapOverviewRebuilds, 'MiniMap overview rebuilt during ordinary scroll');
+assert.ok(scrolled.viewMetrics.minimapViewportUpdates - state.viewMetrics.minimapViewportUpdates >= 1 && scrolled.viewMetrics.minimapViewportUpdates - state.viewMetrics.minimapViewportUpdates <= 1, 'MiniMap viewport was not updated exactly once per scroll frame');
 const beforeZoom = scrolled.miniRect.width;
 await page.evaluate(() => window.TimingChartProductionController.actions.setZoom(150));
 await page.waitForTimeout(180);
@@ -72,7 +76,7 @@ await mini.click({ position: { x: 4, y: 4 } });
 await page.waitForTimeout(60);
 const afterClick = await page.evaluate(() => (window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas')).scrollLeft);
 assert.notEqual(afterClick, beforeClick, 'MiniMap click did not pan the timing viewport');
-const report = { issue: 59, gridIndependent: true, rulerIndependent: true, snapUsesWaveGeometry: true, minimapLiveRows: true, minimapScrollSync: true, minimapZoomSync: true, minimapClickPan: true, rendersUnchangedOnGuideToggle: true, errors, pass: errors.length === 0 };
+const report = { issue: 59, gridIndependent: true, rulerIndependent: true, snapUsesWaveGeometry: true, minimapLiveRows: true, minimapScrollSync: true, minimapZoomSync: true, minimapClickPan: true, rendersUnchangedOnGuideToggle: true, scrollFastPath: { gridRebuilds: scrolled.viewMetrics.gridRebuilds - state.viewMetrics.gridRebuilds, gridBoundaryResolutions: scrolled.viewMetrics.gridBoundaryResolutions - state.viewMetrics.gridBoundaryResolutions, minimapOverviewRebuilds: scrolled.viewMetrics.minimapOverviewRebuilds - state.viewMetrics.minimapOverviewRebuilds, minimapViewportUpdates: scrolled.viewMetrics.minimapViewportUpdates - state.viewMetrics.minimapViewportUpdates }, errors, pass: errors.length === 0 };
 await page.screenshot({ path: path.join(out, 'issue59-1672x941.png') });
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 await browser.close();

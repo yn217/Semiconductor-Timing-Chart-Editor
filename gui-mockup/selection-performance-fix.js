@@ -15,7 +15,8 @@
     lastDetailsMs: 0,
     lastBottomMs: 0,
     lastInspectorMs: 0,
-    fullRendersFromSelection: 0
+    fullRendersFromSelection: 0,
+    last: null
   });
 
   let detailRaf = 0;
@@ -30,7 +31,14 @@
     .replaceAll('"', '&quot;');
 
   const getSignal = id => controller.selectors?.getSignal?.(id);
-  const getComment = id => controller.selectors?.getComments?.().find(item => item.id === id);
+  const getComment = id => controller.model.index?.commentsById?.get(id) || controller.selectors?.getComments?.().find(item => item.id === id);
+  const counterSnapshot = () => ({
+    fullRender: Number(model.persistenceMetrics?.fullRenders || 0),
+    waveDrom: Number(controller.renderMetrics?.waveDromRenders || 0),
+    ruler: Number(controller.timeAxisMetrics?.rulerRebuilds || 0),
+    annotation: Number(controller.timeAxisMetrics?.annotationFullRenders || 0),
+    transaction: Number(controller.transactionMetrics?.renders || 0)
+  });
 
   const findVisibleRow = id => {
     if (!id) return null;
@@ -127,14 +135,18 @@
     const comment = !signal ? getComment(model.selection?.id) : null;
     if (comment) {
       host.innerHTML = `<div class="section"><h3>Comment Row</h3><div class="prop"><span>Title</span><b>${esc(comment.title)}</b></div><div class="prop"><span>Body</span><b>${esc(comment.body)}</b></div></div>`;
+      host.dataset.selectedObjectId = comment.id;
+      host.dataset.detailReady = 'true';
       return;
     }
     if (!signal) return;
     host.innerHTML = `<div class="section"><h3>信号プロパティ</h3><div class="prop"><span>名前</span><input value="${esc(signal.id)}"></div><div class="prop"><span>種別</span><input value="${esc(signal.type)}"></div><div class="prop"><span>可視性</span><select><option>表示</option><option>非表示</option></select></div></div><div class="section"><h3>表示</h3><label><input type="checkbox" checked> 波形を表示</label><br><label><input type="checkbox" checked> ラベルを表示</label></div>`;
+    host.dataset.selectedObjectId = signal.id;
+    host.dataset.detailReady = 'true';
     appendHierarchyInspector(host, signal);
   };
 
-  const renderSelectionDetails = expectedGeneration => {
+  const renderSelectionDetails = (expectedGeneration, clickStarted, beforeCounters) => {
     detailTimer = 0;
     if (expectedGeneration !== generation) {
       metrics.cancelledDetailFrames += 1;
@@ -148,6 +160,7 @@
       if (typeof window.renderBottom === 'function') window.renderBottom(model);
       installDelegatedEditorBinding(content);
       if (content) content.dataset.renderedTab = 'signal';
+      if (content) { content.dataset.selectedObjectId = model.selection?.id || ''; content.dataset.detailReady = 'true'; }
       metrics.lastBottomMs = performance.now() - bottomStarted;
 
       const inspectorStarted = performance.now();
@@ -157,17 +170,34 @@
 
     metrics.detailFrames += 1;
     metrics.lastDetailsMs = performance.now() - started;
+    const afterCounters = counterSnapshot();
+    const delta = key => afterCounters[key] - beforeCounters[key];
+    metrics.last = {
+      clickToHighlightMs: metrics.lastHighlightMs,
+      clickToBottomReadyMs: clickStarted == null ? metrics.lastDetailsMs : performance.now() - clickStarted,
+      clickToInspectorReadyMs: clickStarted == null ? metrics.lastDetailsMs : performance.now() - clickStarted,
+      detailCpuMs: metrics.lastDetailsMs,
+      bottomCpuMs: metrics.lastBottomMs,
+      inspectorCpuMs: metrics.lastInspectorMs,
+      cancelledDetailJobs: metrics.cancelledDetailFrames,
+      fullRenderDelta: delta('fullRender'),
+      waveDromRenderDelta: delta('waveDrom'),
+      rulerRenderDelta: delta('ruler'),
+      annotationRenderDelta: delta('annotation'),
+      transactionRenderDelta: delta('transaction')
+    };
     document.dispatchEvent(new CustomEvent('timingchart:selection-details-rendered', {
       detail: {
         id: model.selection?.id,
         durationMs: metrics.lastDetailsMs,
         bottomMs: metrics.lastBottomMs,
-        inspectorMs: metrics.lastInspectorMs
+        inspectorMs: metrics.lastInspectorMs,
+        metrics: metrics.last
       }
     }));
   };
 
-  const scheduleDetails = () => {
+  const scheduleDetails = (clickStarted, beforeCounters) => {
     generation += 1;
     const expectedGeneration = generation;
     if (detailRaf) cancelAnimationFrame(detailRaf);
@@ -179,10 +209,12 @@
     // render. Update them in the same event turn so a click can never leave
     // the previous signal's editor visible while model.selection already
     // points at the new signal. WaveDrom and the canvas remain untouched.
-    renderSelectionDetails(expectedGeneration);
+    renderSelectionDetails(expectedGeneration, clickStarted, beforeCounters);
   };
 
   controller.actions.selectObject = row => {
+    const clickStarted = performance.now();
+    const beforeCounters = counterSnapshot();
     const id = row?.dataset?.kind === 'comment' ? row.dataset.commentId || row.dataset.signal : row?.dataset?.signal;
     if (!id) return false;
     const kind = row.dataset.kind === 'comment' ? 'comment' : 'signal';
@@ -195,7 +227,7 @@
 
     metrics.selections += 1;
     renderHighlight(row instanceof Element ? row : null);
-    scheduleDetails();
+    scheduleDetails(clickStarted, beforeCounters);
     document.dispatchEvent(new CustomEvent('timingchart:selection-highlighted', {
       detail: { id, durationMs: metrics.lastHighlightMs }
     }));
@@ -204,6 +236,6 @@
 
   controller.renderSelectionFast = () => {
     renderHighlight();
-    scheduleDetails();
+    scheduleDetails(performance.now(), counterSnapshot());
   };
 })();

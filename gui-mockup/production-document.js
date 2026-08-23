@@ -4,10 +4,37 @@
   if (!controller) return;
   const model = controller.model;
   const clone = value => structuredClone(value);
-  const stable = value => JSON.stringify(value);
+  const metrics = model.persistenceMetrics = { commands: 0, serializableSnapshots: 0, structuredClones: 0, fullDocumentStringifies: 0, fullDocumentStringifyBytes: 0, comparisonNodes: 0, validations: 0, fullRenders: 0, commandElapsedMs: 0, lastCommandMs: 0, maxCommandMs: 0 };
+  const stable = value => { const text = JSON.stringify(value); metrics.fullDocumentStringifies += 1; metrics.fullDocumentStringifyBytes += text.length; return text; };
   const hash = value => stable(value);
-  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null, source: { kind: 'user', sample: false }, operation: { type: 'document', result: 'ready', message: 'Ready', detail: '', action: '' } };
+  const canonicalSnapshot = () => { metrics.serializableSnapshots += 1; metrics.structuredClones += 1; return clone(controller.getSerializableDocument()); };
+  model.documentRevision = 0;
+  model.persistence = { fileHandle: null, fileName: 'example.tcd', dirty: false, savedRevision: 0, savedRevisionHash: hash(controller.getSerializableDocument()), lastError: null, source: { kind: 'user', sample: false }, operation: { type: 'document', result: 'ready', message: 'Ready', detail: '', action: '' } };
   model.history = { undo: [], redo: [] };
+  const renderWithMetrics = controller.render;
+  controller.render = (...args) => { metrics.fullRenders += 1; return renderWithMetrics(...args); };
+  const canonicalEqual = (left, right) => {
+    const stack = [[left, right]];
+    while (stack.length) {
+      const [a, b] = stack.pop();
+      metrics.comparisonNodes += 1;
+      if (Object.is(a, b)) continue;
+      if (typeof a !== typeof b || a === null || b === null) return false;
+      if (Array.isArray(a) || Array.isArray(b)) {
+        if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) stack.push([a[index], b[index]]);
+        continue;
+      }
+      if (typeof a === 'object') {
+        const aKeys = Object.keys(a); const bKeys = Object.keys(b);
+        if (aKeys.length !== bKeys.length) return false;
+        for (const key of aKeys) { if (!Object.prototype.hasOwnProperty.call(b, key)) return false; stack.push([a[key], b[key]]); }
+        continue;
+      }
+      return false;
+    }
+    return true;
+  };
   let unloadGuardActive = false;
   const beforeUnload = event => { if (!model.persistence.dirty) return; event.preventDefault(); event.returnValue = ''; };
   const renderOperationStatus = () => {
@@ -69,7 +96,7 @@
   controller.renderCompatibilityPreview = renderCompatibilityPreview;
 
   const updateDirty = () => {
-    model.persistence.dirty = hash(controller.getSerializableDocument()) !== model.persistence.savedRevisionHash;
+    model.persistence.dirty = model.documentRevision !== model.persistence.savedRevision;
     const title = document.querySelector('.titlebar strong');
     const saved = document.querySelector('.titlebar .saved');
     if (title) title.textContent = `タイミングチャートエディタ - ${model.persistence.fileName}`;
@@ -88,14 +115,25 @@
     if (!exists) model.selection = { kind: 'signal', id: controller.selectors.getSignals()[0]?.id || null };
     model.editor.rowIndex = 0;
   };
-  const validateCurrent = () => controller.validateDocument(model.document);
-  const record = (label, before, after) => { if (stable(before) === stable(after)) return; model.history.undo.push({ label, before, after }); model.history.redo = []; updateDirty(); };
+  const validateCurrent = () => controller.validateDocumentRaw(model.document);
+  const record = (label, before, after) => {
+    if (canonicalEqual(before, after)) return false;
+    const revisionBefore = model.documentRevision;
+    const revisionAfter = revisionBefore + 1;
+    model.documentRevision = revisionAfter;
+    model.history.undo.push({ label, before, after, revisionBefore, revisionAfter });
+    model.history.redo = [];
+    updateDirty();
+    return true;
+  };
   // Persistent mutation ownership is defined at each action in the controller.
   // Keep this module responsible for the shared history/dirty/validation boundary,
   // rather than adding another post-hoc wrapper list here.
 
   const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
     model.document = clone(nextDocument);
+    controller.rebuildObjectIndex?.();
+    controller.clearValidationCache?.();
     model.compatibility = null;
     if (resetHistory) { model.history = { undo: [], redo: [] }; controller.history = model.history; }
     model.validation = [];
@@ -105,7 +143,7 @@
     model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
     model.editor = { rowIndex: 0 };
     model.selection = { kind: 'signal', id: controller.selectors.getSignals()[0]?.id || null };
-    model.view.hiddenSignals = [];
+    model.view.hiddenSignals = model.document.signals.filter(signal => signal.display?.visible === false).map(signal => signal.id);
     model.view.scope = [];
     model.view.leftPanelMode = 'group';
     model.view.pinned = false;
@@ -122,7 +160,7 @@
     return true;
   };
   controller.replaceDocument = replaceDocument;
-  const restore = snapshot => {
+  const restore = (snapshot, { revision = model.documentRevision, validation = [], render = true } = {}) => {
     const previousSelection = clone(model.selection);
     const previousView = clone(model.view);
     const previousTimeSelection = clone(model.timeSelection);
@@ -131,6 +169,8 @@
     const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.();
     const previousScroll = scrollHost ? { left: scrollHost.scrollLeft, top: scrollHost.scrollTop } : null;
     replaceDocument(snapshot, { resetHistory: false, render: false });
+    model.documentRevision = revision;
+    model.validation = validation;
     const exists = selection => {
       if (!selection?.id) return false;
       if (selection.kind === 'annotation') return model.document.annotations.some(item => item.id === selection.id);
@@ -161,35 +201,50 @@
     if (model.timeSelection.rangeStart !== null && model.timeSelection.rangeEnd !== null && model.timeSelection.rangeEnd < model.timeSelection.rangeStart) model.timeSelection.rangeEnd = model.timeSelection.rangeStart;
     const selectedSignal = model.document.signals.find(signal => signal.id === model.selection?.id);
     model.editor = { ...model.editor, ...previousEditor, rowIndex: selectedSignal?.values?.length ? Math.max(0, Math.min(Number(previousEditor?.rowIndex ?? 0), selectedSignal.values.length - 1)) : 0 };
-    model.view.hiddenSignals = (previousView.hiddenSignals || []).filter(id => model.document.signals.some(signal => signal.id === id));
+    model.view.hiddenSignals = model.document.signals.filter(signal => signal.display?.visible === false).map(signal => signal.id);
     controller.repairScope?.();
-    controller.render();
+    if (render) controller.render();
     if (previousScroll) requestAnimationFrame(() => { const host = window.TimingChartTimingViewport?.getScrollHost?.(); if (host) { host.scrollLeft = Math.max(0, Math.min(previousScroll.left, host.scrollWidth - host.clientWidth)); host.scrollTop = Math.max(0, Math.min(previousScroll.top, host.scrollHeight - host.clientHeight)); } });
     updateDirty();
   };
   controller.documentHistory = { run(label, mutation, options = {}) {
-    const before = clone(controller.getSerializableDocument());
+    const commandStarted = performance.now();
+    const finishCommand = () => { const elapsed = performance.now() - commandStarted; metrics.commandElapsedMs += elapsed; metrics.lastCommandMs = elapsed; metrics.maxCommandMs = Math.max(metrics.maxCommandMs, elapsed); };
+    metrics.commands += 1;
+    const before = canonicalSnapshot();
     let result = true;
     try { result = mutation() !== false; } catch (error) { model.persistence.lastError = error.message; result = false; }
-    const issues = controller.validateDocument(model.document);
-    if (!result || issues.length) { restore(before); model.validation = issues; if (options.render !== false) controller.render(); return false; }
-    const after = clone(controller.getSerializableDocument());
+    metrics.validations += 1;
+    model.validationMetrics.validationRuns += 1;
+    let issues;
+    try {
+      issues = controller.validateDocumentRaw(model.document);
+    } catch (error) {
+      const diagnostic = { code: 'validator-exception', path: '$', message: error?.message || 'Document validation failed unexpectedly' };
+      restore(before, { validation: [diagnostic], render: options.render !== false });
+      finishCommand();
+      return false;
+    }
+    if (!result || issues.length) { restore(before, { validation: issues, render: options.render !== false }); finishCommand(); return false; }
+    const after = canonicalSnapshot();
     record(label, before, after);
+    controller.cacheValidationResult?.(model.document, issues, model.documentRevision);
     if (options.render !== false) controller.render();
+    finishCommand();
     return true;
   } };
   controller.actions.undo = () => {
     const entry = model.history.undo.pop();
     if (!entry) return false;
     model.history.redo.push(entry);
-    restore(entry.before);
+    restore(entry.before, { revision: entry.revisionBefore ?? Math.max(0, model.documentRevision - 1) });
     return true;
   };
   controller.actions.redo = () => {
     const entry = model.history.redo.pop();
     if (!entry) return false;
     model.history.undo.push(entry);
-    restore(entry.after);
+    restore(entry.after, { revision: entry.revisionAfter ?? model.documentRevision + 1 });
     return true;
   };
 
@@ -207,6 +262,7 @@
     model.persistence.source = { kind: 'user', sample: false };
     model.compatibility = null;
     removeCompatibilityPreview();
+    model.persistence.savedRevision = model.documentRevision;
     model.persistence.savedRevisionHash = documentHash;
     model.persistence.lastError = null;
     publishOperation({ type: 'save', result: 'success', message: `✓ Saved: ${fileName}` });
@@ -216,7 +272,10 @@
     if (model.compatibility?.saveBlocked && !allowCompatibility) return { error: 'Cannot save a Compatibility Mode document until a compatible target is explicitly established.' };
     let serializable;
     try { serializable = controller.getSerializableDocument(); } catch (error) { return { error: `Cannot save invalid document: ${error.message}` }; }
-    const issues = controller.validateDocument(serializable);
+    metrics.validations += 1;
+    model.validationMetrics.validationRuns += 1;
+    let issues;
+    try { issues = controller.validateDocumentRaw(serializable); } catch (error) { return { error: `Cannot save invalid document: ${error?.message || 'validation failed'}` }; }
     if (issues.length) return { error: `Cannot save invalid document: ${issues.map(issue => issue.code).join(', ')}` };
     return { text: `${JSON.stringify(serializable, null, 2)}\n`, documentHash: hash(serializable) };
   };
@@ -241,15 +300,15 @@
   };
   controller.actions.requestNew = async ({ unsavedDecision = 'cancel' } = {}) => {
     if (!await protect(unsavedDecision)) { publishOperation({ type: 'new', result: 'neutral', message: 'New canceled', detail: 'Unsaved changes were kept.' }); return false; }
-    replaceDocument(newDocument()); model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.source = { kind: 'user', sample: false }; model.persistence.lastError = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'new', result: 'success', message: '✓ New document created' }); updateDirty(); return true;
+    replaceDocument(newDocument()); model.documentRevision = 0; model.persistence.fileHandle = null; model.persistence.fileName = 'Untitled.tcd'; model.persistence.source = { kind: 'user', sample: false }; model.persistence.lastError = null; model.persistence.savedRevision = 0; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; publishOperation({ type: 'new', result: 'success', message: '✓ New document created' }); updateDirty(); return true;
   };
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel', source = { kind: 'user', sample: false }) => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
     try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; const preview = controller.analyzeCompatibility?.(text); if (future || preview?.diagnostics?.length) { const fallback = preview || { sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'OPEN_FORMAT_VERSION', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), message: error.message, reason: 'The source is newer than the supported format.', recommendation: 'Open in Compatibility Mode or cancel.' }], canOpen: false, rawText: text }; model.compatibility = { mode: 'preview', ...fallback, fileName }; controller.renderCompatibilityPreview?.(); publishOperation({ type: 'open', result: 'error', message: future ? '✕ Compatibility Preview' : '✕ Open diagnostics', detail: `${fallback.diagnostics?.length || 1} diagnostics available.` }); return false; } publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
-    const issues = controller.validateDocument(parsed);
+    const issues = controller.validateDocumentRaw(parsed);
     if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
-    replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.source = { kind: source.kind || 'user', sample: Boolean(source.sample), sampleId: source.sampleId || null, sampleTitle: source.sampleTitle || null }; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: source.sample ? 'Bundled sample loaded. Save As is required before saving.' : importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
+    replaceDocument(parsed); model.documentRevision = 0; model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.source = { kind: source.kind || 'user', sample: Boolean(source.sample), sampleId: source.sampleId || null, sampleTitle: source.sampleTitle || null }; model.persistence.savedRevision = 0; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: source.sample ? 'Bundled sample loaded. Save As is required before saving.' : importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel', options.source || { kind: 'user', sample: false });
   const sampleCatalog = [
@@ -343,10 +402,33 @@
   controller.persistence = model.persistence;
   controller.history = model.history;
   const tool = label => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(label));
-  const askUnsavedDecision = () => { const answer = window.prompt('未保存の変更があります。Save / Discard / Cancel を入力してください。', 'Cancel')?.trim().toLowerCase(); return answer === 'save' || answer === 'discard' ? answer : 'cancel'; };
-  const uiDecision = () => model.persistence.dirty ? askUnsavedDecision() : 'discard';
-  tool('新規')?.addEventListener('click', () => controller.actions.requestNew({ unsavedDecision: uiDecision() }));
-  tool('開く')?.addEventListener('click', () => controller.actions.requestOpen({ unsavedDecision: uiDecision() }));
+  let unsavedDialogPromise = null;
+  const askUnsavedDecision = () => {
+    if (unsavedDialogPromise) return unsavedDialogPromise;
+    const dialog = document.createElement('section');
+    dialog.id = 'unsavedChangesDialog'; dialog.dataset.unsavedDialog = 'true'; dialog.setAttribute('role', 'dialog'); dialog.setAttribute('aria-modal', 'true'); dialog.setAttribute('aria-labelledby', 'unsavedChangesTitle');
+    dialog.style.cssText = 'position:fixed;inset:0;z-index:4000;display:flex;align-items:center;justify-content:center;background:rgba(20,35,55,.28);font:13px sans-serif;color:#243047;';
+    const panel = document.createElement('div');
+    panel.style.cssText = 'width:410px;background:#fff;border:1px solid #9aaabd;border-radius:6px;box-shadow:0 16px 48px rgba(16,36,59,.28);padding:20px;';
+    const title = document.createElement('h2'); title.id = 'unsavedChangesTitle'; title.textContent = '未保存の変更'; title.style.cssText = 'margin:0 0 10px;font-size:16px;';
+    const message = document.createElement('p'); message.textContent = '現在のドキュメントに未保存の変更があります。どうしますか？'; message.style.cssText = 'margin:0 0 18px;line-height:1.5;';
+    const actions = document.createElement('div'); actions.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+    const makeButton = (id, label, decision, destructive = false) => { const button = document.createElement('button'); button.type = 'button'; button.id = id; button.dataset.unsavedDecision = decision; button.textContent = label; button.style.cssText = `min-width:112px;padding:8px 12px;border:1px solid ${destructive ? '#c55b5b' : '#9aaabd'};border-radius:4px;background:${destructive ? '#fff5f5' : '#fff'};color:${destructive ? '#9b2525' : '#243047'};`; button.addEventListener('click', () => settle(decision)); return button; };
+    let settled = false; let settle;
+    const save = makeButton('unsavedSave', '保存して続行', 'save');
+    const discard = makeButton('unsavedDiscard', '保存せず続行', 'discard', true);
+    const cancel = makeButton('unsavedCancel', 'キャンセル', 'cancel');
+    actions.append(save, discard, cancel); panel.append(title, message, actions); dialog.appendChild(panel); document.body.appendChild(dialog);
+    const onKey = event => { if (event.key === 'Escape') { event.preventDefault(); settle('cancel'); } else if (event.key === 'Enter' && !event.isComposing) { event.preventDefault(); settle(document.activeElement?.dataset?.unsavedDecision || 'save'); } };
+    document.addEventListener('keydown', onKey, true);
+    unsavedDialogPromise = new Promise(resolve => { settle = decision => { if (settled) return; settled = true; document.removeEventListener('keydown', onKey, true); dialog.remove(); unsavedDialogPromise = null; resolve(decision); }; });
+    save.focus();
+    return unsavedDialogPromise;
+  };
+  window.TimingChartUnsavedChangesDialog = { open: askUnsavedDecision };
+  const uiDecision = () => model.persistence.dirty ? askUnsavedDecision() : Promise.resolve('discard');
+  tool('新規')?.addEventListener('click', async () => controller.actions.requestNew({ unsavedDecision: await uiDecision() }));
+  tool('開く')?.addEventListener('click', async () => controller.actions.requestOpen({ unsavedDecision: await uiDecision() }));
   tool('保存')?.addEventListener('click', () => controller.actions.save());
   const saveAsButton = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.includes('名前を付けて'));
   saveAsButton?.addEventListener('click', () => controller.actions.saveAs());
@@ -358,8 +440,13 @@
   shortcuts?.register({ id: 'document.redo-shift', owner: 'production-document', shortcut: 'Ctrl+Shift+Z', execute: () => controller.actions.redo() });
   shortcuts?.register({ id: 'document.save', owner: 'production-document', shortcut: 'Ctrl+S', scope: 'any', allowEditable: true, execute: () => controller.actions.save() });
   shortcuts?.register({ id: 'document.save-as', owner: 'production-document', shortcut: 'Ctrl+Shift+S', scope: 'application', execute: () => controller.actions.saveAs() });
-  shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: () => controller.actions.requestOpen({ unsavedDecision: uiDecision() }) });
-  shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: () => controller.actions.requestNew({ unsavedDecision: uiDecision() }) });
+  shortcuts?.register({ id: 'document.open', owner: 'production-document', shortcut: 'Ctrl+O', execute: async () => controller.actions.requestOpen({ unsavedDecision: await uiDecision() }) });
+  shortcuts?.register({ id: 'document.new', owner: 'production-document', shortcut: 'Ctrl+N', execute: async () => controller.actions.requestNew({ unsavedDecision: await uiDecision() }) });
+  shortcuts?.register({ id: 'selection.copy', owner: 'production-document', shortcut: 'Ctrl+C', scope: 'application', execute: () => controller.actions.copySelection() });
+  shortcuts?.register({ id: 'selection.cut', owner: 'production-document', shortcut: 'Ctrl+X', scope: 'application', execute: () => controller.actions.cutSelection() });
+  shortcuts?.register({ id: 'selection.paste', owner: 'production-document', shortcut: 'Ctrl+V', scope: 'application', execute: () => controller.actions.pasteSelection() });
+  shortcuts?.register({ id: 'selection.delete', owner: 'production-document', shortcut: 'Delete', scope: 'application', execute: () => controller.actions.deleteSelection() });
+  shortcuts?.register({ id: 'selection.duplicate', owner: 'production-document', shortcut: 'Ctrl+D', scope: 'application', execute: () => controller.actions.duplicateSelection() });
   const installSampleBrowser = () => {
     const menu = document.querySelector('#issue26FileMenu');
     if (!menu || menu.querySelector('[data-sample-browser]')) return Boolean(menu);

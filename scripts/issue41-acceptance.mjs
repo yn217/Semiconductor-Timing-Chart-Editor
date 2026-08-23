@@ -48,6 +48,33 @@ async function runViewport(browser, viewport) {
     expect(Object.values(c.model.view.overlays).every(value => value === false), 'overlay state did not change');
     expect(document.querySelector('#cycleCanvas').dataset.viewAnnotations === 'off', 'annotation overlay DOM state missing');
 
+    // Restore the four column toggles before testing their independent rendered effects.
+    command('signal-name').click(); command('role').click(); command('bus-width').click(); command('instance-path').click(); await wait(10);
+    c.actions.selectObject({ dataset: { signal: 'req_addr[7:0]', kind: 'bus' } }); await wait(20);
+    const busLabel = () => document.querySelector('#cycleCanvas .wave-row[data-signal="req_addr[7:0]"] .signal-label');
+    command('bus-width').click(); await wait(10);
+    expect(busLabel()?.querySelector('.bus-width-part')?.style.display === 'none', 'Bus Width OFF did not hide the rendered width part');
+    expect(busLabel()?.querySelector('.signal-name-part')?.style.display !== 'none', 'Bus Width OFF hid the signal name');
+    command('bus-width').click(); await wait(10);
+    expect(busLabel()?.querySelector('.bus-width-part')?.style.display !== 'none', 'Bus Width ON did not restore the rendered width part');
+    command('signal-name').click(); await wait(10);
+    expect(busLabel()?.querySelector('.signal-name-part')?.style.display === 'none', 'Signal Name OFF did not hide only the signal name');
+    expect(busLabel()?.querySelector('.bus-width-part')?.style.display !== 'none', 'Signal Name OFF incorrectly hid Bus Width');
+    command('signal-name').click(); command('full-path').click(); await wait(10);
+    const addedPathFixture = c.actions.addSignalsFromPaths('u_dma.u_chan.req_valid', { type: 'binary', role: 'internal' });
+    const scopedSignal = c.model.document.signals.find(signal => signal.id === addedPathFixture.added[0]);
+    await wait(20);
+    const scopedLabel = () => document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(scopedSignal.id)}"] .signal-label`);
+    expect(scopedLabel()?.textContent.includes('u_dma.u_chan'), `Full Path did not render hierarchy path text: ${JSON.stringify({ id: scopedSignal.id, source: scopedSignal.source, mode: c.model.document.layout.pathDisplayMode, label: scopedLabel()?.textContent, html: scopedLabel()?.innerHTML })}`);
+    command('instance-path').click(); await wait(10);
+    expect(scopedLabel()?.querySelector('.instance-path-part')?.style.display === 'none', 'Instance Path OFF did not hide only hierarchy path');
+    expect(scopedLabel()?.querySelector('.signal-name-part')?.style.display !== 'none', 'Instance Path OFF hid signal name');
+    command('instance-path').click(); command('split-columns').click(); await wait(10);
+    command('signal-name').click(); await wait(10);
+    expect(scopedLabel()?.querySelector('.signal-name-part')?.style.display === 'none', 'Split Columns Signal Name OFF did not hide signal column');
+    expect(scopedLabel()?.querySelector('.instance-path-part')?.style.display !== 'none', 'Split Columns Signal Name OFF hid instance column');
+    command('signal-name').click(); command('signal-only').click(); await wait(10);
+
     const beforeView = JSON.stringify(c.getSerializableDocument());
     const addedHierarchy = c.actions.addSignalsFromPaths('u_top.u_dma.req_valid', { type: 'binary', role: 'internal' });
     expect(addedHierarchy.added.length === 1, 'hierarchical Full Path fixture was not added');
@@ -63,8 +90,11 @@ async function runViewport(browser, viewport) {
     expect(c.model.view.zoom >= 0.25 && c.model.view.zoom <= 4, 'zoom fit-all returned an invalid geometry-derived zoom');
     expect((c.zoomMetrics?.fullWaveDromRenders || 0) === initialRender, 'view zoom caused full WaveDrom rerender');
 
+    const centerBeforePanels = document.querySelector('.center').getBoundingClientRect().width;
     command('left-panel').click(); command('bottom-panel').click(); command('inspector').click(); await wait(10);
     expect(document.querySelector('.left-panel').hidden && document.querySelector('.bottom').hidden && document.querySelector('.inspector').hidden, 'panel toggles did not apply');
+    expect(document.querySelector('.workspace').style.gridTemplateColumns.startsWith('0px '), 'Left panel hide did not reclaim workspace track');
+    expect(document.querySelector('.center').getBoundingClientRect().width > centerBeforePanels, 'Panel hide did not expand the timing canvas');
     const panelsBeforeWaveformOnly = { left: document.querySelector('.left-panel').hidden, bottom: document.querySelector('.bottom').hidden, inspector: document.querySelector('.inspector').hidden };
     command('waveform-only').click(); await wait(10); command('waveform-only').click(); await wait(10);
     expect(document.querySelector('.left-panel').hidden === panelsBeforeWaveformOnly.left && document.querySelector('.bottom').hidden === panelsBeforeWaveformOnly.bottom && document.querySelector('.inspector').hidden === panelsBeforeWaveformOnly.inspector, 'waveform-only did not restore prior panels');

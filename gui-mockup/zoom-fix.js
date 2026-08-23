@@ -282,7 +282,18 @@
     const viewportRect = viewport.getBoundingClientRect();
     const available = Math.max(80, viewportRect.right - bounds.left - 12);
     const current = Number(model.view.zoom || 1);
-    return Math.max(0.25, Math.min(4, current * available / Math.max(1, bounds.right - bounds.left)));
+    // Fit is a geometry operation, not a manual zoom command.  A long
+    // timeline may require a value below the normal 25% manual minimum.
+    // Keep a small positive floor only to avoid zero-sized timing geometry.
+    return Math.max(0.01, Math.min(4, current * available / Math.max(1, bounds.right - bounds.left)));
+  };
+  const applyFitZoom = zoom => {
+    if (!Number.isFinite(Number(zoom)) || zoom < 0.01 || zoom > 4) return false;
+    model.view.zoom = Number(zoom);
+    metrics.requests += 1;
+    updateStatus();
+    scheduleZoom();
+    return true;
   };
   const revealBounds = bounds => {
     const viewport = getTimingViewport();
@@ -298,7 +309,7 @@
     if (resetScroll && viewport) { viewport.scrollLeft = 0; controller.renderTransient?.(model); bounds = recompute?.() || bounds; }
     const zoom = fitZoomForBounds(bounds);
     if (zoom === null) return false;
-    controller.actions.setZoom(zoom * 100);
+    if (!applyFitZoom(zoom)) return false;
     requestAnimationFrame(() => requestAnimationFrame(() => { if (resetScroll && viewport) { viewport.scrollLeft = 0; controller.renderTransient?.(model); } else revealBounds(recompute?.() || bounds); }));
     return true;
   };

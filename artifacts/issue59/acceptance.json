@@ -8,6 +8,12 @@
   "minimapZoomSync": true,
   "minimapClickPan": true,
   "rendersUnchangedOnGuideToggle": true,
+  "scrollFastPath": {
+    "gridRebuilds": 0,
+    "gridBoundaryResolutions": 0,
+    "minimapOverviewRebuilds": 0,
+    "minimapViewportUpdates": 1
+  },
   "errors": [],
   "pass": true
 }

@@ -1,0 +1,11 @@
+{
+  "issue": 101,
+  "parserCases": true,
+  "liveEditorRejectsOverflow": true,
+  "problemsUsesSameParser": true,
+  "invalidEditAtomic": true,
+  "validSaveOpen": true,
+  "arbitrarySignalId": true,
+  "errors": [],
+  "pass": true
+}

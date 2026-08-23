@@ -30,6 +30,23 @@
     record(element, 'implemented');
   };
 
+  const selectedGroup = () => {
+    const selection = controller.model.selection || {};
+    return controller.model.document.signalGroups?.find(group => group.id === controller.model.view.currentGroupId) || controller.model.document.signalGroups?.find(group => (group.rows || []).includes(selection.id)) || controller.model.document.signalGroups?.[0] || null;
+  };
+  const openLayoutPopup = (kind, target) => {
+    document.querySelector('[data-layout-popup]')?.remove();
+    const popup = document.createElement('div'); popup.dataset.layoutPopup = kind; popup.style.cssText = 'position:fixed;z-index:2200;min-width:230px;padding:12px;background:#fff;border:1px solid #b8c5d4;border-radius:5px;box-shadow:0 6px 18px #0003;font:12px sans-serif;color:#243047;';
+    const rect = target.getBoundingClientRect(); popup.style.left = `${Math.max(4, Math.min(innerWidth - 250, rect.left))}px`; popup.style.top = `${Math.min(innerHeight - 210, rect.bottom + 4)}px`;
+    const field = (labelText, name, value) => `<label style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 0"><span>${labelText}</span><input data-layout-field="${name}" type="number" min="0" max="48" step="1" value="${Number(value) || 0}" style="width:76px"></label>`;
+    if (kind === 'row') popup.innerHTML = `<b>行間隔</b>${field('Signal / Comment', 'signalSpacing', controller.model.document.layout.signalSpacing ?? 6)}<div style="display:flex;gap:5px;justify-content:flex-end;margin-top:10px"><button type="button" data-layout-action="minus" data-control-status="implemented">−</button><button type="button" data-layout-action="plus" data-control-status="implemented">＋</button><button type="button" data-layout-action="reset" data-control-status="implemented">Reset</button><button type="button" data-layout-action="apply" data-control-status="implemented">Apply</button></div>`;
+    else { const group = selectedGroup(); if (!group) return; popup.dataset.groupId = group.id; popup.innerHTML = `<b>Group間隔: ${String(group.name || group.id)}</b>${field('Before', 'spacingBefore', group.spacingBefore)}${field('After', 'spacingAfter', group.spacingAfter)}<div style="display:flex;gap:5px;justify-content:flex-end;margin-top:10px"><button type="button" data-layout-action="reset" data-control-status="implemented">Reset</button><button type="button" data-layout-action="apply" data-control-status="implemented">Apply</button></div>`; }
+    const close = () => popup.remove();
+    popup.addEventListener('click', event => { const action = event.target.closest('[data-layout-action]')?.dataset.layoutAction; if (!action) return; if (kind === 'row') { const input = popup.querySelector('[data-layout-field="signalSpacing"]'); if (action === 'minus') input.value = Math.max(0, Number(input.value) - 1); if (action === 'plus') input.value = Math.min(48, Number(input.value) + 1); if (action === 'reset') input.value = 6; if (action === 'apply') { if (controller.actions.setGlobalSignalSpacing(input.value)) close(); } } else { const before = popup.querySelector('[data-layout-field="spacingBefore"]'); const after = popup.querySelector('[data-layout-field="spacingAfter"]'); if (action === 'reset') { before.value = 0; after.value = 0; } if (action === 'apply') { if (controller.actions.setGroupSpacingValues(popup.dataset.groupId, before.value, after.value)) close(); } } });
+    popup.addEventListener('keydown', event => { if (event.key === 'Escape') close(); if (event.key === 'Enter') popup.querySelector('[data-layout-action="apply"]')?.click(); });
+    document.body.appendChild(popup); controller.controlAudit?.registerSubtree?.(popup); popup.querySelector('input')?.focus();
+  };
+
   const applyRibbon = () => {
     document.querySelectorAll('.ribbon-tabs .rtab').forEach(tab => {
       const text = normalize(tab.textContent);
@@ -50,10 +67,30 @@
       ['全体表示', () => controller.actions.fitAll()],
       ['選択に合わせる', () => controller.actions.fitSelection()]
     ];
+    const editActions = new Map([
+      ['切取', ['cut', () => controller.actions.cutSelection()]],
+      ['コピー', ['copy', () => controller.actions.copySelection()]],
+      ['貼付', ['paste', () => controller.actions.pasteSelection()]],
+      ['削除', ['delete', () => controller.actions.deleteSelection()]],
+      ['複製', ['duplicate', () => controller.actions.duplicateSelection()]]
+    ]);
+    const layoutActions = new Map([
+      ['行間隔', currentTool => openLayoutPopup('row', currentTool)],
+      ['Group間隔', currentTool => openLayoutPopup('group', currentTool)],
+      ['自動レイアウト', () => controller.actions.autoLayout()]
+    ]);
     document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
       const text = label(tool);
       const action = homeActions.find(([name]) => text.includes(name));
       if (action) { implement(tool, action[1]); return; }
+      const edit = [...editActions.entries()].find(([name]) => text === name || (name === '切取' && text.startsWith(name)) || (name === '貼付' && text.startsWith(name)));
+      if (edit) { tool.dataset.editCommand = edit[1][0]; implement(tool, edit[1][1]); return; }
+      const layout = [...layoutActions.entries()].find(([name]) => text.includes(name));
+      if (layout) { implement(tool, () => layout[1](tool)); return; }
+      if (text === '上へ' || text === '下へ') {
+        implement(tool, () => controller.actions.moveSignalBy(controller.model.selection?.id, text === '上へ' ? -1 : 1));
+        return;
+      }
       if (/新規|開く|保存|Undo|Redo|Cycle挿入|Cycle削除|NCycle挿入|範囲削除/.test(text)) { record(tool, 'implemented'); return; }
       if (/グリッド|スナップ|ルーラー|ミニマップ/.test(text)) return;
       if (/切取|コピー|貼付|削除|複製|上へ|下へ|別グループへ移動|表示\/非表示|行間隔|Group間隔|自動レイアウト|SVG出力|PNG出力|PDF出力/.test(text)) disable(tool, '未実装の操作です。対応予定: #32 / #34');
@@ -72,9 +109,9 @@
       record(search, 'implemented');
     }
     const filter = document.querySelector('#leftPanel .search-row .iconbtn');
-    if (filter) disable(filter, 'フィルター条件UIは未実装です。対応予定: #32');
+    if (filter) { if (filter.dataset.controlStatus === 'implemented') record(filter, 'implemented'); else disable(filter, 'フィルター条件UIは未実装です。対応予定: #32'); }
     const overflow = document.querySelector('#leftPanel .panel-head .iconbtn');
-    if (overflow) disable(overflow, '左パネルの追加メニュー以外の操作は未実装です。対応予定: #32');
+    if (overflow) { if (overflow.dataset.controlStatus === 'implemented') record(overflow, 'implemented'); else disable(overflow, '左パネルの追加メニュー以外の操作は未実装です。対応予定: #32'); }
     if (document.body.dataset.controlInspectorBound === 'true') return;
     document.body.dataset.controlInspectorBound = 'true';
     document.addEventListener('click', event => {
@@ -131,6 +168,35 @@
       }
     });
   };
+
+  const refreshReorderControls = () => {
+    const selection = controller.model.selection || {};
+    const group = controller.model.document.signalGroups?.find(item => (item.rows || []).includes(selection.id));
+    const index = group ? group.rows.indexOf(selection.id) : -1;
+    const reorderable = (selection.kind === 'signal' || selection.kind === 'comment') && Boolean(group) && index >= 0;
+    document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
+      const text = label(tool);
+      if (text !== '上へ' && text !== '下へ') return;
+      const isUp = text === '上へ';
+      const atBoundary = !reorderable || (isUp ? index === 0 : index === group.rows.length - 1);
+      tool.disabled = atBoundary;
+      tool.dataset.controlStatus = 'implemented';
+      const reason = !reorderable ? 'SignalまたはComment Rowを選択してください' : atBoundary ? (isUp ? 'このGroupの先頭行です' : 'このGroupの末尾行です') : '';
+      if (reason) tool.title = reason; else tool.removeAttribute('title');
+      record(tool, 'implemented', reason);
+    });
+  };
+  const refreshEditControls = () => {
+    const state = controller.actions.getSelectionCommandState?.() || {};
+    const reasons = { copy: 'コピー対象を選択してください', cut: '切取り可能な対象を選択してください', delete: '削除可能な対象を選択してください', duplicate: '複製可能な対象を選択してください', paste: '貼付可能なアプリ内Clipboardがありません' };
+    document.querySelectorAll('#ribbonHome .tool[data-edit-command]').forEach(tool => {
+      const command = tool.dataset.editCommand; const enabled = Boolean(state[command]);
+      tool.disabled = !enabled; tool.dataset.controlStatus = 'implemented';
+      if (enabled) tool.removeAttribute('title'); else tool.title = reasons[command] || '現在の選択では使用できません';
+      record(tool, 'implemented', enabled ? '' : tool.title);
+    });
+  };
+  controller.refreshCommandState = refreshEditControls;
   const run = () => {
     inventory.metrics.controlAuditRuns++;
     applyRibbon();
@@ -149,5 +215,12 @@
   inventory.register = record;
   inventory.registerSubtree = registerSubtree;
   inventory.run = run;
+  controller.registerRenderHook?.('control-completeness-reorder', refreshReorderControls);
+  controller.registerRenderHook?.('control-completeness-edit', refreshEditControls);
+  document.addEventListener('click', event => {
+    if (event.target.closest?.('#groups .row')) requestAnimationFrame(refreshReorderControls);
+  }, true);
   run();
+  refreshReorderControls();
+  refreshEditControls();
 })();

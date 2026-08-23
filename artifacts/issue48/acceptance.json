@@ -1,0 +1,77 @@
+{
+  "issue": 48,
+  "result": {
+    "original": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01"
+    ],
+    "historyBefore": 0,
+    "afterUp": {
+      "rows": [
+        "req_valid",
+        "clk",
+        "req_addr[7:0]",
+        "comment_01"
+      ],
+      "dom": [
+        "req_valid",
+        "clk",
+        "req_addr[7:0]",
+        "comment_01"
+      ],
+      "selection": "req_valid",
+      "history": 1,
+      "upDisabled": true,
+      "downDisabled": false
+    },
+    "afterDown": {
+      "rows": [
+        "clk",
+        "req_valid",
+        "req_addr[7:0]",
+        "comment_01"
+      ],
+      "dom": [
+        "clk",
+        "req_valid",
+        "req_addr[7:0]",
+        "comment_01"
+      ],
+      "selection": "req_valid",
+      "history": 2
+    },
+    "undo": true,
+    "afterUndo": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01"
+    ],
+    "redo": true,
+    "afterRedo": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01"
+    ],
+    "commentId": "comment_01",
+    "afterCommentUp": [
+      "clk",
+      "req_valid",
+      "comment_01",
+      "req_addr[7:0]"
+    ],
+    "boundaryFirst": {
+      "up": true,
+      "title": "このGroupの先頭行です"
+    },
+    "boundaryLast": {
+      "down": true,
+      "title": "このGroupの末尾行です"
+    },
+    "errors": []
+  },
+  "pass": true
+}

@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const out = path.join(root, 'artifacts', 'issue110');
+await fs.mkdir(out, { recursive: true });
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
+const errors = [];
+page.on('pageerror', error => errors.push(error.stack || error.message));
+await page.goto(`file://${path.join(root, 'gui-mockup', 'index.html').replaceAll('\\', '/')}`);
+await page.waitForTimeout(450);
+
+const result = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  const sourceBefore = c.model.document.signals.map(signal => ({ id: signal.id, values: signal.values ? structuredClone(signal.values) : null, generator: signal.generator ? structuredClone(signal.generator) : null }));
+  c.actions.addTimeGroup({ start: 2, end: 7, name: 'PLL stabilization wait', category: 'Wait', comment: 'Long wait', presentation: { collapsed: true, foldStyle: 'axis-break', foldLabel: 'PLL wait', displayAfter: { mode: 'rebase', value: 0 } } });
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const mapping = c.displayMapping;
+  const fold = mapping?.folds?.[0];
+  const sourceStart = c.getCycleBoundary({ signal: c.selectors.getReferenceClock().id, cycle: 2, coordinateSpace: 'canvas' });
+  const sourceEnd = c.getCycleBoundary({ signal: c.selectors.getReferenceClock().id, cycle: 7, coordinateSpace: 'canvas' });
+  const displayStart = c.getDisplayCycleBoundary(2); const displayEnd = c.getDisplayCycleBoundary(7);
+  const sourceAfter = c.model.document.signals.map(signal => ({ id: signal.id, values: signal.values ? structuredClone(signal.values) : null, generator: signal.generator ? structuredClone(signal.generator) : null }));
+  const axisBreaks = [...document.querySelectorAll('[data-axis-break]')].map(node => ({ range: node.dataset.sourceRange, svg: node.querySelector('svg')?.outerHTML || '', label: node.textContent }));
+  const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')].filter(row => row.querySelector('.trace')).length;
+  const labels = [2, 3, 7, 8, 9].map(cycle => ({ source: cycle, display: mapping.labelForSource(cycle), x: c.getDisplayCycleBoundary ? null : null }));
+  const saved = c.prepareSaveText();
+  const opened = await c.actions.openText(saved.text, { fileName: 'issue110-roundtrip.tcd', unsavedDecision: 'discard' });
+  const reopenedGroup = c.model.document.timeGroups[0];
+  return { sourceBefore, sourceAfter, fold, sourceStart, sourceEnd, displayStart, displayEnd, axisBreaks, rows, labels, opened, reopenedGroup, mapping: { totalReduction: mapping.totalReduction, foldCount: mapping.folds.length }, validation: c.getProblems(c.model.document) };
+});
+
+assert.equal(result.axisBreaks.length, 1);
+assert.equal(result.axisBreaks[0].range, '2-7');
+assert.match(result.axisBreaks[0].svg, /M3 0/);
+assert.match(result.axisBreaks[0].svg, /M29 0/);
+assert.equal(result.fold.sourceStart, 2);
+assert.equal(result.fold.sourceEnd, 7);
+assert.equal(result.fold.sourceStartX, result.sourceStart.canvasX);
+assert.equal(result.fold.sourceEndX, result.sourceEnd.canvasX);
+assert.ok(result.displayEnd.canvasX < result.sourceEnd.canvasX);
+assert.equal(result.rows, 7);
+assert.deepEqual(result.sourceAfter, result.sourceBefore);
+assert.equal(result.opened, true);
+assert.equal(result.reopenedGroup.presentation.foldStyle, 'axis-break');
+assert.equal(result.reopenedGroup.presentation.displayAfter.mode, 'rebase');
+assert.equal(result.reopenedGroup.presentation.displayAfter.value, 0);
+assert.equal(result.validation.length, 0);
+assert.equal(errors.length, 0);
+await page.screenshot({ path: path.join(out, 'issue110-1672x941.png') });
+await browser.close();
+const acceptance = { issue: 110, sharedMapping: true, wavedromSourceGeometry: true, sourceDisplaySeparated: true, pairedAxisBreak: true, canonicalUnchanged: true, saveOpen: true, browserErrors: errors, artifacts: ['issue110-1672x941.png'], result, pass: true };
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(acceptance, null, 2)}\n`);
+console.log('Issue #110 acceptance passed: shared folded mapping, paired axis-break marker, source/display separation, and persistence.');

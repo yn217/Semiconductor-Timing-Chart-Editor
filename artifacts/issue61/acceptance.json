@@ -1,0 +1,14 @@
+{
+  "issue": 61,
+  "dragSelection": true,
+  "reverseDrag": true,
+  "deleteWithoutPrompt": true,
+  "undo": true,
+  "afterOpen": true,
+  "zoom150": true,
+  "scroll": true,
+  "viewport1280": true,
+  "waveDromRegenerationsDuringDrag": 0,
+  "errors": [],
+  "pass": true
+}

@@ -25,6 +25,10 @@ All v2 additions are owned by the canonical serializer/validator. IDs and cross 
 ```
 Rules: `start`昇順、同一start重複は原則invalid、値は次changeまで継続、普通のsignal stateにendを保存しない、canonical fieldは`start`で`at`は禁止。
 
+### Bus literal policy
+
+Bus values are parsed by one shared semantic literal parser used by the live editor, canonical Problems validation, and imported Signal configurations. Hexadecimal values may omit or include `0x`; binary values may omit or include `0b` when the display format is binary. Numeric width is determined from the exact value (`BigInt` bit length), so leading zeroes do not create false overflow and non-nibble widths are handled exactly. X/Z digits are accepted as unknown values and consume their positional width. Identifier-like symbolic values such as `IDLE` are accepted for symbolic buses; mixed invalid text is rejected. A value is rejected before mutation when its required width exceeds the Signal's declared `width`.
+
 ## Clock
 Generatorとして保存し、全edgeを列挙しない。period/duty/phase/polarityとenable change-pointsを持つ。
 

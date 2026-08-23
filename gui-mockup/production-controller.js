@@ -60,15 +60,57 @@
     if (signal.width === undefined && signal.source.msb !== undefined) signal.width = Math.abs(signal.source.msb - signal.source.lsb) + 1;
     return signal;
   };
+  const parseSignalLiteral = (rawValue, signal = {}) => {
+    const raw = String(rawValue ?? '').trim();
+    const format = String(signal.displayFormat || 'hex').toLowerCase();
+    const width = Number(signal.width);
+    const invalid = (error, extra = {}) => ({ valid: false, kind: 'invalid', numericValue: null, requiredBits: null, containsUnknown: false, normalizedText: raw, error, ...extra });
+    if (!raw) return invalid('値が空です');
+    let digits = raw;
+    let base = format === 'binary' ? 2 : 16;
+    if (/^0x/i.test(digits)) { base = 16; digits = digits.slice(2); }
+    else if (/^0b/i.test(digits)) { base = 2; digits = digits.slice(2); }
+    if (!digits) return invalid('基数 prefix の後に値が必要です');
+    if (/(^_|_$|__)/.test(digits)) return invalid('桁区切りの位置が不正です');
+    digits = digits.replaceAll('_', '');
+    const digitPattern = base === 2 ? /^[01xz]+$/i : /^[0-9a-fxz]+$/i;
+    if (digitPattern.test(digits)) {
+      const containsUnknown = /[xz]/i.test(digits);
+      const bitsPerDigit = base === 2 ? 1 : 4;
+      let requiredBits = digits.length * bitsPerDigit;
+      let numericValue = null;
+      if (!containsUnknown) {
+        numericValue = BigInt(base === 2 ? `0b${digits}` : `0x${digits}`);
+        requiredBits = numericValue === 0n ? 0 : numericValue.toString(2).length;
+      }
+      const overflow = Number.isFinite(width) && width > 0 && requiredBits > width;
+      return { valid: !overflow, kind: base === 2 ? 'binary' : 'hex', numericValue: numericValue === null ? null : numericValue.toString(), requiredBits, containsUnknown, normalizedText: digits.toUpperCase(), base, width: Number.isFinite(width) ? width : null, overflow, error: overflow ? `${requiredBits}ビット必要ですが幅は${width}ビットです` : null };
+    }
+    if (/^[A-Za-z_][A-Za-z0-9_$]*$/.test(digits) && /[g-wy]/i.test(digits)) return { valid: true, kind: 'symbolic', numericValue: null, requiredBits: null, containsUnknown: false, normalizedText: digits, base: null, width: Number.isFinite(width) ? width : null, overflow: false, error: null };
+    return invalid('許可されていないBus literalです');
+  };
+  window.TimingChartLiteralParser = parseSignalLiteral;
   canonicalDocument.signals = signals.map(signal => ensureCanonicalSource(signal));
-  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
+  const model = { document: canonicalDocument, selection: { kind: 'signal', id: 'req_valid' }, editor: { rowIndex: 2 }, validation: [], compatibility: null, validationCache: { documentRef: null, documentRevision: null, settingsKey: null, refreshRevision: 0, issues: [] }, validationMetrics: { validationRuns: 0, validationCacheHits: 0, validationCacheMisses: 0 }, view: { mode: 'cycle', tab: 'signal', followSelection: true, pinned: false, zoom: 1, hiddenSignals: [], scope: [], leftPanelMode: 'group' } };
   const controller = { model, getState: () => structuredClone(model), actions: {}, renderHooks: { after: new Map() } };
+  controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
-  const getSignals = () => model.document.signals.filter(signal => signal.type !== 'commentRow');
-  const getSignal = id => getSignals().find(signal => signal.id === id);
+  const rebuildObjectIndex = () => {
+    const signalsById = new Map();
+    const commentsById = new Map();
+    for (const signal of model.document.signals || []) {
+      signalsById.set(signal.id, signal);
+      if (signal.type === 'commentRow') commentsById.set(signal.id, signal);
+    }
+    model.index = { signalsById, commentsById, documentRef: model.document };
+    return model.index;
+  };
+  const objectIndex = () => model.index?.documentRef === model.document ? model.index : rebuildObjectIndex();
+  const getSignals = () => (model.document.signals || []).filter(signal => signal.type !== 'commentRow');
+  const getSignal = id => { const signal = objectIndex().signalsById.get(id); return signal?.type === 'commentRow' ? undefined : signal; };
   const getTimeline = () => model.document.timeline;
-  const getComments = () => model.document.signals.filter(signal => signal.type === 'commentRow');
+  const getComments = () => [...objectIndex().commentsById.values()];
   const getGroupRows = groupId => model.document.signalGroups.find(group => group.id === groupId)?.rows || [];
   const getReferenceClock = () => getSignal(getTimeline().referenceClock);
   const getSource = signal => signal?.source || { instancePath: [], signalName: signal?.name || signal?.id || '' };
@@ -112,9 +154,10 @@
     return result;
   };
   const serializeSignal = signal => {
-    if (signal.type === 'commentRow') return { id: signal.id, type: signal.type, title: signal.title, body: signal.body, ...(signal.groupId ? { groupId: signal.groupId } : {}) };
+    if (signal.type === 'commentRow') return { id: signal.id, type: signal.type, title: signal.title, body: signal.body, ...(signal.groupId ? { groupId: signal.groupId } : {}), ...(signal.display?.visible === false ? { display: { visible: false } } : {}) };
     ensureCanonicalSource(signal);
     const result = { id: signal.id, name: signal.name, type: signal.type, role: signal.role, source: { instancePath: [...(signal.source.instancePath || [])], signalName: signal.source.signalName }, display: { name: signal.display?.name || signal.name } };
+    if (signal.display?.visible === false) result.display.visible = false;
     if (signal.display?.style && typeof signal.display.style === 'object') result.display.style = structuredClone(signal.display.style);
     if (signal.source.msb !== undefined) result.source.msb = Number(signal.source.msb);
     if (signal.source.lsb !== undefined) result.source.lsb = Number(signal.source.lsb);
@@ -148,6 +191,8 @@
     timeGroups: (documentValue.timeGroups || []).map(group => ({ id: group.id, name: group.name, ...(group.category ? { category: group.category } : {}), start: finiteNumber(group.start, `$.timeGroups[${group.id}].start`), end: finiteNumber(group.end, `$.timeGroups[${group.id}].end`), ...(group.comment ? { comment: group.comment } : {}), ...(group.presentation ? { presentation: structuredClone(group.presentation) } : {}) })),
     checkSettings: structuredClone(documentValue.checkSettings || {})
   });
+  rebuildObjectIndex();
+  controller.rebuildObjectIndex = rebuildObjectIndex;
   controller.selectors = { getSignals, getSignal, getTimeline, getComments, getGroupRows, getReferenceClock };
   controller.getSerializableDocument = () => serializeDocument(model.document);
   controller.getCompatibilityPreview = () => { if (!model.compatibility) return null; const { rawText, ...publicPreview } = model.compatibility; return structuredClone(publicPreview); };
@@ -173,13 +218,21 @@
       if (!String(bookmark?.name || '').trim() || !Number.isFinite(Number(bookmark?.start)) || Number(bookmark.start) < Number(documentValue?.timeline?.start ?? 0) || Number(bookmark.start) > Number(documentValue?.timeline?.end ?? 0)) issues.push({ code: 'invalid-bookmark', id: bookmark?.id });
     }
     const timeGroupIds = new Set();
-    for (const group of documentValue?.timeGroups || []) {
+    const timeGroups = documentValue?.timeGroups || [];
+    for (const group of timeGroups) {
       if (!group?.id || timeGroupIds.has(group.id)) issues.push({ code: 'duplicate-time-group-id', id: group?.id });
       timeGroupIds.add(group?.id);
       if (!String(group?.name || '').trim() || !Number.isFinite(Number(group?.start)) || !Number.isFinite(Number(group?.end)) || Number(group.start) >= Number(group.end)) issues.push({ code: 'invalid-time-group', id: group?.id });
       const presentation = group.presentation || {};
       if (presentation.foldStyle !== undefined && !['none', 'compact', 'axis-break'].includes(presentation.foldStyle)) issues.push({ code: 'invalid-time-group-fold-style', id: group?.id });
       if (presentation.resumeLabelAnchorId && !anchorIds.has(presentation.resumeLabelAnchorId)) issues.push({ code: 'invalid-resume-label-anchor', id: group?.id });
+    }
+    const validTimeGroups = timeGroups.filter(group => Number.isFinite(Number(group?.start)) && Number.isFinite(Number(group?.end)) && Number(group.start) < Number(group.end));
+    for (let index = 0; index < validTimeGroups.length; index += 1) for (let other = index + 1; other < validTimeGroups.length; other += 1) {
+      const left = validTimeGroups[index]; const right = validTimeGroups[other];
+      const partial = Number(left.start) < Number(right.start) && Number(right.start) < Number(left.end) && Number(left.end) < Number(right.end)
+        || Number(right.start) < Number(left.start) && Number(left.start) < Number(right.end) && Number(right.end) < Number(left.end);
+      if (partial) issues.push({ code: 'overlapping-time-groups', id: left.id, relatedId: right.id, message: `Time Group ${left.id} and ${right.id} partially overlap` });
     }
     for (const anchor of anchors) if (anchor.ownerTimeGroupId && !timeGroupIds.has(anchor.ownerTimeGroupId)) issues.push({ code: 'invalid-label-anchor-owner', id: anchor.id });
     const walkFinite = (value, path = '$') => {
@@ -207,14 +260,10 @@
       ids.add(signal.id);
         if (signal.type !== 'commentRow') {
           if (signal.type === 'bus' && Number(signal.width) > 0) {
-            const format = String(signal.displayFormat || 'hex').toLowerCase();
             for (const value of signal.values || []) {
               const raw = String(value.value ?? '').trim();
-              const numeric = format === 'binary' || /^0b[01]+$/i.test(raw) ? raw.replace(/^0b/i, '') : raw.replace(/^0x/i, '');
-              const numericLike = format === 'binary' ? /^[01]+$/.test(numeric) : /^[0-9a-f]+$/i.test(numeric);
-              if (!numericLike) continue;
-              const capacity = format === 'binary' || /^0b/i.test(raw) ? numeric.length : numeric.length * 4;
-              if (capacity > Number(signal.width)) issues.push({ code: 'bus-width-overflow', severity: 'error', id: signal.id, field: 'value', range: String(value.start), value: raw, message: `値 '${raw}' は${signal.width}ビット幅を超えています`, recommendation: `${signal.width}ビット以内の値にしてください`, path: `$.signals[${signal.id}].values[${value.start}]` });
+              const literal = parseSignalLiteral(raw, signal);
+              if (!literal.valid) issues.push({ code: literal.overflow ? 'bus-width-overflow' : 'invalid-bus-literal', severity: 'error', id: signal.id, field: 'value', range: String(value.start), value: raw, requiredBits: literal.requiredBits, message: literal.overflow ? `値 '${raw}' は${signal.width}ビット幅を超えています` : `値 '${raw}' は有効なBus literalではありません`, recommendation: literal.overflow ? `${signal.width}ビット以内の値にしてください` : 'Hex/Binaryの値、X/Z、または識別子を指定してください', path: `$.signals[${signal.id}].values[${value.start}]` });
             }
           }
           const source = signal.source;
@@ -267,12 +316,42 @@
     const paths = issue => ({
       'format-version': '$.formatVersion', 'duplicate-label-anchor-id': '$.timeline.labelAnchors', 'invalid-label-anchor': '$.timeline.labelAnchors', 'label-anchor-outside-timeline': '$.timeline.labelAnchors', 'duplicate-bookmark-id': '$.bookmarks', 'invalid-bookmark': '$.bookmarks', 'duplicate-time-group-id': '$.timeGroups', 'invalid-time-group': '$.timeGroups', 'invalid-time-group-fold-style': '$.timeGroups', 'invalid-resume-label-anchor': '$.timeGroups', 'invalid-label-anchor-owner': '$.timeline.labelAnchors', 'non-finite-number': '$',
       'missing-document': '$.document', 'missing-timeline': '$.timeline', 'missing-signalGroups': '$.signalGroups', 'missing-signals': '$.signals', 'missing-annotations': '$.annotations', 'missing-legend': '$.legend', 'missing-layout': '$.layout', 'missing-transactions': '$.transactions', 'missing-constraints': '$.constraints',
-      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`, 'duplicate-transaction-id': `$.transactions[${issue.id}]`, 'invalid-transaction-bounds': `$.transactions[${issue.id}]`, 'invalid-transaction-links': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-link': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-phases': `$.transactions[${issue.id}].phases`, 'invalid-transaction-phase-bounds': `$.transactions[${issue.id}].phases`
+      'invalid-reference-clock': '$.timeline.referenceClock', 'invalid-timeline-edge': '$.timeline.edge', 'invalid-group-row': `$.signalGroups[${issue.groupId}].rows`, 'invalid-annotation-anchor': `$.annotations[${issue.id}].${issue.field || 'anchor'}`, 'duplicate-annotation-id': `$.annotations[${issue.id}]`, 'invalid-annotation-type': `$.annotations[${issue.id}].type`, 'invalid-dependency-style': `$.annotations[${issue.id}]`, 'invalid-start-order': `$.signals[${issue.id}].values`, 'duplicate-signal-id': `$.signals[${issue.id}]`, 'invalid-clock-generator': `$.signals[${issue.id}].generator`, 'transient-or-unsupported-field': `$.signals[${issue.id}].${issue.field}`, 'invalid-signal-source': `$.signals[${issue.id}].source`, 'invalid-bus-range': `$.signals[${issue.id}].source`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-bus-literal': `$.signals[${issue.id}].values`, 'bus-width-overflow': `$.signals[${issue.id}].values`, 'invalid-display-name': `$.signals[${issue.id}].display.name`, 'invalid-label-offset': `$.annotations[${issue.id}].labelOffset`, 'invalid-label-style': `$.annotations[${issue.id}].labelStyle`, 'invalid-signal-spacing': `$.signals[${issue.id}].spacing`, 'duplicate-transaction-id': `$.transactions[${issue.id}]`, 'invalid-transaction-bounds': `$.transactions[${issue.id}]`, 'invalid-transaction-links': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-link': `$.transactions[${issue.id}].linkedSignals`, 'invalid-transaction-phases': `$.transactions[${issue.id}].phases`, 'invalid-transaction-phase-bounds': `$.transactions[${issue.id}].phases`
     }[issue.code] || '$');
     return issues.map(issue => ({ ...issue, path: issue.path || paths(issue), message: issue.message || issue.code }));
   };
-  controller.getProblems = documentValue => {
-    return controller.validateDocument(documentValue);
+  const rawValidateDocument = controller.validateDocument;
+  const validateDocumentRaw = documentValue => {
+    if (typeof controller.validationTestHook === 'function') controller.validationTestHook(documentValue);
+    return rawValidateDocument(documentValue);
+  };
+  controller.validateDocumentRaw = validateDocumentRaw;
+  controller.validateDocument = validateDocumentRaw;
+  const validationSettingsKey = documentValue => JSON.stringify(documentValue?.checkSettings || {});
+  const cloneIssues = issues => issues.map(issue => ({ ...issue }));
+  controller.clearValidationCache = () => {
+    model.validationCache = { documentRef: null, documentRevision: null, settingsKey: null, refreshRevision: null, issues: [] };
+  };
+  controller.cacheValidationResult = (documentValue, issues, revision = model.documentRevision) => {
+    if (documentValue !== model.document) return false;
+    model.validationCache = { documentRef: documentValue, documentRevision: revision ?? 0, settingsKey: validationSettingsKey(documentValue), refreshRevision: model.problemRefreshRevision || 0, issues: cloneIssues(issues) };
+    return true;
+  };
+  controller.getValidationMetrics = () => ({ ...model.validationMetrics });
+  controller.getProblems = (documentValue = model.document, { force = false } = {}) => {
+    if (documentValue !== model.document) return validateDocumentRaw(documentValue);
+    const revision = model.documentRevision ?? 0;
+    const settingsKey = validationSettingsKey(documentValue);
+    const cache = model.validationCache;
+    if (!force && cache.documentRef === documentValue && cache.documentRevision === revision && cache.settingsKey === settingsKey && cache.refreshRevision === (model.problemRefreshRevision || 0)) {
+      model.validationMetrics.validationCacheHits += 1;
+      return cloneIssues(cache.issues);
+    }
+    model.validationMetrics.validationCacheMisses += 1;
+    model.validationMetrics.validationRuns += 1;
+    const issues = validateDocumentRaw(documentValue);
+    controller.cacheValidationResult(documentValue, issues, revision);
+    return cloneIssues(issues);
   };
   window.TimingChartProductionController = controller;
 
@@ -331,14 +410,15 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
+  const render = () => { rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
   controller.actions.setProblemFilter = (severity = 'all', signalId = 'all') => { if (!['all', 'err', 'warn', 'info'].includes(severity)) return false; model.view.problemSeverityFilter = severity; model.view.problemSignalFilter = signalId || 'all'; render(); return true; };
+  controller.actions.refreshProblems = () => { model.problemRefreshRevision = (model.problemRefreshRevision || 0) + 1; controller.clearValidationCache(); model.validation = controller.getProblems(model.document, { force: true }); render(); return true; };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
-  controller.actions.setSignalVisibility = (signalId, visible) => { if (!model.document.signals.some(signal => signal.id === signalId)) return false; model.view.hiddenSignals = model.view.hiddenSignals.filter(id => id !== signalId); if (!visible) model.view.hiddenSignals.push(signalId); render(); document.querySelectorAll(`#groups .row[data-signal="${CSS.escape(signalId)}"], #cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`).forEach(row => { row.style.display = visible ? '' : 'none'; }); return true; };
+  controller.actions.setSignalVisibility = (signalId, visible) => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; return transactionRun('Change signal visibility', () => { signal.display ||= { name: signal.name }; if (visible) delete signal.display.visible; else signal.display.visible = false; model.view.hiddenSignals = model.document.signals.filter(item => item.display?.visible === false).map(item => item.id); }); };
   controller.actions.setSignalNameWidth = widthValue => { const width = Number(widthValue); if (!Number.isInteger(width) || width < 120 || width > 360) return false; return transactionRun('Resize signal label column', () => { model.document.layout.signalNameWidth = width; }); };
   const transactionRun = (label, mutation) => {
     if (controller.documentHistory?.run) return controller.documentHistory.run(label, mutation);
@@ -396,7 +476,7 @@
     const esc = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
     const icon = signal => signal.role === 'output' ? 'o' : signal.role === 'internal' ? 'wire' : 'i';
     const labelParts = signal => { const source = getSource(signal); const path = source.instancePath || []; const mode = model.document.layout.pathDisplayMode || 'signalOnly'; const scope = model.view.scope || []; let visiblePath = []; if (mode === 'full') visiblePath = path; else if (mode === 'relative') { let index = 0; while (index < scope.length && index < path.length && scope[index] === path[index]) index++; visiblePath = path.slice(index); } const range = getBusRange(signal); const name = esc(String(signal.display?.name || source.signalName).replace(/\[\d+\s*:\s*\d+\]$/, '')); return `${visiblePath.length ? `<span class="instance-path-part hierarchy-instance-column">${esc(visiblePath.join('.'))}.</span>` : ''}<span class="signal-name-part">${name}</span>${range ? `<span class="bus-width-part bus-width-column">${esc(range)}</span>` : ''}`; };
-    const renderNode = (node, depth = 0) => [...node.entries()].flatMap(([name, value]) => name === '__signals' ? value.signals.map(signal => `<div class="row ${model.selection.id === signal.id ? 'selected' : ''}" data-signal="${esc(signal.id)}" data-kind="${esc(signal.type)}" style="padding-left:${18 + depth * 14}px"><span class="role ${signal.role === 'output' ? 'out' : signal.role === 'internal' ? 'wire' : 'in'}">${icon(signal)}</span><span class="row-name" title="${esc(fullPath(signal))}">${labelParts(signal)}</span><span class="eye">◉</span><span class="more">⋮</span></div>`) : `<div class="group-h" style="padding-left:${8 + depth * 14}px"><span class="chev">⌄</span>${esc(name)}</div>${renderNode(value.children, depth + 1)}`).join('');
+    const renderNode = (node, depth = 0) => [...node.entries()].flatMap(([name, value]) => name === '__signals' ? value.signals.map(signal => `<div class="row ${model.selection.id === signal.id ? 'selected' : ''}" data-signal="${esc(signal.id)}" data-kind="${esc(signal.type)}" style="padding-left:${18 + depth * 14}px"><span class="role ${signal.role === 'output' ? 'out' : signal.role === 'internal' ? 'wire' : 'in'}">${icon(signal)}</span><span class="row-name" title="${esc(fullPath(signal))}">${labelParts(signal)}</span><span class="eye"><svg aria-hidden="true"><use href="icons.svg#${signal.display?.visible === false ? 'i-eye-off' : 'i-eye'}"></use></svg></span><span class="more">⋮</span></div>`) : `<div class="group-h" style="padding-left:${8 + depth * 14}px"><span class="chev">⌄</span>${esc(name)}</div>${renderNode(value.children, depth + 1)}`).join('');
     host.innerHTML = `<div class="group hierarchy-root"><div class="group-h"><span class="chev">⌄</span>Hierarchy<div class="spacer"></div><span>⋮</span></div>${renderNode(tree)}</div>`;
     host.querySelectorAll('.row[data-signal]').forEach(row => row.addEventListener('click', () => controller.actions.selectObject(row)));
   };
@@ -518,7 +598,65 @@
   controller.actions.moveSignalBy = (signalId, delta) => transactionRun('Reorder signal', () => { const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!group) return false; const from = group.rows.indexOf(signalId); const to = Math.max(0, Math.min(group.rows.length - 1, from + Number(delta))); if (from === to) return false; group.rows.splice(from, 1); group.rows.splice(to, 0, signalId); });
   controller.actions.setSignalSpacing = (signalId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update signal spacing', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; signal[field] = Number(value); }); };
   controller.actions.setGroupSpacing = (groupId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update group spacing', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group[field] = Number(value); }); };
+  controller.actions.setGlobalSignalSpacing = value => { const spacing = Number(value); if (!Number.isFinite(spacing) || spacing < 0 || spacing > 48) return false; return transactionRun('Update row spacing', () => { model.document.layout.signalSpacing = spacing; }); };
+  controller.actions.setGroupSpacingValues = (groupId, before, after) => { const spacingBefore = Number(before); const spacingAfter = Number(after); if (!Number.isFinite(spacingBefore) || !Number.isFinite(spacingAfter) || spacingBefore < 0 || spacingAfter < 0 || spacingBefore > 48 || spacingAfter > 48) return false; return transactionRun('Update group spacing', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.spacingBefore = spacingBefore; group.spacingAfter = spacingAfter; }); };
+  controller.actions.autoLayout = () => transactionRun('Auto layout', () => {
+    const layout = model.document.layout;
+    const clamp = (value, min, max, fallback) => { const number = Number(value); return Number.isFinite(number) ? Math.max(min, Math.min(max, number)) : fallback; };
+    layout.signalSpacing = 6;
+    layout.rowHeight = clamp(layout.rowHeight, 20, 80, 28);
+    layout.roleColumnWidth = clamp(layout.roleColumnWidth, 24, 64, 32);
+    layout.signalNameWidth = clamp(layout.signalNameWidth, 120, 360, 168);
+    layout.instancePathWidth = clamp(layout.instancePathWidth, 120, 360, 180);
+    for (const group of model.document.signalGroups || []) { group.spacingBefore = clamp(group.spacingBefore, 0, 48, 0); group.spacingAfter = clamp(group.spacingAfter, 0, 48, 0); }
+    for (const signal of model.document.signals || []) { if (signal.spacingBefore !== undefined) signal.spacingBefore = clamp(signal.spacingBefore, 0, 48, 0); if (signal.spacingAfter !== undefined) signal.spacingAfter = clamp(signal.spacingAfter, 0, 48, 0); }
+    return true;
+  });
   controller.actions.setGroupCollapsed = (groupId, collapsed) => transactionRun('Toggle group collapse', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.collapsed = Boolean(collapsed); });
+  const timeGroupById = id => (model.document.timeGroups || []).find(group => group.id === id);
+  const timeGroupRange = (start, end) => Number.isFinite(Number(start)) && Number.isFinite(Number(end)) && Number(start) >= Number(model.document.timeline.start ?? 0) && Number(end) <= Number(model.document.timeline.end ?? model.document.timeline.cycleCount ?? 0) && Number(start) < Number(end);
+  const partiallyOverlapsTimeGroup = (start, end, ignoreId = '') => (model.document.timeGroups || []).some(group => {
+    if (group.id === ignoreId) return false;
+    const a = Number(start); const b = Number(end); const c = Number(group.start); const d = Number(group.end);
+    return a < d && c < b && !((a === c && b === d) || b === c || d === a) && ((a < c && c < b && b < d) || (c < a && a < d && d < b));
+  });
+  const nextTimeGroupId = () => { let index = (model.document.timeGroups || []).length + 1; let id = `tg_${String(index).padStart(3, '0')}`; while ((model.document.timeGroups || []).some(group => group.id === id)) id = `tg_${String(++index).padStart(3, '0')}`; return id; };
+  const normalizeTimeGroupPresentation = presentation => {
+    const value = structuredClone(presentation || {});
+    if (value.collapsed !== undefined) value.collapsed = Boolean(value.collapsed);
+    if (value.foldStyle !== undefined && !['none', 'compact', 'axis-break'].includes(value.foldStyle)) value.foldStyle = 'none';
+    if (value.displayAfter) {
+      value.displayAfter = { mode: value.displayAfter.mode === 'rebase' ? 'rebase' : 'source', ...(value.displayAfter.value === undefined ? {} : { value: Number(value.displayAfter.value) }) };
+    }
+    return value;
+  };
+  controller.selectors.getTimeGroups = ({ sort = 'start', category = '' } = {}) => {
+    const groups = (model.document.timeGroups || []).filter(group => !category || String(group.category || '') === String(category));
+    const sorted = groups.map((group, index) => ({ ...group, duration: Number(group.end) - Number(group.start), state: group.presentation?.collapsed ? 'Collapsed' : 'Expanded', order: index }));
+    const compare = sort === 'name' ? (a, b) => String(a.name).localeCompare(String(b.name)) : sort === 'category' ? (a, b) => String(a.category || '').localeCompare(String(b.category || '')) : sort === 'duration' ? (a, b) => a.duration - b.duration : (a, b) => Number(a.start) - Number(b.start) || a.order - b.order;
+    return sorted.sort(compare).map((group, index, all) => ({ ...group, gap: index ? Number(group.start) - Number(all[index - 1].end) : null, sameCategoryDurationDelta: index && String(group.category || '') === String(all[index - 1].category || '') ? group.duration - all[index - 1].duration : null }));
+  };
+  controller.actions.addTimeGroup = (seed = {}) => {
+    const start = Number(seed.start ?? model.timeSelection?.rangeStart); const end = Number(seed.end ?? model.timeSelection?.rangeEnd);
+    if (!timeGroupRange(start, end)) { model.validation = [{ code: 'invalid-time-group', message: '有効な時間範囲を選択してください' }]; controller.render(); return false; }
+    if (partiallyOverlapsTimeGroup(start, end)) { model.validation = [{ code: 'overlapping-time-groups', message: 'Time Groupの部分重複は許可されません' }]; controller.render(); return false; }
+    return transactionRun('Create time group', () => {
+      const group = { id: seed.id || nextTimeGroupId(), name: String(seed.name || `Time Group ${(model.document.timeGroups || []).length + 1}`).trim(), start, end, ...(seed.category ? { category: String(seed.category) } : {}), ...(seed.comment ? { comment: String(seed.comment) } : {}), ...(seed.presentation ? { presentation: normalizeTimeGroupPresentation(seed.presentation) } : {}) };
+      if (!group.name || (model.document.timeGroups || []).some(item => item.id === group.id)) return false;
+      model.document.timeGroups ??= []; model.document.timeGroups.push(group); model.selection = { kind: 'timeGroup', id: group.id }; return true;
+    });
+  };
+  controller.actions.updateTimeGroup = (id, field, value) => {
+    const group = timeGroupById(id); if (!group) return false;
+    const next = structuredClone(group); const presentationFields = new Set(['collapsed', 'foldStyle', 'foldLabel', 'displayAfter.mode', 'displayAfter.value']);
+    if (presentationFields.has(field)) { next.presentation = normalizeTimeGroupPresentation(next.presentation); if (field === 'collapsed') next.presentation.collapsed = Boolean(value); else if (field === 'foldStyle') next.presentation.foldStyle = String(value); else if (field === 'foldLabel') next.presentation.foldLabel = String(value); else { next.presentation.displayAfter ??= { mode: 'source' }; if (field === 'displayAfter.mode') next.presentation.displayAfter.mode = value === 'rebase' ? 'rebase' : 'source'; else next.presentation.displayAfter.value = Number(value); } }
+    else if (field === 'start' || field === 'end') next[field] = Number(value); else if (field === 'name') next.name = String(value).trim(); else if (field === 'category' || field === 'comment') next[field] = String(value ?? ''); else return false;
+    if (!next.name || !timeGroupRange(next.start, next.end) || partiallyOverlapsTimeGroup(next.start, next.end, id)) { model.validation = [{ code: 'invalid-time-group-edit', id, message: 'Time Groupの範囲または重複が不正です' }]; controller.render(); return false; }
+    return transactionRun(`Update time group ${field}`, () => { Object.assign(group, next); });
+  };
+  controller.actions.setTimeGroupCollapsed = (id, collapsed) => controller.actions.updateTimeGroup(id, 'collapsed', collapsed);
+  controller.actions.deleteTimeGroup = id => transactionRun('Delete time group', () => { const index = (model.document.timeGroups || []).findIndex(group => group.id === id); if (index < 0) return false; model.document.timeGroups.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
+  controller.actions.revealTimeGroup = id => { const group = timeGroupById(id); if (!group) return false; model.timeSelection = { ...(model.timeSelection || {}), cycle: Number(group.start), rangeStart: Number(group.start), rangeEnd: Number(group.end), source: 'time-group-reveal' }; controller.scheduleTransientLayout?.(model); return true; };
   controller.actions.setGroupName = (groupId, name) => { if (!String(name || '').trim()) return false; return transactionRun('Rename group', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group.name = String(name).trim(); }); };
   controller.actions.moveGroupBy = (groupId, delta) => transactionRun('Reorder group', () => { const from = model.document.signalGroups.findIndex(item => item.id === groupId); const to = Math.max(0, Math.min(model.document.signalGroups.length - 1, from + Number(delta))); if (from < 0 || from === to) return false; const [group] = model.document.signalGroups.splice(from, 1); model.document.signalGroups.splice(to, 0, group); });
   controller.actions.deleteGroup = groupId => transactionRun('Delete group', () => { if (model.document.signalGroups.length <= 1) return false; const index = model.document.signalGroups.findIndex(item => item.id === groupId); if (index < 0 || (model.document.signalGroups[index].rows || []).length) return false; model.document.signalGroups.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
@@ -532,7 +670,7 @@
   controller.export = async (format, options = {}) => { const svg = controller.exportSvg(options); if (format === 'svg' || format === 'clipboard-svg') return { format, text: svg }; if (format === 'pdf') return { format, action: 'print', text: svg }; if (format === 'png' || format === 'clipboard-png') { const dataUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`; return { format, dataUrl, source: svg }; } return { format, text: svg }; };
   const setValidation = issues => { model.validation = issues; };
   const canonicalize = signal => signal.values.sort((a, b) => Number(a.start) - Number(b.start));
-  const validateValue = (signal, index, candidate) => { const issues = []; const start = Number(candidate.start); if (!Number.isInteger(start) || start < 0) issues.push({ field: 'start', code: 'negative-or-non-integer' }); if (start >= getTimeline().cycleCount) issues.push({ field: 'start', code: 'outside-document' }); if (signal.values.some((value, valueIndex) => valueIndex !== index && Number(value.start) === start)) issues.push({ field: 'start', code: 'duplicate-start' }); if (signal.type === 'binary' && !['0', '1', 'X', 'Z', 'x', 'z'].includes(String(candidate.value))) issues.push({ field: 'value', code: 'invalid-binary' }); if (signal.type === 'bus' && signal.width && /^[0-9a-f]+$/i.test(String(candidate.value)) && String(candidate.value).replace(/^0x/i, '').length * 4 > signal.width) issues.push({ field: 'value', code: 'bus-width-overflow' }); return issues; };
+  const validateValue = (signal, index, candidate) => { const issues = []; const start = Number(candidate.start); if (!Number.isInteger(start) || start < 0) issues.push({ field: 'start', code: 'negative-or-non-integer' }); if (start >= getTimeline().cycleCount) issues.push({ field: 'start', code: 'outside-document' }); if (signal.values.some((value, valueIndex) => valueIndex !== index && Number(value.start) === start)) issues.push({ field: 'start', code: 'duplicate-start' }); if (signal.type === 'binary' && !['0', '1', 'X', 'Z', 'x', 'z'].includes(String(candidate.value))) issues.push({ field: 'value', code: 'invalid-binary' }); if (signal.type === 'bus') { const literal = parseSignalLiteral(candidate.value, signal); if (!literal.valid) issues.push({ field: 'value', code: literal.overflow ? 'bus-width-overflow' : 'invalid-bus-literal', requiredBits: literal.requiredBits, message: literal.error }); } return issues; };
   const valueFromInput = (signal, value, field) => field === 'start' ? Number(value) : field === 'value' && signal.type === 'binary' && /^[01]$/.test(value) ? Number(value) : value;
    controller.actions.updateSignalValue = (signalId, index, field, rawValue) => { const signal = getSignal(signalId); if (!signal || !signal.values[index]) return false; const candidate = { ...signal.values[index], [field]: valueFromInput(signal, rawValue, field) }; const issues = validateValue(signal, index, candidate); if (issues.length) { setValidation(issues); render(); return false; } return transactionRun(`Change signal ${field}`, () => { signal.values[index] = candidate; canonicalize(signal); model.editor.rowIndex = signal.values.indexOf(candidate); setValidation([]); }); };
    controller.getSignalConfig = signalId => { const signal = getSignal(signalId); return signal ? structuredClone({ formatVersion: '1.0.0', signal }) : null; };
@@ -607,6 +745,89 @@
   controller.actions.updateComment = (commentId, field, value) => { const comment = getComments().find(item => item.id === commentId); if (!comment || !['title', 'body'].includes(field)) return false; return transactionRun(`Change comment ${field}`, () => { comment[field] = String(value); }); };
   controller.actions.duplicateComment = commentId => transactionRun('Duplicate comment row', () => { const source = getComments().find(comment => comment.id === commentId); if (!source) return false; const copy = structuredClone(source); let id = `${source.id}_copy`; let suffix = 2; while (getComments().some(comment => comment.id === id)) id = `${source.id}_copy${suffix++}`; copy.id = id; copy.title = `${source.title || 'Comment'} copy`; const group = model.document.signalGroups.find(item => (item.rows || []).includes(commentId)); model.document.signals.push(copy); if (group) group.rows.splice(group.rows.indexOf(commentId) + 1, 0, id); model.selection = { kind: 'comment', id }; });
   controller.actions.deleteComment = commentId => transactionRun('Delete comment row', () => { const index = model.document.signals.findIndex(signal => signal.id === commentId && signal.type === 'commentRow'); if (index < 0) return false; for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== commentId); model.document.signals.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
+  const selectionEntry = () => {
+    const selection = model.selection || {};
+    if (selection.kind === 'signal' || selection.kind === 'comment') return model.document.signals.find(item => item.id === selection.id) || null;
+    if (selection.kind === 'annotation') return (model.document.annotations || []).find(item => item.id === selection.id) || null;
+    if (selection.kind === 'transaction') return (model.document.transactions || []).find(item => item.id === selection.id) || null;
+    if (selection.kind === 'spacer') { for (const group of model.document.signalGroups || []) { const spacer = (group.spacers || []).find(item => item.id === selection.id); if (spacer) return { ...spacer, groupId: group.id, type: 'spacer' }; } }
+    return null;
+  };
+  const supportedSelection = () => { const entry = selectionEntry(); const kind = model.selection?.kind; return Boolean(entry && (kind === 'transaction' || kind === 'spacer' || ['clock', 'binary', 'bus', 'state', 'comment', 'annotation'].includes(kind) || ['clock', 'binary', 'bus', 'state', 'commentRow', 'range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight'].includes(entry.type))); };
+  const uniqueId = (base, used) => { let id = `${base}_copy`; let suffix = 2; while (used.has(id)) id = `${base}_copy${suffix++}`; used.add(id); return id; };
+  const groupForRow = id => (model.document.signalGroups || []).find(group => (group.rows || []).includes(id));
+  const clipboardPayload = (entry, selectionKind = model.selection?.kind) => {
+    if (entry.type === 'commentRow') return { version: 1, kind: 'comment', sourceDocumentId: model.document.document.id, payload: serializeSignal(structuredClone(entry)) };
+    if (['clock', 'binary', 'bus', 'state'].includes(entry.type)) return { version: 1, kind: 'signal', sourceDocumentId: model.document.document.id, payload: serializeSignal(structuredClone(entry)) };
+    if (entry.type === 'spacer') return { version: 1, kind: 'spacer', sourceDocumentId: model.document.document.id, payload: { id: entry.id, height: Number(entry.height) } };
+    if (['range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight'].includes(entry.type)) return { version: 1, kind: 'annotation', sourceDocumentId: model.document.document.id, payload: serializeAnnotation(entry) };
+    if (selectionKind === 'transaction') {
+      const allowed = ['name', 'lane', 'start', 'end', 'source', 'destination', 'comment', 'linkedSignals', 'phases'];
+      return { version: 1, kind: 'transaction', sourceDocumentId: model.document.document.id, payload: Object.fromEntries(allowed.filter(key => Object.prototype.hasOwnProperty.call(entry, key)).map(key => [key, structuredClone(entry[key])])) };
+    }
+    return null;
+  };
+  controller.actions.getSelectionCommandState = () => {
+    const supported = supportedSelection();
+    const payload = model.clipboard;
+    const targetGroup = groupForRow(model.selection?.id) || model.document.signalGroups?.[0];
+    const paste = Boolean(payload && targetGroup && ['signal', 'comment', 'spacer', 'annotation', 'transaction'].includes(payload.kind));
+    const protectedReferenceClock = model.selection?.kind === 'signal' && model.selection.id === model.document.timeline.referenceClock;
+    return { copy: supported, cut: supported && !protectedReferenceClock, delete: supported && !protectedReferenceClock, duplicate: supported, paste };
+  };
+  controller.actions.copySelection = () => {
+    const payload = clipboardPayload(selectionEntry(), model.selection?.kind);
+    if (!payload) return false;
+    model.clipboard = structuredClone(payload);
+    controller.lastClipboard = model.clipboard;
+    controller.refreshCommandState?.();
+    return true;
+  };
+  const insertPastedSignal = payload => {
+    const source = structuredClone(payload);
+    const isComment = payload.type === 'commentRow';
+    const used = new Set(model.document.signals.map(signal => signal.id));
+    const id = uniqueId(source.id || (isComment ? 'comment' : 'signal'), used);
+    source.id = id;
+    if (isComment) { source.groupId = undefined; }
+    else ensureCanonicalSource(source);
+    const targetGroup = groupForRow(model.selection?.id) || model.document.signalGroups?.[0];
+    if (!targetGroup) return false;
+    const selectedIndex = targetGroup.rows.indexOf(model.selection?.id);
+    const insertAt = selectedIndex >= 0 ? selectedIndex + 1 : targetGroup.rows.length;
+    model.document.signals.push(source); targetGroup.rows.splice(insertAt, 0, id);
+    if (isComment) source.groupId = targetGroup.id;
+    model.selection = { kind: isComment ? 'comment' : 'signal', id };
+    return true;
+  };
+  controller.actions.pasteSelection = (targetContext = {}) => {
+    const payload = model.clipboard;
+    if (!payload || !['signal', 'comment', 'spacer', 'annotation', 'transaction'].includes(payload.kind)) return false;
+    return transactionRun('Paste selection', () => {
+      if (payload.kind === 'signal' || payload.kind === 'comment') return insertPastedSignal(payload.payload);
+      if (payload.kind === 'spacer') {
+        const group = model.document.signalGroups.find(item => item.id === targetContext.groupId) || groupForRow(model.selection?.id) || model.document.signalGroups?.[0];
+        if (!group) return false; group.spacers ??= []; const used = new Set(group.spacers.map(item => item.id)); const spacer = structuredClone(payload.payload); spacer.id = uniqueId(spacer.id || 'spacer', used); spacer.height = Math.max(1, Number(spacer.height) || 16); group.spacers.push(spacer); model.selection = { kind: 'spacer', id: spacer.id }; return true;
+      }
+      if (payload.kind === 'annotation') {
+        const annotation = structuredClone(payload.payload); const anchors = ['anchor', 'start', 'end', 'from', 'to'].map(key => annotation[key]).filter(Boolean);
+        if (anchors.some(anchor => !model.document.signals.some(signal => signal.id === anchor.signal))) return false;
+        annotation.id = uniqueId(annotation.id || 'annotation', new Set((model.document.annotations || []).map(item => item.id))); model.document.annotations.push(annotation); model.selection = { kind: 'annotation', id: annotation.id }; return true;
+      }
+      const transaction = structuredClone(payload.payload); const linked = (transaction.linkedSignals || []).filter(id => model.document.signals.some(signal => signal.id === id && signal.type !== 'commentRow')); if (linked.length !== (transaction.linkedSignals || []).length) return false; transaction.linkedSignals = linked; transaction.id = uniqueId(transaction.name || 'transaction', new Set((model.document.transactions || []).map(item => item.id))); model.document.transactions.push(transaction); model.selection = { kind: 'transaction', id: transaction.id }; model.crossHighlight = [...linked]; return true;
+    });
+  };
+  controller.actions.deleteSelection = () => {
+    const selection = model.selection || {}; const entry = selectionEntry(); if (!entry) return false;
+    if (selection.kind === 'signal' && entry.type !== 'commentRow') return transactionRun('Delete selection', () => { for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== entry.id); model.document.signals = model.document.signals.filter(signal => signal.id !== entry.id); model.document.transactions = (model.document.transactions || []).map(transaction => ({ ...transaction, linkedSignals: (transaction.linkedSignals || []).filter(id => id !== entry.id) })); model.document.annotations = (model.document.annotations || []).filter(annotation => !['anchor', 'start', 'end', 'from', 'to'].some(key => annotation[key]?.signal === entry.id)); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
+    if (selection.kind === 'comment') return controller.actions.deleteComment(entry.id);
+    if (selection.kind === 'annotation') return controller.actions.deleteAnnotation?.(entry.id) || false;
+    if (selection.kind === 'transaction') return controller.actions.deleteTransaction(entry.id);
+    if (selection.kind === 'spacer') return transactionRun('Delete selection', () => { const group = model.document.signalGroups.find(item => (item.spacers || []).some(spacer => spacer.id === entry.id)); if (!group) return false; group.spacers = group.spacers.filter(spacer => spacer.id !== entry.id); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
+    return false;
+  };
+  controller.actions.cutSelection = () => { if (!controller.actions.copySelection()) return false; return controller.actions.deleteSelection(); };
+  controller.actions.duplicateSelection = () => { if (!controller.actions.copySelection()) return false; return controller.actions.pasteSelection(); };
   const initialGroupsHost = document.querySelector('#groups'); if (initialGroupsHost && !initialGroupsHost.dataset.groupMarkup) initialGroupsHost.dataset.groupMarkup = initialGroupsHost.innerHTML;
   document.querySelectorAll('.seg').forEach(button => button.addEventListener('click', () => controller.actions.setViewMode(button.dataset.mode)));
   tabs().forEach(button => button.addEventListener('click', () => controller.actions.setBottomTab(button.dataset.tab)));

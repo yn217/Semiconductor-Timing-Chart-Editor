@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs/promises';
+import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
@@ -10,22 +11,40 @@ const apb=await fs.readFile(path.join(sampleDir,'01_apb_register_access.tcd.json
 const ahb=await fs.readFile(path.join(sampleDir,'02_ahb_lite_pipelined_transfer.tcd.json'),'utf8');
 const out=path.join(root,'artifacts','issue91');
 await fs.mkdir(out,{recursive:true});
+const server=http.createServer(async(req,res)=>{
+  try{
+    const pathname=decodeURIComponent(new URL(req.url,'http://127.0.0.1').pathname);
+    const target=path.resolve(root,`.${pathname}`);
+    if(!target.startsWith(root)||!pathname)return res.writeHead(403).end();
+    const data=await fs.readFile(target);
+    const type=target.endsWith('.html')?'text/html':target.endsWith('.js')?'text/javascript':target.endsWith('.json')?'application/json':target.endsWith('.svg')?'image/svg+xml':'application/octet-stream';
+    res.writeHead(200,{'content-type':type});res.end(data);
+  }catch{res.writeHead(404).end();}
+});
+server.on('error',error=>{throw error;});
+await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+const port=server.address().port;
+process.on('exit',()=>server.close());
 const browser=await chromium.launch({headless:true});
 const page=await browser.newPage({viewport:{width:1672,height:941},deviceScaleFactor:1});
 const errors=[]; page.on('pageerror',error=>errors.push(error.stack||error.message));
-await page.goto(`file://${path.join(root,'gui-mockup','index.html').replaceAll('\\','/')}`); await page.waitForTimeout(400);
+await page.goto(`http://127.0.0.1:${port}/gui-mockup/index.html`); await page.waitForTimeout(400);
 const result=await page.evaluate(async({apb,ahb})=>{
   const c=window.TimingChartProductionController;
-  window.TimingChartSampleSources={
-    '01_apb_register_access.tcd.json':apb,
-    '02_ahb_lite_pipelined_transfer.tcd.json':ahb
-  };
   const sampleBrowser=Boolean(c.sampleBrowser?.dialog && c.sampleBrowser.dialog.querySelectorAll('[data-sample-file]').length===20);
   c.sampleBrowser?.open();
   const sampleDialogVisible=!c.sampleBrowser.dialog.hidden;
-  const apbButton=c.sampleBrowser.dialog.querySelector('[data-sample-file="01_apb_register_access.tcd.json"]');
-  apbButton?.click();
-  await new Promise(resolve=>setTimeout(resolve,50));
+  const openCatalogSample=async file=>{
+    c.sampleBrowser.open();
+    c.sampleBrowser.dialog.querySelector(`[data-sample-file="${file}"]`)?.click();
+    for(let attempt=0;attempt<100;attempt+=1){if(c.model.persistence.fileName===file&&!c.model.persistence.dirty&&c.model.persistence.source?.sample)return true;await new Promise(resolve=>setTimeout(resolve,25));}
+    return false;
+  };
+  const catalogResults=[];
+  for(const entry of c.sampleCatalog) catalogResults.push({file:entry.file,loaded:await openCatalogSample(entry.file),signals:c.model.document.signals.length,groups:c.model.document.signalGroups.length});
+  const apbLoadedFromCatalog=c.model.persistence.fileName==='20_transaction_cycle_linked_views.tcd.json';
+  await openCatalogSample('01_apb_register_access.tcd.json');
+  await new Promise(resolve=>setTimeout(resolve,150));
   const apbLoaded={fileName:c.model.persistence.fileName,source:c.model.persistence.source,signalIds:c.model.document.signals.map(signal=>signal.id),dirty:c.model.persistence.dirty};
   const beforeDirty=JSON.stringify(c.getSerializableDocument());
   c.actions.updateSignalValue(c.model.document.signals.find(signal=>signal.type==='binary')?.id,0,'value','1');
@@ -57,10 +76,13 @@ const result=await page.evaluate(async({apb,ahb})=>{
   window.showSaveFilePicker=async()=>{const error=new DOMException('Canceled','AbortError');throw error;};
   const canceledSave=await c.actions.save();
   const afterCanceledSave={canceledSave,source:c.model.persistence.source,dirty:c.model.persistence.dirty};
-  return {sampleBrowser,sampleDialogVisible,apbLoaded,beforeDirty,dirtyBeforeSampleSwitch,canceled,afterCancelEqualsBefore:afterCancel===dirtyDocument,discarded,ahbLoaded,nativeOpen,nativeExtensions,fallbackAccept,fallbackResult,sampleBeforeSave,firstSave,afterSave,afterSecondSave,afterCanceledSave};
+  return {sampleBrowser,sampleDialogVisible,apbLoaded,apbLoadedFromCatalog,catalogResults,beforeDirty,dirtyBeforeSampleSwitch,canceled,afterCancelEqualsBefore:afterCancel===dirtyDocument,discarded,ahbLoaded,nativeOpen,nativeExtensions,fallbackAccept,fallbackResult,sampleBeforeSave,firstSave,afterSave,afterSecondSave,afterCanceledSave};
 },{apb,ahb});
 assert.equal(result.sampleBrowser,true);
 assert.equal(result.sampleDialogVisible,true);
+assert.equal(result.apbLoadedFromCatalog,true);
+assert.equal(result.catalogResults.length,20);
+assert.ok(result.catalogResults.every(item=>item.loaded&&item.signals>0&&item.groups>0),JSON.stringify(result.catalogResults));
 assert.equal(result.apbLoaded.source.kind,'sample');
 assert.equal(result.apbLoaded.source.sample,true);
 assert.equal(result.apbLoaded.dirty,false);
@@ -80,5 +102,5 @@ assert.equal(result.afterSecondSave.saveCalls,1); assert.equal(result.afterSecon
 assert.equal(result.afterCanceledSave.canceledSave,false); assert.equal(result.afterCanceledSave.source.kind,'sample'); assert.equal(result.afterCanceledSave.dirty,true);
 assert.equal(errors.length,0,errors.join('\n'));
 await page.screenshot({path:path.join(out,'issue91-1672x941.png')}); await browser.close();
-await fs.writeFile(path.join(out,'acceptance.json'),`${JSON.stringify({issue:91,sampleBrowser:true,extensionPolicy:true,replaceLifecycle:true,dirtyCancel:true,sampleSaveAsBoundary:true,saveAsCancelPreservesSampleState:true,errors,pass:true},null,2)}\n`);
+await fs.writeFile(path.join(out,'acceptance.json'),`${JSON.stringify({issue:91,realSourcePath:true,catalogResults:result.catalogResults,sampleBrowser:true,extensionPolicy:true,replaceLifecycle:true,dirtyCancel:true,sampleSaveAsBoundary:true,saveAsCancelPreservesSampleState:true,errors,pass:true},null,2)}\n`);
 console.log('Issue #91 acceptance passed: sample browser, extension policy, replace lifecycle, dirty protection, and Save As boundary.');
