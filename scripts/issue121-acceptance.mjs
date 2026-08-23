@@ -53,6 +53,19 @@ const afterReopen = await page.evaluate(() => {
   return { basicVisible: basicBody.style.display !== 'none', labelValue: labelInput?.value };
 });
 
+// Style is default-closed (defaultOpen=false). Its first click must open it in
+// a single click, not require two clicks (regression: the toggle handler used
+// to negate the raw internal map value instead of the DOM-rendered state, so
+// an unset/undefined entry flipped to `true`/collapsed -- a no-op visually
+// for sections that start collapsed).
+const styleInitial = await page.evaluate(() => document.querySelector('[data-section-toggle="style"]')?.nextElementSibling?.style.display);
+await page.click('[data-section-toggle="style"]');
+await page.waitForTimeout(100);
+const styleAfterFirstClick = await page.evaluate(() => document.querySelector('[data-section-toggle="style"]')?.nextElementSibling?.style.display);
+await page.click('[data-section-toggle="style"]');
+await page.waitForTimeout(100);
+const styleAfterSecondClick = await page.evaluate(() => document.querySelector('[data-section-toggle="style"]')?.nextElementSibling?.style.display);
+
 const docAfter = await page.evaluate(() => JSON.stringify(window.TimingChartProductionController.getSerializableDocument()));
 
 // Undo history / dirty must be unaffected by pure section collapse
@@ -70,10 +83,13 @@ const pass = setup.sections?.length >= 3
   && afterCollapseBasic.startStillVisible === true
   && afterReopen.basicVisible === true
   && afterReopen.labelValue === setup.labelBefore
+  && styleInitial === 'none'
+  && styleAfterFirstClick === 'block'
+  && styleAfterSecondClick === 'none'
   && docBefore === docAfter
   && errors.length === 0;
 
-const report = { issue: 121, setup, afterCollapseBasic, afterReopen, docUnchanged: docBefore === docAfter, historyCheck, errors, pass, artifacts: ['issue121-1672x941.png'] };
+const report = { issue: 121, setup, afterCollapseBasic, afterReopen, styleToggle: { styleInitial, styleAfterFirstClick, styleAfterSecondClick }, docUnchanged: docBefore === docAfter, historyCheck, errors, pass, artifacts: ['issue121-1672x941.png'] };
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 
 assert.ok(pass, JSON.stringify(report, null, 2));
