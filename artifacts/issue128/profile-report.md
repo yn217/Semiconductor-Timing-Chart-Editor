@@ -10,13 +10,24 @@ Fixture: 50 signals / 100 cycles.
 
 | Scenario | Browser-ready | Scripting | Style | Layout | Paint | Long tasks | WaveDrom | Geometry |
 | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Signal Up | ~1.70 s | ~2.53 s | ~1.29 s | ~0.16 s | ~0.61 s | 10 | 0 | 0 |
-| Signal Down | ~1.92 s | ~2.39 s | ~1.26 s | ~0.15 s | ~0.49 s | 10 | 0 | 0 |
-| Eye OFF | ~0.85 s | ~1.27 s | ~0.01 s | ~0.02 s | ~0.37 s | 10 | 0 | 0 |
-| Eye ON | ~0.39 s | ~0.65 s | ~0.01 s | ~0.02 s | ~0.07 s | 4 | 0 | 0 |
-| Cycle Insert | ~14.49 s | ~26.92 s | ~5.31 s | ~0.67 s | ~1.79 s | 36 | 50 | 1 |
+| Signal Up | ~1.66 s | ~2.16 s | ~1.03 s | ~0.10 s | ~0.55 s | 10 | 0 | 0 |
+| Signal Down | ~1.61 s | ~2.08 s | ~1.02 s | ~0.09 s | ~0.47 s | 10 | 0 | 0 |
+| Eye OFF | ~0.79 s | ~1.17 s | ~0.01 s | ~0.02 s | ~0.02 s | 10 | 0 | 0 |
+| Eye ON | ~0.36 s | ~0.59 s | ~0.01 s | ~0.02 s | ~0.03 s | 4 | 0 | 0 |
+| Cycle Insert | ~12.57 s | ~23.47 s | ~4.63 s | ~0.55 s | ~1.67 s | 36 | 50 | 1 |
 
-The command User Timing span for Signal reorder is only about 60ms. The remaining delay is after `tc:command:dom-ready` and before `tc:command:raf-1`.
+The command User Timing span for Signal reorder is only about 55–60ms. The checked-in summary now also contains `traceBounds` and `commandInterval`, which restrict the CDP totals to `tc:command:start` through `tc:command:raf-1` instead of mixing in setup work.
+
+## Command interval (current run)
+
+| Scenario | Browser-ready | Style | Layout | Paint | Scripting |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Signal Up | 1.756 s | 1.099 s | 0.103 s | 0.532 s | 0.161 s |
+| Signal Down | 1.631 s | 1.024 s | 0.096 s | 0.463 s | 0.181 s |
+| Eye OFF | 0.816 s | 0.005 s | 0.017 s | 0.022 s | 0.132 s |
+| Eye ON | 0.367 s | 0.014 s | 0.018 s | 0.041 s | 0.145 s |
+
+The interval confirms that the reorder delay is not an artifact of pre-command fixture rendering: `UpdateLayoutTree` and `Paint` occur inside the command-to-first-frame interval.
 
 ## Trace hotspot classification
 

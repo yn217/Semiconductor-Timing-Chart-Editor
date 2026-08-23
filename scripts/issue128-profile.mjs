@@ -71,14 +71,31 @@ const traceOnce = async (name, action) => {
   client.off('Tracing.dataCollected', onData);
   const userTiming = await page.evaluate(() => performance.getEntriesByType('mark').filter(entry => entry.name.startsWith('tc:')).map(entry => ({ name: entry.name, startTime: entry.startTime }))); 
   const metrics = await page.evaluate(() => ({ ...window.TimingChartProductionController.renderMetrics }));
+  const traceBounds = {
+    commandStartTs: traceMarkTimestamp(trace, 'tc:command:start'),
+    commandRaf1Ts: traceMarkTimestamp(trace, 'tc:command:raf-1')
+  };
   const totals = summarizeTrace(trace);
-  return { name, browserReadyMs: browserReady - started, userTiming, totals, metrics, traceEvents: trace.length };
+  const commandInterval = traceBounds.commandStartTs !== null && traceBounds.commandRaf1Ts !== null
+    ? summarizeTrace(trace, { startTs: traceBounds.commandStartTs, endTs: traceBounds.commandRaf1Ts })
+    : null;
+  return { name, browserReadyMs: browserReady - started, userTiming, traceBounds, totals, commandInterval, metrics, traceEvents: trace.length };
 };
 
-const summarizeTrace = events => {
+const traceMarkTimestamp = (events, markName) => {
+  const event = events.find(item => {
+    const args = item.args || {};
+    const data = args.data || args.beginData || args;
+    return item.name === markName || data.name === markName || data.markName === markName;
+  });
+  return Number.isFinite(Number(event?.ts)) ? Number(event.ts) : null;
+};
+
+const summarizeTrace = (events, bounds = null) => {
   const sums = { scriptingMs: 0, styleMs: 0, layoutMs: 0, paintMs: 0, compositeMs: 0, longTasks: 0 };
   const top = new Map();
   for (const event of events) {
+    if (bounds && (!Number.isFinite(Number(event.ts)) || Number(event.ts) < bounds.startTs || Number(event.ts) > bounds.endTs)) continue;
     const duration = Number(event.dur || 0) / 1000;
     if (duration <= 0) continue;
     const name = String(event.name || '');
