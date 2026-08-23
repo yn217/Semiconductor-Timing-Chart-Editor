@@ -78,7 +78,8 @@
     const surface = renderSurface();
     if (!surface) return [];
     const waveRect = waveForSurface(surface)?.getBoundingClientRect();
-    const slots = rows.map(row => {
+    const layoutRows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
+    const slots = layoutRows.map(row => {
       const trace = row.querySelector(':scope > .trace, :scope > .comment-body, :scope > .latency');
       const rowRect = row.getBoundingClientRect();
       const traceRect = trace?.getBoundingClientRect?.() || rowRect;
@@ -146,6 +147,52 @@
         if (point.svgRect) point.svgRect = { ...point.svgRect, top: point.svgRect.top + deltaY };
       }
       if (Number.isFinite(Number(entry.rowRectTop))) entry.rowRectTop += deltaY;
+      if (id === model.document.timeline.referenceClock) for (const point of model.waveGeometry.cycleBoundary || []) {
+        point.canvasY += deltaY; point.y += deltaY;
+        if (point.svgRect) point.svgRect = { ...point.svgRect, top: point.svgRect.top + deltaY };
+      }
+    }
+    model.waveGeometry.screenGeometryStale = false;
+    return true;
+  }
+
+  function applyVisibilityLayout(model, signalId) {
+    const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
+    const surface = document.querySelector('#cycleCanvas .waveform-render-surface');
+    if (!rows.length || !surface || !model?.waveGeometry) return false;
+    const entries = rows.map(row => ({
+      row,
+      id: row.dataset.signalId || row.dataset.signal,
+      rowTop: Number(row.dataset.surfaceRowTop),
+      traceTop: Number(row.dataset.surfaceTraceTop),
+      footprint: Number(row.dataset.surfaceFootprint)
+    }));
+    if (entries.some(entry => !entry.id || !Number.isFinite(entry.rowTop) || !Number.isFinite(entry.traceTop) || !Number.isFinite(entry.footprint))) return false;
+    if (!entries.some(entry => entry.id === signalId)) return false;
+    let nextRowTop = Math.min(...entries.map(entry => entry.rowTop));
+    const deltas = new Map();
+    for (const entry of entries) {
+      const traceTop = nextRowTop + (entry.traceTop - entry.rowTop);
+      const lane = surface.querySelector(`:scope > .waveform-surface-row[data-signal="${CSS.escape(entry.id)}"]`);
+      const hidden = entry.row.hidden || entry.row.style.display === 'none';
+      if (lane) {
+        lane.hidden = hidden;
+        if (lane.style.top !== `${traceTop}px`) lane.style.top = `${traceTop}px`;
+      }
+      entry.row.dataset.surfaceRowTop = String(nextRowTop);
+      entry.row.dataset.surfaceTraceTop = String(traceTop);
+      deltas.set(entry.id, traceTop - entry.traceTop);
+      if (!hidden) nextRowTop += entry.footprint;
+    }
+    const arrays = ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd', 'transition'];
+    for (const [id, deltaY] of deltas) {
+      const geometry = model.waveGeometry.signals?.[id];
+      if (!geometry || !deltaY) continue;
+      for (const key of arrays) for (const point of geometry[key] || []) {
+        point.canvasY += deltaY; point.y += deltaY;
+        if (point.svgRect) point.svgRect = { ...point.svgRect, top: point.svgRect.top + deltaY };
+      }
+      if (Number.isFinite(Number(geometry.rowRectTop))) geometry.rowRectTop += deltaY;
       if (id === model.document.timeline.referenceClock) for (const point of model.waveGeometry.cycleBoundary || []) {
         point.canvasY += deltaY; point.y += deltaY;
         if (point.svgRect) point.svgRect = { ...point.svgRect, top: point.svgRect.top + deltaY };
@@ -615,6 +662,7 @@
     },
     captureRowReorder,
     applyCapturedRowReorder,
+    applyVisibilityLayout,
     renderSignal,
     renderTimeline,
     render(model) {

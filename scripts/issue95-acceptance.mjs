@@ -6,6 +6,7 @@ import { chromium } from 'playwright';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'artifacts', 'issue95');
+const fixtureSignalCount = 100;
 await fs.mkdir(out, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
@@ -14,13 +15,13 @@ page.on('pageerror', error => errors.push(error.stack || error.message));
 await page.goto(`file://${path.join(root, 'gui-mockup', 'index.html').replaceAll('\\', '/')}`);
 await page.waitForTimeout(350);
 
-const result = await page.evaluate(async () => {
+const result = await page.evaluate(async fixtureSignalCount => {
   const controller = window.TimingChartProductionController;
   const base = structuredClone(controller.getSerializableDocument());
   base.document.id = 'issue95-large.tcd';
   base.timeline.cycleCount = 100;
   base.timeline.end = 100;
-  const issueSignals = Array.from({ length: 49 }, (_, index) => ({
+  const issueSignals = Array.from({ length: fixtureSignalCount - 1 }, (_, index) => ({
     id: `issue95_sig_${index}`,
     name: `issue95_sig_${index}`,
     type: 'binary',
@@ -52,13 +53,39 @@ const result = await page.evaluate(async () => {
   const afterSignalSelection = snapshot();
 
   const visibilityBefore = snapshot();
+  const visibilityNodesBefore = {
+    row: document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_1"]'),
+    lane: document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_1"]'),
+    svg: document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_1"] .trace svg'),
+    unrelatedSvg: document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_2"] .trace svg')
+  };
+  const originalBoundingRect = Element.prototype.getBoundingClientRect;
+  let visibilityBoundingRectReads = 0;
+  Element.prototype.getBoundingClientRect = function (...args) { visibilityBoundingRectReads += 1; return originalBoundingRect.apply(this, args); };
+  const visibilityStarted = performance.now();
   document.querySelector('#groups .row[data-signal="issue95_sig_1"] .eye')?.click();
-  await new Promise(resolve => setTimeout(resolve, 40));
+  const visibilityCommandMs = performance.now() - visibilityStarted;
+  await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  const visibilityClickToPaintMs = performance.now() - visibilityStarted;
+  Element.prototype.getBoundingClientRect = originalBoundingRect;
   const visibilityAfter = snapshot();
   const visibilityState = (() => {
     const row = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_1"]');
+    const lane = document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_1"]');
+    const svg = lane?.querySelector('.trace svg');
     const unrelated = document.querySelector('#cycleCanvas .waveform-surface-row[data-signal="issue95_sig_2"] .trace svg');
-    return { timingHidden: row?.hidden === true, unrelatedTraceRetained: Boolean(unrelated) };
+    const unrelatedShell = document.querySelector('#cycleCanvas .wave-row[data-signal="issue95_sig_2"] .trace');
+    return {
+      timingHidden: row?.hidden === true,
+      sameRowNode: row === visibilityNodesBefore.row,
+      sameLaneNode: lane === visibilityNodesBefore.lane,
+      sameSvgNode: svg === visibilityNodesBefore.svg,
+      unrelatedTraceRetained: unrelated === visibilityNodesBefore.unrelatedSvg,
+      alignmentErrorPx: Math.abs((unrelated?.getBoundingClientRect().top || 0) - (unrelatedShell?.getBoundingClientRect().top || 0)),
+      boundingRectReads: visibilityBoundingRectReads,
+      commandMs: visibilityCommandMs,
+      clickToPaintMs: visibilityClickToPaintMs
+    };
   })();
   document.querySelector('#groups .row[data-signal="issue95_sig_1"] .eye')?.click();
   await new Promise(resolve => setTimeout(resolve, 40));
@@ -94,7 +121,7 @@ const result = await page.evaluate(async () => {
     editedValue: controller.model.document.signals.find(signal => signal.id === 'issue95_sig_0')?.values?.[1]?.value,
     errors: []
   };
-});
+}, fixtureSignalCount);
 
 assert.equal(result.errors.length, 0);
 assert.equal(result.afterSignalSelection.waveDromRenders, 0, JSON.stringify(result));
@@ -102,7 +129,12 @@ assert.equal(result.afterSignalSelection.geometryBuilds, 0, JSON.stringify(resul
 assert.equal(result.visibility.after.waveDromRenders - result.visibility.before.waveDromRenders, 0, JSON.stringify(result));
 assert.equal(result.visibility.after.geometryBuilds - result.visibility.before.geometryBuilds, 0, JSON.stringify(result));
 assert.equal(result.visibility.state.timingHidden, true, JSON.stringify(result));
+assert.equal(result.visibility.state.sameRowNode, true, JSON.stringify(result));
+assert.equal(result.visibility.state.sameLaneNode, true, JSON.stringify(result));
+assert.equal(result.visibility.state.sameSvgNode, true, JSON.stringify(result));
 assert.equal(result.visibility.state.unrelatedTraceRetained, true, JSON.stringify(result));
+assert.ok(result.visibility.state.alignmentErrorPx <= 0.1, JSON.stringify(result.visibility.state));
+assert.ok(result.visibility.state.commandMs < 50, JSON.stringify(result.visibility.state));
 assert.equal(result.afterAnnotationSelection.waveDromRenders, 0, JSON.stringify(result));
 assert.equal(result.afterAnnotationSelection.geometryBuilds, 0, JSON.stringify(result));
 assert.equal(result.afterAnnotationEdit.waveDromRenders, 0, JSON.stringify(result));
@@ -115,9 +147,10 @@ assert.equal(result.signalEditResult, true, JSON.stringify(result));
 assert.equal(result.editedValue, 0, JSON.stringify(result));
 assert.equal(result.afterSignalEdit.waveDromRenders, 1, JSON.stringify(result));
 assert.equal(result.afterSignalEdit.geometryBuilds - result.afterReorder.geometryBuilds, 1, JSON.stringify(result));
-assert.equal(result.signalCount, 50);
+assert.equal(result.signalCount, fixtureSignalCount);
 assert.equal(errors.length, 0, errors.join('\n'));
 await page.screenshot({ path: path.join(out, 'issue95-1672x941.png') });
-await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 95, fixture: { signals: 50, cycles: 100 }, result, pass: true }, null, 2)}\n`);
+const finalPaintTarget = { thresholdMs: 50, measuredMs: result.visibility.state.clickToPaintMs, pass: result.visibility.state.clickToPaintMs < 50 };
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify({ issue: 95, fixture: { signals: fixtureSignalCount, cycles: 100 }, result, incrementalAcceptancePass: true, finalPaintTarget, pass: finalPaintTarget.pass }, null, 2)}\n`);
 await browser.close();
-console.log('Issue #95 acceptance passed: keyed rows, WaveDrom SVG cache, geometry cache, and minimal signal invalidation.');
+console.log(`Issue #95 incremental acceptance passed; final click-to-paint target ${finalPaintTarget.pass ? 'passed' : 'remains open'} (${finalPaintTarget.measuredMs.toFixed(1)}ms / ${finalPaintTarget.thresholdMs}ms).`);

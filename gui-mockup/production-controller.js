@@ -471,7 +471,7 @@
     };
     apply(document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`));
     apply(document.querySelector(`#cycleCanvas .frozen-label-row[data-signal="${CSS.escape(signalId)}"]`));
-    window.TimingChartProductionWaveform?.syncSurface?.(model);
+    if (!window.TimingChartProductionWaveform?.applyVisibilityLayout?.(model, signalId)) window.TimingChartProductionWaveform?.syncSurface?.(model);
     const treeRow = document.querySelector(`#groups .row[data-signal="${CSS.escape(signalId)}"]`);
     if (treeRow) {
       treeRow.dataset.visibility = hidden ? 'hidden' : 'visible';
