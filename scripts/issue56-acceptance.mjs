@@ -50,12 +50,13 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941
     assert.equal(after.document, before.document, 'Fit All mutated canonical document');
     assert.equal(after.undo, before.undo, 'Fit All created history entry');
     assert.equal(after.waveRenders, before.waveRenders, 'Fit All regenerated WaveDrom');
+    assert.ok(after.endX <= after.viewportRight + 2, `Fit All final boundary clipped for ${cycleCount} cycles: ${JSON.stringify(after)}`);
     return { before, after };
   };
   const short = await fitAll(10);
   const long = await fitAll(100);
   assert.ok(long.after.zoom < short.after.zoom, '100-cycle Fit All did not choose a smaller zoom');
-  assert.ok(long.after.zoom >= 0.25 && long.after.zoom <= 0.250001, '100-cycle Fit All did not respect the minimum zoom clamp');
+  assert.ok(long.after.zoom < 0.25, `100-cycle Fit All did not use fit-specific zoom: ${JSON.stringify(long.after)}`);
 
   await page.evaluate(() => window.TimingChartProductionController.actions.setZoom(100));
   await page.waitForTimeout(80);
