@@ -512,6 +512,11 @@
         const order = orderById.get(id);
         row.style.order = order === undefined ? '0' : String(order);
         row.style.flex = '0 0 auto';
+        // Do not rasterize off-screen SVG rows during large-document reorder.
+        // The intrinsic size preserves the existing row geometry until the
+        // browser brings a row into the viewport.
+        row.style.contentVisibility = 'auto';
+        row.style.containIntrinsicSize = '35px 100%';
         row.style.transform = '';
         row.style.willChange = '';
         row.dataset.reorderVisual = order === undefined ? 'none' : 'layout-order';
