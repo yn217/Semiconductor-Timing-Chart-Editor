@@ -488,7 +488,6 @@
     const shiftStarted = performance.now();
     window.TimingChartProductionWaveform?.shiftScreenGeometryAfterRowReorder?.(model);
     const shiftFinished = performance.now();
-    window.TimingChartProductionTimeAxis?.renderTransient?.(model);
     const axisFinished = performance.now();
     if ((model.document.annotations || []).length) window.TimingChartProductionAnnotations?.render?.(model);
     const annotationFinished = performance.now();
