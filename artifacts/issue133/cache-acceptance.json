@@ -1,0 +1,299 @@
+{
+  "issue": 133,
+  "policy": "prune cache entries whose signal IDs are absent from the current canonical document",
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "documentsOpened": 20,
+  "maxCacheSize": 21,
+  "maxMountedSvgCount": 21,
+  "finalPrunedEntries": 406,
+  "finalPrunedSvgNodes": 490708,
+  "heapUsedMin": 2594972,
+  "heapUsedMax": 3175736,
+  "snapshots": [
+    {
+      "documentIndex": 0,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 7,
+      "cumulativePrunedSvgNodes": 7861,
+      "heap": {
+        "usedSize": 2594972,
+        "totalSize": 3145728
+      }
+    },
+    {
+      "documentIndex": 1,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 28,
+      "cumulativePrunedSvgNodes": 33274,
+      "heap": {
+        "usedSize": 2641136,
+        "totalSize": 3407872
+      }
+    },
+    {
+      "documentIndex": 2,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 49,
+      "cumulativePrunedSvgNodes": 58687,
+      "heap": {
+        "usedSize": 2701176,
+        "totalSize": 3145728
+      }
+    },
+    {
+      "documentIndex": 3,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 70,
+      "cumulativePrunedSvgNodes": 84100,
+      "heap": {
+        "usedSize": 2758020,
+        "totalSize": 3407872
+      }
+    },
+    {
+      "documentIndex": 4,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 91,
+      "cumulativePrunedSvgNodes": 109513,
+      "heap": {
+        "usedSize": 2793984,
+        "totalSize": 3407872
+      }
+    },
+    {
+      "documentIndex": 5,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 112,
+      "cumulativePrunedSvgNodes": 134926,
+      "heap": {
+        "usedSize": 2822800,
+        "totalSize": 3145728
+      }
+    },
+    {
+      "documentIndex": 6,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 133,
+      "cumulativePrunedSvgNodes": 160339,
+      "heap": {
+        "usedSize": 2856304,
+        "totalSize": 3407872
+      }
+    },
+    {
+      "documentIndex": 7,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 154,
+      "cumulativePrunedSvgNodes": 185752,
+      "heap": {
+        "usedSize": 3076636,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 8,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 175,
+      "cumulativePrunedSvgNodes": 211165,
+      "heap": {
+        "usedSize": 3128456,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 9,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 196,
+      "cumulativePrunedSvgNodes": 236578,
+      "heap": {
+        "usedSize": 3111840,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 10,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 217,
+      "cumulativePrunedSvgNodes": 261991,
+      "heap": {
+        "usedSize": 3124876,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 11,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 238,
+      "cumulativePrunedSvgNodes": 287404,
+      "heap": {
+        "usedSize": 3158492,
+        "totalSize": 4194304
+      }
+    },
+    {
+      "documentIndex": 12,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 259,
+      "cumulativePrunedSvgNodes": 312817,
+      "heap": {
+        "usedSize": 3159188,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 13,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 280,
+      "cumulativePrunedSvgNodes": 338230,
+      "heap": {
+        "usedSize": 3149520,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 14,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 301,
+      "cumulativePrunedSvgNodes": 363643,
+      "heap": {
+        "usedSize": 3150688,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 15,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 322,
+      "cumulativePrunedSvgNodes": 389056,
+      "heap": {
+        "usedSize": 3151612,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 16,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 343,
+      "cumulativePrunedSvgNodes": 414469,
+      "heap": {
+        "usedSize": 3157268,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 17,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 364,
+      "cumulativePrunedSvgNodes": 439882,
+      "heap": {
+        "usedSize": 3157220,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 18,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 385,
+      "cumulativePrunedSvgNodes": 465295,
+      "heap": {
+        "usedSize": 3157204,
+        "totalSize": 3670016
+      }
+    },
+    {
+      "documentIndex": 19,
+      "canonicalSignalCount": 24,
+      "mountedSvgCount": 21,
+      "cacheSize": 21,
+      "retainedSvgNodes": 25413,
+      "allCacheIdsBelongToCurrentDocument": true,
+      "cumulativePrunedEntries": 406,
+      "cumulativePrunedSvgNodes": 490708,
+      "heap": {
+        "usedSize": 3175736,
+        "totalSize": 3670016
+      }
+    }
+  ],
+  "pass": true
+}

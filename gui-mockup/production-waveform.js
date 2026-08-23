@@ -15,6 +15,29 @@
   const traceRows = () => [...document.querySelectorAll('#cycleCanvas .wave-row')]
     .filter(row => row.querySelector('.trace'));
 
+  function pruneWaveCache(model) {
+    const currentIds = new Set((model?.document?.signals || []).filter(signal => signal.type !== 'commentRow').map(signal => signal.id));
+    const metrics = renderMetrics();
+    let entries = 0;
+    let retainedSvgNodes = 0;
+    for (const [signalId, cached] of waveCache) {
+      if (currentIds.has(signalId)) continue;
+      retainedSvgNodes += cached?.svg ? cached.svg.querySelectorAll('*').length + 1 : 0;
+      waveCache.delete(signalId);
+      entries += 1;
+    }
+    metrics.waveCachePrunes = (metrics.waveCachePrunes || 0) + entries;
+    metrics.waveCachePrunedSvgNodes = (metrics.waveCachePrunedSvgNodes || 0) + retainedSvgNodes;
+    metrics.waveCacheSize = waveCache.size;
+    return { entries, retainedSvgNodes, size: waveCache.size };
+  }
+
+  function waveCacheStats() {
+    let retainedSvgNodes = 0;
+    for (const cached of waveCache.values()) retainedSvgNodes += cached?.svg ? cached.svg.querySelectorAll('*').length + 1 : 0;
+    return { size: waveCache.size, retainedSvgNodes, ids: [...waveCache.keys()] };
+  }
+
   function updateSurfaceViewport(surface = document.querySelector('#cycleCanvas .waveform-render-surface'), { render = true } = {}) {
     const host = window.TimingChartTimingViewport?.getScrollHost?.();
     if (!surface || !host) return false;
@@ -105,6 +128,7 @@
     if (!mergeSignalGeometry(model, mounted)) { lane.style.display = restoreDisplay; return null; }
     lane.style.display = restoreDisplay;
     renderMetrics().geometryBuilds += 1;
+    renderMetrics().waveCacheSize = waveCache.size;
     return mounted;
   }
 
@@ -411,6 +435,7 @@
     svg.dataset.waveKey = payload.key;
     if (!cacheHit) waveCache.set(signal.id, { semantic, key: payload.key, payload, svg: svg.cloneNode(true) });
     else if (cached && cached.semantic !== semantic) waveCache.set(signal.id, { semantic, key: payload.key, payload, svg: svg.cloneNode(true) });
+    renderMetrics().waveCacheSize = waveCache.size;
     return { host, svg, lane, width, height, subcycleFactor: payload.subcycleFactor || 1, key: payload.key, cacheHit };
   }
 
@@ -748,6 +773,7 @@
     }
     lane.style.display = restoreDisplay;
     renderMetrics().geometryBuilds += 1;
+    renderMetrics().waveCacheSize = waveCache.size;
     renderMetrics().renderSignalGeometryUpdates = (renderMetrics().renderSignalGeometryUpdates || 0) + 1;
     window.TimingChartProductionController.waveGeometry = model.waveGeometry;
     scheduleSurfaceViewport();
@@ -760,6 +786,7 @@
     const generation = ++timelineRenderGeneration;
     const controller = window.TimingChartProductionController;
     controller.timelineRenderActive = true;
+    pruneWaveCache(model);
     const allRows = traceRows();
     viewportRenderSuppressed = true;
     syncSurface(model, allRows);
@@ -853,8 +880,10 @@
     updateSurfaceViewport,
     renderSignal,
     renderTimeline,
+    getWaveCacheStats: waveCacheStats,
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
+      pruneWaveCache(model);
       const allRows = traceRows();
       viewportRenderSuppressed = true;
       syncSurface(model, allRows);
