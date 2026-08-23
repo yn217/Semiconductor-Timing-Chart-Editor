@@ -9,7 +9,22 @@
     return '=';
   }
   function waveFor(signal, cycleCount) {
-    if (signal.type === 'clock') { const generator = signal.generator || signal; return { wave: `${(generator.polarity || signal.polarity) === 'negative' ? 'n' : 'p'}${'.'.repeat(Math.max(0, cycleCount - 1))}`, period: generator.period, phase: generator.phase }; }
+    if (signal.type === 'clock') {
+      const generator = signal.generator || signal;
+      const period = Number(generator.period);
+      const suppressed = new Set((Array.isArray(generator.suppressedPeriods) ? generator.suppressedPeriods : []).map(Number));
+      const polarity = (generator.polarity || signal.polarity) === 'negative' ? 'n' : 'p';
+      // Keep the source-cycle grid intact. A suppressed nominal period is
+      // represented as an inactive WaveDrom segment; no generated edge list
+      // or custom SVG path is introduced.
+      let wave = '';
+      for (let cycle = 0; cycle < cycleCount; cycle += 1) {
+        const periodIndex = Number.isFinite(period) && period > 0 ? Math.floor(cycle / period) : cycle;
+        if (suppressed.has(periodIndex)) wave += cycle % Math.max(1, Math.round(period)) === 0 ? '0' : '.';
+        else wave += cycle === 0 || (Number.isFinite(period) && period > 0 && Math.abs(cycle % period) < 1e-9) ? polarity : '.';
+      }
+      return { wave, period: generator.period, phase: generator.phase, duty: generator.duty, suppressedPeriods: [...suppressed].sort((a, b) => a - b) };
+    }
     const changes = [...(signal.values ?? [])].sort((a, b) => a.start - b.start);
     const byStart = new Map(changes.map(change => [Number(change.start), change]));
     const isBus = signal.type === 'bus' || signal.type === 'state';

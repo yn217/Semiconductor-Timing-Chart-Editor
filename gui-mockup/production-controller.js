@@ -123,7 +123,7 @@
     if (signal.spacingBefore !== undefined) result.spacingBefore = Number(signal.spacingBefore);
     if (signal.spacingAfter !== undefined) result.spacingAfter = Number(signal.spacingAfter);
     if (signal.type === 'clock') {
-      result.generator = { start: signal.generator.start, period: signal.generator.period, duty: signal.generator.duty, phase: signal.generator.phase, initial: signal.generator.initial, polarity: signal.generator.polarity };
+      result.generator = { start: signal.generator.start, period: signal.generator.period, duty: signal.generator.duty, phase: signal.generator.phase, initial: signal.generator.initial, polarity: signal.generator.polarity, ...(Array.isArray(signal.generator.suppressedPeriods) && signal.generator.suppressedPeriods.length ? { suppressedPeriods: [...signal.generator.suppressedPeriods] } : {}) };
       result.edgeCounter = { show: signal.edgeCounter.show, mode: signal.edgeCounter.mode, startNumber: signal.edgeCounter.startNumber, countFrom: signal.edgeCounter.countFrom, labelEvery: signal.edgeCounter.labelEvery, position: signal.edgeCounter.position, offset: { x: signal.edgeCounter.offset.x, y: signal.edgeCounter.offset.y } };
     } else result.values = (signal.values || []).map(value => ({ start: value.start, value: value.value, ...(value.comment !== undefined ? { comment: value.comment } : {}) }));
     return result;
@@ -229,8 +229,10 @@
         if (signal.type === 'clock') {
           const generator = signal.generator || {};
           const counter = signal.edgeCounter || {};
-          if (generator.edgeReference !== undefined || !Number.isFinite(Number(generator.duty)) || Number(generator.duty) <= 0 || Number(generator.duty) >= 1 || generator.period <= 0 || !Number.isFinite(generator.phase)) issues.push({ code: 'invalid-clock-generator', id: signal.id });
-          if (!['rising', 'falling', 'both'].includes(counter.mode) || !['above', 'below'].includes(counter.position) || !['signal-start', 'selected-edge', 'marker', 'visible-range-start'].includes(counter.countFrom) || !Number.isInteger(counter.labelEvery) || counter.labelEvery < 1) issues.push({ code: 'invalid-edge-counter', id: signal.id });
+          const suppressed = generator.suppressedPeriods;
+          const validSuppressed = Array.isArray(suppressed) && suppressed.every(value => Number.isInteger(Number(value)) && Number(value) >= 0) && new Set(suppressed.map(Number)).size === suppressed.length && [...suppressed].every((value, index, values) => index === 0 || Number(values[index - 1]) < Number(value));
+          if (!Number.isFinite(Number(generator.start)) || Number(generator.start) < 0 || !Number.isFinite(Number(generator.duty)) || Number(generator.duty) <= 0 || Number(generator.duty) >= 1 || !Number.isFinite(Number(generator.period)) || Number(generator.period) <= 0 || !Number.isFinite(Number(generator.phase)) || ![0, 1].includes(Number(generator.initial)) || (suppressed !== undefined && !validSuppressed)) issues.push({ code: 'invalid-clock-generator', id: signal.id });
+          if (!['rising', 'falling', 'both'].includes(counter.mode) || !['above', 'below'].includes(counter.position) || !['signal-start', 'selected-edge', 'marker', 'visible-range-start'].includes(counter.countFrom) || !Number.isInteger(Number(counter.startNumber)) || Number(counter.startNumber) < 0 || !Number.isInteger(Number(counter.labelEvery)) || Number(counter.labelEvery) < 1 || !Number.isFinite(Number(counter.offset?.x)) || !Number.isFinite(Number(counter.offset?.y))) issues.push({ code: 'invalid-edge-counter', id: signal.id });
         } else if (signal.type !== 'commentRow') {
         let previous = -1;
         for (const value of signal.values || []) { if (Number(value.start) <= previous) issues.push({ code: 'invalid-start-order', id: signal.id }); previous = Number(value.start); }
@@ -508,20 +510,37 @@
   controller.actions.addSignalValue = signalId => { const signal = getSignal(signalId); if (!signal) return false; const insertion = nextSignalValueInsertion(signalId); if (!insertion) { setValidation([{ field: 'start', code: 'no-available-change-point', message: '変更点を追加できる空きcycleがありません' }]); render(); return false; } const { start } = insertion; return transactionRun('Add signal value', () => { signal.values.push({ start, value: signal.type === 'binary' ? 0 : signal.type === 'state' ? 'IDLE' : '00', comment: '' }); canonicalize(signal); model.editor.rowIndex = signal.values.findIndex(value => Number(value.start) === start); setValidation([]); }); };
   controller.actions.duplicateSignalValue = (signalId, index) => { const signal = getSignal(signalId); if (!signal || !signal.values[index]) return false; const start = Number(signal.values[index].start) + 1; if (start >= getTimeline().cycleCount || signal.values.some(value => Number(value.start) === start)) return false; const duplicate = { ...signal.values[index], start }; return transactionRun('Duplicate signal value', () => { model.editor.draft = { signalId, sourceIndex: index, value: structuredClone(duplicate) }; signal.values.push(duplicate); canonicalize(signal); model.editor.rowIndex = signal.values.findIndex(value => Number(value.start) === start); }); };
   controller.actions.deleteSignalValue = (signalId, index) => { const signal = getSignal(signalId); if (!signal || !signal.values[index] || signal.values.length <= 1) return false; return transactionRun('Delete signal value', () => { signal.values.splice(index, 1); canonicalize(signal); model.editor.rowIndex = Math.max(0, Math.min(index, signal.values.length - 1)); setValidation([]); }); };
+  const clockFieldIssue = (signal, field, rawValue) => {
+    const value = Number(rawValue);
+    const path = field.startsWith('edgeCounter.') ? field.slice(12).split('.') : [];
+    if (field === 'duty' && (!Number.isFinite(value) || value <= 0 || value >= 100)) return { code: 'invalid-duty', message: 'Dutyは0%より大きく100%未満で指定してください' };
+    if (field === 'period' && (!Number.isFinite(value) || value <= 0)) return { code: 'invalid-period' };
+    if (field === 'phase' && !Number.isFinite(value)) return { code: 'invalid-phase' };
+    if (field === 'start' && (!Number.isFinite(value) || value < 0)) return { code: 'invalid-start' };
+    if (field === 'initialLevel' && ![0, 1].includes(value)) return { code: 'invalid-initial-level' };
+    if (field === 'edgeReference' && !['rising', 'falling'].includes(String(rawValue).toLowerCase())) return { code: 'invalid-edge-reference' };
+    if (!path.length) return null;
+    if (path[0] === 'offset' && path[1] && (!Number.isFinite(value))) return { code: 'invalid-edge-offset' };
+    if (path[0] === 'mode' && !['rising', 'falling', 'both'].includes(String(rawValue).toLowerCase())) return { code: 'invalid-edge-mode' };
+    if (path[0] === 'position' && !['above', 'below'].includes(String(rawValue).toLowerCase())) return { code: 'invalid-edge-position' };
+    if (path[0] === 'startNumber' && (!Number.isInteger(value) || value < 0)) return { code: 'invalid-edge-start-number' };
+    if (path[0] === 'labelEvery' && (!Number.isInteger(value) || value < 1)) return { code: 'invalid-edge-label-every' };
+    if (path[0] === 'countFrom' && !['signal-start', 'selected-edge', 'marker', 'visible-range-start'].includes(String(rawValue))) return { code: 'invalid-edge-count-origin' };
+    if (path.length && !['show', 'mode', 'position', 'startNumber', 'labelEvery', 'countFrom'].includes(path[0]) && !(path[0] === 'offset' && ['x', 'y'].includes(path[1]))) return { code: 'unsupported-clock-field' };
+    return null;
+  };
   controller.actions.updateClock = (signalId, field, rawValue) => {
     const signal = getSignal(signalId);
     const fail = issue => { setValidation([{ field, signalId, ...issue }]); render(); return false; };
     if (!signal || signal.type !== 'clock' || !signal.generator || !signal.edgeCounter) return fail({ code: 'invalid-clock-target' });
     const value = Number(rawValue);
-    if (field === 'duty' && value !== 50) return fail({ code: 'unsupported-duty', message: 'WaveDrom標準では任意Dutyは未対応です' });
-    if (field === 'period' && (!Number.isFinite(value) || value <= 0)) return fail({ code: 'invalid-period' });
-    if (field === 'phase' && !Number.isFinite(value)) return fail({ code: 'invalid-phase' });
-    if (field === 'start' && (!Number.isFinite(value) || value < 0)) return fail({ code: 'invalid-start' });
+    const issue = clockFieldIssue(signal, field, rawValue);
+    if (issue) return fail(issue);
     const supported = ['duty', 'period', 'phase', 'start', 'initialLevel', 'edgeReference'];
     if (!supported.includes(field) && !field.startsWith('edgeCounter.')) return fail({ code: 'unsupported-clock-field' });
     return transactionRun(`Change clock ${field}`, () => {
       const generator = signal.generator;
-      if (field === 'duty') generator.duty = 0.5;
+      if (field === 'duty') generator.duty = value / 100;
       else if (field === 'period') generator.period = value;
       else if (field === 'phase') generator.phase = value;
       else if (field === 'start') generator.start = value;
@@ -529,11 +548,11 @@
       else if (field === 'edgeReference') model.document.timeline.edge = String(rawValue).toLowerCase();
       else {
         const path = field.slice(12).split('.');
-        if (path[0] === 'offset' && path[1]) signal.edgeCounter.offset[path[1]] = Number(rawValue);
+        if (path[0] === 'offset' && ['x', 'y'].includes(path[1])) { signal.edgeCounter.offset ??= { x: 0, y: -6 }; signal.edgeCounter.offset[path[1]] = value; }
         else if (path[0] === 'show') signal.edgeCounter.show = rawValue === 'ON';
         else if (path[0] === 'mode') signal.edgeCounter.mode = String(rawValue).toLowerCase();
         else if (path[0] === 'position') signal.edgeCounter.position = String(rawValue).toLowerCase();
-        else if (path[0] === 'startNumber' || path[0] === 'labelEvery') signal.edgeCounter[path[0]] = Number(rawValue);
+        else if (path[0] === 'startNumber' || path[0] === 'labelEvery') signal.edgeCounter[path[0]] = value;
         else if (path[0] === 'countFrom') signal.edgeCounter.countFrom = String(rawValue);
         else return false;
       }
@@ -543,7 +562,16 @@
   };
   controller.actions.setClockPreset = (signalId, preset) => { const signal = getSignal(signalId); const values = { standard: { period: 1, phase: 0, start: 0 }, half: { period: 2, phase: 0, start: 0 }, delayed: { period: 1, phase: 0.5, start: 0 } }; const next = values[preset]; if (!signal || signal.type !== 'clock' || !next) return false; return transactionRun(`Apply clock preset ${preset}`, () => { signal.generator = { ...signal.generator, ...next, duty: 0.5 }; }); };
   controller.getClockConfig = signalId => { const signal = getSignal(signalId); if (!signal || signal.type !== 'clock') return null; return { signalId, generator: structuredClone(signal.generator), edgeCounter: structuredClone(signal.edgeCounter) }; };
-  controller.actions.importClockConfig = (signalId, config) => { const signal = getSignal(signalId); if (!signal || signal.type !== 'clock' || !config?.generator || !config?.edgeCounter) return false; return transactionRun('Import clock configuration', () => { signal.generator = structuredClone(config.generator); signal.edgeCounter = structuredClone(config.edgeCounter); }); };
+  controller.actions.importClockConfig = (signalId, config) => {
+    const signal = getSignal(signalId);
+    if (!signal || signal.type !== 'clock' || !config?.generator || !config?.edgeCounter) return false;
+    const generator = config.generator;
+    const counter = config.edgeCounter;
+    const generatorValid = Number.isFinite(Number(generator.start)) && Number(generator.start) >= 0 && Number.isFinite(Number(generator.period)) && Number(generator.period) > 0 && Number.isFinite(Number(generator.phase)) && Number.isFinite(Number(generator.duty)) && Number(generator.duty) > 0 && Number(generator.duty) < 1 && [0, 1].includes(Number(generator.initial)) && (!Array.isArray(generator.suppressedPeriods) || (generator.suppressedPeriods.every(value => Number.isInteger(Number(value)) && Number(value) >= 0) && new Set(generator.suppressedPeriods.map(Number)).size === generator.suppressedPeriods.length));
+    const counterValid = ['rising', 'falling', 'both'].includes(counter.mode) && ['above', 'below'].includes(counter.position) && ['signal-start', 'selected-edge', 'marker', 'visible-range-start'].includes(counter.countFrom) && Number.isInteger(Number(counter.startNumber)) && Number(counter.startNumber) >= 0 && Number.isInteger(Number(counter.labelEvery)) && Number(counter.labelEvery) >= 1 && Number.isFinite(Number(counter.offset?.x)) && Number.isFinite(Number(counter.offset?.y));
+    if (!generatorValid || !counterValid) { model.validation = [{ code: 'invalid-clock-config', signalId, message: 'Clock設定に無効な値があります。変更は適用されません' }]; render(); return false; }
+    return transactionRun('Import clock configuration', () => { signal.generator = structuredClone(generator); signal.edgeCounter = structuredClone(counter); });
+  };
   controller.actions.updateComment = (commentId, field, value) => { const comment = getComments().find(item => item.id === commentId); if (!comment || !['title', 'body'].includes(field)) return false; return transactionRun(`Change comment ${field}`, () => { comment[field] = String(value); }); };
   controller.actions.duplicateComment = commentId => transactionRun('Duplicate comment row', () => { const source = getComments().find(comment => comment.id === commentId); if (!source) return false; const copy = structuredClone(source); let id = `${source.id}_copy`; let suffix = 2; while (getComments().some(comment => comment.id === id)) id = `${source.id}_copy${suffix++}`; copy.id = id; copy.title = `${source.title || 'Comment'} copy`; const group = model.document.signalGroups.find(item => (item.rows || []).includes(commentId)); model.document.signals.push(copy); if (group) group.rows.splice(group.rows.indexOf(commentId) + 1, 0, id); model.selection = { kind: 'comment', id }; });
   controller.actions.deleteComment = commentId => transactionRun('Delete comment row', () => { const index = model.document.signals.findIndex(signal => signal.id === commentId && signal.type === 'commentRow'); if (index < 0) return false; for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== commentId); model.document.signals.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
