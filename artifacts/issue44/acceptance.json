@@ -1,0 +1,46 @@
+{
+  "issue": 44,
+  "iconState": {
+    "count": 3,
+    "noLiteralText": true,
+    "allHaveSvgUse": true,
+    "allExpandedIcon": true,
+    "hitAreas": [
+      {
+        "w": 26,
+        "h": 26
+      },
+      {
+        "w": 26,
+        "h": 26
+      },
+      {
+        "w": 26,
+        "h": 26
+      }
+    ]
+  },
+  "toggleState": {
+    "rowsHidden": true,
+    "ariaCollapsed": true,
+    "iconCollapsed": true,
+    "otherRowsUnaffected": true,
+    "rowsShown": true,
+    "ariaExpanded": true,
+    "iconExpanded": true,
+    "titleClickSafe": true
+  },
+  "scrollState": {
+    "opened": true,
+    "lastRowId": "perf_sig_39",
+    "lastRowReachable": true,
+    "canvasUnaffected": true,
+    "pageOverflow": false,
+    "outputRowsHiddenAfterCollapse": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue44-1672x941.png"
+  ]
+}
