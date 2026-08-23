@@ -542,27 +542,42 @@
   }
 
   function sampledSegments(path, matrix) {
-    // WaveDrom's transition/clock primitives are short piecewise-linear paths.
-    // Keep sampling on the actual SVG path, but avoid the previous 161 path
-    // queries per primitive; 5 points capture the endpoints, quarter points,
-    // and midpoint used by WaveDrom's piecewise-linear primitives.
-    const sampleCount = 5;
-    let localSamples = sampledPathCache.get(path);
-    if (!localSamples) {
+    // Resolve the actual plateau/transition boundaries once per WaveDrom
+    // definition path.  Coarse samples only locate the changing interval;
+    // binary subdivision then converges on the real SVG path boundary.
+    let localSegment = sampledPathCache.get(path);
+    if (!localSegment) {
       const length = path.getTotalLength();
       if (!length) return [];
-      localSamples = Array.from({ length: sampleCount }, (_, index) => path.getPointAtLength(length * index / (sampleCount - 1))).map(point => ({ x: point.x, y: point.y }));
-      sampledPathCache.set(path, localSamples);
+      const metrics = renderMetrics();
+      metrics.transitionDefinitionResolves = (metrics.transitionDefinitionResolves || 0) + 1;
+      const point = distance => { metrics.transitionPathSamples = (metrics.transitionPathSamples || 0) + 1; const value = path.getPointAtLength(distance); return { x: value.x, y: value.y }; };
+      const first = point(0);
+      const last = point(length);
+      const tolerance = 1e-5;
+      const count = 33;
+      const coarse = Array.from({ length: count }, (_, index) => ({ distance: length * index / (count - 1), point: point(length * index / (count - 1)) }));
+      const refine = (low, high, predicate) => {
+        for (let iteration = 0; iteration < 24; iteration += 1) { const middle = (low + high) / 2; if (predicate(point(middle))) high = middle; else low = middle; }
+        return (low + high) / 2;
+      };
+      const firstChanged = coarse.findIndex(item => Math.abs(item.point.y - first.y) > tolerance);
+      let startDistance = 0;
+      if (firstChanged > 0) startDistance = refine(coarse[firstChanged - 1].distance, coarse[firstChanged].distance, value => Math.abs(value.y - first.y) > tolerance);
+      const lastChanged = coarse.findLastIndex(item => Math.abs(item.point.y - last.y) > tolerance);
+      let endDistance = length;
+      if (lastChanged >= 0 && lastChanged < coarse.length - 1) {
+        const firstOnEndPlateau = refine(coarse[lastChanged].distance, coarse[lastChanged + 1].distance, value => Math.abs(value.y - last.y) <= tolerance);
+        endDistance = firstOnEndPlateau;
+      }
+      if (endDistance <= startDistance || Math.abs(first.y - last.y) <= tolerance) return [];
+      localSegment = { start: point(startDistance), center: point((startDistance + endDistance) / 2), end: point(endDistance) };
+      sampledPathCache.set(path, localSegment);
+    } else {
+      const metrics = renderMetrics();
+      metrics.transitionDefinitionCacheHits = (metrics.transitionDefinitionCacheHits || 0) + 1;
     }
-    const samples = localSamples.map(point => matrixPoint(matrix, point));
-    const changing = [];
-    for (let index = 1; index < samples.length; index += 1) {
-      const previous = samples[index - 1];
-      const current = samples[index];
-      if (Math.abs(current.y - previous.y) > 0.2) changing.push(previous, current);
-    }
-    if (!changing.length) return [];
-    return [{ start: changing[0], end: changing.at(-1), center: changing[Math.floor(changing.length / 2)] }];
+    return [{ start: matrixPoint(matrix, localSegment.start), center: matrixPoint(matrix, localSegment.center), end: matrixPoint(matrix, localSegment.end) }];
   }
 
   function actualBoundaries(svg) {
@@ -680,10 +695,13 @@
       const symbolStarted = performance.now();
       symbols.forEach(use => {
         const href = hrefOf(use);
+        const isClockEdge = href === '#pclk' || href === '#nclk';
+        const isTransition = /^#(?:0m1|1m0|vmv|dmv|umv|zmv)/.test(href);
+        if (!isClockEdge && !isTransition) return;
         let path = definitionPathCache.get(href);
         if (path === undefined) {
           const definition = document.getElementById(href.slice(1));
-          path = definition?.querySelector('path') || null;
+          path = definition?.querySelector('path.s1') || definition?.querySelector('path') || null;
           definitionPathCache.set(href, path);
         }
         if (!path) return;
@@ -691,7 +709,7 @@
         const origin = matrixPoint(matrix, { x: 0, y: 0 });
         const cycleInfo = cycleForX(boundaries, origin.x);
         const segments = sampledSegments(path, matrix);
-        if (href === '#pclk' || href === '#nclk') {
+        if (isClockEdge) {
           const segment = segments[0];
           if (!segment) return;
           const point = { x: (segment.start.x + segment.end.x) / 2, y: (segment.start.y + segment.end.y) / 2 };
@@ -700,7 +718,7 @@
           (href === '#pclk' ? entry.risingEdge : entry.fallingEdge).push(item);
           return;
         }
-        if (!segments.length || !/^#(?:0m1|1m0|vmv|dmv|umv|zmv)/.test(href)) return;
+        if (!segments.length) return;
         const segment = segments[0];
         const start = anchor(signal, cycleInfo, segment.start, 'transition-start', svg, undefined, recordContext);
         const center = anchor(signal, cycleInfo, segment.center, 'transition-center', svg, undefined, recordContext);

@@ -1,0 +1,319 @@
+{
+  "issue": 142,
+  "tolerancePx": 0.1,
+  "supportedShapes": [
+    "0m1",
+    "1m0",
+    "dmv",
+    "umv",
+    "vmv",
+    "zmv"
+  ],
+  "maxErrorPx": 0.00009563884260973853,
+  "comparisons": [
+    {
+      "fixture": "binary",
+      "href": "#0m1",
+      "kind": "start",
+      "errorPx": 0.0000915738419201785
+    },
+    {
+      "fixture": "binary",
+      "href": "#0m1",
+      "kind": "center",
+      "errorPx": 0
+    },
+    {
+      "fixture": "binary",
+      "href": "#0m1",
+      "kind": "end",
+      "errorPx": 0.00009341633044113938
+    },
+    {
+      "fixture": "binary",
+      "href": "#1m0",
+      "kind": "start",
+      "errorPx": 0.0000915738419201785
+    },
+    {
+      "fixture": "binary",
+      "href": "#1m0",
+      "kind": "center",
+      "errorPx": 0
+    },
+    {
+      "fixture": "binary",
+      "href": "#1m0",
+      "kind": "end",
+      "errorPx": 0.00009353790157500631
+    },
+    {
+      "fixture": "vmv",
+      "href": "#vmv-2-2",
+      "kind": "start",
+      "errorPx": 0.0000915738419201785
+    },
+    {
+      "fixture": "vmv",
+      "href": "#vmv-2-2",
+      "kind": "center",
+      "errorPx": 0
+    },
+    {
+      "fixture": "vmv",
+      "href": "#vmv-2-2",
+      "kind": "end",
+      "errorPx": 0.00009353790157500631
+    },
+    {
+      "fixture": "dmv",
+      "href": "#dmv-2",
+      "kind": "start",
+      "errorPx": 0.00009563884260973853
+    },
+    {
+      "fixture": "dmv",
+      "href": "#dmv-2",
+      "kind": "center",
+      "errorPx": 0
+    },
+    {
+      "fixture": "dmv",
+      "href": "#dmv-2",
+      "kind": "end",
+      "errorPx": 0.00009166713745163998
+    },
+    {
+      "fixture": "umv",
+      "href": "#umv-2",
+      "kind": "start",
+      "errorPx": 0.00009563884260973853
+    },
+    {
+      "fixture": "umv",
+      "href": "#umv-2",
+      "kind": "center",
+      "errorPx": 0
+    },
+    {
+      "fixture": "umv",
+      "href": "#umv-2",
+      "kind": "end",
+      "errorPx": 0.00009171154235970541
+    },
+    {
+      "fixture": "zmv",
+      "href": "#zmv-2",
+      "kind": "start",
+      "errorPx": 0.00009458819564309142
+    },
+    {
+      "fixture": "zmv",
+      "href": "#zmv-2",
+      "kind": "center",
+      "errorPx": 0
+    },
+    {
+      "fixture": "zmv",
+      "href": "#zmv-2",
+      "kind": "end",
+      "errorPx": 0.00009381460562757074
+    },
+    {
+      "fixture": "clock",
+      "href": "#pclk",
+      "kind": "edge-center",
+      "errorPx": 9.536743164062508e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#pclk",
+      "kind": "edge-center",
+      "errorPx": 9.5367431640625e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#pclk",
+      "kind": "edge-center",
+      "errorPx": 9.536743164062568e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#pclk",
+      "kind": "edge-center",
+      "errorPx": 9.536743164062568e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#pclk",
+      "kind": "edge-center",
+      "errorPx": 9.5367431640625e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#pclk",
+      "kind": "edge-center",
+      "errorPx": 9.5367431640625e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#nclk",
+      "kind": "edge-center",
+      "errorPx": 9.536743164062517e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#nclk",
+      "kind": "edge-center",
+      "errorPx": 9.536743164062568e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#nclk",
+      "kind": "edge-center",
+      "errorPx": 9.536743164062568e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#nclk",
+      "kind": "edge-center",
+      "errorPx": 9.5367431640625e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#nclk",
+      "kind": "edge-center",
+      "errorPx": 9.5367431640625e-7
+    },
+    {
+      "fixture": "clock",
+      "href": "#nclk",
+      "kind": "edge-center",
+      "errorPx": 9.5367431640625e-7
+    }
+  ],
+  "live": [
+    {
+      "label": "zoom-100",
+      "localExpected": {
+        "x": 503.5000305175781,
+        "y": 25.499900817871094
+      },
+      "localActual": {
+        "x": 503.5000042915344,
+        "y": 25.499988555908203
+      },
+      "screenExpected": {
+        "x": 989.5000305175781,
+        "y": 323.9999008178711
+      },
+      "screenActual": {
+        "x": 989.5000042915344,
+        "y": 323.9999885559082
+      }
+    },
+    {
+      "label": "zoom-50",
+      "localExpected": {
+        "x": 503.5000305175781,
+        "y": 25.499900817871094
+      },
+      "localActual": {
+        "x": 503.5000042915344,
+        "y": 25.499988555908203
+      },
+      "screenExpected": {
+        "x": 748.0000152587891,
+        "y": 323.9999008178711
+      },
+      "screenActual": {
+        "x": 748.0000021457672,
+        "y": 323.9999885559082
+      }
+    },
+    {
+      "label": "zoom-150",
+      "localExpected": {
+        "x": 503.5000305175781,
+        "y": 25.499900817871094
+      },
+      "localActual": {
+        "x": 503.5000042915344,
+        "y": 25.499988555908203
+      },
+      "screenExpected": {
+        "x": 1231.0000457763672,
+        "y": 323.9999008178711
+      },
+      "screenActual": {
+        "x": 1231.0000064373016,
+        "y": 323.9999885559082
+      }
+    },
+    {
+      "label": "zoom-200",
+      "localExpected": {
+        "x": 503.5000305175781,
+        "y": 25.499900817871094
+      },
+      "localActual": {
+        "x": 503.5000042915344,
+        "y": 25.499988555908203
+      },
+      "screenExpected": {
+        "x": 1472.5000610351562,
+        "y": 323.9999008178711
+      },
+      "screenActual": {
+        "x": 1472.5000085830688,
+        "y": 323.9999885559082
+      }
+    },
+    {
+      "label": "horizontal-scroll",
+      "localExpected": {
+        "x": 503.5000305175781,
+        "y": 25.499900817871094
+      },
+      "localActual": {
+        "x": 503.5000042915344,
+        "y": 25.499988555908203
+      },
+      "screenExpected": {
+        "x": 972.5000610351562,
+        "y": 323.9999008178711
+      },
+      "screenActual": {
+        "x": 972.5000085830688,
+        "y": 323.9999885559082
+      }
+    },
+    {
+      "label": "reorder",
+      "localExpected": {
+        "x": 503.5000305175781,
+        "y": 25.499900817871094
+      },
+      "localActual": {
+        "x": 503.5000042915344,
+        "y": 25.499988555908203
+      },
+      "screenExpected": {
+        "x": 972.5000610351562,
+        "y": 358.9999008178711
+      },
+      "screenActual": {
+        "x": 972.5000085830688,
+        "y": 358.9999885559082
+      }
+    }
+  ],
+  "cache": {
+    "firstDefinitionResolves": 3,
+    "firstPathSamples": 258,
+    "secondDefinitionResolves": 0,
+    "secondPathSamples": 0
+  },
+  "pageErrors": [],
+  "pass": true
+}
