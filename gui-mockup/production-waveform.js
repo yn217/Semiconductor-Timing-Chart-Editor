@@ -168,7 +168,8 @@
       if (!geometry.cycleBoundary.length) geometry.cycleBoundary = boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg));
       const lane = svg.querySelector('[id^="wavelane_draw_"]');
       const symbols = [...(lane?.querySelectorAll(':scope > use') || [])];
-      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null };
+      const rowRect = item.svg.closest('.wave-row')?.getBoundingClientRect?.();
+      const entry = { cycleBoundary: boundaries.map((point, cycle) => boundaryRecord(signal, cycle, point, svg)), risingEdge: [], fallingEdge: [], transitionStart: [], transitionCenter: [], transitionEnd: [], transition: [], svgViewBox: svg.getAttribute('viewBox'), traceId: svg.parentElement?.id || null, rowRectTop: rowRect?.top ?? null };
       symbols.forEach(use => {
         const href = hrefOf(use);
         const definition = document.getElementById(href.slice(1));
@@ -204,43 +205,117 @@
     return geometry;
   }
 
-  function refreshPointScreenCoordinates(item, svg) {
-    if (!item || !svg?.getScreenCTM || !Number.isFinite(Number(item.localX)) || !Number.isFinite(Number(item.localY))) return;
-    const matrix = svg.getScreenCTM();
-    if (!matrix) return;
-    const screen = matrixPoint(matrix, { x: Number(item.localX), y: Number(item.localY) });
+  function refreshPointScreenCoordinates(item, svg, transform) {
+    if (!item || !svg || !transform?.matrix || !Number.isFinite(Number(item.localX)) || !Number.isFinite(Number(item.localY))) return;
+    const screen = matrixPoint(transform.matrix, { x: Number(item.localX), y: Number(item.localY) });
     item.canvasX = screen.x;
     item.canvasY = screen.y;
     item.x = screen.x;
     item.y = screen.y;
-    const rect = svg.getBoundingClientRect();
-    const viewBox = svg.viewBox?.baseVal;
-    if (rect && viewBox) {
-      item.svgRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
-      item.viewBox = { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height };
+    if (transform.rect && transform.viewBox) {
+      item.svgRect = transform.rect;
+      item.viewBox = transform.viewBox;
     }
   }
 
   function refreshScreenGeometry(geometry, mounted) {
     const svgBySignal = new Map(mounted.filter(Boolean).map(item => [item.signal.id, item.svg]));
     const arrays = ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd', 'transition'];
+    const transforms = new Map();
+    const transformFor = svg => {
+      if (transforms.has(svg)) return transforms.get(svg);
+      const matrix = svg?.getScreenCTM?.();
+      const rectValue = svg?.getBoundingClientRect?.();
+      const viewBoxValue = svg?.viewBox?.baseVal;
+      const transform = {
+        matrix,
+        rect: rectValue && { left: rectValue.left, top: rectValue.top, width: rectValue.width, height: rectValue.height },
+        viewBox: viewBoxValue && { x: viewBoxValue.x, y: viewBoxValue.y, width: viewBoxValue.width, height: viewBoxValue.height }
+      };
+      transforms.set(svg, transform);
+      return transform;
+    };
     for (const [signalId, entry] of Object.entries(geometry.signals || {})) {
       const svg = svgBySignal.get(signalId);
       if (!svg) continue;
-      for (const key of arrays) for (const item of entry[key] || []) refreshPointScreenCoordinates(item, svg);
+      const transform = transformFor(svg);
+      for (const key of arrays) for (const item of entry[key] || []) refreshPointScreenCoordinates(item, svg, transform);
+      const mountedItem = mounted.find(item => item?.signal.id === signalId);
+      const rowTop = mountedItem?.row?.getBoundingClientRect?.().top;
+      if (Number.isFinite(rowTop)) entry.rowRectTop = rowTop;
     }
     const reference = geometry.cycleBoundary?.[0]?.signal;
     const referenceSvg = svgBySignal.get(reference) || mounted.find(Boolean)?.svg;
-    if (referenceSvg) for (const item of geometry.cycleBoundary || []) refreshPointScreenCoordinates(item, referenceSvg);
+    if (referenceSvg) {
+      const transform = transformFor(referenceSvg);
+      for (const item of geometry.cycleBoundary || []) refreshPointScreenCoordinates(item, referenceSvg, transform);
+    }
+  }
+
+  function shiftScreenGeometryAfterRowReorder(geometry, mounted) {
+    if (!geometry) return false;
+    const arrays = ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd', 'transition'];
+    const shifts = new Map();
+    const parentRects = new Map();
+    for (const item of mounted.filter(Boolean)) {
+      const entry = geometry.signals?.[item.signal.id];
+      const reference = entry?.cycleBoundary?.[0] || entry?.transition?.[0];
+      const previous = reference?.svgRect;
+      if (!entry || !previous) continue;
+      const parent = item.row?.offsetParent || item.row?.parentElement;
+      let parentRect = parentRects.get(parent);
+      if (!parentRect && parent?.getBoundingClientRect) { parentRect = parent.getBoundingClientRect(); parentRects.set(parent, parentRect); }
+      const rowTop = parentRect && item.row ? parentRect.top + item.row.offsetTop : undefined;
+      const previousRowTop = Number(entry.rowRectTop);
+      if (!Number.isFinite(rowTop) || !Number.isFinite(previousRowTop)) continue;
+      const deltaY = rowTop - previousRowTop;
+      shifts.set(item.signal.id, { x: 0, y: deltaY, rowTop, rect: { ...previous, top: previous.top + deltaY } });
+    }
+    for (const [signalId, entry] of Object.entries(geometry.signals || {})) {
+      const shift = shifts.get(signalId);
+      if (!shift) continue;
+      for (const key of arrays) for (const point of entry[key] || []) {
+        point.canvasX += shift.x; point.x += shift.x;
+        point.canvasY += shift.y; point.y += shift.y;
+        point.svgRect = shift.rect;
+      }
+      entry.rowRectTop = shift.rowTop;
+    }
+    const reference = geometry.cycleBoundary?.[0]?.signal;
+    const shift = shifts.get(reference);
+    if (shift) for (const point of geometry.cycleBoundary || []) {
+      point.canvasX += shift.x; point.x += shift.x;
+      point.canvasY += shift.y; point.y += shift.y;
+      point.svgRect = shift.rect;
+    }
+    return true;
   }
 
   const bridge = {
+    refreshScreenGeometry(model) {
+      if (!model?.waveGeometry) return false;
+      const mounted = traceRows().map(row => {
+        const signal = signalForRow(model, row);
+        const svg = row.querySelector('.trace svg');
+        return signal && svg ? { signal, svg, row } : null;
+      }).filter(Boolean);
+      refreshScreenGeometry(model.waveGeometry, mounted);
+      renderMetrics().geometryScreenRefreshes += 1;
+      window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+      return true;
+    },
+    shiftScreenGeometryAfterRowReorder(model) {
+      if (!model?.waveGeometry) return false;
+      model.waveGeometry.screenGeometryStale = true;
+      window.TimingChartProductionController.waveGeometry = model.waveGeometry;
+      return true;
+    },
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
       const mounted = traceRows().map((row, index) => {
         const signal = signalForRow(model, row);
         const result = mountSignal(model, signal, row, index);
-        return result && { ...result, signal };
+        return result && { ...result, signal, row };
       });
       const canvas = document.querySelector('#cycleCanvas');
       const waveSignature = JSON.stringify({
@@ -299,7 +374,11 @@
       const list = edge === 'rising' ? geometry?.risingEdge : edge === 'falling' ? geometry?.fallingEdge : edge === 'transition-start' ? geometry?.transitionStart : edge === 'transition-end' ? geometry?.transitionEnd : edge === 'transition-center' ? geometry?.transitionCenter : undefined;
       const match = list?.find(item => item.cycle === cycle);
       if (!match) return undefined;
-      return { ...match, x: coordinateSpace === 'canvas' ? match.canvasX : match.localX, y: coordinateSpace === 'canvas' ? match.canvasY : match.localY };
+      const svg = match.traceId ? document.getElementById(match.traceId)?.querySelector('svg') : null;
+      const screen = svg?.getScreenCTM ? new DOMPoint(match.localX, match.localY).matrixTransform(svg.getScreenCTM()) : null;
+      const canvasX = screen?.x ?? match.canvasX;
+      const canvasY = screen?.y ?? match.canvasY;
+      return { ...match, canvasX, canvasY, x: coordinateSpace === 'canvas' ? canvasX : match.localX, y: coordinateSpace === 'canvas' ? canvasY : match.localY };
     },
     getCycleBoundary({ signal, cycle, coordinateSpace = 'canvas' }) {
       const item = window.TimingChartProductionController?.model?.waveGeometry?.signals?.[signal]?.cycleBoundary?.[cycle];

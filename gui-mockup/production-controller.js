@@ -439,7 +439,7 @@
   controller.actions.refreshProblems = () => { model.problemRefreshRevision = (model.problemRefreshRevision || 0) + 1; controller.clearValidationCache(); model.validation = controller.getProblems(model.document, { force: true }); render(); return true; };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
-  controller.actions.setSignalVisibility = (signalId, visible) => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; return transactionRun('Change signal visibility', () => { signal.display ||= { name: signal.name }; if (visible) delete signal.display.visible; else signal.display.visible = false; model.view.hiddenSignals = model.document.signals.filter(item => item.display?.visible === false).map(item => item.id); }); };
+  controller.actions.setSignalVisibility = (signalId, visible) => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; return incrementalRun('Change signal visibility', () => { signal.display ||= { name: signal.name }; if (visible) delete signal.display.visible; else signal.display.visible = false; model.view.hiddenSignals = model.document.signals.filter(item => item.display?.visible === false).map(item => item.id); }, () => reconcileSignalVisibility(signalId)); };
   controller.actions.setSignalNameWidth = widthValue => { const width = Number(widthValue); if (!Number.isInteger(width) || width < 120 || width > 360) return false; return transactionRun('Resize signal label column', () => { model.document.layout.signalNameWidth = width; }); };
   const transactionRun = (label, mutation) => {
     if (controller.documentHistory?.run) return controller.documentHistory.run(label, mutation);
@@ -447,6 +447,60 @@
     try { result = mutation() !== false; } catch { result = false; }
     if (result) render();
     return result;
+  };
+  const reconcileSignalVisibility = signalId => {
+    const signal = model.document.signals.find(item => item.id === signalId);
+    if (!signal) return;
+    const hidden = signal.display?.visible === false;
+    const apply = row => {
+      if (!row) return;
+      row.hidden = hidden;
+      row.style.display = hidden ? 'none' : '';
+    };
+    apply(document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`));
+    apply(document.querySelector(`#cycleCanvas .frozen-label-row[data-signal="${CSS.escape(signalId)}"]`));
+    const treeRow = document.querySelector(`#groups .row[data-signal="${CSS.escape(signalId)}"]`);
+    if (treeRow) {
+      treeRow.dataset.visibility = hidden ? 'hidden' : 'visible';
+      const eye = treeRow.querySelector('.eye');
+      if (eye) {
+        eye.setAttribute('aria-label', hidden ? '表示' : '非表示');
+        eye.innerHTML = `<svg aria-hidden="true"><use href="icons.svg#${hidden ? 'i-eye-off' : 'i-eye'}"></use></svg>`;
+      }
+    }
+  };
+  const reconcileSignalOrder = (signalId, delta) => {
+    const reorder = host => {
+      if (!host) return;
+      const group = (model.document.signalGroups || []).find(item => (item.rows || []).includes(signalId));
+      const row = host.querySelector(`[data-signal="${CSS.escape(signalId)}"]`);
+      if (!group || !row) return;
+      const index = group.rows.indexOf(signalId);
+      const nextId = group.rows[index + 1];
+      const next = nextId ? host.querySelector(`[data-signal="${CSS.escape(nextId)}"]`) : null;
+      if (next) { host.insertBefore(row, next); return; }
+      const groupIds = new Set(group.rows);
+      const last = [...host.children].reverse().find(node => groupIds.has(node.dataset.signal));
+      if (last?.nextSibling) host.insertBefore(row, last.nextSibling); else if (last) host.appendChild(row);
+    };
+    reorder(document.querySelector('#cycleCanvas .wave'));
+    reorder(window.TimingChartFrozenLabels?.frozenWave);
+    const shiftStarted = performance.now();
+    window.TimingChartProductionWaveform?.shiftScreenGeometryAfterRowReorder?.(model);
+    const shiftFinished = performance.now();
+    const axisFinished = performance.now();
+    if ((model.document.annotations || []).length) window.TimingChartProductionAnnotations?.render?.(model);
+    const annotationFinished = performance.now();
+    controller.lastIncrementalTraceParts = { shiftMs: shiftFinished - shiftStarted, timeAxisMs: axisFinished - shiftFinished, annotationsMs: annotationFinished - axisFinished };
+  };
+  const incrementalRun = (label, mutation, reconcile) => {
+    const started = performance.now();
+    const result = controller.documentHistory?.run ? controller.documentHistory.run(label, mutation, { render: false }) : (() => { try { return mutation() !== false; } catch { return false; } })();
+    const historyFinished = performance.now();
+    if (!result) { render(); controller.lastIncrementalTrace = { label, historyMs: historyFinished - started, reconcileMs: 0, totalMs: performance.now() - started }; return false; }
+    reconcile?.();
+    controller.lastIncrementalTrace = { label, historyMs: historyFinished - started, reconcileMs: performance.now() - historyFinished, totalMs: performance.now() - started, parts: controller.lastIncrementalTraceParts || null };
+    return true;
   };
   controller.dispatchDocumentCommand = transactionRun;
   const hierarchyRows = () => getSignals().map(signal => ({ signal, group: model.document.signalGroups.find(group => (group.rows || []).includes(signal.id)) })).filter(item => item.signal);
@@ -643,7 +697,7 @@
   controller.actions.duplicateSignal = signalId => transactionRun('Duplicate signal', () => { const source = getSignal(signalId); const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!source || !group) return false; const copy = structuredClone(source); let id = `${source.id}_copy`; let index = 2; while (model.document.signals.some(item => item.id === id)) id = `${source.id}_copy${index++}`; copy.id = id; copy.display = { ...(copy.display || {}), name: copy.display?.name || copy.name }; model.document.signals.push(copy); const rowIndex = group.rows.indexOf(signalId); group.rows.splice(rowIndex + 1, 0, id); model.selection = { kind: 'signal', id }; });
   controller.actions.deleteSignal = signalId => transactionRun('Delete signal', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal || signal.id === model.document.timeline.referenceClock) return false; for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== signalId); model.document.signals = model.document.signals.filter(item => item.id !== signalId); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
   controller.actions.setSignalRole = (signalId, role) => { if (!['input', 'output', 'internal'].includes(role)) return false; return transactionRun('Change signal role', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal || signal.type === 'commentRow') return false; signal.role = role; }); };
-  controller.actions.moveSignalBy = (signalId, delta) => transactionRun('Reorder signal', () => { const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!group) return false; const from = group.rows.indexOf(signalId); const to = Math.max(0, Math.min(group.rows.length - 1, from + Number(delta))); if (from === to) return false; group.rows.splice(from, 1); group.rows.splice(to, 0, signalId); });
+  controller.actions.moveSignalBy = (signalId, delta) => incrementalRun('Reorder signal', () => { const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!group) return false; const from = group.rows.indexOf(signalId); const to = Math.max(0, Math.min(group.rows.length - 1, from + Number(delta))); if (from === to) return false; group.rows.splice(from, 1); group.rows.splice(to, 0, signalId); }, () => reconcileSignalOrder(signalId, delta));
   controller.actions.setSignalSpacing = (signalId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update signal spacing', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; signal[field] = Number(value); }); };
   controller.actions.setGroupSpacing = (groupId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update group spacing', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group[field] = Number(value); }); };
   controller.actions.setGlobalSignalSpacing = value => { const spacing = Number(value); if (!Number.isFinite(spacing) || spacing < 0 || spacing > 48) return false; return transactionRun('Update row spacing', () => { model.document.layout.signalSpacing = spacing; }); };
