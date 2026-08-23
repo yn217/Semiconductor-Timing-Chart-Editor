@@ -1,0 +1,31 @@
+{
+  "issue": 73,
+  "filter": {
+    "outputRows": [
+      "rdata[15:0]",
+      "ready"
+    ],
+    "outputExpected": [
+      "rdata[15:0]",
+      "ready"
+    ],
+    "outputBusRows": [
+      "rdata[15:0]"
+    ],
+    "outputBusExpected": [
+      "rdata[15:0]"
+    ]
+  },
+  "hidden": {
+    "visible": false,
+    "leftHidden": false,
+    "timingHidden": true,
+    "eye": "icons.svg#i-eye-off",
+    "selection": "req_addr[7:0]",
+    "undo": 1,
+    "dirty": true
+  },
+  "savedVisibility": false,
+  "errors": [],
+  "pass": true
+}

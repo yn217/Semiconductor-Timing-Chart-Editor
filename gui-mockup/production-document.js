@@ -119,7 +119,7 @@
     model.timeSelection = { cycle: 0, rangeStart: null, rangeEnd: null };
     model.editor = { rowIndex: 0 };
     model.selection = { kind: 'signal', id: controller.selectors.getSignals()[0]?.id || null };
-    model.view.hiddenSignals = [];
+    model.view.hiddenSignals = model.document.signals.filter(signal => signal.display?.visible === false).map(signal => signal.id);
     model.view.scope = [];
     model.view.leftPanelMode = 'group';
     model.view.pinned = false;
@@ -177,7 +177,7 @@
     if (model.timeSelection.rangeStart !== null && model.timeSelection.rangeEnd !== null && model.timeSelection.rangeEnd < model.timeSelection.rangeStart) model.timeSelection.rangeEnd = model.timeSelection.rangeStart;
     const selectedSignal = model.document.signals.find(signal => signal.id === model.selection?.id);
     model.editor = { ...model.editor, ...previousEditor, rowIndex: selectedSignal?.values?.length ? Math.max(0, Math.min(Number(previousEditor?.rowIndex ?? 0), selectedSignal.values.length - 1)) : 0 };
-    model.view.hiddenSignals = (previousView.hiddenSignals || []).filter(id => model.document.signals.some(signal => signal.id === id));
+    model.view.hiddenSignals = model.document.signals.filter(signal => signal.display?.visible === false).map(signal => signal.id);
     controller.repairScope?.();
     if (render) controller.render();
     if (previousScroll) requestAnimationFrame(() => { const host = window.TimingChartTimingViewport?.getScrollHost?.(); if (host) { host.scrollLeft = Math.max(0, Math.min(previousScroll.left, host.scrollWidth - host.clientWidth)); host.scrollTop = Math.max(0, Math.min(previousScroll.top, host.scrollHeight - host.clientHeight)); } });

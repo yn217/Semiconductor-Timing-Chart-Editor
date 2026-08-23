@@ -109,9 +109,9 @@
       record(search, 'implemented');
     }
     const filter = document.querySelector('#leftPanel .search-row .iconbtn');
-    if (filter) disable(filter, 'フィルター条件UIは未実装です。対応予定: #32');
+    if (filter) { if (filter.dataset.controlStatus === 'implemented') record(filter, 'implemented'); else disable(filter, 'フィルター条件UIは未実装です。対応予定: #32'); }
     const overflow = document.querySelector('#leftPanel .panel-head .iconbtn');
-    if (overflow) disable(overflow, '左パネルの追加メニュー以外の操作は未実装です。対応予定: #32');
+    if (overflow) { if (overflow.dataset.controlStatus === 'implemented') record(overflow, 'implemented'); else disable(overflow, '左パネルの追加メニュー以外の操作は未実装です。対応予定: #32'); }
     if (document.body.dataset.controlInspectorBound === 'true') return;
     document.body.dataset.controlInspectorBound = 'true';
     document.addEventListener('click', event => {
