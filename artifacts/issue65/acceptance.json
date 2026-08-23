@@ -8,7 +8,42 @@
   "pass": true,
   "clockImportExport": true,
   "jsonFileImport": true,
+  "matrixResults": [
+    {
+      "file": "01_apb_register_access.tcd.json",
+      "signalCount": 10,
+      "annotationCount": 3,
+      "transactionCount": 2,
+      "annotationRows": 3,
+      "pass": true
+    },
+    {
+      "file": "02_ahb_lite_pipelined_transfer.tcd.json",
+      "signalCount": 11,
+      "annotationCount": 2,
+      "transactionCount": 3,
+      "annotationRows": 2,
+      "pass": true
+    },
+    {
+      "file": "03_axi4_full_write_burst.tcd.json",
+      "signalCount": 18,
+      "annotationCount": 4,
+      "transactionCount": 1,
+      "annotationRows": 4,
+      "pass": true
+    },
+    {
+      "file": "08_async_fifo_cdc.tcd.json",
+      "signalCount": 12,
+      "annotationCount": 2,
+      "transactionCount": 2,
+      "annotationRows": 2,
+      "pass": true
+    }
+  ],
   "knownIncomplete": [
-    "full APB/AHB/AXI/CDC matrix"
+    "Signal full import/export control matrix",
+    "Annotation type selector and direct end-anchor editing"
   ]
 }

@@ -47,7 +47,11 @@ try {
     annotationRow.click(); await wait(25);
     const label = annotationRow.querySelector('[data-annotation-field="label"]');
     const color = annotationRow.querySelector('[data-annotation-field="color"]');
-    if (!label || !color) throw new Error('Annotation table editor fields missing');
+    const startAnchor = annotationRow.querySelector('[data-annotation-anchor-action="start"]');
+    if (!label || !color || !startAnchor) throw new Error('Annotation table editor fields missing');
+    startAnchor.click(); await wait(20);
+    if (document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'anchor' && document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'start') throw new Error('Annotation Start anchor picker was not activated');
+    c.actions.cancelAnnotationAnchorSelection();
     label.value = 'Edited annotation'; label.dispatchEvent(new Event('change', { bubbles: true }));
     color.value = '#e39a25'; color.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
     const selectedAnnotation = c.model.document.annotations.find(item => item.id === c.model.selection.id);
@@ -58,7 +62,13 @@ try {
     const transactionName = document.querySelector('[data-transaction-field="name"]');
     if (!transactionName) throw new Error('Transaction editor field missing');
     transactionName.value = 'Updated transaction'; transactionName.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
-    if (c.model.document.transactions.find(item => item.id === 'issue65_txn').name !== 'Updated transaction') throw new Error('Transaction edit did not reach canonical model');
+    const linkedSignals = document.querySelector('[data-transaction-field="linkedSignals"]');
+    const phases = document.querySelector('[data-transaction-field="phases"]');
+    if (!linkedSignals || !phases) throw new Error('Transaction linked-signal/phase editors missing');
+    linkedSignals.options[0].selected = true; linkedSignals.dispatchEvent(new Event('change', { bubbles: true }));
+    phases.value = JSON.stringify([{ name: 'Setup', start: 1, end: 2 }]); phases.dispatchEvent(new Event('change', { bubbles: true })); await wait(25);
+    const transaction = c.model.document.transactions.find(item => item.id === 'issue65_txn');
+    if (transaction.name !== 'Updated transaction' || !transaction.linkedSignals?.length || transaction.phases?.[0]?.name !== 'Setup') throw new Error('Transaction linked-signal/phase edit did not reach canonical model');
 
     await selectTab('json');
     document.querySelector('[data-json-action="export"]').click(); await wait(25);
@@ -87,9 +97,36 @@ try {
   await (await jsonChooser).setFiles({ name: 'issue65-imported.tcd.json', mimeType: 'application/json', buffer: Buffer.from(importedText) });
   await page.waitForTimeout(45);
   assert.equal(await page.evaluate(() => window.TimingChartProductionController.model.document.document.title), 'Issue65 imported through UI');
+  const sampleDir = 'samples/golden-protocol/timing_chart_sample_pack/samples';
+  const matrixFiles = ['01_apb_register_access.tcd.json', '02_ahb_lite_pipelined_transfer.tcd.json', '03_axi4_full_write_burst.tcd.json', '08_async_fifo_cdc.tcd.json'];
+  const matrixResults = [];
+  for (const file of matrixFiles) {
+    const sampleText = fs.readFileSync(`${sampleDir}/${file}`, 'utf8');
+    assert.equal(await page.evaluate(async text => window.TimingChartProductionController.actions.openText(text, { fileName: text.slice(0, 0) + 'matrix.tcd.json', unsavedDecision: 'discard' }), sampleText), true, `${file}: open failed`);
+    await page.waitForTimeout(45);
+    await page.locator('.seg[data-mode="cycle"]').click();
+    await page.waitForTimeout(25);
+    const targetSignalId = await page.evaluate(() => { const signals = window.TimingChartProductionController.model.document.signals || []; return signals.find(signal => signal.type !== 'commentRow' && Array.isArray(signal.values) && signal.values.length)?.id || signals.find(signal => signal.type !== 'commentRow')?.id; });
+    assert.ok(targetSignalId, `${file}: canonical signal missing`);
+    const signalRow = page.locator(`#leftPanel .row[data-signal="${targetSignalId}"]`).last();
+    assert.ok(await signalRow.count(), `${file}: editable signal row missing`);
+    await signalRow.click();
+    await page.waitForTimeout(30);
+    await page.locator('#bottomTabs [data-tab="signal"]').click({ force: true });
+    await page.waitForTimeout(80);
+    if (!await page.locator('#bottomContent [data-editor-field]').count()) { const debug = await page.evaluate(() => ({ selection: window.TimingChartProductionController.model.selection, tab: window.TimingChartProductionController.model.view.tab, rendered: document.querySelector('#bottomContent')?.dataset.renderedTab, text: document.querySelector('#bottomContent')?.textContent?.slice(0, 240) })); throw new Error(`${file}: Signal editor missing ${JSON.stringify(debug)}`); }
+    await page.locator('#bottomTabs [data-tab="annotation"]').click();
+    await page.waitForTimeout(25);
+    const annotationCount = await page.locator('#bottomContent tr[data-annotation-id]').count();
+    await page.locator('#bottomTabs [data-tab="json"]').click();
+    await page.waitForTimeout(25);
+    const snapshot = await page.evaluate(() => { const c = window.TimingChartProductionController; return { signals: c.model.document.signals.length, annotations: c.model.document.annotations.length, transactions: c.model.document.transactions.length, json: document.querySelector('#bottomContent')?.textContent || '' }; });
+    assert.match(snapshot.json, new RegExp(`signals \\[${snapshot.signals}\\]`), `${file}: JSON model count mismatch`);
+    matrixResults.push({ file, signalCount: snapshot.signals, annotationCount: snapshot.annotations, transactionCount: snapshot.transactions, annotationRows: annotationCount, pass: true });
+  }
   await page.screenshot({ path: `${root}/issue65-1672x941.png` });
   await browser.close();
-  const report = { issue: 65, ...result, clockImportExport: true, jsonFileImport: true, pass: result.pass, knownIncomplete: ['full APB/AHB/AXI/CDC matrix'] };
+  const report = { issue: 65, ...result, clockImportExport: true, jsonFileImport: true, matrixResults, pass: result.pass && matrixResults.every(item => item.pass), knownIncomplete: ['Signal full import/export control matrix', 'Annotation type selector and direct end-anchor editing'] };
   fs.writeFileSync(`${root}/acceptance.json`, `${JSON.stringify(report, null, 2)}\n`);
   assert.ok(report.pass, 'Issue #65 progress acceptance failed');
   console.log('Issue #65 progress acceptance passed: Signal, Comment, Annotation, Transaction, and JSON editor paths use observable canonical operations.');
