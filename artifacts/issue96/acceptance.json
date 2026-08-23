@@ -1,0 +1,37 @@
+{
+  "issue": 96,
+  "onePrePostSnapshot": true,
+  "revisionDirty": true,
+  "atomicInvalidEdit": true,
+  "oneRenderOnFailure": true,
+  "undoRedoContext": true,
+  "largeFixture100Signals": true,
+  "metrics": {
+    "edit": {
+      "commands": 1,
+      "serializableSnapshots": 2,
+      "structuredClones": 2,
+      "fullDocumentStringifies": 2,
+      "validations": 1,
+      "fullRenders": 1
+    },
+    "invalid": {
+      "commands": 1,
+      "serializableSnapshots": 1,
+      "structuredClones": 1,
+      "fullDocumentStringifies": 0,
+      "validations": 1,
+      "fullRenders": 1
+    },
+    "large": {
+      "commands": 1,
+      "serializableSnapshots": 2,
+      "structuredClones": 2,
+      "fullDocumentStringifies": 2,
+      "validations": 1,
+      "fullRenders": 1
+    }
+  },
+  "errors": [],
+  "pass": true
+}
