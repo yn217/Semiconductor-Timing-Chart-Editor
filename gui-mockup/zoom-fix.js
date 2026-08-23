@@ -152,6 +152,7 @@
   };
 
   const applyTimingOnlyZoom = () => {
+    controller.profileMark?.('zoom:start');
     raf = 0;
     if (applying) return;
     applying = true;
@@ -213,6 +214,7 @@
       positionTimedBandLabels();
       updateStatus();
       metrics.frames += 1;
+      controller.profileMark?.('zoom:end');
     } finally {
       applying = false;
     }

@@ -102,6 +102,9 @@
     transactionRenders: 0, bottomRenders: 0, inspectorRenders: 0,
     minimapOverviewRebuilds: 0, minimapViewportUpdates: 0
   } };
+  const profileMark = name => { if (!controller.profileEnabled || !window.performance?.mark) return; performance.mark(`tc:${name}`); };
+  controller.enableProfiling = enabled => { controller.profileEnabled = Boolean(enabled); if (controller.profileEnabled) performance.clearMarks?.('tc:'); return controller.profileEnabled; };
+  controller.profileMark = profileMark;
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
@@ -440,7 +443,7 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); window.TimingChartProductionWaveform?.render(model); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); };
+  const render = () => { profileMark('render:start'); controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); profileMark('waveform:start'); window.TimingChartProductionWaveform?.render(model); profileMark('waveform:end'); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); profileMark('render:end'); };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
@@ -514,10 +517,17 @@
   };
   const incrementalRun = (label, mutation, reconcile) => {
     const started = performance.now();
+    profileMark('command:start');
+    profileMark('history:start');
     const result = controller.documentHistory?.run ? controller.documentHistory.run(label, mutation, { render: false }) : (() => { try { return mutation() !== false; } catch { return false; } })();
     const historyFinished = performance.now();
+    profileMark('history:end');
     if (!result) { render(); controller.lastIncrementalTrace = { label, historyMs: historyFinished - started, reconcileMs: 0, totalMs: performance.now() - started }; return false; }
+    profileMark('reconcile:start');
     reconcile?.();
+    profileMark('reconcile:end');
+    if (controller.profileEnabled) requestAnimationFrame(() => profileMark('command:raf-1'));
+    profileMark('command:dom-ready');
     controller.lastIncrementalTrace = { label, historyMs: historyFinished - started, reconcileMs: performance.now() - historyFinished, totalMs: performance.now() - started, parts: controller.lastIncrementalTraceParts || null };
     return true;
   };

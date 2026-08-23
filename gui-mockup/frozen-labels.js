@@ -107,6 +107,7 @@
   };
 
   const syncFrozenLabels = model => {
+    window.TimingChartProductionController?.profileMark?.('frozen-labels:start');
     applyPaneWidth();
     const rows = [...wave.querySelectorAll(':scope > .wave-row')];
     const current = new Map([...frozenWave.querySelectorAll(':scope > .frozen-label-row')].map(row => [row.dataset.signal, row]));
@@ -141,6 +142,7 @@
     frozenWave.dataset.scrollTop = String(timingPane.scrollTop);
     frozenPane.dataset.rowCount = String(rows.length);
     frozenPane.dataset.frozen = 'true';
+    window.TimingChartProductionController?.profileMark?.('frozen-labels:end');
   };
 
   window.TimingChartTimingViewport = { canvas, timingPane, frozenPane, getScrollHost: () => timingPane, getScrollLeft: () => timingPane.scrollLeft, getScrollTop: () => timingPane.scrollTop, getViewportRect: () => timingPane.getBoundingClientRect() };
