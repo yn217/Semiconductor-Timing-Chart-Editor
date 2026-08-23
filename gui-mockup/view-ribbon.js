@@ -128,16 +128,21 @@
   const scrollHost = () => window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
   let gridFrame = 0;
   let minimapFrame = 0;
+  let minimapViewportFrame = 0;
+  const viewMetrics = controller.viewMetrics = controller.viewMetrics || { gridRebuilds: 0, gridBoundaryResolutions: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
   const scheduleGrid = () => { if (gridFrame) return; gridFrame = requestAnimationFrame(() => { gridFrame = 0; renderGrid(); }); };
   const scheduleMinimap = () => { if (minimapFrame) return; minimapFrame = requestAnimationFrame(() => { minimapFrame = 0; renderMinimap(); }); };
+  const scheduleMinimapViewport = () => { if (minimapViewportFrame) return; minimapViewportFrame = requestAnimationFrame(() => { minimapViewportFrame = 0; updateMinimapViewport(); }); };
   const boundaryPoints = () => {
     const clock = controller.selectors?.getReferenceClock?.();
     const count = Number(model.document.timeline?.cycleCount || 0);
     if (!clock || !controller.getCycleBoundary) return [];
+    viewMetrics.gridBoundaryResolutions += count + 1;
     return Array.from({ length: count + 1 }, (_, cycle) => controller.getCycleBoundary({ signal: clock.id, cycle, coordinateSpace: 'canvas' })).filter(Boolean);
   };
   const renderGrid = () => {
     const host = scrollHost(); if (!host) return;
+    viewMetrics.gridRebuilds += 1;
     let grid = document.querySelector('#cycleCanvas [data-live-grid]');
     if (!grid) { grid = document.createElement('div'); grid.dataset.liveGrid = 'true'; grid.setAttribute('aria-hidden', 'true'); host.appendChild(grid); }
     if (!view.guides.grid) { grid.hidden = true; return; }
@@ -152,9 +157,16 @@
       grid.appendChild(line);
     }
   };
+  const updateMinimapViewport = () => {
+    const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); const windowNode = mini?.querySelector('.mini-window'); if (!host || !mini || !windowNode || !view.guides.minimap) return;
+    viewMetrics.minimapViewportUpdates += 1;
+    const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
+    windowNode.dataset.viewport = 'true'; windowNode.style.left = `${Math.max(0, host.scrollLeft / contentWidth * 100)}%`; windowNode.style.top = `${Math.max(0, host.scrollTop / contentHeight * 100)}%`; windowNode.style.width = `${Math.min(100, host.clientWidth / contentWidth * 100)}%`; windowNode.style.height = `${Math.min(100, host.clientHeight / contentHeight * 100)}%`; windowNode.title = `Viewport ${Math.round(host.scrollLeft)},${Math.round(host.scrollTop)}`;
+  };
   const renderMinimap = () => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas');
     if (!host || !mini) return;
+    viewMetrics.minimapOverviewRebuilds += 1;
     if (!view.guides.minimap) { mini.dataset.live = 'false'; return; }
     mini.dataset.live = 'true'; mini.style.position = 'relative';
     const wave = document.querySelector('#cycleCanvas .wave'); const hostRect = host.getBoundingClientRect();
@@ -171,8 +183,7 @@
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.replaceChildren();
     const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
     rows.forEach((row, index) => { const rect = row.getBoundingClientRect(); const x = Math.max(0, (rect.left - hostRect.left + host.scrollLeft) / contentWidth * width); const y = Math.max(0, (rect.top - hostRect.top + host.scrollTop) / contentHeight * height); const w = Math.max(2, Math.min(width - x, (row.querySelector('.trace')?.getBoundingClientRect().width || contentWidth * 0.7) / contentWidth * width)); const line = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); line.dataset.minimapRow = row.dataset.signalId || row.dataset.signal || String(index); line.setAttribute('x', x); line.setAttribute('y', y); line.setAttribute('width', w); line.setAttribute('height', Math.max(1, Math.min(4, rect.height / contentHeight * height))); line.setAttribute('fill', row.classList.contains('band-output') ? '#b887ee' : row.classList.contains('band-internal') ? '#63b56b' : '#5a99ee'); svg.appendChild(line); });
-    const windowNode = mini.querySelector('.mini-window'); if (!windowNode) return;
-    windowNode.dataset.viewport = 'true'; windowNode.style.left = `${Math.max(0, host.scrollLeft / contentWidth * 100)}%`; windowNode.style.top = `${Math.max(0, host.scrollTop / contentHeight * 100)}%`; windowNode.style.width = `${Math.min(100, host.clientWidth / contentWidth * 100)}%`; windowNode.style.height = `${Math.min(100, host.clientHeight / contentHeight * 100)}%`; windowNode.title = `Viewport ${Math.round(host.scrollLeft)},${Math.round(host.scrollTop)}`;
+    updateMinimapViewport();
   };
   const panMiniMap = (clientX, clientY, drag = false) => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); if (!host || !mini) return false;
@@ -188,7 +199,7 @@
     const release = event => { if (drag) { drag = null; mini.releasePointerCapture?.(event.pointerId); } }; mini.addEventListener('pointerup', release); mini.addEventListener('pointercancel', release);
   };
   const hostForEvents = scrollHost();
-  hostForEvents?.addEventListener('scroll', () => { scheduleMinimap(); scheduleGrid(); }, { passive: true });
+  hostForEvents?.addEventListener('scroll', () => { scheduleMinimapViewport(); }, { passive: true });
   window.addEventListener('resize', () => { scheduleMinimap(); scheduleGrid(); });
   if (hostForEvents && window.MutationObserver) new MutationObserver(mutations => { if (mutations.some(mutation => !mutation.target?.closest?.('[data-live-grid]'))) { scheduleMinimap(); scheduleGrid(); } }).observe(hostForEvents, { childList: true, subtree: true });
   bindMiniMap();
