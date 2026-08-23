@@ -5,7 +5,7 @@
   },
   "replace": {
     "result": true,
-    "elapsedMs": 6408
+    "elapsedMs": 19485.5
   },
   "state": {
     "signalCount": 50,
@@ -15,49 +15,65 @@
     {
       "name": "signal-up",
       "result": true,
-      "commandMs": 16.100000023841858,
-      "clickDispatchMs": 16,
-      "paintMs": 106.19999992847443,
-      "settledPaintMs": 106.19999992847443,
+      "commandMs": 16.600000023841858,
+      "clickDispatchMs": 16.40000009536743,
+      "paintMs": 179.89999997615814,
+      "settledPaintMs": 179.89999997615814,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 0,
       "revisionAfter": 1,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 7.100000023841858,
-        "reconcileMs": 7.600000023841858,
-        "totalMs": 14.700000047683716,
+        "historyMs": 7.200000047683716,
+        "reconcileMs": 4.100000023841858,
+        "totalMs": 11.300000071525574,
         "parts": {
-          "shiftMs": 0.09999990463256836,
+          "shiftMs": 1.7999999523162842,
           "timeAxisMs": 0,
           "annotationsMs": 0,
+          "minimapMs": 1.100000023841858,
+          "controlsMs": 0.20000004768371582,
           "reorderTimings": [
             {
+              "host": "group",
+              "mode": "dom-move",
+              "ms": 0.10000002384185791
+            },
+            {
               "host": "wave",
-              "mode": "transform",
-              "ms": 5
+              "mode": "dom-move",
+              "ms": 0.10000002384185791
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.20000004768371582
+              "mode": "dom-move",
+              "ms": 0.10000002384185791
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0.09999990463256836,
+        "shiftMs": 1.7999999523162842,
         "timeAxisMs": 0,
         "annotationsMs": 0,
+        "minimapMs": 1.100000023841858,
+        "controlsMs": 0.20000004768371582,
         "reorderTimings": [
           {
+            "host": "group",
+            "mode": "dom-move",
+            "ms": 0.10000002384185791
+          },
+          {
             "host": "wave",
-            "mode": "transform",
-            "ms": 5
+            "mode": "dom-move",
+            "ms": 0.10000002384185791
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.20000004768371582
+            "mode": "dom-move",
+            "ms": 0.10000002384185791
           }
         ]
       },
@@ -96,10 +112,10 @@
       },
       "metricsAfter": {
         "appFullRenders": 0,
-        "rowMoves": 2,
+        "rowMoves": 3,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 2,
+        "cycleRowMoves": 3,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -130,59 +146,75 @@
     {
       "name": "signal-down",
       "result": true,
-      "commandMs": 7.799999952316284,
-      "clickDispatchMs": 7.799999952316284,
-      "paintMs": 77.5,
-      "settledPaintMs": 77.5,
+      "commandMs": 14.5,
+      "clickDispatchMs": 14.400000095367432,
+      "paintMs": 145,
+      "settledPaintMs": 145,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 1,
       "revisionAfter": 2,
       "trace": {
         "label": "Reorder signal",
-        "historyMs": 4.900000095367432,
-        "reconcileMs": 2.299999952316284,
-        "totalMs": 7.200000047683716,
+        "historyMs": 7,
+        "reconcileMs": 5.400000095367432,
+        "totalMs": 12.400000095367432,
         "parts": {
-          "shiftMs": 0,
+          "shiftMs": 2.6999999284744263,
           "timeAxisMs": 0,
           "annotationsMs": 0,
+          "minimapMs": 1.100000023841858,
+          "controlsMs": 0.20000004768371582,
           "reorderTimings": [
             {
+              "host": "group",
+              "mode": "dom-move",
+              "ms": 0.5
+            },
+            {
               "host": "wave",
-              "mode": "transform",
-              "ms": 1.6999999284744263
+              "mode": "dom-move",
+              "ms": 0.5
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.10000002384185791
+              "mode": "dom-move",
+              "ms": 0.20000004768371582
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0,
+        "shiftMs": 2.6999999284744263,
         "timeAxisMs": 0,
         "annotationsMs": 0,
+        "minimapMs": 1.100000023841858,
+        "controlsMs": 0.20000004768371582,
         "reorderTimings": [
           {
+            "host": "group",
+            "mode": "dom-move",
+            "ms": 0.5
+          },
+          {
             "host": "wave",
-            "mode": "transform",
-            "ms": 1.6999999284744263
+            "mode": "dom-move",
+            "ms": 0.5
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.10000002384185791
+            "mode": "dom-move",
+            "ms": 0.20000004768371582
           }
         ]
       },
       "timelineTrace": null,
       "metricsBefore": {
         "appFullRenders": 0,
-        "rowMoves": 2,
+        "rowMoves": 3,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 2,
+        "cycleRowMoves": 3,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -211,10 +243,10 @@
       },
       "metricsAfter": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -245,59 +277,75 @@
     {
       "name": "eye-off",
       "result": true,
-      "commandMs": 8.700000047683716,
+      "commandMs": 14.5,
       "clickDispatchMs": null,
-      "paintMs": 201.60000002384186,
-      "settledPaintMs": 201.60000002384186,
+      "paintMs": 125.70000004768372,
+      "settledPaintMs": 125.70000004768372,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 2,
       "revisionAfter": 3,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 5.899999976158142,
-        "reconcileMs": 1.600000023841858,
-        "totalMs": 7.5,
+        "historyMs": 5.100000023841858,
+        "reconcileMs": 8.599999904632568,
+        "totalMs": 13.699999928474426,
         "parts": {
-          "shiftMs": 0,
+          "shiftMs": 2.6999999284744263,
           "timeAxisMs": 0,
           "annotationsMs": 0,
+          "minimapMs": 1.100000023841858,
+          "controlsMs": 0.20000004768371582,
           "reorderTimings": [
             {
+              "host": "group",
+              "mode": "dom-move",
+              "ms": 0.5
+            },
+            {
               "host": "wave",
-              "mode": "transform",
-              "ms": 1.6999999284744263
+              "mode": "dom-move",
+              "ms": 0.5
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.10000002384185791
+              "mode": "dom-move",
+              "ms": 0.20000004768371582
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0,
+        "shiftMs": 2.6999999284744263,
         "timeAxisMs": 0,
         "annotationsMs": 0,
+        "minimapMs": 1.100000023841858,
+        "controlsMs": 0.20000004768371582,
         "reorderTimings": [
           {
+            "host": "group",
+            "mode": "dom-move",
+            "ms": 0.5
+          },
+          {
             "host": "wave",
-            "mode": "transform",
-            "ms": 1.6999999284744263
+            "mode": "dom-move",
+            "ms": 0.5
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.10000002384185791
+            "mode": "dom-move",
+            "ms": 0.20000004768371582
           }
         ]
       },
       "timelineTrace": null,
       "metricsBefore": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -326,10 +374,10 @@
       },
       "metricsAfter": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -360,59 +408,75 @@
     {
       "name": "eye-on",
       "result": true,
-      "commandMs": 5.600000023841858,
+      "commandMs": 9.299999952316284,
       "clickDispatchMs": null,
-      "paintMs": 199.60000002384186,
-      "settledPaintMs": 199.60000002384186,
+      "paintMs": 248.29999995231628,
+      "settledPaintMs": 248.29999995231628,
       "cycleBefore": 100,
       "cycleAfter": 100,
       "revisionBefore": 3,
       "revisionAfter": 4,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.199999928474426,
-        "reconcileMs": 0.7000000476837158,
-        "totalMs": 4.899999976158142,
+        "historyMs": 4.600000023841858,
+        "reconcileMs": 3.799999952316284,
+        "totalMs": 8.399999976158142,
         "parts": {
-          "shiftMs": 0,
+          "shiftMs": 2.6999999284744263,
           "timeAxisMs": 0,
           "annotationsMs": 0,
+          "minimapMs": 1.100000023841858,
+          "controlsMs": 0.20000004768371582,
           "reorderTimings": [
             {
+              "host": "group",
+              "mode": "dom-move",
+              "ms": 0.5
+            },
+            {
               "host": "wave",
-              "mode": "transform",
-              "ms": 1.6999999284744263
+              "mode": "dom-move",
+              "ms": 0.5
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.10000002384185791
+              "mode": "dom-move",
+              "ms": 0.20000004768371582
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0,
+        "shiftMs": 2.6999999284744263,
         "timeAxisMs": 0,
         "annotationsMs": 0,
+        "minimapMs": 1.100000023841858,
+        "controlsMs": 0.20000004768371582,
         "reorderTimings": [
           {
+            "host": "group",
+            "mode": "dom-move",
+            "ms": 0.5
+          },
+          {
             "host": "wave",
-            "mode": "transform",
-            "ms": 1.6999999284744263
+            "mode": "dom-move",
+            "ms": 0.5
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.10000002384185791
+            "mode": "dom-move",
+            "ms": 0.20000004768371582
           }
         ]
       },
       "timelineTrace": null,
       "metricsBefore": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -441,10 +505,10 @@
       },
       "metricsAfter": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -475,76 +539,92 @@
     {
       "name": "cycle-insert",
       "result": true,
-      "commandMs": 27,
+      "commandMs": 48.89999997615814,
       "clickDispatchMs": null,
-      "paintMs": 104.79999995231628,
-      "settledPaintMs": 11876.299999952316,
+      "paintMs": 267.60000002384186,
+      "settledPaintMs": 81305.60000002384,
       "cycleBefore": 100,
       "cycleAfter": 101,
       "revisionBefore": 4,
       "revisionAfter": 5,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.199999928474426,
-        "reconcileMs": 0.7000000476837158,
-        "totalMs": 4.899999976158142,
+        "historyMs": 4.600000023841858,
+        "reconcileMs": 3.799999952316284,
+        "totalMs": 8.399999976158142,
         "parts": {
-          "shiftMs": 0,
+          "shiftMs": 2.6999999284744263,
           "timeAxisMs": 0,
           "annotationsMs": 0,
+          "minimapMs": 1.100000023841858,
+          "controlsMs": 0.20000004768371582,
           "reorderTimings": [
             {
+              "host": "group",
+              "mode": "dom-move",
+              "ms": 0.5
+            },
+            {
               "host": "wave",
-              "mode": "transform",
-              "ms": 1.6999999284744263
+              "mode": "dom-move",
+              "ms": 0.5
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.10000002384185791
+              "mode": "dom-move",
+              "ms": 0.20000004768371582
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0,
+        "shiftMs": 2.6999999284744263,
         "timeAxisMs": 0,
         "annotationsMs": 0,
+        "minimapMs": 1.100000023841858,
+        "controlsMs": 0.20000004768371582,
         "reorderTimings": [
           {
+            "host": "group",
+            "mode": "dom-move",
+            "ms": 0.5
+          },
+          {
             "host": "wave",
-            "mode": "transform",
-            "ms": 1.6999999284744263
+            "mode": "dom-move",
+            "ms": 0.5
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.10000002384185791
+            "mode": "dom-move",
+            "ms": 0.20000004768371582
           }
         ]
       },
       "timelineTrace": {
-        "waveformMs": 11830.700000047684,
-        "axisMs": 17.299999952316284,
-        "annotationMs": 0.40000009536743164,
-        "totalMs": 11850.400000095367,
+        "waveformMs": 81254.39999997616,
+        "axisMs": 22.799999952316284,
+        "annotationMs": 0.10000002384185791,
+        "totalMs": 81280.60000002384,
         "waveformProfile": {
-          "mountMs": 2837.5,
-          "geometryMs": 4295,
-          "totalMs": 11829.600000023842,
+          "mountMs": 69911.69999992847,
+          "geometryMs": 5050.399999976158,
+          "totalMs": 81231.09999990463,
           "rows": 50,
           "geometry": {
-            "boundaryMs": 88.69999992847443,
-            "symbolMs": 3033.9999998807907,
+            "boundaryMs": 116.200000166893,
+            "symbolMs": 3604.5,
             "rowRectMs": 0,
-            "signalMs": 4294.799999952316
+            "signalMs": 5050
           }
         }
       },
       "metricsBefore": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 0,
         "waveCacheLookups": 0,
         "waveDromRenders": 0,
@@ -573,10 +653,10 @@
       },
       "metricsAfter": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 50,
         "waveCacheLookups": 50,
         "waveDromRenders": 50,
@@ -607,76 +687,92 @@
     {
       "name": "cycle-delete",
       "result": true,
-      "commandMs": 149.70000004768372,
+      "commandMs": 220.39999997615814,
       "clickDispatchMs": null,
-      "paintMs": 885.8999999761581,
-      "settledPaintMs": 12318.200000047684,
+      "paintMs": 1073.7999999523163,
+      "settledPaintMs": 78021,
       "cycleBefore": 101,
       "cycleAfter": 100,
       "revisionBefore": 5,
       "revisionAfter": 6,
       "trace": {
         "label": "Change signal visibility",
-        "historyMs": 4.199999928474426,
-        "reconcileMs": 0.7000000476837158,
-        "totalMs": 4.899999976158142,
+        "historyMs": 4.600000023841858,
+        "reconcileMs": 3.799999952316284,
+        "totalMs": 8.399999976158142,
         "parts": {
-          "shiftMs": 0,
+          "shiftMs": 2.6999999284744263,
           "timeAxisMs": 0,
           "annotationsMs": 0,
+          "minimapMs": 1.100000023841858,
+          "controlsMs": 0.20000004768371582,
           "reorderTimings": [
             {
+              "host": "group",
+              "mode": "dom-move",
+              "ms": 0.5
+            },
+            {
               "host": "wave",
-              "mode": "transform",
-              "ms": 1.6999999284744263
+              "mode": "dom-move",
+              "ms": 0.5
             },
             {
               "host": "frozen-label-wave",
-              "ms": 0.10000002384185791
+              "mode": "dom-move",
+              "ms": 0.20000004768371582
             }
           ]
         }
       },
       "traceParts": {
-        "shiftMs": 0,
+        "shiftMs": 2.6999999284744263,
         "timeAxisMs": 0,
         "annotationsMs": 0,
+        "minimapMs": 1.100000023841858,
+        "controlsMs": 0.20000004768371582,
         "reorderTimings": [
           {
+            "host": "group",
+            "mode": "dom-move",
+            "ms": 0.5
+          },
+          {
             "host": "wave",
-            "mode": "transform",
-            "ms": 1.6999999284744263
+            "mode": "dom-move",
+            "ms": 0.5
           },
           {
             "host": "frozen-label-wave",
-            "ms": 0.10000002384185791
+            "mode": "dom-move",
+            "ms": 0.20000004768371582
           }
         ]
       },
       "timelineTrace": {
-        "waveformMs": 12159.100000023842,
-        "axisMs": 21.899999976158142,
-        "annotationMs": 1.2000000476837158,
-        "totalMs": 12184.899999976158,
+        "waveformMs": 77808.60000002384,
+        "axisMs": 13.899999976158142,
+        "annotationMs": 0.10000002384185791,
+        "totalMs": 77824.19999992847,
         "waveformProfile": {
-          "mountMs": 2753.3000000715256,
-          "geometryMs": 4279.399999976158,
-          "totalMs": 12158.5,
+          "mountMs": 66150.7000001669,
+          "geometryMs": 5085.300000071526,
+          "totalMs": 77802.39999997616,
           "rows": 50,
           "geometry": {
-            "boundaryMs": 95.50000059604645,
-            "symbolMs": 3037.2999995946884,
+            "boundaryMs": 98.80000102519989,
+            "symbolMs": 3477.2999999523163,
             "rowRectMs": 0,
-            "signalMs": 4279.000000119209
+            "signalMs": 5085.100000023842
           }
         }
       },
       "metricsBefore": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 50,
         "waveCacheLookups": 50,
         "waveDromRenders": 50,
@@ -705,10 +801,10 @@
       },
       "metricsAfter": {
         "appFullRenders": 0,
-        "rowMoves": 4,
+        "rowMoves": 6,
         "cycleRowCreates": 0,
         "cycleRowRemoves": 0,
-        "cycleRowMoves": 4,
+        "cycleRowMoves": 6,
         "wavePayloadBuilds": 100,
         "waveCacheLookups": 100,
         "waveDromRenders": 100,
@@ -741,5 +837,14 @@
     "cycleCount": 100,
     "documentRevision": 6
   },
-  "pageErrors": []
+  "pageErrors": [],
+  "targets": [
+    { "name": "signal-up", "metric": "paintMs", "measuredMs": 179.89999997615814, "thresholdMs": 50, "pass": false },
+    { "name": "signal-down", "metric": "paintMs", "measuredMs": 145, "thresholdMs": 50, "pass": false },
+    { "name": "eye-off", "metric": "paintMs", "measuredMs": 125.70000004768372, "thresholdMs": 50, "pass": false },
+    { "name": "eye-on", "metric": "paintMs", "measuredMs": 248.29999995231628, "thresholdMs": 50, "pass": false },
+    { "name": "cycle-insert", "metric": "settledPaintMs", "measuredMs": 81305.60000002384, "thresholdMs": 1500, "pass": false },
+    { "name": "cycle-delete", "metric": "settledPaintMs", "measuredMs": 78021, "thresholdMs": 1500, "pass": false }
+  ],
+  "pass": false
 }
