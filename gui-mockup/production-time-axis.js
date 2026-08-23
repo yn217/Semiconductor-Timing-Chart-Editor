@@ -61,7 +61,9 @@
   const removeRange = (start, end) => {
     const timeline = model.document.timeline;
     if (!validInteger(start) || !validInteger(end) || Number(start) >= Number(end) || Number(end) > timeline.cycleCount || Number(end) - Number(start) >= timeline.cycleCount) { model.validation = [{ code: 'invalid-cycle-range' }]; controller.render(); return false; }
-    return run(`Delete cycles ${start}-${end}`, () => { model.document = deleteRange(model.document, Number(start), Number(end)); });
+    const result = run(`Delete cycles ${start}-${end}`, () => { model.document = deleteRange(model.document, Number(start), Number(end)); });
+    if (result) { model.timeSelection = { ...model.timeSelection, cycle: Math.min(Number(start), model.document.timeline.cycleCount), rangeStart: null, rangeEnd: null, source: 'range-delete' }; renderTransient(model); }
+    return result;
   };
   controller.timeAxis = { insertCycles, deleteCycles, deleteRange, mapPointForInsert, mapPointForDelete };
   controller.actions.insertCycles = insert;
@@ -114,7 +116,7 @@
     for (let index = 0; index < boundaries.length - 1; index += 1) if (x >= boundaries[index].canvasX && x <= boundaries[index + 1].canvasX) { lower = boundaries[index]; upper = boundaries[index + 1]; break; }
     const width = Math.max(0.0001, upper.canvasX - lower.canvasX); const phase = Math.max(0, Math.min(1, (x - lower.canvasX) / width));
     const nearest = Math.abs(x - lower.canvasX) <= Math.abs(upper.canvasX - x) ? lower : upper;
-    return { cycle: model.view.guides?.snap === false ? lower.cycle : nearest.cycle, phase, snapped: model.view.guides?.snap !== false, source: 'wavedrom-geometry', boundaryX: nearest.canvasX };
+    return { cycle: model.view.guides?.snap === false ? lower.cycle : nearest.cycle, phase, snapped: model.view.guides?.snap !== false, source: 'waveform-geometry', boundaryX: nearest.canvasX };
   };
   controller.actions.selectTimeAtCanvasX = (clientX, { shiftKey = false } = {}) => {
     const resolved = controller.actions.resolveSnapAtCanvasX(clientX);
@@ -122,6 +124,18 @@
     const result = selectCycle(resolved.cycle, { range: shiftKey, source: resolved.source });
     if (result) { model.timeSelection.phase = resolved.phase; model.timeSelection.snapped = resolved.snapped; }
     return result;
+  };
+  controller.actions.selectTimeRange = (start, end, { source = 'canvas-drag' } = {}) => {
+    const count = Number(model.document.timeline?.cycleCount ?? 0);
+    const first = Math.max(0, Math.min(count, Number(start)));
+    const last = Math.max(0, Math.min(count, Number(end)));
+    if (!Number.isInteger(first) || !Number.isInteger(last)) return false;
+    model.timeSelection.rangeStart = Math.min(first, last);
+    model.timeSelection.rangeEnd = Math.max(first, last);
+    model.timeSelection.cycle = last;
+    model.timeSelection.source = source;
+    renderTransient(model);
+    return true;
   };
 
   const renderEdgeCounters = currentModel => {
@@ -153,6 +167,34 @@
       band.dataset.cycle0Aligned = 'wavedrom-svg';
       band.dataset.cycle0ErrorPx = String(Math.abs(delta));
     });
+  };
+
+  const renderRangeSelection = currentModel => {
+    const scrollHost = window.TimingChartTimingViewport?.getScrollHost?.() || document.querySelector('#cycleCanvas');
+    if (!scrollHost) return;
+    scrollHost.querySelectorAll('[data-time-range-selection]').forEach(node => node.remove());
+    const start = Number(currentModel.timeSelection?.rangeStart);
+    const end = Number(currentModel.timeSelection?.rangeEnd);
+    if (!Number.isInteger(start) || !Number.isInteger(end) || end <= start) return;
+    const referenceClock = controller.selectors.getReferenceClock();
+    const first = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: start, coordinateSpace: 'canvas' });
+    const last = controller.getCycleBoundary?.({ signal: referenceClock?.id, cycle: end, coordinateSpace: 'canvas' });
+    if (!first || !last) return;
+    const hostRect = scrollHost.getBoundingClientRect();
+    const rulerRect = document.querySelector('#cycleCanvas .ruler')?.getBoundingClientRect();
+    const left = Math.min(first.canvasX, last.canvasX) - hostRect.left + scrollHost.scrollLeft;
+    const right = Math.max(first.canvasX, last.canvasX) - hostRect.left + scrollHost.scrollLeft;
+    const top = Math.max(34, (rulerRect?.bottom || hostRect.top + 34) - hostRect.top + scrollHost.scrollTop);
+    const band = document.createElement('div');
+    band.dataset.timeRangeSelection = 'true';
+    band.setAttribute('aria-label', `Selected cycles ${start} to ${end}`);
+    band.style.cssText = `position:absolute;left:${left}px;top:${top}px;width:${Math.max(1, right-left)}px;height:${Math.max(1, scrollHost.scrollHeight-top)}px;background:rgba(45,131,239,.12);border-left:1px solid #2d83ef;border-right:1px solid #2d83ef;pointer-events:none;z-index:2;`;
+    const label = document.createElement('span');
+    label.textContent = `${start}–${end} / ${end-start} cycles`;
+    label.style.cssText = 'position:absolute;top:4px;left:4px;padding:2px 5px;background:#fff;border:1px solid #9fc5f3;border-radius:3px;color:#2169b6;font:11px sans-serif;white-space:nowrap;';
+    band.appendChild(label); scrollHost.appendChild(band);
+    const status = document.querySelector('.status');
+    if (status) status.dataset.timeRange = `${start}-${end}`;
   };
 
   const renderTransient = currentModel => {
@@ -201,6 +243,11 @@
     if (playhead && boundary && canvas) { const rect = scrollHost.getBoundingClientRect(); playhead.style.left = `${boundary.canvasX - rect.left + scrollHost.scrollLeft}px`; playhead.style.pointerEvents = 'none'; playhead.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); playhead.title = `挿入位置: Cycle ${currentModel.timeSelection?.cycle ?? 0} の直前`; }
     if (ruler) { ruler.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); ruler.querySelectorAll('.tick').forEach(tick => { const selected = Number(tick.dataset.cycle) === Number(currentModel.timeSelection?.cycle); tick.dataset.selected = selected ? 'true' : 'false'; tick.style.fontWeight = selected ? '700' : ''; tick.style.color = selected ? '#1473e6' : ''; }); }
     if (canvas) { canvas.dataset.currentCycle = String(currentModel.timeSelection?.cycle ?? 0); canvas.title = `挿入位置: Cycle ${currentModel.timeSelection?.cycle ?? 0} の直前`; }
+    renderRangeSelection(currentModel);
+    const rangeTool = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes('範囲削除'));
+    const rangeStart = Number(currentModel.timeSelection?.rangeStart); const rangeEnd = Number(currentModel.timeSelection?.rangeEnd);
+    const validRange = Number.isInteger(rangeStart) && Number.isInteger(rangeEnd) && rangeEnd > rangeStart;
+    if (rangeTool) { rangeTool.disabled = !validRange; rangeTool.dataset.rangeDelete = validRange ? 'enabled' : 'disabled'; rangeTool.title = validRange ? `Cycle ${rangeStart}–${rangeEnd} を削除` : 'タイミング領域をドラッグして範囲を選択してください'; }
     alignCommentRowsToCycleZero(currentModel);
     if (window.requestAnimationFrame) window.requestAnimationFrame(() => alignCommentRowsToCycleZero(currentModel));
     renderEdgeCounters(currentModel);
@@ -236,12 +283,55 @@
     const name = window.prompt?.('Bookmark名', `Bookmark ${((model.document.bookmarks || []).length || 0) + 1}`);
     if (name !== null && String(name).trim()) controller.actions.addBookmark(resolved.cycle, { name: String(name).trim() });
   });
+  let suppressNextCanvasClick = false;
   cycleCanvas?.addEventListener('click', event => {
+    if (suppressNextCanvasClick) {
+      suppressNextCanvasClick = false;
+      event.preventDefault();
+      return;
+    }
     if (event.button !== 0 || event.defaultPrevented) return;
     const target = event.target;
     if (target.closest('.ruler, .canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea')) return;
     if (!target.closest('.wave, .wave-row, .trace')) return;
     controller.actions.selectTimeAtCanvasX(event.clientX, { shiftKey: event.shiftKey });
+  });
+  let rangeGesture = null;
+  const isRangeTarget = target => target && !target.closest('.ruler, .canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea') && target.closest('.wave, .wave-row, .trace');
+  cycleCanvas?.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || !isRangeTarget(event.target)) return;
+    const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
+    if (!resolved) return;
+    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, moved: false };
+    try { cycleCanvas.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
+    model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: resolved.cycle, rangeEnd: null, source: 'canvas-drag' };
+    renderTransient(model);
+  });
+  cycleCanvas?.addEventListener('pointermove', event => {
+    if (!rangeGesture) return;
+    const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
+    if (!resolved) return;
+    if (resolved.cycle !== rangeGesture.start) rangeGesture.moved = true;
+    controller.actions.selectTimeRange(rangeGesture.start, resolved.cycle, { source: 'canvas-drag' });
+  });
+  const finishRangeGesture = event => {
+    if (!rangeGesture) return;
+    const current = rangeGesture; rangeGesture = null; try { cycleCanvas.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be released */ }
+    if (!current.moved) {
+      model.timeSelection.rangeStart = null;
+      model.timeSelection.rangeEnd = null;
+      renderTransient(model);
+      suppressNextCanvasClick = true;
+      controller.actions.selectTimeAtCanvasX(current.clientX, { shiftKey: event.shiftKey });
+    } else {
+      suppressNextCanvasClick = true;
+    }
+  };
+  cycleCanvas?.addEventListener('pointerup', finishRangeGesture);
+  cycleCanvas?.addEventListener('pointercancel', finishRangeGesture);
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape' || (!model.timeSelection?.rangeStart && model.timeSelection?.rangeStart !== 0)) return;
+    model.timeSelection.rangeStart = null; model.timeSelection.rangeEnd = null; renderTransient(model);
   });
   (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderScrollTransient(model), { passive: true });
   if (cycleCanvas && window.ResizeObserver) new ResizeObserver(() => scheduleTransientLayout(model)).observe(cycleCanvas);
@@ -251,6 +341,6 @@
   tool('Cycle挿入')?.addEventListener('click', () => insert(model.timeSelection.cycle, 1));
   tool('Cycle削除')?.addEventListener('click', () => removeRange(model.timeSelection.cycle, model.timeSelection.cycle + 1));
   tool('NCycle挿入')?.addEventListener('click', () => { const count = promptCycle('挿入するCycle数', 2); insert(model.timeSelection.cycle, count); });
-  tool('範囲削除')?.addEventListener('click', () => { const end = promptCycle('削除終了Cycle（exclusive）', model.timeSelection.cycle + 1); removeRange(model.timeSelection.cycle, end); });
+  tool('範囲削除')?.addEventListener('click', () => { const start = Number(model.timeSelection?.rangeStart); const end = Number(model.timeSelection?.rangeEnd); if (Number.isInteger(start) && Number.isInteger(end) && end > start) controller.actions.deleteRange(start, end); });
   renderTransient(model);
 })();
