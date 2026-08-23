@@ -1,5 +1,6 @@
 {
   "issue": 25,
+  "regression": "role badge backgrounds and Comment Row SVG parity",
   "intentionalVisualDelta": true,
   "goldenReferenceModified": false,
   "stylesModified": false,
@@ -10,14 +11,37 @@
         "width": 1672,
         "height": 941
       },
+      "startupRoleBadges": true,
+      "frozenScrollPx": 300,
+      "frozenRoleBadges": true,
       "commentIcon": "icons.svg#i-comment",
+      "dynamicSequentialOpen": [
+        {
+          "fileName": "01_apb_register_access.tcd.json",
+          "dynamicComment": "issue25_comment_0",
+          "roles": 20,
+          "commentIcons": 2
+        },
+        {
+          "fileName": "02_ahb_lite_pipelined_transfer.tcd.json",
+          "dynamicComment": "issue25_comment_1",
+          "roles": 22,
+          "commentIcons": 2
+        },
+        {
+          "fileName": "03_axi4_full_write_burst.tcd.json",
+          "dynamicComment": "issue25_comment_2",
+          "roles": 36,
+          "commentIcons": 2
+        }
+      ],
       "labelGapPx": 4,
       "canonicalUnchanged": true,
-      "waveDromTracePreserved": true,
+      "waveDromGeometryUnchangedByScroll": true,
       "visualDelta": {
-        "changedPixels": 42931,
+        "changedPixels": 147825,
         "totalPixels": 1573352,
-        "diffPercent": 0.0272863288062684
+        "diffPercent": 0.09395545307089577
       }
     },
     {
@@ -25,10 +49,33 @@
         "width": 1280,
         "height": 720
       },
+      "startupRoleBadges": true,
+      "frozenScrollPx": 300,
+      "frozenRoleBadges": true,
       "commentIcon": "icons.svg#i-comment",
+      "dynamicSequentialOpen": [
+        {
+          "fileName": "01_apb_register_access.tcd.json",
+          "dynamicComment": "issue25_comment_0",
+          "roles": 20,
+          "commentIcons": 2
+        },
+        {
+          "fileName": "02_ahb_lite_pipelined_transfer.tcd.json",
+          "dynamicComment": "issue25_comment_1",
+          "roles": 22,
+          "commentIcons": 2
+        },
+        {
+          "fileName": "03_axi4_full_write_burst.tcd.json",
+          "dynamicComment": "issue25_comment_2",
+          "roles": 36,
+          "commentIcons": 2
+        }
+      ],
       "labelGapPx": 4,
       "canonicalUnchanged": true,
-      "waveDromTracePreserved": true,
+      "waveDromGeometryUnchangedByScroll": true,
       "visualDelta": null
     }
   ],

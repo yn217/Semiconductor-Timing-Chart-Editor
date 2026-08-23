@@ -13,7 +13,7 @@
     #cycleCanvas[data-frozen-labels] > .timing-scroll-pane > .wave { min-width:920px; }
     #cycleCanvas[data-frozen-labels] .canvas-icon,
     #cycleCanvas[data-frozen-labels] .signal-label { position:sticky; }
-    #cycleCanvas[data-frozen-labels] .canvas-icon { left:14px; z-index:6; background:inherit; }
+    #cycleCanvas[data-frozen-labels] .canvas-icon { left:14px; z-index:6; }
     #cycleCanvas[data-frozen-labels] .signal-label { left:42px; z-index:5; background:inherit; }
     #cycleCanvas[data-frozen-labels] .ruler .cycle-title { position:sticky; left:14px; z-index:6; background:#fff; }
   `;
