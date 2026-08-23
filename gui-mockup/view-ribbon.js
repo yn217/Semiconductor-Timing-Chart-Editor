@@ -82,7 +82,15 @@
 
   controller.actions.setGuide = (key, enabled) => {
     if (!Object.prototype.hasOwnProperty.call(view.guides, key)) return false;
-    view.guides[key] = Boolean(enabled); apply(); refresh(); return true;
+    view.guides[key] = Boolean(enabled);
+    if (key === 'snap') {
+      const canvas = document.querySelector('#cycleCanvas');
+      if (canvas) canvas.dataset.viewSnap = view.guides.snap ? 'on' : 'off';
+      ribbon.dataset.viewState = JSON.stringify({ guides: view.guides, columns: view.columns, overlays: view.overlays, panels: view.panels });
+      refresh();
+      return true;
+    }
+    apply(); refresh(); return true;
   };
   controller.actions.toggleGuide = key => controller.actions.setGuide(key, !view.guides[key]);
 
