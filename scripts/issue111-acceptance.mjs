@@ -72,9 +72,19 @@ assert.equal(await open(future), false, 'future format was opened destructively'
 assert.deepEqual(await read(), beforeFuture, 'future format rejection mutated current document');
 const preview = await page.evaluate(() => window.TimingChartProductionController.getCompatibilityPreview());
 assert.equal(preview.sourceFormatVersion, 999);
+assert.ok(preview.diagnostics.some(item => item.code === 'OPEN_COMPATIBILITY_SUMMARY'));
+assert.ok(preview.diagnostics.some(item => item.code === 'OPEN_UNKNOWN_OPTIONAL_FIELD'));
+assert.equal(await page.locator('#compatibilityPreview').count(), 1, 'Compatibility Preview UI was not shown');
+assert.match(await page.locator('[data-compatibility-details]').textContent(), /OPEN_COMPATIBILITY_SUMMARY/);
+await page.locator('[data-compatibility-action="copy"]').click();
+assert.equal(await page.locator('[data-compatibility-action="copy"]').getAttribute('data-copied'), 'true');
 assert.equal(await page.evaluate(async text => window.TimingChartProductionController.actions.openCompatibilityText(text, { fileName: 'future-compatible.tcd' }), JSON.stringify(future)), true, 'Compatibility Mode open failed');
 assert.equal((await page.evaluate(() => window.TimingChartProductionController.getCompatibilityPreview())).mode, 'compatibility');
 assert.ok((await page.evaluate(() => window.TimingChartProductionController.prepareSaveText())).error, 'Compatibility Mode Save was not protected');
+const invalidJson = await page.evaluate(async () => window.TimingChartProductionController.actions.openText('{\n  "formatVersion": 3,\n  ]', { fileName: 'invalid.tcd', unsavedDecision: 'discard' }));
+assert.equal(invalidJson, false);
+const syntaxPreview = await page.evaluate(() => window.TimingChartProductionController.getCompatibilityPreview());
+assert.ok(syntaxPreview === null || syntaxPreview.diagnostics.some(item => item.code === 'OPEN_JSON_SYNTAX'), 'Invalid JSON diagnostics missing');
 
 const nan = structuredClone(beforeFuture);
 nan.bookmarks = [{ id: 'bm_nan', name: 'bad', start: Number.NaN }];

@@ -150,6 +150,57 @@
 
   controller.normalizeExternalDocument = normalizeExternalDocument;
   controller.getImportWarnings = () => clone(model.importWarnings || []);
+  const canonicalTopLevel = new Set(['formatVersion', 'document', 'timeline', 'signalGroups', 'signals', 'bookmarks', 'timeGroups', 'annotations', 'legend', 'layout', 'transactions', 'constraints', 'checkSettings']);
+  const parseSyntaxDiagnostic = (error, text) => {
+    const match = String(error?.message || '').match(/position (\d+)/i);
+    const position = match ? Number(match[1]) : null;
+    const prefix = position === null ? '' : text.slice(0, position);
+    const line = position === null ? undefined : (prefix.match(/\n/g) || []).length + 1;
+    const column = position === null ? undefined : position - prefix.lastIndexOf('\n');
+    return { code: 'OPEN_JSON_SYNTAX', severity: 'blocking', path: '$', ...(line ? { line, column } : {}), message: 'JSON syntax error', reason: String(error?.message || 'Invalid JSON'), recommendation: 'Correct the JSON syntax and try again.' };
+  };
+  const issueDiagnostic = issue => ({
+    code: ({ 'format-version': 'OPEN_FORMAT_VERSION', 'invalid-reference-clock': 'OPEN_BROKEN_REFERENCE', 'duplicate-signal-id': 'OPEN_DUPLICATE_ID', 'duplicate-annotation-id': 'OPEN_DUPLICATE_ID', 'duplicate-transaction-id': 'OPEN_DUPLICATE_ID', 'invalid-timeline-edge': 'OPEN_INVALID_TIMELINE', 'invalid-time-group': 'OPEN_INVALID_TIME_GROUP', 'invalid-time-group-fold-style': 'OPEN_UNSUPPORTED_PRESENTATION', 'invalid-label-anchor': 'OPEN_INVALID_LABEL_ANCHOR', 'invalid-label-anchor-owner': 'OPEN_BROKEN_REFERENCE', 'invalid-resume-label-anchor': 'OPEN_BROKEN_REFERENCE' }[issue.code] || 'OPEN_SCHEMA_ERROR'), severity: 'blocking', path: issue.path || '$', ...(issue.id ? { objectId: issue.id } : {}), actual: issue.value, message: issue.message || issue.code, reason: `The document violates the canonical v2 contract at ${issue.path || '$'}.`, recommendation: 'Repair the field or open a supported copy from the producing application.' });
+  const analyzeCompatibility = input => {
+    const text = typeof input === 'string' ? input : JSON.stringify(input);
+    let parsed;
+    try { parsed = typeof input === 'string' ? JSON.parse(input) : clone(input); } catch (error) { return { sourceFormatVersion: undefined, diagnostics: [parseSyntaxDiagnostic(error, text)], canOpen: false, rawText: text }; }
+    const version = Number(parsed?.formatVersion);
+    if (!Number.isInteger(version) || version <= 2) return { sourceFormatVersion: version, diagnostics: [], canOpen: true, projected: parsed };
+    const diagnostics = [];
+    for (const key of Object.keys(parsed || {})) if (!canonicalTopLevel.has(key)) diagnostics.push({ code: 'OPEN_UNKNOWN_OPTIONAL_FIELD', severity: 'cannot-reproduce', path: `$.${key}`, actual: typeof parsed[key], message: `Unknown top-level field '${key}' will not be editable.`, reason: 'This application has no canonical owner for the field.', recommendation: 'Keep the original source file; save only to a separate compatible copy.' });
+    const projectedSource = clone(parsed);
+    projectedSource.formatVersion = 2;
+    const knownAnnotationTypes = new Set(['range', 'marker', 'text', 'callout', 'dependency', 'verticalLine', 'bracket', 'highlight']);
+    for (const [index, annotation] of (projectedSource.annotations || []).entries()) if (!knownAnnotationTypes.has(annotation?.type)) {
+      diagnostics.push({ code: 'OPEN_UNSUPPORTED_ANNOTATION_TYPE', severity: 'cannot-reproduce', path: `$.annotations[${index}].type`, objectId: annotation?.id, actual: annotation?.type, message: `Annotation type '${annotation?.type}' will use text fallback.`, reason: 'The annotation semantic type is not implemented in this version.', recommendation: 'Review the fallback annotation before saving a compatible copy.' });
+      annotation.type = 'text';
+    }
+    for (const [index, group] of (projectedSource.timeGroups || []).entries()) {
+      const style = group?.presentation?.foldStyle;
+      if (style !== undefined && !['none', 'compact', 'axis-break'].includes(style)) {
+        diagnostics.push({ code: 'OPEN_UNSUPPORTED_FOLD_STYLE', severity: 'cannot-reproduce', path: `$.timeGroups[${index}].presentation.foldStyle`, objectId: group?.id, actual: style, message: `Time Group foldStyle '${style}' will fall back to 'none'.`, reason: 'The renderer has no equivalent fold style.', recommendation: 'Review the compatible copy visually.' });
+        group.presentation.foldStyle = 'none';
+      }
+    }
+    const timeBase = projectedSource.timeline?.timeBase;
+    if (timeBase !== undefined && !['cycle', 'ns'].includes(timeBase)) diagnostics.push({ code: 'OPEN_UNKNOWN_TIME_BASE', severity: 'blocking', path: '$.timeline.timeBase', actual: timeBase, message: `Mandatory time base '${timeBase}' cannot be interpreted safely.`, reason: 'Source-time positions cannot be mapped to cycle/ns semantics.', recommendation: 'Convert the file to cycle or ns using the producing application.' });
+    try {
+      const projected = normalizeExternalDocument(projectedSource);
+      const issues = controller.validateDocument(projected);
+      for (const issue of issues) diagnostics.push(issueDiagnostic(issue));
+      const blocking = diagnostics.some(item => item.severity === 'blocking');
+      const signalCount = (projected.signals || []).filter(signal => signal.type !== 'commentRow').length;
+      const bookmarkCount = (projected.bookmarks || []).length;
+      const timeGroupCount = (projected.timeGroups || []).length;
+      diagnostics.unshift({ code: 'OPEN_COMPATIBILITY_SUMMARY', severity: 'info', path: '$.formatVersion', message: `Format version ${version}; application supports through 2.`, reason: `Can reproduce signals ${signalCount}/${signalCount}, bookmarks ${bookmarkCount}/${bookmarkCount}, time groups ${timeGroupCount}/${timeGroupCount}.`, recommendation: blocking ? 'Cancel and repair blocking diagnostics.' : 'Review degraded items before opening.' });
+      return { sourceFormatVersion: version, diagnostics, canOpen: !blocking, projected, rawText: text };
+    } catch (error) {
+      diagnostics.push({ code: 'OPEN_UNRECOVERABLE_STRUCTURE', severity: 'blocking', path: '$', message: 'The document structure could not be normalized safely.', reason: error.message, recommendation: 'Repair the source document before opening it.' });
+      return { sourceFormatVersion: version, diagnostics, canOpen: false, rawText: text };
+    }
+  };
+  controller.analyzeCompatibility = analyzeCompatibility;
   const originalGetProblems = controller.getProblems;
   controller.getProblems = documentValue => {
     const issues = originalGetProblems(documentValue);

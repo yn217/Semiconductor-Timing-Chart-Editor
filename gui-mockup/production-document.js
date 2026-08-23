@@ -40,7 +40,33 @@
     model.persistence.lastError = result === 'error' ? detail || message : null;
     renderOperationStatus();
   };
+  const compatibilityDetails = preview => {
+    const lines = [`Format version: ${preview.sourceFormatVersion} (supported through 2)`];
+    for (const item of preview.diagnostics || []) lines.push(`[${item.severity}] ${item.code} ${item.path || '$'}${item.objectId ? ` (${item.objectId})` : ''}: ${item.message}${item.reason ? ` ${item.reason}` : ''}${item.recommendation ? ` Recommendation: ${item.recommendation}` : ''}`);
+    return lines.join('\n');
+  };
+  const removeCompatibilityPreview = () => document.querySelector('#compatibilityPreview')?.remove();
+  const renderCompatibilityPreview = () => {
+    removeCompatibilityPreview();
+    const preview = model.compatibility;
+    if (!preview || preview.mode !== 'preview') return;
+    const panel = document.createElement('section');
+    panel.id = 'compatibilityPreview';
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-labelledby', 'compatibilityPreviewTitle');
+    panel.style.cssText = 'position:fixed;z-index:4000;inset:12% 20%;background:#fff;border:1px solid #9aaabd;border-radius:6px;box-shadow:0 16px 48px #10243b55;padding:18px;overflow:auto;font:13px sans-serif;color:#243047;';
+    const title = document.createElement('h2'); title.id = 'compatibilityPreviewTitle'; title.textContent = preview.canOpen ? 'Compatibility Preview' : 'Cannot open in Compatibility Mode'; title.style.margin = '0 0 10px'; panel.appendChild(title);
+    const intro = document.createElement('p'); intro.textContent = preview.canOpen ? 'The source is newer than this application. Review exact, degraded, and unsupported content before opening.' : 'The source could not be safely reconstructed. The current document remains unchanged.'; panel.appendChild(intro);
+    const report = document.createElement('pre'); report.dataset.compatibilityDetails = 'true'; report.textContent = compatibilityDetails(preview); report.style.cssText = 'white-space:pre-wrap;background:#f5f8fb;border:1px solid #d7e0ea;padding:10px;max-height:52vh;overflow:auto;'; panel.appendChild(report);
+    const actions = document.createElement('div'); actions.style.cssText = 'display:flex;gap:8px;justify-content:flex-end;margin-top:12px;';
+    const copy = document.createElement('button'); copy.type = 'button'; copy.dataset.compatibilityAction = 'copy'; copy.textContent = 'Copy details'; copy.addEventListener('click', () => { void navigator.clipboard?.writeText(compatibilityDetails(preview)).catch(() => {}); copy.dataset.copied = 'true'; });
+    const cancel = document.createElement('button'); cancel.type = 'button'; cancel.dataset.compatibilityAction = 'cancel'; cancel.textContent = 'Cancel'; cancel.addEventListener('click', () => { model.compatibility = null; removeCompatibilityPreview(); publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); });
+    actions.append(copy, cancel);
+    if (preview.canOpen) { const open = document.createElement('button'); open.type = 'button'; open.dataset.compatibilityAction = 'open'; open.textContent = 'Open in Compatibility Mode'; open.addEventListener('click', async () => { await controller.actions.openCompatibilityText(preview.rawText, { fileName: preview.fileName || 'compatibility-preview.tcd' }); }); actions.append(open); }
+    panel.appendChild(actions); document.body.appendChild(panel);
+  };
   controller.publishOperation = publishOperation;
+  controller.renderCompatibilityPreview = renderCompatibilityPreview;
 
   const updateDirty = () => {
     model.persistence.dirty = hash(controller.getSerializableDocument()) !== model.persistence.savedRevisionHash;
@@ -147,13 +173,15 @@
   const commitSaveSuccess = ({ fileHandle = model.persistence.fileHandle, fileName = model.persistence.fileName, documentHash }) => {
     model.persistence.fileHandle = fileHandle;
     model.persistence.fileName = fileName;
+    model.compatibility = null;
+    removeCompatibilityPreview();
     model.persistence.savedRevisionHash = documentHash;
     model.persistence.lastError = null;
     publishOperation({ type: 'save', result: 'success', message: `✓ Saved: ${fileName}` });
     updateDirty();
   };
-  const prepareSaveText = () => {
-    if (model.compatibility?.saveBlocked) return { error: 'Cannot save a Compatibility Mode document until a compatible target is explicitly established.' };
+  const prepareSaveText = ({ allowCompatibility = false } = {}) => {
+    if (model.compatibility?.saveBlocked && !allowCompatibility) return { error: 'Cannot save a Compatibility Mode document until a compatible target is explicitly established.' };
     let serializable;
     try { serializable = controller.getSerializableDocument(); } catch (error) { return { error: `Cannot save invalid document: ${error.message}` }; }
     const issues = controller.validateDocument(serializable);
@@ -186,25 +214,23 @@
   const loadText = async (text, fileName = 'example.tcd', unsavedDecision = 'cancel') => {
     if (!await protect(unsavedDecision)) return false;
     let parsed;
-    try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; if (future) model.compatibility = { mode: 'preview', sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'newer-format-version', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), expected: 2, recommendation: 'Open in Compatibility Mode or cancel.' }] }; publishOperation({ type: 'open', result: 'error', message: future ? '✕ Newer file format' : '✕ Could not open file', detail: future ? `${error.message}. The current document was left unchanged.` : `Invalid JSON: ${error.message}` }); return false; }
+    try { parsed = JSON.parse(text); parsed = controller.normalizeExternalDocument(parsed); } catch (error) { const future = error?.code === 'future-format-version'; const preview = controller.analyzeCompatibility?.(text); if (future || preview?.diagnostics?.length) { const fallback = preview || { sourceFormatVersion: Number(error.parsed?.formatVersion), diagnostics: [{ code: 'OPEN_FORMAT_VERSION', severity: 'blocking', path: '$.formatVersion', actual: Number(error.parsed?.formatVersion), message: error.message, reason: 'The source is newer than the supported format.', recommendation: 'Open in Compatibility Mode or cancel.' }], canOpen: false, rawText: text }; model.compatibility = { mode: 'preview', ...fallback, fileName }; controller.renderCompatibilityPreview?.(); publishOperation({ type: 'open', result: 'error', message: future ? '✕ Compatibility Preview' : '✕ Open diagnostics', detail: `${fallback.diagnostics?.length || 1} diagnostics available.` }); return false; } publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: `Invalid JSON: ${error.message}` }); return false; }
     const issues = controller.validateDocument(parsed);
     if (parsed?.formatVersion !== 2 || issues.length) { const detail = `Invalid .tcd document: ${issues.map(issue => issue.code).join(', ') || 'unsupported formatVersion'}`; model.validation = issues; publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail, action: issues.length ? 'problems' : '' }); return false; }
     replaceDocument(parsed); model.persistence.fileName = fileName; model.persistence.fileHandle = null; model.persistence.savedRevisionHash = hash(controller.getSerializableDocument()); model.persistence.dirty = false; const importWarnings = controller.getImportWarnings?.() || []; publishOperation({ type: 'open', result: importWarnings.length ? 'warning' : 'success', message: `✓ Opened: ${fileName}`, detail: importWarnings.length ? importWarnings.map(warning => `${warning.path}: ${warning.reason}`).join('\n') : '' }); updateDirty(); return true;
   };
   controller.actions.openText = (text, options = {}) => loadText(text, options.fileName || 'example.tcd', options.unsavedDecision || 'cancel');
   controller.actions.openCompatibilityText = async (text, options = {}) => {
-    let parsed;
     try {
-      parsed = JSON.parse(text);
-      if (Number(parsed?.formatVersion) <= 2) return false;
-      const sourceVersion = Number(parsed.formatVersion);
-      parsed = controller.normalizeExternalDocument({ ...parsed, formatVersion: 2 });
-      const issues = controller.validateDocument(parsed);
-      if (issues.length) return false;
+      const analysis = controller.analyzeCompatibility?.(text);
+      if (!analysis?.canOpen || !analysis.projected) return false;
+      const sourceVersion = Number(analysis.sourceFormatVersion);
+      const parsed = analysis.projected;
       replaceDocument(parsed);
-      model.compatibility = { mode: 'compatibility', sourceFormatVersion: sourceVersion, saveBlocked: true, diagnostics: [{ code: 'opened-in-compatibility-mode', severity: 'warning', path: '$.formatVersion', actual: sourceVersion, expected: 2, recommendation: 'Save is blocked until a new compatible target is explicitly established.' }] };
+      model.compatibility = { mode: 'compatibility', sourceFormatVersion: sourceVersion, saveBlocked: true, diagnostics: analysis.diagnostics, rawText: text, fileName: options.fileName || 'compatibility-preview.tcd' };
       model.persistence.fileName = options.fileName || 'compatibility-preview.tcd';
       model.persistence.dirty = false;
+      removeCompatibilityPreview();
       publishOperation({ type: 'open', result: 'warning', message: `⚠ Opened in Compatibility Mode: ${model.persistence.fileName}`, detail: 'Save is blocked to protect newer fields.' });
       updateDirty();
       return true;
@@ -215,12 +241,13 @@
     if (window.showOpenFilePicker) { try { const [handle] = await window.showOpenFilePicker({ types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const file = await handle.getFile(); const result = await loadText(await file.text(), file.name, unsavedDecision); if (result) model.persistence.fileHandle = handle; return result; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'open', result: 'neutral', message: 'Open canceled' }); else publishOperation({ type: 'open', result: 'error', message: '✕ Could not open file', detail: error.message }); return false; } }
     const input = document.createElement('input'); input.type = 'file'; input.accept = '.tcd,application/json'; input.hidden = true; document.body.appendChild(input); input.click(); return new Promise(resolve => { input.addEventListener('change', async () => { const file = input.files?.[0]; const result = file ? await loadText(await file.text(), file.name, unsavedDecision) : false; input.remove(); resolve(result); }, { once: true }); });
   };
-  controller.actions.saveAs = async ({ fileName = 'Untitled.tcd' } = {}) => {
-    const prepared = prepareSaveText(); if (prepared.error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: prepared.error, action: 'problems' }); return false; }
+  controller.actions.saveAs = async ({ fileName = 'Untitled.tcd', allowCompatibility = false } = {}) => {
+    const prepared = prepareSaveText({ allowCompatibility }); if (prepared.error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: prepared.error, action: 'problems' }); return false; }
     if (window.showSaveFilePicker) { try { const handle = await window.showSaveFilePicker({ suggestedName: fileName, types: [{ description: 'Timing Chart', accept: { 'application/json': ['.tcd'] } }] }); const writable = await handle.createWritable(); await writable.write(prepared.text); await writable.close(); commitSaveSuccess({ fileHandle: handle, fileName, documentHash: prepared.documentHash }); return true; } catch (error) { if (error.name === 'AbortError') publishOperation({ type: 'save', result: 'neutral', message: 'Save canceled' }); else publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: error.message }); return false; } }
     const blob = new Blob([prepared.text], { type: 'application/json;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = fileName.endsWith('.tcd') ? fileName : `${fileName}.tcd`; link.hidden = true; document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); commitSaveSuccess({ fileHandle: null, fileName: link.download, documentHash: prepared.documentHash }); return true;
   };
   controller.actions.save = async () => {
+    if (model.compatibility?.saveBlocked) return controller.actions.saveAs({ fileName: model.persistence.fileName.replace(/\.tcd$/i, '') + '_compatible_v2.tcd', allowCompatibility: true });
     const prepared = prepareSaveText(); if (prepared.error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: prepared.error, action: 'problems' }); return false; }
     if (model.persistence.fileHandle) { try { const writable = await model.persistence.fileHandle.createWritable(); await writable.write(prepared.text); await writable.close(); commitSaveSuccess({ fileHandle: model.persistence.fileHandle, fileName: model.persistence.fileName, documentHash: prepared.documentHash }); return true; } catch (error) { publishOperation({ type: 'save', result: 'error', message: '✕ Cannot save', detail: error.message }); return false; } }
     return controller.actions.saveAs({ fileName: model.persistence.fileName });

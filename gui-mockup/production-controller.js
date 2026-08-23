@@ -150,7 +150,7 @@
   });
   controller.selectors = { getSignals, getSignal, getTimeline, getComments, getGroupRows, getReferenceClock };
   controller.getSerializableDocument = () => serializeDocument(model.document);
-  controller.getCompatibilityPreview = () => model.compatibility ? structuredClone(model.compatibility) : null;
+  controller.getCompatibilityPreview = () => { if (!model.compatibility) return null; const { rawText, ...publicPreview } = model.compatibility; return structuredClone(publicPreview); };
   controller.validateDocument = documentValue => {
     const issues = [];
     const candidateSignals = documentValue?.signals || [];
