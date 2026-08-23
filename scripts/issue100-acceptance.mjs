@@ -1,0 +1,58 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright';
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const out = path.join(root, 'artifacts', 'issue100');
+await fs.mkdir(out, { recursive: true });
+const browser = await chromium.launch({ headless: true });
+const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
+const errors = [];
+page.on('pageerror', error => errors.push(error.stack || error.message));
+await page.goto(`file://${path.join(root, 'gui-mockup', 'index.html').replaceAll('\\', '/')}`);
+await page.waitForTimeout(350);
+
+const result = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  window.showOpenFilePicker = undefined;
+  const input = () => [...document.querySelectorAll('input[data-open-fallback]')].at(-1);
+  const cancel = async () => { const pending = c.actions.requestOpen({ unsavedDecision: 'discard' }); await Promise.resolve(); const node = input(); const existed = Boolean(node); node?.dispatchEvent(new Event('cancel')); const result = await pending; return { result, existed, remaining: document.querySelectorAll('input[data-open-fallback]').length }; };
+  const cancellations = [];
+  for (let index = 0; index < 20; index += 1) cancellations.push(await cancel());
+  const source = c.getSerializableDocument();
+  const validText = JSON.stringify(source);
+  const pending = c.actions.requestOpen({ unsavedDecision: 'discard' });
+  await Promise.resolve();
+  const selectedInput = input();
+  const data = new DataTransfer(); data.items.add(new File([validText], 'selected.tcd', { type: 'application/json' })); selectedInput.files = data.files; selectedInput.dispatchEvent(new Event('change'));
+  const selected = await pending;
+  const beforeDirty = JSON.stringify(c.getSerializableDocument());
+  c.actions.updateSignalValue('req_valid', 1, 'value', '0');
+  const dirtyBeforeCancel = c.model.persistence.dirty;
+  const dirtyText = JSON.stringify(c.getSerializableDocument());
+  const canceledDirty = await cancel();
+  const dirtyAfterCancel = JSON.stringify(c.getSerializableDocument());
+  const first = c.actions.requestOpen({ unsavedDecision: 'discard' }); await Promise.resolve(); const staleInput = input();
+  const second = c.actions.requestOpen({ unsavedDecision: 'discard' }); await Promise.resolve(); const currentInput = input();
+  const staleData = new DataTransfer(); staleData.items.add(new File([validText], 'stale.tcd', { type: 'application/json' })); staleInput.files = staleData.files; staleInput.dispatchEvent(new Event('change')); const staleResult = await first;
+  currentInput?.dispatchEvent(new Event('cancel')); const currentResult = await second;
+  return { cancellations, selected, afterSelectedInputs: document.querySelectorAll('input[data-open-fallback]').length, dirtyBeforeCancel, dirtyText, canceledDirty, dirtyAfterCancel, staleResult, currentResult, beforeDirty, errors: [] };
+});
+
+assert.equal(result.cancellations.length, 20);
+assert.ok(result.cancellations.every(item => item.result === false && item.existed && item.remaining === 0));
+assert.equal(result.selected, true);
+assert.equal(result.afterSelectedInputs, 0);
+assert.equal(result.dirtyBeforeCancel, true);
+assert.deepEqual(result.dirtyAfterCancel, result.dirtyText);
+assert.equal(result.canceledDirty.result, false);
+assert.equal(result.staleResult, false);
+assert.equal(result.currentResult, false);
+assert.equal(errors.length, 0, errors.join('\n'));
+await page.screenshot({ path: path.join(out, 'issue100-1672x941.png') });
+await browser.close();
+const acceptance = { issue: 100, cancel20: true, selectedFile: result.selected, cleanup: true, dirtyPreserved: result.dirtyBeforeCancel && result.dirtyAfterCancel === result.dirtyText, staleRace: result.staleResult === false, artifacts: ['issue100-1672x941.png'], errors, pass: true };
+await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(acceptance, null, 2)}\n`);
+console.log('Issue #100 acceptance passed: fallback Open cancellation cleanup, selected file, dirty preservation, and stale race.');

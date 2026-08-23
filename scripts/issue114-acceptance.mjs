@@ -82,24 +82,6 @@ const hit1280 = await hitTargets(page);
 await page.setViewportSize({ width: 1672, height: 941 });
 await page.waitForTimeout(150);
 
-// --- E. Dynamic Open: newly reconciled group uses the same SVG-button pattern, no fallback to glyphs ---
-const dynamicState = await page.evaluate(async () => {
-  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
-  const c = window.TimingChartProductionController;
-  const doc = structuredClone(c.getSerializableDocument());
-  doc.signalGroups.push({ id: 'group_dynamic_extra', name: 'Dynamic Extra', rows: ['clk'] });
-  const opened = await c.actions.openText(JSON.stringify(doc), { fileName: 'issue114-dynamic.tcd', unsavedDecision: 'discard' });
-  await wait(100);
-  const allMore = [...document.querySelectorAll('#groups .more')];
-  const allChev = [...document.querySelectorAll('#groups .chev')];
-  return {
-    opened,
-    moreAllSvgButtons: allMore.length > 0 && allMore.every(m => m.tagName === 'BUTTON' && !!m.querySelector('use[href*="i-more-vertical"]')),
-    chevAllSvgButtons: allChev.length === 4 && allChev.every(el => el.tagName === 'BUTTON' && !!el.querySelector('use[href*="i-chevron"]')),
-    noLiteralAnywhere: [...allMore, ...allChev].every(el => !/[v>⌄▼▶⋮]/.test(el.textContent)),
-  };
-});
-
 // --- F. Keyboard activation (Enter/Space) for Chevron and More buttons.
 // These are real native <button> elements with no keydown handler of their
 // own, so a genuine focused Enter/Space keypress (not a synthetic click())
@@ -152,6 +134,27 @@ const selectionSafeState = await page.evaluate(async () => {
     selectionBefore, selectionAfterEye, selectionAfterMore,
     unaffectedByEye: selectionBefore === selectionAfterEye,
     moreSelectsItsOwnRow: selectionAfterMore === moreRow.dataset.signal,
+  };
+});
+
+// --- E. Dynamic Open: newly reconciled group uses the same SVG-button pattern,
+// no fallback to glyphs. Runs last: opening a document replaces/reconciles the
+// entire Left Tree DOM, which would otherwise invalidate row/group references
+// used by the checks above. ---
+const dynamicState = await page.evaluate(async () => {
+  const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const c = window.TimingChartProductionController;
+  const doc = structuredClone(c.getSerializableDocument());
+  doc.signalGroups.push({ id: 'group_dynamic_extra', name: 'Dynamic Extra', rows: ['clk'] });
+  const opened = await c.actions.openText(JSON.stringify(doc), { fileName: 'issue114-dynamic.tcd', unsavedDecision: 'discard' });
+  await wait(100);
+  const allMore = [...document.querySelectorAll('#groups .more')];
+  const allChev = [...document.querySelectorAll('#groups .chev')];
+  return {
+    opened,
+    moreAllSvgButtons: allMore.length > 0 && allMore.every(m => m.tagName === 'BUTTON' && !!m.querySelector('use[href*="i-more-vertical"]')),
+    chevAllSvgButtons: allChev.length === 4 && allChev.every(el => el.tagName === 'BUTTON' && !!el.querySelector('use[href*="i-chevron"]')),
+    noLiteralAnywhere: [...allMore, ...allChev].every(el => !/[v>⌄▼▶⋮]/.test(el.textContent)),
   };
 });
 

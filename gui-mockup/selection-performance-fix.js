@@ -172,14 +172,14 @@
     const expectedGeneration = generation;
     if (detailRaf) cancelAnimationFrame(detailRaf);
     if (detailTimer) clearTimeout(detailTimer);
+    detailRaf = 0;
+    detailTimer = 0;
 
-    // One rAF is enough to let the immediate row highlight reach the next
-    // paint. Heavy detail DOM work then runs as a separate task immediately
-    // after that paint instead of waiting for a second animation frame.
-    detailRaf = requestAnimationFrame(() => {
-      detailRaf = 0;
-      detailTimer = window.setTimeout(() => renderSelectionDetails(expectedGeneration), 0);
-    });
+    // Selection details are a localized view update, not an application
+    // render. Update them in the same event turn so a click can never leave
+    // the previous signal's editor visible while model.selection already
+    // points at the new signal. WaveDrom and the canvas remain untouched.
+    renderSelectionDetails(expectedGeneration);
   };
 
   controller.actions.selectObject = row => {

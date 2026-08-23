@@ -45,9 +45,9 @@
     "moreMenuOpenedByKeyboard": true
   },
   "selectionSafeState": {
-    "selectionBefore": "req_addr[7:0]",
-    "selectionAfterEye": "req_addr[7:0]",
-    "selectionAfterMore": "req_valid",
+    "selectionBefore": "req_valid",
+    "selectionAfterEye": "req_valid",
+    "selectionAfterMore": "clk",
     "unaffectedByEye": true,
     "moreSelectsItsOwnRow": true
   },

@@ -1,0 +1,9 @@
+{
+  "issue": 112,
+  "canonicalRows": true,
+  "rapidSelectionNewestWins": true,
+  "selectionDoesNotMutateDocument": true,
+  "waveDromRegenerations": 0,
+  "errors": [],
+  "pass": true
+}

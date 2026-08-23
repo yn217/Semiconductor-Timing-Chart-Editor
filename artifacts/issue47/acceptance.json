@@ -8,12 +8,12 @@
       "height": 698
     },
     "minimap": {
-      "top": 796,
+      "top": 812,
       "bottom": 914,
-      "height": 118
+      "height": 102
     },
     "minimapVisible": true,
-    "minimapHeight": 118,
+    "minimapHeight": 102,
     "bodyScrollable": true,
     "pageOverflow": false
   },
@@ -25,12 +25,12 @@
       "height": 698
     },
     "minimap": {
-      "top": 796,
+      "top": 812,
       "bottom": 914,
-      "height": 118
+      "height": 102
     },
     "minimapVisible": true,
-    "minimapHeight": 118,
+    "minimapHeight": 102,
     "bodyScrollable": true,
     "pageOverflow": false
   },
@@ -53,12 +53,12 @@
       "height": 477
     },
     "minimap": {
-      "top": 575,
+      "top": 591,
       "bottom": 693,
-      "height": 118
+      "height": 102
     },
     "minimapVisible": true,
-    "minimapHeight": 118,
+    "minimapHeight": 102,
     "bodyScrollable": true,
     "pageOverflow": false
   },

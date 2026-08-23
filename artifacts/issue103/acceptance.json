@@ -1,0 +1,16 @@
+{
+  "issue": 103,
+  "context": {
+    "selection": true,
+    "view": true,
+    "timeSelection": true,
+    "editor": true,
+    "followPin": true
+  },
+  "undoRedo": true,
+  "artifacts": [
+    "issue103-1672x941.png"
+  ],
+  "errors": [],
+  "pass": true
+}
