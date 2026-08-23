@@ -147,7 +147,11 @@
   const serializeAnnotation = annotation => {
     const result = { id: annotation.id, type: annotation.type, label: annotation.label || '', color: annotation.color || '#1473e6', position: annotation.position || 'canvas', comment: annotation.comment || '', visible: annotation.visible !== false };
     for (const key of ['anchor', 'start', 'end', 'from', 'to']) if (annotation[key]) result[key] = serializeAnchor(annotation[key]);
+    if (annotation.style && typeof annotation.style === 'object') result.style = structuredClone(annotation.style);
+    if (annotation.labelPlacement) result.labelPlacement = annotation.labelPlacement;
     if (annotation.labelOffset) result.labelOffset = { x: Number(annotation.labelOffset.x || 0), y: Number(annotation.labelOffset.y || 0) };
+    if (annotation.zOrder !== undefined) result.zOrder = Number(annotation.zOrder);
+    if (annotation.locked !== undefined) result.locked = Boolean(annotation.locked);
     if (annotation.labelStyle) result.labelStyle = { wrap: annotation.labelStyle.wrap !== false, ...(annotation.labelStyle.maxWidth !== undefined ? { maxWidth: Number(annotation.labelStyle.maxWidth) } : {}), ...(annotation.labelStyle.lineHeight !== undefined ? { lineHeight: Number(annotation.labelStyle.lineHeight) } : {}), align: ['left', 'center', 'right'].includes(annotation.labelStyle.align) ? annotation.labelStyle.align : 'center' };
     if (annotation.lineType) result.lineType = annotation.lineType;
     if (annotation.arrowhead) result.arrowhead = annotation.arrowhead;
@@ -252,6 +256,15 @@
       if (annotation.visible !== undefined && typeof annotation.visible !== 'boolean') issues.push({ code: 'invalid-annotation-visible', id: annotation.id });
       if (annotation.labelOffset !== undefined && (!Number.isFinite(Number(annotation.labelOffset.x || 0)) || !Number.isFinite(Number(annotation.labelOffset.y || 0)))) issues.push({ code: 'invalid-label-offset', id: annotation.id });
       if (annotation.labelStyle !== undefined && (typeof annotation.labelStyle !== 'object' || !['left', 'center', 'right'].includes(annotation.labelStyle.align || 'center') || (annotation.labelStyle.maxWidth !== undefined && (!Number.isFinite(Number(annotation.labelStyle.maxWidth)) || Number(annotation.labelStyle.maxWidth) <= 0)) || (annotation.labelStyle.lineHeight !== undefined && (!Number.isFinite(Number(annotation.labelStyle.lineHeight)) || Number(annotation.labelStyle.lineHeight) <= 0)))) issues.push({ code: 'invalid-label-style', id: annotation.id });
+      if (annotation.style !== undefined) {
+        const style = annotation.style;
+        const text = style?.text;
+        if (!style || typeof style !== 'object' || (style.strokeColor !== undefined && !/^#[0-9a-f]{6}$/i.test(String(style.strokeColor))) || (style.fillColor !== undefined && !/^#[0-9a-f]{6}$/i.test(String(style.fillColor))) || (style.strokeWidth !== undefined && (!Number.isFinite(Number(style.strokeWidth)) || Number(style.strokeWidth) <= 0)) || (style.strokeOpacity !== undefined && (!Number.isFinite(Number(style.strokeOpacity)) || Number(style.strokeOpacity) < 0 || Number(style.strokeOpacity) > 1)) || (style.fillOpacity !== undefined && (!Number.isFinite(Number(style.fillOpacity)) || Number(style.fillOpacity) < 0 || Number(style.fillOpacity) > 1)) || (style.lineStyle !== undefined && !['solid', 'dash', 'dot', 'dashDot'].includes(style.lineStyle))) issues.push({ code: 'invalid-annotation-style', id: annotation.id });
+        if (text && (typeof text !== 'object' || (text.fontSize !== undefined && (!Number.isFinite(Number(text.fontSize)) || Number(text.fontSize) <= 0)) || (text.maxWidth !== undefined && (!Number.isFinite(Number(text.maxWidth)) || Number(text.maxWidth) <= 0)) || (text.lineHeight !== undefined && (!Number.isFinite(Number(text.lineHeight)) || Number(text.lineHeight) <= 0)) || (text.align !== undefined && !['left', 'center', 'right'].includes(text.align)))) issues.push({ code: 'invalid-annotation-text-style', id: annotation.id });
+      }
+      if (annotation.labelPlacement !== undefined && !['start', 'center', 'end', 'above', 'below'].includes(annotation.labelPlacement)) issues.push({ code: 'invalid-label-placement', id: annotation.id });
+      if (annotation.zOrder !== undefined && !Number.isInteger(Number(annotation.zOrder))) issues.push({ code: 'invalid-annotation-z-order', id: annotation.id });
+      if (annotation.locked !== undefined && typeof annotation.locked !== 'boolean') issues.push({ code: 'invalid-annotation-locked', id: annotation.id });
     }
     const ids = new Set();
     for (const signal of documentValue?.signals || []) {

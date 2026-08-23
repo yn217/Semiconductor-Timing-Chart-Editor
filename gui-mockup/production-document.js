@@ -281,6 +281,7 @@
   };
   controller.prepareSaveText = prepareSaveText;
   const normalizeExternalDocument = parsed => {
+    if (parsed?.formatVersion === 2 && parsed.timeline?.cycleCount !== undefined && Array.isArray(parsed.signals) && Array.isArray(parsed.annotations)) return parsed;
     if (parsed?.formatVersion === 1 && parsed.timeline?.cycleCount && Array.isArray(parsed.signals)) return parsed;
     const sourceSignals = parsed?.cycleView?.signals || parsed?.signals || [];
     const cycleCount = Number(parsed?.document?.timebase?.cycleCount || parsed?.timeline?.cycleCount || parsed?.document?.cycleCount || 10);

@@ -101,6 +101,10 @@
       }
       if (annotation.labelOffset) result.labelOffset = { x: numberOr(annotation.labelOffset.x, 0), y: numberOr(annotation.labelOffset.y, 0) };
       if (annotation.labelStyle) result.labelStyle = clone(annotation.labelStyle);
+      if (annotation.style && typeof annotation.style === 'object') result.style = clone(annotation.style);
+      if (annotation.labelPlacement) result.labelPlacement = annotation.labelPlacement;
+      if (annotation.zOrder !== undefined) result.zOrder = Number(annotation.zOrder);
+      if (annotation.locked !== undefined) result.locked = Boolean(annotation.locked);
       if (type === 'dependency') { result.lineType = annotation.lineType || annotation.line || 'orthogonal'; result.arrowhead = annotation.arrowhead || annotation.arrow || 'end'; }
       if (annotation.scope !== undefined) warn(`$.cycleView.annotations[${index}].scope`, 'Annotation scope is not part of the canonical annotation schema');
       return result;
