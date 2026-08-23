@@ -221,6 +221,32 @@ assert.equal(splitCrossHighlight.cycleHighlighted, true, 'a linked Signal must b
 assert.equal(splitCrossHighlight.treeHighlighted, true);
 assert.equal(splitCrossHighlight.clearedAfterDelete, true, 'cross-highlight must not persist as a stale class once the Transaction is gone');
 
+// --- Open lifecycle (#51): a Transaction selection and its cross-highlight from the previous document must never survive opening a new one ---
+const openLifecycle = await page.evaluate(async () => {
+  const c = window.TimingChartProductionController;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const signal = c.model.document.signals.find(s => s.type === 'binary');
+  c.actions.addTransaction();
+  await wait(60);
+  const txn = c.model.document.transactions.find(t => t.id === c.model.selection.id);
+  c.actions.updateTransaction(txn.id, 'linkedSignals', [signal.id]);
+  c.actions.selectTransaction(txn.id);
+  await wait(60);
+  const newDoc = structuredClone(c.getSerializableDocument());
+  newDoc.transactions = [];
+  const ok = await c.actions.openText(JSON.stringify(newDoc), { fileName: 'issue77-lifecycle.tcd', unsavedDecision: 'discard' });
+  await wait(150);
+  const selectionIsStaleTransaction = c.model.selection?.kind === 'transaction';
+  const crossHighlightReferencesGoneSignal = (c.model.crossHighlight || []).length > 0;
+  const staleCanvasHighlight = Boolean(document.querySelector(`#cycleCanvas .wave-row.selected[data-signal="${signal.id}"]`));
+  return { ok, txnCountAfter: c.model.document.transactions.length, selectionIsStaleTransaction, crossHighlightReferencesGoneSignal, staleCanvasHighlight };
+});
+assert.equal(openLifecycle.ok, true);
+assert.equal(openLifecycle.txnCountAfter, 0);
+assert.equal(openLifecycle.selectionIsStaleTransaction, false, 'Open must not leave selection pointing at a Transaction from the previous document');
+assert.equal(openLifecycle.crossHighlightReferencesGoneSignal, false, 'Open must clear cross-highlight state from the previous document');
+assert.equal(openLifecycle.staleCanvasHighlight, false, 'no stale cross-highlight class may survive on a freshly reconciled Cycle View row after Open');
+
 // --- Regression guard: this must not have collided with the unrelated Home Ribbon Signal reorder / Cut/Copy/Paste/Delete/Duplicate buttons ---
 const homeRegression = await page.evaluate(async () => {
   const c = window.TimingChartProductionController;
@@ -255,10 +281,11 @@ const pass = setup
   && revealFlow.disabledNoSelection && revealFlow.disabledNoLinks && revealFlow.enabledWithLinks && revealFlow.modeAfterClick === 'split' && revealFlow.unchanged
   && rangeFlow.disabledNoSelection && rangeFlow.disabledNoRange && rangeFlow.enabledWithRange && rangeFlow.undoDelta === 1 && rangeFlow.start === rangeFlow.before.start + 1 && rangeFlow.end === rangeFlow.before.end + 4 && !rangeFlow.phaseIssue
   && splitCrossHighlight.cycleHighlighted && splitCrossHighlight.treeHighlighted && splitCrossHighlight.clearedAfterDelete
+  && openLifecycle.ok && openLifecycle.txnCountAfter === 0 && !openLifecycle.selectionIsStaleTransaction && !openLifecycle.crossHighlightReferencesGoneSignal && !openLifecycle.staleCanvasHighlight
   && homeRegression.foundHomeButtons && homeRegression.signalDuplicateStillWorks
   && errors.length === 0;
 
-const report = { issue: '77 (Transaction operations + Time + Links Ribbon groups, plus Split-mode Cycle View cross-highlight -- not the full Transaction Ribbon spec)', setup, buttons, disabledState, duplicateFlow, reorderFlow, deleteFlow, revealFlow, rangeFlow, splitCrossHighlight, homeRegression, errors, pass, artifacts: ['issue77-ribbon-ops-1672x941.png'] };
+const report = { issue: '77 (Transaction operations + Time + Links Ribbon groups, Split-mode Cycle View cross-highlight, and Open lifecycle -- not the full Transaction Ribbon spec)', setup, buttons, disabledState, duplicateFlow, reorderFlow, deleteFlow, revealFlow, rangeFlow, splitCrossHighlight, openLifecycle, homeRegression, errors, pass, artifacts: ['issue77-ribbon-ops-1672x941.png'] };
 await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(report, null, 2)}\n`);
 
 assert.ok(pass, JSON.stringify(report, null, 2));
