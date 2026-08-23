@@ -1,0 +1,72 @@
+{
+  "issue": 105,
+  "fullState": {
+    "band": "full",
+    "triggerCount": 0,
+    "scrollNeeded": true
+  },
+  "compactState": {
+    "band": "compact",
+    "coreReachable": true,
+    "scrollNeeded": false,
+    "triggers": [
+      "行操作",
+      "行操作",
+      "時間軸",
+      "レイアウト",
+      "表示"
+    ],
+    "visibleGroupTitles": [
+      "ファイル",
+      "編集",
+      "ズーム"
+    ],
+    "coreToolCount": 6
+  },
+  "overflowResult": {
+    "opened": true,
+    "withinViewport": true,
+    "tools": [
+      {
+        "label": "行間隔",
+        "disabled": true,
+        "hasTitle": true
+      },
+      {
+        "label": "Group間隔",
+        "disabled": true,
+        "hasTitle": true
+      },
+      {
+        "label": "自動レイアウト",
+        "disabled": true,
+        "hasTitle": true
+      }
+    ],
+    "ariaExpanded": "true"
+  },
+  "afterEscape": {
+    "openCount": 0,
+    "focusedIsTrigger": true
+  },
+  "restoredState": {
+    "band": "full",
+    "triggerCount": 0,
+    "scrollNeeded": true
+  },
+  "zoomClickResult": {
+    "calls": 1,
+    "before": 100,
+    "after": 110
+  },
+  "tabSwitchState": {
+    "homeScrollAfterReturn": 0,
+    "insertScrollAfterShow": 0
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue105-1672x941.png",
+    "issue105-1280x720.png"
+  ]
+}

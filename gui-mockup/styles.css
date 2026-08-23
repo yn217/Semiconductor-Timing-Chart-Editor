@@ -16,3 +16,15 @@ button,input,select,textarea{font:inherit}.app{height:100%;min-width:1280px;disp
 .status{height:27px;border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;background:#fbfcfe;color:#4c5a6c;font-size:11px}.status .spacer{flex:1}.status span{margin-left:24px}
 .hidden{display:none!important}.transaction-canvas{padding:18px}.txn-lane{display:grid;grid-template-columns:140px 1fr;min-height:72px;border-bottom:1px solid #edf0f4;align-items:center}.txnbar{height:52px;border:1px solid #4f8fea;border-radius:6px;background:#f3f8ff;position:relative;display:flex}.txnbar.green{border-color:#57a767;background:#f1faf3}.txnbar.purple{border-color:#8d62d8;background:#f8f3ff}.phase{flex:1;border-right:1px solid #aebfd6;display:flex;align-items:center;justify-content:center;text-align:center;font-size:11px}.phase:last-child{border-right:0}
 @media(max-width:1400px){:root{--left:280px;--right:270px}.tool{min-width:42px}.wave-row{grid-template-columns:26px 130px 1fr}.ruler{grid-template-columns:156px repeat(11,1fr)}}
+.ribbon-overflow-trigger{border:1px solid var(--line2);background:#fff;min-width:56px;height:74px;margin:10px 6px 22px 0;padding:4px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:4px;color:#243047;cursor:pointer}
+.ribbon-overflow-trigger:hover,.ribbon-overflow-trigger[aria-expanded="true"]{background:#f1f6fc;border-color:var(--blue)}
+.ribbon-overflow-trigger .tool-label{font-size:11px;line-height:1.25;text-align:center}
+.ribbon-overflow-menu{position:fixed;left:-9999px;top:-9999px;z-index:2200;min-width:200px;max-width:340px;max-height:70vh;overflow:auto;background:#fff;border:1px solid #b8c5d4;border-radius:6px;box-shadow:0 8px 24px #0003;padding:6px;display:none}
+.ribbon-overflow-menu.open{display:block}
+.ribbon-overflow-menu .rgroup{border-right:0;padding:4px 2px 20px;position:static;display:flex;flex-wrap:wrap;gap:4px}
+.ribbon-overflow-menu .rgroup-title{position:static;order:-1;width:100%;text-align:left;font-size:11px;color:#5d6879;margin:2px 0 4px;padding-left:2px}
+.ribbon-overflow-menu .tool{height:auto;min-width:0;flex:1 1 100%;flex-direction:row;justify-content:flex-start;padding:6px 8px;border-radius:4px;gap:8px}
+.ribbon-overflow-menu .tool:hover,.ribbon-overflow-menu .tool:focus-visible{background:#eef5ff;outline:none}
+.ribbon-overflow-menu .tool svg{width:18px;height:18px;margin:0}
+.ribbon-overflow-menu .tool .tool-label{text-align:left}
+.ribbon-overflow-menu .toggles{padding:4px 2px}
