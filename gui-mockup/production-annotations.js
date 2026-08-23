@@ -16,14 +16,38 @@
     return { ...result, semantic: clone(anchor), x: result.canvasX + Number(anchor.offset?.x || 0), y: result.canvasY + Number(anchor.offset?.y || 0), source: 'wavedrom-svg', signal: anchor.signal, cycle: Number(anchor.cycle), anchorType: result.anchorType || anchor.point };
   };
   const semanticPoint = anchorType => anchorType === 'rising-edge' || anchorType === 'rising-transition-center' ? 'rising' : anchorType === 'falling-edge' || anchorType === 'falling-transition-center' ? 'falling' : ['cycle-boundary', 'transition-start', 'transition-center', 'transition-end'].includes(anchorType) ? anchorType : 'transition-center';
+  const snapMetrics = controller.annotationSnapMetrics ||= { indexBuilds: 0, queries: 0, candidateScans: 0, yCandidates: 0, sortCount: 0, screenMatrixCalls: 0 };
+  let snapIndex = null;
   const geometryCandidates = () => Object.values(model.waveGeometry?.signals || {}).flatMap(entry => ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd'].flatMap(key => (entry[key] || []).map(item => ({ ...item, point: semanticPoint(item.anchorType) }))));
+  const lowerBound = (items, value) => { let low = 0; let high = items.length; while (low < high) { const middle = (low + high) >> 1; if (items[middle].y < value) low = middle + 1; else high = middle; } return low; };
+  const ensureSnapIndex = () => {
+    const geometry = model.waveGeometry;
+    if (!geometry) return null;
+    if (snapIndex?.geometry === geometry) return snapIndex;
+    const candidates = geometryCandidates().map((item, order) => ({ item, x: Number(item.canvasX), y: Number(item.canvasY), order }))
+      .filter(candidate => Number.isFinite(candidate.x) && Number.isFinite(candidate.y));
+    // Sort once per WaveDrom geometry revision. Pointer queries never sort or
+    // transform individual candidates; canvasX/canvasY are authoritative.
+    const byY = [...candidates].sort((a, b) => a.y - b.y || a.order - b.order);
+    snapMetrics.indexBuilds += 1;
+    snapMetrics.sortCount += 1;
+    snapIndex = { geometry, candidates, byY };
+    return snapIndex;
+  };
   const resolveAnnotationAnchorPointer = ({ x, y, annotationId = null, anchorKey = null } = {}) => {
-    const candidates = geometryCandidates().map(item => {
-      const svg = item.traceId ? document.getElementById(item.traceId)?.querySelector('svg') : null;
-      const screen = svg?.getScreenCTM ? new DOMPoint(Number(item.localX), Number(item.localY)).matrixTransform(svg.getScreenCTM()) : { x: item.canvasX, y: item.canvasY };
-      return { item, x: screen.x, y: screen.y, distance: Math.hypot(screen.x - Number(x), screen.y - Number(y)) };
-    }).filter(candidate => Number.isFinite(candidate.distance)).sort((a, b) => a.distance - b.distance);
-    const nearest = candidates[0];
+    const index = ensureSnapIndex();
+    if (!index) return null;
+    const pointerX = Number(x); const pointerY = Number(y); const radius = 28;
+    const start = lowerBound(index.byY, pointerY - radius);
+    let nearest = null; let bestD2 = Infinity; let bestOrder = Infinity;
+    snapMetrics.queries += 1;
+    for (let position = start; position < index.byY.length && index.byY[position].y <= pointerY + radius; position += 1) {
+      const candidate = index.byY[position];
+      snapMetrics.yCandidates += 1;
+      const dx = candidate.x - pointerX; const dy = candidate.y - pointerY; const d2 = dx * dx + dy * dy;
+      snapMetrics.candidateScans += 1;
+      if (d2 < bestD2 || (d2 === bestD2 && candidate.order < bestOrder)) { nearest = { item: candidate.item, x: candidate.x, y: candidate.y, distance: Math.sqrt(d2) }; bestD2 = d2; bestOrder = candidate.order; }
+    }
     if (!nearest || nearest.distance > 28) return null;
     return { signal: nearest.item.signal, cycle: Number(nearest.item.cycle), point: nearest.item.point, offset: { x: 0, y: 0 }, source: 'wavedrom-svg', anchorType: nearest.item.anchorType, annotationId, anchorKey, screenX: nearest.x, screenY: nearest.y, distance: nearest.distance };
   };
@@ -61,7 +85,7 @@
     const label = (x, y, text, extra = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', 'text'); const style = annotation.labelStyle || {}; const align = style.align || extra['text-anchor'] === 'middle' ? (style.align || 'center') : (style.align || 'left'); const anchor = align === 'right' ? 'end' : align === 'center' ? 'middle' : 'start'; const rawLines = String(text || '').split('\n'); const lines = style.wrap && style.maxWidth ? rawLines.flatMap(line => { const maxChars = Math.max(1, Math.floor(Number(style.maxWidth) / 7)); const chunks = []; for (let i = 0; i < line.length; i += maxChars) chunks.push(line.slice(i, i + maxChars)); return chunks.length ? chunks : ['']; }) : rawLines; el.setAttribute('x', x); el.setAttribute('y', y); el.setAttribute('fill', annotation.color || '#1473e6'); el.setAttribute('font-size', '11'); el.setAttribute('text-anchor', anchor); const lineHeight = Number(style.lineHeight || 1.2) * 11; lines.forEach((lineText, index) => { const span = document.createElementNS('http://www.w3.org/2000/svg', 'tspan'); span.textContent = lineText; span.setAttribute('x', x); span.setAttribute('dy', index === 0 ? 0 : lineHeight); el.appendChild(span); }); Object.entries(extra).filter(([key]) => key !== 'text-anchor').forEach(([key, value]) => el.setAttribute(key, value)); return el; };
     const markerId = `annotation-arrow-${String(annotation.id).replace(/[^a-zA-Z0-9_-]/g, '_')}`;
     const ensureArrowMarker = () => { if (overlay.querySelector(`#${markerId}`)) return; const defs = overlay.querySelector('defs') || overlay.insertBefore(document.createElementNS('http://www.w3.org/2000/svg', 'defs'), overlay.firstChild); const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker'); marker.id = markerId; marker.setAttribute('viewBox', '0 0 10 10'); marker.setAttribute('refX', '8'); marker.setAttribute('refY', '5'); marker.setAttribute('markerWidth', '6'); marker.setAttribute('markerHeight', '6'); marker.setAttribute('orient', 'auto-start-reverse'); const head = document.createElementNS('http://www.w3.org/2000/svg', 'path'); head.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z'); head.setAttribute('fill', annotation.color || '#1473e6'); marker.appendChild(head); defs.appendChild(marker); };
-    const selectable = (el, part = 'geometry', arrows = {}) => { el.dataset.annotationId = annotation.id; el.dataset.annotationPart = part; el.addEventListener('click', event => { event.stopPropagation(); controller.actions.selectAnnotation(annotation.id); }); if (annotation.type === 'dependency' && (arrows.start || arrows.end)) { ensureArrowMarker(); if (arrows.start) el.setAttribute('marker-start', `url(#${markerId})`); if (arrows.end) el.setAttribute('marker-end', `url(#${markerId})`); } return el; };
+    const selectable = (el, part = 'geometry', arrows = {}) => { el.dataset.annotationId = annotation.id; el.dataset.annotationPart = part; el.addEventListener('click', event => { event.stopPropagation(); controller.actions.selectAnnotation(annotation.id); }); if (['dependency', 'range'].includes(annotation.type) && (arrows.start || arrows.end)) { ensureArrowMarker(); if (arrows.start) el.setAttribute('marker-start', `url(#${markerId})`); if (arrows.end) el.setAttribute('marker-end', `url(#${markerId})`); } return el; };
     if (annotation.type === 'range' || annotation.type === 'dependency') {
       if (!start || !end) return;
       const a = xy(start); const b = xy(end); const lineType = annotation.lineType || 'orthogonal';
@@ -120,7 +144,7 @@
   controller.actions.addDependency = (from, to, options = {}) => run('Add dependency arrow', () => { const annotation = { id: options.id || makeId(), type: 'dependency', from: clone(from), to: clone(to), label: options.label || '', labelOffset: clone(options.labelOffset || { x: 0, y: -8 }), lineType: options.lineType || 'straight', arrowhead: options.arrowhead || 'end', color: options.color || '#1473e6', position: 'canvas', comment: options.comment || '', visible: true }; model.document.annotations.push(annotation); model.selection = { kind: 'annotation', id: annotation.id }; model.view.tab = 'annotation'; });
   controller.actions.duplicateAnnotation = id => run('Duplicate annotation', () => { const source = model.document.annotations.find(annotation => annotation.id === id); if (!source) return false; const copy = withRange(clone(source)); copy.id = makeId(); model.document.annotations.push(copy); model.selection = { kind: 'annotation', id: copy.id }; return true; });
   controller.actions.deleteAnnotation = id => run('Delete annotation', () => { const index = model.document.annotations.findIndex(annotation => annotation.id === id); if (index < 0) return false; model.document.annotations.splice(index, 1); const next = model.document.annotations[index] || model.document.annotations[index - 1]; model.selection = next ? { kind: 'annotation', id: next.id } : { kind: 'signal', id: model.document.timeline.referenceClock }; return true; });
-   controller.actions.updateAnnotation = (id, field, value) => run(`Update annotation ${field}`, () => { const annotation = model.document.annotations.find(item => item.id === id); if (!annotation) return false; if (field === 'type') return migrateAnnotationType(annotation, String(value)); if (field.startsWith('offset.')) { const anchor = annotation.anchor || annotation.start || annotation.from; if (!anchor) return false; anchor.offset[field.endsWith('x') ? 'x' : 'y'] = Number(value); } else if (field.startsWith('labelOffset.')) { annotation.labelOffset ??= { x: 0, y: 0 }; annotation.labelOffset[field.endsWith('x') ? 'x' : 'y'] = Number(value); } else if (field.startsWith('labelStyle.')) { annotation.labelStyle ??= { wrap: false, maxWidth: 240, lineHeight: 1.2, align: 'center' }; const styleField = field.slice('labelStyle.'.length); annotation.labelStyle[styleField] = styleField === 'wrap' ? Boolean(value) : styleField === 'align' ? String(value) : Number(value); } else if (field === 'visible') annotation.visible = Boolean(value); else annotation[field] = String(value); return true; });
+  controller.actions.updateAnnotation = (id, field, value) => run(`Update annotation ${field}`, () => { const annotation = model.document.annotations.find(item => item.id === id); if (!annotation) return false; if (field === 'lineType' && annotation.type !== 'dependency') return false; if (field === 'lineType' && !['straight', 'orthogonal', 'curve'].includes(String(value))) return false; if (field === 'arrowhead' && !['dependency', 'range'].includes(annotation.type)) return false; if (field === 'arrowhead' && !['none', 'start', 'end', 'both'].includes(String(value))) return false; if (field === 'type') return migrateAnnotationType(annotation, String(value)); if (field.startsWith('offset.')) { const anchor = annotation.anchor || annotation.start || annotation.from; if (!anchor) return false; anchor.offset[field.endsWith('x') ? 'x' : 'y'] = Number(value); } else if (field.startsWith('labelOffset.')) { annotation.labelOffset ??= { x: 0, y: 0 }; annotation.labelOffset[field.endsWith('x') ? 'x' : 'y'] = Number(value); } else if (field.startsWith('labelStyle.')) { annotation.labelStyle ??= { wrap: false, maxWidth: 240, lineHeight: 1.2, align: 'center' }; const styleField = field.slice('labelStyle.'.length); annotation.labelStyle[styleField] = styleField === 'wrap' ? Boolean(value) : styleField === 'align' ? String(value) : Number(value); } else if (field === 'visible') annotation.visible = Boolean(value); else annotation[field] = String(value); return true; });
   controller.actions.updateAnnotationAnchor = (id, key, field, value) => run(`Update annotation ${field}`, () => { const annotation = model.document.annotations.find(item => item.id === id); const anchor = annotation?.[key]; if (!anchor) return false; if (field === 'cycle') anchor.cycle = Number(value); else if (field === 'offset.x' || field === 'offset.y') anchor.offset[field.endsWith('x') ? 'x' : 'y'] = Number(value); else anchor[field] = String(value); return true; });
   controller.actions.setAnnotationAnchor = (id, key, anchor) => run(`Set annotation ${key} anchor`, () => { const annotation = model.document.annotations.find(item => item.id === id); if (!annotation || !annotation[key] || !anchor || !points.has(anchor.point)) return false; annotation[key] = { signal: anchor.signal, cycle: Number(anchor.cycle), point: anchor.point, offset: { x: Number(anchor.offset?.x || 0), y: Number(anchor.offset?.y || 0) } }; return true; });
   controller.actions.snapAnnotationAnchor = (id, key) => { if (model.view.guides?.snap === false) return false; const annotation = model.document.annotations.find(item => item.id === id); const anchor = annotation?.[key]; const snapped = anchor ? resolveNearestAnnotationAnchor({ anchor, annotationId: id, anchorKey: key }) : null; return snapped ? controller.actions.setAnnotationAnchor(id, key, snapped) : false; };
@@ -138,7 +162,8 @@
   controller.actions.cancelAnnotationAnchorSelection = () => { delete model.view.annotationAnchorSelection; document.querySelector('#cycleCanvas')?.removeAttribute('data-annotation-anchor-pick'); };
   document.addEventListener('click', event => {
     const pick = model.view.annotationAnchorSelection;
-    if (!pick || !event.target.closest?.('#cycleCanvas .trace[data-renderer="wavedrom"]')) return;
+    const hit = event.target.closest?.('#cycleCanvas .trace[data-renderer="wavedrom"]') || document.elementFromPoint(event.clientX, event.clientY)?.closest?.('#cycleCanvas .trace[data-renderer="wavedrom"]');
+    if (!pick || !hit) return;
     const candidate = resolveAnnotationAnchorPointer({ x: event.clientX, y: event.clientY, annotationId: pick.annotationId, anchorKey: pick.anchorKey });
     if (!candidate) return;
     event.preventDefault(); event.stopPropagation();

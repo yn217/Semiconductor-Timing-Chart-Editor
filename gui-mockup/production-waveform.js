@@ -5,7 +5,9 @@
   const waveCache = new Map();
   const renderMetrics = () => {
     const controller = window.TimingChartProductionController;
-    return controller.renderMetrics ||= { waveDromRenders: 0, geometryBuilds: 0, geometryCacheHits: 0, waveCacheHits: 0, rowCreates: 0, rowRemoves: 0 };
+    const metrics = controller.renderMetrics ||= { waveDromRenders: 0, geometryBuilds: 0, geometryScreenRefreshes: 0, geometryCacheHits: 0, waveCacheHits: 0, rowCreates: 0, rowRemoves: 0 };
+    metrics.geometryScreenRefreshes ??= 0;
+    return metrics;
   };
   const traceRows = () => [...document.querySelectorAll('#cycleCanvas .wave-row')]
     .filter(row => row.querySelector('.trace'));
@@ -202,6 +204,36 @@
     return geometry;
   }
 
+  function refreshPointScreenCoordinates(item, svg) {
+    if (!item || !svg?.getScreenCTM || !Number.isFinite(Number(item.localX)) || !Number.isFinite(Number(item.localY))) return;
+    const matrix = svg.getScreenCTM();
+    if (!matrix) return;
+    const screen = matrixPoint(matrix, { x: Number(item.localX), y: Number(item.localY) });
+    item.canvasX = screen.x;
+    item.canvasY = screen.y;
+    item.x = screen.x;
+    item.y = screen.y;
+    const rect = svg.getBoundingClientRect();
+    const viewBox = svg.viewBox?.baseVal;
+    if (rect && viewBox) {
+      item.svgRect = { left: rect.left, top: rect.top, width: rect.width, height: rect.height };
+      item.viewBox = { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height };
+    }
+  }
+
+  function refreshScreenGeometry(geometry, mounted) {
+    const svgBySignal = new Map(mounted.filter(Boolean).map(item => [item.signal.id, item.svg]));
+    const arrays = ['cycleBoundary', 'risingEdge', 'fallingEdge', 'transitionStart', 'transitionCenter', 'transitionEnd', 'transition'];
+    for (const [signalId, entry] of Object.entries(geometry.signals || {})) {
+      const svg = svgBySignal.get(signalId);
+      if (!svg) continue;
+      for (const key of arrays) for (const item of entry[key] || []) refreshPointScreenCoordinates(item, svg);
+    }
+    const reference = geometry.cycleBoundary?.[0]?.signal;
+    const referenceSvg = svgBySignal.get(reference) || mounted.find(Boolean)?.svg;
+    if (referenceSvg) for (const item of geometry.cycleBoundary || []) refreshPointScreenCoordinates(item, referenceSvg);
+  }
+
   const bridge = {
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
@@ -211,8 +243,11 @@
         return result && { ...result, signal };
       });
       const canvas = document.querySelector('#cycleCanvas');
-      const signature = JSON.stringify({
+      const waveSignature = JSON.stringify({
         cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
+        rows: mounted.filter(Boolean).map(item => [item.signal.id, item.key]).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+      });
+      const screenSignature = JSON.stringify({
         layout: {
           signalNameWidth: model.document.layout?.signalNameWidth,
           rowHeight: model.document.layout?.rowHeight,
@@ -223,13 +258,19 @@
         scroll: [canvas?.scrollLeft || 0, canvas?.scrollTop || 0],
         rows: mounted.filter(Boolean).map(item => [item.signal.id, item.key])
       });
-      if (model.waveGeometry && bridge.geometrySignature === signature) {
+      if (model.waveGeometry && bridge.waveSignature === waveSignature) {
+        if (bridge.screenSignature !== screenSignature) {
+          refreshScreenGeometry(model.waveGeometry, mounted);
+          renderMetrics().geometryScreenRefreshes += 1;
+          bridge.screenSignature = screenSignature;
+        }
         renderMetrics().geometryCacheHits += 1;
         window.TimingChartProductionController.waveGeometry = model.waveGeometry;
         return;
       }
       model.waveGeometry = buildGeometry(model, mounted);
-      bridge.geometrySignature = signature;
+      bridge.waveSignature = waveSignature;
+      bridge.screenSignature = screenSignature;
       renderMetrics().geometryBuilds += 1;
       window.TimingChartProductionController.waveGeometry = model.waveGeometry;
     },

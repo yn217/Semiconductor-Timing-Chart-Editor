@@ -46,13 +46,15 @@ try {
     if (!c.actions.redo() || annotation('issue70_marker').color !== '#e39a25') throw new Error('Color redo failed');
 
     c.actions.addDependency({ signal: 'req_valid', cycle: 3, point: 'rising', offset: { x: 0, y: 0 } }, { signal: 'ready', cycle: 8, point: 'rising', offset: { x: 0, y: 0 } }, { id: 'issue70_dependency' }); await wait(25);
-    if (command('diagonal').disabled || command('start-anchor').disabled || command('end-anchor').disabled) throw new Error('Dependency controls are not enabled');
+    if (!command('diagonal').disabled || command('start-anchor').disabled || command('end-anchor').disabled) throw new Error('Dependency control applicability is incorrect');
+    const beforeDiagonal = annotation('issue70_dependency').lineType;
     command('diagonal').click(); await wait(20);
-    if (annotation('issue70_dependency').lineType !== 'diagonal') throw new Error('Diagonal route did not update canonical annotation');
+    if (annotation('issue70_dependency').lineType !== beforeDiagonal) throw new Error('Disabled Diagonal route mutated canonical annotation');
+    command('curve').click(); await wait(20);
     command('start-anchor').click(); if (document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'from') throw new Error('Dependency start did not select from anchor'); c.actions.cancelAnnotationAnchorSelection();
     command('end-anchor').click(); if (document.querySelector('#cycleCanvas')?.dataset.annotationAnchorPick !== 'to') throw new Error('Dependency end did not select to anchor'); c.actions.cancelAnnotationAnchorSelection();
     const saved = c.prepareSaveText().text; await c.actions.openText(saved, { fileName: 'issue70-roundtrip.tcd', unsavedDecision: 'discard' }); await wait(25);
-    if (annotation('issue70_dependency').lineType !== 'diagonal' || annotation('issue70_marker').color !== '#e39a25') throw new Error('Annotation Ribbon properties did not round-trip through Save/Open');
+    if (annotation('issue70_dependency').lineType !== 'curve' || annotation('issue70_marker').color !== '#e39a25') throw new Error('Annotation Ribbon properties did not round-trip through Save/Open');
     return { invalidRollback: true, selectableColor: true, typeAwareControls: true, anchorPick: true, undoRedo: true, saveOpen: true, pass: true };
   });
   await page.screenshot({ path: `${root}/issue70-1672x941.png` });
