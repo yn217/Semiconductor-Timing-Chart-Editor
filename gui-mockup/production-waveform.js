@@ -811,6 +811,7 @@
   }
 
   function renderSignal(model, signalId) {
+    window.TimingChartProductionController?.invalidateAsyncRender?.('signal-render');
     const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
     const signal = signalForRow(model, row);
     if (!row || !signal || signal.type === 'commentRow') return false;
@@ -836,12 +837,17 @@
     return true;
   }
 
-  let timelineRenderGeneration = 0;
   function renderTimeline(model, { batchSize = 10 } = {}) {
     if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return Promise.resolve(false);
-    const generation = ++timelineRenderGeneration;
     const controller = window.TimingChartProductionController;
+    controller.invalidateAsyncRender?.('timeline-render');
+    const token = controller.captureRenderToken?.() || { epoch: controller.renderEpoch, document: model.document, revision: model.documentRevision };
+    const asyncMetrics = controller.asyncRenderMetrics;
+    asyncMetrics.asyncRenderStarted += 1;
+    controller.activeAsyncRenderToken = token;
     controller.timelineRenderActive = true;
+    const canvas = document.querySelector('#cycleCanvas');
+    if (canvas) { canvas.dataset.timingUpdating = 'true'; canvas.setAttribute('aria-busy', 'true'); }
     pruneWaveCache(model);
     const allRows = traceRows();
     viewportRenderSuppressed = true;
@@ -864,42 +870,80 @@
     let mountMs = 0;
     return new Promise(resolve => {
       let index = 0;
-      const step = () => {
-        if (generation !== timelineRenderGeneration) { resolve(false); return; }
-        const end = Math.min(rows.length, index + Math.max(1, batchSize));
-        const mountStarted = performance.now();
-        for (; index < end; index += 1) {
-          const row = rows[index];
-          const signal = signalForRow(model, row);
-          const result = mountSignal(model, signal, row, index);
-          if (result && signal) {
-            result.lane.dataset.semanticKey = semanticKey(model, signal);
-            mounted.push({ ...result, signal, row });
-          }
+      let settled = false;
+      const current = () => controller.isRenderTokenCurrent?.(token) !== false;
+      const finish = value => {
+        if (settled) return;
+        settled = true;
+        if (controller.activeAsyncRenderToken === token) {
+          controller.activeAsyncRenderToken = null;
+          controller.timelineRenderActive = false;
+          if (canvas) { delete canvas.dataset.timingUpdating; canvas.removeAttribute('aria-busy'); }
+          viewportRenderSuppressed = false;
+          updateSurfaceViewport();
         }
-        mountMs += performance.now() - mountStarted;
-        if (index < rows.length) { requestAnimationFrame(step); return; }
-        const geometryStarted = performance.now();
-        model.waveGeometry = buildGeometry(model, mounted);
-        const geometryMs = performance.now() - geometryStarted;
-        bridge.waveSignature = JSON.stringify({
-          cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
-          rows: allRows.map(row => {
-            const signal = signalForRow(model, row);
-            return signal ? [signal.id, semanticKey(model, signal)] : null;
-          }).filter(Boolean).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+        resolve(value);
+      };
+      const cancel = () => {
+        asyncMetrics.asyncRenderCanceled += 1;
+        asyncMetrics.stalePublishRejected += 1;
+        finish(false);
+      };
+      const fail = error => {
+        asyncMetrics.asyncRenderExceptions += 1;
+        controller.lastAsyncRenderError = { message: error?.message || String(error), epoch: token.epoch };
+        controller.timingInteractionBlocked = true;
+        finish(false);
+        if (canvas) { canvas.dataset.timingUpdating = 'recovering'; canvas.setAttribute('aria-busy', 'true'); }
+        requestAnimationFrame(() => {
+          try { if (current()) controller.render?.(); }
+          catch (recoveryError) { controller.lastAsyncRenderRecoveryError = recoveryError?.message || String(recoveryError); }
+          finally {
+            controller.timingInteractionBlocked = false;
+            if (!controller.timelineRenderActive && canvas) { delete canvas.dataset.timingUpdating; canvas.removeAttribute('aria-busy'); }
+          }
         });
-        bridge.screenSignature = null;
-        renderMetrics().geometryBuilds += 1;
-        controller.waveGeometry = model.waveGeometry;
-        controller.timelineRenderActive = false;
-        controller.applyTimingOnlyZoom?.();
-        controller.lastWaveformTimelineProfile = { mountMs, geometryMs, totalMs: performance.now() - started, rows: mounted.length, geometry: model.waveGeometry.profile || null };
-        controller.lastWaveformTimelineProfile.totalRows = allRows.length;
-        controller.lastWaveformTimelineProfile.deferredRows = allRows.length - activeIds.size;
-        viewportRenderSuppressed = false;
-        updateSurfaceViewport();
-        resolve({ durationMs: performance.now() - started, rows: mounted.length });
+      };
+      const step = () => {
+        try {
+          if (!current()) { cancel(); return; }
+          const end = Math.min(rows.length, index + Math.max(1, batchSize));
+          const mountStarted = performance.now();
+          for (; index < end; index += 1) {
+            if (!current()) { cancel(); return; }
+            const row = rows[index];
+            const signal = signalForRow(model, row);
+            const result = mountSignal(model, signal, row, index);
+            if (result && signal) {
+              result.lane.dataset.semanticKey = semanticKey(model, signal);
+              mounted.push({ ...result, signal, row });
+            }
+          }
+          mountMs += performance.now() - mountStarted;
+          if (index < rows.length) { requestAnimationFrame(step); return; }
+          if (!current()) { cancel(); return; }
+          const geometryStarted = performance.now();
+          const nextGeometry = buildGeometry(model, mounted);
+          const geometryMs = performance.now() - geometryStarted;
+          if (!current()) { cancel(); return; }
+          model.waveGeometry = nextGeometry;
+          bridge.waveSignature = JSON.stringify({
+            cycleCount: model.document.timeline?.cycleCount ?? model.document.cycleCount,
+            rows: allRows.map(row => {
+              const signal = signalForRow(model, row);
+              return signal ? [signal.id, semanticKey(model, signal)] : null;
+            }).filter(Boolean).sort((a, b) => String(a[0]).localeCompare(String(b[0])))
+          });
+          bridge.screenSignature = null;
+          renderMetrics().geometryBuilds += 1;
+          controller.waveGeometry = nextGeometry;
+          controller.applyTimingOnlyZoom?.();
+          controller.lastWaveformTimelineProfile = { mountMs, geometryMs, totalMs: performance.now() - started, rows: mounted.length, geometry: nextGeometry.profile || null };
+          controller.lastWaveformTimelineProfile.totalRows = allRows.length;
+          controller.lastWaveformTimelineProfile.deferredRows = allRows.length - activeIds.size;
+          asyncMetrics.asyncRenderPublished += 1;
+          finish({ durationMs: performance.now() - started, rows: mounted.length, epoch: token.epoch });
+        } catch (error) { fail(error); }
       };
       requestAnimationFrame(() => requestAnimationFrame(() => setTimeout(step, 0)));
     });
@@ -939,6 +983,7 @@
     getWaveCacheStats: waveCacheStats,
     render(model) {
       if (!window.WaveDrom?.RenderWaveForm || !window.TimingWaveDromAdapter) return;
+      window.TimingChartProductionController?.invalidateAsyncRender?.('waveform-render');
       pruneWaveCache(model);
       const allRows = traceRows();
       viewportRenderSuppressed = true;
@@ -1022,6 +1067,7 @@
     },
     getAnchor({ signal, cycle, edge, coordinateSpace = 'local' }) {
       const model = window.TimingChartProductionController?.model;
+      if (window.TimingChartProductionController?.timelineRenderActive || window.TimingChartProductionController?.timingInteractionBlocked) return undefined;
       if (!model?.waveGeometry?.signals?.[signal]) ensureSignalGeometry(model, signal);
       const geometry = model?.waveGeometry?.signals?.[signal];
       const list = edge === 'rising' ? geometry?.risingEdge : edge === 'falling' ? geometry?.fallingEdge : edge === 'transition-start' ? geometry?.transitionStart : edge === 'transition-end' ? geometry?.transitionEnd : edge === 'transition-center' ? geometry?.transitionCenter : undefined;
@@ -1037,6 +1083,7 @@
     },
     getCycleBoundary({ signal, cycle, coordinateSpace = 'canvas' }) {
       const model = window.TimingChartProductionController?.model;
+      if (window.TimingChartProductionController?.timelineRenderActive || window.TimingChartProductionController?.timingInteractionBlocked) return undefined;
       if (!model?.waveGeometry?.signals?.[signal]) ensureSignalGeometry(model, signal);
       const item = model?.waveGeometry?.signals?.[signal]?.cycleBoundary?.[cycle];
       if (!item) return undefined;

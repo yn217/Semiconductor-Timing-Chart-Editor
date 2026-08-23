@@ -105,6 +105,19 @@
   const profileMark = name => { if (!controller.profileEnabled || !window.performance?.mark) return; performance.mark(`tc:${name}`); };
   controller.enableProfiling = enabled => { controller.profileEnabled = Boolean(enabled); if (controller.profileEnabled) performance.clearMarks?.('tc:'); return controller.profileEnabled; };
   controller.profileMark = profileMark;
+  controller.asyncRenderMetrics = { invalidations: 0, asyncRenderStarted: 0, asyncRenderCanceled: 0, asyncRenderPublished: 0, stalePublishRejected: 0, asyncRenderExceptions: 0 };
+  controller.renderEpoch = 0;
+  controller.invalidateAsyncRender = reason => {
+    controller.renderEpoch += 1;
+    controller.asyncRenderMetrics.invalidations += 1;
+    controller.lastRenderInvalidationReason = reason || 'unspecified';
+    return controller.renderEpoch;
+  };
+  controller.captureRenderToken = () => ({ epoch: controller.renderEpoch, document: model.document, revision: model.documentRevision });
+  controller.isRenderTokenCurrent = token => Boolean(token)
+    && token.epoch === controller.renderEpoch
+    && token.document === model.document
+    && token.revision === model.documentRevision;
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
@@ -444,6 +457,7 @@
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
   const render = () => {
+    controller.invalidateAsyncRender('full-render');
     profileMark('render:start');
     const started = performance.now();
     const profile = {};

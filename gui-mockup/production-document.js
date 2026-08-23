@@ -131,6 +131,7 @@
   // rather than adding another post-hoc wrapper list here.
 
   const replaceDocument = (nextDocument, { resetHistory = true, render = true } = {}) => {
+    controller.invalidateAsyncRender?.('replace-document');
     model.document = clone(nextDocument);
     controller.rebuildObjectIndex?.();
     controller.clearValidationCache?.();
