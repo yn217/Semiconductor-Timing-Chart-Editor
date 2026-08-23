@@ -230,6 +230,29 @@
     center.dataset.waveformOnly = view.panels.waveformOnly ? 'true' : 'false';
   }
 
+  function applyInspectorLayout() {
+    const inspector = document.querySelector('.inspector');
+    const body = document.querySelector('.inspector-body');
+    const minimap = document.querySelector('.inspector .minimap');
+    if (!inspector || !body || !minimap) return;
+    inspector.style.minHeight = '0';
+    inspector.style.overflow = 'hidden';
+    body.style.flex = '1 1 auto';
+    body.style.minHeight = '0';
+    body.style.overflow = 'auto';
+    minimap.style.flex = '0 0 102px';
+    minimap.style.minHeight = '102px';
+    minimap.style.overflow = 'hidden';
+    if (view.guides.minimap) {
+      minimap.hidden = false;
+      minimap.style.display = '';
+    } else {
+      minimap.hidden = true;
+      minimap.style.display = 'none';
+    }
+    inspector.dataset.minimapLayout = view.guides.minimap ? 'pinned' : 'hidden';
+  }
+
   function apply() {
     const canvas = document.querySelector('#cycleCanvas');
     if (canvas) {
@@ -254,6 +277,7 @@
     if (bottom) { bottom.hidden = !view.panels.bottom; bottom.classList.toggle('hidden', !view.panels.bottom); }
     if (inspector) inspector.dataset.viewMinimap = view.guides.minimap ? 'on' : 'off';
     if (minimap) { minimap.hidden = !view.guides.minimap; minimap.dataset.viewState = view.guides.minimap ? 'on' : 'off'; }
+    applyInspectorLayout();
     applyPanelLayout();
     bindMiniMap(); renderGrid(); renderMinimap();
     ribbon.dataset.viewState = JSON.stringify({ guides: view.guides, columns: view.columns, overlays: view.overlays, panels: view.panels });
