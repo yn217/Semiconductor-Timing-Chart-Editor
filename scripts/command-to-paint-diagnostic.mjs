@@ -61,7 +61,7 @@ const actions = await page.evaluate(() => {
     const commandEnd = performance.now();
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const paint = performance.now();
-    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
+    return { name, result, commandMs: commandEnd - start, paintMs: paint - start, cycleBefore, cycleAfter: controller.model.document.timeline.cycleCount, revisionBefore, revisionAfter: controller.model.documentRevision, trace: controller.lastIncrementalTrace || null, traceParts: controller.lastIncrementalTraceParts || null, timelineTrace: controller.lastTimelineInvalidation || null, metricsBefore, metricsAfter: { ...controller.renderMetrics } };
   };
   return (async () => {
     controller.actions.selectObject(row('ctp_sig_10'));
