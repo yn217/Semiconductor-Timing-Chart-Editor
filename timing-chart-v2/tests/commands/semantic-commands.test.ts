@@ -42,6 +42,28 @@ describe("pure Semantic Command planning", () => {
       expect(visibility.changeSet.rowPresentation).toEqual(["sig_data"]);
     }
   });
+
+  it("plans Signal Editor changes with precise render domains", () => {
+    const source = canonicalFixture();
+    const moved = planCommand(source, { id: commandId("cmd_move_value"), type: "signal.moveValue", signalId: "sig_data" as SignalId, fromStart: 4, toStart: 3 });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) {
+      expect((moved.document.signals[1] as Extract<Signal, { values: unknown }>).values.map((change) => change.start)).toEqual([0, 3]);
+      expect(moved.changeSet).toMatchObject({ waveSemantics: ["sig_data"], geometryLocal: ["sig_data"] });
+    }
+    const replaced = planCommand(source, { id: commandId("cmd_replace_value"), type: "signal.replaceValue", signalId: "sig_data" as SignalId, fromStart: 4, start: 3, value: "0F", comment: "edited" });
+    expect(replaced.ok).toBe(true);
+    if (replaced.ok) expect((replaced.document.signals[1] as Extract<Signal, { values: unknown }>).values[1]).toEqual({ start: 3, value: "0F", comment: "edited" });
+    const formatted = planCommand(source, { id: commandId("cmd_format"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA_OUT", role: "output", displayFormat: "binary" });
+    expect(formatted.ok).toBe(true);
+    if (formatted.ok) {
+      expect(formatted.document.signals[1]).toMatchObject({ name: "DATA_OUT", role: "output", displayFormat: "binary", display: { name: "DATA_OUT" } });
+      expect(formatted.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"] });
+    }
+    const removed = planCommand(source, { id: commandId("cmd_remove_value"), type: "signal.removeValue", signalId: "sig_data" as SignalId, start: 4 });
+    expect(removed.ok).toBe(true);
+    if (removed.ok) expect((removed.document.signals[1] as Extract<Signal, { values: unknown }>).values).toHaveLength(1);
+  });
 });
 
 describe("command execution and atomic history", () => {

@@ -7,8 +7,10 @@ import type {
   RowId,
   SemanticAnchor,
   Signal,
+  ClockGenerator,
   SignalGroup,
   SignalId,
+  SignalRole,
   TimeGroupId,
   TransactionId,
 } from "@timing-chart-v2/schema";
@@ -22,6 +24,11 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.move"; signalId: SignalId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.setVisibility"; signalId: SignalId; visible: boolean }>
   | Readonly<{ id: CommandId; type: "signal.updateValue"; signalId: SignalId; start: number; value: SignalValue; comment?: string }>
+  | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
+  | Readonly<{ id: CommandId; type: "signal.moveValue"; signalId: SignalId; fromStart: number; toStart: number }>
+  | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
+  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; displayFormat?: "hex" | "binary" | "symbolic" }>
+  | Readonly<{ id: CommandId; type: "signal.updateClockGenerator"; signalId: SignalId; generator: ClockGenerator }>
   | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>
   | Readonly<{ id: CommandId; type: "group.delete"; groupId: GroupId }>
   | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>

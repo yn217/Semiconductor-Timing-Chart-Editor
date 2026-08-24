@@ -257,6 +257,79 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.replaceValue": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
+      if (!Number.isInteger(command.start) || command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Change point is outside the timeline.");
+      const source = signal.values.find((change) => change.start === command.fromStart);
+      if (!source) return fail("invalid", "CHANGE_NOT_FOUND", "$.fromStart", `No change starts at cycle ${command.fromStart}.`);
+      if (command.start !== command.fromStart && signal.values.some((change) => change.start === command.start)) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.start", `A change already starts at cycle ${command.start}.`);
+      if (source.start === command.start && source.value === command.value && source.comment === command.comment) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
+      const replacement = { start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
+      const values = signal.values.map((change) => change === source ? replacement : change).sort((left, right) => left.start - right.start);
+      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
+    }
+    case "signal.moveValue": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
+      if (!Number.isInteger(command.toStart) || command.toStart < 0 || command.toStart >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.toStart", "Change point is outside the timeline.");
+      const source = signal.values.find((change) => change.start === command.fromStart);
+      if (!source) return fail("invalid", "CHANGE_NOT_FOUND", "$.fromStart", `No change starts at cycle ${command.fromStart}.`);
+      if (command.fromStart === command.toStart) return fail("no-op", "NO_OP", "$", "Change point is already at the requested cycle.");
+      if (signal.values.some((change) => change.start === command.toStart)) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.toStart", `A change already starts at cycle ${command.toStart}.`);
+      const values = signal.values.map((change) => change === source ? { ...change, start: command.toStart } : change).sort((left, right) => left.start - right.start);
+      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
+    }
+    case "signal.removeValue": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
+      if (!signal.values.some((change) => change.start === command.start)) return fail("invalid", "CHANGE_NOT_FOUND", "$.start", `No change starts at cycle ${command.start}.`);
+      if (signal.values.length === 1) return fail("invalid", "LAST_CHANGE_REQUIRED", "$.start", "A value signal must retain at least one change point.");
+      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      return { ok: true, document: replaceSignal(document, index, { ...signal, values: signal.values.filter((change) => change.start !== command.start) }), changeSet, inverseChangeSet: changeSet };
+    }
+    case "signal.updateProperties": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      const name = command.name.trim();
+      if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
+      if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Signal name cannot be empty.");
+      if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "Display format applies only to bus signals.");
+      const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
+      if (signal.name === name && signal.role === command.role && currentFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      const next = signal.type === "bus"
+        ? (() => {
+            const { displayFormat: _displayFormat, ...base } = signal;
+            return { ...base, name, role: command.role, display: { ...signal.display, name }, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }) } as Signal;
+          })()
+        : { ...signal, name, role: command.role, display: { ...signal.display, name } } as Signal;
+      const formatChanged = signal.type === "bus" && currentFormat !== command.displayFormat;
+      const changeSet: ChangeSet = {
+        rowPresentation: [signal.id],
+        ...(formatChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true } : {}),
+      };
+      return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
+    }
+    case "signal.updateClockGenerator": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type !== "clock") return fail("invalid", "SIGNAL_NOT_CLOCK", "$.signalId", "Clock Generator requires a clock signal.");
+      const generator = command.generator;
+      if (!Number.isInteger(generator.start) || generator.start < 0 || generator.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.generator.start", "Clock start is outside the timeline.");
+      if (!Number.isFinite(generator.period) || generator.period <= 0 || !Number.isFinite(generator.duty) || generator.duty <= 0 || generator.duty > 1 || !Number.isFinite(generator.phase)) return fail("invalid", "INVALID_CLOCK_GENERATOR", "$.generator", "Clock period, duty, and phase are invalid.");
+      if (JSON.stringify(signal.generator) === JSON.stringify(generator)) return fail("no-op", "NO_OP", "$", "Clock Generator is unchanged.");
+      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      return { ok: true, document: replaceSignal(document, index, { ...signal, generator }), changeSet, inverseChangeSet: changeSet };
+    }
     case "group.create": {
       if (command.group.rows.length > 0 || (command.group.spacers?.length ?? 0) > 0) return fail("invalid", "GROUP_CREATE_NOT_EMPTY", "$.group", "Group creation cannot implicitly move existing rows.");
       if (!Number.isInteger(command.index) || command.index < 0 || command.index > document.signalGroups.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Group insertion index is outside the group list.");

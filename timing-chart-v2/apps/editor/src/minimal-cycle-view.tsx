@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react";
+import type { SemanticCommand } from "@timing-chart-v2/commands";
+import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
-import { CommandHistorySession } from "@timing-chart-v2/history";
+import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import type { CanonicalDocument, ClockSignal, GroupId, SignalId, SignalRole, ValueSignal } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, ClockGenerator, ClockSignal, CommandId, GroupId, Signal, SignalId, SignalRole, ValueSignal } from "@timing-chart-v2/schema";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
 const signalId = (value: string) => value as SignalId;
@@ -59,7 +61,14 @@ export function MinimalCycleView() {
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
-  const [selectedName, setSelectedName] = useState("None");
+  const execute = useRef<(command: SemanticCommand) => void>(() => undefined);
+  const undo = useRef<() => void>(() => undefined);
+  const redo = useRef<() => void>(() => undefined);
+  const [selectedId, setSelectedId] = useState<SignalId | undefined>();
+  const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: cycleDocument });
+  const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
+  const [problem, setProblem] = useState("");
+  const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
 
   useEffect(() => {
     const rendererHost = host.current;
@@ -92,15 +101,37 @@ export function MinimalCycleView() {
 
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
-      rendererHost.dataset.historyDepth = "0";
+      rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
     };
     publishState();
 
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
-      buildRuler(rulerElement, referenceGeometry, cycleDocument.timeline.cycleCount, clock.id);
+      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document.timeline.cycleCount, clock.id);
       rendererHost.dataset.cycleViewReady = "true";
     });
+
+    const applyResult = (result: ReturnType<CommandHistorySession["execute"]>) => {
+      if (!result.ok) {
+        setProblem(result.problems.map((item) => item.message).join(" "));
+        return;
+      }
+      delete rendererHost.dataset.editorIdle;
+      projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection });
+      renderer.update(projection);
+      setSnapshot(result.snapshot);
+      setHistory(session.historyState());
+      setProblem("");
+      publishState();
+      void renderer.whenIdle().then(() => {
+        if (!rendererHost.isConnected) return;
+        buildRuler(rulerElement, referenceGeometry, result.snapshot.document.timeline.cycleCount, clock.id);
+        rendererHost.dataset.editorIdle = "true";
+      });
+    };
+    execute.current = (command) => applyResult(session.execute(command));
+    undo.current = () => applyResult(session.undo());
+    redo.current = () => applyResult(session.redo());
 
     let frame = 0;
     const onScroll = () => {
@@ -118,7 +149,7 @@ export function MinimalCycleView() {
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-row-id]") : null;
       const id = target?.dataset.rowId;
       if (!id || !id.startsWith("sig_")) return;
-      const signal = cycleDocument.signals.find((candidate) => candidate.id === id);
+      const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
       for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
         const selected = row.dataset.rowId === id || row.dataset.signalId === id;
@@ -126,7 +157,7 @@ export function MinimalCycleView() {
         row.setAttribute("aria-selected", String(selected));
       }
       rendererHost.dataset.selectedSignalId = id;
-      setSelectedName(signal.display.name);
+      setSelectedId(signal.id);
       publishState();
     };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
@@ -135,6 +166,9 @@ export function MinimalCycleView() {
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
       rendererHost.removeEventListener("click", onSelect);
+      execute.current = () => undefined;
+      undo.current = () => undefined;
+      redo.current = () => undefined;
       renderer.dispose();
     };
   }, []);
@@ -144,18 +178,139 @@ export function MinimalCycleView() {
       <div><p className="eyebrow">TIMING CHART EDITOR V2</p><h1>Semiconductor Timing Chart</h1></div>
       <span className="view-chip">Cycle View</span>
     </header>
-    <section className="cycle-panel" aria-label="Minimal Cycle View">
+    <section className="cycle-panel" aria-label="Cycle View">
       <div className="column-headings" aria-hidden="true"><span>Signal tree</span><span>Role / signal</span><span>Cycle waveform</span></div>
       <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
         <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
         <div className="surface-host" ref={host} data-testid="cycle-surface" />
       </div>
     </section>
+    <SignalEditor
+      key={`${selectedSignal?.id ?? "none"}:${snapshot.revision}`}
+      signal={selectedSignal}
+      cycleCount={snapshot.document.timeline.cycleCount}
+      history={history}
+      problem={problem}
+      onCommand={(command) => execute.current(command)}
+      onUndo={() => undo.current()}
+      onRedo={() => redo.current()}
+    />
     <footer className="status-bar">
-      <span>Selected: <strong data-testid="selection-status">{selectedName}</strong></span>
-      <span>Canonical revision 0</span><span>Read-only cycle projection</span>
+      <span>Selected: <strong data-testid="selection-status">{selectedSignal?.display.name ?? "None"}</strong></span>
+      <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
+      <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
+      <span>{history.dirty ? "Modified" : "Clean"}</span>
     </footer>
   </main>;
+}
+
+interface SignalEditorProps {
+  readonly signal: Signal | undefined;
+  readonly cycleCount: number;
+  readonly history: HistoryState;
+  readonly problem: string;
+  readonly onCommand: (command: SemanticCommand) => void;
+  readonly onUndo: () => void;
+  readonly onRedo: () => void;
+}
+
+function SignalEditor({ signal, cycleCount, history, problem, onCommand, onUndo, onRedo }: SignalEditorProps) {
+  const [name, setName] = useState(signal?.display.name ?? "");
+  const [role, setRole] = useState<SignalRole>(signal?.role ?? "internal");
+  const [format, setFormat] = useState<"hex" | "binary" | "symbolic">(signal?.type === "bus" ? signal.displayFormat ?? "hex" : "hex");
+  return <section className="signal-editor" aria-label="Signal Editor" data-testid="signal-editor">
+    <div className="editor-tabbar">
+      <button type="button" className="editor-tab active">Signal</button>
+      <span className="editor-selection">{signal ? `${signal.display.name} · ${signal.type}` : "Select a signal to edit"}</span>
+      <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
+      <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
+    </div>
+    {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
+    {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>
+      <form className="signal-properties" onSubmit={(event) => {
+        event.preventDefault();
+        onCommand({ id: nextCommandId("properties"), type: "signal.updateProperties", signalId: signal.id, name, role, ...(signal.type === "bus" ? { displayFormat: format } : {}) });
+      }}>
+        <label>Name<input aria-label="Signal name" value={name} onChange={(event) => setName(event.target.value)} /></label>
+        <label>Role<select aria-label="Signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
+        {signal.type === "bus" && <label>Display<select aria-label="Bus display format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label>}
+        <button type="submit" data-testid="save-signal-properties">Apply properties</button>
+      </form>
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} /> : signal.type === "commentRow" ? <div className="editor-empty">Comment rows are edited in a later context editor.</div> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+    </>}
+  </section>;
+}
+
+function ClockGeneratorEditor({ signal, onCommand }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
+  const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
+  return <form className="clock-generator" aria-label="Clock Generator" onSubmit={(event) => {
+    event.preventDefault();
+    onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator });
+  }}>
+    <h2>Clock Generator</h2>
+    <label>Start<input aria-label="Clock start" type="number" min="0" step="1" value={generator.start} onChange={(event) => number("start", event.target.value)} /></label>
+    <label>Period<input aria-label="Clock period" type="number" min="1" step="1" value={generator.period} onChange={(event) => number("period", event.target.value)} /></label>
+    <label title="Pinned WaveDrom supports 50% duty only">Duty<input aria-label="Clock duty" type="number" value={generator.duty} disabled /></label>
+    <label>Phase<input aria-label="Clock phase" type="number" step="0.5" value={generator.phase} onChange={(event) => number("phase", event.target.value)} /></label>
+    <label>Initial<select aria-label="Clock initial" value={generator.initial} onChange={(event) => setGenerator({ ...generator, initial: Number(event.target.value) as 0 | 1 })}><option value="0">0</option><option value="1">1</option></select></label>
+    <label>Polarity<select aria-label="Clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label>
+    <button type="submit" data-testid="apply-clock-generator">Apply generator</button>
+  </form>;
+}
+
+function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [start, setStart] = useState(0);
+  const [value, setValue] = useState(quickValue(signal));
+  return <div className="event-editor">
+    <div className="event-heading"><h2>Event Table</h2><span>End and duration are derived</span></div>
+    <div className="event-table" role="table" aria-label="Signal events">
+      <div className="event-row event-columns" role="row"><span>Start</span><span>Value</span><span>End</span><span>Duration</span><span>Comment</span><span>Actions</span></div>
+      {signal.values.map((change, index) => <EventRow key={change.start} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} onCommand={onCommand} />)}
+    </div>
+    <form className="event-add" onSubmit={(event) => {
+      event.preventDefault();
+      onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value });
+    }}>
+      <label>Start<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+      <label>Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
+      <QuickValues signal={signal} setValue={setValue} />
+      <button type="submit" data-testid="add-signal-event">Add / replace event</button>
+    </form>
+  </div>;
+}
+
+function EventRow({ signal, change, end, onCommand }: { readonly signal: ValueSignal; readonly change: ValueSignal["values"][number]; readonly end: number; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [start, setStart] = useState(change.start);
+  const [value, setValue] = useState(String(change.value));
+  const [comment, setComment] = useState(change.comment ?? "");
+  return <form className="event-row" role="row" onSubmit={(event) => {
+    event.preventDefault();
+    onCommand({ id: nextCommandId("replace_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: change.start, start, value, ...(comment ? { comment } : {}) });
+  }}>
+    <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
+    <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />
+    <output>{end}</output><output>{end - change.start}</output>
+    <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
+    <span className="event-actions"><button type="submit">Save</button><button type="button" onClick={() => onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start })}>Remove</button></span>
+  </form>;
+}
+
+function QuickValues({ signal, setValue }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void }) {
+  const values = signal.type === "binary" || signal.type === "logic" ? ["0", "1", "X", "Z"] : signal.type === "bus" ? ["Hex", "Binary", "Symbol", "X", "Z"] : ["IDLE", "ACTIVE", "X", "Z"];
+  return <div className="quick-values" role="group" aria-label="Quick values">{values.map((item) => <button type="button" key={item} onClick={() => setValue(item === "Hex" ? "00" : item === "Binary" ? "00000000" : item === "Symbol" ? "VALUE" : item)}>{item}</button>)}</div>;
+}
+
+function quickValue(signal: ValueSignal): string {
+  if (signal.type === "bus") return signal.displayFormat === "binary" ? "00000000" : "00";
+  if (signal.type === "state") return "IDLE";
+  return "0";
+}
+
+let commandSequence = 0;
+function nextCommandId(scope: string): CommandId {
+  commandSequence += 1;
+  return `cmd_phase7_${scope}_${commandSequence}` as CommandId;
 }
 
 function viewportWindow(viewport: HTMLElement): VirtualizationWindow {

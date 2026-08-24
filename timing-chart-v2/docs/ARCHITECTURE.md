@@ -42,6 +42,10 @@ selection and viewport are transient view state: they do not dispatch a
 semantic command, create a History entry, or alter the canonical revision.
 Cycle ruler positions come from the reference-clock Local Geometry Map.
 
+Phase 7's Signal Editor reads the selected Signal from the current canonical
+snapshot. Form drafts are transient component state. Submit dispatches one
+typed Semantic Command; Event End/Duration are derived and never persisted.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.
