@@ -6,6 +6,7 @@ import type { GroupId, RowId, SignalId, SignalRole } from "@timing-chart-v2/sche
 export interface RowLayoutEntry {
   readonly rowId: RowId;
   readonly groupId: GroupId;
+  readonly groupName: string;
   readonly kind: "timing" | "comment" | "spacer";
   readonly name: string;
   readonly role?: SignalRole;

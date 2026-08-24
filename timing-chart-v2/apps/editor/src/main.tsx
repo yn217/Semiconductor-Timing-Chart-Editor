@@ -5,6 +5,8 @@ import { CommandHistorySession } from "@timing-chart-v2/history";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import type { CanonicalDocument, ClockSignal, CommandId, GroupId, SignalId, ValueSignal } from "@timing-chart-v2/schema";
+import { MinimalCycleView } from "./minimal-cycle-view.js";
+import "./styles.css";
 
 const probeSignal: ValueSignal = {
   id: "sig_phase3_probe" as SignalId,
@@ -156,4 +158,4 @@ function StableSurfaceProbe() {
 const root = document.getElementById("root");
 if (!root) throw new Error("Editor root is missing");
 const probe = new URLSearchParams(window.location.search).get("probe");
-createRoot(root).render(<StrictMode>{probe === "geometry" ? <ArchitectureProbe /> : <StableSurfaceProbe />}</StrictMode>);
+createRoot(root).render(<StrictMode>{probe === "geometry" ? <ArchitectureProbe /> : probe === "stable" ? <StableSurfaceProbe /> : <MinimalCycleView />}</StrictMode>);

@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("reorders row shells without rerendering or moving heavy WaveDrom SVG owners", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?probe=stable");
   await expect(page.getByText("Phase 5 Stable Waveform Surface probe")).toBeVisible();
   const host = page.getByTestId("surface-host");
   await expect(host).toHaveAttribute("data-phase5-ready", "true");

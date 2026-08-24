@@ -37,6 +37,11 @@ Canonical signal
 The renderer never receives `CanonicalMutationPort`. UI never receives Core
 state mutation APIs. WaveDrom Adapter owns no persistent state.
 
+Phase 6's Minimal Cycle View composes these ports in `apps/editor`. Its row
+selection and viewport are transient view state: they do not dispatch a
+semantic command, create a History entry, or alter the canonical revision.
+Cycle ruler positions come from the reference-clock Local Geometry Map.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.

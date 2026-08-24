@@ -156,6 +156,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
   const active = new Set(rowIds);
   for (const [rowId, shell] of cache) if (!active.has(rowId)) shell.remove();
   const ordered: HTMLElement[] = [];
+  let previousGroupId: string | undefined;
   for (const rowId of rowIds) {
     const row = rows.get(rowId);
     if (!row) throw new Error(`Missing RowLayout for '${rowId}'.`);
@@ -167,11 +168,39 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     }
     shell.dataset.kind = row.kind;
     shell.dataset.name = row.name;
+    shell.dataset.groupId = row.groupId;
+    shell.dataset.groupName = row.groupName;
+    shell.dataset.groupStart = String(row.groupId !== previousGroupId);
     if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
+    if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
+    populateShell(shell, row, surface, row.groupId !== previousGroupId);
     place(shell, row);
     ordered.push(shell);
+    previousGroupId = row.groupId;
   }
   layer.replaceChildren(...ordered);
+}
+
+function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string, groupStart: boolean): void {
+  if (surface === "timing") return;
+  const document = shell.ownerDocument;
+  if (surface === "left") {
+    const branch = document.createElement("span");
+    branch.dataset.role = "tree-branch";
+    branch.textContent = groupStart ? row.groupName : "";
+    const name = document.createElement("span");
+    name.dataset.role = "tree-signal-name";
+    name.textContent = row.name;
+    shell.replaceChildren(branch, name);
+    return;
+  }
+  const role = document.createElement("span");
+  role.dataset.role = "signal-role";
+  role.textContent = row.role?.toUpperCase() ?? "";
+  const name = document.createElement("span");
+  name.dataset.role = "frozen-signal-name";
+  name.textContent = row.name;
+  shell.replaceChildren(role, name);
 }
 
 function place(element: HTMLElement, row: RowLayoutEntry): void {

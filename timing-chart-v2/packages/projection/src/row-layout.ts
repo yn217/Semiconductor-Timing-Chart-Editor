@@ -25,12 +25,12 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
       if (!signal && !spacer) continue;
       if (visibleInGroup > 0) y += document.layout.signalSpacing;
       if (signal) y += signal.spacingBefore ?? 0;
-      const entry = signalEntry(signal, group.id, y, document.layout.rowHeight, rowId);
+      const entry = signalEntry(signal, group.id, group.name, y, document.layout.rowHeight, rowId);
       if (entry) {
         visibleRows.push(entry);
         y += entry.height + (signal?.spacingAfter ?? 0);
       } else if (spacer) {
-        visibleRows.push({ rowId, groupId: group.id, kind: "spacer", name: "", y, height: spacer.height });
+        visibleRows.push({ rowId, groupId: group.id, groupName: group.name, kind: "spacer", name: "", y, height: spacer.height });
         y += spacer.height;
       }
       visibleInGroup += 1;
@@ -40,11 +40,12 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
   return { canonicalRowIds, visibleRows, totalHeight: y };
 }
 
-function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
+function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
   if (!signal) return undefined;
   return {
     rowId,
     groupId,
+    groupName,
     kind: signal.type === "commentRow" ? "comment" : "timing",
     name: signal.display.name,
     role: signal.role,
