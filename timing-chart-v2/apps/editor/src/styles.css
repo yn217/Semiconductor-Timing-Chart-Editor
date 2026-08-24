@@ -23,6 +23,11 @@ button, input { font: inherit; }
 .surface-host [data-role="frozen-row"] { grid-template-columns: 58px minmax(0, 1fr); }
 .surface-host [data-role="tree-branch"] { overflow: hidden; color: #55708e; font-size: 10px; font-weight: 700; text-transform: uppercase; text-overflow: ellipsis; white-space: nowrap; }
 .surface-host [data-role="tree-signal-name"], .surface-host [data-role="frozen-signal-name"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.surface-host [data-role="left-row"] { cursor: grab; }
+.surface-host [data-role="left-row"][data-dragging="true"], .surface-host [data-role="tree-branch"][data-dragging="true"] { opacity: .45; cursor: grabbing; }
+.surface-host [data-role="tree-branch"][draggable="true"] { cursor: grab; }
+.surface-host [data-role="left-row"][data-drop-position="before"] { box-shadow: inset 0 3px #2477bd; }
+.surface-host [data-role="left-row"][data-drop-position="after"] { box-shadow: inset 0 -3px #2477bd; }
 .surface-host [data-role="signal-role"] { padding: 2px 4px; border-radius: 3px; background: #e6edf6; color: #405675; font-size: 9px; font-weight: 700; text-align: center; }
 .surface-host [data-signal-role="input"] [data-role="signal-role"] { background: #e3f1ff; color: #1b5b96; }
 .surface-host [data-signal-role="output"] [data-role="signal-role"] { background: #e4f6ec; color: #216843; }
@@ -38,6 +43,10 @@ button, input { font: inherit; }
 .editor-tabbar button:disabled { opacity: .45; }
 .editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
+.group-drop-targets { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 12px; border-bottom: 1px solid #dce3eb; background: #fbfcfe; color: #637086; font-size: 10px; }
+.group-drop-targets button { display: flex; align-items: center; gap: 7px; height: 24px; border: 1px dashed #aebaca; border-radius: 4px; background: white; color: #344a67; padding: 2px 8px; }
+.group-drop-targets button[data-drop-active="true"] { border-style: solid; border-color: #2477bd; background: #dcecff; }
+.group-drop-targets small { display: inline-grid; min-width: 16px; height: 16px; place-items: center; border-radius: 8px; background: #e6ecf3; font-size: 9px; }
 .editor-empty { display: grid; min-height: 160px; place-items: center; color: #728096; font-size: 12px; }
 .editor-problem { padding: 7px 12px; border-bottom: 1px solid #f2c2c2; background: #fff0f0; color: #9a2b2b; font-size: 11px; }
 .signal-properties { display: flex; align-items: end; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #e0e5ec; }

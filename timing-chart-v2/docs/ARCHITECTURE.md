@@ -46,6 +46,11 @@ Phase 7's Signal Editor reads the selected Signal from the current canonical
 snapshot. Form drafts are transient component state. Submit dispatches one
 typed Semantic Command; Event End/Duration are derived and never persisted.
 
+Phase 8 drag state belongs to the view and exists only for the active native
+drag gesture. A successful drop dispatches `signal.move` or `group.move` once;
+drag end without drop dispatches nothing. Visibility remains solely
+`Signal.display.visible` in the canonical document.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.

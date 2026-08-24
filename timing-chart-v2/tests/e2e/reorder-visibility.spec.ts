@@ -1,0 +1,121 @@
+import { expect, test, type Locator } from "@playwright/test";
+
+const signalOrder = async (surface: Locator) =>
+  surface.locator("[data-role='left-tree-rows'] > [data-row-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+
+test("hides and restores a selected signal without rebuilding its stable SVG", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const requestSvg = await surface.locator("[data-signal-id='sig_cycle_request'] > svg").elementHandle();
+  const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+
+  await page.getByTestId("signal-visibility").click();
+  await expect(page.getByTestId("signal-visibility")).toHaveText("Show signal");
+  await expect(surface.locator("[data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(surface.locator("[data-signal-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const countersHidden = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(countersHidden.waveDromRenders).toBe(countersBefore.waveDromRenders);
+  expect(countersHidden.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
+  expect(countersHidden.rowPositionUpdates).toBeGreaterThan(countersBefore.rowPositionUpdates);
+
+  await page.getByTestId("signal-visibility").click();
+  await expect(page.getByTestId("signal-visibility")).toHaveText("Hide signal");
+  await expect(surface.locator("[data-row-id='sig_cycle_request']")).toHaveCount(3);
+  const restoredSvg = await surface.locator("[data-signal-id='sig_cycle_request'] > svg").elementHandle();
+  expect(await requestSvg!.evaluate((before, after) => before === after, restoredSvg)).toBe(true);
+  const countersShown = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(countersShown.waveDromRenders).toBe(countersBefore.waveDromRenders);
+  expect(countersShown.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+});
+
+test("reorders a signal by drag-and-drop with row-position updates only", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const ownerOrderBefore = await surface.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+  const validSvg = await surface.locator("[data-signal-id='sig_cycle_valid'] > svg").elementHandle();
+
+  const source = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']");
+  const target = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_reset_n']");
+  await source.dragTo(target, { targetPosition: { x: 120, y: 2 } });
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
+  expect(await signalOrder(surface)).toEqual([
+    "sig_cycle_clock", "sig_cycle_valid", "sig_cycle_reset_n", "sig_cycle_request",
+    "sig_cycle_ready", "sig_cycle_data", "sig_cycle_result", "sig_cycle_state",
+  ]);
+  const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
+  expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
+  expect(countersAfter.rowPositionUpdates).toBeGreaterThan(countersBefore.rowPositionUpdates);
+  const ownerOrderAfter = await surface.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+  expect(ownerOrderAfter).toEqual(ownerOrderBefore);
+  const currentValidSvg = await surface.locator("[data-signal-id='sig_cycle_valid'] > svg").elementHandle();
+  expect(await validSvg!.evaluate((before, after) => before === after, currentValidSvg)).toBe(true);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
+test("moves an arbitrary group as one semantic drag-and-drop operation", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const countersBefore = await surface.getAttribute("data-render-counters");
+  const payloadHandle = surface.locator("[data-role='tree-branch'][data-group-id='grp_cycle_payload'][draggable='true']");
+  const controlRow = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_clock']");
+  await payloadHandle.dragTo(controlRow, { targetPosition: { x: 120, y: 2 } });
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
+  expect(await signalOrder(surface)).toEqual([
+    "sig_cycle_data", "sig_cycle_result", "sig_cycle_state", "sig_cycle_clock",
+    "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready", "sig_cycle_valid",
+  ]);
+  const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const countersInitial = JSON.parse(countersBefore ?? "null") as Record<string, number>;
+  expect(countersAfter.waveDromRenders).toBe(countersInitial.waveDromRenders);
+  expect(countersAfter.localGeometryBuilds).toBe(countersInitial.localGeometryBuilds);
+  await expect(surface.locator("[data-role='left-row'][data-group-start='true']").first()).toHaveAttribute("data-group-name", "Payload");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
+test("moves a signal across groups without changing its semantic role", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']").dragTo(page.locator("[data-group-target='grp_cycle_scratch']"));
+  expect(await signalOrder(surface)).toEqual([
+    "sig_cycle_clock", "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready",
+    "sig_cycle_data", "sig_cycle_result", "sig_cycle_state", "sig_cycle_valid",
+  ]);
+  await expect(surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']")).toHaveAttribute("data-group-id", "grp_cycle_scratch");
+  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid'] [data-role='signal-role']")).toHaveText("OUTPUT");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
+test("cancels a drag preview without canonical or History changes", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const source = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']");
+  const target = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_reset_n']");
+  await source.evaluate((element) => {
+    const transfer = new DataTransfer();
+    element.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }));
+  });
+  await target.evaluate((element) => {
+    const bounds = element.getBoundingClientRect();
+    element.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, clientY: bounds.top + 2, dataTransfer: new DataTransfer() }));
+  });
+  await expect(target).toHaveAttribute("data-drop-position", "before");
+  await source.dispatchEvent("dragend");
+  await expect(surface.locator("[data-drop-position]")).toHaveCount(0);
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});

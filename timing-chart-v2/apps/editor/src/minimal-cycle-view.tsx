@@ -5,7 +5,7 @@ import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import type { CanonicalDocument, ClockGenerator, ClockSignal, CommandId, GroupId, Signal, SignalId, SignalRole, ValueSignal } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, ClockGenerator, ClockSignal, CommandId, GroupId, Signal, SignalGroup, SignalId, SignalRole, ValueSignal } from "@timing-chart-v2/schema";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
 const signalId = (value: string) => value as SignalId;
@@ -49,6 +49,7 @@ const cycleDocument: CanonicalDocument = {
   signalGroups: [
     { id: groupId("grp_cycle_control"), name: "Control", rows: signals.slice(0, 5).map((signal) => signal.id), spacingAfter: 8 },
     { id: groupId("grp_cycle_payload"), name: "Payload", rows: signals.slice(5).map((signal) => signal.id), spacingBefore: 4 },
+    { id: groupId("grp_cycle_scratch"), name: "Scratch", rows: [] },
   ],
   signals,
   bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
@@ -160,12 +161,82 @@ export function MinimalCycleView() {
       setSelectedId(signal.id);
       publishState();
     };
+    let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
+    const clearDropState = () => {
+      for (const element of rendererHost.querySelectorAll<HTMLElement>("[data-drop-position], [data-dragging]")) {
+        delete element.dataset.dropPosition;
+        delete element.dataset.dragging;
+        element.setAttribute("aria-grabbed", "false");
+      }
+    };
+    const onDragStart = (event: DragEvent) => {
+      const element = event.target instanceof Element ? event.target : null;
+      const branch = element?.closest<HTMLElement>("[data-role='tree-branch'][draggable='true']");
+      const row = element?.closest<HTMLElement>("[data-role='left-row'][data-row-id]");
+      if (branch?.dataset.groupId) dragged = { kind: "group", id: branch.dataset.groupId };
+      else if (row?.dataset.rowId) dragged = { kind: "signal", id: row.dataset.rowId };
+      else return;
+      const owner = dragged.kind === "group" ? branch : row;
+      if (owner) {
+        owner.dataset.dragging = "true";
+        owner.setAttribute("aria-grabbed", "true");
+      }
+      event.dataTransfer?.setData("text/plain", `${dragged.kind}:${dragged.id}`);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    };
+    const onDragOver = (event: DragEvent) => {
+      if (!dragged) return;
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-row'][data-row-id]") : null;
+      if (!target) return;
+      event.preventDefault();
+      for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-drop-position]")) delete row.dataset.dropPosition;
+      const bounds = target.getBoundingClientRect();
+      target.dataset.dropPosition = event.clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    };
+    const onDrop = (event: DragEvent) => {
+      if (!dragged) return;
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-row'][data-row-id]") : null;
+      if (!target?.dataset.rowId || !target.dataset.groupId) return;
+      event.preventDefault();
+      const after = target.dataset.dropPosition === "after";
+      const document = session.getSnapshot().document;
+      if (dragged.kind === "signal") {
+        const sourceGroup = document.signalGroups.find((group) => group.rows.includes(dragged!.id as SignalId));
+        const targetGroup = document.signalGroups.find((group) => group.id === target.dataset.groupId);
+        if (sourceGroup && targetGroup && dragged.id !== target.dataset.rowId) {
+          const sourceIndex = sourceGroup.rows.indexOf(dragged.id as SignalId);
+          let index = targetGroup.rows.indexOf(target.dataset.rowId as SignalId) + (after ? 1 : 0);
+          if (sourceGroup.id === targetGroup.id && sourceIndex < index) index -= 1;
+          execute.current({ id: nextCommandId("drag_signal"), type: "signal.move", signalId: dragged.id as SignalId, targetGroupId: targetGroup.id, index });
+        }
+      } else {
+        const sourceIndex = document.signalGroups.findIndex((group) => group.id === dragged!.id);
+        const targetIndex = document.signalGroups.findIndex((group) => group.id === target.dataset.groupId);
+        if (sourceIndex >= 0 && targetIndex >= 0 && sourceIndex !== targetIndex) {
+          let index = targetIndex + (after ? 1 : 0);
+          if (sourceIndex < index) index -= 1;
+          execute.current({ id: nextCommandId("drag_group"), type: "group.move", groupId: dragged.id as GroupId, index });
+        }
+      }
+      dragged = undefined;
+      clearDropState();
+    };
+    const onDragEnd = () => { dragged = undefined; clearDropState(); };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
     rendererHost.addEventListener("click", onSelect);
+    rendererHost.addEventListener("dragstart", onDragStart);
+    rendererHost.addEventListener("dragover", onDragOver);
+    rendererHost.addEventListener("drop", onDrop);
+    rendererHost.addEventListener("dragend", onDragEnd);
     return () => {
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
       rendererHost.removeEventListener("click", onSelect);
+      rendererHost.removeEventListener("dragstart", onDragStart);
+      rendererHost.removeEventListener("dragover", onDragOver);
+      rendererHost.removeEventListener("drop", onDrop);
+      rendererHost.removeEventListener("dragend", onDragEnd);
       execute.current = () => undefined;
       undo.current = () => undefined;
       redo.current = () => undefined;
@@ -190,10 +261,28 @@ export function MinimalCycleView() {
       signal={selectedSignal}
       cycleCount={snapshot.document.timeline.cycleCount}
       history={history}
+      groups={snapshot.document.signalGroups}
       problem={problem}
       onCommand={(command) => execute.current(command)}
       onUndo={() => undo.current()}
       onRedo={() => redo.current()}
+      onVisibility={(signalId, visible) => execute.current({ id: nextCommandId("visibility"), type: "signal.setVisibility", signalId, visible })}
+      onDropToGroup={(kind, id, targetGroupId) => {
+        const document = snapshot.document;
+        const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
+        if (!targetGroup) return;
+        if (kind === "signal") {
+          const sourceGroup = document.signalGroups.find((group) => group.rows.includes(id as SignalId));
+          let index = targetGroup.rows.length;
+          if (sourceGroup?.id === targetGroup.id) index = Math.max(0, index - 1);
+          execute.current({ id: nextCommandId("drop_group_target"), type: "signal.move", signalId: id as SignalId, targetGroupId, index });
+          return;
+        }
+        const sourceIndex = document.signalGroups.findIndex((group) => group.id === id);
+        const targetIndex = document.signalGroups.findIndex((group) => group.id === targetGroupId);
+        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+        execute.current({ id: nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
+      }}
     />
     <footer className="status-bar">
       <span>Selected: <strong data-testid="selection-status">{selectedSignal?.display.name ?? "None"}</strong></span>
@@ -208,13 +297,16 @@ interface SignalEditorProps {
   readonly signal: Signal | undefined;
   readonly cycleCount: number;
   readonly history: HistoryState;
+  readonly groups: readonly SignalGroup[];
   readonly problem: string;
   readonly onCommand: (command: SemanticCommand) => void;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
+  readonly onVisibility: (signalId: SignalId, visible: boolean) => void;
+  readonly onDropToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
 }
 
-function SignalEditor({ signal, cycleCount, history, problem, onCommand, onUndo, onRedo }: SignalEditorProps) {
+function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDropToGroup }: SignalEditorProps) {
   const [name, setName] = useState(signal?.display.name ?? "");
   const [role, setRole] = useState<SignalRole>(signal?.role ?? "internal");
   const [format, setFormat] = useState<"hex" | "binary" | "symbolic">(signal?.type === "bus" ? signal.displayFormat ?? "hex" : "hex");
@@ -224,6 +316,26 @@ function SignalEditor({ signal, cycleCount, history, problem, onCommand, onUndo,
       <span className="editor-selection">{signal ? `${signal.display.name} · ${signal.type}` : "Select a signal to edit"}</span>
       <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
+      {signal && <button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button>}
+    </div>
+    <div className="group-drop-targets" role="list" aria-label="Signal groups">
+      <span>Drop into group</span>
+      {groups.map((group) => <button
+        type="button"
+        role="listitem"
+        key={group.id}
+        data-group-target={group.id}
+        onDragOver={(event) => { event.preventDefault(); event.currentTarget.dataset.dropActive = "true"; }}
+        onDragLeave={(event) => { delete event.currentTarget.dataset.dropActive; }}
+        onDrop={(event) => {
+          event.preventDefault();
+          delete event.currentTarget.dataset.dropActive;
+          const payload = event.dataTransfer.getData("text/plain");
+          const separator = payload.indexOf(":");
+          const kind = payload.slice(0, separator);
+          if (separator > 0 && (kind === "signal" || kind === "group")) onDropToGroup(kind, payload.slice(separator + 1), group.id);
+        }}
+      >{group.name}<small>{group.rows.length}</small></button>)}
     </div>
     {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>

@@ -173,6 +173,10 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.groupStart = String(row.groupId !== previousGroupId);
     if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
     if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
+    if (surface === "left" && row.kind === "timing") {
+      shell.draggable = true;
+      shell.setAttribute("aria-grabbed", "false");
+    }
     populateShell(shell, row, surface, row.groupId !== previousGroupId);
     place(shell, row);
     ordered.push(shell);
@@ -187,6 +191,9 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
   if (surface === "left") {
     const branch = document.createElement("span");
     branch.dataset.role = "tree-branch";
+    branch.dataset.groupId = row.groupId;
+    branch.draggable = groupStart;
+    if (groupStart) branch.setAttribute("aria-label", `Move group ${row.groupName}`);
     branch.textContent = groupStart ? row.groupName : "";
     const name = document.createElement("span");
     name.dataset.role = "tree-signal-name";
