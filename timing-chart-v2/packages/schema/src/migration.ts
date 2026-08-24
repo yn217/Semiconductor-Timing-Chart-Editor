@@ -305,6 +305,16 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     const gap = record(value);
     timeGroups.push({ id: deterministicId("time_gap", gapIndex), name: text(gap.label, `Gap ${gapIndex + 1}`), start: number(gap.start, 0), end: number(gap.end, cycleCount), presentation: { collapsed: true, foldStyle: "axis-break", ...(typeof gap.label === "string" ? { foldLabel: gap.label } : {}) } });
   }
+  for (const anchor of labelAnchors) {
+    if (anchor.ownerTimeGroupId === undefined) continue;
+    const owner = timeGroups.find((group) => group.id === anchor.ownerTimeGroupId);
+    if (!owner || owner.end !== anchor.source) {
+      delete anchor.ownerTimeGroupId;
+      warnings.push({ code: "MIGRATION_LABEL_ANCHOR_OWNER", path: "$.timeline.labelAnchors", message: `Label anchor '${anchor.id}' had a missing or non-boundary owner; the invalid owner link was removed.` });
+      continue;
+    }
+    owner.presentation = { ...record(owner.presentation), resumeLabelAnchorId: anchor.id };
+  }
 
   const headerSource = record(sourceDocument.header);
   const footerSource = record(sourceDocument.footer);

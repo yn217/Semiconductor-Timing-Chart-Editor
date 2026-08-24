@@ -377,7 +377,7 @@ export function MinimalCycleView() {
           rendererHost.dataset.snapKind = snap.kind;
           return;
         }
-        const annotation: Annotation = { id: nextEntityId("annotation") as AnnotationId, type: "arrow", label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
+        const annotation: Annotation = { id: nextEntityId("annotation", session.getSnapshot().document) as AnnotationId, type: "arrow", label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
         commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
         selectedAnnotationRef.current = annotation.id;
         setSelectedAnnotationId(annotation.id);
@@ -813,7 +813,7 @@ function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selected
     </div>
     <div className="ribbon-group history-group"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><b>Edit</b></div>
     <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>
-    <div className="ribbon-group annotation-group"><AnnotationToolbar range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
+    <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
     <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input type="checkbox" defaultChecked /> Grid</label><label><input type="checkbox" defaultChecked /> Snap</label></div><b>View</b></div>
   </section>;
 }
@@ -896,7 +896,7 @@ function TransactionEditor({ transaction, document, history, onSelect, onCommand
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
   const [laneId, setLaneId] = useState("lane_0");
-  return <section className="transaction-editor" data-testid="transaction-editor"><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header><form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction") as TransactionId; onCommand({ id: nextCommandId("transaction_create"), type: "transaction.create", transaction: { id, name: name.trim() || "Transaction", start, end, laneId } }); onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /></label><button type="submit">Create Transaction</button></form><div className="transaction-list">{document.transactions.map((item) => <button type="button" key={item.id} data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}><b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span></button>)}</div></section>;
+  return <section className="transaction-editor" data-testid="transaction-editor"><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header><form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; onCommand({ id: nextCommandId("transaction_create"), type: "transaction.create", transaction: { id, name: name.trim() || "Transaction", start, end, laneId } }); onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /></label><button type="submit">Create Transaction</button></form><div className="transaction-list">{document.transactions.map((item) => <button type="button" key={item.id} data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}><b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span></button>)}</div></section>;
 }
 
 function ExportDialog({ snapshot, range, onClose }: { readonly snapshot: CanonicalSnapshot; readonly range: { start: number; end: number }; readonly onClose: () => void }) {
@@ -931,22 +931,22 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function AnnotationToolbar({ range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
+function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
   const [type, setType] = useState<AnnotationType>("text");
   return <div className="annotation-toolbar" aria-label="Annotation tools" data-testid="annotation-toolbar">
     <strong>Annotation</strong>
     <select aria-label="Annotation type" value={type} onChange={(event) => setType(event.target.value as AnnotationType)}>
       {(["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
-    <button type="button" onClick={() => onCreate(createAnnotation(type, signalId, range))}>Add annotation</button>
+    <button type="button" onClick={() => onCreate(createAnnotation(type, signalId, range, document))}>Add annotation</button>
     <button type="button" className={arrowPickStatus === "idle" ? "" : "active"} onClick={onArmArrow}>Pick arrow endpoints</button>
     {arrowPickStatus !== "idle" && <b data-testid="arrow-pick-status">Click {arrowPickStatus} transition</b>}
     <span>Uses selected Signal and Timeline range · drag handles snap to rendered geometry</span>
   </div>;
 }
 
-function createAnnotation(type: AnnotationType, signalId: SignalId, range: { readonly start: number; readonly end: number }): Annotation {
-  const id = nextEntityId("annotation") as AnnotationId;
+function createAnnotation(type: AnnotationType, signalId: SignalId, range: { readonly start: number; readonly end: number }, document: CanonicalDocument): Annotation {
+  const id = nextEntityId("annotation", document) as AnnotationId;
   const first: SemanticAnchor = { signalId, cycle: range.start, point: "cycle-start" };
   const second: SemanticAnchor = { signalId, cycle: Math.max(range.start, range.end - 1), point: "cycle-end" };
   const base = { id, type, label: `${type} ${range.start}`, visible: true, color: "#d04a36" } as const;
@@ -1012,8 +1012,8 @@ function TimelineToolbar({ document, range, onRange, onCommand }: { readonly doc
       <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}>Delete range</button>
       <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}>Duplicate to</button>
       <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })}>Move to</button>
-      <button type="button" onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark") as BookmarkId, name: `Marker ${range.start}`, start: range.start } })}>Add marker</button>
-      <button type="button" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time") as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}>Add gap</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark", document) as BookmarkId, name: `Marker ${range.start}`, start: range.start } })}>Add marker</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}>Add gap</button>
     </div>
     <div className="timeline-objects">
       {document.bookmarks.map((bookmark) => <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} onClick={() => onCommand({ id: nextCommandId("marker_delete"), type: "bookmark.delete", bookmarkId: bookmark.id })}>◆ {bookmark.name} ×</button>)}
@@ -1155,9 +1155,24 @@ function nextCommandId(scope: string): CommandId {
 }
 
 let entitySequence = 0;
-function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction"): string {
-  entitySequence += 1;
-  return `${scope}_phase9_${entitySequence}`;
+function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction", document: CanonicalDocument): string {
+  const used = new Set<string>([
+    ...document.signals.map((item) => item.id),
+    ...document.signalGroups.map((item) => item.id),
+    ...document.signalGroups.flatMap((item) => item.spacers?.map((spacer) => spacer.id) ?? []),
+    ...document.annotations.map((item) => item.id),
+    ...document.transactions.map((item) => item.id),
+    ...document.bookmarks.map((item) => item.id),
+    ...document.timeGroups.map((item) => item.id),
+    ...document.timeline.labelAnchors.map((item) => item.id),
+    ...document.constraints.map((item) => item.id),
+  ]);
+  let candidate: string;
+  do {
+    entitySequence += 1;
+    candidate = `${scope}_phase9_${entitySequence}`;
+  } while (used.has(candidate));
+  return candidate;
 }
 
 const annotationFields = ["anchor", "start", "end", "from", "to"] as const;

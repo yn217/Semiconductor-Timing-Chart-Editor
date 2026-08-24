@@ -98,6 +98,51 @@ describe("semantic validation", () => {
     expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("MISSING_CROSS_REFERENCE");
   });
 
+  it.each([
+    ["binary width", "binary", "width", 1],
+    ["binary display format", "binary", "displayFormat", "binary"],
+    ["binary generator", "binary", "generator", canonicalFixture().signals[0]!.type === "clock" ? canonicalFixture().signals[0]!.generator : undefined],
+    ["clock values", "clock", "values", [{ start: 0, value: 0 }]],
+    ["clock width", "clock", "width", 1],
+    ["comment generator", "commentRow", "generator", canonicalFixture().signals[0]!.type === "clock" ? canonicalFixture().signals[0]!.generator : undefined],
+    ["comment values", "commentRow", "values", [{ start: 0, value: 0 }]],
+  ])("rejects signal foreign field: %s", (_name, type, key, value) => {
+    const document = clone(canonicalFixture());
+    const base = document.signals[1] as unknown as Record<string, unknown>;
+    if (type === "clock") Object.assign(base, document.signals[0], { id: document.signals[1]!.id });
+    else if (type === "commentRow") Object.assign(base, { type, role: "internal", title: "Note", body: "Body" });
+    else Object.assign(base, { type });
+    base[key] = value;
+    expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("SCHEMA_NOT");
+  });
+
+  it("rejects a spacer row placed in a group other than its owner", () => {
+    const document = clone(canonicalFixture());
+    const first = document.signalGroups[0]!;
+    const second = { id: "grp_other", name: "Other", rows: ["spacer_owned"] };
+    (document.signalGroups as unknown as Array<Record<string, unknown>>).splice(0, 1,
+      { ...first, rows: first.rows, spacers: [{ id: "spacer_owned", height: 8 }] }, second);
+    expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("SPACER_OWNER_MISMATCH");
+  });
+
+  it("rejects duplicate ruler sources and non-reciprocal Time Group resume anchors", () => {
+    const document = clone(canonicalFixture());
+    (document.timeGroups as unknown as Array<Record<string, unknown>>).push({ id: "time_gap", name: "Gap", start: 2, end: 4, presentation: { resumeLabelAnchorId: "label_resume" } });
+    (document.timeline.labelAnchors as unknown as Array<Record<string, unknown>>).push(
+      { id: "label_resume", source: 3, display: 10, ownerTimeGroupId: "time_other" },
+      { id: "label_duplicate", source: 3, display: 11 },
+    );
+    const codes = validateCanonicalDocument(document).map((item) => item.code);
+    expect(codes).toContain("DUPLICATE_LABEL_ANCHOR_SOURCE");
+    expect(codes).toContain("TIME_GROUP_RESUME_OWNER_MISMATCH");
+  });
+
+  it("rejects anchor points that are incompatible with their signal target", () => {
+    const document = clone(canonicalFixture());
+    (document.annotations as unknown as Array<Record<string, unknown>>).push({ id: "ann_bad_point", type: "text", label: "bad", visible: true, anchor: { signalId: "sig_clk", cycle: 1, point: "value-center" } });
+    expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("INVALID_ANCHOR_POINT");
+  });
+
   it("rejects non-timing annotation targets", () => {
     const document = clone(canonicalFixture());
     const comment = {

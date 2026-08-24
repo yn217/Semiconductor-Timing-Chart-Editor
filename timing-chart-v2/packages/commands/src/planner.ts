@@ -198,8 +198,27 @@ function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSe
   };
 }
 
-function cloneStableId<T extends string>(id: T, commandId: string): T {
-  return `${id}.copy.${commandId}` as T;
+function canonicalIds(document: CanonicalDocument): Set<string> {
+  return new Set([
+    ...document.signals.map((item) => item.id),
+    ...document.signalGroups.map((item) => item.id),
+    ...document.signalGroups.flatMap((item) => item.spacers?.map((spacer) => spacer.id) ?? []),
+    ...document.annotations.map((item) => item.id),
+    ...document.transactions.map((item) => item.id),
+    ...document.bookmarks.map((item) => item.id),
+    ...document.timeGroups.map((item) => item.id),
+    ...document.timeline.labelAnchors.map((item) => item.id),
+    ...document.constraints.map((item) => item.id),
+  ]);
+}
+
+function cloneStableId<T extends string>(id: T, commandId: string, used: Set<string>): T {
+  const base = `${id}.copy.${commandId}`;
+  let candidate = base;
+  let suffix = 2;
+  while (used.has(candidate)) candidate = `${base}.${suffix++}`;
+  used.add(candidate);
+  return candidate as T;
 }
 
 function sameValue(left: SignalValueChange | undefined, right: SignalValueChange | undefined): boolean {
@@ -266,6 +285,15 @@ function mappedInterval(start: number, end: number, sourceStart: number, sourceE
 function duplicateTimelineRange(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "timeline.duplicateRange" }>): CanonicalDocument {
   const length = command.end - command.start;
   const inserted = insertTimeline(document, command.at, length);
+  const usedIds = canonicalIds(document);
+  const clonedIds = new Map<string, string>();
+  const cloneId = <T extends string>(id: T): T => {
+    const existing = clonedIds.get(id);
+    if (existing) return existing as T;
+    const clone = cloneStableId(id, command.id, usedIds);
+    clonedIds.set(id, clone);
+    return clone;
+  };
   const signals = inserted.signals.map((signal): Signal => {
     const source = document.signals.find((item) => item.id === signal.id)!;
     if (signal.type === "commentRow" || source.type === "commentRow") return signal;
@@ -279,26 +307,37 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
   const annotations = document.annotations.flatMap((annotation) => {
     const anchors = annotationKeys.map((key) => annotation[key]).filter((anchor): anchor is SemanticAnchor => anchor !== undefined);
     if (anchors.length === 0 || anchors.some((anchor) => anchor.cycle < command.start || anchor.cycle >= command.end)) return [];
-    const clone = { ...annotation, id: cloneStableId(annotation.id, command.id) };
+    const clone = { ...annotation, id: cloneId(annotation.id) };
     for (const key of annotationKeys) {
       const anchor = duplicateAnchor(annotation[key], command.start, command.end, command.at);
       if (anchor) Object.assign(clone, { [key]: anchor });
     }
     return [clone];
   });
-  const clonedGroups = document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end).map((group) => ({ ...group, id: cloneStableId(group.id, command.id), start: command.at + group.start - command.start, end: command.at + group.end - command.start }));
-  const groupIds = new Map(document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end).map((group) => [group.id, cloneStableId(group.id, command.id)]));
-  const clonedLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source < command.end).map((anchor) => ({ ...anchor, id: cloneStableId(anchor.id, command.id), source: command.at + anchor.source - command.start, ...(anchor.ownerTimeGroupId && groupIds.has(anchor.ownerTimeGroupId) ? { ownerTimeGroupId: groupIds.get(anchor.ownerTimeGroupId)! } : { ownerTimeGroupId: undefined }) })).map((anchor) => {
+  const sourceGroups = document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end);
+  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source <= command.end);
+  const groupIds = new Map(sourceGroups.map((group) => [group.id, cloneId(group.id)]));
+  const labelIds = new Map(sourceLabels.map((anchor) => [anchor.id, cloneId(anchor.id)]));
+  const clonedGroups = sourceGroups.map((group) => ({
+    ...group,
+    id: groupIds.get(group.id)!,
+    start: command.at + group.start - command.start,
+    end: command.at + group.end - command.start,
+    ...(group.presentation?.resumeLabelAnchorId && labelIds.has(group.presentation.resumeLabelAnchorId)
+      ? { presentation: { ...group.presentation, resumeLabelAnchorId: labelIds.get(group.presentation.resumeLabelAnchorId)! } }
+      : {}),
+  }));
+  const clonedLabels = sourceLabels.map((anchor) => ({ ...anchor, id: labelIds.get(anchor.id)!, source: command.at + anchor.source - command.start, ...(anchor.ownerTimeGroupId && groupIds.has(anchor.ownerTimeGroupId) ? { ownerTimeGroupId: groupIds.get(anchor.ownerTimeGroupId)! } : { ownerTimeGroupId: undefined }) })).map((anchor) => {
     if (anchor.ownerTimeGroupId !== undefined) return anchor;
     const { ownerTimeGroupId: _owner, ...rest } = anchor;
     return rest;
   });
-  const clonedTransactions = document.transactions.filter((transaction) => transaction.start >= command.start && transaction.end <= command.end).map((transaction) => ({ ...transaction, id: cloneStableId(transaction.id, command.id), start: command.at + transaction.start - command.start, end: command.at + transaction.end - command.start, ...(transaction.phases ? { phases: transaction.phases.map((phase) => ({ ...phase, start: command.at + phase.start - command.start, end: command.at + phase.end - command.start })) } : {}) }));
+  const clonedTransactions = document.transactions.filter((transaction) => transaction.start >= command.start && transaction.end <= command.end).map((transaction) => ({ ...transaction, id: cloneId(transaction.id), start: command.at + transaction.start - command.start, end: command.at + transaction.end - command.start, ...(transaction.phases ? { phases: transaction.phases.map((phase) => ({ ...phase, start: command.at + phase.start - command.start, end: command.at + phase.end - command.start })) } : {}) }));
   return {
     ...inserted,
     signals,
     annotations: [...inserted.annotations, ...annotations],
-    bookmarks: [...inserted.bookmarks, ...document.bookmarks.filter((bookmark) => bookmark.start >= command.start && bookmark.start < command.end).map((bookmark) => ({ ...bookmark, id: cloneStableId(bookmark.id, command.id), start: command.at + bookmark.start - command.start }))],
+    bookmarks: [...inserted.bookmarks, ...document.bookmarks.filter((bookmark) => bookmark.start >= command.start && bookmark.start < command.end).map((bookmark) => ({ ...bookmark, id: cloneId(bookmark.id), start: command.at + bookmark.start - command.start }))],
     timeGroups: [...inserted.timeGroups, ...clonedGroups],
     transactions: [...inserted.transactions, ...clonedTransactions],
     timeline: { ...inserted.timeline, labelAnchors: [...inserted.timeline.labelAnchors, ...clonedLabels] },

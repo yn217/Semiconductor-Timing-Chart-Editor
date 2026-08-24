@@ -109,6 +109,12 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
     const target = signals.get(anchor.signalId);
     if (!target) problems.push(problem("MISSING_CROSS_REFERENCE", `${path}.signalId`, `Signal '${anchor.signalId}' does not exist.`, annotation.id));
     else if (target.type === "commentRow") problems.push(problem("NON_TIMING_ANCHOR_TARGET", `${path}.signalId`, "Annotations cannot target a non-timing comment row.", annotation.id));
+    else {
+      const valueOnly = anchor.point === "value-start" || anchor.point === "value-center";
+      if (valueOnly && target.type === "clock") problems.push(problem("INVALID_ANCHOR_POINT", `${path}.point`, `Point '${anchor.point}' requires a value signal.`, annotation.id));
+    }
+  } else if (["rising-edge", "falling-edge", "value-start", "value-center", "row-center"].includes(anchor.point)) {
+    problems.push(problem("ANCHOR_SIGNAL_REQUIRED", `${path}.signalId`, `Point '${anchor.point}' requires signalId.`, annotation.id));
   }
 }
 
@@ -146,12 +152,15 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
   if (document.timeline.end !== document.timeline.cycleCount) problems.push(problem("TIMELINE_END_MISMATCH", "$.timeline.end", "Canonical timeline end must equal cycleCount."));
 
   const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
-  const spacers = new Set(document.signalGroups.flatMap((group) => group.spacers?.map((spacer) => spacer.id) ?? []));
+  const spacerOwners = new Map<string, string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => [spacer.id, group.id] as const)));
+  const spacers = new Set(spacerOwners.keys());
   const renderableRows = new Set<string>([...signals.keys(), ...spacers]);
   const occurrences = new Map<string, number>();
   document.signalGroups.forEach((group, groupIndex) => group.rows.forEach((rowId, rowIndex) => {
     occurrences.set(rowId, (occurrences.get(rowId) ?? 0) + 1);
     if (!renderableRows.has(rowId)) problems.push(problem("UNKNOWN_ROW", `$.signalGroups[${groupIndex}].rows[${rowIndex}]`, `Row '${rowId}' has no canonical signal or spacer owner.`, rowId));
+    const spacerOwner = spacerOwners.get(rowId);
+    if (spacerOwner !== undefined && spacerOwner !== group.id) problems.push(problem("SPACER_OWNER_MISMATCH", `$.signalGroups[${groupIndex}].rows[${rowIndex}]`, `Spacer '${rowId}' belongs to group '${spacerOwner}', not '${group.id}'.`, rowId));
   }));
   for (const rowId of renderableRows) {
     const count = occurrences.get(rowId) ?? 0;
@@ -194,10 +203,24 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
     if (group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) problems.push(problem("INVALID_TIME_GROUP_RANGE", `$.timeGroups[${index}]`, "Time Group must use a half-open range within the source timeline.", group.id));
     const resume = group.presentation?.resumeLabelAnchorId;
     if (resume && !labelAnchors.has(resume)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, `Label anchor '${resume}' does not exist.`, group.id));
+    if (resume) {
+      const anchor = labelAnchors.get(resume);
+      if (anchor && anchor.ownerTimeGroupId !== group.id) problems.push(problem("TIME_GROUP_RESUME_OWNER_MISMATCH", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, "Resume label anchor must reciprocally name this Time Group as owner.", group.id));
+      if (anchor && anchor.source !== group.end) problems.push(problem("TIME_GROUP_RESUME_BOUNDARY_MISMATCH", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, `Resume label anchor must be at Time Group end ${group.end}.`, group.id));
+    }
   });
+  const labelSources = new Map<number, string>();
   document.timeline.labelAnchors.forEach((anchor, index) => {
     if (anchor.source < 0 || anchor.source > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].source`, "Ruler label anchor is outside the source timeline.", anchor.id));
     if (anchor.ownerTimeGroupId && !timeGroups.has(anchor.ownerTimeGroupId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.timeline.labelAnchors[${index}].ownerTimeGroupId`, `Time Group '${anchor.ownerTimeGroupId}' does not exist.`, anchor.id));
+    const prior = labelSources.get(anchor.source);
+    if (prior !== undefined) problems.push(problem("DUPLICATE_LABEL_ANCHOR_SOURCE", `$.timeline.labelAnchors[${index}].source`, `Source ${anchor.source} is already owned by label anchor '${prior}'.`, anchor.id));
+    else labelSources.set(anchor.source, anchor.id);
+    if (anchor.ownerTimeGroupId) {
+      const owner = timeGroups.get(anchor.ownerTimeGroupId);
+      if (owner && owner.end !== anchor.source) problems.push(problem("LABEL_ANCHOR_BOUNDARY_MISMATCH", `$.timeline.labelAnchors[${index}].source`, `Resume label anchor must be at owner Time Group end ${owner.end}.`, anchor.id));
+      if (owner?.presentation?.resumeLabelAnchorId !== anchor.id) problems.push(problem("LABEL_ANCHOR_OWNER_MISMATCH", `$.timeline.labelAnchors[${index}].ownerTimeGroupId`, "Owner Time Group must reciprocally reference this resume label anchor.", anchor.id));
+    }
   });
   document.transactions.forEach((transaction, index) => {
     if (transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.transactions[${index}]`, "Transaction must use a half-open range within the source timeline.", transaction.id));

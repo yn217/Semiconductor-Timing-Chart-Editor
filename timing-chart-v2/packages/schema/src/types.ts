@@ -21,7 +21,7 @@ export interface PixelOffset { readonly x: number; readonly y: number }
 export type AnchorPoint =
   | "cycle-start" | "cycle-center" | "cycle-end"
   | "transition-start" | "transition-center" | "transition-end"
-  | "rising-edge" | "falling-edge" | "value-start";
+  | "rising-edge" | "falling-edge" | "value-start" | "value-center" | "row-center";
 
 export interface SemanticAnchor {
   readonly signalId?: SignalId;

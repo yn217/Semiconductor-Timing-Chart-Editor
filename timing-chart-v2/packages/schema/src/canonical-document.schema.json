@@ -143,14 +143,15 @@
       },
       "additionalProperties": false,
       "allOf": [
-        { "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] }, "then": { "required": ["generator", "edgeCounter"], "not": { "required": ["values"] } } },
-        { "if": { "properties": { "type": { "const": "commentRow" } }, "required": ["type"] }, "then": { "required": ["title", "body"], "not": { "anyOf": [{ "required": ["values"] }, { "required": ["generator"] }] } } },
-        { "if": { "not": { "properties": { "type": { "enum": ["clock", "commentRow"] } }, "required": ["type"] } }, "then": { "required": ["values"] } }
+        { "if": { "properties": { "type": { "const": "clock" } }, "required": ["type"] }, "then": { "required": ["generator", "edgeCounter"], "not": { "anyOf": [{ "required": ["values"] }, { "required": ["width"] }, { "required": ["displayFormat"] }, { "required": ["title"] }, { "required": ["body"] }] } } },
+        { "if": { "properties": { "type": { "const": "commentRow" } }, "required": ["type"] }, "then": { "required": ["title", "body"], "properties": { "role": { "const": "internal" } }, "not": { "anyOf": [{ "required": ["values"] }, { "required": ["generator"] }, { "required": ["enable"] }, { "required": ["edgeCounter"] }, { "required": ["width"] }, { "required": ["displayFormat"] }] } } },
+        { "if": { "properties": { "type": { "const": "bus" } }, "required": ["type"] }, "then": { "required": ["values"], "not": { "anyOf": [{ "required": ["generator"] }, { "required": ["enable"] }, { "required": ["edgeCounter"] }, { "required": ["title"] }, { "required": ["body"] }] } } },
+        { "if": { "properties": { "type": { "enum": ["binary", "state", "logic", "event", "pulse"] } }, "required": ["type"] }, "then": { "required": ["values"], "not": { "anyOf": [{ "required": ["generator"] }, { "required": ["enable"] }, { "required": ["edgeCounter"] }, { "required": ["width"] }, { "required": ["displayFormat"] }, { "required": ["title"] }, { "required": ["body"] }] } } }
       ]
     },
     "anchor": {
       "type": "object", "additionalProperties": false, "required": ["cycle", "point"],
-      "properties": { "signalId": { "$ref": "#/$defs/stableId" }, "cycle": { "type": "number", "minimum": 0 }, "point": { "enum": ["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start"] }, "offset": { "$ref": "#/$defs/offset" } }
+      "properties": { "signalId": { "$ref": "#/$defs/stableId" }, "cycle": { "type": "number", "minimum": 0 }, "point": { "enum": ["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"] }, "offset": { "$ref": "#/$defs/offset" } }
     },
     "annotation": {
       "type": "object", "additionalProperties": false, "required": ["id", "type", "label", "visible"],

@@ -14,7 +14,7 @@ function rippleFixture() {
       labelAnchors: [{ id: "label_wait" as LabelAnchorId, source: 5, display: 20, ownerTimeGroupId: "time_wait" as TimeGroupId }],
     },
     bookmarks: [{ id: "bookmark_data" as BookmarkId, name: "Data", start: 4 }],
-    timeGroups: [{ id: "time_wait" as TimeGroupId, name: "Wait", start: 2, end: 5 }],
+    timeGroups: [{ id: "time_wait" as TimeGroupId, name: "Wait", start: 2, end: 5, presentation: { resumeLabelAnchorId: "label_wait" as LabelAnchorId } }],
     annotations: [{ id: "ann_data" as AnnotationId, type: "text" as const, label: "Data", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 4, point: "value-start" as const } }],
     transactions: [{ id: "txn_data" as TransactionId, name: "Transfer", start: 4, end: 7, phases: [{ name: "Data", start: 4, end: 6 }] }],
   };
@@ -68,6 +68,7 @@ describe("timeline ripple commands", () => {
   it("removes fully deleted ranges and reports their IDs in the ChangeSet", () => {
     const initial = rippleFixture();
     initial.timeGroups[0] = { ...initial.timeGroups[0]!, start: 2, end: 4 };
+    initial.timeline.labelAnchors[0] = { ...initial.timeline.labelAnchors[0]!, source: 4 };
     initial.transactions[0] = { ...initial.transactions[0]!, start: 2, end: 4, phases: [{ name: "Deleted", start: 2, end: 4 }] };
     const session = new CommandHistorySession(initial);
     const result = session.execute({ id: commandId("cmd_delete_ranges"), type: "timeline.delete", start: 2, end: 4 });
@@ -122,6 +123,21 @@ describe("timeline ripple commands", () => {
       expect.objectContaining({ id: "bookmark_data", start: 7 }),
     ]));
     expect(session.historyState().undoDepth).toBe(1);
+  });
+
+  it("allocates collision-free clone IDs after reload even when a command ID is reused", () => {
+    const reloaded = rippleFixture();
+    reloaded.annotations = [...reloaded.annotations, {
+      id: "ann_data.copy.cmd_duplicate" as AnnotationId,
+      type: "text",
+      label: "Existing clone",
+      visible: true,
+      anchor: { signalId: "sig_data" as SignalId, cycle: 0, point: "value-start" },
+    }];
+    const session = new CommandHistorySession(reloaded);
+    const result = session.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.annotations.map((item) => item.id)).toContain("ann_data.copy.cmd_duplicate.2");
   });
 
   it("moves a cycle range by permutation while preserving owner identity", () => {
