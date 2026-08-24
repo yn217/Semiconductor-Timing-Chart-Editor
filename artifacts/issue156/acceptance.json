@@ -1,5 +1,87 @@
 {
   "issue": 156,
+  "cases": [
+    {
+      "name": "A-start-0-duty-50",
+      "start": 0,
+      "initial": 0,
+      "polarity": "positive",
+      "duty": 0.5,
+      "adapted": {
+        "wave": "p.......",
+        "period": 1,
+        "phase": 0,
+        "duty": 0.5,
+        "suppressedPeriods": []
+      },
+      "wave": "p.......",
+      "firstEdgeCycle": 0
+    },
+    {
+      "name": "B-start-3-duty-50",
+      "start": 3,
+      "initial": 0,
+      "polarity": "positive",
+      "duty": 0.5,
+      "adapted": {
+        "wave": "0.....1010101010",
+        "subcycleFactor": 2,
+        "binaryClock": true,
+        "duty": 0.5,
+        "suppressedPeriods": []
+      },
+      "wave": "0.....1010101010",
+      "firstEdgeCycle": 3
+    },
+    {
+      "name": "C-start-3-duty-40",
+      "start": 3,
+      "initial": 0,
+      "polarity": "positive",
+      "duty": 0.4,
+      "adapted": {
+        "wave": "0..............1.0..1.0..1.0..1.0..1.0..",
+        "subcycleFactor": 5,
+        "binaryClock": true,
+        "duty": 0.4,
+        "suppressedPeriods": []
+      },
+      "wave": "0..............1.0..1.0..1.0..1.0..1.0..",
+      "firstEdgeCycle": 3
+    },
+    {
+      "name": "D-start-3-initial-1",
+      "start": 3,
+      "initial": 1,
+      "polarity": "positive",
+      "duty": 0.5,
+      "adapted": {
+        "wave": "1......010101010",
+        "subcycleFactor": 2,
+        "binaryClock": true,
+        "duty": 0.5,
+        "suppressedPeriods": []
+      },
+      "wave": "1......010101010",
+      "firstEdgeCycle": 3
+    },
+    {
+      "name": "E-start-3-negative",
+      "start": 3,
+      "initial": 0,
+      "polarity": "negative",
+      "duty": 0.5,
+      "adapted": {
+        "wave": "0......101010101",
+        "subcycleFactor": 2,
+        "binaryClock": true,
+        "duty": 0.5,
+        "suppressedPeriods": []
+      },
+      "wave": "0......101010101",
+      "firstEdgeCycle": 3
+    }
+  ],
   "native": {
     "binaryClock": false,
     "wave": "p.......",
@@ -16,6 +98,20 @@
   },
   "startHonored": true,
   "nativeStillNative": true,
+  "initialAndPolarityPreserved": true,
+  "multiClockIndependent": true,
+  "persistence": {
+    "changed": true,
+    "reopened": true,
+    "roundTripStart": 3,
+    "changedAfterOpen": true,
+    "undone": true,
+    "undoStart": 3,
+    "redone": true,
+    "redoStart": 4,
+    "historyBefore": 0,
+    "unchangedBefore": true
+  },
   "errors": [],
   "pass": true
 }
