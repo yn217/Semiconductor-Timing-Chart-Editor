@@ -6,6 +6,7 @@ import type {
   SignalGroup,
   SignalId,
   SignalValueChange,
+  SemanticAnchor,
   TimeGroup,
   Transaction,
 } from "@timing-chart-v2/schema";
@@ -194,6 +195,139 @@ function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSe
     timeGroupSemantics: unique(documents.flatMap((document) => document.timeGroups.map((item) => item.id))),
     transactionSemantics: unique(documents.flatMap((document) => document.transactions.map((item) => item.id))),
     minimapOverview: true,
+  };
+}
+
+function cloneStableId<T extends string>(id: T, commandId: string): T {
+  return `${id}.copy.${commandId}` as T;
+}
+
+function sameValue(left: SignalValueChange | undefined, right: SignalValueChange | undefined): boolean {
+  return left?.value === right?.value && left?.comment === right?.comment;
+}
+
+function compressCycleStates(states: readonly (SignalValueChange | undefined)[]): SignalValueChange[] {
+  const changes: SignalValueChange[] = [];
+  let previous: SignalValueChange | undefined;
+  states.forEach((state, start) => {
+    if (state && !sameValue(state, previous)) changes.push({ start, value: state.value, ...(state.comment === undefined ? {} : { comment: state.comment }) });
+    previous = state;
+  });
+  return changes;
+}
+
+function cycleStates(changes: readonly SignalValueChange[], cycleCount: number): (SignalValueChange | undefined)[] {
+  return Array.from({ length: cycleCount }, (_, cycle) => valueAt(changes, cycle));
+}
+
+function duplicateChanges(changes: readonly SignalValueChange[], cycleCount: number, start: number, end: number, at: number): SignalValueChange[] {
+  const states = cycleStates(changes, cycleCount);
+  states.splice(at, 0, ...states.slice(start, end));
+  return compressCycleStates(states);
+}
+
+function moveCycleIndex(cycle: number, start: number, end: number, to: number): number {
+  const length = end - start;
+  if (to < start) {
+    if (cycle >= start && cycle < end) return to + (cycle - start);
+    if (cycle >= to && cycle < start) return cycle + length;
+    return cycle;
+  }
+  const originalDestination = to + length;
+  if (cycle >= start && cycle < end) return to + (cycle - start);
+  if (cycle >= end && cycle < originalDestination) return cycle - length;
+  return cycle;
+}
+
+function moveChanges(changes: readonly SignalValueChange[], cycleCount: number, start: number, end: number, to: number): SignalValueChange[] {
+  const source = cycleStates(changes, cycleCount);
+  const moved = Array<SignalValueChange | undefined>(cycleCount);
+  source.forEach((state, cycle) => { moved[moveCycleIndex(cycle, start, end, to)] = state; });
+  return compressCycleStates(moved);
+}
+
+function duplicateAnchor(anchor: SemanticAnchor | undefined, start: number, end: number, at: number): SemanticAnchor | undefined {
+  if (!anchor || anchor.cycle < start || anchor.cycle >= end) return undefined;
+  return { ...anchor, cycle: at + (anchor.cycle - start) };
+}
+
+function moveAnchor(anchor: SemanticAnchor | undefined, start: number, end: number, to: number): SemanticAnchor | undefined {
+  if (!anchor) return undefined;
+  return { ...anchor, cycle: moveCycleIndex(anchor.cycle, start, end, to) };
+}
+
+function mappedInterval(start: number, end: number, sourceStart: number, sourceEnd: number, to: number): { readonly start: number; readonly end: number } | undefined {
+  if (!Number.isInteger(start) || !Number.isInteger(end)) return undefined;
+  const mapped = Array.from({ length: end - start }, (_, index) => moveCycleIndex(start + index, sourceStart, sourceEnd, to)).sort((left, right) => left - right);
+  if (mapped.length === 0 || mapped.some((cycle, index) => index > 0 && cycle !== mapped[index - 1]! + 1)) return undefined;
+  return { start: mapped[0]!, end: mapped.at(-1)! + 1 };
+}
+
+function duplicateTimelineRange(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "timeline.duplicateRange" }>): CanonicalDocument {
+  const length = command.end - command.start;
+  const inserted = insertTimeline(document, command.at, length);
+  const signals = inserted.signals.map((signal): Signal => {
+    const source = document.signals.find((item) => item.id === signal.id)!;
+    if (signal.type === "commentRow" || source.type === "commentRow") return signal;
+    if (signal.type === "clock" && source.type === "clock") return source.enable
+      ? { ...signal, enable: duplicateChanges(source.enable, document.timeline.cycleCount, command.start, command.end, command.at) }
+      : signal;
+    if (signal.type !== "clock" && source.type !== "clock") return { ...signal, values: duplicateChanges(source.values, document.timeline.cycleCount, command.start, command.end, command.at) };
+    return signal;
+  });
+  const annotationKeys = ["anchor", "start", "end", "from", "to"] as const;
+  const annotations = document.annotations.flatMap((annotation) => {
+    const anchors = annotationKeys.map((key) => annotation[key]).filter((anchor): anchor is SemanticAnchor => anchor !== undefined);
+    if (anchors.length === 0 || anchors.some((anchor) => anchor.cycle < command.start || anchor.cycle >= command.end)) return [];
+    const clone = { ...annotation, id: cloneStableId(annotation.id, command.id) };
+    for (const key of annotationKeys) {
+      const anchor = duplicateAnchor(annotation[key], command.start, command.end, command.at);
+      if (anchor) Object.assign(clone, { [key]: anchor });
+    }
+    return [clone];
+  });
+  const clonedGroups = document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end).map((group) => ({ ...group, id: cloneStableId(group.id, command.id), start: command.at + group.start - command.start, end: command.at + group.end - command.start }));
+  const groupIds = new Map(document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end).map((group) => [group.id, cloneStableId(group.id, command.id)]));
+  const clonedLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source < command.end).map((anchor) => ({ ...anchor, id: cloneStableId(anchor.id, command.id), source: command.at + anchor.source - command.start, ...(anchor.ownerTimeGroupId && groupIds.has(anchor.ownerTimeGroupId) ? { ownerTimeGroupId: groupIds.get(anchor.ownerTimeGroupId)! } : { ownerTimeGroupId: undefined }) })).map((anchor) => {
+    if (anchor.ownerTimeGroupId !== undefined) return anchor;
+    const { ownerTimeGroupId: _owner, ...rest } = anchor;
+    return rest;
+  });
+  const clonedTransactions = document.transactions.filter((transaction) => transaction.start >= command.start && transaction.end <= command.end).map((transaction) => ({ ...transaction, id: cloneStableId(transaction.id, command.id), start: command.at + transaction.start - command.start, end: command.at + transaction.end - command.start, ...(transaction.phases ? { phases: transaction.phases.map((phase) => ({ ...phase, start: command.at + phase.start - command.start, end: command.at + phase.end - command.start })) } : {}) }));
+  return {
+    ...inserted,
+    signals,
+    annotations: [...inserted.annotations, ...annotations],
+    bookmarks: [...inserted.bookmarks, ...document.bookmarks.filter((bookmark) => bookmark.start >= command.start && bookmark.start < command.end).map((bookmark) => ({ ...bookmark, id: cloneStableId(bookmark.id, command.id), start: command.at + bookmark.start - command.start }))],
+    timeGroups: [...inserted.timeGroups, ...clonedGroups],
+    transactions: [...inserted.transactions, ...clonedTransactions],
+    timeline: { ...inserted.timeline, labelAnchors: [...inserted.timeline.labelAnchors, ...clonedLabels] },
+  };
+}
+
+function moveTimelineRange(document: CanonicalDocument, start: number, end: number, to: number): CanonicalDocument | undefined {
+  if (document.signals.some((signal) => signal.type === "clock" && ((signal.enable?.length ?? 0) > 0 || (signal.generator.suppressedPeriods?.length ?? 0) > 0))) return undefined;
+  const mapRange = <T extends { readonly start: number; readonly end: number }>(range: T): T | undefined => {
+    const mapped = mappedInterval(range.start, range.end, start, end, to);
+    return mapped ? { ...range, ...mapped } : undefined;
+  };
+  const timeGroups = document.timeGroups.map(mapRange);
+  const transactions = document.transactions.map((transaction) => {
+    const mapped = mapRange(transaction);
+    if (!mapped) return undefined;
+    const phases = transaction.phases?.map(mapRange);
+    if (phases?.some((phase) => phase === undefined)) return undefined;
+    return { ...mapped, ...(phases ? { phases } : {}) } as Transaction;
+  });
+  if (timeGroups.some((group) => group === undefined) || transactions.some((transaction) => transaction === undefined)) return undefined;
+  return {
+    ...document,
+    signals: document.signals.map((signal): Signal => signal.type === "clock" || signal.type === "commentRow" ? signal : { ...signal, values: moveChanges(signal.values, document.timeline.cycleCount, start, end, to) }),
+    annotations: document.annotations.map((annotation) => ({ ...annotation, anchor: moveAnchor(annotation.anchor, start, end, to), start: moveAnchor(annotation.start, start, end, to), end: moveAnchor(annotation.end, start, end, to), from: moveAnchor(annotation.from, start, end, to), to: moveAnchor(annotation.to, start, end, to) })).map((annotation) => Object.fromEntries(Object.entries(annotation).filter(([, value]) => value !== undefined)) as unknown as Annotation),
+    bookmarks: document.bookmarks.map((bookmark) => ({ ...bookmark, start: moveCycleIndex(bookmark.start, start, end, to) })),
+    timeGroups: timeGroups as TimeGroup[],
+    transactions: transactions as Transaction[],
+    timeline: { ...document.timeline, labelAnchors: document.timeline.labelAnchors.map((anchor) => ({ ...anchor, source: moveCycleIndex(anchor.source, start, end, to) })) },
   };
 }
 
@@ -390,6 +524,75 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const next = deleteTimeline(document, command.start, command.end);
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
+    }
+    case "timeline.duplicateRange": {
+      if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount || !Number.isInteger(command.at) || command.at < 0 || command.at > document.timeline.cycleCount) return fail("invalid", "INVALID_TIMELINE_DUPLICATE", "$", "Duplicate requires a valid half-open source range and insertion boundary.");
+      if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline duplicate is blocked while untyped constraints exist.");
+      const next = duplicateTimelineRange(document, command);
+      const changeSet = timelineChangeSet(document, next);
+      return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
+    }
+    case "timeline.moveRange": {
+      const length = command.end - command.start;
+      if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount || !Number.isInteger(command.to) || command.to < 0 || command.to > document.timeline.cycleCount - length) return fail("invalid", "INVALID_TIMELINE_MOVE", "$", "Move requires a valid half-open source range and post-removal destination boundary.");
+      if (command.to === command.start) return fail("no-op", "NO_OP", "$", "Timeline range is already at the requested boundary.");
+      if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline move is blocked while untyped constraints exist.");
+      const next = moveTimelineRange(document, command.start, command.end, command.to);
+      if (!next) return fail("invalid", "NON_CONTIGUOUS_RANGE_MOVE", "$", "Move would split a semantic range or includes non-periodic Clock controls.");
+      const changeSet = timelineChangeSet(document, next);
+      return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
+    }
+    case "bookmark.create": {
+      if (!isStableId(command.bookmark.id)) return fail("invalid", "INVALID_STABLE_ID", "$.bookmark.id", "Bookmark ID must be stable.");
+      if (document.bookmarks.some((bookmark) => bookmark.id === command.bookmark.id)) return fail("invalid", "DUPLICATE_ID", "$.bookmark.id", `Bookmark '${command.bookmark.id}' already exists.`);
+      if (!Number.isInteger(command.bookmark.start) || command.bookmark.start < 0 || command.bookmark.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.bookmark.start", "Bookmark is outside the timeline.");
+      const changeSet: ChangeSet = { bookmarkPosition: [command.bookmark.id], minimapOverview: true };
+      return { ok: true, document: { ...document, bookmarks: [...document.bookmarks, command.bookmark] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "bookmark.move": {
+      const index = document.bookmarks.findIndex((bookmark) => bookmark.id === command.bookmarkId);
+      const bookmark = document.bookmarks[index];
+      if (!bookmark) return fail("invalid", "BOOKMARK_NOT_FOUND", "$.bookmarkId", `Bookmark '${command.bookmarkId}' does not exist.`);
+      if (!Number.isInteger(command.start) || command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Bookmark is outside the timeline.");
+      if (bookmark.start === command.start) return fail("no-op", "NO_OP", "$", "Bookmark is already at the requested cycle.");
+      const bookmarks = [...document.bookmarks]; bookmarks[index] = { ...bookmark, start: command.start };
+      const changeSet: ChangeSet = { bookmarkPosition: [bookmark.id], minimapOverview: true };
+      return { ok: true, document: { ...document, bookmarks }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "bookmark.delete": {
+      const bookmark = document.bookmarks.find((item) => item.id === command.bookmarkId);
+      if (!bookmark) return fail("invalid", "BOOKMARK_NOT_FOUND", "$.bookmarkId", `Bookmark '${command.bookmarkId}' does not exist.`);
+      const changeSet: ChangeSet = { bookmarkPosition: [bookmark.id], minimapOverview: true };
+      return { ok: true, document: { ...document, bookmarks: document.bookmarks.filter((item) => item.id !== bookmark.id) }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "timeGroup.create": {
+      const group = command.timeGroup;
+      if (!isStableId(group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.timeGroup.id", "Time Group ID must be stable.");
+      if (document.timeGroups.some((item) => item.id === group.id)) return fail("invalid", "DUPLICATE_ID", "$.timeGroup.id", `Time Group '${group.id}' already exists.`);
+      if (!Number.isInteger(group.start) || !Number.isInteger(group.end) || group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeGroups: [...document.timeGroups, group] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "timeGroup.updatePresentation": {
+      const index = document.timeGroups.findIndex((group) => group.id === command.timeGroupId);
+      const group = document.timeGroups[index];
+      if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
+      if (JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group presentation is unchanged.");
+      const { presentation: _presentation, ...base } = group;
+      const timeGroups = [...document.timeGroups]; timeGroups[index] = { ...base, ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeGroups }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "timeGroup.delete": {
+      const group = document.timeGroups.find((item) => item.id === command.timeGroupId);
+      if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
+      const labelAnchors = document.timeline.labelAnchors.map((anchor) => {
+        if (anchor.ownerTimeGroupId !== group.id) return anchor;
+        const { ownerTimeGroupId: _owner, ...rest } = anchor;
+        return rest;
+      });
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: document.timeGroups.filter((item) => item.id !== group.id) }, changeSet, inverseChangeSet: changeSet };
     }
   }
 }

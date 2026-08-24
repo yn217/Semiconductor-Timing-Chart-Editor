@@ -1,6 +1,7 @@
 import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core";
 import type {
   AnnotationId,
+  Bookmark,
   BookmarkId,
   CommandId,
   GroupId,
@@ -12,6 +13,7 @@ import type {
   SignalId,
   SignalRole,
   TimeGroupId,
+  TimeGroup,
   TransactionId,
 } from "@timing-chart-v2/schema";
 
@@ -35,6 +37,14 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "group.move"; groupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "timeline.insert"; at: number; count: number }>
   | Readonly<{ id: CommandId; type: "timeline.delete"; start: number; end: number }>
+  | Readonly<{ id: CommandId; type: "timeline.duplicateRange"; start: number; end: number; at: number }>
+  | Readonly<{ id: CommandId; type: "timeline.moveRange"; start: number; end: number; to: number }>
+  | Readonly<{ id: CommandId; type: "bookmark.create"; bookmark: Bookmark }>
+  | Readonly<{ id: CommandId; type: "bookmark.move"; bookmarkId: BookmarkId; start: number }>
+  | Readonly<{ id: CommandId; type: "bookmark.delete"; bookmarkId: BookmarkId }>
+  | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
+  | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
+  | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>;
 
 export interface ChangeSet {

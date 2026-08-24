@@ -5,7 +5,7 @@ import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import type { CanonicalDocument, ClockGenerator, ClockSignal, CommandId, GroupId, Signal, SignalGroup, SignalId, SignalRole, ValueSignal } from "@timing-chart-v2/schema";
+import type { BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, GroupId, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, ValueSignal } from "@timing-chart-v2/schema";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
 const signalId = (value: string) => value as SignalId;
@@ -69,7 +69,19 @@ export function MinimalCycleView() {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: cycleDocument });
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
   const [problem, setProblem] = useState("");
+  const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
+  const timelineRangeRef = useRef(timelineRange);
+  timelineRangeRef.current = timelineRange;
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
+
+  useEffect(() => {
+    const rulerElement = ruler.current;
+    if (!rulerElement) return;
+    for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
+      const cycle = Number(tick.dataset.cycle);
+      tick.dataset.rangeSelected = String(cycle >= timelineRange.start && cycle < timelineRange.end);
+    }
+  }, [timelineRange, snapshot.revision]);
 
   useEffect(() => {
     const rendererHost = host.current;
@@ -108,7 +120,7 @@ export function MinimalCycleView() {
 
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
-      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document.timeline.cycleCount, clock.id);
+      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, clock.id);
       rendererHost.dataset.cycleViewReady = "true";
     });
 
@@ -121,12 +133,16 @@ export function MinimalCycleView() {
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection });
       renderer.update(projection);
       setSnapshot(result.snapshot);
+      setTimelineRange((range) => {
+        const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
+        return { start, end: Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount)) };
+      });
       setHistory(session.historyState());
       setProblem("");
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        buildRuler(rulerElement, referenceGeometry, result.snapshot.document.timeline.cycleCount, clock.id);
+        buildRuler(rulerElement, referenceGeometry, result.snapshot.document, clock.id);
         rendererHost.dataset.editorIdle = "true";
       });
     };
@@ -160,6 +176,16 @@ export function MinimalCycleView() {
       rendererHost.dataset.selectedSignalId = id;
       setSelectedId(signal.id);
       publishState();
+    };
+    const onRulerSelect = (event: MouseEvent) => {
+      const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
+      if (!tick) return;
+      const cycle = Number(tick.dataset.cycle);
+      if (!Number.isInteger(cycle) || cycle >= session.getSnapshot().document.timeline.cycleCount) return;
+      if (event.shiftKey) {
+        const anchor = timelineRangeRef.current.start;
+        setTimelineRange({ start: Math.min(anchor, cycle), end: Math.max(anchor, cycle) + 1 });
+      } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
     const clearDropState = () => {
@@ -229,6 +255,7 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("dragover", onDragOver);
     rendererHost.addEventListener("drop", onDrop);
     rendererHost.addEventListener("dragend", onDragEnd);
+    rulerElement.addEventListener("click", onRulerSelect);
     return () => {
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
@@ -237,6 +264,7 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("dragover", onDragOver);
       rendererHost.removeEventListener("drop", onDrop);
       rendererHost.removeEventListener("dragend", onDragEnd);
+      rulerElement.removeEventListener("click", onRulerSelect);
       execute.current = () => undefined;
       undo.current = () => undefined;
       redo.current = () => undefined;
@@ -250,6 +278,12 @@ export function MinimalCycleView() {
       <span className="view-chip">Cycle View</span>
     </header>
     <section className="cycle-panel" aria-label="Cycle View">
+      <TimelineToolbar
+        document={snapshot.document}
+        range={timelineRange}
+        onRange={setTimelineRange}
+        onCommand={(command) => execute.current(command)}
+      />
       <div className="column-headings" aria-hidden="true"><span>Signal tree</span><span>Role / signal</span><span>Cycle waveform</span></div>
       <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
         <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
@@ -291,6 +325,35 @@ export function MinimalCycleView() {
       <span>{history.dirty ? "Modified" : "Clean"}</span>
     </footer>
   </main>;
+}
+
+function TimelineToolbar({ document, range, onRange, onCommand }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [count, setCount] = useState(1);
+  const [destination, setDestination] = useState(8);
+  const setBoundary = (key: "start" | "end", value: number) => {
+    if (key === "start") onRange({ start: Math.max(0, Math.min(value, range.end - 1)), end: range.end });
+    else onRange({ start: range.start, end: Math.min(document.timeline.cycleCount, Math.max(value, range.start + 1)) });
+  };
+  return <div className="timeline-toolbar" aria-label="Timeline Editor" data-testid="timeline-editor">
+    <strong>Timeline</strong>
+    <label>Start<input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
+    <label>End<input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
+    <label>Count<input aria-label="Timeline insert count" type="number" min="1" step="1" value={count} onChange={(event) => setCount(Math.max(1, Number(event.target.value)))} /></label>
+    <label>To<input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
+    <div className="timeline-actions">
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_before"), type: "timeline.insert", at: range.start, count })}>Insert before</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_after"), type: "timeline.insert", at: range.end, count })}>Insert after</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}>Delete range</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}>Duplicate to</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })}>Move to</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark") as BookmarkId, name: `Marker ${range.start}`, start: range.start } })}>Add marker</button>
+      <button type="button" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time") as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}>Add gap</button>
+    </div>
+    <div className="timeline-objects">
+      {document.bookmarks.map((bookmark) => <button type="button" key={bookmark.id} data-bookmark-id={bookmark.id} onClick={() => onCommand({ id: nextCommandId("marker_delete"), type: "bookmark.delete", bookmarkId: bookmark.id })}>◆ {bookmark.name} ×</button>)}
+      {document.timeGroups.map((group) => <button type="button" key={group.id} data-time-group-id={group.id} onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })}>// {group.name} ×</button>)}
+    </div>
+  </div>;
 }
 
 interface SignalEditorProps {
@@ -425,6 +488,12 @@ function nextCommandId(scope: string): CommandId {
   return `cmd_phase7_${scope}_${commandSequence}` as CommandId;
 }
 
+let entitySequence = 0;
+function nextEntityId(scope: "bookmark" | "time"): string {
+  entitySequence += 1;
+  return `${scope}_phase9_${entitySequence}`;
+}
+
 function viewportWindow(viewport: HTMLElement): VirtualizationWindow {
   const bodyTop = Math.max(0, viewport.scrollTop - 34);
   return {
@@ -436,24 +505,48 @@ function viewportWindow(viewport: HTMLElement): VirtualizationWindow {
   };
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, cycles: number, referenceSignalId: SignalId): void {
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId): void {
   if (!geometry) {
     element.dataset.geometryError = "Reference-clock geometry unavailable";
     return;
   }
   const ticks: HTMLElement[] = [];
   let finalX = 0;
-  for (let cycle = 0; cycle <= cycles; cycle += 1) {
+  for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
     const point = geometry.find({ signalId: referenceSignalId, cycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
     tick.dataset.cycle = String(cycle);
+    tick.className = "cycle-tick";
     tick.style.left = `${point.x}px`;
     tick.textContent = String(cycle);
     ticks.push(tick);
     finalX = point.x;
   }
-  element.replaceChildren(...ticks);
+  const overlays: HTMLElement[] = [];
+  for (const bookmark of document.bookmarks) {
+    const point = geometry.find({ signalId: referenceSignalId, cycle: bookmark.start, point: "cycle-start" })?.point;
+    if (!point) continue;
+    const marker = element.ownerDocument.createElement("span");
+    marker.className = "timeline-marker";
+    marker.dataset.bookmarkId = bookmark.id;
+    marker.style.left = `${point.x}px`;
+    marker.textContent = `◆ ${bookmark.name}`;
+    overlays.push(marker);
+  }
+  for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
+    const start = geometry.find({ signalId: referenceSignalId, cycle: group.start, point: "cycle-start" })?.point;
+    const end = geometry.find({ signalId: referenceSignalId, cycle: group.end, point: "cycle-start" })?.point;
+    if (!start || !end) continue;
+    const gap = element.ownerDocument.createElement("span");
+    gap.className = "timeline-gap";
+    gap.dataset.timeGroupId = group.id;
+    gap.style.left = `${start.x}px`;
+    gap.style.width = `${end.x - start.x}px`;
+    gap.textContent = group.presentation?.foldLabel ?? group.name;
+    overlays.push(gap);
+  }
+  element.replaceChildren(...ticks, ...overlays);
   element.dataset.source = "local-geometry";
   element.parentElement?.style.setProperty("--wave-width", `${Math.ceil(finalX + 24)}px`);
 }

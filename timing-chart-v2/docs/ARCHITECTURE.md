@@ -51,6 +51,11 @@ drag gesture. A successful drop dispatches `signal.move` or `group.move` once;
 drag end without drop dispatches nothing. Visibility remains solely
 `Signal.display.visible` in the canonical document.
 
+Phase 9 Timeline selection is transient and half-open. Insert/Delete ripple
+canonical positions; Duplicate creates deterministic clone IDs; Move preserves
+existing IDs through a cycle permutation. Bookmark and Time Group remain the
+canonical owners for Marker and Collapse/Gap semantics.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.

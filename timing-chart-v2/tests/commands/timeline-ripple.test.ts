@@ -82,4 +82,61 @@ describe("timeline ripple commands", () => {
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document).toEqual(initial);
   });
+
+  it("creates, moves, and removes timeline markers through semantic commands", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const bookmark = { id: "bookmark_phase9" as BookmarkId, name: "Review", start: 2 };
+    expect(session.execute({ id: commandId("cmd_marker_create"), type: "bookmark.create", bookmark }).ok).toBe(true);
+    expect(session.execute({ id: commandId("cmd_marker_move"), type: "bookmark.move", bookmarkId: bookmark.id, start: 5 }).ok).toBe(true);
+    expect(session.getSnapshot().document.bookmarks[0]).toMatchObject({ id: bookmark.id, start: 5 });
+    expect(session.execute({ id: commandId("cmd_marker_delete"), type: "bookmark.delete", bookmarkId: bookmark.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.bookmarks).toEqual([]);
+    expect(session.historyState().undoDepth).toBe(3);
+  });
+
+  it("owns collapsed gap presentation in a canonical Time Group", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const timeGroup = { id: "time_phase9_gap" as TimeGroupId, name: "Wait", start: 2, end: 5, presentation: { collapsed: true as const, foldStyle: "axis-break" as const, foldLabel: "WAIT" } };
+    const created = session.execute({ id: commandId("cmd_gap_create"), type: "timeGroup.create", timeGroup });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.changeSet).toMatchObject({ timeGroupSemantics: [timeGroup.id], geometryScreenX: true });
+    expect(session.execute({ id: commandId("cmd_gap_style"), type: "timeGroup.updatePresentation", timeGroupId: timeGroup.id, presentation: { collapsed: false, foldStyle: "compact" } }).ok).toBe(true);
+    expect(session.getSnapshot().document.timeGroups[0]?.presentation).toEqual({ collapsed: false, foldStyle: "compact" });
+    expect(session.execute({ id: commandId("cmd_gap_delete"), type: "timeGroup.delete", timeGroupId: timeGroup.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.timeGroups).toEqual([]);
+  });
+
+  it("duplicates cycle states and contained point owners with deterministic stable IDs", () => {
+    const session = new CommandHistorySession(rippleFixture());
+    const result = session.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 });
+    expect(result.ok).toBe(true);
+    const document = session.getSnapshot().document;
+    expect(document.timeline.cycleCount).toBe(11);
+    expect(document.signals[1]).toMatchObject({ values: [{ start: 0, value: "00" }, { start: 2, value: "A5" }, { start: 4, value: "00" }, { start: 7, value: "A5" }] });
+    expect(document.annotations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "ann_data.copy.cmd_duplicate", anchor: expect.objectContaining({ cycle: 2 }) }),
+      expect.objectContaining({ id: "ann_data", anchor: expect.objectContaining({ cycle: 7 }) }),
+    ]));
+    expect(document.bookmarks).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "bookmark_data.copy.cmd_duplicate", start: 2 }),
+      expect.objectContaining({ id: "bookmark_data", start: 7 }),
+    ]));
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
+  it("moves a cycle range by permutation while preserving owner identity", () => {
+    const initial = canonicalFixture();
+    initial.bookmarks = [{ id: "bookmark_move" as BookmarkId, name: "Move", start: 4 }];
+    initial.annotations = [{ id: "ann_move" as AnnotationId, type: "text", label: "Move", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 4, point: "value-start" } }];
+    const session = new CommandHistorySession(initial);
+    const result = session.execute({ id: commandId("cmd_move_range"), type: "timeline.moveRange", start: 3, end: 6, to: 0 });
+    expect(result.ok).toBe(true);
+    const document = session.getSnapshot().document;
+    expect(document.timeline.cycleCount).toBe(8);
+    expect(document.signals[1]).toMatchObject({ values: [{ start: 0, value: "00" }, { start: 1, value: "A5" }, { start: 3, value: "00" }, { start: 6, value: "A5" }] });
+    expect(document.bookmarks[0]).toMatchObject({ id: "bookmark_move", start: 1 });
+    expect(document.annotations[0]).toMatchObject({ id: "ann_move", anchor: { cycle: 1 } });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+  });
 });
