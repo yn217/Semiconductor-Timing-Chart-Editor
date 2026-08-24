@@ -23,8 +23,10 @@ const snapshot = label => page.evaluate(label => {
   const reference = c.selectors.getReferenceClock();
   const tickErrors = [...ruler.querySelectorAll('.tick[data-cycle]')].map(tick => {
     const boundary = c.getCycleBoundary({ signal: reference.id, cycle: Number(tick.dataset.cycle), coordinateSpace: 'canvas' });
-    const error = Math.abs(rulerRect.left + Number.parseFloat(tick.style.left || 0) - boundary.canvasX);
-    return { cycle: Number(tick.dataset.cycle), error, rulerX: rulerRect.left + Number.parseFloat(tick.style.left || 0), boundaryX: boundary.canvasX };
+    const tickRect = tick.getBoundingClientRect();
+    const visualX = tickRect.left + tickRect.width / 2;
+    const error = Math.abs(visualX - boundary.canvasX);
+    return { cycle: Number(tick.dataset.cycle), error, visualX, styleX: rulerRect.left + Number.parseFloat(tick.style.left || 0), boundaryX: boundary.canvasX, rulerLeft: rulerRect.left };
   });
   const canonical = c.model.document.signalGroups.flatMap(group => group.rows || []);
   const timing = [...document.querySelectorAll('#cycleCanvas .wave > .wave-row')].map(row => row.dataset.signalId || row.dataset.signal);
