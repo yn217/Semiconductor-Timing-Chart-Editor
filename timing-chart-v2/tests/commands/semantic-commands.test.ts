@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { CommandId, GroupId, Signal, SignalId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, GroupId, Signal, SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -157,5 +157,42 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ canRedo: true, dirty: false });
     expect(session.execute({ id: commandId("cmd_hide_after_undo"), type: "signal.setVisibility", signalId: "sig_data" as SignalId, visible: false }).ok).toBe(true);
     expect(session.historyState()).toMatchObject({ canRedo: false, redoDepth: 0, dirty: true });
+  });
+
+  it("changes group spacing as Screen Y only and reprojects dependent Annotations", () => {
+    const document = canonicalFixture();
+    document.annotations = [{ id: "ann_spacing" as AnnotationId, type: "text", label: "Data", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "value-start" } }];
+    const session = new CommandHistorySession(document);
+    const result = session.execute({ id: commandId("cmd_group_spacing"), type: "group.updateLayout", groupId: "grp_main" as GroupId, spacingBefore: 7, spacingAfter: 11 });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.changeSet).toMatchObject({ geometryScreenY: ["sig_clk", "sig_data"], annotationPosition: ["ann_spacing"] });
+      expect(result.changeSet.waveSemantics).toBeUndefined();
+      expect(result.changeSet.geometryLocal).toBeUndefined();
+    }
+  });
+
+  it("supports Annotation lifecycle, anchors, label offsets, and style domains", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const annotation = { id: "ann_editor" as AnnotationId, type: "arrow" as const, label: "Dependency", visible: true, from: { signalId: "sig_data" as SignalId, cycle: 2, point: "transition-center" as const }, to: { signalId: "sig_data" as SignalId, cycle: 4, point: "value-start" as const } };
+    const created = session.execute({ id: commandId("cmd_ann_create"), type: "annotation.create", annotation });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.changeSet).toMatchObject({ annotationPosition: [annotation.id], annotationStyle: [annotation.id] });
+    expect(session.execute({ id: commandId("cmd_ann_anchor"), type: "annotation.setAnchor", annotationId: annotation.id, field: "to", anchor: { signalId: "sig_data" as SignalId, cycle: 5, point: "cycle-center", offset: { x: 2, y: -1 } } }).ok).toBe(true);
+    const moved = session.execute({ id: commandId("cmd_ann_move"), type: "annotation.translateOffsets", annotationId: annotation.id, delta: { x: 5, y: 3 } });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) expect(moved.changeSet).toEqual({ annotationPosition: [annotation.id] });
+    expect(session.getSnapshot().document.annotations[0]).toMatchObject({ from: { cycle: 2, offset: { x: 5, y: 3 } }, to: { cycle: 5, offset: { x: 7, y: 2 } } });
+    expect(session.execute({ id: commandId("cmd_ann_label"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: 7, y: -9 } }).ok).toBe(true);
+    const styled = session.execute({ id: commandId("cmd_ann_style"), type: "annotation.updateProperties", annotationId: annotation.id, label: "Ready", visible: true, color: "#cc3300", lineType: "orthogonal", arrowhead: "end" });
+    expect(styled.ok).toBe(true);
+    if (styled.ok) expect(styled.changeSet).toEqual({ annotationStyle: [annotation.id], minimapOverview: true });
+    expect(session.getSnapshot().document.annotations[0]).toMatchObject({ label: "Ready", color: "#cc3300", labelOffset: { x: 7, y: -9 }, to: { cycle: 5 } });
+    expect(session.execute({ id: commandId("cmd_ann_reset"), type: "annotation.resetOffsets", annotationId: annotation.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).not.toHaveProperty("labelOffset");
+    expect(session.getSnapshot().document.annotations[0]?.from).not.toHaveProperty("offset");
+    expect(session.getSnapshot().document.annotations[0]?.to).not.toHaveProperty("offset");
+    expect(session.execute({ id: commandId("cmd_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.annotations).toEqual([]);
   });
 });

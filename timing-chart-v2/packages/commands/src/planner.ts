@@ -502,6 +502,18 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { rowOrder: group.rows, geometryScreenY: timingRows, minimapOverview: true };
       return { ok: true, document: { ...document, signalGroups: remaining }, changeSet, inverseChangeSet: changeSet };
     }
+    case "group.updateLayout": {
+      const index = document.signalGroups.findIndex((group) => group.id === command.groupId);
+      const group = document.signalGroups[index];
+      if (!group) return fail("invalid", "GROUP_NOT_FOUND", "$.groupId", `Group '${command.groupId}' does not exist.`);
+      if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_GROUP_SPACING", "$", "Group spacing must be finite and non-negative.");
+      if (group.spacingBefore === command.spacingBefore && group.spacingAfter === command.spacingAfter) return fail("no-op", "NO_OP", "$", "Group spacing is unchanged.");
+      const next = Object.fromEntries(Object.entries({ ...group, spacingBefore: command.spacingBefore, spacingAfter: command.spacingAfter }).filter(([, value]) => value !== undefined)) as unknown as SignalGroup;
+      const groups = [...document.signalGroups]; groups[index] = next;
+      const timingRows = group.rows.filter((row): row is SignalId => document.signals.some((signal) => signal.id === row && signal.type !== "commentRow"));
+      const changeSet: ChangeSet = { rowPresentation: group.rows, geometryScreenY: timingRows, annotationPosition: document.annotations.filter((annotation) => [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId && timingRows.includes(anchor.signalId))).map((annotation) => annotation.id), minimapOverview: true };
+      return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: changeSet };
+    }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];
@@ -509,6 +521,83 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (JSON.stringify(annotation.anchor) === JSON.stringify(command.anchor)) return fail("no-op", "NO_OP", "$", "Annotation anchor is unchanged.");
       const annotations = [...document.annotations]; annotations[index] = { ...annotation, anchor: command.anchor };
       const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.create": {
+      if (!isStableId(command.annotation.id)) return fail("invalid", "INVALID_STABLE_ID", "$.annotation.id", "Annotation ID must be stable.");
+      if (document.annotations.some((annotation) => annotation.id === command.annotation.id)) return fail("invalid", "DUPLICATE_ID", "$.annotation.id", `Annotation '${command.annotation.id}' already exists.`);
+      const changeSet: ChangeSet = { annotationPosition: [command.annotation.id], annotationStyle: [command.annotation.id], minimapOverview: true };
+      return { ok: true, document: { ...document, annotations: [...document.annotations, command.annotation] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.delete": {
+      const annotation = document.annotations.find((item) => item.id === command.annotationId);
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true };
+      return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id) }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.setAnchor": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (JSON.stringify(annotation[command.field]) === JSON.stringify(command.anchor)) return fail("no-op", "NO_OP", "$", "Annotation anchor is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, [command.field]: command.anchor };
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id], minimapOverview: true };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.translateOffsets": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (!Number.isFinite(command.delta.x) || !Number.isFinite(command.delta.y)) return fail("invalid", "NON_FINITE_OFFSET", "$.delta", "Annotation offset delta must be finite.");
+      if (command.delta.x === 0 && command.delta.y === 0) return fail("no-op", "NO_OP", "$", "Annotation offset delta is zero.");
+      const next = { ...annotation } as Record<string, unknown>;
+      for (const field of ["anchor", "start", "end", "from", "to"] as const) {
+        const anchor = annotation[field];
+        if (anchor) next[field] = { ...anchor, offset: { x: (anchor.offset?.x ?? 0) + command.delta.x, y: (anchor.offset?.y ?? 0) + command.delta.y } };
+      }
+      const annotations = [...document.annotations]; annotations[index] = next as unknown as Annotation;
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.resetOffsets": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      const hasOffset = [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.offset && (anchor.offset.x !== 0 || anchor.offset.y !== 0)) || (annotation.labelOffset !== undefined && (annotation.labelOffset.x !== 0 || annotation.labelOffset.y !== 0));
+      if (!hasOffset) return fail("no-op", "NO_OP", "$", "Annotation offsets are already reset.");
+      const next = { ...annotation } as Record<string, unknown>;
+      for (const field of ["anchor", "start", "end", "from", "to"] as const) {
+        const anchor = annotation[field];
+        if (anchor) {
+          const { offset: _offset, ...semantic } = anchor;
+          next[field] = semantic;
+        }
+      }
+      delete next.labelOffset;
+      const annotations = [...document.annotations]; annotations[index] = next as unknown as Annotation;
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.updateLabelOffset": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (!Number.isFinite(command.labelOffset.x) || !Number.isFinite(command.labelOffset.y)) return fail("invalid", "NON_FINITE_OFFSET", "$.labelOffset", "Label offset must be finite.");
+      if (JSON.stringify(annotation.labelOffset) === JSON.stringify(command.labelOffset)) return fail("no-op", "NO_OP", "$", "Annotation label offset is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, labelOffset: command.labelOffset };
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.updateProperties": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      const label = command.label.trim();
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
+      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
+      if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = next;
+      const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
     case "timeline.insert": {

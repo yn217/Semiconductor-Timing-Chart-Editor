@@ -8,9 +8,11 @@
   { "key": "derived.waveJson", "class": "derived", "owner": "wavedrom-adapter", "saved": false, "undoable": false },
   { "key": "derived.waveSvg", "class": "derived", "owner": "wavedrom-adapter", "saved": false, "undoable": false },
   { "key": "derived.localGeometry", "class": "derived", "owner": "geometry", "saved": false, "undoable": false },
+  { "key": "derived.snapIndex", "class": "derived", "owner": "geometry", "saved": false, "undoable": false },
   { "key": "derived.screenGeometry", "class": "derived", "owner": "projection", "saved": false, "undoable": false },
   { "key": "derived.rowLayout", "class": "derived", "owner": "projection", "saved": false, "undoable": false },
   { "key": "derived.waveformSurface", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
+  { "key": "derived.annotationOverlay", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "derived.problems", "class": "derived", "owner": "core", "saved": false, "undoable": false },
   { "key": "derived.minimap", "class": "derived", "owner": "projection", "saved": false, "undoable": false }
 ]

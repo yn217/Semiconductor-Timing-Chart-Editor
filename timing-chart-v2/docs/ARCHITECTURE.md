@@ -56,6 +56,11 @@ canonical positions; Duplicate creates deterministic clone IDs; Move preserves
 existing IDs through a cycle permutation. Bookmark and Time Group remain the
 canonical owners for Marker and Collapse/Gap semantics.
 
+Phase 10 stores only semantic Annotation anchors and pixel offsets in the
+canonical document. Geometry owns the immutable snap index; Renderer owns the
+stable overlay DOM and pointer preview. A completed pointer gesture dispatches
+one Annotation command, while cancel dispatches none.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.

@@ -175,6 +175,10 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
   });
 
   document.annotations.forEach((annotation, index) => {
+    const required = (["text", "callout", "verticalLine", "marker"] as const).includes(annotation.type as "text") ? ["anchor"]
+      : (["range", "bracket", "highlight", "measurement"] as const).includes(annotation.type as "range") ? ["start", "end"]
+      : ["from", "to"];
+    for (const field of required) if (!annotation[field as keyof Annotation]) problems.push(problem("MISSING_ANNOTATION_ANCHOR", `$.annotations[${index}].${field}`, `Annotation type '${annotation.type}' requires '${field}'.`, annotation.id));
     for (const key of ["anchor", "start", "end", "from", "to"] as const) {
       const anchor = annotation[key];
       if (anchor) validateAnchor(anchor, `$.annotations[${index}].${key}`, annotation, signals, document.timeline.cycleCount, problems);

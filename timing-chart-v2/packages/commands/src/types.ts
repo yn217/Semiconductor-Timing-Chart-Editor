@@ -1,12 +1,14 @@
 import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core";
 import type {
   AnnotationId,
+  Annotation,
   Bookmark,
   BookmarkId,
   CommandId,
   GroupId,
   RowId,
   SemanticAnchor,
+  PixelOffset,
   Signal,
   ClockGenerator,
   SignalGroup,
@@ -35,6 +37,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "group.delete"; groupId: GroupId }>
   | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>
   | Readonly<{ id: CommandId; type: "group.move"; groupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "group.updateLayout"; groupId: GroupId; spacingBefore?: number; spacingAfter?: number }>
   | Readonly<{ id: CommandId; type: "timeline.insert"; at: number; count: number }>
   | Readonly<{ id: CommandId; type: "timeline.delete"; start: number; end: number }>
   | Readonly<{ id: CommandId; type: "timeline.duplicateRange"; start: number; end: number; at: number }>
@@ -45,7 +48,14 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
-  | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>;
+  | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
+  | Readonly<{ id: CommandId; type: "annotation.create"; annotation: Annotation }>
+  | Readonly<{ id: CommandId; type: "annotation.delete"; annotationId: AnnotationId }>
+  | Readonly<{ id: CommandId; type: "annotation.setAnchor"; annotationId: AnnotationId; field: "anchor" | "start" | "end" | "from" | "to"; anchor: SemanticAnchor }>
+  | Readonly<{ id: CommandId; type: "annotation.translateOffsets"; annotationId: AnnotationId; delta: PixelOffset }>
+  | Readonly<{ id: CommandId; type: "annotation.resetOffsets"; annotationId: AnnotationId }>
+  | Readonly<{ id: CommandId; type: "annotation.updateLabelOffset"; annotationId: AnnotationId; labelOffset: PixelOffset }>
+  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"] }>;
 
 export interface ChangeSet {
   readonly fullDocumentReplace?: boolean;

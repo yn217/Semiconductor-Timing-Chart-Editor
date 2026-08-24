@@ -19,9 +19,40 @@ export interface RenderCounters {
   readonly overlayUpdates: number;
 }
 
+export interface OverlayAnchorPoint {
+  readonly field: "anchor" | "start" | "end" | "from" | "to";
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface AnnotationOverlayPrimitive {
+  readonly id: string;
+  readonly type: string;
+  readonly shape: "point" | "line" | "range" | "vertical";
+  readonly label: string;
+  readonly visible: boolean;
+  readonly color?: string;
+  readonly anchors: readonly OverlayAnchorPoint[];
+  readonly labelOffset?: Readonly<{ x: number; y: number }>;
+  readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
+  readonly arrowhead?: "end" | "start" | "bidirectional" | "none";
+  readonly surfaceHeight: number;
+}
+
+export interface SnapGuidePrimitive {
+  readonly x: number;
+  readonly y: number;
+  readonly rowY: number;
+  readonly rowHeight: number;
+  readonly surfaceHeight: number;
+  readonly label: string;
+}
+
 export interface TimingChartRenderer {
   mount(host: HTMLElement): void;
   update(projection: RenderProjection): void;
+  updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
+  updateSnapGuide(guide?: SnapGuidePrimitive): void;
   counters(): Readonly<RenderCounters>;
   dispose(): void;
 }
