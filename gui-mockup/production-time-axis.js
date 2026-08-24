@@ -441,14 +441,43 @@
     const rangeTool = [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes('範囲削除'));
     if (rangeTool) { rangeTool.disabled = !validRange; rangeTool.dataset.rangeDelete = validRange ? 'enabled' : 'disabled'; }
   };
-  const isRangeTarget = target => target && !target.closest('.ruler, .canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea') && target.closest('.wave, .wave-row, .trace');
+  const isRangeTarget = (target, event) => {
+    if (!target || target.closest('.canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea')) return false;
+    if (target.closest('.ruler')) {
+      // A Ruler tick can visually overlap the first timing row after layout
+      // reconstruction. Treat it as a drag surface only when the pointer is
+      // inside an actual row rectangle; a normal click in the ruler remains
+      // a cycle-selection gesture.
+      if (!target.closest('.tick') || !event) return false;
+      const inTimingRow = [...document.querySelectorAll('#cycleCanvas .wave-row')].some(row => {
+        if (row.hidden || getComputedStyle(row).display === 'none') return false;
+        const rect = row.getBoundingClientRect();
+        return event.clientY >= rect.top && event.clientY <= rect.bottom;
+      });
+      if (!inTimingRow) return false;
+      return true;
+    }
+    if (target.closest('.wave, .wave-row, .trace')) return true;
+    // Blank timing-canvas space is also a valid range hit surface. Use the
+    // real timing host/wave rectangles so the frozen label pane and splitters
+    // remain outside the gesture owner.
+    if (!event || !target.closest('.timing-scroll-pane, #cycleCanvas')) return false;
+    const host = window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas;
+    const hostRect = host?.getBoundingClientRect?.();
+    const waveRect = cycleCanvas?.querySelector('.wave')?.getBoundingClientRect?.();
+    return Boolean(hostRect && waveRect && event.clientY >= waveRect.top && event.clientY <= hostRect.bottom && event.clientX >= hostRect.left && event.clientX <= hostRect.right);
+  };
   cycleCanvas?.addEventListener('pointerdown', event => {
-    if (event.button !== 0 || !isRangeTarget(event.target)) return;
+    if (event.button !== 0 || !isRangeTarget(event.target, event)) return;
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
     suppressNextCanvasClick = false;
-    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, moved: false, previousSelection: { ...model.timeSelection }, captureTarget: event.target };
-    try { event.target.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
+    // Keep capture on a layout-stable owner. The timing canvas can be
+    // reflowed by zoom/scroll overlays while a long drag is in flight;
+    // capturing on that subtree would spuriously emit lostpointercapture.
+    const captureTarget = document.documentElement || document.body || cycleCanvas || event.target;
+    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, moved: false, previousSelection: { ...model.timeSelection }, captureTarget };
+    try { captureTarget.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
     model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: resolved.cycle, rangeEnd: null, source: 'canvas-drag' };
     controller.renderTimeRangePreview(model);
   });
@@ -469,7 +498,20 @@
   };
   const finishRangeGesture = event => {
     if (!rangeGesture || event.pointerId !== rangeGesture.pointerId) return;
-    const current = rangeGesture; rangeGesture = null; stopRangeAutoScroll(); try { current.captureTarget?.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be released */ }
+    const current = rangeGesture;
+    // A browser may deliver pointerup at the final boundary without a last
+    // pointermove. Resolve that committed endpoint from the actual WaveDrom
+    // geometry so a valid drag cannot finish with a null end cycle.
+    if (event.type === 'pointerup' && current.moved) {
+      const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
+      if (resolved) {
+        const first = Math.min(current.start, resolved.cycle);
+        const last = Math.max(current.start, resolved.cycle);
+        model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: first, rangeEnd: last, source: 'canvas-drag' };
+        controller.renderTimeRangePreview(model);
+      }
+    }
+    rangeGesture = null; stopRangeAutoScroll(); try { current.captureTarget?.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be released */ }
     if (!current.moved) {
       model.timeSelection.rangeStart = null;
       model.timeSelection.rangeEnd = null;
