@@ -251,10 +251,11 @@ function modelDrivenReconcileCycleRowsKeyed(model=getProductionModel()){
     const body=row.querySelector('.comment-body');if(body)body.textContent=signal.body||'';
     return row;
   };
-  let cursor=wave.firstElementChild;
+  const ruler=wave.querySelector(':scope > .ruler');
+  let cursor=ruler?.nextElementSibling||wave.firstElementChild;
   for(const group of model.document.signalGroups||[]) for(const id of group.rows||[]){const signal=signals.get(id);if(!signal)continue;let row=existing.get(id)||createRow(signal);row=updateRow(row,signal,group);row.style.removeProperty('order');row.style.removeProperty('flex');row.style.contentVisibility='auto';row.style.containIntrinsicSize='35px 100%';row.dataset.reorderVisual='dom-order';if(row!==cursor){wave.insertBefore(row,cursor);metrics.rowMoves=(metrics.rowMoves||0)+1;metrics.cycleRowMoves=(metrics.cycleRowMoves||0)+1;}cursor=row.nextElementSibling;used.add(id);}
   for(const row of wave.querySelectorAll('.wave-row')){const id=row.dataset.signalId||row.dataset.signal;if(!used.has(id)){metrics.rowRemoves+=1;metrics.cycleRowRemoves=(metrics.cycleRowRemoves||0)+1;row.remove();}}
-  const ruler=wave.querySelector(':scope > .ruler');if(ruler){ruler.style.removeProperty('order');ruler.style.removeProperty('flex');}
+  if(ruler){ruler.style.removeProperty('order');ruler.style.removeProperty('flex');}
 }
 reconcileCycleRows=modelDrivenReconcileCycleRowsKeyed;
 function ensureIssue6RowsSafe(model=getProductionModel()){
