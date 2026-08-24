@@ -5,6 +5,9 @@ import { chromium } from 'playwright';
 
 const root = process.cwd();
 const out = path.join(root, 'artifacts', 'issue152');
+const large = process.argv.includes('--large');
+const cycles = large ? 500 : 100;
+const artifactPrefix = large ? '100x500' : '100-cycle';
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 const pageErrors = [];
@@ -12,24 +15,23 @@ page.on('pageerror', error => pageErrors.push(error.stack || error.message));
 await page.goto(`file://${root.replaceAll('\\', '/')}/gui-mockup/index.html`);
 await page.waitForTimeout(300);
 
-await page.evaluate(async () => {
+await page.evaluate(async ({ large, cycles }) => {
   const c = window.TimingChartProductionController;
   const base = structuredClone(c.getSerializableDocument());
-  const cycles = 100;
-  const extra = Array.from({ length: 19 }, (_, index) => ({
+  const extra = Array.from({ length: large ? 99 : 19 }, (_, index) => ({
     id: `issue152_sig_${index}`, name: `issue152_sig_${index}`, type: 'binary', role: index % 2 ? 'internal' : 'input',
     source: { instancePath: [], signalName: `issue152_sig_${index}` }, display: { name: `issue152_sig_${index}` },
     values: [{ start: 0, value: 0 }, { start: 33, value: 1 }, { start: 66, value: 0 }, { start: 99, value: 1 }]
   }));
   const clock = structuredClone(base.signals.find(signal => signal.type === 'clock'));
   clock.id = 'issue152_clk'; clock.name = 'issue152_clk'; clock.display = { name: clock.name };
-  base.document.id = 'issue152-100-cycle.tcd';
+  base.document.id = `issue152-${large ? '100x500' : '100-cycle'}.tcd`;
   base.timeline.cycleCount = cycles; base.timeline.end = cycles; base.timeline.referenceClock = clock.id;
   base.signals = [clock, ...extra];
   base.signalGroups = [{ id: 'issue152_group', name: 'Issue 152', rows: base.signals.map(signal => signal.id) }];
   base.annotations = []; base.transactions = [];
   return c.actions.openText(JSON.stringify(base), { fileName: base.document.id, unsavedDecision: 'discard' });
-});
+}, { large, cycles });
 
 const idle = () => page.evaluate(async () => {
   if (window.TimingChartProductionController?.waveformIdle) await window.TimingChartProductionController.waveformIdle;
@@ -41,6 +43,11 @@ const states = [];
 for (const zoom of [50, 100, 150, 200, 400]) {
   await page.evaluate(value => window.TimingChartProductionController.actions.setZoom(value), zoom);
   await idle();
+  await page.evaluate(() => {
+    const host = window.TimingChartTimingViewport?.getScrollHost?.();
+    if (host) host.scrollLeft = Math.max(0, host.scrollWidth - host.clientWidth);
+  });
+  await idle();
   states.push(await page.evaluate(zoom => {
     const wave = document.querySelector('#cycleCanvas .wave');
     const surface = document.querySelector('#cycleCanvas .waveform-render-surface');
@@ -49,6 +56,7 @@ for (const zoom of [50, 100, 150, 200, 400]) {
       const svg = lane.querySelector(':scope > .trace svg');
       if (!svg) return null;
       const svgRect = svg.getBoundingClientRect();
+      if (svgRect.width <= 0 || svgRect.height <= 0) return null;
       const laneRect = lane.getBoundingClientRect();
       const surfaceRect = surface?.getBoundingClientRect();
       return {
@@ -65,6 +73,8 @@ for (const zoom of [50, 100, 150, 200, 400]) {
         rightOutsideSurfacePx: surfaceRect ? svgRect.right - surfaceRect.right : null
       };
     }).filter(Boolean);
+    const reference = rows.find(row => row.id === 'issue152_clk');
+    const hostRect = host?.getBoundingClientRect();
     return {
       zoom,
       waveScrollWidth: wave?.scrollWidth ?? 0,
@@ -74,6 +84,9 @@ for (const zoom of [50, 100, 150, 200, 400]) {
       surfaceStyleWidth: surface?.style.width || '',
       surfaceRect: surface ? { left: surface.getBoundingClientRect().left, right: surface.getBoundingClientRect().right } : null,
       hostScrollWidth: host?.scrollWidth ?? 0,
+      hostScrollLeft: host?.scrollLeft ?? 0,
+      finalReachable: Boolean(host && reference && host.scrollLeft + host.clientWidth >= reference.svgRight - hostRect.left - 2),
+      surfacePointerEvents: surface ? getComputedStyle(surface).pointerEvents : null,
       maxRightOutsideLanePx: Math.max(0, ...rows.map(row => row.rightOutsideLanePx)),
       maxRightOutsideSurfacePx: Math.max(0, ...rows.map(row => row.rightOutsideSurfacePx ?? 0)),
       rows
@@ -81,10 +94,10 @@ for (const zoom of [50, 100, 150, 200, 400]) {
   }, zoom));
 }
 
-const result = { issue: 152, states, pageErrors, pass: !pageErrors.length && states.every(state => state.maxRightOutsideLanePx <= 0.1 && state.maxRightOutsideSurfacePx <= 0.1) };
+const result = { issue: 152, fixture: { signals: large ? 100 : 20, cycles }, states, pageErrors, pass: !pageErrors.length && states.every(state => state.maxRightOutsideLanePx <= 0.1 && state.maxRightOutsideSurfacePx <= 0.1 && state.finalReachable) };
 await fs.mkdir(out, { recursive: true });
-await fs.writeFile(path.join(out, 'acceptance.json'), `${JSON.stringify(result, null, 2)}\n`);
-await page.screenshot({ path: path.join(out, 'issue152-1672x941.png') });
+await fs.writeFile(path.join(out, large ? 'acceptance-100x500.json' : 'acceptance.json'), `${JSON.stringify(result, null, 2)}\n`);
+await page.screenshot({ path: path.join(out, `issue152-${artifactPrefix}-1672x941.png`) });
 await browser.close();
 console.log(JSON.stringify(result, null, 2));
 assert.equal(pageErrors.length, 0, pageErrors.join('\n'));
