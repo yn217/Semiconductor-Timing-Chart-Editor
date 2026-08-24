@@ -185,9 +185,9 @@
       tool.dataset.controlStatus = 'implemented';
       const reason = !reorderable ? 'SignalまたはComment Rowを選択してください' : atBoundary ? (isUp ? 'このGroupの先頭行です' : 'このGroupの末尾行です') : '';
       if (reason) tool.title = reason; else tool.removeAttribute('title');
-      record(tool, 'implemented', reason);
     });
   };
+  controller.refreshReorderControls = refreshReorderControls;
   const refreshEditControls = () => {
     const state = controller.actions.getSelectionCommandState?.() || {};
     const reasons = { copy: 'コピー対象を選択してください', cut: '切取り可能な対象を選択してください', delete: '削除可能な対象を選択してください', duplicate: '複製可能な対象を選択してください', paste: '貼付可能なアプリ内Clipboardがありません' };

@@ -1,0 +1,101 @@
+{
+  "issue": 137,
+  "busyDuringOpenRace": true,
+  "staleOpenResult": false,
+  "staleNewResult": false,
+  "newState": {
+    "documentId": "untitled.tcd",
+    "staleNewResult": false,
+    "geometryIds": [
+      "clk"
+    ],
+    "active": false
+  },
+  "firstTimelineResult": false,
+  "secondTimelineResult": {
+    "waveformMs": 2640,
+    "axisMs": 15.5,
+    "annotationMs": 0.10000002384185791,
+    "totalMs": 2657.100000023842,
+    "waveformProfile": {
+      "mountMs": 387.39999997615814,
+      "geometryMs": 1548.0999999046326,
+      "totalMs": 2636,
+      "rows": 21,
+      "geometry": {
+        "boundaryMs": 35.69999980926514,
+        "symbolMs": 1148,
+        "rowRectMs": 0,
+        "signalMs": 1547.8999998569489
+      },
+      "totalRows": 40,
+      "deferredRows": 19
+    }
+  },
+  "staleUndoResult": false,
+  "rapidStaleResult": false,
+  "failedResult": false,
+  "exceptionSettled": true,
+  "afterOpenRace": {
+    "documentId": "epoch_B.tcd",
+    "expected": "epoch_B.tcd",
+    "canonicalTiming": true,
+    "canonicalFrozen": true,
+    "geometryCurrent": true,
+    "visibleGeometry": true,
+    "referenceGeometry": true,
+    "timingUpdating": false
+  },
+  "afterSequential": {
+    "documentId": "epoch_A.tcd",
+    "expected": "epoch_A.tcd",
+    "canonicalTiming": true,
+    "canonicalFrozen": true,
+    "geometryCurrent": true,
+    "visibleGeometry": true,
+    "referenceGeometry": true,
+    "timingUpdating": false
+  },
+  "afterUndo": {
+    "documentId": "epoch_A.tcd",
+    "expected": "epoch_A.tcd",
+    "canonicalTiming": true,
+    "canonicalFrozen": true,
+    "geometryCurrent": true,
+    "visibleGeometry": true,
+    "referenceGeometry": true,
+    "timingUpdating": false
+  },
+  "afterRapid": {
+    "documentId": "epoch_C.tcd",
+    "expected": "epoch_C.tcd",
+    "canonicalTiming": true,
+    "canonicalFrozen": true,
+    "geometryCurrent": true,
+    "visibleGeometry": true,
+    "referenceGeometry": true,
+    "timingUpdating": false
+  },
+  "afterException": {
+    "documentId": "epoch_A.tcd",
+    "expected": "epoch_A.tcd",
+    "canonicalTiming": true,
+    "canonicalFrozen": true,
+    "geometryCurrent": true,
+    "visibleGeometry": true,
+    "referenceGeometry": true,
+    "timingUpdating": false
+  },
+  "cancellationDelta": 5,
+  "staleRejectDelta": 5,
+  "metrics": {
+    "invalidations": 41,
+    "asyncRenderStarted": 7,
+    "asyncRenderCanceled": 5,
+    "asyncRenderPublished": 1,
+    "stalePublishRejected": 5,
+    "asyncRenderExceptions": 1
+  },
+  "pageErrors": [],
+  "pass": true
+}

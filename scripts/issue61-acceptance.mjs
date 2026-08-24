@@ -14,13 +14,18 @@ let unexpectedDialog=''; page.on('dialog',dialog=>{unexpectedDialog=dialog.messa
 await page.goto(`file://${path.join(root,'gui-mockup','index.html').replaceAll('\\','/')}`); await page.waitForTimeout(400);
 
 const dragRange=async(start,end,selector='.timing-scroll-pane .wave-row .trace',yMode='center')=>{
-  const points=await page.evaluate(({start,end,selector,yMode})=>{
+  const startPoint=await page.evaluate(({start,selector,yMode})=>{
     const c=window.TimingChartProductionController; const clock=c.selectors.getReferenceClock();
     const target=document.querySelector(selector); const row=target?.closest('.wave-row') || target;
-    const a=c.getCycleBoundary({signal:clock.id,cycle:start,coordinateSpace:'canvas'}); const b=c.getCycleBoundary({signal:clock.id,cycle:end,coordinateSpace:'canvas'}); const rect=row.getBoundingClientRect(); return {a:a.canvasX,b:b.canvasX,y:yMode==='blank'?rect.top+1:rect.top+rect.height/2};
-  },{start,end,selector,yMode});
-  await page.mouse.move(points.a,points.y); await page.mouse.down();
-  for (let index=1; index<=4; index+=1) { await page.mouse.move(points.a+(points.b-points.a)*index/4,points.y,{steps:1}); await page.waitForTimeout(8); }
+    const a=c.getCycleBoundary({signal:clock.id,cycle:start,coordinateSpace:'canvas'}); const rect=row.getBoundingClientRect(); return {x:a.canvasX,y:yMode==='blank'?rect.top+1:rect.top+rect.height/2};
+  },{start,selector,yMode});
+  await page.mouse.move(startPoint.x,startPoint.y); await page.mouse.down();
+  for (let attempts=0; attempts<160; attempts+=1) {
+    const point=await page.evaluate(endCycle=>{const c=window.TimingChartProductionController;const clock=c.selectors.getReferenceClock();const boundary=c.getCycleBoundary({signal:clock.id,cycle:endCycle,coordinateSpace:'canvas'});const host=window.TimingChartTimingViewport.getScrollHost();const rect=host.getBoundingClientRect();return {targetX:boundary.canvasX,edgeX:Math.max(rect.left+8,Math.min(rect.right-8,boundary.canvasX)),visible:boundary.canvasX>=rect.left+8&&boundary.canvasX<=rect.right-8};},end);
+    await page.mouse.move(point.edgeX,startPoint.y,{steps:1});
+    await page.waitForTimeout(point.visible?8:18);
+    if(point.visible){await page.mouse.move(point.targetX,startPoint.y,{steps:2});break;}
+  }
   await page.mouse.up(); await page.waitForTimeout(20);
 };
 const dispatchRange=async(start,end)=>await page.evaluate(({start,end})=>{
@@ -42,7 +47,7 @@ assert.equal(deleted.cycleCount,first.cycleCount-4); assert.deepEqual(deleted.ra
 assert.equal(await page.evaluate(()=>window.TimingChartProductionController.actions.undo()),true); await page.waitForTimeout(50); assert.equal(await page.evaluate(()=>window.TimingChartProductionController.model.document.timeline.cycleCount),first.cycleCount);
 
 await page.reload(); await page.waitForTimeout(400);
-await page.evaluate(() => { const node=document.querySelector('#cycleCanvas'); const original=node.setPointerCapture?.bind(node); window.__pointerCaptureCount=0; if(original) node.setPointerCapture=id=>{window.__pointerCaptureCount+=1; return original(id);}; });
+await page.evaluate(() => { const original=Element.prototype.setPointerCapture; window.__pointerCaptureCount=0; if(original) Element.prototype.setPointerCapture=function(id){window.__pointerCaptureCount+=1; return original.call(this,id);}; });
 await page.evaluate(()=>{const node=window.TimingChartTimingViewport?.getScrollHost?.(); if(node) node.scrollLeft=Math.min(420,node.scrollWidth-node.clientWidth);}); await page.waitForTimeout(40);
 const beforeReverseWave=await page.evaluate(()=>window.TimingChartProductionController.timeAxisMetrics.waveDromRenders);
 await dragRange(7,3); const reverse=await page.evaluate(()=>({range:[window.TimingChartProductionController.model.timeSelection.rangeStart,window.TimingChartProductionController.model.timeSelection.rangeEnd],capture:window.__pointerCaptureCount,wave:window.TimingChartProductionController.timeAxisMetrics.waveDromRenders})); assert.deepEqual(reverse.range,[3,7]); assert.ok(reverse.capture>0); assert.equal(reverse.wave,beforeReverseWave);
@@ -61,5 +66,5 @@ const host=page.locator('.timing-scroll-pane'); await host.evaluate(node=>{node.
 
 await page.setViewportSize({width:1280,height:720}); await page.waitForTimeout(100); await page.evaluate(()=>{const node=window.TimingChartTimingViewport?.getScrollHost?.(); if(node) node.scrollLeft=0; window.TimingChartProductionController.actions.setZoom(50);}); await page.waitForTimeout(100); await page.keyboard.press('Escape'); await dispatchRange(2,5); assert.deepEqual(await page.evaluate(()=>[window.TimingChartProductionController.model.timeSelection.rangeStart,window.TimingChartProductionController.model.timeSelection.rangeEnd]),[2,5]);
 assert.equal(errors.length,0,errors.join('\n')); await page.screenshot({path:path.join(out,'issue61-1280x720.png')}); await page.setViewportSize({width:1672,height:941}); await page.waitForTimeout(80); await page.screenshot({path:path.join(out,'issue61-1672x941.png')}); await browser.close();
-await fs.writeFile(path.join(out,'acceptance.json'),`${JSON.stringify({issue:61,dragSelection:true,reverseDrag:true,deleteWithoutPrompt:true,undo:true,afterOpen:true,zoom150:true,scroll:true,viewport1280:true,waveDromRegenerationsDuringDrag:0,errors,pass:true},null,2)}\n`);
+await fs.writeFile(path.join(out,'acceptance.json'),`${JSON.stringify({issue:61,dragSelection:true,reverseDrag:true,deleteWithoutPrompt:true,undo:true,afterOpen:true,zoom:[50,100,150,200],scroll:true,edgeAutoScroll:true,viewport1280:true,waveDromRegenerationsDuringDrag:0,errors,pass:true},null,2)}\n`);
 console.log('Issue #61 acceptance passed: geometry-backed range selection, prompt-free delete, Undo, Open/Zoom/scroll, and 1280x720 drag.');

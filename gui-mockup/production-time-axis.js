@@ -397,7 +397,42 @@
     controller.actions.selectTimeAtCanvasX(event.clientX, { shiftKey: event.shiftKey });
   });
   let rangeGesture = null;
+  let rangeAutoScrollFrame = 0;
   const rangeMoveThresholdPx = 5;
+  const stopRangeAutoScroll = () => {
+    if (rangeAutoScrollFrame) cancelAnimationFrame(rangeAutoScrollFrame);
+    rangeAutoScrollFrame = 0;
+  };
+  const scheduleRangeAutoScroll = () => {
+    if (rangeAutoScrollFrame || !rangeGesture?.moved) return;
+    const host = window.TimingChartTimingViewport?.getScrollHost?.();
+    if (!host) return;
+    const step = () => {
+      rangeAutoScrollFrame = 0;
+      if (!rangeGesture?.moved) return;
+      const rect = host.getBoundingClientRect();
+      const edge = 36;
+      const distance = rangeGesture.clientX < rect.left + edge
+        ? rangeGesture.clientX - (rect.left + edge)
+        : rangeGesture.clientX > rect.right - edge
+          ? rangeGesture.clientX - (rect.right - edge)
+          : 0;
+      if (!distance) return;
+      const before = host.scrollLeft;
+      host.scrollLeft += Math.sign(distance) * Math.min(24, Math.max(4, Math.abs(distance) / 2));
+      if (host.scrollLeft !== before) {
+        const resolved = controller.actions.resolveSnapAtCanvasX?.(rangeGesture.clientX);
+        if (resolved) {
+          const first = Math.min(rangeGesture.start, resolved.cycle);
+          const last = Math.max(rangeGesture.start, resolved.cycle);
+          model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: first, rangeEnd: last, source: 'canvas-drag' };
+          controller.renderTimeRangePreview(model);
+        }
+        rangeAutoScrollFrame = requestAnimationFrame(step);
+      }
+    };
+    rangeAutoScrollFrame = requestAnimationFrame(step);
+  };
   controller.renderTimeRangePreview = currentModel => {
     renderRangeSelection(currentModel);
     const rangeStart = Number(currentModel.timeSelection?.rangeStart);
@@ -412,27 +447,29 @@
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
     suppressNextCanvasClick = false;
-    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, moved: false };
-    try { event.target.setPointerCapture?.(event.pointerId); } catch { /* target may not own the active pointer */ }
-    try { cycleCanvas.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
+    rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, moved: false, previousSelection: { ...model.timeSelection }, captureTarget: event.target };
+    try { event.target.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
     model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: resolved.cycle, rangeEnd: null, source: 'canvas-drag' };
     controller.renderTimeRangePreview(model);
   });
   const updateRangeGesture = event => {
-    if (!rangeGesture) return;
+    if (!rangeGesture || event.pointerId !== rangeGesture.pointerId) return;
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
     const distance = Math.hypot(event.clientX - rangeGesture.clientX, event.clientY - rangeGesture.clientY);
     if (!rangeGesture.moved && distance < rangeMoveThresholdPx) return;
     rangeGesture.moved = true;
+    rangeGesture.clientX = event.clientX;
+    rangeGesture.clientY = event.clientY;
     const first = Math.min(rangeGesture.start, resolved.cycle);
     const last = Math.max(rangeGesture.start, resolved.cycle);
     model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: first, rangeEnd: last, source: 'canvas-drag' };
     controller.renderTimeRangePreview(model);
+    scheduleRangeAutoScroll();
   };
   const finishRangeGesture = event => {
-    if (!rangeGesture) return;
-    const current = rangeGesture; rangeGesture = null; try { cycleCanvas.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be released */ }
+    if (!rangeGesture || event.pointerId !== rangeGesture.pointerId) return;
+    const current = rangeGesture; rangeGesture = null; stopRangeAutoScroll(); try { current.captureTarget?.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be released */ }
     if (!current.moved) {
       model.timeSelection.rangeStart = null;
       model.timeSelection.rangeEnd = null;
@@ -443,11 +480,23 @@
       suppressNextCanvasClick = true;
     }
   };
+  const cancelRangeGesture = event => {
+    if (!rangeGesture || (event?.pointerId !== undefined && event.pointerId !== rangeGesture.pointerId)) return;
+    const current = rangeGesture;
+    rangeGesture = null;
+    stopRangeAutoScroll();
+    suppressNextCanvasClick = false;
+    try { current.captureTarget?.releasePointerCapture?.(current.pointerId); } catch { /* capture may already be lost */ }
+    model.timeSelection = { ...current.previousSelection };
+    controller.renderTimeRangePreview(model);
+  };
   document.addEventListener('pointermove', updateRangeGesture);
   document.addEventListener('pointerup', finishRangeGesture);
-  document.addEventListener('pointercancel', finishRangeGesture);
+  document.addEventListener('pointercancel', cancelRangeGesture);
+  document.addEventListener('lostpointercapture', cancelRangeGesture);
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape' || (!model.timeSelection?.rangeStart && model.timeSelection?.rangeStart !== 0)) return;
+    if (rangeGesture) { cancelRangeGesture(); return; }
     model.timeSelection.rangeStart = null; model.timeSelection.rangeEnd = null; renderTransient(model);
   });
   (window.TimingChartTimingViewport?.getScrollHost?.() || cycleCanvas)?.addEventListener('scroll', () => renderScrollTransient(model), { passive: true });

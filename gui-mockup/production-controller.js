@@ -105,6 +105,19 @@
   const profileMark = name => { if (!controller.profileEnabled || !window.performance?.mark) return; performance.mark(`tc:${name}`); };
   controller.enableProfiling = enabled => { controller.profileEnabled = Boolean(enabled); if (controller.profileEnabled) performance.clearMarks?.('tc:'); return controller.profileEnabled; };
   controller.profileMark = profileMark;
+  controller.asyncRenderMetrics = { invalidations: 0, asyncRenderStarted: 0, asyncRenderCanceled: 0, asyncRenderPublished: 0, stalePublishRejected: 0, asyncRenderExceptions: 0 };
+  controller.renderEpoch = 0;
+  controller.invalidateAsyncRender = reason => {
+    controller.renderEpoch += 1;
+    controller.asyncRenderMetrics.invalidations += 1;
+    controller.lastRenderInvalidationReason = reason || 'unspecified';
+    return controller.renderEpoch;
+  };
+  controller.captureRenderToken = () => ({ epoch: controller.renderEpoch, document: model.document, revision: model.documentRevision });
+  controller.isRenderTokenCurrent = token => Boolean(token)
+    && token.epoch === controller.renderEpoch
+    && token.document === model.document
+    && token.revision === model.documentRevision;
   controller.parseSignalLiteral = parseSignalLiteral;
   controller.registerRenderHook = (name, callback) => { if (!name || typeof callback !== 'function') return false; if (controller.renderHooks.after.has(name)) throw new Error(`Duplicate render hook owner: ${name}`); controller.renderHooks.after.set(name, callback); return true; };
   controller.removeRenderHook = name => controller.renderHooks.after.delete(name);
@@ -443,7 +456,41 @@
   document.addEventListener('pointerdown', event => { if (!event.target.closest('[data-status-popup], [data-status-control]')) closeStatusPopup(); });
   document.addEventListener('click', event => { const action = event.target.closest('[data-status-action]')?.dataset.statusAction; if (!['minus', 'plus'].includes(action)) return; const popup = event.target.closest('[data-status-popup="zoom"]'); const input = popup?.querySelector('[data-status-field="zoom"]'); if (input) controller.actions.setZoom(input.value); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeStatusPopup(); });
-  const render = () => { profileMark('render:start'); controller.renderMetrics.appFullRenders += 1; rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); window.TimingChartGoldenRenderer?.render(model); appendHierarchyInspector(); ensurePathMenu(); profileMark('waveform:start'); window.TimingChartProductionWaveform?.render(model); profileMark('waveform:end'); window.TimingChartProductionTimeAxis?.renderTransient(model); window.TimingChartProductionAnnotations?.render(model); window.TimingChartProductionTransactions?.render(model); applyZoom(); bindStatus(); for (const callback of controller.renderHooks.after.values()) callback(model); profileMark('render:end'); };
+  const render = () => {
+    controller.invalidateAsyncRender('full-render');
+    profileMark('render:start');
+    const started = performance.now();
+    const profile = {};
+    const timed = (name, callback) => { const phaseStarted = performance.now(); const result = callback(); profile[name] = performance.now() - phaseStarted; return result; };
+    controller.renderMetrics.appFullRenders += 1;
+    timed('stateAndHierarchyMs', () => { rebuildObjectIndex(); renderMode(); renderTab(); renderContextControls(); renderSelection(); renderStatus(); renderHierarchy(); });
+    timed('rowReconcileMs', () => window.TimingChartGoldenRenderer?.render(model));
+    timed('hierarchyInspectorMs', () => { appendHierarchyInspector(); ensurePathMenu(); });
+    profileMark('waveform:start');
+    controller.waveformSynchronizedForRender = false;
+    timed('waveformMs', () => window.TimingChartProductionWaveform?.render(model));
+    controller.waveformSynchronizedForRender = true;
+    profileMark('waveform:end');
+    timed('timeAxisMs', () => window.TimingChartProductionTimeAxis?.renderTransient(model));
+    timed('annotationsMs', () => window.TimingChartProductionAnnotations?.render(model));
+    timed('transactionsMs', () => window.TimingChartProductionTransactions?.render(model));
+    timed('zoomMs', applyZoom);
+    timed('statusMs', bindStatus);
+    profile.hooks = [];
+    timed('hooksMs', () => {
+      for (const [name, callback] of controller.renderHooks.after) {
+        const hookStarted = performance.now();
+        callback(model);
+        profile.hooks.push({ name, ms: performance.now() - hookStarted });
+      }
+    });
+    controller.waveformSynchronizedForRender = false;
+    profile.totalMs = performance.now() - started;
+    profile.signalCount = model.document.signals?.length || 0;
+    profile.cycleCount = model.document.timeline?.cycleCount || 0;
+    controller.lastFullRenderProfile = profile;
+    profileMark('render:end');
+  };
   controller.render = render;
   controller.actions.setViewMode = nextMode => { model.view.mode = nextMode; if (nextMode === 'transaction') model.view.tab = 'transaction'; if (nextMode === 'cycle' && model.view.tab === 'transaction') model.view.tab = 'signal'; render(); };
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
@@ -485,6 +532,7 @@
     };
     apply(document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`));
     apply(document.querySelector(`#cycleCanvas .frozen-label-row[data-signal="${CSS.escape(signalId)}"]`));
+    if (!window.TimingChartProductionWaveform?.applyVisibilityLayout?.(model, signalId)) window.TimingChartProductionWaveform?.syncSurface?.(model);
     const treeRow = document.querySelector(`#groups .row[data-signal="${CSS.escape(signalId)}"]`);
     if (treeRow) {
       treeRow.dataset.visibility = hidden ? 'hidden' : 'visible';
@@ -495,94 +543,45 @@
       }
     }
   };
-  const reconcileSignalOrder = (signalId, delta) => {
+  const reconcileSignalOrder = (signalId, delta, surfaceCapture) => {
     const group = (model.document.signalGroups || []).find(item => (item.rows || []).includes(signalId));
     const index = group ? group.rows.indexOf(signalId) : -1;
     const reorderTimings = [];
-    const applyTimingVisualOrder = host => {
-      const rows = [...host.querySelectorAll(':scope > .wave-row')];
-      const byId = new Map(rows.map(row => [row.dataset.signalId || row.dataset.signal, row]));
-      const visibleRows = rows.filter(row => !row.hidden && row.style.display !== 'none');
-      const visibleIds = new Set(visibleRows.map(row => row.dataset.signalId || row.dataset.signal));
-      const orderedIds = (model.document.signalGroups || []).flatMap(item => item.rows || []).filter(id => visibleIds.has(id));
-      if (!visibleRows.length || !orderedIds.length) return false;
-      // Keep the WaveDrom SVG subtrees in place, but let one layout container
-      // determine visual order. Per-row transforms promote every SVG-heavy row
-      // to a compositor layer on large documents.
-      host.style.display = 'flex';
-      host.style.flexDirection = 'column';
-      host.style.alignItems = 'stretch';
-      const ruler = host.querySelector(':scope > .ruler');
-      if (ruler) {
-        // The locked GUI's initial DOM places the ruler after the rows. Keep
-        // that established geometry while assigning flex order to signals.
-        ruler.style.order = String(orderedIds.length + 1);
-        ruler.style.flex = '0 0 auto';
-      }
-      const baseTop = new Map(visibleRows.map(row => [row, row.offsetTop]));
-      const orderById = new Map(orderedIds.map((id, index) => [id, index + 1]));
-      for (const row of rows) {
-        const id = row.dataset.signalId || row.dataset.signal;
-        const order = orderById.get(id);
-        row.style.order = order === undefined ? '0' : String(order);
-        row.style.flex = '0 0 auto';
-        // Do not rasterize off-screen SVG rows during large-document reorder.
-        // The intrinsic size preserves the existing row geometry until the
-        // browser brings a row into the viewport.
-        row.style.contentVisibility = 'auto';
-        row.style.containIntrinsicSize = '35px 100%';
-        row.style.transform = '';
-        row.style.willChange = '';
-        row.dataset.reorderVisual = order === undefined ? 'none' : 'layout-order';
-      }
-      controller.renderMetrics.rowMoves += 1;
-      controller.renderMetrics.cycleRowMoves += 1;
-      host.dataset.reorderLayout = 'flex-order';
-      return true;
-    };
     const reorder = host => {
       if (!host) return;
       const started = performance.now();
-      if (host.matches('#cycleCanvas .timing-scroll-pane > .wave') && applyTimingVisualOrder(host)) {
-        reorderTimings.push({ host: host.className || host.id || 'host', mode: 'layout-order', ms: performance.now() - started });
-        return;
-      }
       const row = host.querySelector(`[data-signal="${CSS.escape(signalId)}"]`);
       if (!group || !row) { reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started }); return; }
       const nextId = group.rows[index + 1];
       const next = nextId ? host.querySelector(`[data-signal="${CSS.escape(nextId)}"]`) : null;
-      if (next) { host.insertBefore(row, next); controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1; reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started }); return; }
+      if (next) { host.insertBefore(row, next); row.dataset.reorderVisual='dom-order'; controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1; reorderTimings.push({ host: host.className || host.id || 'host', mode:'dom-move', ms: performance.now() - started }); return; }
       const groupIds = new Set(group.rows);
       const last = [...host.children].reverse().find(node => groupIds.has(node.dataset.signal));
       if (last?.nextSibling) host.insertBefore(row, last.nextSibling); else if (last) host.appendChild(row);
       controller.renderMetrics.rowMoves += 1; controller.renderMetrics.cycleRowMoves += 1;
-      reorderTimings.push({ host: host.className || host.id || 'host', ms: performance.now() - started });
+      row.dataset.reorderVisual='dom-order';reorderTimings.push({ host: host.className || host.id || 'host', mode:'dom-move', ms: performance.now() - started });
     };
+    reorder(document.querySelector(`#groups .group[data-group-id="${CSS.escape(group?.id || '')}"]`));
     reorder(document.querySelector('#cycleCanvas .wave'));
     reorder(window.TimingChartFrozenLabels?.frozenWave);
-    const treeHost = group ? document.querySelector(`#groups .group[data-group-id="${CSS.escape(group.id)}"]`) : null;
-    if (treeHost && group) {
-      const row = treeHost.querySelector(`.row[data-signal="${CSS.escape(signalId)}"]`);
-      const nextId = group.rows[index + 1];
-      const next = nextId ? treeHost.querySelector(`.row[data-signal="${CSS.escape(nextId)}"]`) : null;
-      if (row) {
-        if (next) treeHost.insertBefore(row, next);
-        else { const rowIds = new Set(group.rows); const last = [...treeHost.querySelectorAll(':scope > .row[data-signal]')].reverse().find(node => rowIds.has(node.dataset.signal)); if (last?.nextSibling) treeHost.insertBefore(row, last.nextSibling); else treeHost.appendChild(row); }
-      }
-    }
+    const neighborIndex = Number(delta) < 0 ? index + 1 : index - 1;
+    const affectedRows = group && group.rows[neighborIndex] ? [signalId, group.rows[neighborIndex]] : [signalId];
     const shiftStarted = performance.now();
-    window.TimingChartProductionWaveform?.shiftScreenGeometryAfterRowReorder?.(model);
+    if (!window.TimingChartProductionWaveform?.applyCapturedRowReorder?.(model, surfaceCapture)) window.TimingChartProductionWaveform?.shiftScreenGeometryAfterRowReorder?.(model, affectedRows);
     const shiftFinished = performance.now();
     const axisFinished = performance.now();
     if ((model.document.annotations || []).length) window.TimingChartProductionAnnotations?.render?.(model);
     const annotationFinished = performance.now();
-    const neighborIndex = Number(delta) < 0 ? index + 1 : index - 1;
     const minimapRows = group && group.rows[neighborIndex] ? [signalId, group.rows[neighborIndex]] : [];
+    const minimapStarted = performance.now();
     if (controller.viewRibbon?.reconcileMinimapRows?.(minimapRows)) {
       controller.viewMetrics ||= {};
       controller.viewMetrics.minimapLocalizedUpdates = (controller.viewMetrics.minimapLocalizedUpdates || 0) + 1;
     }
-    controller.lastIncrementalTraceParts = { shiftMs: shiftFinished - shiftStarted, timeAxisMs: axisFinished - shiftFinished, annotationsMs: annotationFinished - axisFinished, reorderTimings };
+    const minimapFinished = performance.now();
+    controller.refreshReorderControls?.();
+    const controlsFinished = performance.now();
+    controller.lastIncrementalTraceParts = { shiftMs: shiftFinished - shiftStarted, timeAxisMs: axisFinished - shiftFinished, annotationsMs: annotationFinished - axisFinished, minimapMs: minimapFinished - minimapStarted, controlsMs: controlsFinished - minimapFinished, reorderTimings };
   };
   const incrementalRun = (label, mutation, reconcile) => {
     const started = performance.now();
@@ -797,7 +796,16 @@
   controller.actions.duplicateSignal = signalId => transactionRun('Duplicate signal', () => { const source = getSignal(signalId); const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!source || !group) return false; const copy = structuredClone(source); let id = `${source.id}_copy`; let index = 2; while (model.document.signals.some(item => item.id === id)) id = `${source.id}_copy${index++}`; copy.id = id; copy.display = { ...(copy.display || {}), name: copy.display?.name || copy.name }; model.document.signals.push(copy); const rowIndex = group.rows.indexOf(signalId); group.rows.splice(rowIndex + 1, 0, id); model.selection = { kind: 'signal', id }; });
   controller.actions.deleteSignal = signalId => transactionRun('Delete signal', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal || signal.id === model.document.timeline.referenceClock) return false; for (const group of model.document.signalGroups) group.rows = (group.rows || []).filter(id => id !== signalId); model.document.signals = model.document.signals.filter(item => item.id !== signalId); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; });
   controller.actions.setSignalRole = (signalId, role) => { if (!['input', 'output', 'internal'].includes(role)) return false; return transactionRun('Change signal role', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal || signal.type === 'commentRow') return false; signal.role = role; }); };
-  controller.actions.moveSignalBy = (signalId, delta) => incrementalRun('Reorder signal', () => { const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId)); if (!group) return false; const from = group.rows.indexOf(signalId); const to = Math.max(0, Math.min(group.rows.length - 1, from + Number(delta))); if (from === to) return false; group.rows.splice(from, 1); group.rows.splice(to, 0, signalId); }, () => reconcileSignalOrder(signalId, delta));
+  controller.actions.moveSignalBy = (signalId, delta) => {
+    const group = model.document.signalGroups.find(item => (item.rows || []).includes(signalId));
+    if (!group) return false;
+    const from = group.rows.indexOf(signalId);
+    const to = Math.max(0, Math.min(group.rows.length - 1, from + Number(delta)));
+    if (from === to) return false;
+    const neighborId = group.rows[to];
+    const surfaceCapture = window.TimingChartProductionWaveform?.captureRowReorder?.([signalId, neighborId]);
+    return incrementalRun('Reorder signal', () => { group.rows.splice(from, 1); group.rows.splice(to, 0, signalId); }, () => reconcileSignalOrder(signalId, delta, surfaceCapture));
+  };
   controller.actions.setSignalSpacing = (signalId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update signal spacing', () => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; signal[field] = Number(value); }); };
   controller.actions.setGroupSpacing = (groupId, field, value) => { if (!['spacingBefore', 'spacingAfter'].includes(field) || Number(value) < 0) return false; return transactionRun('Update group spacing', () => { const group = model.document.signalGroups.find(item => item.id === groupId); if (!group) return false; group[field] = Number(value); }); };
   controller.actions.setGlobalSignalSpacing = value => { const spacing = Number(value); if (!Number.isFinite(spacing) || spacing < 0 || spacing > 48) return false; return transactionRun('Update row spacing', () => { model.document.layout.signalSpacing = spacing; }); };

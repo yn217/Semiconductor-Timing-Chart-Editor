@@ -1,0 +1,722 @@
+{
+  "issue": 146,
+  "states": [
+    {
+      "label": "startup",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-1",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-1",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-2",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-2",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-3",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-3",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-4",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-4",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-5",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-5",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-6",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-6",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-7",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-7",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-8",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-8",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-9",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-9",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "up-10",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "down-10",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 644,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 7,
+        "geometry": 7,
+        "ruler": 4,
+        "full": 1
+      }
+    },
+    {
+      "label": "ahb-open",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 691,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 18,
+        "geometry": 8,
+        "ruler": 6,
+        "full": 2
+      }
+    },
+    {
+      "label": "100-signals-500-cycles",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 3794,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0.0078125,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 38,
+        "geometry": 9,
+        "ruler": 12,
+        "full": 3
+      }
+    },
+    {
+      "label": "large-after-reorder",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 3794,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0.0078125,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 38,
+        "geometry": 9,
+        "ruler": 12,
+        "full": 3
+      }
+    }
+  ],
+  "combinations": [
+    {
+      "grid": false,
+      "ruler": false,
+      "state": {
+        "label": "grid-false-ruler-false",
+        "ruler": {
+          "top": 260,
+          "bottom": 294,
+          "visible": false,
+          "firstElement": true
+        },
+        "firstRowTop": 294,
+        "lastRowBottom": 691,
+        "rulerAboveRows": true,
+        "maxTickErrorPx": 0,
+        "worstTicks": [],
+        "orderExact": true,
+        "metrics": {
+          "waveDrom": 18,
+          "geometry": 8,
+          "ruler": 6,
+          "full": 2
+        }
+      }
+    },
+    {
+      "grid": false,
+      "ruler": true,
+      "state": {
+        "label": "grid-false-ruler-true",
+        "ruler": {
+          "top": 260,
+          "bottom": 294,
+          "visible": true,
+          "firstElement": true
+        },
+        "firstRowTop": 294,
+        "lastRowBottom": 691,
+        "rulerAboveRows": true,
+        "maxTickErrorPx": 0,
+        "worstTicks": [],
+        "orderExact": true,
+        "metrics": {
+          "waveDrom": 18,
+          "geometry": 8,
+          "ruler": 6,
+          "full": 2
+        }
+      }
+    },
+    {
+      "grid": true,
+      "ruler": false,
+      "state": {
+        "label": "grid-true-ruler-false",
+        "ruler": {
+          "top": 260,
+          "bottom": 294,
+          "visible": false,
+          "firstElement": true
+        },
+        "firstRowTop": 294,
+        "lastRowBottom": 691,
+        "rulerAboveRows": true,
+        "maxTickErrorPx": 0,
+        "worstTicks": [],
+        "orderExact": true,
+        "metrics": {
+          "waveDrom": 18,
+          "geometry": 8,
+          "ruler": 6,
+          "full": 2
+        }
+      }
+    },
+    {
+      "grid": true,
+      "ruler": true,
+      "state": {
+        "label": "grid-true-ruler-true",
+        "ruler": {
+          "top": 260,
+          "bottom": 294,
+          "visible": true,
+          "firstElement": true
+        },
+        "firstRowTop": 294,
+        "lastRowBottom": 691,
+        "rulerAboveRows": true,
+        "maxTickErrorPx": 0,
+        "worstTicks": [],
+        "orderExact": true,
+        "metrics": {
+          "waveDrom": 18,
+          "geometry": 8,
+          "ruler": 6,
+          "full": 2
+        }
+      }
+    }
+  ],
+  "zoomAndScroll": [
+    {
+      "label": "zoom-50",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 691,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 18,
+        "geometry": 8,
+        "ruler": 7,
+        "full": 2
+      }
+    },
+    {
+      "label": "zoom-100",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 691,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 18,
+        "geometry": 8,
+        "ruler": 8,
+        "full": 2
+      }
+    },
+    {
+      "label": "zoom-150",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 691,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 18,
+        "geometry": 8,
+        "ruler": 9,
+        "full": 2
+      }
+    },
+    {
+      "label": "zoom-200",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 691,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 18,
+        "geometry": 8,
+        "ruler": 10,
+        "full": 2
+      }
+    },
+    {
+      "label": "horizontal-scroll",
+      "ruler": {
+        "top": 260,
+        "bottom": 294,
+        "visible": true,
+        "firstElement": true
+      },
+      "firstRowTop": 294,
+      "lastRowBottom": 691,
+      "rulerAboveRows": true,
+      "maxTickErrorPx": 0,
+      "worstTicks": [],
+      "orderExact": true,
+      "metrics": {
+        "waveDrom": 18,
+        "geometry": 8,
+        "ruler": 10,
+        "full": 2
+      }
+    }
+  ],
+  "largeLatencyMs": 666,
+  "maxTickErrorPx": 0.0078125,
+  "pageErrors": [],
+  "pass": true
+}

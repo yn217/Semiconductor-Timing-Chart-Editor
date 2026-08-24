@@ -213,6 +213,8 @@
       window.TimingChartProductionAnnotations?.render?.(model);
       positionTimedBandLabels();
       updateStatus();
+      // Zoom changes the timing extent without a semantic document render;
+      // let the MiniMap consume the settled transformed geometry once.
       controller.viewRibbon?.scheduleMinimap?.();
       metrics.frames += 1;
       controller.profileMark?.('zoom:end');

@@ -18,10 +18,10 @@ try {
   const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1, acceptDownloads: true });
   const open = async () => { await page.goto('http://127.0.0.1:4190/gui-mockup/', { waitUntil: 'networkidle' }); await wait(50); };
   const documentValue = () => page.evaluate(() => window.TimingChartProductionController.getSerializableDocument());
-  const state = () => page.evaluate(() => window.TimingChartProductionController.getState());
+  const state = () => page.evaluate(() => { const model = window.TimingChartProductionController.model; return { document: structuredClone(model.document), validation: structuredClone(model.validation || []), timeSelection: structuredClone(model.timeSelection || {}), persistence: structuredClone(model.persistence || {}) }; });
   const setCycle = cycle => page.evaluate(cycleValue => { window.TimingChartProductionController.model.timeSelection.cycle = cycleValue; window.TimingChartProductionController.renderTransient(window.TimingChartProductionController.model); }, cycle);
-  const insert = (start, count = 1) => page.evaluate(([s, c]) => window.TimingChartProductionController.actions.insertCycles(s, c), [start, count]);
-  const remove = (start, end) => page.evaluate(([s, e]) => window.TimingChartProductionController.actions.deleteRange(s, e), [start, end]);
+  const insert = (start, count = 1) => page.evaluate(async ([s, c]) => { const controller = window.TimingChartProductionController; const result = controller.actions.insertCycles(s, c); if (result && controller.waveformIdle) await controller.waveformIdle; return result; }, [start, count]);
+  const remove = (start, end) => page.evaluate(async ([s, e]) => { const controller = window.TimingChartProductionController; const result = controller.actions.deleteRange(s, e); if (result && controller.waveformIdle) await controller.waveformIdle; return result; }, [start, end]);
   const historyLengths = () => page.evaluate(() => ({ undo: window.TimingChartProductionController.model.history.undo.length, redo: window.TimingChartProductionController.model.history.redo.length }));
   const common = async (name, fn) => { await open(); const result = await fn(); report.cases[name] = { ...result, pass: true }; };
 

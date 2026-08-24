@@ -1,0 +1,64 @@
+{
+  "issue": 145,
+  "browser": "Chromium 151.0.7922.34",
+  "viewport": "1672x941",
+  "architecture": "canonical row shells + stable WaveDrom surface + lazy viewport trace generation",
+  "viewportAcceptance": {
+    "fixture": { "signals": 100, "cycles": 100 },
+    "renderedInitially": 21,
+    "renderedAfterBottomScroll": 30,
+    "totalSignals": 100,
+    "svgIdentityStable": true,
+    "maxActiveYErrorPx": 0,
+    "referenceBoundaryVerticalScrollDeltaPx": 0,
+    "hiddenGeometryHorizontalScrollErrorPx": 0,
+    "visibilityWaveDromRenderDelta": 0,
+    "visibilityGeometryBuildDelta": 0
+  },
+  "repeatedRealClick": {
+    "warmupPairs": 3,
+    "samplesPerDirection": 20,
+    "runs": [
+      {
+        "fixture": { "signals": 50, "cycles": 100 },
+        "initialVisibleReadyMs": 8450,
+        "renderedSvgCount": 21,
+        "signalUp": { "medianMs": 218, "p95Ms": 267.5, "maxMs": 284.3 },
+        "signalDown": { "medianMs": 235, "p95Ms": 267.6, "maxMs": 286.4 }
+      },
+      {
+        "fixture": { "signals": 100, "cycles": 500 },
+        "initialVisibleReadyMs": 43162,
+        "renderedSvgCount": 21,
+        "signalUp": { "medianMs": 941.2, "p95Ms": 1500.3, "maxMs": 1583 },
+        "signalDown": { "medianMs": 959.9, "p95Ms": 1533.9, "maxMs": 1566.9 }
+      }
+    ],
+    "canonicalOrder": true,
+    "svgIdentityStable": true,
+    "maxYErrorPx": 0,
+    "waveDromRenderDelta": 0,
+    "geometryBuildDelta": 0,
+    "appFullRenderDelta": 0
+  },
+  "singleTrace": {
+    "normal50x100": {
+      "signalUp": { "browserReadyMs": 122.1, "commandMs": 11.2, "layerizeMs": 18.26 },
+      "signalDown": { "browserReadyMs": 92.2, "commandMs": 5.1, "layerizeMs": 14.01 }
+    },
+    "large100x500": {
+      "signalUp": { "browserReadyMs": 355.2, "commandMs": 8.9, "layerizeMs": 90.39 },
+      "signalDown": { "browserReadyMs": 289.9, "commandMs": 8.1, "layerizeMs": 69.52 }
+    }
+  },
+  "physicalRowBaseline100x500": {
+    "browserReadyMs": "15800-21700",
+    "layerizeMs": 2500
+  },
+  "structuralAcceptance": true,
+  "materialReduction": true,
+  "commandToPaintTargetMs": 50,
+  "commandToPaintAcceptance": false,
+  "remainingHotspot": "Visible 500-cycle WaveDrom SVG style/layout/layerization",
+  "issueRemainsOpen": true
+}

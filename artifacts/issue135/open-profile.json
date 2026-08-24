@@ -1,0 +1,564 @@
+{
+  "issue": 135,
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "runs": [
+    {
+      "fileName": "01_apb_register_access.tcd.json",
+      "accepted": true,
+      "profile": {
+        "sequence": 1,
+        "fileName": "01_apb_register_access.tcd.json",
+        "startedAt": 1391.9000000953674,
+        "textBytes": 8245,
+        "protectMs": 0.10000002384185791,
+        "parseMs": 0.2999999523162842,
+        "normalizeMs": 2.700000047683716,
+        "validateMs": 0.7999999523162842,
+        "replaceDocumentMs": 499.3000000715256,
+        "render": {
+          "stateAndHierarchyMs": 1.7999999523162842,
+          "rowReconcileMs": 31.399999976158142,
+          "hierarchyInspectorMs": 0,
+          "waveformMs": 379,
+          "timeAxisMs": 0,
+          "annotationsMs": 7,
+          "transactionsMs": 0.6000000238418579,
+          "zoomMs": 0,
+          "statusMs": 0.2999999523162842,
+          "hooks": [
+            {
+              "name": "issue74-styles",
+              "ms": 2
+            },
+            {
+              "name": "frozen-labels",
+              "ms": 68.70000004768372
+            },
+            {
+              "name": "control-completeness-reorder",
+              "ms": 0.20000004768371582
+            },
+            {
+              "name": "control-completeness-edit",
+              "ms": 0.6000000238418579
+            },
+            {
+              "name": "annotation-ribbon",
+              "ms": 0.5
+            },
+            {
+              "name": "view-ribbon",
+              "ms": 6.100000023841858
+            }
+          ],
+          "hooksMs": 78.30000007152557,
+          "totalMs": 498.5,
+          "signalCount": 10,
+          "cycleCount": 18
+        },
+        "serializeHashMs": 0.3999999761581421,
+        "domReadyMs": 504.89999997615814,
+        "result": "success",
+        "signalCount": 10,
+        "cycleCount": 18,
+        "paintReadyMs": 573.7999999523163,
+        "currentDocument": true,
+        "consistency": {
+          "canonicalLeftExact": true,
+          "canonicalTimingExact": true,
+          "visibleGeometryComplete": true,
+          "staleGeometryIds": []
+        },
+        "firstConsistentPaint": true,
+        "pass": true
+      },
+      "deltas": {
+        "appFullRenders": 1,
+        "waveDromRenders": 10,
+        "geometryBuilds": 1
+      },
+      "marks": [
+        "tc:open:start",
+        "tc:open:parse:start",
+        "tc:open:parse:end",
+        "tc:open:normalize:start",
+        "tc:open:normalize:end",
+        "tc:open:validate:start",
+        "tc:open:validate:end",
+        "tc:open:replaceDocument:start",
+        "tc:open:replaceDocument:end",
+        "tc:open:serializeHash:start",
+        "tc:open:serializeHash:end",
+        "tc:open:dom-ready",
+        "tc:open:paint-ready"
+      ]
+    },
+    {
+      "fileName": "02_ahb_lite_pipelined_transfer.tcd.json",
+      "accepted": true,
+      "profile": {
+        "sequence": 2,
+        "fileName": "02_ahb_lite_pipelined_transfer.tcd.json",
+        "startedAt": 1973.2000000476837,
+        "textBytes": 8505,
+        "protectMs": 0,
+        "parseMs": 0.19999992847442627,
+        "normalizeMs": 0.8000000715255737,
+        "validateMs": 0.6999999284744263,
+        "replaceDocumentMs": 377.2000000476837,
+        "render": {
+          "stateAndHierarchyMs": 1.7000000476837158,
+          "rowReconcileMs": 35.89999997615814,
+          "hierarchyInspectorMs": 0,
+          "waveformMs": 314.89999997615814,
+          "timeAxisMs": 0,
+          "annotationsMs": 3,
+          "transactionsMs": 0.6000000238418579,
+          "zoomMs": 0,
+          "statusMs": 0.5,
+          "hooks": [
+            {
+              "name": "issue74-styles",
+              "ms": 2.3000000715255737
+            },
+            {
+              "name": "frozen-labels",
+              "ms": 10.5
+            },
+            {
+              "name": "control-completeness-reorder",
+              "ms": 0.19999992847442627
+            },
+            {
+              "name": "control-completeness-edit",
+              "ms": 0.10000002384185791
+            },
+            {
+              "name": "annotation-ribbon",
+              "ms": 0.5
+            },
+            {
+              "name": "view-ribbon",
+              "ms": 6.399999976158142
+            }
+          ],
+          "hooksMs": 20,
+          "totalMs": 376.60000002384186,
+          "signalCount": 11,
+          "cycleCount": 14
+        },
+        "serializeHashMs": 0.20000004768371582,
+        "domReadyMs": 379.89999997615814,
+        "result": "success",
+        "signalCount": 11,
+        "cycleCount": 14,
+        "paintReadyMs": 435.7999999523163,
+        "currentDocument": true,
+        "consistency": {
+          "canonicalLeftExact": true,
+          "canonicalTimingExact": true,
+          "visibleGeometryComplete": true,
+          "staleGeometryIds": []
+        },
+        "firstConsistentPaint": true,
+        "pass": true
+      },
+      "deltas": {
+        "appFullRenders": 1,
+        "waveDromRenders": 11,
+        "geometryBuilds": 1
+      },
+      "marks": [
+        "tc:open:start",
+        "tc:open:parse:start",
+        "tc:open:parse:end",
+        "tc:open:normalize:start",
+        "tc:open:normalize:end",
+        "tc:open:validate:start",
+        "tc:open:validate:end",
+        "tc:open:replaceDocument:start",
+        "tc:open:replaceDocument:end",
+        "tc:open:serializeHash:start",
+        "tc:open:serializeHash:end",
+        "tc:open:dom-ready",
+        "tc:open:paint-ready"
+      ]
+    },
+    {
+      "fileName": "03_axi4_full_write_burst.tcd.json",
+      "accepted": true,
+      "profile": {
+        "sequence": 3,
+        "fileName": "03_axi4_full_write_burst.tcd.json",
+        "startedAt": 2416.8000000715256,
+        "textBytes": 12042,
+        "protectMs": 0,
+        "parseMs": 0.20000004768371582,
+        "normalizeMs": 0.7000000476837158,
+        "validateMs": 0.5,
+        "replaceDocumentMs": 747.0999999046326,
+        "render": {
+          "stateAndHierarchyMs": 1.6999999284744263,
+          "rowReconcileMs": 52.300000071525574,
+          "hierarchyInspectorMs": 0.10000002384185791,
+          "waveformMs": 663.2999999523163,
+          "timeAxisMs": 0.10000002384185791,
+          "annotationsMs": 4.600000023841858,
+          "transactionsMs": 0.20000004768371582,
+          "zoomMs": 0,
+          "statusMs": 0.5,
+          "hooks": [
+            {
+              "name": "issue74-styles",
+              "ms": 2.899999976158142
+            },
+            {
+              "name": "frozen-labels",
+              "ms": 9.5
+            },
+            {
+              "name": "control-completeness-reorder",
+              "ms": 0.20000004768371582
+            },
+            {
+              "name": "control-completeness-edit",
+              "ms": 0.19999992847442627
+            },
+            {
+              "name": "annotation-ribbon",
+              "ms": 0.6000000238418579
+            },
+            {
+              "name": "view-ribbon",
+              "ms": 10.399999976158142
+            }
+          ],
+          "hooksMs": 23.799999952316284,
+          "totalMs": 746.6999999284744,
+          "signalCount": 18,
+          "cycleCount": 18
+        },
+        "serializeHashMs": 0.3999999761581421,
+        "domReadyMs": 750.1000000238419,
+        "result": "success",
+        "signalCount": 18,
+        "cycleCount": 18,
+        "paintReadyMs": 861.7999999523163,
+        "currentDocument": true,
+        "consistency": {
+          "canonicalLeftExact": true,
+          "canonicalTimingExact": true,
+          "visibleGeometryComplete": true,
+          "staleGeometryIds": []
+        },
+        "firstConsistentPaint": true,
+        "pass": true
+      },
+      "deltas": {
+        "appFullRenders": 1,
+        "waveDromRenders": 18,
+        "geometryBuilds": 1
+      },
+      "marks": [
+        "tc:open:start",
+        "tc:open:parse:start",
+        "tc:open:parse:end",
+        "tc:open:normalize:start",
+        "tc:open:normalize:end",
+        "tc:open:validate:start",
+        "tc:open:validate:end",
+        "tc:open:replaceDocument:start",
+        "tc:open:replaceDocument:end",
+        "tc:open:serializeHash:start",
+        "tc:open:serializeHash:end",
+        "tc:open:dom-ready",
+        "tc:open:paint-ready"
+      ]
+    },
+    {
+      "fileName": "08_async_fifo_cdc.tcd.json",
+      "accepted": true,
+      "profile": {
+        "sequence": 4,
+        "fileName": "08_async_fifo_cdc.tcd.json",
+        "startedAt": 3293.7000000476837,
+        "textBytes": 7953,
+        "protectMs": 0,
+        "parseMs": 0.2999999523162842,
+        "normalizeMs": 0.8999999761581421,
+        "validateMs": 0.6000000238418579,
+        "replaceDocumentMs": 465.2999999523163,
+        "render": {
+          "stateAndHierarchyMs": 3,
+          "rowReconcileMs": 52.5,
+          "hierarchyInspectorMs": 0,
+          "waveformMs": 391.39999997615814,
+          "timeAxisMs": 0,
+          "annotationsMs": 1,
+          "transactionsMs": 0.20000004768371582,
+          "zoomMs": 0.10000002384185791,
+          "statusMs": 0.19999992847442627,
+          "hooks": [
+            {
+              "name": "issue74-styles",
+              "ms": 1.8000000715255737
+            },
+            {
+              "name": "frozen-labels",
+              "ms": 7
+            },
+            {
+              "name": "control-completeness-reorder",
+              "ms": 0.09999990463256836
+            },
+            {
+              "name": "control-completeness-edit",
+              "ms": 0.10000002384185791
+            },
+            {
+              "name": "annotation-ribbon",
+              "ms": 0.5
+            },
+            {
+              "name": "view-ribbon",
+              "ms": 6.899999976158142
+            }
+          ],
+          "hooksMs": 16.399999976158142,
+          "totalMs": 464.7999999523163,
+          "signalCount": 12,
+          "cycleCount": 18
+        },
+        "serializeHashMs": 0.30000007152557373,
+        "domReadyMs": 468.2999999523163,
+        "result": "success",
+        "signalCount": 12,
+        "cycleCount": 18,
+        "paintReadyMs": 533.7000000476837,
+        "currentDocument": true,
+        "consistency": {
+          "canonicalLeftExact": true,
+          "canonicalTimingExact": true,
+          "visibleGeometryComplete": true,
+          "staleGeometryIds": []
+        },
+        "firstConsistentPaint": true,
+        "pass": true
+      },
+      "deltas": {
+        "appFullRenders": 1,
+        "waveDromRenders": 12,
+        "geometryBuilds": 1
+      },
+      "marks": [
+        "tc:open:start",
+        "tc:open:parse:start",
+        "tc:open:parse:end",
+        "tc:open:normalize:start",
+        "tc:open:normalize:end",
+        "tc:open:validate:start",
+        "tc:open:validate:end",
+        "tc:open:replaceDocument:start",
+        "tc:open:replaceDocument:end",
+        "tc:open:serializeHash:start",
+        "tc:open:serializeHash:end",
+        "tc:open:dom-ready",
+        "tc:open:paint-ready"
+      ]
+    },
+    {
+      "fileName": "generated-50x100.tcd",
+      "accepted": true,
+      "profile": {
+        "sequence": 5,
+        "fileName": "generated-50x100.tcd",
+        "startedAt": 3835.4000000953674,
+        "textBytes": 13495,
+        "protectMs": 0.10000002384185791,
+        "parseMs": 0.20000004768371582,
+        "normalizeMs": 1.100000023841858,
+        "validateMs": 0.5999999046325684,
+        "replaceDocumentMs": 2492.600000023842,
+        "render": {
+          "stateAndHierarchyMs": 2.100000023841858,
+          "rowReconcileMs": 129.70000004768372,
+          "hierarchyInspectorMs": 0,
+          "waveformMs": 2298.600000023842,
+          "timeAxisMs": 0,
+          "annotationsMs": 0.2999999523162842,
+          "transactionsMs": 0.20000004768371582,
+          "zoomMs": 0,
+          "statusMs": 0.3999999761581421,
+          "hooks": [
+            {
+              "name": "issue74-styles",
+              "ms": 6.200000047683716
+            },
+            {
+              "name": "frozen-labels",
+              "ms": 33.89999997615814
+            },
+            {
+              "name": "control-completeness-reorder",
+              "ms": 0.10000002384185791
+            },
+            {
+              "name": "control-completeness-edit",
+              "ms": 0.19999992847442627
+            },
+            {
+              "name": "annotation-ribbon",
+              "ms": 0.8000000715255737
+            },
+            {
+              "name": "view-ribbon",
+              "ms": 19.199999928474426
+            }
+          ],
+          "hooksMs": 60.5,
+          "totalMs": 2492,
+          "signalCount": 50,
+          "cycleCount": 100
+        },
+        "serializeHashMs": 0.5,
+        "domReadyMs": 2496.1999999284744,
+        "result": "success",
+        "signalCount": 50,
+        "cycleCount": 100,
+        "paintReadyMs": 2746.899999976158,
+        "currentDocument": true,
+        "consistency": {
+          "canonicalLeftExact": true,
+          "canonicalTimingExact": true,
+          "visibleGeometryComplete": true,
+          "staleGeometryIds": []
+        },
+        "firstConsistentPaint": true,
+        "pass": true
+      },
+      "deltas": {
+        "appFullRenders": 1,
+        "waveDromRenders": 21,
+        "geometryBuilds": 1
+      },
+      "marks": [
+        "tc:open:start",
+        "tc:open:parse:start",
+        "tc:open:parse:end",
+        "tc:open:normalize:start",
+        "tc:open:normalize:end",
+        "tc:open:validate:start",
+        "tc:open:validate:end",
+        "tc:open:replaceDocument:start",
+        "tc:open:replaceDocument:end",
+        "tc:open:serializeHash:start",
+        "tc:open:serializeHash:end",
+        "tc:open:dom-ready",
+        "tc:open:paint-ready"
+      ]
+    },
+    {
+      "fileName": "generated-100x500.tcd",
+      "accepted": true,
+      "profile": {
+        "sequence": 6,
+        "fileName": "generated-100x500.tcd",
+        "startedAt": 6609.600000023842,
+        "textBytes": 26271,
+        "protectMs": 0,
+        "parseMs": 0.6000000238418579,
+        "normalizeMs": 3.700000047683716,
+        "validateMs": 4.699999928474426,
+        "replaceDocumentMs": 11485.900000095367,
+        "render": {
+          "stateAndHierarchyMs": 3.3000000715255737,
+          "rowReconcileMs": 662.2999999523163,
+          "hierarchyInspectorMs": 0.10000002384185791,
+          "waveformMs": 10672.5,
+          "timeAxisMs": 0,
+          "annotationsMs": 0.10000002384185791,
+          "transactionsMs": 0.10000002384185791,
+          "zoomMs": 0,
+          "statusMs": 0.40000009536743164,
+          "hooks": [
+            {
+              "name": "issue74-styles",
+              "ms": 13
+            },
+            {
+              "name": "frozen-labels",
+              "ms": 57.89999997615814
+            },
+            {
+              "name": "control-completeness-reorder",
+              "ms": 0.19999992847442627
+            },
+            {
+              "name": "control-completeness-edit",
+              "ms": 0.10000002384185791
+            },
+            {
+              "name": "annotation-ribbon",
+              "ms": 0.7000000476837158
+            },
+            {
+              "name": "view-ribbon",
+              "ms": 74.10000002384186
+            }
+          ],
+          "hooksMs": 146,
+          "totalMs": 11484.900000095367,
+          "signalCount": 100,
+          "cycleCount": 500
+        },
+        "serializeHashMs": 0.5,
+        "domReadyMs": 11497.200000047684,
+        "result": "success",
+        "signalCount": 100,
+        "cycleCount": 500,
+        "paintReadyMs": 12780.600000023842,
+        "currentDocument": true,
+        "consistency": {
+          "canonicalLeftExact": true,
+          "canonicalTimingExact": true,
+          "visibleGeometryComplete": true,
+          "staleGeometryIds": []
+        },
+        "firstConsistentPaint": true,
+        "pass": true
+      },
+      "deltas": {
+        "appFullRenders": 1,
+        "waveDromRenders": 21,
+        "geometryBuilds": 1
+      },
+      "marks": [
+        "tc:open:start",
+        "tc:open:parse:start",
+        "tc:open:parse:end",
+        "tc:open:normalize:start",
+        "tc:open:normalize:end",
+        "tc:open:validate:start",
+        "tc:open:validate:end",
+        "tc:open:replaceDocument:start",
+        "tc:open:replaceDocument:end",
+        "tc:open:serializeHash:start",
+        "tc:open:serializeHash:end",
+        "tc:open:dom-ready",
+        "tc:open:paint-ready"
+      ]
+    }
+  ],
+  "atomicFailure": {
+    "result": false,
+    "beforeId": "open-100-500.tcd",
+    "afterId": "open-100-500.tcd",
+    "unchanged": true
+  },
+  "pageErrors": [],
+  "pass": true
+}

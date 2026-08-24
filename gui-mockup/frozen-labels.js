@@ -142,6 +142,8 @@
     frozenWave.dataset.scrollTop = String(timingPane.scrollTop);
     frozenPane.dataset.rowCount = String(rows.length);
     frozenPane.dataset.frozen = 'true';
+    const controller = window.TimingChartProductionController;
+    if (!controller?.waveformSynchronizedForRender) window.TimingChartProductionWaveform?.syncSurface?.(model);
     window.TimingChartProductionController?.profileMark?.('frozen-labels:end');
   };
 

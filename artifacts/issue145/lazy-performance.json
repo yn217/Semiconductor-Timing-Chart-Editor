@@ -1,0 +1,92 @@
+{
+  "issue": 145,
+  "browser": "151.0.7922.34",
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "measuredAt": "2026-08-23T21:42:17.034Z",
+  "runs": [
+    {
+      "fixture": {
+        "signals": 50,
+        "cycles": 100
+      },
+      "initialVisibleReadyMs": 3087,
+      "surfaceBatching": {
+        "rowCount": 50,
+        "deltas": {
+          "syncSurfaceCalls": 1,
+          "renderSurfaceCalls": 1,
+          "surfaceChildrenLinearScans": 0,
+          "waveRectReads": 1,
+          "rowRectReads": 50,
+          "traceRectReads": 50
+        }
+      },
+      "signalUp": {
+        "samples": 20,
+        "medianMs": 218,
+        "p95Ms": 267.7,
+        "maxMs": 286.2
+      },
+      "signalDown": {
+        "samples": 20,
+        "medianMs": 218,
+        "p95Ms": 251.3,
+        "maxMs": 285.6
+      },
+      "renderedSvgCount": 21,
+      "totalSignalCount": 50,
+      "canonicalOrder": true,
+      "identityStable": true,
+      "maxYErrorPx": 0,
+      "deltas": {
+        "waveDromRenders": 0,
+        "geometryBuilds": 0,
+        "appFullRenders": 0
+      }
+    },
+    {
+      "fixture": {
+        "signals": 100,
+        "cycles": 500
+      },
+      "initialVisibleReadyMs": 15234,
+      "surfaceBatching": {
+        "rowCount": 100,
+        "deltas": {
+          "syncSurfaceCalls": 1,
+          "renderSurfaceCalls": 1,
+          "surfaceChildrenLinearScans": 0,
+          "waveRectReads": 1,
+          "rowRectReads": 100,
+          "traceRectReads": 100
+        }
+      },
+      "signalUp": {
+        "samples": 20,
+        "medianMs": 942.5,
+        "p95Ms": 1483,
+        "maxMs": 1518
+      },
+      "signalDown": {
+        "samples": 20,
+        "medianMs": 930.8,
+        "p95Ms": 1501.7,
+        "maxMs": 1518.1
+      },
+      "renderedSvgCount": 21,
+      "totalSignalCount": 100,
+      "canonicalOrder": true,
+      "identityStable": true,
+      "maxYErrorPx": 0,
+      "deltas": {
+        "waveDromRenders": 0,
+        "geometryBuilds": 0,
+        "appFullRenders": 0
+      }
+    }
+  ],
+  "pass": true
+}
