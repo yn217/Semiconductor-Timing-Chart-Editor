@@ -1,0 +1,40 @@
+{
+  "issue": 90,
+  "result": {
+    "wasBelowViewport": true,
+    "revealResult": {
+      "revealed": true,
+      "leftTree": "revealed",
+      "cycleRow": "revealed"
+    },
+    "nowVisible": true,
+    "leftScrollTopChanged": true,
+    "canvasRowVisible": true,
+    "docUnchangedByPureReveal": true,
+    "historyLenAfterReveal": 0,
+    "revealAgain": {
+      "revealed": true,
+      "leftTree": "revealed",
+      "cycleRow": "revealed"
+    },
+    "noJumpWhenAlreadyVisible": true,
+    "filteredResult": null,
+    "collapsedReveal": {
+      "revealed": false,
+      "leftTree": "group-collapsed",
+      "cycleRow": "hidden"
+    },
+    "collapseUndoLenBefore": 1,
+    "collapseUndoLenAfter": 1,
+    "groupHeaderPulsed": true,
+    "staleAttempt": {
+      "revealed": false,
+      "reason": "stale-id"
+    }
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue90-1672x941.png"
+  ]
+}

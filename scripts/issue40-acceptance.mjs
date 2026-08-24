@@ -19,7 +19,11 @@ async function runViewport(browser, viewport) {
     const expect = (condition, message) => { if (!condition) throw new Error(message); };
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
     const annotation = id => c.model.document.annotations.find(item => item.id === id);
-    const command = id => document.querySelector(`#ribbonAnnotation [data-annotation-command="${id}"]`);
+    // #105 responsive overflow relocates collapsed groups' buttons into a
+    // menu appended to document.body, so a command's element may no longer
+    // be a literal descendant of #ribbonAnnotation at the Compact band even
+    // though it is still the same live element with its original handler.
+    const command = id => document.querySelector(`[data-annotation-command="${id}"]`);
     const select = id => { expect(c.actions.selectAnnotation(id), `could not select ${id}`); return annotation(id); };
     const traceCount = () => document.querySelectorAll('#cycleCanvas .trace[data-renderer="wavedrom"] svg').length;
     const initial = c.model.document.annotations.map(item => item.id);
@@ -29,7 +33,7 @@ async function runViewport(browser, viewport) {
     annotationTab.click(); await wait(30);
     expect(!document.querySelector('#ribbonAnnotation').hidden, 'Annotation Ribbon did not activate');
     expect(document.querySelector('#ribbonHome').hidden, 'Home Ribbon remained visible');
-    expect([...document.querySelectorAll('#ribbonAnnotation [data-annotation-command]')].every(node => node.dataset.tooltipMeta && node.dataset.controlStatus), 'Annotation command metadata missing');
+    expect([...document.querySelectorAll('[data-annotation-command]')].every(node => node.dataset.tooltipMeta && node.dataset.controlStatus), 'Annotation command metadata missing');
     expect(command('duplicate').disabled && command('delete').disabled, 'Annotation context controls enabled without selection');
     expect(command('fill').disabled && command('width').disabled && command('lock').disabled, 'Unsupported controls were not disabled');
 
@@ -69,7 +73,7 @@ async function runViewport(browser, viewport) {
     expect(range.labelOffset?.x === 0 && range.labelOffset?.y === 0, 'Offset reset did not reset labelOffset');
 
     const beforeStyleTraceCount = traceCount();
-    command('label-right').click(); command('wrap').click(); command('multiline').click(); const labelEditor = document.querySelector('[data-annotation-label-editor]'); expect(labelEditor, 'Multiline label editor did not open'); const labelText = labelEditor.querySelector('[data-annotation-label-text]'); labelText.value = `${range.label}\nsecond line`; labelEditor.querySelector('[data-annotation-label-apply]').click(); command('color').click(); const colorPicker = document.querySelector('#ribbonAnnotation [data-annotation-color-picker]'); expect(colorPicker, 'Color command did not expose a selectable color control'); colorPicker.value = '#e39a25'; colorPicker.dispatchEvent(new Event('change', { bubbles: true })); command('visible').click(); await wait(30);
+    command('label-right').click(); command('wrap').click(); command('multiline').click(); const labelEditor = document.querySelector('[data-annotation-label-editor]'); expect(labelEditor, 'Multiline label editor did not open'); const labelText = labelEditor.querySelector('[data-annotation-label-text]'); labelText.value = `${range.label}\nsecond line`; labelEditor.querySelector('[data-annotation-label-apply]').click(); command('color').click(); const colorPicker = document.querySelector('[data-annotation-color-picker]'); expect(colorPicker, 'Color command did not expose a selectable color control'); colorPicker.value = '#e39a25'; colorPicker.dispatchEvent(new Event('change', { bubbles: true })); command('visible').click(); await wait(30);
     expect(range.labelStyle?.align === 'right', 'Label alignment was not stored canonically');
     expect(range.labelStyle?.wrap === true, 'Label wrap was not stored canonically');
     expect(String(range.label).includes('\n'), 'Multiline label was not stored canonically');

@@ -80,6 +80,7 @@
       ['自動レイアウト', () => controller.actions.autoLayout()]
     ]);
     document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
+      if (tool.dataset.txnAction) return;
       const text = label(tool);
       const action = homeActions.find(([name]) => text.includes(name));
       if (action) { implement(tool, action[1]); return; }
@@ -175,6 +176,7 @@
     const index = group ? group.rows.indexOf(selection.id) : -1;
     const reorderable = (selection.kind === 'signal' || selection.kind === 'comment') && Boolean(group) && index >= 0;
     document.querySelectorAll('#ribbonHome .tool').forEach(tool => {
+      if (tool.dataset.txnAction) return;
       const text = label(tool);
       if (text !== '上へ' && text !== '下へ') return;
       const isUp = text === '上へ';

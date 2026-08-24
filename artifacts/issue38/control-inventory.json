@@ -1,6 +1,6 @@
 {
-  "enabledControlCount": 80,
-  "disabledControlCount": 22,
+  "enabledControlCount": 88,
+  "disabledControlCount": 12,
   "inventory": [
     {
       "label": "ファイル",
@@ -117,58 +117,51 @@
     {
       "label": "切取",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "切取\n選択中の行をClipboardへ移します。\nAffects: Selected signal/group"
     },
     {
       "label": "コピー",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "コピー\n選択中の行をClipboardへコピーします。\nAffects: Selected signal/group\nShortcut: Ctrl+C"
     },
     {
       "label": "貼付",
       "tag": "button",
       "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "status": "implemented",
+      "reason": "貼付可能なアプリ内Clipboardがありません"
     },
     {
       "label": "削除",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "削除\n選択中のSignal/Group/Annotationを削除します。\nAffects: Selected semantic object\nShortcut: Delete"
     },
     {
       "label": "複製",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "複製\n選択中のSignal/Group/Annotationを複製します。\nAffects: Selected semantic object"
     },
     {
       "label": "上へ",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "上へ\n選択行をSignal Tree内で1つ上へ移動します。\nAffects: Signal Tree order"
     },
     {
       "label": "下へ",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "Cycle挿入",
-      "tag": "button",
       "disabled": false,
       "status": "implemented",
-      "reason": "Cycle挿入\n現在位置に1 Cycleを追加します。\nAffects: Timeline and following semantic time; Undo対応"
+      "reason": "下へ\n選択行をSignal Tree内で1つ下へ移動します。\nAffects: Signal Tree order"
     },
     {
       "label": "Cycle削除",
@@ -178,39 +171,32 @@
       "reason": "Cycle削除\n選択Cycleを削除し、後続のsemantic timeを追従させます。\nAffects: Timeline and following semantic time; Undo対応"
     },
     {
-      "label": "N Cycle挿入",
-      "tag": "button",
-      "disabled": false,
-      "status": "implemented",
-      "reason": "NCycle挿入\n現在位置に1 Cycleを追加します。\nAffects: Timeline and following semantic time; Undo対応"
-    },
-    {
       "label": "範囲削除",
       "tag": "button",
-      "disabled": false,
+      "disabled": true,
       "status": "implemented",
-      "reason": "範囲削除\n選択した時間範囲を削除します。\nAffects: Timeline and following semantic time; Undo対応"
+      "reason": "タイミング領域をドラッグして範囲を選択してください"
     },
     {
       "label": "行間隔",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "行間隔\n選択行の表示間隔を調整します。\nAffects: Signal layout only"
     },
     {
       "label": "Group間隔",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "Group間隔\n選択Groupの表示間隔を調整します。\nAffects: Group layout only"
     },
     {
       "label": "自動レイアウト",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "disabled": false,
+      "status": "implemented",
+      "reason": "自動レイアウト\nSignal/Group layoutを自動整列します。\nAffects: Presentation layout"
     },
     {
       "label": "Zoom−",
@@ -283,11 +269,11 @@
       "reason": ""
     },
     {
-      "label": "",
+      "label": "Signal Treeメニュー",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "左パネルの追加メニュー以外の操作は未実装です。対応予定: #32"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "",
@@ -297,11 +283,11 @@
       "reason": ""
     },
     {
-      "label": "",
+      "label": "信号フィルター",
       "tag": "button",
-      "disabled": true,
-      "status": "disabled",
-      "reason": "フィルター条件UIは未実装です。対応予定: #32"
+      "disabled": false,
+      "status": "implemented",
+      "reason": ""
     },
     {
       "label": "グループを折りたたむ",
@@ -733,52 +719,12 @@
       "reason": ""
     },
     {
-      "label": "切取",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "コピー",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
       "label": "貼付",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
+      "reason": "貼付可能なアプリ内Clipboardがありません"
     },
     {
-      "label": "削除",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "複製",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "上へ",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "下へ",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "行間隔",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "Group間隔",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "自動レイアウト",
-      "reason": "未実装の操作です。対応予定: #32 / #34"
-    },
-    {
-      "label": "",
-      "reason": "左パネルの追加メニュー以外の操作は未実装です。対応予定: #32"
-    },
-    {
-      "label": "",
-      "reason": "フィルター条件UIは未実装です。対応予定: #32"
+      "label": "範囲削除",
+      "reason": "タイミング領域をドラッグして範囲を選択してください"
     },
     {
       "label": "binarybusstateclock",

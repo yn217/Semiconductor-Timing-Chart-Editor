@@ -19,14 +19,31 @@ async function runViewport(browser, viewport) {
     const expect = (condition, message) => { if (!condition) throw new Error(message); };
     const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
     const tab = text => [...document.querySelectorAll('.ribbon-tabs .rtab')].find(node => node.textContent.trim() === text);
-    const command = id => document.querySelector(`#ribbonView [data-view-command="${id}"]`);
+    // #105 responsive overflow relocates collapsed groups' buttons into a
+    // menu appended to document.body, so a command's element may no longer
+    // be a literal descendant of #ribbonView at the Compact band even though
+    // it is still the same live element with its original click handler.
+    const command = id => document.querySelector(`[data-view-command="${id}"]`);
     const canonicalBefore = JSON.stringify(c.getSerializableDocument());
     const defaultLayout = { left: !document.querySelector('.left-panel').hidden, bottom: !document.querySelector('.bottom').hidden, inspector: !document.querySelector('.inspector').hidden };
     expect(defaultLayout.left && defaultLayout.bottom && defaultLayout.inspector, 'default panels changed');
 
     tab('表示').click(); await wait(10);
-    expect(!document.querySelector('#ribbonView').hidden, 'View Ribbon did not open');
-    expect(document.querySelectorAll('#ribbonView [data-control-status="implemented"]').length >= 20, 'View controls missing implementation metadata');
+    const ribbonViewEl = document.querySelector('#ribbonView');
+    expect(!ribbonViewEl.hidden, 'View Ribbon did not open');
+    // At the Compact band (#105) most groups collapse behind a named overflow
+    // trigger whose menu is relocated to document.body, so a control being
+    // reachable -- inline or via its group's overflow trigger -- is what
+    // "implemented" must mean here, not literal DOM presence under #ribbonView.
+    let implementedCount = ribbonViewEl.querySelectorAll('[data-control-status="implemented"]:not([data-ribbon-overflow-trigger])').length;
+    const triggers = [...ribbonViewEl.querySelectorAll('[data-ribbon-overflow-trigger]')];
+    for (const trigger of triggers) {
+      trigger.click(); await wait(10);
+      const menu = document.querySelector('.ribbon-overflow-menu.open');
+      if (menu) implementedCount += menu.querySelectorAll('[data-control-status="implemented"]').length;
+      trigger.click(); await wait(10);
+    }
+    expect(implementedCount >= 20, `View controls missing implementation metadata (found ${implementedCount})`);
 
     const initialRender = c.zoomMetrics?.fullWaveDromRenders || 0;
     command('grid').click(); command('snap').click(); command('ruler').click(); command('minimap').click(); await wait(10);

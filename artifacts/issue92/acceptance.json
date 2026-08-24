@@ -1,0 +1,59 @@
+{
+  "issue": 92,
+  "renameFlow": {
+    "blankError": "名前を入力してください",
+    "stillOpenAfterBlank": true,
+    "dupError": "この名前は既に使用されています",
+    "stillOpenAfterDup": true,
+    "closedAfterValid": true,
+    "newName": "request_valid_renamed"
+  },
+  "escFlow": {
+    "closedByEsc": true,
+    "docUnchanged": true
+  },
+  "spacingFlow": {
+    "negativeError": "0以上の値を入力してください",
+    "stillOpen": true,
+    "closed": true,
+    "spacingAfter": 24
+  },
+  "colorFlow": {
+    "isColorInput": true,
+    "background": "#f0a23a"
+  },
+  "nCycleFlow": {
+    "hasPopover": true,
+    "before": 10,
+    "after": 13,
+    "delta": 3
+  },
+  "menuClamp": {
+    "withinRight": true,
+    "withinBottom": true,
+    "withinLeft": true,
+    "withinTop": true
+  },
+  "popoverClamp": {
+    "withinRight": true,
+    "withinBottom": true,
+    "withinLeft": true,
+    "withinTop": true
+  },
+  "undoFlow": {
+    "undoLenBefore": 4,
+    "undoLenAfterApply": 5,
+    "dirtyBefore": true,
+    "dirtyAfterApply": true,
+    "undoLenAfterCancel": 5,
+    "appliedOneEntry": true,
+    "cancelAddedNoEntry": true,
+    "cancelDidNotRename": true
+  },
+  "promptFired": false,
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue92-1672x941.png"
+  ]
+}
