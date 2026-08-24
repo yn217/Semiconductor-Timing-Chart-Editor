@@ -1,0 +1,64 @@
+import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core";
+import type {
+  AnnotationId,
+  BookmarkId,
+  CommandId,
+  GroupId,
+  RowId,
+  SemanticAnchor,
+  Signal,
+  SignalGroup,
+  SignalId,
+  TimeGroupId,
+  TransactionId,
+} from "@timing-chart-v2/schema";
+
+export type SignalValue = string | number;
+
+export type SemanticCommand =
+  | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
+  | Readonly<{ id: CommandId; type: "signal.rename"; signalId: SignalId; name: string }>
+  | Readonly<{ id: CommandId; type: "signal.move"; signalId: SignalId; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "signal.setVisibility"; signalId: SignalId; visible: boolean }>
+  | Readonly<{ id: CommandId; type: "signal.updateValue"; signalId: SignalId; start: number; value: SignalValue; comment?: string }>
+  | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>
+  | Readonly<{ id: CommandId; type: "group.delete"; groupId: GroupId }>
+  | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>
+  | Readonly<{ id: CommandId; type: "group.move"; groupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "timeline.insert"; at: number; count: number }>
+  | Readonly<{ id: CommandId; type: "timeline.delete"; start: number; end: number }>
+  | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>;
+
+export interface ChangeSet {
+  readonly fullDocumentReplace?: boolean;
+  readonly rowOrder?: readonly RowId[];
+  readonly rowPresentation?: readonly RowId[];
+  readonly addedSignals?: readonly SignalId[];
+  readonly removedSignals?: readonly SignalId[];
+  readonly addedGroups?: readonly GroupId[];
+  readonly removedGroups?: readonly GroupId[];
+  readonly waveSemantics?: readonly SignalId[];
+  readonly geometryLocal?: readonly SignalId[];
+  readonly timelineSemantics?: boolean;
+  readonly geometryScreenX?: boolean;
+  readonly geometryScreenY?: readonly SignalId[];
+  readonly annotationPosition?: readonly AnnotationId[];
+  readonly annotationStyle?: readonly AnnotationId[];
+  readonly bookmarkPosition?: readonly BookmarkId[];
+  readonly timeGroupSemantics?: readonly TimeGroupId[];
+  readonly transactionSemantics?: readonly TransactionId[];
+  readonly minimapOverview?: boolean;
+}
+
+export type CommandResult =
+  | Readonly<{ ok: true; snapshot: CanonicalSnapshot; changeSet: ChangeSet }>
+  | Readonly<{ ok: false; reason: "invalid" | "stale" | "no-op"; problems: readonly ValidationProblem[] }>;
+
+export interface SemanticCommandDispatcher {
+  execute(command: SemanticCommand): CommandResult;
+}
+
+export interface SemanticBatchDispatcher {
+  executeBatch(id: CommandId, commands: readonly SemanticCommand[]): CommandResult;
+}

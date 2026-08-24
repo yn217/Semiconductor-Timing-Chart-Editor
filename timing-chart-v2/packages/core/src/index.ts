@@ -47,6 +47,23 @@ export type SaveResult =
   | Readonly<{ ok: true; text: string }>
   | Readonly<{ ok: false; problems: readonly DocumentProblem[] }>;
 
+export class CanonicalCommitError extends Error {
+  readonly reason: "stale" | "validation";
+  readonly problems: readonly DocumentProblem[];
+
+  constructor(reason: "stale" | "validation", message: string, problems: readonly DocumentProblem[] = []) {
+    super(message);
+    this.name = "CanonicalCommitError";
+    this.reason = reason;
+    this.problems = problems;
+  }
+}
+
+export interface CanonicalSessionMetrics {
+  readonly validationRuns: number;
+  readonly commits: number;
+}
+
 function cloneValue<T>(value: T): T {
   if (Array.isArray(value)) return value.map((entry) => cloneValue(entry)) as T;
   if (value !== null && typeof value === "object") {
@@ -75,9 +92,11 @@ function failedOpen(result: Exclude<ParseDocumentResult, { ok: true }>): AtomicO
 
 export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
   #snapshot: CanonicalSnapshot;
+  #validationRuns = 0;
+  #commits = 0;
 
   constructor(initial: CanonicalDocument) {
-    const problems = validateCanonicalDocument(initial);
+    const problems = this.#validate(initial);
     if (problems.length > 0) throw new Error(`Initial canonical document is invalid: ${problems.map((item) => item.code).join(", ")}`);
     this.#snapshot = deepFreeze({ revision: 0, document: cloneValue(initial) }) as CanonicalSnapshot;
   }
@@ -86,11 +105,21 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
     return this.#snapshot;
   }
 
+  metrics(): CanonicalSessionMetrics {
+    return { validationRuns: this.#validationRuns, commits: this.#commits };
+  }
+
+  #validate(candidate: Readonly<CanonicalDocument>): readonly DocumentProblem[] {
+    this.#validationRuns += 1;
+    return validateCanonicalDocument(candidate);
+  }
+
   commit(next: Readonly<CanonicalDocument>, expectedRevision: number): CanonicalSnapshot {
-    if (expectedRevision !== this.#snapshot.revision) throw new Error(`Stale canonical revision ${expectedRevision}; current revision is ${this.#snapshot.revision}.`);
-    const problems = validateCanonicalDocument(next);
-    if (problems.length > 0) throw new Error(`Rejected invalid canonical commit: ${problems.map((item) => item.code).join(", ")}`);
+    if (expectedRevision !== this.#snapshot.revision) throw new CanonicalCommitError("stale", `Stale canonical revision ${expectedRevision}; current revision is ${this.#snapshot.revision}.`);
+    const problems = this.#validate(next);
+    if (problems.length > 0) throw new CanonicalCommitError("validation", `Rejected invalid canonical commit: ${problems.map((item) => item.code).join(", ")}`, problems);
     this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: cloneValue(next) }) as CanonicalSnapshot;
+    this.#commits += 1;
     return this.#snapshot;
   }
 
@@ -98,6 +127,7 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
     const parsed = parseDocument(input);
     if (!parsed.ok) return failedOpen(parsed);
     this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: cloneValue(parsed.document) }) as CanonicalSnapshot;
+    this.#commits += 1;
     return { ok: true, snapshot: this.#snapshot, warnings: parsed.warnings, fullDocumentReplace: true, resetDocumentTransientState: true };
   }
 

@@ -4,11 +4,11 @@ This workspace is the from-scratch V2 implementation boundary. Everything
 outside `timing-chart-v2/` is reference-only and cannot be imported by this
 workspace.
 
-Phase 0 and Phase 1 are complete. The workspace now contains the version 2
-canonical schema, deterministic v1 migration, semantic validation,
-serialization, and atomic document Open/Save. It does not contain command
-execution, history storage, WaveDrom rendering, geometry extraction, or a
-production GUI.
+Phases 0 through 2 are complete. In addition to the version 2 canonical Core,
+the workspace now contains pure semantic command planning, atomic command and
+batch execution, timeline ripple editing, ChangeSets, Undo/Redo, and canonical
+Dirty tracking. It does not contain WaveDrom rendering, geometry extraction,
+or a production GUI.
 
 ## Commands
 
