@@ -1,0 +1,21 @@
+{
+  "issue": 156,
+  "native": {
+    "binaryClock": false,
+    "wave": "p.......",
+    "period": 1
+  },
+  "delayed": {
+    "binaryClock": true,
+    "factor": 2,
+    "wave": "0.....1010101010"
+  },
+  "delayedGeometry": {
+    "firstRisingCycle": 3,
+    "wave": "0.....1010101010"
+  },
+  "startHonored": true,
+  "nativeStillNative": true,
+  "errors": [],
+  "pass": true
+}

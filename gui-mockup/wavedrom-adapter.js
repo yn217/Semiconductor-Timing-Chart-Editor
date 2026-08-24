@@ -19,7 +19,10 @@
   function clockNeedsSubdivision(signal) {
     if (signal?.type !== 'clock') return false;
     const generator = signal.generator || signal;
-    return Math.abs(Number(generator.duty ?? 0.5) - 0.5) > 1e-8 || (Array.isArray(generator.suppressedPeriods) && generator.suppressedPeriods.length > 0);
+    const start = Number(generator.start ?? 0);
+    return (Number.isFinite(start) && Math.abs(start) > 1e-8)
+      || Math.abs(Number(generator.duty ?? 0.5) - 0.5) > 1e-8
+      || (Array.isArray(generator.suppressedPeriods) && generator.suppressedPeriods.length > 0);
   }
   function subcycleFactor(document) {
     const clocks = (document?.signals || []).filter(clockNeedsSubdivision);
