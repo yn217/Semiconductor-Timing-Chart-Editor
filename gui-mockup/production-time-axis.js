@@ -397,6 +397,7 @@
     controller.actions.selectTimeAtCanvasX(event.clientX, { shiftKey: event.shiftKey });
   });
   let rangeGesture = null;
+  let pendingRangeGesture = null;
   let rangeAutoScrollFrame = 0;
   const rangeMoveThresholdPx = 5;
   const stopRangeAutoScroll = () => {
@@ -444,11 +445,10 @@
   const isRangeTarget = (target, event) => {
     if (!target || target.closest('.canvas-meta, .signal-label, .canvas-icon, .playhead, [data-production-overlay], button, input, select, textarea')) return false;
     if (target.closest('.ruler')) {
-      // A Ruler tick can visually overlap the first timing row after layout
-      // reconstruction. Treat it as a drag surface only when the pointer is
-      // inside an actual row rectangle; a normal click in the ruler remains
-      // a cycle-selection gesture.
-      if (!target.closest('.tick') || !event) return false;
+      // Ruler graphics can overlap the first timing row after scroll/layout
+      // reconstruction. Keep ordinary ruler clicks untouched, but recognize
+      // a drag that starts within a real row as a pending range gesture.
+      if (!event || !target.closest('.tick')) return false;
       const inTimingRow = [...document.querySelectorAll('#cycleCanvas .wave-row')].some(row => {
         if (row.hidden || getComputedStyle(row).display === 'none') return false;
         const rect = row.getBoundingClientRect();
@@ -472,17 +472,46 @@
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
     suppressNextCanvasClick = false;
+    const pending = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, previousSelection: { ...model.timeSelection } };
+    if (event.target.closest('.ruler')) {
+      // Preserve ordinary ruler-click behavior. A drag past the threshold is
+      // promoted to a range gesture by updateRangeGesture.
+      pending.captureTarget = document.documentElement || document.body || cycleCanvas || event.target;
+      pendingRangeGesture = pending;
+      try { pending.captureTarget.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
+      return;
+    }
     // Keep capture on a layout-stable owner. The timing canvas can be
     // reflowed by zoom/scroll overlays while a long drag is in flight;
     // capturing on that subtree would spuriously emit lostpointercapture.
     const captureTarget = document.documentElement || document.body || cycleCanvas || event.target;
     rangeGesture = { start: resolved.cycle, pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY, moved: false, previousSelection: { ...model.timeSelection }, captureTarget };
     try { captureTarget.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
+    event.preventDefault();
     model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: resolved.cycle, rangeEnd: null, source: 'canvas-drag' };
     controller.renderTimeRangePreview(model);
   });
   const updateRangeGesture = event => {
+    if (!rangeGesture && pendingRangeGesture && event.pointerId === pendingRangeGesture.pointerId) {
+      const pending = pendingRangeGesture;
+      const distance = Math.hypot(event.clientX - pending.clientX, event.clientY - pending.clientY);
+      if (distance < rangeMoveThresholdPx) return;
+      pendingRangeGesture = null;
+      const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
+      if (!resolved) return;
+      const captureTarget = pending.captureTarget || document.documentElement || document.body || cycleCanvas || event.target;
+      rangeGesture = { start: pending.start, pointerId: pending.pointerId, clientX: event.clientX, clientY: event.clientY, moved: true, previousSelection: pending.previousSelection, captureTarget };
+      try { captureTarget.setPointerCapture?.(event.pointerId); } catch { /* synthetic/browser pointer streams may not own capture */ }
+      event.preventDefault();
+      const first = Math.min(rangeGesture.start, resolved.cycle);
+      const last = Math.max(rangeGesture.start, resolved.cycle);
+      model.timeSelection = { ...model.timeSelection, cycle: resolved.cycle, rangeStart: first, rangeEnd: last, source: 'canvas-drag' };
+      controller.renderTimeRangePreview(model);
+      scheduleRangeAutoScroll();
+      return;
+    }
     if (!rangeGesture || event.pointerId !== rangeGesture.pointerId) return;
+    event.preventDefault();
     const resolved = controller.actions.resolveSnapAtCanvasX?.(event.clientX);
     if (!resolved) return;
     const distance = Math.hypot(event.clientX - rangeGesture.clientX, event.clientY - rangeGesture.clientY);
@@ -497,6 +526,11 @@
     scheduleRangeAutoScroll();
   };
   const finishRangeGesture = event => {
+    if (!rangeGesture && pendingRangeGesture?.pointerId === event.pointerId) {
+      try { pendingRangeGesture.captureTarget?.releasePointerCapture?.(event.pointerId); } catch { /* capture may already be released */ }
+      pendingRangeGesture = null;
+      return;
+    }
     if (!rangeGesture || event.pointerId !== rangeGesture.pointerId) return;
     const current = rangeGesture;
     // A browser may deliver pointerup at the final boundary without a last
@@ -523,6 +557,11 @@
     }
   };
   const cancelRangeGesture = event => {
+    if (!rangeGesture && pendingRangeGesture && (event?.pointerId === undefined || event.pointerId === pendingRangeGesture.pointerId)) {
+      try { pendingRangeGesture.captureTarget?.releasePointerCapture?.(pendingRangeGesture.pointerId); } catch { /* capture may already be released */ }
+      pendingRangeGesture = null;
+      return;
+    }
     if (!rangeGesture || (event?.pointerId !== undefined && event.pointerId !== rangeGesture.pointerId)) return;
     const current = rangeGesture;
     rangeGesture = null;
@@ -537,7 +576,8 @@
   document.addEventListener('pointercancel', cancelRangeGesture);
   document.addEventListener('lostpointercapture', cancelRangeGesture);
   document.addEventListener('keydown', event => {
-    if (event.key !== 'Escape' || (!model.timeSelection?.rangeStart && model.timeSelection?.rangeStart !== 0)) return;
+    if (event.key !== 'Escape' || (!pendingRangeGesture && (!model.timeSelection?.rangeStart && model.timeSelection?.rangeStart !== 0))) return;
+    if (pendingRangeGesture) { pendingRangeGesture = null; return; }
     if (rangeGesture) { cancelRangeGesture(); return; }
     model.timeSelection.rangeStart = null; model.timeSelection.rangeEnd = null; renderTransient(model);
   });
