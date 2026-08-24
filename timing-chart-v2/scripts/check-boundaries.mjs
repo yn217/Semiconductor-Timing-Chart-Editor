@@ -71,7 +71,7 @@ for (const [unit, allowed] of Object.entries(packageRules)) {
     }
 
     if (["schema", "core", "commands", "history", "geometry"].includes(unit)) {
-      if (/(?:\b(?:window|document)\s*\.|\b(?:HTMLElement|SVGElement)\b)/.test(source)) {
+      if (/(?:\bwindow\s*\.|\bglobalThis\s*\.\s*(?:window|document)\b|\bdocument\s*\.\s*(?:querySelector|getElementById|createElement|createElementNS|addEventListener|removeEventListener|body|documentElement)\b|\b(?:HTMLElement|SVGElement)\b)/.test(source)) {
         errors.push(`${path.relative(root, file)}: browser/DOM ownership is forbidden`);
       }
       if (imports.some((specifier) => ["react", "react-dom", "pixi.js"].includes(specifier))) {

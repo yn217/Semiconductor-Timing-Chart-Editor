@@ -4,9 +4,11 @@ This workspace is the from-scratch V2 implementation boundary. Everything
 outside `timing-chart-v2/` is reference-only and cannot be imported by this
 workspace.
 
-Phase 0 contains contracts and executable architecture gates only. It does not
-contain a production GUI, canonical parsing, command execution, WaveDrom
-rendering, geometry extraction, or persistence behavior.
+Phase 0 and Phase 1 are complete. The workspace now contains the version 2
+canonical schema, deterministic v1 migration, semantic validation,
+serialization, and atomic document Open/Save. It does not contain command
+execution, history storage, WaveDrom rendering, geometry extraction, or a
+production GUI.
 
 ## Commands
 
