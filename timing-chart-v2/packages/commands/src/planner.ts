@@ -2,6 +2,8 @@ import type { ValidationProblem } from "@timing-chart-v2/core";
 import type {
   Annotation,
   CanonicalDocument,
+  CommentRow,
+  RowId,
   Signal,
   SignalGroup,
   SignalId,
@@ -20,6 +22,29 @@ export type CommandPlanResult =
 const fail = (reason: "invalid" | "no-op", code: string, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
+
+function orderedRows(document: CanonicalDocument): readonly RowId[] {
+  return document.signalGroups.flatMap((group) => group.rows);
+}
+
+function orderedVisibleTimingRows(document: CanonicalDocument): readonly SignalId[] {
+  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  return orderedRows(document).filter((id): id is SignalId => {
+    const signal = signals.get(id as SignalId);
+    return signal !== undefined && signal.type !== "commentRow" && signal.display.visible !== false;
+  });
+}
+
+function changedPositions<T extends string>(before: readonly T[], after: readonly T[]): T[] {
+  const beforeIndex = new Map(before.map((id, index) => [id, index]));
+  const afterIndex = new Map(after.map((id, index) => [id, index]));
+  return [...new Set([...before, ...after])].filter((id) => beforeIndex.get(id) !== afterIndex.get(id));
+}
+
+function annotationsForSignals(document: CanonicalDocument, signalIds: readonly SignalId[]) {
+  const affected = new Set(signalIds);
+  return document.annotations.filter((annotation) => [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId && affected.has(anchor.signalId))).map((annotation) => annotation.id);
+}
 
 function replaceSignal(document: CanonicalDocument, index: number, signal: Signal): CanonicalDocument {
   const signals = [...document.signals];
@@ -52,8 +77,11 @@ function moveSignal(document: CanonicalDocument, command: Extract<SemanticComman
     if (index === targetGroupIndex) return { ...group, rows: targetRows };
     return group;
   });
-  const changeSet: ChangeSet = { rowOrder: [command.signalId], geometryScreenY: [command.signalId], minimapOverview: true };
-  return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: changeSet };
+  const nextDocument = { ...document, signalGroups: groups };
+  const changedRows = changedPositions(orderedRows(document), orderedRows(nextDocument));
+  const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));
+  const changeSet: ChangeSet = { rowOrder: changedRows, geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, changedTimingRows), minimapOverview: true };
+  return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
 }
 
 function mapInsertPoint(value: number, at: number, count: number): number {
@@ -373,6 +401,21 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
 export function planCommand(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
   if (!isStableId(command.id)) return fail("invalid", "INVALID_COMMAND_ID", "$.id", "Command ID must be a stable ID.");
   switch (command.type) {
+    case "commentRow.create":
+      return planCommand(document, { id: command.id, type: "signal.create", signal: command.commentRow, targetGroupId: command.targetGroupId, index: command.index });
+    case "commentRow.update": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const row = document.signals[index];
+      if (!row || row.type !== "commentRow") return fail("invalid", "COMMENT_ROW_NOT_FOUND", "$.signalId", `Comment Row '${command.signalId}' does not exist.`);
+      const title = command.title.trim();
+      if (!title) return fail("invalid", "INVALID_TITLE", "$.title", "Comment Row title cannot be empty.");
+      if (row.title === title && row.body === command.body) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
+      const next: CommentRow = { ...row, title, body: command.body, name: title, display: { ...row.display, name: title } };
+      const changeSet: ChangeSet = { rowPresentation: [row.id], minimapOverview: true };
+      return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
+    }
+    case "commentRow.delete":
+      return planCommand(document, { id: command.id, type: "signal.delete", signalId: command.signalId });
     case "signal.create": {
       if (document.signals.some((signal) => signal.id === command.signal.id)) return fail("invalid", "DUPLICATE_ID", "$.signal.id", `Signal '${command.signal.id}' already exists.`);
       const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
@@ -414,10 +457,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
+      if (!command.visible && document.timeline.referenceClock === signal.id) return fail("invalid", "HIDDEN_REFERENCE_CLOCK", "$.signalId", "Reference clock cannot be hidden.");
       const visible = signal.display.visible !== false;
       if (visible === command.visible) return fail("no-op", "NO_OP", "$", "Signal visibility is unchanged.");
-      const changeSet: ChangeSet = { rowPresentation: [signal.id], minimapOverview: true };
-      return { ok: true, document: replaceSignal(document, index, { ...signal, display: { ...signal.display, visible: command.visible } }), changeSet, inverseChangeSet: changeSet };
+      const nextDocument = replaceSignal(document, index, { ...signal, display: { ...signal.display, visible: command.visible } });
+      const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));
+      const affectedForAnnotations = [...new Set([signal.id, ...changedTimingRows])];
+      const changeSet: ChangeSet = { rowPresentation: [signal.id], geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, affectedForAnnotations), minimapOverview: true };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "signal.updateValue": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
@@ -476,20 +523,22 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const signal = document.signals[index];
       const name = command.name.trim();
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
+      if (signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "This property command applies only to value signals.");
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Signal name cannot be empty.");
-      if (command.displayFormat !== undefined && signal.type !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "Display format applies only to bus signals.");
+      const nextType = command.signalType ?? signal.type;
+      if (command.displayFormat !== undefined && nextType !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "Display format applies only to bus signals.");
+      if (command.width !== undefined && (nextType !== "bus" || !Number.isInteger(command.width) || command.width < 1)) return fail("invalid", "INVALID_SIGNAL_WIDTH", "$.width", "Width must be a positive integer and applies only to bus signals.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
-      if (signal.name === name && signal.role === command.role && currentFormat === command.displayFormat) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
-      const next = signal.type === "bus"
-        ? (() => {
-            const { displayFormat: _displayFormat, ...base } = signal;
-            return { ...base, name, role: command.role, display: { ...signal.display, name }, ...(command.displayFormat === undefined ? {} : { displayFormat: command.displayFormat }) } as Signal;
-          })()
-        : { ...signal, name, role: command.role, display: { ...signal.display, name } } as Signal;
-      const formatChanged = signal.type === "bus" && currentFormat !== command.displayFormat;
+      const currentWidth = signal.type === "bus" ? signal.width : undefined;
+      const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
+      const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
+      const next: Signal = { ...base, type: nextType, name, role: command.role, display: { ...signal.display, name }, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }) };
+      const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],
-        ...(formatChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true } : {}),
+        ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id).map((annotation) => annotation.id) } : {}),
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
     }
@@ -549,9 +598,11 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isInteger(command.index) || command.index < 0 || command.index > remaining.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Group move index is outside the post-removal group list.");
       remaining.splice(command.index, 0, group);
       if (remaining.every((item, itemIndex) => item.id === document.signalGroups[itemIndex]?.id)) return fail("no-op", "NO_OP", "$", "Group is already at the requested position.");
-      const timingRows = group.rows.filter((row): row is SignalId => document.signals.some((signal) => signal.id === row && signal.type !== "commentRow"));
-      const changeSet: ChangeSet = { rowOrder: group.rows, geometryScreenY: timingRows, minimapOverview: true };
-      return { ok: true, document: { ...document, signalGroups: remaining }, changeSet, inverseChangeSet: changeSet };
+      const nextDocument = { ...document, signalGroups: remaining };
+      const changedRows = changedPositions(orderedRows(document), orderedRows(nextDocument));
+      const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));
+      const changeSet: ChangeSet = { rowOrder: changedRows, geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, changedTimingRows), minimapOverview: true };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "group.updateLayout": {
       const index = document.signalGroups.findIndex((group) => group.id === command.groupId);
@@ -561,8 +612,10 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (group.spacingBefore === command.spacingBefore && group.spacingAfter === command.spacingAfter) return fail("no-op", "NO_OP", "$", "Group spacing is unchanged.");
       const next = Object.fromEntries(Object.entries({ ...group, spacingBefore: command.spacingBefore, spacingAfter: command.spacingAfter }).filter(([, value]) => value !== undefined)) as unknown as SignalGroup;
       const groups = [...document.signalGroups]; groups[index] = next;
-      const timingRows = group.rows.filter((row): row is SignalId => document.signals.some((signal) => signal.id === row && signal.type !== "commentRow"));
-      const changeSet: ChangeSet = { rowPresentation: group.rows, geometryScreenY: timingRows, annotationPosition: document.annotations.filter((annotation) => [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId && timingRows.includes(anchor.signalId))).map((annotation) => annotation.id), minimapOverview: true };
+      const affectedGroups = document.signalGroups.slice(index);
+      const timingRows = new Set(orderedVisibleTimingRows({ ...document, signalGroups: affectedGroups }));
+      const affectedTimingRows = orderedVisibleTimingRows(document).filter((id) => timingRows.has(id));
+      const changeSet: ChangeSet = { rowPresentation: group.rows, geometryScreenY: affectedTimingRows, annotationPosition: annotationsForSignals(document, affectedTimingRows), minimapOverview: true };
       return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.create": {
@@ -590,6 +643,22 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (name === transaction.name) return fail("no-op", "NO_OP", "$", "Transaction already has this name.");
       const transactions = [...document.transactions]; transactions[index] = { ...transaction, name };
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.update": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      const name = command.name.trim();
+      const laneId = command.laneId?.trim();
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
+      if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$", "Transaction must use a half-open source-time range.");
+      if (transaction.phases?.some((phase) => phase.start < command.start || phase.end > command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$", "Updated range cannot exclude an existing transaction phase.");
+      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined)) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
+      const { laneId: _oldLane, ...base } = transaction;
+      const next: Transaction = { ...base, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}) };
+      const transactions = [...document.transactions]; transactions[index] = next;
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.move": {

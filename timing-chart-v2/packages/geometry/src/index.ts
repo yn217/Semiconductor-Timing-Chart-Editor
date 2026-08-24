@@ -115,11 +115,12 @@ export class SemanticSnapCandidateService {
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
       const signalId = anchor.signalId ?? input.document.timeline.referenceClock;
       if (!signalId) return undefined;
+      if (!input.rowY.has(signalId)) return undefined;
       const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId });
       return local ? { x: local.point.x, y: (input.rowY.get(signalId) ?? 0) + local.point.y } : undefined;
     };
     for (const signal of input.document.signals) {
-      if (signal.type === "commentRow") continue;
+      if (signal.type === "commentRow" || signal.display.visible === false || !input.rowY.has(signal.id)) continue;
       const map = input.geometryMaps.get(signal.id);
       if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
@@ -130,6 +131,8 @@ export class SemanticSnapCandidateService {
           { point: "cycle-center", kind: "signal-row" },
           { point: "transition-center", kind: signal.type === "bus" || signal.type === "state" ? "bus-transition" : "signal-transition" },
           { point: "value-start", kind: "value-boundary" },
+          { point: "value-center", kind: "value-boundary" },
+          { point: "row-center", kind: "signal-row" },
           ...(signal.type === "clock" ? [{ point: "rising-edge" as const, kind: "clock-edge" as const }, { point: "falling-edge" as const, kind: "clock-edge" as const }] : []),
         ];
         for (const item of points) {

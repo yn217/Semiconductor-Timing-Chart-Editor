@@ -16,13 +16,16 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
   let y = 0;
 
   for (const group of document.signalGroups) {
+    const visibleGroupRows = group.rows.filter((rowId) => {
+      const signal = signals.get(rowId);
+      return signal?.display.visible !== false && (signal !== undefined || spacers.has(rowId));
+    });
+    if (visibleGroupRows.length === 0) continue;
     y += group.spacingBefore ?? 0;
     let visibleInGroup = 0;
-    for (const rowId of group.rows) {
+    for (const rowId of visibleGroupRows) {
       const signal = signals.get(rowId);
       const spacer = spacers.get(rowId);
-      if (signal?.display.visible === false) continue;
-      if (!signal && !spacer) continue;
       if (visibleInGroup > 0) y += document.layout.signalSpacing;
       if (signal) y += signal.spacingBefore ?? 0;
       const entry = signalEntry(signal, group.id, group.name, y, document.layout.rowHeight, rowId);

@@ -65,7 +65,7 @@ export function MinimalCycleView() {
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
-  const execute = useRef<(command: SemanticCommand) => void>(() => undefined);
+  const execute = useRef<(command: SemanticCommand) => ReturnType<CommandHistorySession["execute"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
   const undo = useRef<() => void>(() => undefined);
   const redo = useRef<() => void>(() => undefined);
   const armArrowPick = useRef<() => void>(() => undefined);
@@ -122,17 +122,14 @@ export function MinimalCycleView() {
         const signalId = selectedSignalRef.current;
         const transactionId = selectedTransactionRef.current;
         if (transactionId) {
-          execute.current({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
-          selectedTransactionRef.current = undefined;
-          setSelectedTransactionId(undefined);
+          const result = execute.current({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
+          if (result.ok) { selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined); }
         } else if (annotationId) {
-          execute.current({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
-          selectedAnnotationRef.current = undefined;
-          setSelectedAnnotationId(undefined);
+          const result = execute.current({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
+          if (result.ok) { selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined); }
         } else if (signalId) {
-          execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
-          selectedSignalRef.current = undefined;
-          setSelectedId(undefined);
+          const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); }
         }
       }),
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {
@@ -184,13 +181,17 @@ export function MinimalCycleView() {
         if (id === document.timeline.referenceClock) referenceGeometry = geometry;
         return { waveDromRenders: 1, localGeometryBuilds: 1 };
       },
-      disposeWave(id) { adapter.dispose(id); },
+      disposeWave(id) {
+        adapter.dispose(id);
+        geometryMaps.delete(id);
+        if (id === session.getSnapshot().document.timeline.referenceClock) referenceGeometry = undefined;
+      },
     };
     const renderer = new StableTimingChartRenderer(provider);
     const snapService = new SemanticSnapCandidateService();
     renderer.mount(rendererHost);
     const initialSnapshot = session.getSnapshot();
-    let window: VirtualizationWindow = viewportWindow(viewportElement);
+    let window: VirtualizationWindow = viewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
     let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window });
     renderer.update(projection);
     const refreshOverlays = (document: CanonicalDocument) => {
@@ -242,7 +243,7 @@ export function MinimalCycleView() {
 
     const applyResult = (result: ReturnType<CommandHistorySession["execute"]>) => {
       if (!result.ok) {
-        setProblem(result.problems.map((item) => item.message).join(" "));
+        setProblem(result.reason === "no-op" ? "" : result.problems.map((item) => item.message).join(" "));
         return;
       }
       delete rendererHost.dataset.editorIdle;
@@ -265,7 +266,7 @@ export function MinimalCycleView() {
         rendererHost.dataset.editorIdle = "true";
       });
     };
-    execute.current = (command) => applyResult(session.execute(command));
+    execute.current = (command) => { const result = session.execute(command); applyResult(result); return result; };
     undo.current = () => applyResult(session.undo());
     redo.current = () => applyResult(session.redo());
     const replaceDocument = (document: CanonicalDocument) => {
@@ -273,7 +274,7 @@ export function MinimalCycleView() {
       session = new CommandHistorySession(document);
       geometryMaps.clear();
       referenceGeometry = undefined;
-      window = viewportWindow(viewportElement);
+      window = viewportWindow(viewportElement, document.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window });
       renderer.update(projection);
       rulerElement.replaceChildren();
@@ -321,7 +322,7 @@ export function MinimalCycleView() {
     const onScroll = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const next = viewportWindow(viewportElement);
+        const next = viewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         window = next;
         projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection });
@@ -365,7 +366,7 @@ export function MinimalCycleView() {
         const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
         if (!waveLayer) return;
         const bounds = waveLayer.getBoundingClientRect();
-        const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps).nearest({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, 12, ["clock-edge", "signal-transition", "bus-transition"]);
+        const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps).nearest({ x: (event.clientX - bounds.left) / currentZoom, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
         if (!snap) {
           setProblem("No rendered transition is within the 12 px snap tolerance.");
           return;
@@ -513,9 +514,10 @@ export function MinimalCycleView() {
     };
     const onAnnotationPointerMove = (event: PointerEvent) => {
       if (!annotationDrag) return;
-      const dx = Math.round(event.clientX - annotationDrag.startX);
+      const screenDx = Math.round(event.clientX - annotationDrag.startX);
+      const dx = Math.round(screenDx / currentZoom);
       const dy = Math.round(event.clientY - annotationDrag.startY);
-      annotationDrag.owner.style.translate = `${dx}px ${dy}px`;
+      annotationDrag.owner.style.translate = `${screenDx}px ${dy}px`;
       if (!annotationDrag.field || annotationDrag.label) return;
       const document = session.getSnapshot().document;
       const annotation = document.annotations.find((item) => item.id === annotationDrag?.annotationId);
@@ -523,7 +525,7 @@ export function MinimalCycleView() {
       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps);
       if (!annotation || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
-      const snap = annotationDrag.snapIndex?.nearest(desired, 8, undefined, preferredSnapKinds(annotation.type));
+      const snap = annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type));
       if (!snap) {
         renderer.updateSnapGuide();
         delete rendererHost.dataset.snapKind;
@@ -538,7 +540,7 @@ export function MinimalCycleView() {
     const onAnnotationPointerUp = (event: PointerEvent) => {
       const drag = annotationDrag;
       if (!drag) return;
-      const dx = Math.round(event.clientX - drag.startX);
+      const dx = Math.round((event.clientX - drag.startX) / currentZoom);
       const dy = Math.round(event.clientY - drag.startY);
       drag.owner.style.translate = "";
       annotationDrag = undefined;
@@ -559,7 +561,7 @@ export function MinimalCycleView() {
       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps);
       if (!field || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
-      const snap = drag.snapIndex?.nearest(desired, 8, undefined, preferredSnapKinds(annotation.type));
+      const snap = drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type));
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {
         rendererHost.dataset.snapKind = snap.kind;
@@ -632,7 +634,7 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("pointercancel", clearAnnotationPreview);
       rendererHost.removeEventListener("contextmenu", onContextMenu);
       rendererHost.ownerDocument.removeEventListener("keydown", onAnnotationKeyDown);
-      execute.current = () => undefined;
+      execute.current = () => ({ ok: false, reason: "no-op", problems: [] });
       undo.current = () => undefined;
       redo.current = () => undefined;
       armArrowPick.current = () => undefined;
@@ -838,7 +840,7 @@ function InspectorPanel({ signal, group, annotation, transaction, registry, docu
     </>}
     {group && <section><h3>Group</h3><label>Name<input aria-label="Inspector group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} onBlur={() => { if (groupName.trim() && groupName.trim() !== group.name) registry.execute("selection.rename", { name: groupName }); }} /></label><label>Spacing Before<input aria-label="Group spacing before" type="number" min="0" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Group spacing after" type="number" min="0" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("group_layout"), type: "group.updateLayout", groupId: group.id, spacingBefore, spacingAfter })}>Apply Group Layout</button><div className="property-row"><span>Rows</span><span>{group.rows.length}</span></div><div className="property-row"><span>Collapsed</span><span>No</span></div></section>}
     {annotation && <section><h3>Annotation</h3><div className="property-row"><span>Type</span><b>{annotation.type}</b></div><div className="property-row"><span>Anchor</span><span>{annotation.anchor?.point ?? annotation.from?.point ?? annotation.start?.point}</span></div><div className="property-row"><span>Offset</span><span>{JSON.stringify((annotation.anchor ?? annotation.from ?? annotation.start)?.offset ?? { x: 0, y: 0 })}</span></div><div className="property-row"><span>Style</span><span>{annotation.lineType ?? "default"}</span></div><div className="property-row"><span>Text</span><span>{annotation.label}</span></div><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Annotation</button></section>}
-    {transaction && <section><h3>Transaction</h3><label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} onBlur={() => { if (transactionName.trim() && transactionName.trim() !== transaction.name) registry.execute("selection.rename", { name: transactionName }); }} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /></label><button type="button" onClick={() => { if (transactionStart !== transaction.start) onCommand({ id: nextCommandId("transaction_move"), type: "transaction.move", transactionId: transaction.id, start: transactionStart }); if (transactionEnd !== transaction.end) onCommand({ id: nextCommandId("transaction_resize"), type: "transaction.resize", transactionId: transaction.id, edge: "end", value: transactionEnd }); if (transactionLane.trim() !== (transaction.laneId ?? "lane_0")) onCommand({ id: nextCommandId("transaction_lane"), type: "transaction.moveLane", transactionId: transaction.id, laneId: transactionLane }); }}>Apply Transaction</button><h3>Linked Signals</h3>{document.signals.filter((item) => item.type !== "commentRow").map((item) => <label className="checkline" key={item.id}>{item.display.name}<input aria-label={`Link ${item.display.name}`} type="checkbox" checked={transaction.linkedSignals?.includes(item.id) ?? false} onChange={(event) => onCommand({ id: nextCommandId("transaction_link"), type: event.target.checked ? "transaction.linkSignal" : "transaction.unlinkSignal", transactionId: transaction.id, signalId: item.id })} /></label>)}<button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>}
+    {transaction && <section><h3>Transaction</h3><label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("transaction_update"), type: "transaction.update", transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane })}>Apply Transaction</button><h3>Linked Signals</h3>{document.signals.filter((item) => item.type !== "commentRow").map((item) => <label className="checkline" key={item.id}>{item.display.name}<input aria-label={`Link ${item.display.name}`} type="checkbox" checked={transaction.linkedSignals?.includes(item.id) ?? false} onChange={(event) => onCommand({ id: nextCommandId("transaction_link"), type: event.target.checked ? "transaction.linkSignal" : "transaction.unlinkSignal", transactionId: transaction.id, signalId: item.id })} /></label>)}<button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>}
   </aside>;
 }
 
@@ -1183,7 +1185,9 @@ function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: Canoni
   if (!signalId) return undefined;
   const local = maps.get(signalId)?.find({ ...anchor, signalId });
   if (!local) return undefined;
-  const rowY = anchor.signalId ? projection.rowLayout.find((row) => row.rowId === anchor.signalId)?.y ?? 0 : 0;
+  const row = anchor.signalId ? projection.rowLayout.find((item) => item.rowId === anchor.signalId) : undefined;
+  if (anchor.signalId && !row) return undefined;
+  const rowY = row?.y ?? 0;
   return { x: local.point.x, y: rowY + local.point.y };
 }
 
@@ -1252,14 +1256,14 @@ function withSnapOffset(anchor: SemanticAnchor, desired: Point, snapped: Point):
   return { ...anchor, offset: { x: (anchor.offset?.x ?? 0) + residual.x, y: (anchor.offset?.y ?? 0) + residual.y } };
 }
 
-function viewportWindow(viewport: HTMLElement): VirtualizationWindow {
+function viewportWindow(viewport: HTMLElement, referenceClock?: SignalId): VirtualizationWindow {
   const bodyTop = Math.max(0, viewport.scrollTop - 34);
   return {
     viewportStartY: bodyTop,
     viewportEndY: bodyTop + viewport.clientHeight,
     overscanBefore: 48,
     overscanAfter: 48,
-    pinnedRowIds: [],
+    pinnedRowIds: referenceClock ? [referenceClock] : [],
   };
 }
 

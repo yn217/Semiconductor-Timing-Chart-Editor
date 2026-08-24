@@ -5,13 +5,13 @@ export interface UiServices {
   readonly commands: SemanticCommandDispatcher;
 }
 
-export type UiCommandHandler<Payload = unknown> = (payload: Payload) => void;
+export type UiCommandHandler<Payload = unknown, Result = unknown> = (payload: Payload) => Result;
 
 /** One routing surface shared by Ribbon, keyboard, context menus and inspectors. */
 export class UiCommandRegistry {
   readonly #handlers = new Map<string, UiCommandHandler>();
 
-  register<Payload>(name: string, handler: UiCommandHandler<Payload>): () => void {
+  register<Payload, Result = unknown>(name: string, handler: UiCommandHandler<Payload, Result>): () => void {
     if (this.#handlers.has(name)) throw new Error(`UI command '${name}' is already registered.`);
     this.#handlers.set(name, handler as UiCommandHandler);
     return () => this.#handlers.delete(name);
@@ -21,10 +21,10 @@ export class UiCommandRegistry {
     return this.#handlers.has(name);
   }
 
-  execute<Payload = undefined>(name: string, payload?: Payload): void {
+  execute<Payload = undefined, Result = unknown>(name: string, payload?: Payload): Result {
     const handler = this.#handlers.get(name);
     if (!handler) throw new Error(`UI command '${name}' is not registered.`);
-    handler(payload);
+    return handler(payload) as Result;
   }
 }
 

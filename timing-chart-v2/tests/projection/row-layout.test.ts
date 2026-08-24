@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
-import type { CanonicalDocument, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const spacerId = "spacer_gap" as SpacerId;
@@ -20,6 +20,22 @@ function layoutFixture(): CanonicalDocument {
 }
 
 describe("RowLayout and projection invariants", () => {
+  it.each([0, 1, 2])("does not retain spacing for a fully hidden group at index %i", (hiddenIndex) => {
+    const document = canonicalFixture();
+    const template = document.signals[1]!;
+    document.signals = [0, 1, 2].map((index) => ({ ...template, id: `sig_${index}` as SignalId, name: `S${index}`, source: { ...template.source, signalName: `S${index}` }, display: { ...template.display, name: `S${index}`, visible: index !== hiddenIndex } }));
+    document.signalGroups = [0, 1, 2].map((index) => ({ id: `grp_${index}` as GroupId, name: `G${index}`, rows: [`sig_${index}` as SignalId], spacingBefore: 10, spacingAfter: 11 }));
+    const result = calculateRowLayout(document);
+    expect(result.visibleRows).toHaveLength(2);
+    expect(result.totalHeight).toBe(2 * (10 + document.layout.rowHeight + 11));
+  });
+
+  it("returns zero height when every group is fully hidden", () => {
+    const document = canonicalFixture();
+    document.signals = document.signals.map((signal) => ({ ...signal, display: { ...signal.display, visible: false } }));
+    document.signalGroups = document.signalGroups.map((group) => ({ ...group, spacingBefore: 10, spacingAfter: 11 }));
+    expect(calculateRowLayout(document)).toMatchObject({ visibleRows: [], totalHeight: 0 });
+  });
   it("derives absolute Y from canonical spacing without persisting it", () => {
     const result = calculateRowLayout(layoutFixture());
     expect(result.canonicalRowIds).toEqual(["sig_clk", "spacer_gap", "sig_data"]);

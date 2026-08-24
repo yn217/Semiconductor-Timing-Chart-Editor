@@ -19,6 +19,8 @@ import type {
   TimeGroup,
   Transaction,
   TransactionId,
+  CommentRow,
+  ValueSignal,
 } from "@timing-chart-v2/schema";
 
 export type SignalValue = string | number;
@@ -33,7 +35,10 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.moveValue"; signalId: SignalId; fromStart: number; toStart: number }>
   | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
-  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; displayFormat?: "hex" | "binary" | "symbolic" }>
+  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: "hex" | "binary" | "symbolic" }>
+  | Readonly<{ id: CommandId; type: "commentRow.create"; commentRow: CommentRow; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string }>
+  | Readonly<{ id: CommandId; type: "commentRow.delete"; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "signal.updateClockGenerator"; signalId: SignalId; generator: ClockGenerator }>
   | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
   | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>
@@ -54,6 +59,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
+  | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string }>
   | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
   | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>

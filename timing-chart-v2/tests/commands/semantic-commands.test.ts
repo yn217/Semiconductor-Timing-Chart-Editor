@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { AnnotationId, CommandId, GroupId, Signal, SignalId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -25,6 +25,30 @@ describe("pure Semantic Command planning", () => {
     expect(session.historyState().undoDepth).toBe(5);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual(["sig_data"]);
+  });
+
+  it("updates all Transaction inspector fields atomically", () => {
+    const document = canonicalFixture();
+    document.transactions = [{ id: "txn_atomic" as TransactionId, name: "Old", start: 1, end: 3, laneId: "lane_0" }];
+    const session = new CommandHistorySession(document);
+    const result = session.execute({ id: commandId("cmd_txn_atomic"), type: "transaction.update", transactionId: "txn_atomic" as TransactionId, name: "Updated", start: 2, end: 6, laneId: "lane_2" });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ name: "Updated", start: 2, end: 6, laneId: "lane_2" });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toEqual(document.transactions[0]);
+  });
+
+  it("creates, edits, deletes, and restores a Comment Row through explicit commands", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const commentRow: CommentRow = { id: "comment_review" as SignalId, type: "commentRow", name: "Review", role: "internal", source: { instancePath: [], signalName: "review" }, display: { name: "Review" }, title: "Review", body: "Initial" };
+    expect(session.execute({ id: commandId("cmd_comment_create"), type: "commentRow.create", commentRow, targetGroupId: "grp_main" as GroupId, index: 2 }).ok).toBe(true);
+    expect(session.execute({ id: commandId("cmd_comment_update"), type: "commentRow.update", signalId: commentRow.id, title: "Notes", body: "Updated body" }).ok).toBe(true);
+    expect(session.getSnapshot().document.signals.at(-1)).toMatchObject({ title: "Notes", body: "Updated body", display: { name: "Notes" } });
+    expect(session.execute({ id: commandId("cmd_comment_delete"), type: "commentRow.delete", signalId: commentRow.id }).ok).toBe(true);
+    expect(session.historyState().undoDepth).toBe(3);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.at(-1)).toMatchObject({ id: commentRow.id, title: "Notes" });
   });
 
   it("unlinks deleted Signals while retaining their Transactions", () => {
@@ -52,7 +76,7 @@ describe("pure Semantic Command planning", () => {
       expect(reorder.document.signalGroups[0]?.rows).toEqual(["sig_data", "sig_clk"]);
       expect(reorder.changeSet.waveSemantics).toBeUndefined();
       expect(reorder.changeSet.geometryLocal).toBeUndefined();
-      expect(reorder.changeSet).toMatchObject({ rowOrder: ["sig_data"], geometryScreenY: ["sig_data"] });
+      expect(reorder.changeSet).toMatchObject({ rowOrder: ["sig_clk", "sig_data"], geometryScreenY: ["sig_clk", "sig_data"] });
     }
     const visibility = planCommand(source, { id: commandId("cmd_hide"), type: "signal.setVisibility", signalId: "sig_data" as SignalId, visible: false });
     expect(visibility.ok).toBe(true);
@@ -79,6 +103,13 @@ describe("pure Semantic Command planning", () => {
     if (formatted.ok) {
       expect(formatted.document.signals[1]).toMatchObject({ name: "DATA_OUT", role: "output", displayFormat: "binary", display: { name: "DATA_OUT" } });
       expect(formatted.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"] });
+    }
+    const retyped = planCommand(source, { id: commandId("cmd_retype"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "internal", signalType: "binary" });
+    expect(retyped.ok).toBe(true);
+    if (retyped.ok) {
+      expect(retyped.document.signals[1]).toMatchObject({ type: "binary" });
+      expect(retyped.document.signals[1]).not.toHaveProperty("width");
+      expect(retyped.document.signals[1]).not.toHaveProperty("displayFormat");
     }
     const removed = planCommand(source, { id: commandId("cmd_remove_value"), type: "signal.removeValue", signalId: "sig_data" as SignalId, start: 4 });
     expect(removed.ok).toBe(true);

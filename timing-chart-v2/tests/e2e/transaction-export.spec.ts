@@ -26,7 +26,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await inspector.getByLabel("Transaction lane").fill("lane_1");
   await inspector.getByRole("button", { name: "Apply Transaction" }).click();
   await inspector.getByLabel("Link REQUEST").check();
-  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
   await expect(inspector.getByLabel("Link REQUEST")).not.toBeChecked();
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();

@@ -124,6 +124,8 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     if (!start || !end) continue;
     add(entries, cycle, "cycle-start", start);
     add(entries, cycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(entries, cycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(entries, cycle, "row-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
     add(entries, cycle, "cycle-end", end);
   }
 
