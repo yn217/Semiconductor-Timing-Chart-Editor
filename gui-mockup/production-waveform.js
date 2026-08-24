@@ -221,7 +221,7 @@
       lane.className = 'waveform-surface-row';
       lane.dataset.signal = signal.id;
       lane.dataset.signalId = signal.id;
-      lane.style.cssText = 'position:absolute;left:0;top:0;height:28px;pointer-events:none;';
+      lane.style.cssText = 'position:absolute;left:0;top:0;height:28px;pointer-events:none;contain:layout paint;';
       const host = document.createElement('span');
       host.className = 'trace';
       host.dataset.surfaceTrace = 'true';
