@@ -9,6 +9,7 @@ const sizes = process.argv.includes('--normal-only') ? [{ signals: 50, cycles: 1
 const tryRowContainment = process.argv.includes('--try-row-containment');
 const reorderOnly = process.argv.includes('--reorder-only');
 const skipTimeline = process.argv.includes('--skip-timeline');
+const deepProfile = process.argv.includes('--deep');
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 const client = await page.context().newCDPSession(page);
@@ -56,6 +57,10 @@ const traceOnce = async (name, action) => {
   });
   const chunks = [];
   const onData = event => chunks.push(...(event.value || []));
+  if (deepProfile) {
+    await client.send('Profiler.enable');
+    await client.send('Profiler.start', { callCount: 10 });
+  }
   client.on('Tracing.dataCollected', onData);
   await client.send('Tracing.start', { categories: 'devtools.timeline,blink.user_timing,disabled-by-default-devtools.timeline', options: 'record-as-much-as-needed' });
   const started = await page.evaluate(() => performance.now());
@@ -71,6 +76,8 @@ const traceOnce = async (name, action) => {
     await client.send('Tracing.end');
   });
   client.off('Tracing.dataCollected', onData);
+  const cpuProfile = deepProfile ? (await client.send('Profiler.stop')).profile : null;
+  if (deepProfile) await client.send('Profiler.disable');
   const userTiming = await page.evaluate(() => performance.getEntriesByType('mark').filter(entry => entry.name.startsWith('tc:')).map(entry => ({ name: entry.name, startTime: entry.startTime }))); 
   const metrics = await page.evaluate(() => ({ ...window.TimingChartProductionController.renderMetrics }));
   const incrementalTrace = await page.evaluate(() => ({ trace: window.TimingChartProductionController.lastIncrementalTrace || null, parts: window.TimingChartProductionController.lastIncrementalTraceParts || null }));
@@ -82,7 +89,7 @@ const traceOnce = async (name, action) => {
   const commandInterval = traceBounds.commandStartTs !== null && traceBounds.commandRaf1Ts !== null
     ? summarizeTrace(trace, { startTs: traceBounds.commandStartTs, endTs: traceBounds.commandRaf1Ts })
     : null;
-  return { name, browserReadyMs: browserReady - started, userTiming, traceBounds, totals, commandInterval, metrics, incrementalTrace, traceEvents: trace.length };
+  return { name, browserReadyMs: browserReady - started, userTiming, traceBounds, totals, commandInterval, metrics, incrementalTrace, cpuProfile: deepProfile ? summarizeCpuProfile(cpuProfile) : null, traceEvents: trace.length };
 };
 
 const traceMarkTimestamp = (events, markName) => {
@@ -95,7 +102,7 @@ const traceMarkTimestamp = (events, markName) => {
 };
 
 const summarizeTrace = (events, bounds = null) => {
-  const sums = { scriptingMs: 0, styleMs: 0, layoutMs: 0, paintMs: 0, compositeMs: 0, longTasks: 0 };
+  const sums = { scriptingMs: 0, styleMs: 0, layoutMs: 0, prePaintMs: 0, layerizeMs: 0, paintMs: 0, rasterMs: 0, compositeMs: 0, commitMs: 0, longTasks: 0 };
   const top = new Map();
   for (const event of events) {
     if (bounds && (!Number.isFinite(Number(event.ts)) || Number(event.ts) < bounds.startTs || Number(event.ts) > bounds.endTs)) continue;
@@ -105,13 +112,53 @@ const summarizeTrace = (events, bounds = null) => {
     const lower = name.toLowerCase();
     if (lower.includes('recalculatestyle') || lower.includes('updatelayouttree')) sums.styleMs += duration;
     else if (lower === 'layout' || lower.includes('layout')) sums.layoutMs += duration;
+    else if (lower === 'prepaint' || lower.includes('prepaint')) sums.prePaintMs += duration;
+    else if (lower === 'layerize' || lower.includes('layerize')) sums.layerizeMs += duration;
     else if (lower === 'paint' || lower.includes('paint')) sums.paintMs += duration;
+    else if (lower.includes('raster')) sums.rasterMs += duration;
     else if (lower.includes('composite')) sums.compositeMs += duration;
+    else if (lower === 'commit' || lower.includes('commit')) sums.commitMs += duration;
     else if (event.cat?.includes('devtools.timeline')) sums.scriptingMs += duration;
     if (duration >= 50) sums.longTasks += 1;
     top.set(name, (top.get(name) || 0) + duration);
   }
   return { ...Object.fromEntries(Object.entries(sums).map(([key, value]) => [key, Number(value.toFixed(3))])), topHotspots: [...top.entries()].sort((a, b) => b[1] - a[1]).slice(0, 12).map(([name, ms]) => ({ name, ms: Number(ms.toFixed(3)) })) };
+};
+
+const summarizeCpuProfile = profile => {
+  if (!profile?.nodes?.length) return { available: false, totalSamples: 0, topFunctions: [] };
+  const byFunction = new Map();
+  for (const node of profile.nodes) {
+    const callFrame = node.callFrame || {};
+    const name = callFrame.functionName || '(anonymous)';
+    const url = callFrame.url || '';
+    const key = `${name}\u0000${url}`;
+    byFunction.set(key, {
+      functionName: name,
+      url,
+      lineNumber: Number(callFrame.lineNumber ?? -1) + 1,
+      selfSamples: Number(node.hitCount || 0),
+      totalSamples: 0
+    });
+  }
+  const totalFor = id => {
+    const node = profile.nodes.find(item => item.id === id);
+    if (!node) return 0;
+    let total = Number(node.hitCount || 0);
+    for (const child of node.children || []) total += totalFor(child);
+    return total;
+  };
+  for (const node of profile.nodes) {
+    const callFrame = node.callFrame || {};
+    const key = `${callFrame.functionName || '(anonymous)'}\u0000${callFrame.url || ''}`;
+    const entry = byFunction.get(key);
+    if (entry) entry.totalSamples += totalFor(node.id);
+  }
+  return {
+    available: true,
+    totalSamples: Number(profile.samples?.length || 0),
+    topFunctions: [...byFunction.values()].sort((a, b) => b.totalSamples - a.totalSamples || b.selfSamples - a.selfSamples).slice(0, 20)
+  };
 };
 
 const reorder = async direction => {

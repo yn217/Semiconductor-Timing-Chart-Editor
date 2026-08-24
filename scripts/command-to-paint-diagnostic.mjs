@@ -131,3 +131,4 @@ if (actions.find(action => action.name === 'cycle-insert')?.cycleAfter !== 101) 
 if (actions.find(action => action.name === 'cycle-delete')?.cycleAfter !== 100) throw new Error(JSON.stringify(result));
 console.log(`Command-to-Paint diagnostic completed; final gate ${result.pass ? 'PASS' : 'FAIL'}:`, JSON.stringify(targets));
 await browser.close();
+if (!result.pass) process.exitCode = 1;
