@@ -16,6 +16,7 @@ export default defineConfig({
       "@timing-chart-v2/renderer": source("renderer"),
       "@timing-chart-v2/export": source("export"),
       "@timing-chart-v2/testing": source("testing"),
+      "@timing-chart-v2/ui": source("ui"),
     },
   },
   test: {
