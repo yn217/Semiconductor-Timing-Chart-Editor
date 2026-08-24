@@ -89,11 +89,11 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
-    expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, activeOwners: 0 });
+    expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0 });
   });
 
   it("records an explicit reason for every intentionally unsupported capability", () => {
-    expect(WAVEDROM_UNSUPPORTED_CAPABILITIES.length).toBe(4);
+    expect(WAVEDROM_UNSUPPORTED_CAPABILITIES.length).toBe(5);
     for (const item of WAVEDROM_UNSUPPORTED_CAPABILITIES) expect(item.reason.length).toBeGreaterThan(20);
   });
 });

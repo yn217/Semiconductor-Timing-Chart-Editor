@@ -2,6 +2,7 @@ import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { SignalId } from "@timing-chart-v2/schema";
 import WaveDrom from "wavedrom";
 import { toWaveJson } from "./conversion.js";
+import { extractLocalGeometry } from "./geometry-extractor.js";
 import {
   WAVEDROM_VERSION,
   WaveDromAdapterError,
@@ -35,6 +36,8 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #active = new Map<SignalId, ActiveOwner>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
+  #geometryBuilds = 0;
+  #geometryMatrixReads = 0;
 
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
     return toWaveJson(source);
@@ -60,14 +63,17 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     svg.setAttribute("data-wave-render-index", String(renderIndex));
     mount.setAttribute("data-wave-owner", signalId);
     mount.replaceChildren(svg);
-    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex };
+    const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
     this.#active.set(signalId, { mount, rendered });
     this.#renderCalls += 1;
     return rendered;
   }
 
-  extractLocalGeometry(_rendered: RenderedWave): LocalGeometryMap {
-    throw new WaveDromAdapterError("GEOMETRY_PHASE_NOT_IMPLEMENTED", "Local Geometry extraction belongs to Phase 4.");
+  extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap {
+    const geometry = extractLocalGeometry(rendered);
+    this.#geometryBuilds += 1;
+    this.#geometryMatrixReads += 2;
+    return geometry;
   }
 
   dispose(signalId: SignalId): void {
@@ -78,7 +84,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, activeOwners: this.#active.size };
+    return { renderCalls: this.#renderCalls, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size };
   }
 
   #clearOwner(owner: ActiveOwner): void {

@@ -4,12 +4,14 @@ This workspace is the from-scratch V2 implementation boundary. Everything
 outside `timing-chart-v2/` is reference-only and cannot be imported by this
 workspace.
 
-Phases 0 through 3 are complete. In addition to the version 2 canonical Core,
+Phases 0 through 4 are complete. In addition to the version 2 canonical Core,
 the workspace now contains pure semantic command planning, atomic command and
 batch execution, timeline ripple editing, ChangeSets, Undo/Redo, and canonical
 Dirty tracking and the pinned WaveDrom adapter. Canonical Signals convert to
-temporary WaveJSON and default-skin SVG without entering persisted state. The
-workspace does not contain Geometry extraction or a production GUI.
+temporary WaveJSON and default-skin SVG without entering persisted state. Local
+Geometry Maps are extracted from the rendered cycle grid, brick uses, and skin
+paths. The workspace does not contain Screen Geometry, RowLayout, or a
+production GUI.
 
 ## Commands
 

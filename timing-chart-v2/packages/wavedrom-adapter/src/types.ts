@@ -10,6 +10,7 @@ export const WAVEDROM_UNSUPPORTED_CAPABILITIES = [
   { capability: "active-edge-clock-tokens-P-and-N", reason: "Canonical Clock has no active-edge-marker semantic." },
   { capability: "non-50-percent-clock-duty", reason: "Pinned WaveDrom clock primitives cannot preserve arbitrary duty geometry." },
   { capability: "fractional-per-signal-change-points", reason: "WaveDrom phase transforms a lane; it cannot place independent fractional changes exactly." },
+  { capability: "sub-half-cycle-clock-phase", reason: "The pinned WaveDrom brick model cannot expose exact Geometry Map ownership below half-cycle phase increments." },
 ] as const;
 
 export interface CanonicalSignalSource {
@@ -31,10 +32,13 @@ export interface RenderedWave {
   readonly ownerKey: SignalId;
   readonly svg: SVGElement;
   readonly renderIndex: number;
+  readonly waveJson: WaveJsonSignal;
 }
 
 export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
+  readonly geometryBuilds: number;
+  readonly geometryMatrixReads: number;
   readonly activeOwners: number;
 }
 

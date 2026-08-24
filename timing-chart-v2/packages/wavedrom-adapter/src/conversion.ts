@@ -91,6 +91,9 @@ function clockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: readonly
   if (generator.duty !== 0.5) {
     throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_DUTY", "Pinned WaveDrom clock primitives support a 0.5 duty cycle only.");
   }
+  if (!Number.isInteger(generator.phase * 2)) {
+    throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_PHASE", "WaveDrom geometry requires phase aligned to a half cycle.");
+  }
   if (!Number.isInteger(generator.start) || generator.start % generator.period !== 0) {
     throw new WaveDromAdapterError("UNALIGNED_CLOCK_START", "Clock start must align to its WaveDrom period.");
   }
