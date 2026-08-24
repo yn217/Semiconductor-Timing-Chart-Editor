@@ -139,8 +139,9 @@
 
   function ensureSignalGeometry(model, signalId) {
     const row = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(signalId)}"]`);
+    if (!row) return null;
     const signal = signalForRow(model, row);
-    if (!row || !signal || signal.type === 'commentRow') return null;
+    if (!signal || signal.type === 'commentRow') return null;
     const lane = laneFor(signal, row);
     const expectedSemantic = semanticKey(model, signal);
     const existingSvg = lane?.querySelector(':scope > .trace svg');
