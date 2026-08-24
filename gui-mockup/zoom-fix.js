@@ -160,12 +160,15 @@
       const zoom = Number(model.view.zoom || 1);
       const wave = document.querySelector('#cycleCanvas .wave');
       if (!wave) return;
+      const surface = document.querySelector('#cycleCanvas .waveform-render-surface');
 
       wave.style.removeProperty('transform');
       wave.dataset.zoomScope = 'timing-only';
       wave.dataset.zoom = String(zoom);
 
       const waveRect = wave.getBoundingClientRect();
+      const surfaceBaseWidth = surface ? (Number(surface.dataset.zoomBaseWidth || 0) || surface.getBoundingClientRect().width) : 0;
+      if (surface) surface.dataset.zoomBaseWidth = String(surfaceBaseWidth);
       let requiredRight = 0;
 
       document.querySelectorAll('#cycleCanvas .trace > svg').forEach(svg => {
@@ -186,13 +189,29 @@
 
         const host = svg.parentElement;
         const hostLeft = host ? host.getBoundingClientRect().left - waveRect.left : 0;
-        const scaledRight = base.cycle0Px + (base.baseWidth - base.cycle0Px) * zoom;
+        // The containment extent must cover the transformed SVG's complete
+        // actual width.  The cycle-0 anchored right edge is also retained for
+        // the geometry mapping, but it is not sufficient when the SVG has a
+        // non-zero left-side margin.
+        const scaledRight = Math.max(base.cycle0Px + (base.baseWidth - base.cycle0Px) * zoom, base.baseWidth * zoom);
         requiredRight = Math.max(requiredRight, hostLeft + scaledRight + 24);
+        const lane = svg.closest('.waveform-surface-row');
+        if (lane) {
+          const baseLaneWidth = Number(lane.dataset.zoomBaseWidth || 0) || lane.getBoundingClientRect().width;
+          lane.dataset.zoomBaseWidth = String(baseLaneWidth);
+          lane.style.width = `${Math.ceil(Math.max(baseLaneWidth, scaledRight + 24))}px`;
+        }
       });
 
       // Ensure transformed timing content contributes enough horizontal
       // scrollable extent without scaling any label/UI columns.
       if (requiredRight > 0) wave.style.minWidth = `${Math.max(920, Math.ceil(requiredRight))}px`;
+      if (surface && requiredRight > 0) {
+        const extent = Math.max(surfaceBaseWidth, requiredRight);
+        surface.style.width = `${Math.ceil(extent)}px`;
+        surface.style.minWidth = `${Math.ceil(extent)}px`;
+        surface.dataset.zoomExtent = String(Math.ceil(extent));
+      }
 
       // Timed Comment Row bands follow the time-axis scale. Their text is
       // detached into an unscaled overlay label and positioned within the
