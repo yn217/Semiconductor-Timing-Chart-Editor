@@ -89,7 +89,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
 
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
-    expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0 });
+    expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
   });
 
   it("records an explicit reason for every intentionally unsupported capability", () => {

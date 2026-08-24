@@ -32,6 +32,8 @@ describe("deterministic document export", () => {
     expect(first).toContain('data-annotation-id="ann_export"');
     expect(first).toContain('data-group-id="grp_perf"');
     expect(first).toContain('data-layer="legend"');
+    expect(first).toContain('data-wave-engine="wavedrom-3.6.2"');
+    expect(first).toContain('class="WaveDrom"');
     expect(first).not.toMatch(/Inspector|Ribbon|selection-handle|snap-guide/);
   });
 
@@ -40,7 +42,7 @@ describe("deterministic document export", () => {
     const service = new DeterministicExportService();
     const snapshot = { revision: 7, document };
     const svg = new TextDecoder().decode(await service.export({ format: "svg", snapshot, settings: { scope: "selected-range", range: { start: 2, end: 5 } } }));
-    expect(svg).toContain('viewBox="0 0 364');
+    expect(svg).toContain('data-wave-engine="wavedrom-3.6.2"');
     const first = await service.export({ format: "pdf", snapshot });
     const second = await service.export({ format: "pdf", snapshot });
     expect(new TextDecoder().decode(first.slice(0, 8))).toBe("%PDF-1.4");

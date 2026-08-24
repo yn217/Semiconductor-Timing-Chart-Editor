@@ -1,5 +1,5 @@
 import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
 
 interface Layers {
   readonly root: HTMLElement;
@@ -27,6 +27,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -51,6 +52,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
     assertCrossSurfaceInvariant(projection);
+    this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
     const rows = new Map(projection.rowLayout.map((row) => [row.rowId, row]));
     const changedRows = new Set<string>();
     for (const row of projection.rowLayout) {
@@ -58,9 +60,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#rowY.set(row.rowId, row.y);
     }
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
-    syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, rows, "left");
-    syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen");
-    syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing");
+    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, rows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
+    this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.reduce((sum, item) => sum + item.moves, 0) };
     layers.root.style.height = `${projection.totalHeight}px`;
     layers.root.dataset.revision = String(projection.revision);
     layers.root.dataset.canonicalRowIds = projection.canonicalRowIds.join(",");
@@ -79,6 +80,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#dirtyWaves.delete(signalId);
       this.#waveVersions.delete(signalId);
       this.#wavePending.delete(signalId);
+      this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     const mounted = new Set(projection.mountedSignalIds);
     for (const [signalId, owner] of this.#waveOwners) if (!mounted.has(signalId)) owner.remove();
@@ -89,12 +91,25 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         owner = element(layers.root.ownerDocument, "div", "wave-owner");
         owner.dataset.signalId = signalId;
         this.#waveOwners.set(signalId, owner);
+        this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + 1, waveArtifactCacheMisses: this.#diagnostics.waveArtifactCacheMisses + 1 };
       }
-      if (!owner.isConnected) layers.waves.append(owner);
+      if (!owner.isConnected) {
+        if (!isNew) this.#diagnostics = { ...this.#diagnostics, waveArtifactCacheHits: this.#diagnostics.waveArtifactCacheHits + 1 };
+        layers.waves.append(owner);
+      }
+      if (!isNew) { this.#waveOwners.delete(signalId); this.#waveOwners.set(signalId, owner); }
       const row = rows.get(signalId);
       if (row) place(owner, row);
       if (isNew || this.#dirtyWaves.has(signalId)) this.#queueWave(signalId, owner);
     }
+    const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
+    for (const [signalId, owner] of this.#waveOwners) {
+      if (this.#waveOwners.size <= waveOwnerCacheLimit) break;
+      if (mounted.has(signalId)) continue;
+      owner.remove(); this.#provider.disposeWave(signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
+      this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
+    }
+    this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit };
     this.#publishCounters();
   }
 
@@ -102,9 +117,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     return Object.freeze({ ...this.#counters });
   }
 
+  diagnostics(): Readonly<RendererDiagnostics> {
+    return Object.freeze({ ...this.#diagnostics });
+  }
+
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void {
     const layers = this.#layers;
     if (!layers) throw new Error("Timing chart renderer must be mounted before overlay update.");
+    this.#diagnostics = { ...this.#diagnostics, annotationResolvePasses: this.#diagnostics.annotationResolvePasses + 1, resolvedAnnotations: this.#diagnostics.resolvedAnnotations + primitives.length };
     const active = new Set(primitives.map((primitive) => primitive.id));
     let changes = 0;
     for (const [id, owner] of this.#overlayOwners) {
@@ -180,7 +200,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   async whenIdle(): Promise<void> {
-    await Promise.all([...this.#pending]);
+    while (this.#pending.size > 0) await Promise.all([...this.#pending]);
   }
 
   dispose(): void {
@@ -210,6 +230,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
         localGeometryBuilds: this.#counters.localGeometryBuilds + delta.localGeometryBuilds,
       };
+      const waveRendersBySignal = { ...this.#diagnostics.waveRendersBySignal, [signalId]: (this.#diagnostics.waveRendersBySignal[signalId] ?? 0) + delta.waveDromRenders };
+      const localGeometryBuildsBySignal = { ...this.#diagnostics.localGeometryBuildsBySignal, [signalId]: (this.#diagnostics.localGeometryBuildsBySignal[signalId] ?? 0) + delta.localGeometryBuilds };
+      this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal, localGeometryBuildsBySignal };
       owner.removeAttribute("data-wave-error");
       if ((this.#waveVersions.get(signalId) ?? 0) === version) this.#dirtyWaves.delete(signalId);
       this.#publishCounters();
@@ -228,6 +251,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #publishCounters(): void {
     if (!this.#layers) return;
     this.#layers.root.dataset.renderCounters = JSON.stringify(this.#counters);
+    this.#layers.root.dataset.performanceCounters = JSON.stringify(this.#diagnostics);
   }
 }
 
@@ -295,9 +319,10 @@ function element(owner: Document | HTMLElement, tag: "div", role: string): HTMLE
   return result;
 }
 
-function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>, surface: string): void {
+function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>, surface: string): { creates: number; destroys: number; moves: number } {
   const active = new Set(rowIds);
-  for (const [rowId, shell] of cache) if (!active.has(rowId)) shell.remove();
+  let creates = 0, destroys = 0, moves = 0;
+  for (const [rowId, shell] of cache) if (!active.has(rowId)) { shell.remove(); cache.delete(rowId); destroys += 1; }
   const ordered: HTMLElement[] = [];
   let previousGroupId: string | undefined;
   for (const rowId of rowIds) {
@@ -308,6 +333,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell = element(layer.ownerDocument, "div", `${surface}-row`);
       shell.dataset.rowId = rowId;
       cache.set(rowId, shell);
+      creates += 1;
     }
     shell.dataset.kind = row.kind;
     shell.dataset.name = row.name;
@@ -320,12 +346,14 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }
-    populateShell(shell, row, surface, row.groupId !== previousGroupId);
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.groupId !== previousGroupId}`;
+    if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
     place(shell, row);
     ordered.push(shell);
     previousGroupId = row.groupId;
   }
-  layer.replaceChildren(...ordered);
+  if (ordered.length !== layer.children.length || ordered.some((shell, index) => layer.children[index] !== shell)) { layer.replaceChildren(...ordered); moves = ordered.length; }
+  return { creates, destroys, moves };
 }
 
 function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string, groupStart: boolean): void {
@@ -359,7 +387,7 @@ function place(element: HTMLElement, row: RowLayoutEntry): void {
 }
 
 function assertCrossSurfaceInvariant(projection: RenderProjection): void {
-  const expected = projection.visibleRowIds.join("\u0000");
+  const expected = projection.mountedRowIds.join("\u0000");
   if (projection.leftRowIds.join("\u0000") !== expected || projection.frozenLabelRowIds.join("\u0000") !== expected || projection.timingRowIds.join("\u0000") !== expected) {
     throw new Error("Cross-surface row ID invariant failed.");
   }

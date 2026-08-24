@@ -107,6 +107,9 @@ export interface SemanticSnapGeometryInput {
 
 /** Geometry-owned construction of immutable, screen-local semantic snap candidates. */
 export class SemanticSnapCandidateService {
+  #builds = 0;
+  #candidateCount = 0;
+
   build(input: SemanticSnapGeometryInput): ImmutableSnapIndex {
     const candidates: SnapCandidate[] = [];
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
@@ -137,7 +140,13 @@ export class SemanticSnapCandidateService {
       }
     }
     this.#appendOwners(candidates, input.document.bookmarks, input.document.annotations, resolve);
+    this.#builds += 1;
+    this.#candidateCount = candidates.length;
     return new ImmutableSnapIndex(candidates);
+  }
+
+  metrics(): Readonly<{ builds: number; candidateCount: number }> {
+    return Object.freeze({ builds: this.#builds, candidateCount: this.#candidateCount });
   }
 
   #appendOwners(candidates: SnapCandidate[], bookmarks: readonly Bookmark[], annotations: readonly Annotation[], resolve: (anchor: SemanticAnchor) => Point | undefined): void {

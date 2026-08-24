@@ -118,7 +118,9 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
     if (expectedRevision !== this.#snapshot.revision) throw new CanonicalCommitError("stale", `Stale canonical revision ${expectedRevision}; current revision is ${this.#snapshot.revision}.`);
     const problems = this.#validate(next);
     if (problems.length > 0) throw new CanonicalCommitError("validation", `Rejected invalid canonical commit: ${problems.map((item) => item.code).join(", ")}`, problems);
-    this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: cloneValue(next) }) as CanonicalSnapshot;
+    // Command planning already uses structural sharing. Preserve those shared,
+    // frozen branches instead of cloning the complete document per edit.
+    this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: next }) as CanonicalSnapshot;
     this.#commits += 1;
     return this.#snapshot;
   }
@@ -126,7 +128,7 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
   open(input: string | unknown): AtomicOpenResult {
     const parsed = parseDocument(input);
     if (!parsed.ok) return failedOpen(parsed);
-    this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: cloneValue(parsed.document) }) as CanonicalSnapshot;
+    this.#snapshot = deepFreeze({ revision: this.#snapshot.revision + 1, document: parsed.document }) as CanonicalSnapshot;
     this.#commits += 1;
     return { ok: true, snapshot: this.#snapshot, warnings: parsed.warnings, fullDocumentReplace: true, resetDocumentTransientState: true };
   }

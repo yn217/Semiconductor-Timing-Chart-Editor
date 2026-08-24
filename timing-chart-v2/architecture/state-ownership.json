@@ -16,6 +16,8 @@
   { "key": "derived.screenGeometry", "class": "derived", "owner": "projection", "saved": false, "undoable": false },
   { "key": "derived.rowLayout", "class": "derived", "owner": "projection", "saved": false, "undoable": false },
   { "key": "derived.waveformSurface", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
+  { "key": "derived.renderDiagnostics", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
+  { "key": "derived.performanceSummary", "class": "derived", "owner": "testing", "saved": false, "undoable": false },
   { "key": "derived.annotationOverlay", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "derived.clockEdgeNumbers", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "derived.transactionHorizontalGeometry", "class": "derived", "owner": "geometry", "saved": false, "undoable": false },

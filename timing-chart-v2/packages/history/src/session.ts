@@ -14,8 +14,8 @@ import {
   type CanonicalSnapshot,
   type CanonicalStore,
 } from "@timing-chart-v2/core";
-import { isStableId, serializeCanonicalDocument, type CanonicalDocument, type CommandId } from "@timing-chart-v2/schema";
-import type { HistoryController, HistoryEntry, HistoryState, RecordedAction } from "./types.js";
+import { isStableId, type CanonicalDocument, type CommandId } from "@timing-chart-v2/schema";
+import type { HistoryController, HistoryEntry, HistoryMetrics, HistoryState, RecordedAction } from "./types.js";
 
 const noHistory = (operation: "Undo" | "Redo"): CommandResult => ({ ok: false, reason: "no-op", problems: [{ code: "NO_HISTORY", path: "$", message: `${operation} history is empty.` }] });
 
@@ -23,11 +23,12 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
   readonly #documents: DocumentSession;
   #undo: HistoryEntry[] = [];
   #redo: HistoryEntry[] = [];
-  #cleanText: string;
+  #cleanDocument: Readonly<CanonicalDocument>;
+  #historyMetrics: HistoryMetrics = { commandAttempts: 0, committedActions: 0, undoOperations: 0, redoOperations: 0 };
 
   constructor(initial: CanonicalDocument) {
     this.#documents = new DocumentSession(initial);
-    this.#cleanText = serializeCanonicalDocument(initial);
+    this.#cleanDocument = this.#documents.getSnapshot().document;
   }
 
   getSnapshot(): CanonicalSnapshot {
@@ -44,15 +45,20 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
       canRedo: this.#redo.length > 0,
       undoDepth: this.#undo.length,
       redoDepth: this.#redo.length,
-      dirty: serializeCanonicalDocument(this.getSnapshot().document) !== this.#cleanText,
+      dirty: this.getSnapshot().document !== this.#cleanDocument,
     };
   }
 
   markClean(): void {
-    this.#cleanText = serializeCanonicalDocument(this.getSnapshot().document);
+    this.#cleanDocument = this.getSnapshot().document;
+  }
+
+  historyMetrics(): HistoryMetrics {
+    return Object.freeze({ ...this.#historyMetrics });
   }
 
   execute(command: SemanticCommand): CommandResult {
+    this.#historyMetrics = { ...this.#historyMetrics, commandAttempts: this.#historyMetrics.commandAttempts + 1 };
     const before = this.getSnapshot();
     const plan = planCommand(before.document, command);
     if (!plan.ok) return { ok: false, reason: plan.reason, problems: plan.problems };
@@ -60,6 +66,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
   }
 
   executeBatch(id: CommandId, commands: readonly SemanticCommand[]): CommandResult {
+    this.#historyMetrics = { ...this.#historyMetrics, commandAttempts: this.#historyMetrics.commandAttempts + 1 };
     if (!isStableId(id)) return { ok: false, reason: "invalid", problems: [{ code: "INVALID_COMMAND_ID", path: "$.id", message: "Batch ID must be a stable ID." }] };
     if (commands.length === 0) return { ok: false, reason: "no-op", problems: [{ code: "EMPTY_BATCH", path: "$", message: "Atomic batch contains no commands." }] };
     const before = this.getSnapshot();
@@ -91,6 +98,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
       };
       this.#undo.push(entry);
       this.#redo = [];
+      this.#historyMetrics = { ...this.#historyMetrics, committedActions: this.#historyMetrics.committedActions + 1 };
       return { ok: true, snapshot: after, changeSet };
     } catch (error) {
       if (error instanceof CanonicalCommitError) return { ok: false, reason: error.reason === "stale" ? "stale" : "invalid", problems: error.problems.length > 0 ? error.problems : [{ code: "STALE_REVISION", path: "$", message: error.message }] };
@@ -106,6 +114,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
       const snapshot = this.#documents.commit(entry.inverse.document, current.revision);
       this.#undo.pop();
       this.#redo.push(entry);
+      this.#historyMetrics = { ...this.#historyMetrics, undoOperations: this.#historyMetrics.undoOperations + 1 };
       return { ok: true, snapshot, changeSet: entry.inverseChangeSet };
     } catch (error) {
       if (error instanceof CanonicalCommitError) return { ok: false, reason: error.reason === "stale" ? "stale" : "invalid", problems: error.problems };
@@ -121,6 +130,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
       const snapshot = this.#documents.commit(entry.after.document, current.revision);
       this.#redo.pop();
       this.#undo.push(entry);
+      this.#historyMetrics = { ...this.#historyMetrics, redoOperations: this.#historyMetrics.redoOperations + 1 };
       return { ok: true, snapshot, changeSet: entry.changeSet };
     } catch (error) {
       if (error instanceof CanonicalCommitError) return { ok: false, reason: error.reason === "stale" ? "stale" : "invalid", problems: error.problems };

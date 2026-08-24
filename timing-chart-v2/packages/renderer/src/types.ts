@@ -19,6 +19,24 @@ export interface RenderCounters {
   readonly overlayUpdates: number;
 }
 
+export interface RendererDiagnostics {
+  readonly projectionUpdates: number;
+  readonly mountedRows: number;
+  readonly mountedWaveOwners: number;
+  readonly cachedWaveOwners: number;
+  readonly waveOwnerCacheLimit: number;
+  readonly domNodeCreates: number;
+  readonly domNodeDestroys: number;
+  readonly domNodeMoves: number;
+  readonly waveArtifactCacheHits: number;
+  readonly waveArtifactCacheMisses: number;
+  readonly waveArtifactDisposals: number;
+  readonly waveRendersBySignal: Readonly<Record<string, number>>;
+  readonly localGeometryBuildsBySignal: Readonly<Record<string, number>>;
+  readonly annotationResolvePasses: number;
+  readonly resolvedAnnotations: number;
+}
+
 export interface OverlayAnchorPoint {
   readonly field: "anchor" | "start" | "end" | "from" | "to";
   readonly x: number;
@@ -63,5 +81,6 @@ export interface TimingChartRenderer {
   updateSnapGuide(guide?: SnapGuidePrimitive): void;
   updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void;
   counters(): Readonly<RenderCounters>;
+  diagnostics(): Readonly<RendererDiagnostics>;
   dispose(): void;
 }

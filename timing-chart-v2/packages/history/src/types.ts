@@ -27,9 +27,17 @@ export interface HistoryState {
   readonly dirty: boolean;
 }
 
+export interface HistoryMetrics {
+  readonly commandAttempts: number;
+  readonly committedActions: number;
+  readonly undoOperations: number;
+  readonly redoOperations: number;
+}
+
 export interface HistoryController {
   historyState(): HistoryState;
   undo(): CommandResult;
   redo(): CommandResult;
   markClean(): void;
+  historyMetrics(): HistoryMetrics;
 }

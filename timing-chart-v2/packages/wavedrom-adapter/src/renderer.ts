@@ -78,13 +78,13 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
 
   dispose(signalId: SignalId): void {
     const owner = this.#active.get(signalId);
-    if (!owner) return;
-    this.#clearOwner(owner);
+    if (owner) this.#clearOwner(owner);
     this.#active.delete(signalId);
+    this.#renderIndices.delete(signalId);
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size };
+    return { renderCalls: this.#renderCalls, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
   }
 
   #clearOwner(owner: ActiveOwner): void {

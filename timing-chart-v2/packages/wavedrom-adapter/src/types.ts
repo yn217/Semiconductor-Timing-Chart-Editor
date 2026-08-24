@@ -40,6 +40,7 @@ export interface WaveDromAdapterMetrics {
   readonly geometryBuilds: number;
   readonly geometryMatrixReads: number;
   readonly activeOwners: number;
+  readonly allocatedRenderIndices: number;
 }
 
 export interface WaveDromAdapter {

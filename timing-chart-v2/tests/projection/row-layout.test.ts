@@ -31,7 +31,7 @@ describe("RowLayout and projection invariants", () => {
     expect(result.totalHeight).toBe(66);
   });
 
-  it("keeps canonical, Left, Frozen, and Timing visible IDs identical", () => {
+  it("keeps Left, Frozen, and Timing mounted IDs identical", () => {
     const document = layoutFixture();
     const projection = new DefaultProjectionService().project({
       snapshot: { revision: 0, document } as CanonicalSnapshot,
@@ -39,14 +39,15 @@ describe("RowLayout and projection invariants", () => {
       viewport: { viewportStartY: 0, viewportEndY: 25, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: ["sig_data" as RowId] },
     });
     expect(projection.visibleRowIds).toEqual(["sig_clk", "spacer_gap", "sig_data"]);
-    expect(projection.leftRowIds).toEqual(projection.visibleRowIds);
-    expect(projection.frozenLabelRowIds).toEqual(projection.visibleRowIds);
-    expect(projection.timingRowIds).toEqual(projection.visibleRowIds);
+    expect(projection.mountedRowIds).toEqual(["sig_clk", "sig_data"]);
+    expect(projection.leftRowIds).toEqual(projection.mountedRowIds);
+    expect(projection.frozenLabelRowIds).toEqual(projection.mountedRowIds);
+    expect(projection.timingRowIds).toEqual(projection.mountedRowIds);
     expect(projection.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
     expect(projection.waveSignalIds).toEqual(["sig_clk", "sig_data"]);
   });
 
-  it("virtualizes timing SVGs while preserving all canonical visible row shells", () => {
+  it("virtualizes row shells and timing SVGs while preserving canonical visible IDs", () => {
     const document = layoutFixture();
     const projection = new DefaultProjectionService().project({
       snapshot: { revision: 0, document } as CanonicalSnapshot,
@@ -54,6 +55,7 @@ describe("RowLayout and projection invariants", () => {
       viewport: { viewportStartY: 40, viewportEndY: 70, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
     });
     expect(projection.visibleRowIds).toHaveLength(3);
+    expect(projection.mountedRowIds).toEqual(["sig_data"]);
     expect(projection.mountedSignalIds).toEqual(["sig_data"]);
     expect(projection.waveSignalIds).toEqual([]);
   });
@@ -67,5 +69,15 @@ describe("RowLayout and projection invariants", () => {
     });
     expect(projection.mountedSignalIds).toEqual(["sig_clk"]);
     expect(projection.waveSignalIds).toEqual(["sig_data"]);
+  });
+
+  it("reuses canonical RowLayout for view-only scroll projections", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const first = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport: { viewportStartY: 0, viewportEndY: 25, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } });
+    service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport: { viewportStartY: 40, viewportEndY: 70, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] }, previous: first });
+    expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, rowLayoutBuilds: 1 });
+    service.project({ snapshot: { revision: 1, document } as CanonicalSnapshot, changeSet: { rowPresentation: ["sig_data" as RowId] }, viewport: { viewportStartY: 40, viewportEndY: 70, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } });
+    expect(service.diagnostics().rowLayoutBuilds).toBe(2);
   });
 });

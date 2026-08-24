@@ -3,6 +3,17 @@ import { DocumentSession } from "@timing-chart-v2/core";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("DocumentSession atomic Open/Save", () => {
+  it("preserves structurally shared frozen branches on a local commit", () => {
+    const session = new DocumentSession(canonicalFixture());
+    const before = session.getSnapshot();
+    const next = { ...before.document, document: { ...before.document.document, title: "Local edit" } };
+    const after = session.commit(next, before.revision);
+    expect(after.document.signals).toBe(before.document.signals);
+    expect(after.document.signalGroups).toBe(before.document.signalGroups);
+    expect(after.document.document).not.toBe(before.document.document);
+    expect(Object.isFrozen(after.document.document)).toBe(true);
+  });
+
   it("replaces once on valid Open and returns a full-document render contract", () => {
     const session = new DocumentSession(canonicalFixture());
     const next = { ...canonicalFixture(), document: { ...canonicalFixture().document, title: "Opened" } };

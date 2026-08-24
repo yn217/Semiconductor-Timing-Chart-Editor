@@ -79,6 +79,23 @@ ruler positions and viewport scroll/zoom as Cycle View. Export reads the full
 canonical document (never mounted DOM), builds a deterministic ExportScene,
 serializes stable SVG using the pinned WaveDrom conversion contract, and derives
 PNG/PDF outputs from that scene. Export settings are one-shot view state.
+Waveform export embeds output from the pinned WaveDrom renderer and derives its
+timeline scale from that SVG; it has no parallel fixed-pitch waveform painter.
+PNG is the browser rasterization of the deterministic SVG, and browser PDF
+embeds that same complete rasterized scene in a valid PDF document.
+
+Phase 13 makes row mounting a projection concern: all three synchronized
+surfaces consume the same `mountedRowIds`, while the canonical document and
+full row layout remain independent of the DOM. Renderer diagnostics are
+derived, read-only evidence and never feed application behavior. Stable row
+and waveform owners are moved instead of recreated; waveform artifacts are
+recomputed only for semantic waveform changes. Deterministic performance
+fixtures and percentile summaries belong to `testing`, not production state.
+Core preserves frozen structural sharing across local commits. History uses
+snapshot identity for Dirty state and therefore neither clones document trees
+nor serializes them during status reads. Projection caches canonical RowLayout
+across viewport-only updates, SnapIndex is prepared once per pointer gesture,
+and detached waveform caches are bounded relative to the mounted viewport.
 
 ## Render-domain policy
 
@@ -96,3 +113,7 @@ WaveDrom imports to its adapter, rejects legacy/other-product runtime imports,
 and keeps domain packages free of browser/UI ownership. Unit tests verify owner
 uniqueness and the pinned WaveDrom version. Playwright verifies the browser
 composition boundary can start before production GUI work begins.
+The Phase 13 performance architecture gate additionally rejects
+MutationObserver-based synchronization and monolithic render-everything entry
+points, and verifies that virtualization, diagnostics, fixture, and 1000-row
+contracts remain present.

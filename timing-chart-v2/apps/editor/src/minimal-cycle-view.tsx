@@ -202,6 +202,7 @@ export function MinimalCycleView() {
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, waveAdapter: adapter.metrics() });
     };
     let currentZoom = 1;
     const applyZoom = (next: number) => {
@@ -235,6 +236,7 @@ export function MinimalCycleView() {
       buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, clock.id);
       applyZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);
+      publishState();
       rendererHost.dataset.cycleViewReady = "true";
     });
 
@@ -259,6 +261,7 @@ export function MinimalCycleView() {
         buildRuler(rulerElement, referenceGeometry, result.snapshot.document, clock.id);
         applyZoom(currentZoom);
         refreshOverlays(result.snapshot.document);
+        publishState();
         rendererHost.dataset.editorIdle = "true";
       });
     };
@@ -266,6 +269,7 @@ export function MinimalCycleView() {
     undo.current = () => applyResult(session.undo());
     redo.current = () => applyResult(session.redo());
     const replaceDocument = (document: CanonicalDocument) => {
+      delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
       geometryMaps.clear();
       referenceGeometry = undefined;
@@ -287,6 +291,7 @@ export function MinimalCycleView() {
         buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
         applyZoom(currentZoom);
         refreshOverlays(session.getSnapshot().document);
+        publishState();
         rendererHost.dataset.editorIdle = "true";
       });
     };
@@ -479,7 +484,7 @@ export function MinimalCycleView() {
       clearDropState();
     };
     const onDragEnd = () => { dragged = undefined; clearDropState(); };
-    let annotationDrag: { readonly annotationId: AnnotationId; readonly field?: typeof annotationFields[number]; readonly label: boolean; readonly startX: number; readonly startY: number; readonly owner: HTMLElement } | undefined;
+    let annotationDrag: { readonly annotationId: AnnotationId; readonly field?: typeof annotationFields[number]; readonly label: boolean; readonly startX: number; readonly startY: number; readonly owner: HTMLElement; readonly snapIndex?: ImmutableSnapIndex } | undefined;
     const clearAnnotationPreview = () => {
       if (annotationDrag) annotationDrag.owner.style.translate = "";
       annotationDrag = undefined;
@@ -493,14 +498,16 @@ export function MinimalCycleView() {
       if (!owner?.dataset.annotationId) return;
       const fieldElement = event.target.closest<HTMLElement>("[data-role='annotation-handle'][data-annotation-field]");
       const label = event.target.closest<HTMLElement>("[data-annotation-label='true']") !== null;
+      const field = fieldElement?.dataset.annotationField as typeof annotationFields[number] | undefined;
       annotationDrag = {
         annotationId: owner.dataset.annotationId as AnnotationId,
-        ...(fieldElement?.dataset.annotationField ? { field: fieldElement.dataset.annotationField as typeof annotationFields[number] } : {}),
+        ...(field ? { field, snapIndex: buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService) } : {}),
         label,
         startX: event.clientX,
         startY: event.clientY,
         owner,
       };
+      publishState();
       owner.setPointerCapture(event.pointerId);
       event.preventDefault();
     };
@@ -516,7 +523,7 @@ export function MinimalCycleView() {
       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps);
       if (!annotation || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
-      const snap = buildSnapIndex(document, projection, geometryMaps, snapService).nearest(desired, 8, undefined, preferredSnapKinds(annotation.type));
+      const snap = annotationDrag.snapIndex?.nearest(desired, 8, undefined, preferredSnapKinds(annotation.type));
       if (!snap) {
         renderer.updateSnapGuide();
         delete rendererHost.dataset.snapKind;
@@ -552,7 +559,7 @@ export function MinimalCycleView() {
       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps);
       if (!field || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
-      const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest(desired, 8, undefined, preferredSnapKinds(annotation.type));
+      const snap = drag.snapIndex?.nearest(desired, 8, undefined, preferredSnapKinds(annotation.type));
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {
         rendererHost.dataset.snapKind = snap.kind;

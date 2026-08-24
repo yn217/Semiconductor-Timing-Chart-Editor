@@ -109,7 +109,8 @@ test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", as
   const svgText = svg1.toString("utf8");
   expect(svgText).toContain('data-transaction-id=');
   expect(svgText).toContain('data-signal-id="sig_cycle_state"');
+  expect(svgText).toContain('data-wave-engine="wavedrom-3.6.2"');
   expect(svgText).not.toMatch(/Ribbon|Inspector|selection-handle|snap-guide/);
   const png = await download("png"); expect([...png.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
-  const pdf = await download("pdf"); expect(pdf.subarray(0, 8).toString("utf8")).toBe("%PDF-1.4");
+  const pdf = await download("pdf"); const pdf2 = await download("pdf"); expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-"); expect(pdf.length).toBeGreaterThan(1_000); expect(pdf).toEqual(pdf2);
 });

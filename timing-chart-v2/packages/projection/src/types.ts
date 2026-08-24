@@ -18,6 +18,7 @@ export interface RenderProjection {
   readonly revision: number;
   readonly canonicalRowIds: readonly RowId[];
   readonly visibleRowIds: readonly RowId[];
+  readonly mountedRowIds: readonly RowId[];
   readonly leftRowIds: readonly RowId[];
   readonly frozenLabelRowIds: readonly RowId[];
   readonly timingRowIds: readonly RowId[];
@@ -46,4 +47,5 @@ export interface ProjectionRequest {
 
 export interface ProjectionService {
   project(request: ProjectionRequest): RenderProjection;
+  diagnostics(): Readonly<{ projectionBuilds: number; rowLayoutBuilds: number; lastMountedRange: readonly [number, number] }>;
 }
