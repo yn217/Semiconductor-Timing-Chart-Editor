@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test("extracts Phase 4 Local Geometry from rendered WaveDrom SVG in Chromium", async ({ page }) => {
-  await page.goto("/");
+  await page.goto("/?probe=geometry");
   await expect(page.getByRole("heading", { name: "Timing Chart Editor V2" })).toBeVisible();
   await expect(page.getByText("Phase 4 Local Geometry probe — WaveDrom 3.6.2")).toBeVisible();
   const mount = page.getByTestId("wave-mount");

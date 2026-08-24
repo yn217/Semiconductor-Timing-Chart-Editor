@@ -1,0 +1,54 @@
+import type { CanonicalDocument, RowId, Signal, SpacerRow } from "@timing-chart-v2/schema";
+import type { RowLayoutEntry } from "./types.js";
+
+export interface RowLayoutResult {
+  readonly canonicalRowIds: readonly RowId[];
+  readonly visibleRows: readonly RowLayoutEntry[];
+  readonly totalHeight: number;
+}
+
+export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult {
+  const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
+  const spacers = new Map<string, SpacerRow>();
+  for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacers.set(spacer.id, spacer);
+  const canonicalRowIds = document.signalGroups.flatMap((group) => group.rows);
+  const visibleRows: RowLayoutEntry[] = [];
+  let y = 0;
+
+  for (const group of document.signalGroups) {
+    y += group.spacingBefore ?? 0;
+    let visibleInGroup = 0;
+    for (const rowId of group.rows) {
+      const signal = signals.get(rowId);
+      const spacer = spacers.get(rowId);
+      if (signal?.display.visible === false) continue;
+      if (!signal && !spacer) continue;
+      if (visibleInGroup > 0) y += document.layout.signalSpacing;
+      if (signal) y += signal.spacingBefore ?? 0;
+      const entry = signalEntry(signal, group.id, y, document.layout.rowHeight, rowId);
+      if (entry) {
+        visibleRows.push(entry);
+        y += entry.height + (signal?.spacingAfter ?? 0);
+      } else if (spacer) {
+        visibleRows.push({ rowId, groupId: group.id, kind: "spacer", name: "", y, height: spacer.height });
+        y += spacer.height;
+      }
+      visibleInGroup += 1;
+    }
+    y += group.spacingAfter ?? 0;
+  }
+  return { canonicalRowIds, visibleRows, totalHeight: y };
+}
+
+function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
+  if (!signal) return undefined;
+  return {
+    rowId,
+    groupId,
+    kind: signal.type === "commentRow" ? "comment" : "timing",
+    name: signal.display.name,
+    role: signal.role,
+    y,
+    height,
+  };
+}
