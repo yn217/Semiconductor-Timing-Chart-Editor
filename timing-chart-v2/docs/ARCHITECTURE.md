@@ -71,6 +71,15 @@ tab, selection, zoom, and document-properties state are view-only and never
 enter canonical History. Clock edge labels are renderer-owned projections of
 actual Local Geometry and do not regenerate WaveDrom.
 
+Phase 12 keeps Transaction ranges, lanes, and stable Signal links in the same
+canonical document and source timeline. Every edit is a semantic command;
+Timeline ripple uses the Phase 9 atomic transform and pointer snapping uses the
+Phase 10 geometry index. Transaction and Split views read the same rendered
+ruler positions and viewport scroll/zoom as Cycle View. Export reads the full
+canonical document (never mounted DOM), builds a deterministic ExportScene,
+serializes stable SVG using the pinned WaveDrom conversion contract, and derives
+PNG/PDF outputs from that scene. Export settings are one-shot view state.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.

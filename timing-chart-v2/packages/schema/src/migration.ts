@@ -217,6 +217,12 @@ function normalizeTransaction(value: unknown, index: number): Transaction {
   if (typeof (source.source ?? source.from) === "string") result.source = source.source ?? source.from;
   if (typeof (source.destination ?? source.to) === "string") result.destination = source.destination ?? source.to;
   if (phases.length > 0) result.phases = phases;
+  if (typeof source.laneId === "string") result.laneId = source.laneId;
+  const linkedSignals = list(source.linkedSignals).filter((id): id is string => typeof id === "string");
+  if (linkedSignals.length > 0) result.linkedSignals = linkedSignals;
+  if (typeof source.category === "string") result.category = source.category;
+  if (jsonObject(source.style)) result.style = jsonObject(source.style);
+  if (jsonObject(source.metadata)) result.metadata = jsonObject(source.metadata);
   if (jsonObject(source.links)) result.links = jsonObject(source.links);
   return result as unknown as Transaction;
 }

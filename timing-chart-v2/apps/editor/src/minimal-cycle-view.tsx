@@ -3,10 +3,11 @@ import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
+import { DeterministicExportService } from "@timing-chart-v2/export";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -72,6 +73,7 @@ export function MinimalCycleView() {
   const openDocument = useRef<(text: string) => void>(() => undefined);
   const newDocument = useRef<() => void>(() => undefined);
   const saveDocument = useRef<() => string | undefined>(() => undefined);
+  const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<SignalId | undefined>();
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
@@ -82,19 +84,24 @@ export function MinimalCycleView() {
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>();
   const selectedAnnotationRef = useRef<AnnotationId | undefined>(undefined);
   selectedAnnotationRef.current = selectedAnnotationId;
+  const [selectedTransactionId, setSelectedTransactionId] = useState<TransactionId | undefined>();
+  const selectedTransactionRef = useRef<TransactionId | undefined>(undefined);
+  selectedTransactionRef.current = selectedTransactionId;
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: cycleDocument });
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
   const [problem, setProblem] = useState("");
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
   const [ribbonTab, setRibbonTab] = useState("Home");
-  const [bottomTab, setBottomTab] = useState<"Signal" | "Annotation" | "Problems" | "JSON">("Signal");
+  const [bottomTab, setBottomTab] = useState<"Signal" | "Annotation" | "Transaction" | "Problems" | "JSON">("Signal");
+  const [viewMode, setViewMode] = useState<"Cycle" | "Transaction" | "Split">("Cycle");
   const [followSelection, setFollowSelection] = useState(true);
   const followSelectionRef = useRef(true);
   followSelectionRef.current = followSelection;
   const [inspectorVisible, setInspectorVisible] = useState(true);
   const [bottomVisible, setBottomVisible] = useState(true);
   const [propertiesVisible, setPropertiesVisible] = useState(false);
+  const [exportVisible, setExportVisible] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
   const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
@@ -103,6 +110,7 @@ export function MinimalCycleView() {
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
   const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
+  const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
   const diagnostics = validateCanonicalDocument(snapshot.document);
 
   useEffect(() => {
@@ -112,7 +120,12 @@ export function MinimalCycleView() {
       registry.register("selection.delete", () => {
         const annotationId = selectedAnnotationRef.current;
         const signalId = selectedSignalRef.current;
-        if (annotationId) {
+        const transactionId = selectedTransactionRef.current;
+        if (transactionId) {
+          execute.current({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
+          selectedTransactionRef.current = undefined;
+          setSelectedTransactionId(undefined);
+        } else if (annotationId) {
           execute.current({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
           selectedAnnotationRef.current = undefined;
           setSelectedAnnotationId(undefined);
@@ -125,7 +138,9 @@ export function MinimalCycleView() {
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {
         const signalId = selectedSignalRef.current;
         const groupId = selectedGroupRef.current;
-        if (signalId) execute.current({ id: nextCommandId("route_rename"), type: "signal.rename", signalId, name });
+        const transactionId = selectedTransactionRef.current;
+        if (transactionId) execute.current({ id: nextCommandId("route_rename_transaction"), type: "transaction.rename", transactionId, name });
+        else if (signalId) execute.current({ id: nextCommandId("route_rename"), type: "signal.rename", signalId, name });
         else if (groupId) execute.current({ id: nextCommandId("route_rename_group"), type: "group.rename", groupId, name });
       }),
       registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => {
@@ -204,6 +219,15 @@ export function MinimalCycleView() {
       setZoom(currentZoom);
     };
     changeZoom.current = (delta) => applyZoom(currentZoom + delta);
+    snapTransactionCycle.current = (clientX) => {
+      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+      const referenceId = session.getSnapshot().document.timeline.referenceClock;
+      const referenceRow = referenceId ? projection.rowLayout.find((row) => row.rowId === referenceId) : undefined;
+      if (!waveLayer || !referenceRow) return undefined;
+      const bounds = waveLayer.getBoundingClientRect();
+      const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (clientX - bounds.left) / currentZoom, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+      return snap?.anchor.cycle;
+    };
     publishState();
 
     void renderer.whenIdle().then(() => {
@@ -254,6 +278,8 @@ export function MinimalCycleView() {
       setSelectedId(undefined);
       selectedAnnotationRef.current = undefined;
       setSelectedAnnotationId(undefined);
+      selectedTransactionRef.current = undefined;
+      setSelectedTransactionId(undefined);
       setProblem("");
       publishState();
       void renderer.whenIdle().then(() => {
@@ -313,6 +339,8 @@ export function MinimalCycleView() {
         selectedSignalRef.current = undefined;
         setSelectedAnnotationId(undefined);
         selectedAnnotationRef.current = undefined;
+        setSelectedTransactionId(undefined);
+        selectedTransactionRef.current = undefined;
         return;
       }
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
@@ -322,6 +350,8 @@ export function MinimalCycleView() {
         setSelectedAnnotationId(id);
         setSelectedId(undefined);
         setSelectedGroupId(undefined);
+        setSelectedTransactionId(undefined);
+        selectedTransactionRef.current = undefined;
         if (followSelectionRef.current) setBottomTab("Annotation");
         for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === id);
         return;
@@ -348,6 +378,8 @@ export function MinimalCycleView() {
         setSelectedAnnotationId(annotation.id);
         setSelectedId(undefined);
         setSelectedGroupId(undefined);
+        setSelectedTransactionId(undefined);
+        selectedTransactionRef.current = undefined;
         if (followSelectionRef.current) setBottomTab("Annotation");
         pendingArrow = undefined;
         setArrowPickStatus("idle");
@@ -370,6 +402,8 @@ export function MinimalCycleView() {
       setSelectedGroupId(undefined);
       selectedAnnotationRef.current = undefined;
       setSelectedAnnotationId(undefined);
+      selectedTransactionRef.current = undefined;
+      setSelectedTransactionId(undefined);
       if (followSelectionRef.current) setBottomTab("Signal");
       publishState();
     };
@@ -599,6 +633,7 @@ export function MinimalCycleView() {
       openDocument.current = () => undefined;
       newDocument.current = () => undefined;
       saveDocument.current = () => undefined;
+      snapTransactionCycle.current = () => undefined;
       renderer.dispose();
     };
   }, []);
@@ -608,6 +643,8 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = annotation.id;
     setSelectedAnnotationId(annotation.id);
     setSelectedId(undefined);
+    setSelectedTransactionId(undefined);
+    selectedTransactionRef.current = undefined;
     if (followSelectionRef.current) setBottomTab("Annotation");
   };
   const signalEditor = <SignalEditor
@@ -648,6 +685,24 @@ export function MinimalCycleView() {
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onDelete={() => commandRegistry.current.execute("selection.delete")}
   /> : <div className="empty-editor">Select or create an Annotation.</div>;
+  const selectTransaction = (id: TransactionId) => {
+    selectedTransactionRef.current = id;
+    setSelectedTransactionId(id);
+    selectedSignalRef.current = undefined; setSelectedId(undefined);
+    selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
+    selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
+    if (followSelectionRef.current) setBottomTab("Transaction");
+  };
+  const transactionEditor = <TransactionEditor
+    key={`${selectedTransaction?.id ?? "none"}:${snapshot.revision}`}
+    transaction={selectedTransaction}
+    document={snapshot.document}
+    history={history}
+    onSelect={selectTransaction}
+    onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+    onUndo={() => commandRegistry.current.execute("history.undo")}
+    onRedo={() => commandRegistry.current.execute("history.redo")}
+  />;
   const navigateProblem = (path: string) => {
     const target = resolveProblemTarget(path, snapshot.document);
     setSelectedId(target.kind === "signal" ? target.id as SignalId : undefined);
@@ -656,7 +711,10 @@ export function MinimalCycleView() {
     selectedGroupRef.current = target.kind === "group" ? target.id as GroupId : undefined;
     setSelectedAnnotationId(target.kind === "annotation" ? target.id as AnnotationId : undefined);
     selectedAnnotationRef.current = target.kind === "annotation" ? target.id as AnnotationId : undefined;
+    setSelectedTransactionId(target.kind === "transaction" ? target.id as TransactionId : undefined);
+    selectedTransactionRef.current = target.kind === "transaction" ? target.id as TransactionId : undefined;
     if (target.kind === "annotation" && followSelectionRef.current) setBottomTab("Annotation");
+    if (target.kind === "transaction" && followSelectionRef.current) setBottomTab("Transaction");
     if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
 
@@ -664,7 +722,7 @@ export function MinimalCycleView() {
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const).map((tab) => <button type="button" key={tab} className={ribbonTab === tab ? "active" : ""} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
-      <div className="view-mode"><span>View Mode:</span><button type="button" className="active">Cycle</button><button type="button" disabled>Transaction</button><button type="button" disabled>Split</button></div>
+      <div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => setViewMode(mode)}>{mode}</button>)}</div>
     </nav>
     <Ribbon
       tab={ribbonTab}
@@ -687,13 +745,15 @@ export function MinimalCycleView() {
       onSave={() => { const text = saveDocument.current(); if (text) downloadText(text, `${snapshot.document.document.title || "timing-chart"}.tcd.json`); }}
       onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) openDocument.current(text); else setProblem("No recent document is available."); }}
       onProperties={() => setPropertiesVisible(true)}
+      onExport={() => setExportVisible(true)}
       onToggleInspector={() => setInspectorVisible((value) => !value)}
       onToggleBottom={() => setBottomVisible((value) => !value)}
     />
     <div className="desktop-workspace">
-      <section className="cycle-panel" aria-label="Cycle View">
+      <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label="Cycle View">
         <div className="column-headings" aria-hidden="true"><span>Signal / Group</span><span>Role / signal</span><span>Cycle waveform</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
+          {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
           <div className="surface-host" ref={host} data-testid="cycle-surface" />
         </div>
@@ -701,21 +761,22 @@ export function MinimalCycleView() {
       <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button">＋ Signal</button><span>{snapshot.document.signals.length} signals</span></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
-          {(["Signal", "Annotation", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
+          {(["Signal", "Annotation", "Transaction", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
           <span />
           <label><input type="checkbox" checked={followSelection} onChange={(event) => setFollowSelection(event.target.checked)} /> Follow Selection</label>
           <button type="button" onClick={() => setFollowSelection(false)}>Pin</button>
         </nav>
-        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <JsonPanel document={snapshot.document} />}</div>
+        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <JsonPanel document={snapshot.document} />}</div>
       </section>}
-      {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
+      {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
     </div>
     {contextMenu && <div className="context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }} onMouseLeave={() => setContextMenu(undefined)}><button type="button" role="menuitem" onClick={() => { const current = selectedSignal?.name ?? selectedGroup?.name; const name = current === undefined ? null : window.prompt("Rename", current); if (name?.trim()) commandRegistry.current.execute("selection.rename", { name }); setContextMenu(undefined); }}>Rename</button><button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }}>Delete</button><button type="button" role="menuitem" onClick={() => { if (selectedSignal) commandRegistry.current.execute("selection.visibility", { visible: selectedSignal.display.visible === false }); setContextMenu(undefined); }}>Visibility</button></div>}
     {propertiesVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Document Properties" className="document-properties"><header><h2>Document Properties</h2><button type="button" aria-label="Close properties" onClick={() => setPropertiesVisible(false)}>×</button></header><dl><dt>Title</dt><dd>{snapshot.document.document.title}</dd><dt>ID</dt><dd>{snapshot.document.document.id}</dd><dt>Revision</dt><dd>{snapshot.document.document.footer.revision}</dd><dt>Signals</dt><dd>{snapshot.document.signals.length}</dd><dt>Cycles</dt><dd>{snapshot.document.timeline.cycleCount}</dd></dl></section></div>}
+    {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} onClose={() => setExportVisible(false)} />}
     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
     <footer className="status-bar">
       <span>Tool: Select</span>
-      <span>Selected: <strong data-testid="selection-status">{selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
+      <span>Selected: <strong data-testid="selection-status">{selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
       <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: On</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
@@ -730,10 +791,10 @@ function RibbonIcon({ name }: { readonly name: string }) {
   return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
 }
 
-function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onToggleInspector, onToggleBottom }: {
+function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
-  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void;
+  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void;
 }) {
   return <section className="ribbon" aria-label={`${tab} Ribbon`} data-testid="ribbon">
     <div className="ribbon-group file-group">
@@ -741,7 +802,7 @@ function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selected
       <button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span>Open</span></button>
       <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save</span></button>
       <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save As</span></button>
-      <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" disabled title="Enabled by Phase 12">Export</button></div><b>File</b>
+      <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
     </div>
     <div className="ribbon-group history-group"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><b>Edit</b></div>
     <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>
@@ -750,15 +811,19 @@ function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selected
   </section>;
 }
 
-function InspectorPanel({ signal, group, annotation, registry, document, onCommand }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly onCommand: (command: SemanticCommand) => void }) {
+function InspectorPanel({ signal, group, annotation, transaction, registry, document, onCommand }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly onCommand: (command: SemanticCommand) => void }) {
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
   const [spacingBefore, setSpacingBefore] = useState(group?.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(group?.spacingAfter ?? 0);
   const [visible, setVisible] = useState(signal?.display.visible !== false);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
+  const [transactionName, setTransactionName] = useState(transaction?.name ?? "");
+  const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
+  const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
+  const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");
   return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><button type="button">•••</button></header>
-    {!signal && !group && !annotation && <section className="inspector-empty">No selection</section>}
+    {!signal && !group && !annotation && !transaction && <section className="inspector-empty">No selection</section>}
     {signal && <>
       <section><h3>Signal</h3><div className="property-row"><span>Type</span><b>{signal.type}</b></div><label>Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} onBlur={() => { if (name.trim() && name.trim() !== signal.name) registry.execute("selection.rename", { name }); }} /></label><label>Role<select aria-label="Inspector signal role" value={signal.role} disabled><option>{signal.role}</option></select></label><label>Width<input value={signal.type === "bus" ? signal.width ?? "" : 1} readOnly /></label><label className="checkline">Visible<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => { setVisible(event.target.checked); registry.execute("selection.visibility", { visible: event.target.checked }); }} /></label><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Signal</button></section>
       <section><h3>Layout</h3><div className="property-row"><span>Row height</span><span>{document.layout.rowHeight}px</span></div><div className="property-row"><span>Spacing</span><span>{document.layout.signalSpacing}px</span></div></section>
@@ -766,6 +831,7 @@ function InspectorPanel({ signal, group, annotation, registry, document, onComma
     </>}
     {group && <section><h3>Group</h3><label>Name<input aria-label="Inspector group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} onBlur={() => { if (groupName.trim() && groupName.trim() !== group.name) registry.execute("selection.rename", { name: groupName }); }} /></label><label>Spacing Before<input aria-label="Group spacing before" type="number" min="0" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Group spacing after" type="number" min="0" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("group_layout"), type: "group.updateLayout", groupId: group.id, spacingBefore, spacingAfter })}>Apply Group Layout</button><div className="property-row"><span>Rows</span><span>{group.rows.length}</span></div><div className="property-row"><span>Collapsed</span><span>No</span></div></section>}
     {annotation && <section><h3>Annotation</h3><div className="property-row"><span>Type</span><b>{annotation.type}</b></div><div className="property-row"><span>Anchor</span><span>{annotation.anchor?.point ?? annotation.from?.point ?? annotation.start?.point}</span></div><div className="property-row"><span>Offset</span><span>{JSON.stringify((annotation.anchor ?? annotation.from ?? annotation.start)?.offset ?? { x: 0, y: 0 })}</span></div><div className="property-row"><span>Style</span><span>{annotation.lineType ?? "default"}</span></div><div className="property-row"><span>Text</span><span>{annotation.label}</span></div><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Annotation</button></section>}
+    {transaction && <section><h3>Transaction</h3><label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} onBlur={() => { if (transactionName.trim() && transactionName.trim() !== transaction.name) registry.execute("selection.rename", { name: transactionName }); }} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /></label><button type="button" onClick={() => { if (transactionStart !== transaction.start) onCommand({ id: nextCommandId("transaction_move"), type: "transaction.move", transactionId: transaction.id, start: transactionStart }); if (transactionEnd !== transaction.end) onCommand({ id: nextCommandId("transaction_resize"), type: "transaction.resize", transactionId: transaction.id, edge: "end", value: transactionEnd }); if (transactionLane.trim() !== (transaction.laneId ?? "lane_0")) onCommand({ id: nextCommandId("transaction_lane"), type: "transaction.moveLane", transactionId: transaction.id, laneId: transactionLane }); }}>Apply Transaction</button><h3>Linked Signals</h3>{document.signals.filter((item) => item.type !== "commentRow").map((item) => <label className="checkline" key={item.id}>{item.display.name}<input aria-label={`Link ${item.display.name}`} type="checkbox" checked={transaction.linkedSignals?.includes(item.id) ?? false} onChange={(event) => onCommand({ id: nextCommandId("transaction_link"), type: event.target.checked ? "transaction.linkSignal" : "transaction.unlinkSignal", transactionId: transaction.id, signalId: item.id })} /></label>)}<button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>}
   </aside>;
 }
 
@@ -781,6 +847,67 @@ function JsonPanel({ document }: { readonly document: CanonicalDocument }) {
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>Generated JSON</strong><span>🔒 Read only</span><button type="button" onClick={() => setStatus("Formatted")}>Format</button><button type="button" onClick={() => setStatus(validateCanonicalDocument(document).length === 0 ? "Valid" : "Invalid")}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(text); setStatus("Copied"); }}>Copy</button><select aria-label="JSON scope"><option>Selected Object</option><option>Whole Document</option></select><output>{status}</output></div><pre>{text}</pre></section>;
 }
 
+function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onCommand }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
+  const lanes = [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort();
+  const [drag, setDrag] = useState<{ id: TransactionId; edge: "body" | "start" | "end" }>();
+  const owner = useRef<HTMLElement>(null);
+  const [cycleXs, setCycleXs] = useState<readonly number[]>([]);
+  useEffect(() => {
+    let frame = 0; let attempts = 0;
+    const read = () => {
+      const ruler = owner.current?.parentElement?.querySelector<HTMLElement>(".cycle-ruler");
+      const values = Array.from(ruler?.querySelectorAll<HTMLElement>("[data-cycle]") ?? []).map((tick) => Number.parseFloat(tick.style.left));
+      if (values.length >= document.timeline.cycleCount) {
+        if (values.length === document.timeline.cycleCount && values.length > 1) values.push(values.at(-1)! + values.at(-1)! - values.at(-2)!);
+        setCycleXs(values);
+      }
+      else if (attempts++ < 20) frame = requestAnimationFrame(read);
+    };
+    frame = requestAnimationFrame(read); return () => cancelAnimationFrame(frame);
+  }, [document.timeline.cycleCount, document.transactions, zoom]);
+  const finish = (event: React.PointerEvent, transaction: Transaction) => {
+    if (!drag || drag.id !== transaction.id) return;
+    const cycle = onSnap(event.clientX);
+    setDrag(undefined);
+    if (cycle === undefined) return;
+    if (drag.edge === "body") {
+      const duration = transaction.end - transaction.start;
+      const start = Math.max(0, Math.min(document.timeline.cycleCount - duration, cycle));
+      if (start !== transaction.start) onCommand({ id: nextCommandId("transaction_snap_move"), type: "transaction.move", transactionId: transaction.id, start });
+    } else {
+      const value = drag.edge === "start" ? Math.min(cycle, transaction.end - 1) : Math.max(cycle, transaction.start + 1);
+      if (value !== transaction[drag.edge]) onCommand({ id: nextCommandId("transaction_snap_resize"), type: "transaction.resize", transactionId: transaction.id, edge: drag.edge, value });
+    }
+  };
+  const capture = (event: React.PointerEvent, next: { id: TransactionId; edge: "body" | "start" | "end" }) => { event.stopPropagation(); event.currentTarget.parentElement?.setPointerCapture(event.pointerId); setDrag(next); };
+  const x = (cycle: number) => cycleXs[cycle] ?? cycle / document.timeline.cycleCount * 640;
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom } as React.CSSProperties}><div className="transaction-lane-labels">{lanes.map((lane) => <span key={lane}>{lane}</span>)}</div><div className="transaction-track">{lanes.map((lane, laneIndex) => <div className="transaction-lane" key={lane} style={{ top: laneIndex * 28 }}>{document.transactions.filter((transaction) => (transaction.laneId ?? "lane_0") === lane).map((transaction) => <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: x(transaction.start), width: x(transaction.end) - x(transaction.start) }} onClick={() => onSelect(transaction.id)} onPointerUp={(event) => finish(event, transaction)}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>)}</div>)}</div></section>;
+}
+
+function TransactionEditor({ transaction, document, history, onSelect, onCommand, onUndo, onRedo }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void }) {
+  const [name, setName] = useState("Transaction");
+  const [start, setStart] = useState(1);
+  const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
+  const [laneId, setLaneId] = useState("lane_0");
+  return <section className="transaction-editor" data-testid="transaction-editor"><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header><form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction") as TransactionId; onCommand({ id: nextCommandId("transaction_create"), type: "transaction.create", transaction: { id, name: name.trim() || "Transaction", start, end, laneId } }); onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /></label><button type="submit">Create Transaction</button></form><div className="transaction-list">{document.transactions.map((item) => <button type="button" key={item.id} data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}><b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span></button>)}</div></section>;
+}
+
+function ExportDialog({ snapshot, range, onClose }: { readonly snapshot: CanonicalSnapshot; readonly range: { start: number; end: number }; readonly onClose: () => void }) {
+  const [format, setFormat] = useState<"svg" | "png" | "pdf">("svg");
+  const [scope, setScope] = useState<"document" | "selected-range">("document");
+  const [scale, setScale] = useState(2);
+  const [status, setStatus] = useState("");
+  const exportNow = async () => {
+    setStatus("Generating…");
+    try {
+      const bytes = await new DeterministicExportService().export({ format, snapshot, settings: { scope, ...(scope === "selected-range" ? { range } : {}), scale, page: { size: "A4", orientation: "landscape", margin: 24, fit: "width" }, foldPolicy: "respect" } });
+      downloadBytes(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
+      setStatus(`${format.toUpperCase()} ready`);
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Export failed"); }
+  };
+  return <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={onClose}>×</button></header><label>Format<select aria-label="Export format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output>{status}</output><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></footer></section></div>;
+}
+
 function downloadText(text: string, filename: string): void {
   const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
   const anchor = globalThis.document.createElement("a");
@@ -788,6 +915,13 @@ function downloadText(text: string, filename: string): void {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function downloadBytes(bytes: Uint8Array, filename: string, type: string): void {
+  const blob = new Blob([bytes as BlobPart], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 function AnnotationToolbar({ range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
@@ -1014,7 +1148,7 @@ function nextCommandId(scope: string): CommandId {
 }
 
 let entitySequence = 0;
-function nextEntityId(scope: "bookmark" | "time" | "annotation"): string {
+function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction"): string {
   entitySequence += 1;
   return `${scope}_phase9_${entitySequence}`;
 }

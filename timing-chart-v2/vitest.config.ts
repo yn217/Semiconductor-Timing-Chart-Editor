@@ -14,6 +14,7 @@ export default defineConfig({
       "@timing-chart-v2/wavedrom-adapter": source("wavedrom-adapter"),
       "@timing-chart-v2/projection": source("projection"),
       "@timing-chart-v2/renderer": source("renderer"),
+      "@timing-chart-v2/export": source("export"),
     },
   },
   test: {

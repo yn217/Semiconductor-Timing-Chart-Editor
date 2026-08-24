@@ -17,6 +17,7 @@ import type {
   SignalRole,
   TimeGroupId,
   TimeGroup,
+  Transaction,
   TransactionId,
 } from "@timing-chart-v2/schema";
 
@@ -50,6 +51,14 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
+  | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
+  | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
+  | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
+  | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
+  | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
+  | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>
+  | Readonly<{ id: CommandId; type: "transaction.linkSignal"; transactionId: TransactionId; signalId: SignalId }>
+  | Readonly<{ id: CommandId; type: "transaction.unlinkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.create"; annotation: Annotation }>
   | Readonly<{ id: CommandId; type: "annotation.delete"; annotationId: AnnotationId }>

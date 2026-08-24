@@ -223,6 +223,11 @@ export interface Transaction {
   readonly start: number;
   readonly end: number;
   readonly phases?: readonly TransactionPhase[];
+  readonly laneId?: string;
+  readonly linkedSignals?: readonly SignalId[];
+  readonly category?: string;
+  readonly style?: JsonObject;
+  readonly metadata?: JsonObject;
   readonly links?: JsonObject;
 }
 

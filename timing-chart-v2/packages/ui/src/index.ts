@@ -46,18 +46,20 @@ export function mayRouteGlobalShortcut(event: Pick<KeyboardEvent, "isComposing" 
   return scope !== "editable" && scope !== "modal" && scope !== "gesture";
 }
 
-export type ProblemTarget = Readonly<{ kind: "signal" | "group" | "annotation" | "timeline"; id?: string }>;
+export type ProblemTarget = Readonly<{ kind: "signal" | "group" | "annotation" | "transaction" | "timeline"; id?: string }>;
 
 /** Resolves canonical validation paths/IDs without persisting diagnostics as editor state. */
 export function resolveProblemTarget(path: string, document: {
   readonly signals: readonly Readonly<{ id: string }>[];
   readonly signalGroups: readonly Readonly<{ id: string }>[];
   readonly annotations: readonly Readonly<{ id: string }>[];
+  readonly transactions?: readonly Readonly<{ id: string }>[];
 }): ProblemTarget {
-  const match = /^\$\.(signals|signalGroups|annotations)\[(\d+)\]/.exec(path);
+  const match = /^\$\.(signals|signalGroups|annotations|transactions)\[(\d+)\]/.exec(path);
   if (!match) return { kind: "timeline" };
   const index = Number(match[2]);
   if (match[1] === "signals") return document.signals[index] ? { kind: "signal", id: document.signals[index].id } : { kind: "signal" };
   if (match[1] === "signalGroups") return document.signalGroups[index] ? { kind: "group", id: document.signalGroups[index].id } : { kind: "group" };
+  if (match[1] === "transactions") return document.transactions?.[index] ? { kind: "transaction", id: document.transactions[index].id } : { kind: "transaction" };
   return document.annotations[index] ? { kind: "annotation", id: document.annotations[index].id } : { kind: "annotation" };
 }

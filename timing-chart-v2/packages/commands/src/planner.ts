@@ -354,9 +354,11 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", "Signal does not exist.");
       const groups = document.signalGroups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== command.signalId) }));
-      const changeSet: ChangeSet = { removedSignals: [command.signalId], rowOrder: [command.signalId], minimapOverview: true };
-      const inverseChangeSet: ChangeSet = { addedSignals: [command.signalId], rowOrder: [command.signalId], waveSemantics: signal.type === "commentRow" ? [] : [command.signalId], geometryLocal: signal.type === "commentRow" ? [] : [command.signalId], minimapOverview: true };
-      return { ok: true, document: { ...document, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups }, changeSet, inverseChangeSet };
+      const linkedTransactions = document.transactions.filter((transaction) => transaction.linkedSignals?.includes(command.signalId));
+      const transactions = document.transactions.map((transaction) => transaction.linkedSignals?.includes(command.signalId) ? { ...transaction, linkedSignals: transaction.linkedSignals.filter((id) => id !== command.signalId) } : transaction);
+      const changeSet: ChangeSet = { removedSignals: [command.signalId], rowOrder: [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true };
+      const inverseChangeSet: ChangeSet = { addedSignals: [command.signalId], rowOrder: [command.signalId], waveSemantics: signal.type === "commentRow" ? [] : [command.signalId], geometryLocal: signal.type === "commentRow" ? [] : [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true };
+      return { ok: true, document: { ...document, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions }, changeSet, inverseChangeSet };
     }
     case "signal.rename": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
@@ -523,6 +525,86 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const timingRows = group.rows.filter((row): row is SignalId => document.signals.some((signal) => signal.id === row && signal.type !== "commentRow"));
       const changeSet: ChangeSet = { rowPresentation: group.rows, geometryScreenY: timingRows, annotationPosition: document.annotations.filter((annotation) => [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId && timingRows.includes(anchor.signalId))).map((annotation) => annotation.id), minimapOverview: true };
       return { ok: true, document: { ...document, signalGroups: groups }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.create": {
+      const transaction = command.transaction;
+      if (!isStableId(transaction.id)) return fail("invalid", "INVALID_STABLE_ID", "$.transaction.id", "Transaction ID must be stable.");
+      if (document.transactions.some((item) => item.id === transaction.id)) return fail("invalid", "DUPLICATE_ID", "$.transaction.id", `Transaction '${transaction.id}' already exists.`);
+      if (!transaction.name.trim()) return fail("invalid", "INVALID_NAME", "$.transaction.name", "Transaction name cannot be empty.");
+      if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.transaction", "Transaction must use a half-open source-time range.");
+      if (transaction.linkedSignals?.some((id) => !document.signals.some((signal) => signal.id === id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.linkedSignals", "Transaction links must target existing Signals.");
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.delete": {
+      const transaction = document.transactions.find((item) => item.id === command.transactionId);
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: document.transactions.filter((item) => item.id !== transaction.id) }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.rename": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      const name = command.name.trim();
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
+      if (name === transaction.name) return fail("no-op", "NO_OP", "$", "Transaction already has this name.");
+      const transactions = [...document.transactions]; transactions[index] = { ...transaction, name };
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.move": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      const delta = command.start - transaction.start;
+      const end = transaction.end + delta;
+      if (!Number.isInteger(command.start) || command.start < 0 || end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Moved Transaction is outside the source timeline.");
+      if (delta === 0) return fail("no-op", "NO_OP", "$", "Transaction is already at the requested start.");
+      const next = { ...transaction, start: command.start, end, ...(transaction.phases ? { phases: transaction.phases.map((phase) => ({ ...phase, start: phase.start + delta, end: phase.end + delta })) } : {}) };
+      const transactions = [...document.transactions]; transactions[index] = next;
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.resize": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      const start = command.edge === "start" ? command.value : transaction.start;
+      const end = command.edge === "end" ? command.value : transaction.end;
+      if (!Number.isInteger(command.value) || start < 0 || start >= end || end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.value", "Resized Transaction must remain a non-empty half-open range.");
+      if (start === transaction.start && end === transaction.end) return fail("no-op", "NO_OP", "$", "Transaction edge is unchanged.");
+      const phases = transaction.phases?.map((phase) => ({ ...phase, start: Math.max(start, phase.start), end: Math.min(end, phase.end) })).filter((phase) => phase.start < phase.end);
+      const { phases: _phases, ...base } = transaction;
+      const next = phases?.length ? { ...base, start, end, phases } : { ...base, start, end };
+      const transactions = [...document.transactions]; transactions[index] = next;
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.moveLane": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      const laneId = command.laneId.trim();
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      if (!laneId) return fail("invalid", "INVALID_LANE", "$.laneId", "Lane ID cannot be empty.");
+      if (transaction.laneId === laneId) return fail("no-op", "NO_OP", "$", "Transaction is already in this lane.");
+      const transactions = [...document.transactions]; transactions[index] = { ...transaction, laneId };
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.linkSignal":
+    case "transaction.unlinkSignal": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      if (!document.signals.some((signal) => signal.id === command.signalId)) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
+      const current = transaction.linkedSignals ?? [];
+      const linked = current.includes(command.signalId);
+      if ((command.type === "transaction.linkSignal" && linked) || (command.type === "transaction.unlinkSignal" && !linked)) return fail("no-op", "NO_OP", "$", "Transaction Signal link is unchanged.");
+      const linkedSignals = command.type === "transaction.linkSignal" ? [...current, command.signalId] : current.filter((id) => id !== command.signalId);
+      const transactions = [...document.transactions]; transactions[index] = { ...transaction, linkedSignals };
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);

@@ -25,7 +25,7 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   expect(workspace).toMatchObject({ y: 217 });
   expect(bottom).toMatchObject({ x: 330, height: 270 });
   expect(inspector).toMatchObject({ x: 1372, width: 300 });
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(0);
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(1);
   await expect(page.locator(".ribbon-group")).toHaveCount(5);
 });
 

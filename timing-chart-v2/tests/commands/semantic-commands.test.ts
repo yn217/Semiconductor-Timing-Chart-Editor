@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { AnnotationId, CommandId, GroupId, Signal, SignalId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, GroupId, Signal, SignalId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -13,6 +13,26 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("edits a Transaction through semantic commands and one-entry History", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const transactionId = "txn_read" as TransactionId;
+    expect(session.execute({ id: commandId("cmd_txn_create"), type: "transaction.create", transaction: { id: transactionId, name: "DMA Read", start: 1, end: 4, laneId: "lane_0", linkedSignals: ["sig_data" as SignalId] } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("cmd_txn_move"), type: "transaction.move", transactionId, start: 2 }).ok).toBe(true);
+    expect(session.execute({ id: commandId("cmd_txn_resize"), type: "transaction.resize", transactionId, edge: "end", value: 7 }).ok).toBe(true);
+    expect(session.execute({ id: commandId("cmd_txn_lane"), type: "transaction.moveLane", transactionId, laneId: "lane_1" }).ok).toBe(true);
+    expect(session.execute({ id: commandId("cmd_txn_unlink"), type: "transaction.unlinkSignal", transactionId, signalId: "sig_data" as SignalId }).ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toMatchObject({ start: 2, end: 7, laneId: "lane_1", linkedSignals: [] });
+    expect(session.historyState().undoDepth).toBe(5);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]?.linkedSignals).toEqual(["sig_data"]);
+  });
+
+  it("unlinks deleted Signals while retaining their Transactions", () => {
+    const document = { ...canonicalFixture(), transactions: [{ id: "txn_link" as TransactionId, name: "Linked", start: 1, end: 3, linkedSignals: ["sig_data" as SignalId] }] };
+    const plan = planCommand(document, { id: commandId("cmd_delete_linked"), type: "signal.delete", signalId: "sig_data" as SignalId });
+    expect(plan.ok).toBe(true);
+    if (plan.ok) expect(plan.document.transactions).toEqual([{ id: "txn_link", name: "Linked", start: 1, end: 3, linkedSignals: [] }]);
+  });
   it("plans one-signal edits without mutating the source", () => {
     const source = canonicalFixture();
     const before = JSON.stringify(source);
