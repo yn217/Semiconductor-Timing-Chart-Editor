@@ -60,10 +60,14 @@
     const top = Number(host.scrollTop || 0) - overscan;
     const bottom = Number(host.scrollTop || 0) + Number(host.clientHeight || 0) + overscan;
     for (const lane of surface.querySelectorAll(':scope > .waveform-surface-row')) {
-      const laneTop = Number.parseFloat(lane.style.top) || 0;
+      const laneTop = Number.parseFloat(lane.dataset.pendingTop ?? lane.style.top) || 0;
       const laneHeight = Number.parseFloat(lane.style.height) || 28;
       const active = !lane.hidden && laneTop + laneHeight >= top && laneTop <= bottom;
       const next = active ? 'block' : 'none';
+      if (active && lane.dataset.pendingTop !== undefined) {
+        lane.style.top = `${lane.dataset.pendingTop}px`;
+        delete lane.dataset.pendingTop;
+      }
       if (lane.style.display === next) continue;
       lane.style.display = next;
       lane.dataset.viewportState = active ? 'active' : 'virtualized';
@@ -253,6 +257,7 @@
     const { top, left, width } = values;
     const hidden = row.hidden || row.style.display === 'none';
     if (lane.style.top !== `${top}px`) lane.style.top = `${top}px`;
+    delete lane.dataset.pendingTop;
     if (lane.style.left !== `${left}px`) lane.style.left = `${left}px`;
     if (lane.style.width !== `${width}px`) lane.style.width = `${width}px`;
     if (lane.hidden !== hidden) lane.hidden = hidden;
@@ -386,7 +391,11 @@
       const hidden = entry.row.hidden || entry.row.style.display === 'none';
       if (lane) {
         lane.hidden = hidden;
-        if (lane.style.top !== `${traceTop}px`) lane.style.top = `${traceTop}px`;
+        lane.dataset.pendingTop = String(traceTop);
+        if (lane.dataset.viewportState !== 'virtualized') {
+          if (lane.style.top !== `${traceTop}px`) lane.style.top = `${traceTop}px`;
+          delete lane.dataset.pendingTop;
+        }
       }
       entry.row.dataset.surfaceRowTop = String(nextRowTop);
       entry.row.dataset.surfaceTraceTop = String(traceTop);
