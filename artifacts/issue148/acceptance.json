@@ -1,0 +1,244 @@
+{
+  "issue": 148,
+  "realBrowserDragTo": true,
+  "midpointRule": "after",
+  "before": {
+    "flatten": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "left": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "timing": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "frozen": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "selection": {
+      "kind": "signal",
+      "id": "req_valid"
+    },
+    "history": 0,
+    "dirty": false,
+    "wave": 7,
+    "geometry": 7,
+    "app": 1
+  },
+  "after": {
+    "flatten": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "left": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "timing": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "frozen": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "selection": {
+      "kind": "signal",
+      "id": "clk"
+    },
+    "history": 1,
+    "dirty": true,
+    "wave": 7,
+    "geometry": 7,
+    "app": 1
+  },
+  "undone": {
+    "flatten": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "left": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "timing": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "frozen": [
+      "clk",
+      "req_valid",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "selection": {
+      "kind": "signal",
+      "id": "clk"
+    },
+    "history": 0,
+    "dirty": false,
+    "wave": 7,
+    "geometry": 8,
+    "app": 2
+  },
+  "redone": {
+    "flatten": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "left": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "timing": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "frozen": [
+      "req_valid",
+      "clk",
+      "req_addr[7:0]",
+      "comment_01",
+      "busy",
+      "state[1:0]",
+      "comment_02",
+      "ready",
+      "rdata[15:0]",
+      "comment_03"
+    ],
+    "selection": {
+      "kind": "signal",
+      "id": "clk"
+    },
+    "history": 1,
+    "dirty": true,
+    "wave": 7,
+    "geometry": 9,
+    "app": 3
+  },
+  "stableSvgIdentity": true,
+  "errors": [],
+  "pass": true
+}
