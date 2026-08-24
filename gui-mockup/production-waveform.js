@@ -13,6 +13,17 @@
     metrics.geometryScreenRefreshes ??= 0;
     return metrics;
   };
+
+  // WaveDrom resolves its mount target by `${prefix}${index}` through
+  // document.getElementById().  The render window is virtualized, so its
+  // local array index is not stable across renders.  Encode the canonical
+  // signal id instead; code-point encoding is injective and remains valid in
+  // an HTML id without depending on CSS escaping or DOM position.
+  function stableMountKey(signalId) {
+    const text = String(signalId ?? '');
+    const encoded = [...text].map(character => character.codePointAt(0).toString(16)).join('_');
+    return `signal_${encoded || 'empty'}`;
+  }
   const traceRows = () => [...document.querySelectorAll('#cycleCanvas .wave-row')]
     .filter(row => row.querySelector('.trace'));
 
@@ -465,7 +476,9 @@
     if (lane && lane.dataset.surfacePositioned !== 'true') positionLane(row, lane);
     const host = lane?.querySelector(':scope > .trace') || row.querySelector('.trace');
     if (!host || !signal) return null;
-    host.id = `${mountPrefix}${index}`;
+    const mountKey = stableMountKey(signal.id);
+    host.id = `${mountPrefix}${mountKey}`;
+    host.dataset.waveDromMountKey = mountKey;
     host.dataset.renderer = 'wavedrom';
     host.dataset.staticMock = 'removed';
     renderMetrics().waveCacheLookups += 1;
@@ -481,7 +494,7 @@
     }
     if (!cacheHit) {
       host.innerHTML = '';
-      window.WaveDrom.RenderWaveForm(index, payload.waveJson, mountPrefix, false);
+      window.WaveDrom.RenderWaveForm(mountKey, payload.waveJson, mountPrefix, false);
       renderMetrics().waveDromRenders += 1;
     }
     const axisMetrics = window.TimingChartProductionController?.timeAxisMetrics;

@@ -1,0 +1,447 @@
+{
+  "issue": 158,
+  "viewport": {
+    "width": 1672,
+    "height": 941,
+    "deviceScaleFactor": 1
+  },
+  "originalIds": [
+    "clk",
+    "req_valid",
+    "req_addr[7:0]",
+    "comment_01",
+    "busy",
+    "state[1:0]",
+    "comment_02",
+    "ready",
+    "rdata[15:0]",
+    "comment_03"
+  ],
+  "duplicateResult": true,
+  "duplicateId": "clk_copy",
+  "duplicateHasTrace": true,
+  "duplicateUndo": true,
+  "duplicateRedo": true,
+  "addResult": true,
+  "addedHasTrace": true,
+  "addUndo": true,
+  "addRedo": true,
+  "finalIds": [
+    "clk",
+    "req_valid",
+    "req_addr[7:0]",
+    "comment_01",
+    "busy",
+    "state[1:0]",
+    "comment_02",
+    "ready",
+    "rdata[15:0]",
+    "comment_03",
+    "clk_copy",
+    "issue158_added"
+  ],
+  "stableIdentity": true,
+  "checks": [
+    {
+      "label": "initial",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    },
+    {
+      "label": "after-duplicate",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "clk_copy",
+          "id": "waveDromTrace_signal_63_6c_6b_5f_63_6f_70_79",
+          "mountKey": "signal_63_6c_6b_5f_63_6f_70_79",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    },
+    {
+      "label": "after-duplicate-undo",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    },
+    {
+      "label": "after-duplicate-redo",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "clk_copy",
+          "id": "waveDromTrace_signal_63_6c_6b_5f_63_6f_70_79",
+          "mountKey": "signal_63_6c_6b_5f_63_6f_70_79",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    },
+    {
+      "label": "after-add",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "clk_copy",
+          "id": "waveDromTrace_signal_63_6c_6b_5f_63_6f_70_79",
+          "mountKey": "signal_63_6c_6b_5f_63_6f_70_79",
+          "svg": true
+        },
+        {
+          "signalId": "issue158_added",
+          "id": "waveDromTrace_signal_69_73_73_75_65_31_35_38_5f_61_64_64_65_64",
+          "mountKey": "signal_69_73_73_75_65_31_35_38_5f_61_64_64_65_64",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    },
+    {
+      "label": "after-add-undo",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "clk_copy",
+          "id": "waveDromTrace_signal_63_6c_6b_5f_63_6f_70_79",
+          "mountKey": "signal_63_6c_6b_5f_63_6f_70_79",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    },
+    {
+      "label": "after-add-redo",
+      "entries": [
+        {
+          "signalId": "clk",
+          "id": "waveDromTrace_signal_63_6c_6b",
+          "mountKey": "signal_63_6c_6b",
+          "svg": true
+        },
+        {
+          "signalId": "req_valid",
+          "id": "waveDromTrace_signal_72_65_71_5f_76_61_6c_69_64",
+          "mountKey": "signal_72_65_71_5f_76_61_6c_69_64",
+          "svg": true
+        },
+        {
+          "signalId": "req_addr[7:0]",
+          "id": "waveDromTrace_signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "mountKey": "signal_72_65_71_5f_61_64_64_72_5b_37_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "busy",
+          "id": "waveDromTrace_signal_62_75_73_79",
+          "mountKey": "signal_62_75_73_79",
+          "svg": true
+        },
+        {
+          "signalId": "state[1:0]",
+          "id": "waveDromTrace_signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "mountKey": "signal_73_74_61_74_65_5b_31_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "ready",
+          "id": "waveDromTrace_signal_72_65_61_64_79",
+          "mountKey": "signal_72_65_61_64_79",
+          "svg": true
+        },
+        {
+          "signalId": "rdata[15:0]",
+          "id": "waveDromTrace_signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "mountKey": "signal_72_64_61_74_61_5b_31_35_3a_30_5d",
+          "svg": true
+        },
+        {
+          "signalId": "clk_copy",
+          "id": "waveDromTrace_signal_63_6c_6b_5f_63_6f_70_79",
+          "mountKey": "signal_63_6c_6b_5f_63_6f_70_79",
+          "svg": true
+        },
+        {
+          "signalId": "issue158_added",
+          "id": "waveDromTrace_signal_69_73_73_75_65_31_35_38_5f_61_64_64_65_64",
+          "mountKey": "signal_69_73_73_75_65_31_35_38_5f_61_64_64_65_64",
+          "svg": true
+        }
+      ],
+      "uniqueIds": true,
+      "uniqueKeys": true,
+      "allWaveDrom": true,
+      "noDuplicateDomIds": true
+    }
+  ],
+  "pageErrors": [],
+  "pass": true
+}
