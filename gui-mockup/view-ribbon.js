@@ -137,7 +137,7 @@
   let gridFrame = 0;
   let minimapFrame = 0;
   let minimapViewportFrame = 0;
-  const viewMetrics = controller.viewMetrics = controller.viewMetrics || { gridRebuilds: 0, gridBoundaryResolutions: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0 };
+  const viewMetrics = controller.viewMetrics = controller.viewMetrics || { gridRebuilds: 0, gridBoundaryResolutions: 0, minimapOverviewRebuilds: 0, minimapViewportUpdates: 0, minimapSceneSizeWrites: 0, minimapRowRectReads: 0 };
   const scheduleGrid = () => { if (gridFrame) return; gridFrame = requestAnimationFrame(() => { gridFrame = 0; renderGrid(); }); };
   const scheduleMinimap = () => { if (minimapFrame) return; minimapFrame = requestAnimationFrame(() => { minimapFrame = 0; renderMinimap(); }); };
   const scheduleMinimapViewport = () => { if (minimapViewportFrame) return; minimapViewportFrame = requestAnimationFrame(() => { minimapViewportFrame = 0; updateMinimapViewport(); }); };
@@ -202,21 +202,44 @@
     const wave = document.querySelector('#cycleCanvas .wave'); const hostRect = host.getBoundingClientRect();
     if (wave) {
       const rowsForExtent = [...document.querySelectorAll('#cycleCanvas .wave-row')];
-      const maxRight = Math.max(wave.getBoundingClientRect().right - hostRect.left + host.scrollLeft, ...rowsForExtent.map(row => row.getBoundingClientRect().right - hostRect.left + host.scrollLeft));
-      const maxBottom = Math.max(wave.getBoundingClientRect().bottom - hostRect.top + host.scrollTop, ...rowsForExtent.map(row => row.getBoundingClientRect().bottom - hostRect.top + host.scrollTop));
-      wave.style.minWidth = `${Math.max(920, Math.ceil(maxRight + 24))}px`;
-      wave.style.minHeight = `${Math.max(0, Math.ceil(maxBottom + 20))}px`;
+      // The scene size is an input to layout, not MiniMap-owned state.  Clear
+      // only the previous derived minimum while measuring so a refresh cannot
+      // measure its own margin and grow the scene again.
+      const previousMinWidth = wave.style.minWidth;
+      const previousMinHeight = wave.style.minHeight;
+      wave.style.minWidth = '';
+      wave.style.minHeight = '';
+      const naturalWaveRect = wave.getBoundingClientRect();
+      const naturalRowRects = rowsForExtent.map(row => row.getBoundingClientRect());
+      viewMetrics.minimapRowRectReads += naturalRowRects.length;
+      const maxRight = Math.max(naturalWaveRect.right - hostRect.left + host.scrollLeft, ...naturalRowRects.map(rect => rect.right - hostRect.left + host.scrollLeft));
+      const maxBottom = Math.max(naturalWaveRect.bottom - hostRect.top + host.scrollTop, ...naturalRowRects.map(rect => rect.bottom - hostRect.top + host.scrollTop));
+      const nextMinWidth = `${Math.max(920, Math.ceil(maxRight + 24))}px`;
+      const nextMinHeight = `${Math.max(0, Math.ceil(maxBottom + 20))}px`;
+      // Restore the last derived value when the measured layout is already
+      // stable; this avoids a style mutation (and its observer/layout work)
+      // on every idempotent overview refresh.
+      if (previousMinWidth === nextMinWidth && previousMinHeight === nextMinHeight) {
+        wave.style.minWidth = previousMinWidth;
+        wave.style.minHeight = previousMinHeight;
+      } else {
+        wave.style.minWidth = nextMinWidth;
+        wave.style.minHeight = nextMinHeight;
+        viewMetrics.minimapSceneSizeWrites += 1;
+        if (controller.renderMetrics) controller.renderMetrics.minimapSceneSizeWrites = (controller.renderMetrics.minimapSceneSizeWrites || 0) + 1;
+      }
     }
     let svg = mini.querySelector('[data-live-minimap]');
     if (!svg) { svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.dataset.liveMinimap = 'true'; svg.setAttribute('aria-label', 'Live timing overview'); svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;'; mini.appendChild(svg); }
     const width = Math.max(1, mini.clientWidth); const height = Math.max(1, mini.clientHeight); const contentWidth = Math.max(host.scrollWidth, host.clientWidth); const contentHeight = Math.max(host.scrollHeight, host.clientHeight);
     svg.setAttribute('viewBox', `0 0 ${width} ${height}`); svg.replaceChildren();
     const rows = [...document.querySelectorAll('#cycleCanvas .wave-row')];
-    if (controller.renderMetrics) controller.renderMetrics.minimapRowRectReads += rows.length;
+    if (controller.renderMetrics) controller.renderMetrics.minimapRowRectReads = (controller.renderMetrics.minimapRowRectReads || 0) + rows.length;
     rows.forEach((row, index) => { const rect = row.getBoundingClientRect(); const x = Math.max(0, (rect.left - hostRect.left + host.scrollLeft) / contentWidth * width); const y = Math.max(0, (rect.top - hostRect.top + host.scrollTop) / contentHeight * height); const w = Math.max(2, Math.min(width - x, (row.querySelector('.trace')?.getBoundingClientRect().width || contentWidth * 0.7) / contentWidth * width)); const line = document.createElementNS('http://www.w3.org/2000/svg', 'rect'); line.dataset.minimapRow = row.dataset.signalId || row.dataset.signal || String(index); line.setAttribute('x', x); line.setAttribute('y', y); line.setAttribute('width', w); line.setAttribute('height', Math.max(1, Math.min(4, rect.height / contentHeight * height))); line.setAttribute('fill', row.classList.contains('band-output') ? '#b887ee' : row.classList.contains('band-internal') ? '#63b56b' : '#5a99ee'); svg.appendChild(line); });
     updateMinimapViewport();
     controller.profileMark?.('minimap:end');
   };
+  controller.renderMinimap = renderMinimap;
   const panMiniMap = (clientX, clientY, drag = false) => {
     const host = scrollHost(); const mini = document.querySelector('.inspector .mini-canvas'); if (!host || !mini) return false;
     const rect = mini.getBoundingClientRect(); const x = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)); const y = Math.max(0, Math.min(1, (clientY - rect.top) / rect.height));
