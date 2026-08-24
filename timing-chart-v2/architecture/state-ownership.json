@@ -4,6 +4,10 @@
   { "key": "view.selection", "class": "transient", "owner": "ui", "saved": false, "undoable": false },
   { "key": "view.hover", "class": "transient", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "view.viewport", "class": "transient", "owner": "renderer", "saved": false, "undoable": false },
+  { "key": "view.panelTabs", "class": "transient", "owner": "ui", "saved": false, "undoable": false },
+  { "key": "view.editorDraft", "class": "transient", "owner": "ui", "saved": false, "undoable": false },
+  { "key": "interaction.commandRegistry", "class": "transient", "owner": "ui", "saved": false, "undoable": false },
+  { "key": "interaction.keyboardScope", "class": "transient", "owner": "ui", "saved": false, "undoable": false },
   { "key": "interaction.preview", "class": "transient", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "derived.waveJson", "class": "derived", "owner": "wavedrom-adapter", "saved": false, "undoable": false },
   { "key": "derived.waveSvg", "class": "derived", "owner": "wavedrom-adapter", "saved": false, "undoable": false },
@@ -13,6 +17,7 @@
   { "key": "derived.rowLayout", "class": "derived", "owner": "projection", "saved": false, "undoable": false },
   { "key": "derived.waveformSurface", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "derived.annotationOverlay", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
+  { "key": "derived.clockEdgeNumbers", "class": "derived", "owner": "renderer", "saved": false, "undoable": false },
   { "key": "derived.problems", "class": "derived", "owner": "core", "saved": false, "undoable": false },
   { "key": "derived.minimap", "class": "derived", "owner": "projection", "saved": false, "undoable": false }
 ]

@@ -61,6 +61,16 @@ canonical document. Geometry owns the immutable snap index; Renderer owns the
 stable overlay DOM and pointer preview. A completed pointer gesture dispatches
 one Annotation command, while cancel dispatches none.
 
+Phase 11's Ribbon, tree routes, Inspector, Bottom Editor, context menu, and
+keyboard shortcuts converge on one UI Command Registry. Inspector forms own
+only transient drafts; Apply, Enter, or blur dispatches one semantic command.
+The single global keyboard owner classifies editable/modal/gesture scopes and
+does not route composition events. Problems are recomputed from canonical
+validation and resolve their paths back to stable canonical selections. Panel,
+tab, selection, zoom, and document-properties state are view-only and never
+enter canonical History. Clock edge labels are renderer-owned projections of
+actual Local Geometry and do not regenerate WaveDrom.
+
 ## Render-domain policy
 
 - Reorder: row order and screen Y only; WaveDrom/local-geometry deltas are zero.

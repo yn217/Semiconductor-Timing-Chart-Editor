@@ -4,8 +4,10 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
-import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, ValueSignal } from "@timing-chart-v2/schema";
+import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
+import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, ValueSignal } from "@timing-chart-v2/schema";
+import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
 const signalId = (value: string) => value as SignalId;
@@ -67,7 +69,16 @@ export function MinimalCycleView() {
   const redo = useRef<() => void>(() => undefined);
   const armArrowPick = useRef<() => void>(() => undefined);
   const changeZoom = useRef<(delta: number) => void>(() => undefined);
+  const openDocument = useRef<(text: string) => void>(() => undefined);
+  const newDocument = useRef<() => void>(() => undefined);
+  const saveDocument = useRef<() => string | undefined>(() => undefined);
+  const fileInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<SignalId | undefined>();
+  const selectedSignalRef = useRef<SignalId | undefined>(undefined);
+  selectedSignalRef.current = selectedId;
+  const [selectedGroupId, setSelectedGroupId] = useState<GroupId | undefined>();
+  const selectedGroupRef = useRef<GroupId | undefined>(undefined);
+  selectedGroupRef.current = selectedGroupId;
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>();
   const selectedAnnotationRef = useRef<AnnotationId | undefined>(undefined);
   selectedAnnotationRef.current = selectedAnnotationId;
@@ -76,11 +87,56 @@ export function MinimalCycleView() {
   const [problem, setProblem] = useState("");
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
+  const [ribbonTab, setRibbonTab] = useState("Home");
+  const [bottomTab, setBottomTab] = useState<"Signal" | "Annotation" | "Problems" | "JSON">("Signal");
+  const [followSelection, setFollowSelection] = useState(true);
+  const followSelectionRef = useRef(true);
+  followSelectionRef.current = followSelection;
+  const [inspectorVisible, setInspectorVisible] = useState(true);
+  const [bottomVisible, setBottomVisible] = useState(true);
+  const [propertiesVisible, setPropertiesVisible] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
+  const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
+  const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
+  const diagnostics = validateCanonicalDocument(snapshot.document);
+
+  useEffect(() => {
+    const registry = commandRegistry.current;
+    const unregister = [
+      registry.register<SemanticCommand>("semantic.execute", (command) => execute.current(command)),
+      registry.register("selection.delete", () => {
+        const annotationId = selectedAnnotationRef.current;
+        const signalId = selectedSignalRef.current;
+        if (annotationId) {
+          execute.current({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
+          selectedAnnotationRef.current = undefined;
+          setSelectedAnnotationId(undefined);
+        } else if (signalId) {
+          execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
+          selectedSignalRef.current = undefined;
+          setSelectedId(undefined);
+        }
+      }),
+      registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {
+        const signalId = selectedSignalRef.current;
+        const groupId = selectedGroupRef.current;
+        if (signalId) execute.current({ id: nextCommandId("route_rename"), type: "signal.rename", signalId, name });
+        else if (groupId) execute.current({ id: nextCommandId("route_rename_group"), type: "group.rename", groupId, name });
+      }),
+      registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => {
+        const signalId = selectedSignalRef.current;
+        if (signalId) execute.current({ id: nextCommandId("route_visibility"), type: "signal.setVisibility", signalId, visible });
+      }),
+      registry.register("history.undo", () => undo.current()),
+      registry.register("history.redo", () => redo.current()),
+    ];
+    return () => unregister.forEach((dispose) => dispose());
+  }, []);
 
   useEffect(() => {
     const rulerElement = ruler.current;
@@ -97,7 +153,7 @@ export function MinimalCycleView() {
     const rulerElement = ruler.current;
     if (!rendererHost || !viewportElement || !rulerElement) return;
 
-    const session = new CommandHistorySession(cycleDocument);
+    let session = new CommandHistorySession(cycleDocument);
     const adapter = new ProductionWaveDromAdapter();
     const projectionService = new DefaultProjectionService();
     let referenceGeometry: LocalGeometryMap | undefined;
@@ -124,6 +180,7 @@ export function MinimalCycleView() {
     renderer.update(projection);
     const refreshOverlays = (document: CanonicalDocument) => {
       renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps));
+      renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps));
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
     };
 
@@ -184,6 +241,50 @@ export function MinimalCycleView() {
     execute.current = (command) => applyResult(session.execute(command));
     undo.current = () => applyResult(session.undo());
     redo.current = () => applyResult(session.redo());
+    const replaceDocument = (document: CanonicalDocument) => {
+      session = new CommandHistorySession(document);
+      geometryMaps.clear();
+      referenceGeometry = undefined;
+      window = viewportWindow(viewportElement);
+      projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window });
+      renderer.update(projection);
+      rulerElement.replaceChildren();
+      setSnapshot(session.getSnapshot());
+      setHistory(session.historyState());
+      setSelectedId(undefined);
+      selectedAnnotationRef.current = undefined;
+      setSelectedAnnotationId(undefined);
+      setProblem("");
+      publishState();
+      void renderer.whenIdle().then(() => {
+        if (!rendererHost.isConnected) return;
+        buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
+        applyZoom(currentZoom);
+        refreshOverlays(session.getSnapshot().document);
+        rendererHost.dataset.editorIdle = "true";
+      });
+    };
+    openDocument.current = (text) => {
+      const parsed = parseDocument(text);
+      if (!parsed.ok) {
+        setProblem(parsed.problems.map((item) => item.message).join(" "));
+        return;
+      }
+      replaceDocument(parsed.document);
+    };
+    newDocument.current = () => replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] });
+    saveDocument.current = () => {
+      try {
+        const text = serializeCanonicalDocument(session.getSnapshot().document);
+        localStorage.setItem("timing-chart-v2.recent", text);
+        session.markClean();
+        setHistory(session.historyState());
+        return text;
+      } catch (error) {
+        setProblem(error instanceof Error ? error.message : "Save failed.");
+        return undefined;
+      }
+    };
 
     let frame = 0;
     const onScroll = () => {
@@ -204,12 +305,24 @@ export function MinimalCycleView() {
       rendererHost.dataset.arrowPick = "from";
     };
     const onSelect = (event: MouseEvent) => {
+      const groupOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-branch'][data-group-id]") : null;
+      if (groupOwner?.dataset.groupId) {
+        setSelectedGroupId(groupOwner.dataset.groupId as GroupId);
+        selectedGroupRef.current = groupOwner.dataset.groupId as GroupId;
+        setSelectedId(undefined);
+        selectedSignalRef.current = undefined;
+        setSelectedAnnotationId(undefined);
+        selectedAnnotationRef.current = undefined;
+        return;
+      }
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
       if (annotationOwner?.dataset.annotationId) {
         const id = annotationOwner.dataset.annotationId as AnnotationId;
         selectedAnnotationRef.current = id;
         setSelectedAnnotationId(id);
         setSelectedId(undefined);
+        setSelectedGroupId(undefined);
+        if (followSelectionRef.current) setBottomTab("Annotation");
         for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === id);
         return;
       }
@@ -230,10 +343,12 @@ export function MinimalCycleView() {
           return;
         }
         const annotation: Annotation = { id: nextEntityId("annotation") as AnnotationId, type: "arrow", label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
-        execute.current({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
+        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
         selectedAnnotationRef.current = annotation.id;
         setSelectedAnnotationId(annotation.id);
         setSelectedId(undefined);
+        setSelectedGroupId(undefined);
+        if (followSelectionRef.current) setBottomTab("Annotation");
         pendingArrow = undefined;
         setArrowPickStatus("idle");
         delete rendererHost.dataset.arrowPick;
@@ -252,8 +367,10 @@ export function MinimalCycleView() {
       }
       rendererHost.dataset.selectedSignalId = id;
       setSelectedId(signal.id);
+      setSelectedGroupId(undefined);
       selectedAnnotationRef.current = undefined;
       setSelectedAnnotationId(undefined);
+      if (followSelectionRef.current) setBottomTab("Signal");
       publishState();
     };
     const onRulerSelect = (event: MouseEvent) => {
@@ -313,7 +430,7 @@ export function MinimalCycleView() {
           const sourceIndex = sourceGroup.rows.indexOf(dragged.id as SignalId);
           let index = targetGroup.rows.indexOf(target.dataset.rowId as SignalId) + (after ? 1 : 0);
           if (sourceGroup.id === targetGroup.id && sourceIndex < index) index -= 1;
-          execute.current({ id: nextCommandId("drag_signal"), type: "signal.move", signalId: dragged.id as SignalId, targetGroupId: targetGroup.id, index });
+          commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drag_signal"), type: "signal.move", signalId: dragged.id as SignalId, targetGroupId: targetGroup.id, index });
         }
       } else {
         const sourceIndex = document.signalGroups.findIndex((group) => group.id === dragged!.id);
@@ -321,7 +438,7 @@ export function MinimalCycleView() {
         if (sourceIndex >= 0 && targetIndex >= 0 && sourceIndex !== targetIndex) {
           let index = targetIndex + (after ? 1 : 0);
           if (sourceIndex < index) index -= 1;
-          execute.current({ id: nextCommandId("drag_group"), type: "group.move", groupId: dragged.id as GroupId, index });
+          commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drag_group"), type: "group.move", groupId: dragged.id as GroupId, index });
         }
       }
       dragged = undefined;
@@ -389,11 +506,11 @@ export function MinimalCycleView() {
       const annotation = session.getSnapshot().document.annotations.find((item) => item.id === drag.annotationId);
       if (!annotation) return;
       if (drag.label) {
-        execute.current({ id: nextCommandId("annotation_label_drag"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: (annotation.labelOffset?.x ?? 0) + dx, y: (annotation.labelOffset?.y ?? -14) + dy } });
+        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_label_drag"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: (annotation.labelOffset?.x ?? 0) + dx, y: (annotation.labelOffset?.y ?? -14) + dy } });
         return;
       }
       if (!drag.field) {
-        execute.current({ id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: annotation.id, delta: { x: dx, y: dy } });
+        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: annotation.id, delta: { x: dx, y: dy } });
         return;
       }
       const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
@@ -407,10 +524,20 @@ export function MinimalCycleView() {
         rendererHost.dataset.snapKind = snap.kind;
         rendererHost.dataset.snapDistance = String(snap.distance);
       }
-      execute.current({ id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
+      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
     };
     const onAnnotationKeyDown = (event: KeyboardEvent) => {
-      if (!(event.target instanceof Element)) return;
+      if (!(event.target instanceof Element) || !mayRouteGlobalShortcut(event, annotationDrag !== undefined)) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        commandRegistry.current.execute(event.shiftKey ? "history.redo" : "history.undo");
+        return;
+      }
+      if (event.key === "Delete") {
+        event.preventDefault();
+        commandRegistry.current.execute("selection.delete");
+        return;
+      }
       const owner = event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]");
       const delta = event.shiftKey ? 10 : 1;
       const movement = event.key === "ArrowLeft" ? { x: -delta, y: 0 } : event.key === "ArrowRight" ? { x: delta, y: 0 } : event.key === "ArrowUp" ? { x: 0, y: -delta } : event.key === "ArrowDown" ? { x: 0, y: delta } : undefined;
@@ -428,7 +555,13 @@ export function MinimalCycleView() {
       const anchor = field && annotation ? annotation[field] : undefined;
       if (!annotation || !field || !anchor) return;
       event.preventDefault();
-      execute.current({ id: nextCommandId("annotation_nudge"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: withAddedOffset(anchor, movement.x, movement.y) });
+      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_nudge"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: withAddedOffset(anchor, movement.x, movement.y) });
+    };
+    const onContextMenu = (event: MouseEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id]")) return;
+      event.preventDefault();
+      onSelect(event);
+      setContextMenu({ x: event.clientX, y: event.clientY });
     };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
     rendererHost.addEventListener("click", onSelect);
@@ -441,6 +574,7 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("pointermove", onAnnotationPointerMove);
     rendererHost.addEventListener("pointerup", onAnnotationPointerUp);
     rendererHost.addEventListener("pointercancel", clearAnnotationPreview);
+    rendererHost.addEventListener("contextmenu", onContextMenu);
     rendererHost.ownerDocument.addEventListener("keydown", onAnnotationKeyDown);
     return () => {
       cancelAnimationFrame(frame);
@@ -455,95 +589,205 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("pointermove", onAnnotationPointerMove);
       rendererHost.removeEventListener("pointerup", onAnnotationPointerUp);
       rendererHost.removeEventListener("pointercancel", clearAnnotationPreview);
+      rendererHost.removeEventListener("contextmenu", onContextMenu);
       rendererHost.ownerDocument.removeEventListener("keydown", onAnnotationKeyDown);
       execute.current = () => undefined;
       undo.current = () => undefined;
       redo.current = () => undefined;
       armArrowPick.current = () => undefined;
       changeZoom.current = () => undefined;
+      openDocument.current = () => undefined;
+      newDocument.current = () => undefined;
+      saveDocument.current = () => undefined;
       renderer.dispose();
     };
   }, []);
 
-  return <main className="editor-shell">
-    <header className="app-header">
-      <div><p className="eyebrow">TIMING CHART EDITOR V2</p><h1>Semiconductor Timing Chart</h1></div>
-      <span className="view-chip">Cycle View</span>
-    </header>
-    <section className="cycle-panel" aria-label="Cycle View">
-      <TimelineToolbar
-        document={snapshot.document}
-        range={timelineRange}
-        onRange={setTimelineRange}
-        onCommand={(command) => execute.current(command)}
-      />
-      <AnnotationToolbar
-        range={timelineRange}
-        signalId={selectedSignal?.id ?? clock.id}
-        onCreate={(annotation) => {
-          execute.current({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
-          selectedAnnotationRef.current = annotation.id;
-          setSelectedAnnotationId(annotation.id);
-          setSelectedId(undefined);
-        }}
-        arrowPickStatus={arrowPickStatus}
-        onArmArrow={() => armArrowPick.current()}
-      />
-      <div className="view-toolbar" aria-label="View controls"><strong>View</strong><button type="button" onClick={() => changeZoom.current(-0.25)}>Zoom out</button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" onClick={() => changeZoom.current(0.25)}>Zoom in</button></div>
-      <div className="column-headings" aria-hidden="true"><span>Signal tree</span><span>Role / signal</span><span>Cycle waveform</span></div>
-      <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
-        <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
-        <div className="surface-host" ref={host} data-testid="cycle-surface" />
-      </div>
-    </section>
-    {selectedAnnotation ? <AnnotationEditor
-      key={`${selectedAnnotation.id}:${snapshot.revision}`}
-      annotation={selectedAnnotation}
+  const createSelectedAnnotation = (annotation: Annotation) => {
+    commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
+    selectedAnnotationRef.current = annotation.id;
+    setSelectedAnnotationId(annotation.id);
+    setSelectedId(undefined);
+    if (followSelectionRef.current) setBottomTab("Annotation");
+  };
+  const signalEditor = <SignalEditor
+    key={`${selectedSignal?.id ?? "none"}:${snapshot.revision}`}
+    signal={selectedSignal}
+    cycleCount={snapshot.document.timeline.cycleCount}
+    history={history}
+    groups={snapshot.document.signalGroups}
+    problem={problem}
+    onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+    onUndo={() => commandRegistry.current.execute("history.undo")}
+    onRedo={() => commandRegistry.current.execute("history.redo")}
+    onVisibility={(_signalId, visible) => commandRegistry.current.execute("selection.visibility", { visible })}
+    onDropToGroup={(kind, id, targetGroupId) => {
+      const document = snapshot.document;
+      const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
+      if (!targetGroup) return;
+      if (kind === "signal") {
+        const sourceGroup = document.signalGroups.find((group) => group.rows.includes(id as SignalId));
+        let index = targetGroup.rows.length;
+        if (sourceGroup?.id === targetGroup.id) index = Math.max(0, index - 1);
+        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drop_group_target"), type: "signal.move", signalId: id as SignalId, targetGroupId, index });
+        return;
+      }
+      const sourceIndex = document.signalGroups.findIndex((group) => group.id === id);
+      const targetIndex = document.signalGroups.findIndex((group) => group.id === targetGroupId);
+      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
+    }}
+  />;
+  const annotationEditor = selectedAnnotation ? <AnnotationEditor
+    key={`${selectedAnnotation.id}:${snapshot.revision}`}
+    annotation={selectedAnnotation}
+    history={history}
+    problem={problem}
+    onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+    onUndo={() => commandRegistry.current.execute("history.undo")}
+    onRedo={() => commandRegistry.current.execute("history.redo")}
+    onDelete={() => commandRegistry.current.execute("selection.delete")}
+  /> : <div className="empty-editor">Select or create an Annotation.</div>;
+  const navigateProblem = (path: string) => {
+    const target = resolveProblemTarget(path, snapshot.document);
+    setSelectedId(target.kind === "signal" ? target.id as SignalId : undefined);
+    selectedSignalRef.current = target.kind === "signal" ? target.id as SignalId : undefined;
+    setSelectedGroupId(target.kind === "group" ? target.id as GroupId : undefined);
+    selectedGroupRef.current = target.kind === "group" ? target.id as GroupId : undefined;
+    setSelectedAnnotationId(target.kind === "annotation" ? target.id as AnnotationId : undefined);
+    selectedAnnotationRef.current = target.kind === "annotation" ? target.id as AnnotationId : undefined;
+    if (target.kind === "annotation" && followSelectionRef.current) setBottomTab("Annotation");
+    if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
+  };
+
+  return <main className="editor-shell" data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)}>
+    <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
+    <nav className="ribbon-tabs" aria-label="Ribbon tabs">
+      {(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const).map((tab) => <button type="button" key={tab} className={ribbonTab === tab ? "active" : ""} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
+      <div className="view-mode"><span>View Mode:</span><button type="button" className="active">Cycle</button><button type="button" disabled>Transaction</button><button type="button" disabled>Split</button></div>
+    </nav>
+    <Ribbon
+      tab={ribbonTab}
+      document={snapshot.document}
+      range={timelineRange}
       history={history}
-      problem={problem}
-      onCommand={(command) => execute.current(command)}
-      onUndo={() => undo.current()}
-      onRedo={() => redo.current()}
-      onDelete={() => {
-        execute.current({ id: nextCommandId("annotation_delete"), type: "annotation.delete", annotationId: selectedAnnotation.id });
-        selectedAnnotationRef.current = undefined;
-        setSelectedAnnotationId(undefined);
-      }}
-    /> : <SignalEditor
-      key={`${selectedSignal?.id ?? "none"}:${snapshot.revision}`}
-      signal={selectedSignal}
-      cycleCount={snapshot.document.timeline.cycleCount}
-      history={history}
-      groups={snapshot.document.signalGroups}
-      problem={problem}
-      onCommand={(command) => execute.current(command)}
-      onUndo={() => undo.current()}
-      onRedo={() => redo.current()}
-      onVisibility={(signalId, visible) => execute.current({ id: nextCommandId("visibility"), type: "signal.setVisibility", signalId, visible })}
-      onDropToGroup={(kind, id, targetGroupId) => {
-        const document = snapshot.document;
-        const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
-        if (!targetGroup) return;
-        if (kind === "signal") {
-          const sourceGroup = document.signalGroups.find((group) => group.rows.includes(id as SignalId));
-          let index = targetGroup.rows.length;
-          if (sourceGroup?.id === targetGroup.id) index = Math.max(0, index - 1);
-          execute.current({ id: nextCommandId("drop_group_target"), type: "signal.move", signalId: id as SignalId, targetGroupId, index });
-          return;
-        }
-        const sourceIndex = document.signalGroups.findIndex((group) => group.id === id);
-        const targetIndex = document.signalGroups.findIndex((group) => group.id === targetGroupId);
-        if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-        execute.current({ id: nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
-      }}
-    />}
+      zoom={zoom}
+      arrowPickStatus={arrowPickStatus}
+      selectedSignalId={selectedSignal?.id ?? clock.id}
+      onRange={setTimelineRange}
+      onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+      onCreateAnnotation={createSelectedAnnotation}
+      onArrowPick={() => armArrowPick.current()}
+      onZoom={(delta) => changeZoom.current(delta)}
+      onUndo={() => commandRegistry.current.execute("history.undo")}
+      onRedo={() => commandRegistry.current.execute("history.redo")}
+      onDelete={() => commandRegistry.current.execute("selection.delete")}
+      onNew={() => newDocument.current()}
+      onOpen={() => fileInput.current?.click()}
+      onSave={() => { const text = saveDocument.current(); if (text) downloadText(text, `${snapshot.document.document.title || "timing-chart"}.tcd.json`); }}
+      onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) openDocument.current(text); else setProblem("No recent document is available."); }}
+      onProperties={() => setPropertiesVisible(true)}
+      onToggleInspector={() => setInspectorVisible((value) => !value)}
+      onToggleBottom={() => setBottomVisible((value) => !value)}
+    />
+    <div className="desktop-workspace">
+      <section className="cycle-panel" aria-label="Cycle View">
+        <div className="column-headings" aria-hidden="true"><span>Signal / Group</span><span>Role / signal</span><span>Cycle waveform</span></div>
+        <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
+          <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
+          <div className="surface-host" ref={host} data-testid="cycle-surface" />
+        </div>
+      </section>
+      <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button">＋ Signal</button><span>{snapshot.document.signals.length} signals</span></aside>
+      {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
+        <nav className="bottom-tabs">
+          {(["Signal", "Annotation", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
+          <span />
+          <label><input type="checkbox" checked={followSelection} onChange={(event) => setFollowSelection(event.target.checked)} /> Follow Selection</label>
+          <button type="button" onClick={() => setFollowSelection(false)}>Pin</button>
+        </nav>
+        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <JsonPanel document={snapshot.document} />}</div>
+      </section>}
+      {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
+    </div>
+    {contextMenu && <div className="context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }} onMouseLeave={() => setContextMenu(undefined)}><button type="button" role="menuitem" onClick={() => { const current = selectedSignal?.name ?? selectedGroup?.name; const name = current === undefined ? null : window.prompt("Rename", current); if (name?.trim()) commandRegistry.current.execute("selection.rename", { name }); setContextMenu(undefined); }}>Rename</button><button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }}>Delete</button><button type="button" role="menuitem" onClick={() => { if (selectedSignal) commandRegistry.current.execute("selection.visibility", { visible: selectedSignal.display.visible === false }); setContextMenu(undefined); }}>Visibility</button></div>}
+    {propertiesVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Document Properties" className="document-properties"><header><h2>Document Properties</h2><button type="button" aria-label="Close properties" onClick={() => setPropertiesVisible(false)}>×</button></header><dl><dt>Title</dt><dd>{snapshot.document.document.title}</dd><dt>ID</dt><dd>{snapshot.document.document.id}</dd><dt>Revision</dt><dd>{snapshot.document.document.footer.revision}</dd><dt>Signals</dt><dd>{snapshot.document.signals.length}</dd><dt>Cycles</dt><dd>{snapshot.document.timeline.cycleCount}</dd></dl></section></div>}
+    <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
     <footer className="status-bar">
-      <span>Selected: <strong data-testid="selection-status">{selectedAnnotation?.label ?? selectedSignal?.display.name ?? "None"}</strong></span>
+      <span>Tool: Select</span>
+      <span>Selected: <strong data-testid="selection-status">{selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
+      <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: On</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
-      <span>{history.dirty ? "Modified" : "Clean"}</span>
+      <span>{history.dirty ? "Modified" : "Clean"}</span><span>Problems: {diagnostics.length}</span><span>WaveDrom: Ready</span>
     </footer>
   </main>;
+}
+
+const iconSprite = new URL("../../../../gui-mockup/icons.svg", import.meta.url).href;
+
+function RibbonIcon({ name }: { readonly name: string }) {
+  return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
+}
+
+function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onToggleInspector, onToggleBottom }: {
+  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId;
+  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
+  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void;
+}) {
+  return <section className="ribbon" aria-label={`${tab} Ribbon`} data-testid="ribbon">
+    <div className="ribbon-group file-group">
+      <button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span>New</span></button>
+      <button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span>Open</span></button>
+      <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save</span></button>
+      <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save As</span></button>
+      <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" disabled title="Enabled by Phase 12">Export</button></div><b>File</b>
+    </div>
+    <div className="ribbon-group history-group"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><b>Edit</b></div>
+    <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>
+    <div className="ribbon-group annotation-group"><AnnotationToolbar range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
+    <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input type="checkbox" defaultChecked /> Grid</label><label><input type="checkbox" defaultChecked /> Snap</label></div><b>View</b></div>
+  </section>;
+}
+
+function InspectorPanel({ signal, group, annotation, registry, document, onCommand }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [name, setName] = useState(signal?.name ?? "");
+  const [groupName, setGroupName] = useState(group?.name ?? "");
+  const [spacingBefore, setSpacingBefore] = useState(group?.spacingBefore ?? 0);
+  const [spacingAfter, setSpacingAfter] = useState(group?.spacingAfter ?? 0);
+  const [visible, setVisible] = useState(signal?.display.visible !== false);
+  const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings | undefined>(signal?.type === "clock" ? signal.edgeCounter : undefined);
+  return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><button type="button">•••</button></header>
+    {!signal && !group && !annotation && <section className="inspector-empty">No selection</section>}
+    {signal && <>
+      <section><h3>Signal</h3><div className="property-row"><span>Type</span><b>{signal.type}</b></div><label>Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} onBlur={() => { if (name.trim() && name.trim() !== signal.name) registry.execute("selection.rename", { name }); }} /></label><label>Role<select aria-label="Inspector signal role" value={signal.role} disabled><option>{signal.role}</option></select></label><label>Width<input value={signal.type === "bus" ? signal.width ?? "" : 1} readOnly /></label><label className="checkline">Visible<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => { setVisible(event.target.checked); registry.execute("selection.visibility", { visible: event.target.checked }); }} /></label><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Signal</button></section>
+      <section><h3>Layout</h3><div className="property-row"><span>Row height</span><span>{document.layout.rowHeight}px</span></div><div className="property-row"><span>Spacing</span><span>{document.layout.signalSpacing}px</span></div></section>
+      {signal.type === "clock" && edgeCounter && <section><h3>Edge Numbers</h3><label className="checkline">Show<input aria-label="Edge Numbers show" type="checkbox" checked={edgeCounter.show} onChange={(event) => setEdgeCounter({ ...edgeCounter, show: event.target.checked })} /></label><label>Mode<select aria-label="Edge Numbers mode" value={edgeCounter.mode} onChange={(event) => setEdgeCounter({ ...edgeCounter, mode: event.target.value as EdgeCounterSettings["mode"] })}><option value="rising">Rising</option><option value="falling">Falling</option><option value="both">Both</option></select></label><label>Start number<input aria-label="Edge Numbers start" type="number" value={edgeCounter.startNumber} onChange={(event) => setEdgeCounter({ ...edgeCounter, startNumber: Number(event.target.value) })} /></label><label>Count from<select aria-label="Edge Numbers count from" value={edgeCounter.countFrom} onChange={(event) => setEdgeCounter({ ...edgeCounter, countFrom: event.target.value as EdgeCounterSettings["countFrom"] })}><option value="signal-start">Signal start</option><option value="selected-edge">Selected edge</option><option value="marker">Marker</option><option value="visible-range-start">Visible range start</option></select></label><label>Every N<input aria-label="Edge Numbers every" type="number" min="1" value={edgeCounter.labelEvery} onChange={(event) => setEdgeCounter({ ...edgeCounter, labelEvery: Number(event.target.value) })} /></label><label>Position<select aria-label="Edge Numbers position" value={edgeCounter.position} onChange={(event) => setEdgeCounter({ ...edgeCounter, position: event.target.value as EdgeCounterSettings["position"] })}><option value="above">Above</option><option value="below">Below</option></select></label><label>X offset<input aria-label="Edge Numbers X" type="number" value={edgeCounter.offset.x} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, x: Number(event.target.value) } })} /></label><label>Y offset<input aria-label="Edge Numbers Y" type="number" value={edgeCounter.offset.y} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, y: Number(event.target.value) } })} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("edge_counter"), type: "signal.updateEdgeCounter", signalId: signal.id, edgeCounter })}>Apply Edge Numbers</button></section>}
+    </>}
+    {group && <section><h3>Group</h3><label>Name<input aria-label="Inspector group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} onBlur={() => { if (groupName.trim() && groupName.trim() !== group.name) registry.execute("selection.rename", { name: groupName }); }} /></label><label>Spacing Before<input aria-label="Group spacing before" type="number" min="0" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Group spacing after" type="number" min="0" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("group_layout"), type: "group.updateLayout", groupId: group.id, spacingBefore, spacingAfter })}>Apply Group Layout</button><div className="property-row"><span>Rows</span><span>{group.rows.length}</span></div><div className="property-row"><span>Collapsed</span><span>No</span></div></section>}
+    {annotation && <section><h3>Annotation</h3><div className="property-row"><span>Type</span><b>{annotation.type}</b></div><div className="property-row"><span>Anchor</span><span>{annotation.anchor?.point ?? annotation.from?.point ?? annotation.start?.point}</span></div><div className="property-row"><span>Offset</span><span>{JSON.stringify((annotation.anchor ?? annotation.from ?? annotation.start)?.offset ?? { x: 0, y: 0 })}</span></div><div className="property-row"><span>Style</span><span>{annotation.lineType ?? "default"}</span></div><div className="property-row"><span>Text</span><span>{annotation.label}</span></div><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Annotation</button></section>}
+  </aside>;
+}
+
+function ProblemsPanel({ diagnostics, onNavigate }: { readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigate: (path: string) => void }) {
+  const [filter, setFilter] = useState("");
+  const visible = diagnostics.filter((item) => `${item.code} ${item.path} ${item.message}`.toLowerCase().includes(filter.toLowerCase()));
+  return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Refresh</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td></tr>)}</tbody></table>}</section>;
+}
+
+function JsonPanel({ document }: { readonly document: CanonicalDocument }) {
+  const text = serializeCanonicalDocument(document);
+  const [status, setStatus] = useState("Read only");
+  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>Generated JSON</strong><span>🔒 Read only</span><button type="button" onClick={() => setStatus("Formatted")}>Format</button><button type="button" onClick={() => setStatus(validateCanonicalDocument(document).length === 0 ? "Valid" : "Invalid")}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(text); setStatus("Copied"); }}>Copy</button><select aria-label="JSON scope"><option>Selected Object</option><option>Whole Document</option></select><output>{status}</output></div><pre>{text}</pre></section>;
+}
+
+function downloadText(text: string, filename: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  const anchor = globalThis.document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function AnnotationToolbar({ range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
@@ -813,6 +1057,25 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
   });
 }
 
+function projectEdgeCounters(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>): EdgeCounterOverlayPrimitive[] {
+  return document.signals.flatMap((signal) => {
+    if (signal.type !== "clock" || !signal.edgeCounter.show) return [];
+    const map = maps.get(signal.id);
+    const rowY = projection.rowLayout.find((row) => row.rowId === signal.id)?.y ?? 0;
+    if (!map) return [];
+    const edges: { readonly x: number; readonly y: number; readonly kind: "rising" | "falling"; readonly cycle: number }[] = [];
+    for (let cycle = 0; cycle < document.timeline.cycleCount; cycle += 1) {
+      for (const kind of ["rising", "falling"] as const) {
+        if (signal.edgeCounter.mode !== "both" && signal.edgeCounter.mode !== kind) continue;
+        const local = map.find({ signalId: signal.id, cycle, point: kind === "rising" ? "rising-edge" : "falling-edge" });
+        if (local) edges.push({ x: local.point.x, y: rowY + local.point.y, kind, cycle });
+      }
+    }
+    edges.sort((left, right) => left.x - right.x || left.kind.localeCompare(right.kind));
+    return edges.flatMap((edge, index) => index % signal.edgeCounter.labelEvery === 0 ? [{ id: `edge:${signal.id}:${edge.kind}:${edge.cycle}`, signalId: signal.id, x: edge.x + signal.edgeCounter.offset.x, y: edge.y + signal.edgeCounter.offset.y + (signal.edgeCounter.position === "above" ? -6 : 10), label: String(signal.edgeCounter.startNumber + index) }] : []);
+  });
+}
+
 function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService()): ImmutableSnapIndex {
   return service.build({ document, geometryMaps: maps, rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])) });
 }
@@ -844,9 +1107,10 @@ function viewportWindow(viewport: HTMLElement): VirtualizationWindow {
   };
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId): void {
-  if (!geometry) {
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined): void {
+  if (!geometry || !referenceSignalId) {
     element.dataset.geometryError = "Reference-clock geometry unavailable";
+    element.replaceChildren();
     return;
   }
   const ticks: HTMLElement[] = [];

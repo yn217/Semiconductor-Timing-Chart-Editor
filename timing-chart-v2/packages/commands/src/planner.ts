@@ -464,6 +464,16 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, generator }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.updateEdgeCounter": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type !== "clock") return fail("invalid", "SIGNAL_NOT_CLOCK", "$.signalId", "Edge Numbers require a clock signal.");
+      const settings = command.edgeCounter;
+      if (!Number.isInteger(settings.startNumber) || !Number.isInteger(settings.labelEvery) || settings.labelEvery < 1 || !Number.isFinite(settings.offset.x) || !Number.isFinite(settings.offset.y)) return fail("invalid", "INVALID_EDGE_COUNTER", "$.edgeCounter", "Edge Number settings are invalid.");
+      if (JSON.stringify(signal.edgeCounter) === JSON.stringify(settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
+      const changeSet: ChangeSet = { rowPresentation: [signal.id] };
+      return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
+    }
     case "group.create": {
       if (command.group.rows.length > 0 || (command.group.spacers?.length ?? 0) > 0) return fail("invalid", "GROUP_CREATE_NOT_EMPTY", "$.group", "Group creation cannot implicitly move existing rows.");
       if (!Number.isInteger(command.index) || command.index < 0 || command.index > document.signalGroups.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Group insertion index is outside the group list.");

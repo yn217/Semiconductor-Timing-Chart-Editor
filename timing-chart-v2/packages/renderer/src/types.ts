@@ -48,11 +48,20 @@ export interface SnapGuidePrimitive {
   readonly label: string;
 }
 
+export interface EdgeCounterOverlayPrimitive {
+  readonly id: string;
+  readonly signalId: string;
+  readonly x: number;
+  readonly y: number;
+  readonly label: string;
+}
+
 export interface TimingChartRenderer {
   mount(host: HTMLElement): void;
   update(projection: RenderProjection): void;
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void;
   updateSnapGuide(guide?: SnapGuidePrimitive): void;
+  updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void;
   counters(): Readonly<RenderCounters>;
   dispose(): void;
 }

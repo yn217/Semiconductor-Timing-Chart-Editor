@@ -1,5 +1,5 @@
 import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import type { AnnotationOverlayPrimitive, RenderCounters, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
 
 interface Layers {
   readonly root: HTMLElement;
@@ -19,6 +19,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #waveOwners = new Map<WaveSignalId, HTMLElement>();
   readonly #overlayOwners = new Map<string, HTMLElement>();
   readonly #overlaySignatures = new Map<string, string>();
+  readonly #edgeCounterOwners = new Map<string, HTMLElement>();
   readonly #dirtyWaves = new Set<WaveSignalId>();
   readonly #waveVersions = new Map<WaveSignalId, number>();
   readonly #wavePending = new Set<WaveSignalId>();
@@ -158,6 +159,26 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     layers.interactive.replaceChildren(row, vertical, point, label);
   }
 
+  updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void {
+    const layers = this.#layers;
+    if (!layers) throw new Error("Timing chart renderer must be mounted before Edge Number update.");
+    const active = new Set(primitives.map((primitive) => primitive.id));
+    for (const [id, owner] of this.#edgeCounterOwners) if (!active.has(id)) { owner.remove(); this.#edgeCounterOwners.delete(id); }
+    for (const primitive of primitives) {
+      let owner = this.#edgeCounterOwners.get(primitive.id);
+      if (!owner) {
+        owner = layers.root.ownerDocument.createElement("span");
+        owner.dataset.role = "clock-edge-number";
+        owner.dataset.edgeCounterId = primitive.id;
+        owner.dataset.signalId = primitive.signalId;
+        this.#edgeCounterOwners.set(primitive.id, owner);
+        layers.overlays.append(owner);
+      }
+      owner.style.transform = `translate(${primitive.x}px, ${primitive.y}px)`;
+      owner.textContent = primitive.label;
+    }
+  }
+
   async whenIdle(): Promise<void> {
     await Promise.all([...this.#pending]);
   }
@@ -173,6 +194,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#timingRows.clear();
     this.#overlayOwners.clear();
     this.#overlaySignatures.clear();
+    this.#edgeCounterOwners.clear();
     this.#rowY.clear();
     this.#layers?.root.remove();
     this.#layers = undefined;

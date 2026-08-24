@@ -11,6 +11,7 @@ import type {
   PixelOffset,
   Signal,
   ClockGenerator,
+  EdgeCounterSettings,
   SignalGroup,
   SignalId,
   SignalRole,
@@ -33,6 +34,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
   | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; displayFormat?: "hex" | "binary" | "symbolic" }>
   | Readonly<{ id: CommandId; type: "signal.updateClockGenerator"; signalId: SignalId; generator: ClockGenerator }>
+  | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
   | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>
   | Readonly<{ id: CommandId; type: "group.delete"; groupId: GroupId }>
   | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>
