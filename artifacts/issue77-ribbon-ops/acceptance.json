@@ -1,0 +1,117 @@
+{
+  "issue": "77 (Transaction operations + Time + Links Ribbon groups, Split-mode Cycle View cross-highlight, and Open lifecycle -- not the full Transaction Ribbon spec)",
+  "setup": true,
+  "buttons": [
+    {
+      "action": "add",
+      "status": "implemented",
+      "label": "Transaction追加"
+    },
+    {
+      "action": "duplicate",
+      "status": "implemented",
+      "label": "Transaction複製"
+    },
+    {
+      "action": "delete",
+      "status": "implemented",
+      "label": "Transaction削除"
+    },
+    {
+      "action": "up",
+      "status": "implemented",
+      "label": "前に移動"
+    },
+    {
+      "action": "down",
+      "status": "implemented",
+      "label": "後に移動"
+    },
+    {
+      "action": "apply-range",
+      "status": "implemented",
+      "label": "選択範囲を適用"
+    },
+    {
+      "action": "reveal-links",
+      "status": "implemented",
+      "label": "Cycle Viewで表示"
+    }
+  ],
+  "disabledState": {
+    "disabledWithoutSelection": true,
+    "addEnabled": true,
+    "enabledWithSelection": true
+  },
+  "duplicateFlow": {
+    "addedOne": true,
+    "undoDelta": 1,
+    "newIdDifferent": true,
+    "sourceStillExists": true
+  },
+  "reorderFlow": {
+    "indexBefore": 2,
+    "indexAfterUp": 1,
+    "upUndoDelta": 1,
+    "stillSelected": true,
+    "atTop": true,
+    "boundaryNoOpUndoDelta": 0
+  },
+  "deleteFlow": {
+    "removed": true,
+    "undoDelta": 1
+  },
+  "revealFlow": {
+    "disabledNoSelection": true,
+    "disabledNoLinks": true,
+    "enabledWithLinks": true,
+    "modeAfterClick": "split",
+    "unchanged": true
+  },
+  "rangeFlow": {
+    "before": {
+      "start": 0,
+      "end": 2,
+      "phases": [
+        {
+          "name": "Request",
+          "start": 0,
+          "end": 1
+        },
+        {
+          "name": "Response",
+          "start": 1,
+          "end": 2
+        }
+      ]
+    },
+    "disabledNoSelection": true,
+    "disabledNoRange": true,
+    "enabledWithRange": true,
+    "undoDelta": 1,
+    "start": 1,
+    "end": 6,
+    "phaseIssue": false
+  },
+  "splitCrossHighlight": {
+    "cycleHighlighted": true,
+    "treeHighlighted": true,
+    "clearedAfterDelete": true
+  },
+  "openLifecycle": {
+    "ok": true,
+    "txnCountAfter": 0,
+    "selectionIsStaleTransaction": false,
+    "crossHighlightReferencesGoneSignal": false,
+    "staleCanvasHighlight": false
+  },
+  "homeRegression": {
+    "foundHomeButtons": true,
+    "signalDuplicateStillWorks": true
+  },
+  "errors": [],
+  "pass": true,
+  "artifacts": [
+    "issue77-ribbon-ops-1672x941.png"
+  ]
+}

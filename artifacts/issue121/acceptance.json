@@ -19,6 +19,11 @@
     "basicVisible": true,
     "labelValue": "リクエスト受付からレスポンスまで 6 cycle"
   },
+  "styleToggle": {
+    "styleInitial": "none",
+    "styleAfterFirstClick": "block",
+    "styleAfterSecondClick": "none"
+  },
   "docUnchanged": true,
   "historyCheck": {},
   "errors": [],

@@ -597,10 +597,20 @@
   }
 
   const tool = text => [...document.querySelectorAll('.tool')].find(button => button.querySelector('.tool-label')?.textContent?.replace(/\s/g, '').includes(text));
-  const promptCycle = (message, fallback) => Number(window.prompt(message, String(fallback)));
   tool('Cycle挿入')?.addEventListener('click', () => insert(model.timeSelection.cycle, 1));
   tool('Cycle削除')?.addEventListener('click', () => removeRange(model.timeSelection.cycle, model.timeSelection.cycle + 1));
-  tool('NCycle挿入')?.addEventListener('click', () => { const count = promptCycle('挿入するCycle数', 2); insert(model.timeSelection.cycle, count); });
+  tool('NCycle挿入')?.addEventListener('click', event => {
+    if (typeof window.issue92ShowFieldPopover !== 'function') return;
+    window.issue92ShowFieldPopover({
+      anchor: event.currentTarget, title: 'N Cycle 挿入',
+      fields: [{ key: 'count', label: '挿入するCycle数', type: 'number', min: 1, max: 1000, step: 1, value: 2, validate: value => {
+        if (!Number.isFinite(value) || !Number.isInteger(value)) return '整数を入力してください';
+        if (value < 1) return '1以上の値を入力してください';
+        return null;
+      } }],
+      onApply: values => insert(model.timeSelection.cycle, values.count)
+    });
+  });
   tool('範囲削除')?.addEventListener('click', () => { const start = Number(model.timeSelection?.rangeStart); const end = Number(model.timeSelection?.rangeEnd); if (Number.isInteger(start) && Number.isInteger(end) && end > start) controller.actions.deleteRange(start, end); });
   renderTransient(model);
 })();

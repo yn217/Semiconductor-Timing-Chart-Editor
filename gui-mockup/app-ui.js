@@ -11,9 +11,9 @@ function derivedRows(signal){const values=[...(signal?.values||[])].sort((a,b)=>
 
 function signalToolbar(model=getProductionModel()){const controller=window.TimingChartProductionController;const signalId=selectedSignal(model);const signal=controller?.selectors?.getSignal?.(signalId);const role=signal?.role||'internal';const roleClass=role==='output'?'out':role==='internal'?'wire':'in';const roleLabel=role==='output'?'o':role==='internal'?'wire':'i';const next=controller?.getNextSignalValueInsertion?.(signalId);const addState=next===null?' disabled title="変更点を追加できる空きcycleがありません"':` title="Cycle ${next} に変更点を追加"`;const validation=model.validation?.length?`<span style="color:#b22">● ${esc(model.validation[0].message||model.validation[0].code)}</span>`:'';return `<div class="selected-line">選択中の信号:　${esc(signal?.display?.name||signal?.name||signalId)} <span class="role ${roleClass}">${roleLabel}</span> ${validation}</div><div class="toolbar-line"><button class="mini-btn primary" data-editor-action="add"${addState}>＋ 変更点を追加</button><button class="mini-btn" data-editor-action="duplicate">▣ 行を複製</button><button class="mini-btn" data-editor-action="delete">🗑 行を削除</button><button class="mini-btn" data-editor-action="import">⇩ インポート...</button><button class="mini-btn" data-editor-action="export">⇧ エクスポート...</button><button class="mini-btn" data-editor-action="refresh">⟳ プレビュー更新</button></div>`}
 function editorInput(signal,index,field,value,type='text'){return `<input data-editor-index="${index}" data-editor-field="${field}" value="${esc(value)}" type="${type}" style="width:100%;border:0;background:transparent;text-align:center;font:inherit;padding:0">`}
-function binaryPanel(model=getProductionModel()){const signal=selectedSignalModel(model),rows=derivedRows(signal),selected=model.editor?.rowIndex??rows.length-1;return signalToolbar(model)+`<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>Value</th><th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${rows.map(({value,index,duration,end})=>`<tr class="${index===selected?'selected-row':''}" data-editor-index="${index}"><td>${index===selected?'☑':'□'}</td><td class=center>${index+1}</td><td class=center>${editorInput(signal,index,'start',value.start,'number')}</td><td class=center>${editorInput(signal,index,'value',value.value)}</td><td class=center>${duration??'—'}</td><td class=center>${end??'—'}</td><td>${editorInput(signal,index,'comment',value.comment||'')}</td></tr>`).join('')}</tbody></table><div style="margin-top:8px;color:#5c6878">合計: ${rows.length} 行（終端は自動延長されます）</div>`}
-function busPanel(model=getProductionModel()){const signal=selectedSignalModel(model),rows=derivedRows(signal),selected=model.editor?.rowIndex??rows.length-1;return signalToolbar(model)+`<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>Value</th><th>Display format</th><th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${rows.map(({value,index,duration,end})=>`<tr class="${index===selected?'selected-row':''}" data-editor-index="${index}"><td>${index===selected?'☑':'□'}</td><td class=center>${index+1}</td><td class=center>${editorInput(signal,index,'start',value.start,'number')}</td><td class=center>${editorInput(signal,index,'value',value.value)}</td><td class=center>${signal.displayFormat==='hex'?'Hex':signal.displayFormat}</td><td class=center>${duration??'—'}</td><td class=center>${end??'—'}</td><td>${editorInput(signal,index,'comment',value.comment||'')}</td></tr>`).join('')}</tbody></table>`}
-function statePanel(model=getProductionModel()){const signal=selectedSignalModel(model),rows=derivedRows(signal),selected=model.editor?.rowIndex??rows.length-1;return signalToolbar(model)+`<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>State</th><th>Color</th><th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${rows.map(({value,index,duration,end})=>`<tr class="${index===selected?'selected-row':''}" data-editor-index="${index}"><td>${index===selected?'☑':'□'}</td><td class=center>${index+1}</td><td class=center>${editorInput(signal,index,'start',value.start,'number')}</td><td class=center>${editorInput(signal,index,'value',value.value)}</td><td class=center>Auto</td><td class=center>${duration??'—'}</td><td class=center>${end??'—'}</td><td>${editorInput(signal,index,'comment',value.comment||'')}</td></tr>`).join('')}</tbody></table>`}
+function binaryPanel(model=getProductionModel()){const signal=selectedSignalModel(model),rows=derivedRows(signal),selected=model.editor?.rowIndex??rows.length-1;return signalToolbar(model)+`<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>Value</th><th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${rows.map(({value,index,duration,end})=>`<tr class="${index===selected?'selected-row':''}" data-editor-index="${index}" tabindex="${index===selected?0:-1}"><td>${index===selected?'☑':'□'}</td><td class=center>${index+1}</td><td class=center>${editorInput(signal,index,'start',value.start,'number')}</td><td class=center>${editorInput(signal,index,'value',value.value)}</td><td class=center>${duration??'—'}</td><td class=center>${end??'—'}</td><td>${editorInput(signal,index,'comment',value.comment||'')}</td></tr>`).join('')}</tbody></table><div style="margin-top:8px;color:#5c6878">合計: ${rows.length} 行（終端は自動延長されます）</div>`}
+function busPanel(model=getProductionModel()){const signal=selectedSignalModel(model),rows=derivedRows(signal),selected=model.editor?.rowIndex??rows.length-1;return signalToolbar(model)+`<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>Value</th><th>Display format</th><th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${rows.map(({value,index,duration,end})=>`<tr class="${index===selected?'selected-row':''}" data-editor-index="${index}" tabindex="${index===selected?0:-1}"><td>${index===selected?'☑':'□'}</td><td class=center>${index+1}</td><td class=center>${editorInput(signal,index,'start',value.start,'number')}</td><td class=center>${editorInput(signal,index,'value',value.value)}</td><td class=center>${signal.displayFormat==='hex'?'Hex':signal.displayFormat}</td><td class=center>${duration??'—'}</td><td class=center>${end??'—'}</td><td>${editorInput(signal,index,'comment',value.comment||'')}</td></tr>`).join('')}</tbody></table>`}
+function statePanel(model=getProductionModel()){const signal=selectedSignalModel(model),rows=derivedRows(signal),selected=model.editor?.rowIndex??rows.length-1;return signalToolbar(model)+`<table><thead><tr><th>□</th><th>#</th><th>Start (cycle)</th><th>State</th><th>Color</th><th>Duration (cycles)</th><th>End (cycle)</th><th>コメント</th></tr></thead><tbody>${rows.map(({value,index,duration,end})=>`<tr class="${index===selected?'selected-row':''}" data-editor-index="${index}" tabindex="${index===selected?0:-1}"><td>${index===selected?'☑':'□'}</td><td class=center>${index+1}</td><td class=center>${editorInput(signal,index,'start',value.start,'number')}</td><td class=center>${editorInput(signal,index,'value',value.value)}</td><td class=center>Auto</td><td class=center>${duration??'—'}</td><td class=center>${end??'—'}</td><td>${editorInput(signal,index,'comment',value.comment||'')}</td></tr>`).join('')}</tbody></table>`}
 function clockField(label,field,value,type='number'){return `<div class="field"><label>${label}</label><input data-clock-field="${field}" value="${esc(value)}" type="${type}"></div>`}
 function clockSelect(label,field,value,options){return `<div class="field"><label>${label}</label><select data-clock-field="${field}">${options.map(option=>`<option ${String(option).toLowerCase()===String(value).toLowerCase()?'selected':''}>${option}</option>`).join('')}</select></div>`}
 function clockPanel(model=getProductionModel()){const signal=selectedSignalModel(model),generator=signal?.generator||{},counter=signal?.edgeCounter||{},timeline=model.document.timeline||{};const name=signal?.display?.name||signal?.name||signal?.id||'—';return `<div class="selected-line">選択中の信号:　${esc(name)}　種別: Clock</div><div class="toolbar-line"><select class="mini-btn" data-clock-action="preset"><option value="">∿ プリセット</option><option value="standard">Standard</option><option value="half">Half Rate</option><option value="delayed">Delayed</option></select><button class="mini-btn" data-clock-action="duplicate">▣ 複製</button><button class="mini-btn" data-clock-action="import">⇩ インポート...</button><button class="mini-btn" data-clock-action="export">⇧ エクスポート...</button><button class="mini-btn" data-clock-action="refresh">⟳ プレビュー更新</button></div><div class="clock-form">${clockField('Start (cycle)','start',generator.start??0)}${clockField('Period (cycles)','period',generator.period??1)}${clockField('Duty (%)','duty',(generator.duty??0.5)*100)}${clockField('Phase (cycles)','phase',generator.phase??0)}${clockSelect('Initial level','initialLevel',generator.initial??0,['0','1'])}${clockSelect('Edge基準','edgeReference',timeline.edge||'rising',['Rising','Falling'])}</div><div class="edge-box"><b>エッジ番号表示</b><div class="edge-grid" style="margin-top:8px">${clockSelect('Show','edgeCounter.show',counter.show===false?'OFF':'ON',['ON','OFF'])}${clockSelect('Mode','edgeCounter.mode',counter.mode||'rising',['Rising','Falling','Both'])}${clockField('Start number','edgeCounter.startNumber',counter.startNumber??1)}${clockSelect('Count from','edgeCounter.countFrom',counter.countFrom||'signal-start',['signal-start','selected-edge','marker','visible-range-start'])}${clockField('Show every','edgeCounter.labelEvery',counter.labelEvery??1)}${clockSelect('Position','edgeCounter.position',counter.position||'above',['Above','Below'])}${clockField('Offset X','edgeCounter.offset.x',counter.offset?.x??0)}${clockField('Offset Y','edgeCounter.offset.y',counter.offset?.y??-6)}</div></div>`}
@@ -86,7 +86,7 @@ function applyIssue25VisualPolish(model=getProductionModel()){
 }
 function syncIssue26Groups(model=getProductionModel()){const groups=$$('#groups .group');const hidden=hiddenSignalIds(model);(model.document.signalGroups||[]).forEach((group,index)=>{const container=groups[index];if(!container)return;container.dataset.groupId=group.id;for(const id of group.rows||[]){const row=$(`.row[data-signal="${CSS.escape(id)}"]`);if(row){row.hidden=false;row.draggable=true;container.appendChild(row);}}});$$('#groups .row').forEach(row=>{const id=row.dataset.signal;row.dataset.visibility=hidden.has(id)?'hidden':'visible';const eye=$('.eye',row);if(eye){eye.setAttribute('aria-label',hidden.has(id)?'表示':'非表示');eye.innerHTML=`<svg aria-hidden="true"><use href="icons.svg#${hidden.has(id)?'i-eye-off':'i-eye'}"></use></svg>`;}});}
 function bindIssue26LeftPanel(model=getProductionModel()){const controller=window.TimingChartProductionController;const groups=$$('#groups .group');const dropIndex=(group,event,sourceId)=>{const rows=[...group.querySelectorAll(':scope > .row[data-signal]')];const target=event.target.closest?.('.row[data-signal]');if(!target||target.parentElement!==group||!rows.includes(target))return rows.length;const targetIndex=rows.indexOf(target);const rect=target.getBoundingClientRect();const after=event.clientY>=rect.top+rect.height/2;let index=targetIndex+(after?1:0);const sourceGroup=target.closest('.group');const sourceIndex=sourceGroup&&[...sourceGroup.querySelectorAll(':scope > .row[data-signal]')].findIndex(row=>row.dataset.signal===sourceId);if(sourceGroup===group&&sourceIndex>=0&&sourceIndex<index)index-=1;return Math.max(0,Math.min(rows.length,index));};groups.forEach(group=>{if(group.dataset.issue26Bound)return;group.dataset.issue26Bound='true';group.addEventListener('dragover',event=>{if(event.dataTransfer)event.dataTransfer.dropEffect='move';event.preventDefault();});group.addEventListener('drop',event=>{event.preventDefault();const id=event.dataTransfer?.getData('text/plain');if(!id)return;const index=dropIndex(group,event,id);const sourceGroup=model.document.signalGroups.find(item=>(item.rows||[]).includes(id));const sourceIndex=sourceGroup?.rows?.indexOf(id)??-1;const delta=sourceGroup?.id===group.dataset.groupId?index-sourceIndex:null;if(Number.isInteger(delta)&&Math.abs(delta)===1)controller.actions.moveSignalBy(id,delta);else controller.actions.moveSignal(id,group.dataset.groupId,index);});});$$('#groups .row').forEach(row=>{if(row.dataset.issue26Bound)return;row.dataset.issue26Bound='true';row.addEventListener('dragstart',event=>{event.dataTransfer?.setData('text/plain',row.dataset.signal);if(event.dataTransfer)event.dataTransfer.effectAllowed='move';});});const groupsHost=$('#groups');if(groupsHost&&!groupsHost.dataset.issue26VisibilityBound){groupsHost.dataset.issue26VisibilityBound='true';groupsHost.addEventListener('click',event=>{const eye=event.target.closest('.eye');if(!eye)return;event.preventDefault();event.stopPropagation();const row=eye.closest('.row');const hidden=hiddenSignalIds(getProductionModel()).has(row.dataset.signal);controller.actions.setSignalVisibility(row.dataset.signal,hidden);});}}
-function applyIssue26Ribbon(){const home=$('#ribbonHome');if(!home||home.dataset.issue26Applied)return;home.dataset.issue26Applied='true';$$('.rgroup',home).forEach(group=>{group.querySelectorAll('.tool').forEach(tool=>{const label=tool.querySelector('.tool-label')?.textContent?.replace(/\s/g,'')||'';if(label.includes('別グループへ')||label.includes('表示/非表示')||tool.classList.contains('export-tool'))tool.remove();});if(!group.querySelector('.tool')&&!group.querySelector('.toggles'))group.remove();});const fileTab=$$('.rtab').find(tab=>tab.textContent.trim()==='ファイル');if(!fileTab)return;fileTab.dataset.issue26Bound='true';const menu=document.createElement('div');menu.id='issue26FileMenu';menu.hidden=true;menu.style.cssText='position:absolute;top:72px;left:8px;z-index:30;background:#fff;border:1px solid #cbd6e4;border-radius:4px;box-shadow:0 6px 18px #0002;padding:6px;gap:4px;';const setMenuVisible=visible=>{menu.hidden=!visible;menu.style.display=visible?'grid':'none';};setMenuVisible(false);for(const [format,label] of [['svg','SVGとして出力...'],['png','PNGとして出力...'],['pdf','PDFとして出力...']]){const button=document.createElement('button');button.type='button';button.dataset.fileExport=format;button.textContent=label;button.style.cssText='text-align:left;border:0;background:#fff;padding:6px 10px;';button.addEventListener('click',async()=>{const result=await window.TimingChartProductionController.export(format);window.TimingChartLastExport=result;if(format==='pdf'){window.print();return;}const blob=new Blob([format==='svg'?result.text:result.dataUrl],{type:format==='svg'?'image/svg+xml':'text/plain'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`timing-chart.${format}`;link.click();URL.revokeObjectURL(link.href);setMenuVisible(false);});menu.appendChild(button);}document.body.appendChild(menu);fileTab.addEventListener('click',event=>{event.stopPropagation();setMenuVisible(menu.hidden);});$$('.rtab').filter(tab=>tab!==fileTab).forEach(tab=>tab.addEventListener('click',()=>setMenuVisible(false)));document.addEventListener('click',event=>{if(!event.target.closest('#issue26FileMenu,.rtab'))setMenuVisible(false);});document.addEventListener('keydown',event=>{if(event.key==='Escape')setMenuVisible(false);});}
+function applyIssue26Ribbon(){const home=$('#ribbonHome');if(!home||home.dataset.issue26Applied)return;home.dataset.issue26Applied='true';$$('.rgroup',home).forEach(group=>{group.querySelectorAll('.tool').forEach(tool=>{const label=tool.querySelector('.tool-label')?.textContent?.replace(/\s/g,'')||'';if(label.includes('別グループへ')||label.includes('表示/非表示')||label==='Cycle挿入'||label==='NCycle挿入'||tool.classList.contains('export-tool'))tool.remove();});if(!group.querySelector('.tool')&&!group.querySelector('.toggles'))group.remove();});const fileTab=$$('.rtab').find(tab=>tab.textContent.trim()==='ファイル');if(!fileTab)return;fileTab.dataset.issue26Bound='true';const menu=document.createElement('div');menu.id='issue26FileMenu';menu.hidden=true;menu.style.cssText='position:absolute;top:72px;left:8px;z-index:30;background:#fff;border:1px solid #cbd6e4;border-radius:4px;box-shadow:0 6px 18px #0002;padding:6px;gap:4px;';const setMenuVisible=visible=>{menu.hidden=!visible;menu.style.display=visible?'grid':'none';};setMenuVisible(false);for(const [format,label] of [['svg','SVGとして出力...'],['png','PNGとして出力...'],['pdf','PDFとして出力...']]){const button=document.createElement('button');button.type='button';button.dataset.fileExport=format;button.textContent=label;button.style.cssText='text-align:left;border:0;background:#fff;padding:6px 10px;';button.addEventListener('click',async()=>{const result=await window.TimingChartProductionController.export(format);window.TimingChartLastExport=result;if(format==='pdf'){window.print();return;}const blob=new Blob([format==='svg'?result.text:result.dataUrl],{type:format==='svg'?'image/svg+xml':'text/plain'});const link=document.createElement('a');link.href=URL.createObjectURL(blob);link.download=`timing-chart.${format}`;link.click();URL.revokeObjectURL(link.href);setMenuVisible(false);});menu.appendChild(button);}document.body.appendChild(menu);fileTab.addEventListener('click',event=>{event.stopPropagation();setMenuVisible(menu.hidden);});$$('.rtab').filter(tab=>tab!==fileTab).forEach(tab=>tab.addEventListener('click',()=>setMenuVisible(false)));document.addEventListener('click',event=>{if(!event.target.closest('#issue26FileMenu,.rtab'))setMenuVisible(false);});document.addEventListener('keydown',event=>{if(event.key==='Escape')setMenuVisible(false);});}
 function applyIssue29LabelWidth(model=getProductionModel()){const width=Math.max(120,Math.min(360,Number(model.view.previewSignalNameWidth??model.document.layout.signalNameWidth??168)));const rowWidth=width-23;const custom=width!==168;$$('#cycleCanvas .wave-row').forEach(row=>{if(custom){row.style.gridTemplateColumns=`28px ${rowWidth}px 1fr`;const color=row.classList.contains('band-internal')?'#fbf7ff':row.classList.contains('band-output')?'#f5fbf6':'#f6faff';row.style.backgroundImage=`linear-gradient(90deg,transparent 0 ${width+5}px,${color} ${width+5}px)`;}else{row.style.removeProperty('grid-template-columns');row.style.removeProperty('background-image');}row.dataset.signalNameWidth=String(width);});}
 function bindIssue29LabelSplitter(model=getProductionModel()){const canvas=$('#cycleCanvas');const controller=window.TimingChartProductionController;if(!canvas||!controller||canvas.dataset.labelSplitterBound)return;canvas.dataset.labelSplitterBound='true';canvas.dataset.labelSplitter='interactive';const min=120,max=360;let gesture=null;const boundaryX=()=>controller.getCycleBoundary?.({signal:controller.selectors.getReferenceClock()?.id,cycle:0,coordinateSpace:'canvas'})?.canvasX;const nearBoundary=event=>{const x=boundaryX();return x!==undefined&&Math.abs(event.clientX-x)<=8&&event.clientY>canvas.getBoundingClientRect().top+34;};const preview=width=>{model.view.previewSignalNameWidth=Math.max(min,Math.min(max,Math.round(width)));applyIssue29LabelWidth(model);window.TimingChartProductionTimeAxis?.renderTransient(model);};canvas.addEventListener('pointerdown',event=>{if(!nearBoundary(event))return;gesture={startX:event.clientX,startWidth:Number(model.document.layout.signalNameWidth||168),pointerId:event.pointerId,moved:false};canvas.setPointerCapture?.(event.pointerId);event.preventDefault();});canvas.addEventListener('pointermove',event=>{if(!gesture){canvas.style.cursor=nearBoundary(event)?'col-resize':'default';return;}if(Math.abs(event.clientX-gesture.startX)>2)gesture.moved=true;if(gesture.moved){canvas.style.cursor='col-resize';preview(gesture.startWidth+event.clientX-gesture.startX);}});canvas.addEventListener('pointerup',event=>{if(!gesture)return;const current=gesture;gesture=null;canvas.releasePointerCapture?.(current.pointerId);canvas.style.cursor='default';const finalWidth=Number(model.view.previewSignalNameWidth??current.startWidth);delete model.view.previewSignalNameWidth;if(current.moved&&finalWidth!==current.startWidth)controller.actions.setSignalNameWidth(finalWidth);else applyIssue29LabelWidth(model);});canvas.addEventListener('pointercancel',()=>{if(gesture){delete model.view.previewSignalNameWidth;applyIssue29LabelWidth(model);}gesture=null;canvas.style.cursor='default';});}
 function bindBottomResize(model=getProductionModel()){const canvas=$('#cycleCanvas');const center=$('.center');if(!canvas||!center||canvas.dataset.bottomResizeBound)return;canvas.dataset.bottomResizeBound='true';canvas.dataset.bottomSplitter='interactive';canvas.style.cursor='default';const defaultHeight=270;const minBottom=150;const minCanvas=280;const height=()=>center.getBoundingClientRect().height;const apply=next=>{const max=Math.max(minBottom,height()-minCanvas);const value=Math.max(minBottom,Math.min(max,Math.round(next)));center.style.setProperty('--bottom-h',`${value}px`);model.view.bottomHeight=value;window.TimingChartProductionTimeAxis?.renderTransient(model);return value;};let gesture=null;canvas.addEventListener('pointerdown',event=>{const rect=canvas.getBoundingClientRect();if(event.clientY<rect.bottom-8)return;gesture={startY:event.clientY,startHeight:document.querySelector('.bottom')?.getBoundingClientRect().height||defaultHeight,moved:false,pointerId:event.pointerId};canvas.setPointerCapture?.(event.pointerId);event.preventDefault();});canvas.addEventListener('pointermove',event=>{if(!gesture)return;if(Math.abs(event.clientY-gesture.startY)>2)gesture.moved=true;if(gesture.moved){canvas.style.cursor='row-resize';apply(gesture.startHeight+gesture.startY-event.clientY);}});canvas.addEventListener('pointerup',event=>{if(!gesture)return;const current=gesture;gesture=null;canvas.releasePointerCapture?.(current.pointerId);canvas.style.cursor='default';if(!current.moved){const currentHeight=document.querySelector('.bottom')?.getBoundingClientRect().height||defaultHeight;if(Math.abs(currentHeight-defaultHeight)<=2){apply(Math.min(Math.max(minBottom,height()-minCanvas),defaultHeight+180));}else{center.style.removeProperty('--bottom-h');delete model.view.bottomHeight;window.TimingChartProductionTimeAxis?.renderTransient(model);}}});canvas.addEventListener('pointercancel',()=>{gesture=null;canvas.style.cursor='default';});canvas.addEventListener('mousemove',event=>{const rect=canvas.getBoundingClientRect();canvas.style.cursor=event.clientY>=rect.bottom-8?'row-resize':'default';});}
@@ -99,6 +99,226 @@ function bindIssue6Menus(model=getProductionModel()){const controller=window.Tim
   const close=()=>document.querySelector('#issue6ContextMenu')?.remove();const show=(items,x,y,context)=>{close();const menu=document.createElement('div');menu.id='issue6ContextMenu';menu.style.cssText=`position:fixed;z-index:2100;left:${x}px;top:${y}px;background:#fff;border:1px solid #b8c5d4;box-shadow:0 5px 16px #0003;padding:4px;display:grid;min-width:150px;font:12px sans-serif`;items.forEach(([command,label])=>{const button=document.createElement('button');button.type='button';button.dataset.command=command;button.textContent=label;button.style.cssText='border:0;background:#fff;text-align:left;padding:5px 8px;';menu.appendChild(button);});menu.addEventListener('click',event=>{const command=event.target.closest('[data-command]')?.dataset.command;if(!command)return;close();const signalId=context.signalId,groupId=context.groupId;const signal=signalId?model.document.signals.find(item=>item.id===signalId):null;if(command==='rename'&&signal){const name=window.prompt('名前を変更',signal.display?.name||signal.name);if(name)controller.actions.setDisplayName(signalId,name);}else if(command==='duplicate'&&signal)controller.actions.duplicateSignal(signalId);else if(command==='delete'&&signal)controller.actions.deleteSignal(signalId);else if(command==='up'&&signal)controller.actions.moveSignalBy(signalId,-1);else if(command==='down'&&signal)controller.actions.moveSignalBy(signalId,1);else if(command==='visible'&&signal)controller.actions.setSignalVisibility(signalId,hiddenSignalIds(model).has(signalId));else if(command.startsWith('role-')&&signal)controller.actions.setSignalRole(signalId,command.slice(5));else if(command==='edit-comment'&&signal){const title=window.prompt('コメント行を編集',signal.title);if(title)controller.actions.updateComment(signalId,'title',title);}else if(command==='duplicate-comment'&&signal)controller.actions.addCommentRow({title:`${signal.title} copy`,body:signal.body},groupId);else if(command==='rename-group') {const name=window.prompt('グループ名を変更',model.document.signalGroups.find(item=>item.id===groupId)?.name);if(name)controller.actions.setGroupName(groupId,name);}else if(command==='collapse-group')controller.actions.setGroupCollapsed(groupId,!model.document.signalGroups.find(item=>item.id===groupId)?.collapsed);else if(command==='up-group')controller.actions.moveGroupBy(groupId,-1);else if(command==='down-group')controller.actions.moveGroupBy(groupId,1);else if(command==='add-signal')controller.actions.addSignal({name:`signal_${Date.now()}`},groupId);else if(command==='add-comment')controller.actions.addCommentRow({},groupId);else if(command==='add-spacer')controller.actions.addSpacer(groupId,16);else if(command==='group-spacing')controller.actions.setGroupSpacing(groupId,'spacingAfter',Number(window.prompt('グループ間隔(px)',model.document.signalGroups.find(item=>item.id===groupId)?.spacingAfter||0)));else if(command==='group-appearance'){const group=model.document.signalGroups.find(item=>item.id===groupId);const background=window.prompt('Group Band背景色',group?.style?.background||'#eef5ff');if(background)controller.actions.setGroupAppearance(groupId,{background});}else if(command==='delete-group')controller.actions.deleteGroup(groupId);});document.body.appendChild(menu);};if(document.body.dataset.issue6Menus!=='true'){document.body.dataset.issue6Menus='true';document.addEventListener('click',event=>{if(!event.target.closest('#issue6ContextMenu,.more,.group-h'))close();});}
   $$('#groups .row .more').forEach(more=>{if(more.dataset.issue6Bound)return;more.dataset.issue6Bound='true';more.addEventListener('click',event=>{event.stopPropagation();const row=more.closest('.row');const signal=model.document.signals.find(item=>item.id===row.dataset.signal);const items=signal?.type==='commentRow'?[['edit-comment','編集'],['duplicate-comment','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示']]:[['rename','名前を変更'],['duplicate','複製'],['delete','削除'],['up','上へ移動'],['down','下へ移動'],['visible','表示 / 非表示'],['role-input','Role: Input'],['role-output','Role: Output'],['role-internal','Role: Internal'],['inspector','Inspectorを開く']];show(items,event.clientX,event.clientY,{signalId:row.dataset.signal,groupId:row.closest('.group')?.dataset.groupId});});});
   $$('#groups .group-h').forEach(header=>{const button=header.lastElementChild;if(!button||button.dataset.issue6Bound)return;button.dataset.issue6Bound='true';button.style.cursor='pointer';button.addEventListener('click',event=>{event.stopPropagation();const group=header.closest('.group');const groupId=group?.dataset.groupId;show([['rename-group','名前を変更'],['collapse-group','グループを折りたたむ / 展開'],['up-group','上へ移動'],['down-group','下へ移動'],['add-signal','Signalを追加'],['add-comment','Comment Rowを追加'],['add-spacer','Spacerを追加'],['group-appearance','Group Band / 背景設定'],['group-spacing','グループ間隔設定'],['delete-group','グループ削除']],event.clientX,event.clientY,{groupId});});});}
+function issue104TreeItems(){
+  const host=document.querySelector('#groups');
+  if(!host)return [];
+  const items=[];
+  for(const group of host.querySelectorAll(':scope > .group')){
+    const header=group.querySelector('.group-h');
+    if(header)items.push({el:header,type:'group',groupId:group.dataset.groupId});
+    for(const row of group.querySelectorAll('.row[data-signal]')){
+      if(row.hidden)continue;
+      items.push({el:row,type:'row',signalId:row.dataset.signal});
+    }
+  }
+  return items;
+}
+function issue104SetRovingTabindex(activeEl){
+  document.querySelectorAll('#groups .row[data-signal],#groups .group-h').forEach(el=>{el.tabIndex=-1;});
+  if(activeEl)activeEl.tabIndex=0;
+}
+function issue104FocusItem(el){
+  if(!el)return;
+  issue104SetRovingTabindex(el);
+  el.focus();
+  el.scrollIntoView({block:'nearest',inline:'nearest'});
+}
+function issue104Move(delta){
+  const items=issue104TreeItems();
+  if(!items.length)return;
+  const current=document.activeElement;
+  const index=items.findIndex(item=>item.el===current);
+  const nextIndex=index<0?0:Math.max(0,Math.min(items.length-1,index+delta));
+  issue104FocusItem(items[nextIndex].el);
+}
+function applyIssue104TreeA11y(model=getProductionModel()){
+  const host=document.querySelector('#groups');
+  if(!host)return;
+  host.setAttribute('role','tree');
+  host.querySelectorAll('.group').forEach(group=>group.setAttribute('role','group'));
+  host.querySelectorAll('.group-h').forEach(header=>{
+    header.setAttribute('role','treeitem');
+    const collapsed=header.closest('.group')?.classList.contains('collapsed');
+    header.setAttribute('aria-expanded',String(!collapsed));
+  });
+  host.querySelectorAll('.row[data-signal]').forEach(row=>{
+    row.setAttribute('role','treeitem');
+    const isSelected=(model.selection?.kind==='signal'||model.selection?.kind==='comment')&&model.selection.id===row.dataset.signal;
+    row.setAttribute('aria-selected',String(isSelected));
+  });
+  const items=issue104TreeItems();
+  if(!items.length)return;
+  const selectedItem=items.find(item=>item.type==='row'&&item.signalId===model.selection?.id)?.el;
+  const currentTabbable=host.querySelector('[tabindex="0"]');
+  const stillVisible=currentTabbable&&items.some(item=>item.el===currentTabbable);
+  const active=selectedItem||(stillVisible?currentTabbable:items[0].el);
+  const focusNeedsRepair=window.__issue104NeedsFocusRepair===true&&!stillVisible;
+  issue104SetRovingTabindex(active);
+  if(focusNeedsRepair&&active){active.focus();window.__issue104NeedsFocusRepair=false;}
+}
+function issue104Install(){
+  const router=window.TimingChartShortcutRouter;
+  if(!router||document.body.dataset.issue104Bound)return;
+  document.body.dataset.issue104Bound='true';
+  const inTree=event=>Boolean(event.target?.closest?.('#groups'));
+  const controllerOf=()=>window.TimingChartProductionController;
+  const host=document.querySelector('#groups');
+  host?.addEventListener('focusout',event=>{if(!event.relatedTarget)window.__issue104NeedsFocusRepair=true;});
+  host?.addEventListener('focusin',()=>{window.__issue104NeedsFocusRepair=false;});
+  router.register({id:'issue104-down',shortcut:'ArrowDown',owner:'issue104',scope:'application',when:inTree,execute:()=>{issue104Move(1);return true;}});
+  router.register({id:'issue104-up',shortcut:'ArrowUp',owner:'issue104',scope:'application',when:inTree,execute:()=>{issue104Move(-1);return true;}});
+  router.register({id:'issue104-home',shortcut:'Home',owner:'issue104',scope:'application',when:inTree,execute:()=>{const items=issue104TreeItems();if(items.length)issue104FocusItem(items[0].el);return true;}});
+  router.register({id:'issue104-end',shortcut:'End',owner:'issue104',scope:'application',when:inTree,execute:()=>{const items=issue104TreeItems();if(items.length)issue104FocusItem(items[items.length-1].el);return true;}});
+  router.register({id:'issue104-left',shortcut:'ArrowLeft',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(el?.classList.contains('group-h')){
+      const groupId=el.closest('.group')?.dataset.groupId;
+      const group=controller.model.document.signalGroups.find(g=>g.id===groupId);
+      if(group&&!group.collapsed)controller.actions.setGroupCollapsed(groupId,true);
+      return true;
+    }
+    if(el?.matches('.row[data-signal]')){const header=el.closest('.group')?.querySelector('.group-h');if(header)issue104FocusItem(header);return true;}
+    return false;
+  }});
+  router.register({id:'issue104-right',shortcut:'ArrowRight',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(el?.classList.contains('group-h')){
+      const groupId=el.closest('.group')?.dataset.groupId;
+      const group=controller.model.document.signalGroups.find(g=>g.id===groupId);
+      if(group?.collapsed){controller.actions.setGroupCollapsed(groupId,false);return true;}
+      const firstRow=el.closest('.group')?.querySelector('.row[data-signal]:not([hidden])');
+      if(firstRow)issue104FocusItem(firstRow);
+      return true;
+    }
+    return false;
+  }});
+  router.register({id:'issue104-enter',shortcut:'Enter',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(el?.matches('.row[data-signal]')){controller.actions.selectObject(el);controller.actions.revealSelection?.({});return true;}
+    if(el?.classList.contains('group-h')){
+      const groupId=el.closest('.group')?.dataset.groupId;
+      const group=controller.model.document.signalGroups.find(g=>g.id===groupId);
+      controller.actions.setGroupCollapsed(groupId,!group?.collapsed);
+      return true;
+    }
+    return false;
+  }});
+  router.register({id:'issue104-f2',shortcut:'F2',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;
+    if(!el?.matches('.row[data-signal]'))return false;
+    const more=el.querySelector('.more');
+    if(!more)return false;
+    more.click();
+    requestAnimationFrame(()=>{const menu=document.querySelector('#issue6ContextMenu');const target=menu?.querySelector('[data-command="rename"],[data-command="edit-comment"]');target?.click();});
+    return true;
+  }});
+  router.register({id:'issue104-delete',shortcut:'Delete',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;const controller=controllerOf();
+    if(!el?.matches('.row[data-signal]'))return false;
+    const signalId=el.dataset.signal;
+    const signal=controller.model.document.signals.find(item=>item.id===signalId);
+    if(signal)controller.actions.deleteSignal(signalId);
+    return true;
+  }});
+  router.register({id:'issue104-contextmenu',shortcut:'Shift+F10',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;
+    const more=el?.matches('.row[data-signal]')?el.querySelector('.more'):(el?.classList.contains('group-h')?el.lastElementChild:null);
+    more?.click();
+    return true;
+  }});
+  router.register({id:'issue104-contextmenu-key',shortcut:'ContextMenu',owner:'issue104',scope:'application',when:inTree,execute:()=>{
+    const el=document.activeElement;
+    const more=el?.matches('.row[data-signal]')?el.querySelector('.more'):(el?.classList.contains('group-h')?el.lastElementChild:null);
+    more?.click();
+    return true;
+  }});
+}
+function issue92ClosePopover(){document.querySelector('#issue92Popover')?.remove();document.removeEventListener('pointerdown',window.__issue92PopoverOutside||(()=>{}),true);}
+function issue92ShowFieldPopover({anchor,title,fields,onApply,dangerous}){
+  issue92ClosePopover();
+  const popover=document.createElement('div');
+  popover.id='issue92Popover';
+  popover.setAttribute('role','dialog');
+  popover.setAttribute('aria-label',title);
+  popover.style.cssText='position:fixed;z-index:2200;background:#fff;border:1px solid #b8c5d4;border-radius:6px;box-shadow:0 8px 24px #0003;padding:12px;min-width:220px;max-width:280px;font:12px sans-serif;color:#243047;';
+  const titleEl=document.createElement('div');
+  titleEl.textContent=title;
+  titleEl.style.cssText='font-weight:600;margin-bottom:8px;';
+  popover.appendChild(titleEl);
+  const inputs={};
+  fields.forEach(field=>{
+    const row=document.createElement('div');
+    row.style.cssText='margin-bottom:8px;';
+    const label=document.createElement('label');
+    label.textContent=field.label;
+    label.style.cssText='display:block;margin-bottom:3px;color:#58677a;';
+    const input=document.createElement('input');
+    input.type=field.type==='color'?'color':field.type==='number'?'number':'text';
+    input.value=field.value??'';
+    if(field.type==='number'){if(field.min!==undefined)input.min=String(field.min);if(field.max!==undefined)input.max=String(field.max);if(field.step!==undefined)input.step=String(field.step);}
+    input.style.cssText='width:100%;border:1px solid #cbd6e4;border-radius:4px;padding:6px;box-sizing:border-box;';
+    input.dataset.field=field.key;
+    inputs[field.key]=input;
+    row.append(label,input);
+    popover.appendChild(row);
+  });
+  const errorEl=document.createElement('div');
+  errorEl.setAttribute('role','alert');
+  errorEl.style.cssText='color:#c43a3a;font-size:11px;min-height:14px;margin-bottom:6px;';
+  popover.appendChild(errorEl);
+  const buttonRow=document.createElement('div');
+  buttonRow.style.cssText='display:flex;gap:6px;justify-content:flex-end;';
+  const cancelButton=document.createElement('button');
+  cancelButton.type='button';cancelButton.textContent='キャンセル';
+  cancelButton.style.cssText='border:1px solid #cbd6e4;background:#fff;border-radius:4px;padding:6px 12px;cursor:pointer;';
+  const applyButton=document.createElement('button');
+  applyButton.type='button';applyButton.textContent='適用';
+  applyButton.style.cssText=`border:0;background:${dangerous?'#df4d4d':'#1473e6'};color:#fff;border-radius:4px;padding:6px 12px;cursor:pointer;`;
+  buttonRow.append(cancelButton,applyButton);
+  popover.appendChild(buttonRow);
+  document.body.appendChild(popover);
+
+  const anchorRect=anchor?.getBoundingClientRect?anchor.getBoundingClientRect():{left:anchor?.x||0,top:anchor?.y||0,bottom:anchor?.y||0,right:anchor?.x||0};
+  const margin=6;
+  const popRect=popover.getBoundingClientRect();
+  let left=anchorRect.left;
+  let top=anchorRect.bottom+4;
+  if(left+popRect.width+margin>innerWidth)left=Math.max(margin,innerWidth-popRect.width-margin);
+  if(left<margin)left=margin;
+  if(top+popRect.height+margin>innerHeight)top=Math.max(margin,anchorRect.top-popRect.height-4);
+  if(top<margin)top=margin;
+  popover.style.left=`${left}px`;
+  popover.style.top=`${top}px`;
+
+  const previouslyFocused=document.activeElement;
+  const close=()=>{popover.remove();document.removeEventListener('pointerdown',onOutside,true);if(previouslyFocused&&previouslyFocused.focus&&document.contains(previouslyFocused))previouslyFocused.focus();};
+  const onOutside=event=>{if(!popover.contains(event.target))close();};
+  document.addEventListener('pointerdown',onOutside,true);
+  window.__issue92PopoverOutside=onOutside;
+
+  const apply=()=>{
+    const values={};
+    for(const field of fields)values[field.key]=field.type==='number'?Number(inputs[field.key].value):inputs[field.key].value;
+    for(const field of fields){
+      if(field.validate){
+        const message=field.validate(values[field.key],values);
+        if(message){errorEl.textContent=message;inputs[field.key].focus();return;}
+      }
+    }
+    onApply(values);
+    close();
+  };
+  applyButton.addEventListener('click',apply);
+  cancelButton.addEventListener('click',close);
+  popover.addEventListener('keydown',event=>{
+    if(event.key==='Escape'){event.preventDefault();event.stopPropagation();close();}
+    else if(event.key==='Enter'){event.preventDefault();apply();}
+    else if(event.key==='Tab'){const focusable=[...popover.querySelectorAll('input,button')];const index=focusable.indexOf(document.activeElement);if(event.shiftKey&&index===0){event.preventDefault();focusable[focusable.length-1].focus();}else if(!event.shiftKey&&index===focusable.length-1){event.preventDefault();focusable[0].focus();}}
+  });
+  const firstInput=inputs[fields[0].key];
+  firstInput.focus();
+  firstInput.select?.();
+}
 function bindIssue64Menus(model=getProductionModel()) {
   const controller = window.TimingChartProductionController;
   const addMenu = $('#addMenu');
@@ -119,35 +339,81 @@ function bindIssue64Menus(model=getProductionModel()) {
     });
   }
   const menuState = document.body.__issue64MenuState || (document.body.__issue64MenuState = { openMenu: null });
-  const close = () => { menuState.openMenu?.remove(); menuState.openMenu = null; };
+  const close = () => { menuState.openMenu?.remove(); menuState.openMenu = null; const invoker = menuState.invoker; menuState.invoker = null; if (invoker && invoker.focus && document.contains(invoker)) invoker.focus(); };
   const findGroup = groupId => model.document.signalGroups.find(group => group.id === groupId);
-  const execute = (command, context) => {
+  const execute = (command, context, anchor) => {
     const { signalId, groupId } = context;
     const signal = signalId ? model.document.signals.find(item => item.id === signalId) : null;
     const group = findGroup(groupId);
-    if (command === 'rename' && signal) { const name = window.prompt('名前を変更', signal.display?.name || signal.name); if (name) controller.actions.setDisplayName(signalId, name); }
+    if (command === 'rename' && signal) {
+      issue92ShowFieldPopover({
+        anchor, title: '名前を変更',
+        fields: [{ key: 'name', label: '信号名', type: 'text', value: signal.display?.name || signal.name, validate: value => {
+          if (!value || !value.trim()) return '名前を入力してください';
+          const trimmed = value.trim();
+          if (model.document.signals.some(item => item.id !== signalId && (item.display?.name || item.name) === trimmed)) return 'この名前は既に使用されています';
+          return null;
+        } }],
+        onApply: values => controller.actions.setDisplayName(signalId, values.name.trim())
+      });
+    }
     else if (command === 'duplicate' && signal) controller.actions.duplicateSignal(signalId);
     else if (command === 'delete' && signal) controller.actions.deleteSignal(signalId);
     else if (command === 'up' && signal) controller.actions.moveSignalBy(signalId, -1);
     else if (command === 'down' && signal) controller.actions.moveSignalBy(signalId, 1);
     else if (command === 'visible' && signal) controller.actions.setSignalVisibility(signalId, signal.display?.visible === false);
     else if (command.startsWith('role-') && signal) controller.actions.setSignalRole(signalId, command.slice(5));
-    else if (command === 'edit-comment' && signal) { const title = window.prompt('コメント行を編集', signal.title); if (title) controller.actions.updateComment(signalId, 'title', title); }
+    else if (command === 'edit-comment' && signal) {
+      issue92ShowFieldPopover({
+        anchor, title: 'コメント行を編集',
+        fields: [{ key: 'title', label: 'タイトル', type: 'text', value: signal.title, validate: value => (!value || !value.trim()) ? 'タイトルを入力してください' : null }],
+        onApply: values => controller.actions.updateComment(signalId, 'title', values.title.trim())
+      });
+    }
     else if (command === 'duplicate-comment' && signal) controller.actions.addCommentRow({ title: `${signal.title} copy`, body: signal.body }, groupId);
     else if (command === 'inspector' && signal) controller.actions.selectObject({ dataset: { signal: signalId, kind: signal.type === 'commentRow' ? 'comment' : 'signal' } });
-    else if (command === 'rename-group' && group) { const name = window.prompt('グループ名を変更', group.name); if (name) controller.actions.setGroupName(groupId, name); }
+    else if (command === 'rename-group' && group) {
+      issue92ShowFieldPopover({
+        anchor, title: 'グループ名を変更',
+        fields: [{ key: 'name', label: 'グループ名', type: 'text', value: group.name, validate: value => {
+          if (!value || !value.trim()) return '名前を入力してください';
+          const trimmed = value.trim();
+          if (model.document.signalGroups.some(item => item.id !== groupId && item.name === trimmed)) return 'この名前は既に使用されています';
+          return null;
+        } }],
+        onApply: values => controller.actions.setGroupName(groupId, values.name.trim())
+      });
+    }
     else if (command === 'collapse-group' && group) controller.actions.setGroupCollapsed(groupId, !group.collapsed);
     else if (command === 'up-group') controller.actions.moveGroupBy(groupId, -1);
     else if (command === 'down-group') controller.actions.moveGroupBy(groupId, 1);
     else if (command === 'add-signal') controller.actions.addSignal({ name: `signal_${Date.now()}` }, groupId);
     else if (command === 'add-comment') controller.actions.addCommentRow({}, groupId);
     else if (command === 'add-spacer') controller.actions.addSpacer(groupId, 16);
-    else if (command === 'group-spacing' && group) { const value = Number(window.prompt('グループ間隔(px)', group.spacingAfter || 0)); if (Number.isFinite(value)) controller.actions.setGroupSpacing(groupId, 'spacingAfter', value); }
-    else if (command === 'group-appearance' && group) { const background = window.prompt('Group Band背景色', group.style?.background || '#eef5ff'); if (background) controller.actions.setGroupAppearance(groupId, { background }); }
+    else if (command === 'group-spacing' && group) {
+      issue92ShowFieldPopover({
+        anchor, title: 'グループ間隔設定',
+        fields: [{ key: 'spacing', label: '間隔 (px)', type: 'number', min: 0, max: 200, step: 1, value: group.spacingAfter || 0, validate: value => {
+          if (!Number.isFinite(value) || Number.isNaN(value)) return '数値を入力してください';
+          if (value < 0) return '0以上の値を入力してください';
+          return null;
+        } }],
+        onApply: values => controller.actions.setGroupSpacing(groupId, 'spacingAfter', values.spacing)
+      });
+    }
+    else if (command === 'group-appearance' && group) {
+      issue92ShowFieldPopover({
+        anchor, title: 'Group Band 背景設定',
+        fields: [{ key: 'background', label: '背景色', type: 'color', value: group.style?.background || '#eef5ff', validate: value => (!/^#[0-9a-fA-F]{6}$/.test(value)) ? '有効な色を選択してください' : null }],
+        onApply: values => controller.actions.setGroupAppearance(groupId, { background: values.background })
+      });
+    }
     else if (command === 'delete-group') controller.actions.deleteGroup(groupId);
   };
   const show = (items, x, y, context) => {
+    const invoker = document.activeElement;
     close();
+    menuState.invoker = invoker;
     const menu = document.createElement('div');
     menu.id = 'issue6ContextMenu';
     menu.setAttribute('role', 'menu');
@@ -167,7 +433,7 @@ function bindIssue64Menus(model=getProductionModel()) {
       if (!button || !menu.contains(button)) return;
       event.preventDefault(); event.stopPropagation();
       close();
-      execute(button.dataset.command, context);
+      execute(button.dataset.command, context, button);
     });
     menu.addEventListener('keydown', event => {
       const buttons = [...menu.querySelectorAll('[data-command]')];
@@ -231,6 +497,7 @@ function modelDrivenReconcileCycleRowsKeyed(model=getProductionModel()){
   const metrics=window.TimingChartProductionController.renderMetrics ||= {waveDromRenders:0,geometryBuilds:0,geometryCacheHits:0,waveCacheHits:0,rowCreates:0,rowRemoves:0};
   const used=new Set();
   const groupClass=signal=>signal.role==='output'?'band-output':signal.role==='internal'?'band-internal':'band-command';
+  const crossHighlighted=signalId=>model.selection?.id===signalId||(model.crossHighlight||[]).includes(signalId);
   const createRow=signal=>{
     const row=document.createElement('div');metrics.rowCreates+=1;metrics.cycleRowCreates=(metrics.cycleRowCreates||0)+1;
     row.className=`wave-row ${groupClass(signal)}`;
@@ -244,7 +511,7 @@ function modelDrivenReconcileCycleRowsKeyed(model=getProductionModel()){
   const updateRow=(row,signal,group)=>{
     const kind=signal.type==='commentRow'?'comment':signal.type;
     if(row.dataset.kind!==kind || Boolean(row.querySelector('.trace'))!== (kind!=='comment')){const replacement=createRow(signal);row.replaceWith(replacement);row=replacement;}
-    row.className=`wave-row ${groupClass(signal)}`;row.dataset.signalId=signal.id;row.dataset.signal=signal.id;row.dataset.kind=kind;row.dataset.groupId=group.id;
+    row.className=`wave-row ${groupClass(signal)}${crossHighlighted(signal.id)?' selected':''}`;row.dataset.signalId=signal.id;row.dataset.signal=signal.id;row.dataset.kind=kind;row.dataset.groupId=group.id;
     row.style.removeProperty('transform');row.style.removeProperty('will-change');row.dataset.reorderVisual='none';
     const icon=row.querySelector('.canvas-icon');if(icon)issue25RenderRoleIcon(icon,signal);
     const label=row.querySelector('.signal-label');if(label){label.textContent=kind==='comment'?signal.title:signal.display?.name||signal.name||signal.id;label.dataset.signalId=signal.id;}
@@ -371,14 +638,14 @@ function bindIssue73LeftPanel(model=getProductionModel()){
   applyIssue73Filter(model);
 }
 function applyIssue73CycleVisibility(model=getProductionModel()){
-  const hidden=hiddenSignalIds(model); const groups=new Map((model.document.signalGroups||[]).map(group=>[group.id,group]));
-  $$('#cycleCanvas .wave-row[data-signal]').forEach(row=>{const id=row.dataset.signal;const group=groups.get(row.dataset.groupId);const shouldHide=hidden.has(id)||Boolean(group?.collapsed);row.hidden=shouldHide;row.style.display=shouldHide?'none':'';});
+  const hidden=hiddenSignalIds(model);
+  $$('#cycleCanvas .wave-row[data-signal]').forEach(row=>{const id=row.dataset.signal;const shouldHide=hidden.has(id);row.hidden=shouldHide;row.style.display=shouldHide?'none':'';});
 }
 function modelDrivenInspector(model=getProductionModel()){const host=$('#inspectorBody');if(!host)return;const controller=window.TimingChartProductionController;const documentValue=model.document||{};const timeline=documentValue.timeline||{};const signals=documentValue.signals||[];const annotations=documentValue.annotations||[];const transactions=documentValue.transactions||[];const issues=controller?.getProblems?.(documentValue)||[];if(model.view.tab==='problems'){const errors=issues.filter(issue=>problemSeverity(issue)==='err').length;const warnings=issues.filter(issue=>problemSeverity(issue)==='warn').length;const infos=issues.filter(issue=>problemSeverity(issue)==='info').length;host.innerHTML=`<div class="section"><h3>概要</h3>🔴 エラー　${errors}<br><br>🟠 警告　${warnings}<br><br>🔵 情報　${infos}</div><div class="section"><h3>自動チェック設定</h3><label><input type=checkbox checked> 幅チェック</label><br><label><input type=checkbox checked> 未定義値チェック</label><br><label><input type=checkbox checked> レイテンシチェック</label></div>`;return;}if(model.view.tab==='json'){host.innerHTML=`<div class="section"><h3>JSON Document</h3><div class="prop"><span>Time base</span><b>${esc(timeline.timeBase||'')}</b></div><div class="prop"><span>Ref clock</span><b>${esc(timeline.referenceClock||'')}</b></div><div class="prop"><span>Signals</span><b>${signals.length}</b></div><div class="prop"><span>Annotations</span><b>${annotations.length}</b></div><div class="prop"><span>Transactions</span><b>${transactions.length}</b></div><div class="prop"><span>Problems</span><b>${issues.length}</b></div></div><div class="section"><h3>検証</h3><span style="color:${issues.length?'#b22':'#2e9550'}">● ${issues.length?`${issues.length}件の問題`:'有効なJSONです'}</span></div>`;return;}const signal=controller?.selectors?.getSignal?.(selectedSignal(model));const name=signal?.display?.name||signal?.name||signal?.id||'—';const kind=signal?.type||selectedKind(model);host.innerHTML=`<div class="section"><h3>信号プロパティ</h3><div class="prop"><span>名前</span><input value="${esc(name)}"></div><div class="prop"><span>種別</span><input value="${esc(kind)}"></div><div class="prop"><span>Role</span><input value="${esc(signal?.role||'')}" readonly></div><div class="prop"><span>可視性</span><select><option>表示</option><option>非表示</option></select></div></div><div class="section"><h3>表示</h3><label><input type=checkbox checked> 波形を表示</label><br><label><input type=checkbox checked> ラベルを表示</label></div>`;}
 const renderModelDrivenInspector=modelDrivenInspector;
 renderInspector=model=>{if(model.view.tab==='annotation'){const host=$('#inspectorBody');const annotation=(model.document.annotations||[]).find(item=>item.id===model.selection?.id);if(!annotation){host.innerHTML='<div class="section"><h3>Annotation</h3><span>注釈を選択してください</span></div>';return;}renderAnnotationInspector(model,annotation);return;}renderModelDrivenInspector(model);};
 if(!document.body.dataset.issue108BookmarksBound){document.body.dataset.issue108BookmarksBound='true';document.addEventListener('click',event=>{const row=event.target.closest?.('[data-bookmark-id]');const action=event.target.closest?.('[data-bookmark-action]')?.dataset.bookmarkAction;const controller=window.TimingChartProductionController;if(!controller)return;if(action==='add'){controller.actions.addBookmark();return;}if(action==='delete'){if(controller.model.selection?.kind==='bookmark')controller.actions.deleteBookmark(controller.model.selection.id);return;}if(!row||event.target.closest('input,textarea,select'))return;controller.actions.revealBookmark(row.dataset.bookmarkId);});document.addEventListener('change',event=>{const input=event.target.closest?.('[data-bookmark-field]');const row=input?.closest('[data-bookmark-id]');if(!input||!row)return;window.TimingChartProductionController?.actions.updateBookmark(row.dataset.bookmarkId,input.dataset.bookmarkField,input.value);});}
- window.TimingChartGoldenRenderer={render(model){reconcileCycleRows(model);renderComments(model);ensureIssue6Rows(model);ensureIssue44GroupDisclosure(model);renderLayoutBindings(model);applyIssue25VisualPolish();syncIssue26Groups(model);bindIssue26LeftPanel(model);bindIssue73LeftPanel(model);applyIssue26Ribbon();applyIssue29LabelWidth(model);bindIssue29LabelSplitter(model);bindBottomResize(model);bindSplitBottomResize(model);applyIssue6Layout(model);applyIssue73Filter(model);applyIssue73CycleVisibility(model);bindIssue64Menus(model);renderIssue6Legend(model);renderBottom(model);const metrics=window.TimingChartProductionController?.renderMetrics;if(metrics){metrics.inspectorRenders=(metrics.inspectorRenders||0)+1;metrics.inspectorInnerHtmlRebuilds=(metrics.inspectorInnerHtmlRebuilds||0)+1;}renderInspector(model);bindEditor(model);const bottom=document.querySelector('#bottomContent');const inspector=document.querySelector('#inspectorBody');window.TimingChartProductionController?.controlAudit?.registerSubtree?.(bottom);window.TimingChartProductionController?.controlAudit?.registerSubtree?.(inspector);window.TimingChartTooltipContract?.registerSubtree?.(bottom);window.TimingChartTooltipContract?.registerSubtree?.(inspector);}};
+ window.TimingChartGoldenRenderer={render(model){reconcileCycleRows(model);renderComments(model);ensureIssue6Rows(model);ensureIssue44GroupDisclosure(model);renderLayoutBindings(model);applyIssue25VisualPolish();syncIssue26Groups(model);bindIssue26LeftPanel(model);bindIssue73LeftPanel(model);applyIssue26Ribbon();applyIssue29LabelWidth(model);bindIssue29LabelSplitter(model);bindBottomResize(model);bindSplitBottomResize(model);applyIssue6Layout(model);applyIssue73Filter(model);applyIssue73CycleVisibility(model);applyIssue104TreeA11y(model);issue104Install();bindIssue64Menus(model);renderIssue6Legend(model);renderBottom(model);const metrics=window.TimingChartProductionController?.renderMetrics;if(metrics){metrics.inspectorRenders=(metrics.inspectorRenders||0)+1;metrics.inspectorInnerHtmlRebuilds=(metrics.inspectorInnerHtmlRebuilds||0)+1;}renderInspector(model);bindEditor(model);const bottom=document.querySelector('#bottomContent');const inspector=document.querySelector('#inspectorBody');window.TimingChartProductionController?.controlAudit?.registerSubtree?.(bottom);window.TimingChartProductionController?.controlAudit?.registerSubtree?.(inspector);window.TimingChartTooltipContract?.registerSubtree?.(bottom);window.TimingChartTooltipContract?.registerSubtree?.(inspector);}};
 window.TimingChartProductionTransactions={render:model=>renderTransactionCanvas(model)};
 
 // Bottom splitter controller for the locked workspace. This declaration intentionally
@@ -454,15 +721,15 @@ applyIssue6Layout = function applyIssue6LayoutIndexed(model=getProductionModel()
   const waveRows=new Map($$('#cycleCanvas .wave-row').map(row=>[row.dataset.signalId||row.dataset.signal,row])); if(metrics)metrics.layoutRowLookups=(metrics.layoutRowLookups||0)+waveRows.size;
   for(const data of groups.values()){
     const rows=(data.rows||[]).map(id=>waveRows.get(id)).filter(Boolean); const visible=rows.filter(row=>!row.hidden); const visibleIndex=new Map(visible.map((row,index)=>[row,index]));
-    rows.forEach(row=>{const id=row.dataset.signalId||row.dataset.signal;const signal=signals.get(id);const index=visibleIndex.get(row);row.hidden=hidden.has(id)||Boolean(data.collapsed);row.style.marginTop=`${Number(signal?.spacingBefore||0)+(index===0?Number(data.spacingBefore||0):0)}px`;row.style.marginBottom=`${Number(signal?.spacingAfter||0)+(index===visible.length-1?Number(data.spacingAfter||0):0)+globalExtra}px`;});
+    rows.forEach(row=>{const id=row.dataset.signalId||row.dataset.signal;const signal=signals.get(id);const index=visibleIndex.get(row);row.hidden=hidden.has(id);row.style.marginTop=`${Number(signal?.spacingBefore||0)+(index===0?Number(data.spacingBefore||0):0)}px`;row.style.marginBottom=`${Number(signal?.spacingAfter||0)+(index===visible.length-1?Number(data.spacingAfter||0):0)+globalExtra}px`;});
   }
   const host=$('#cycleCanvas'); if(host)host.dataset.issue6Spacing='composed';
 };
 
 const issue65BaseProblemsPanel=problemsPanel;
-problemsPanel=model=>{const controller=window.TimingChartProductionController;const all=controller?.getProblems?.(model.document)||[];const severity=model.view.problemSeverityFilter||'all';const signalId=model.view.problemSignalFilter||'all';const signals=controller?.selectors?.getSignals?.()||[];const filtered=all.filter(issue=>(severity==='all'||problemSeverity(issue)===severity)&&(signalId==='all'||issue.id===signalId));const errors=all.filter(issue=>problemSeverity(issue)==='err').length;const warnings=all.filter(issue=>problemSeverity(issue)==='warn').length;const infos=all.filter(issue=>problemSeverity(issue)==='info').length;const rows=filtered.length?filtered.map((issue,index)=>`<tr data-problem-path="${esc(issue.path)}" data-problem-id="${esc(issue.id||'')}"><td>□</td><td>${index+1}</td><td><span class="badge ${problemSeverity(issue)}">${problemSeverity(issue)==='err'?'エラー':problemSeverity(issue)==='info'?'情報':'警告'}</span></td><td>${esc(issue.displayType||issue.code)}</td><td>${esc(issue.id||issue.field||'document')}</td><td>${esc(issue.range||'—')}</td><td>${esc(issue.message)}</td><td>${esc(issue.recommendation||'該当パスを確認してください')}</td><td>${esc(issue.auto||'—')}</td><td>未解決</td></tr>`).join(''):'<tr><td colspan="10">問題はありません。Semantic ModelとAnchorを検証済みです。</td></tr>';return `<div class="toolbar-line"><button class="mini-btn" data-problem-filter="all">すべて (${all.length})</button><button class="mini-btn" data-problem-filter="err">エラー (${errors})</button><button class="mini-btn" data-problem-filter="warn">警告 (${warnings})</button><button class="mini-btn" data-problem-filter="info">情報 (${infos})</button><select data-problem-signal-filter><option value="all">すべての信号</option>${signals.map(signal=>`<option value="${esc(signal.id)}" ${signal.id===signalId?'selected':''}>${esc(signal.display?.name||signal.name||signal.id)}</option>`).join('')}</select><div style="flex:1"></div><button class="mini-btn" data-problem-action="refresh">⟳ 最新の状態に更新</button></div><table><thead><tr><th>□</th><th>#</th><th>重要度</th><th>種類</th><th>信号 / 行</th><th>区間 (cycle)</th><th>内容</th><th>推奨対応</th><th>自動修正</th><th>状態</th></tr></thead><tbody>${rows}</tbody></table>`;};
+problemsPanel=model=>{const controller=window.TimingChartProductionController;const all=controller?.getProblems?.(model.document)||[];const severity=model.view.problemSeverityFilter||'all';const signalId=model.view.problemSignalFilter||'all';const objectFilter=Array.isArray(model.view.problemObjectFilter)?model.view.problemObjectFilter:null;const categoryFilter=Array.isArray(model.view.problemCategoryFilter)?model.view.problemCategoryFilter:null;const signals=controller?.selectors?.getSignals?.()||[];const filtered=all.filter(issue=>(severity==='all'||problemSeverity(issue)===severity)&&(signalId==='all'||issue.id===signalId)&&(!objectFilter||objectFilter.includes(issue.id))&&(!categoryFilter||categoryFilter.includes(controller?.problemCategoryOf?.(issue.code))));const errors=all.filter(issue=>problemSeverity(issue)==='err').length;const warnings=all.filter(issue=>problemSeverity(issue)==='warn').length;const infos=all.filter(issue=>problemSeverity(issue)==='info').length;const scopeNote=objectFilter?`<span style="color:#5c6878">Group/選択範囲で絞込中 (${objectFilter.length}件の対象) <button type="button" class="mini-btn" data-problem-action="clear-object-filter">解除</button></span>`:'';const rows=filtered.length?filtered.map((issue,index)=>`<tr data-problem-path="${esc(issue.path)}" data-problem-id="${esc(issue.id||'')}"><td>□</td><td>${index+1}</td><td><span class="badge ${problemSeverity(issue)}">${problemSeverity(issue)==='err'?'エラー':problemSeverity(issue)==='info'?'情報':'警告'}</span></td><td>${esc(issue.displayType||issue.code)}</td><td>${esc(issue.id||issue.field||'document')}</td><td>${esc(issue.range||'—')}</td><td>${esc(issue.message)}</td><td>${esc(issue.recommendation||'該当パスを確認してください')}</td><td>${esc(issue.auto||'—')}</td><td>未解決</td></tr>`).join(''):`<tr><td colspan="10">${all.length&&filtered.length===0?'絞り込み条件に一致する問題はありません。':'問題はありません。Semantic ModelとAnchorを検証済みです。'}</td></tr>`;return `<div class="toolbar-line"><button class="mini-btn" data-problem-filter="all">すべて (${all.length})</button><button class="mini-btn" data-problem-filter="err">エラー (${errors})</button><button class="mini-btn" data-problem-filter="warn">警告 (${warnings})</button><button class="mini-btn" data-problem-filter="info">情報 (${infos})</button><select data-problem-signal-filter><option value="all">すべての信号</option>${signals.map(signal=>`<option value="${esc(signal.id)}" ${signal.id===signalId?'selected':''}>${esc(signal.display?.name||signal.name||signal.id)}</option>`).join('')}</select>${scopeNote}<div style="flex:1"></div><button class="mini-btn" data-problem-action="refresh">⟳ 最新の状態に更新</button></div><table><thead><tr><th>□</th><th>#</th><th>重要度</th><th>種類</th><th>信号 / 行</th><th>区間 (cycle)</th><th>内容</th><th>推奨対応</th><th>自動修正</th><th>状態</th></tr></thead><tbody>${rows}</tbody></table>`;};
 const issue65ProblemsBaseBindEditor=bindEditor;
-bindEditor=model=>{issue65ProblemsBaseBindEditor(model);const controller=window.TimingChartProductionController;const content=$('#bottomContent');content?.querySelectorAll('[data-problem-filter]').forEach(button=>button.addEventListener('click',()=>controller.actions.setProblemFilter(button.dataset.problemFilter,model.view.problemSignalFilter||'all')));content?.querySelector('[data-problem-signal-filter]')?.addEventListener('change',event=>controller.actions.setProblemFilter(model.view.problemSeverityFilter||'all',event.target.value));content?.querySelectorAll('[data-problem-id]').forEach(row=>row.addEventListener('click',()=>{const id=row.dataset.problemId;if(controller.selectors.getSignal(id))controller.actions.selectObject({dataset:{signal:id,kind:'signal'}});else if(controller.model.document.annotations?.some(item=>item.id===id))controller.actions.selectAnnotation(id);else if(controller.model.document.transactions?.some(item=>item.id===id))controller.actions.selectTransaction(id);}));content?.querySelectorAll('[data-annotation-anchor-action]').forEach(button=>button.addEventListener('click',event=>{const row=event.currentTarget.closest('[data-annotation-id]');const id=row?.dataset.annotationId;const key=event.currentTarget.dataset.annotationAnchorAction;if(id){controller.actions.selectAnnotation(id);controller.actions.beginAnnotationAnchorSelection(key);}}));};
+bindEditor=model=>{issue65ProblemsBaseBindEditor(model);const controller=window.TimingChartProductionController;const content=$('#bottomContent');content?.querySelectorAll('[data-problem-filter]').forEach(button=>button.addEventListener('click',()=>controller.actions.setProblemFilter(button.dataset.problemFilter,model.view.problemSignalFilter||'all')));content?.querySelector('[data-problem-signal-filter]')?.addEventListener('change',event=>controller.actions.setProblemFilter(model.view.problemSeverityFilter||'all',event.target.value));content?.querySelector('[data-problem-action="clear-object-filter"]')?.addEventListener('click',()=>controller.actions.setProblemObjectFilter(null));content?.querySelectorAll('[data-problem-id]').forEach(row=>row.addEventListener('click',()=>{const id=row.dataset.problemId;if(controller.selectors.getSignal(id))controller.actions.selectObject({dataset:{signal:id,kind:'signal'}});else if(controller.model.document.annotations?.some(item=>item.id===id))controller.actions.selectAnnotation(id);else if(controller.model.document.transactions?.some(item=>item.id===id))controller.actions.selectTransaction(id);controller.actions.revealSelection?.({id});}));content?.querySelectorAll('[data-annotation-anchor-action]').forEach(button=>button.addEventListener('click',event=>{const row=event.currentTarget.closest('[data-annotation-id]');const id=row?.dataset.annotationId;const key=event.currentTarget.dataset.annotationAnchorAction;if(id){controller.actions.selectAnnotation(id);controller.actions.beginAnnotationAnchorSelection(key);}}));};
 const issue65TransactionBindEditor=bindEditor;
 bindEditor=model=>{issue65TransactionBindEditor(model);const controller=window.TimingChartProductionController;const content=$('#bottomContent');content?.querySelectorAll('[data-transaction-field]').forEach(input=>input.addEventListener('change',event=>{event.stopImmediatePropagation();const id=input.closest('[data-transaction-id]')?.dataset.transactionId||model.selection.id;let value=input.value;if(input.dataset.transactionField==='linkedSignals')value=Array.from(input.selectedOptions||[]).map(option=>option.value);if(input.dataset.transactionField==='phases'){try{value=JSON.parse(input.value);}catch{return;}}controller.actions.updateTransaction(id,input.dataset.transactionField,value);},true));};
 const issue65SignalBindEditor=bindEditor;
@@ -473,5 +740,5 @@ const issue65AnnotationAnchorDelegation=bindEditor;
 bindEditor=model=>{issue65AnnotationAnchorDelegation(model);const controller=window.TimingChartProductionController;const content=$('#bottomContent');if(content&&!content.dataset.issue65AnchorBound){content.dataset.issue65AnchorBound='true';content.addEventListener('change',event=>{const input=event.target.closest?.('[data-annotation-anchor-field]');if(!input)return;const row=input.closest('[data-annotation-id]');const annotation=model.document.annotations?.find(item=>item.id===row?.dataset.annotationId);const [key,field]=input.dataset.annotationAnchorField.split('.');if(annotation&&field==='cycle'){event.stopImmediatePropagation();controller.actions.updateAnnotationAnchor(annotation.id,key,'cycle',input.value);}},true);}};
 window.TimingChartProductionUi={refreshBottom:model=>{renderBottom(model);bindEditor(model);},renderBottom,renderInspector};
 const issue121BindInspector=bindEditor;
-bindEditor=model=>{issue121BindInspector(model);const controller=window.TimingChartProductionController;const inspector=$('#inspectorBody');if(inspector){inspector.querySelectorAll('[data-section-toggle]').forEach(header=>header.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const section=header.dataset.sectionToggle;model.view.collapsedInspectorSections??={};model.view.collapsedInspectorSections[section]=!model.view.collapsedInspectorSections[section];controller.render?.();}));inspector.querySelectorAll('[data-inspector-anchor-pick]').forEach(button=>button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();controller.actions.beginAnnotationAnchorSelection(button.dataset.inspectorAnchorPick);}));inspector.querySelectorAll('[data-annotation-anchor-key]').forEach(input=>input.addEventListener('change',()=>{const id=model.selection?.id;const key=input.dataset.annotationAnchorKey;const prop=input.dataset.annotationAnchorProp;if(id&&key&&prop)controller.actions.updateAnnotationAnchor(id,key,prop,input.value);}));}const panelHead=document.querySelector('.inspector .panel-head');if(panelHead&&!panelHead.dataset.issue122Bound){panelHead.dataset.issue122Bound='true';const moreBtn=panelHead.querySelector('span:nth-child(2)');if(moreBtn){moreBtn.style.cursor='pointer';moreBtn.addEventListener('click',event=>{event.stopPropagation();model.view.inspectorPaneCollapsed=!model.view.inspectorPaneCollapsed;controller.render?.();});}}};
+bindEditor=model=>{issue121BindInspector(model);const controller=window.TimingChartProductionController;const inspector=$('#inspectorBody');if(inspector){inspector.querySelectorAll('[data-section-toggle]').forEach(header=>header.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();const section=header.dataset.sectionToggle;const body=header.nextElementSibling;const currentlyCollapsed=body?.style.display==='none';model.view.collapsedInspectorSections??={};model.view.collapsedInspectorSections[section]=!currentlyCollapsed;controller.render?.();}));inspector.querySelectorAll('[data-inspector-anchor-pick]').forEach(button=>button.addEventListener('click',event=>{event.preventDefault();event.stopPropagation();controller.actions.beginAnnotationAnchorSelection(button.dataset.inspectorAnchorPick);}));inspector.querySelectorAll('[data-annotation-anchor-key]').forEach(input=>input.addEventListener('change',()=>{const id=model.selection?.id;const key=input.dataset.annotationAnchorKey;const prop=input.dataset.annotationAnchorProp;if(id&&key&&prop)controller.actions.updateAnnotationAnchor(id,key,prop,input.value);}));}const panelHead=document.querySelector('.inspector .panel-head');if(panelHead&&!panelHead.dataset.issue122Bound){panelHead.dataset.issue122Bound='true';const moreBtn=panelHead.querySelector('span:nth-child(2)');if(moreBtn){moreBtn.style.cursor='pointer';moreBtn.addEventListener('click',event=>{event.stopPropagation();model.view.inspectorPaneCollapsed=!model.view.inspectorPaneCollapsed;controller.render?.();});}}};
 if(!document.body.dataset.issue148DragSelectionBound){document.body.dataset.issue148DragSelectionBound='true';document.addEventListener('dragstart',event=>{const row=event.target.closest?.('#groups .row[data-signal]');if(row)window.TimingChartProductionController?.actions.selectObject(row);},true);}

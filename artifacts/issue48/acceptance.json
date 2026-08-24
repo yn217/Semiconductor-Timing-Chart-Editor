@@ -23,7 +23,7 @@
       ],
       "selection": "req_valid",
       "history": 1,
-      "upDisabled": true,
+      "upDisabled": false,
       "downDisabled": false
     },
     "afterDown": {

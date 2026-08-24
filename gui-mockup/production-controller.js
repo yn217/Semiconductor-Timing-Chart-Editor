@@ -27,9 +27,9 @@
     ],
     signals,
     annotations: [
-      { id: 'ann_default_range', type: 'range', start: { signal: 'req_valid', cycle: 4, point: 'rising', offset: { x: 0, y: -24 } }, end: { signal: 'ready', cycle: 10, point: 'rising', offset: { x: 0, y: -24 } }, label: 'リクエスト受付からレスポンスまで 6 cycle', color: '#1473e6', position: 'top', comment: 'リード全体の期間', visible: false },
+      { id: 'ann_default_range', type: 'range', start: { signal: 'req_valid', cycle: 3, point: 'rising', offset: { x: 0, y: -24 } }, end: { signal: 'ready', cycle: 8, point: 'rising', offset: { x: 0, y: -24 } }, label: 'リクエスト受付からレスポンスまで 6 cycle', color: '#1473e6', position: 'top', comment: 'リード全体の期間', visible: false },
       { id: 'ann_default_marker', type: 'marker', anchor: { signal: 'clk', cycle: 4, point: 'rising', offset: { x: 0, y: -40 } }, label: 'REQ assert', color: '#1473e6', position: 'canvas', comment: 'リクエストアサート点', visible: false },
-      { id: 'ann_default_callout', type: 'callout', anchor: { signal: 'req_valid', cycle: 4, point: 'rising', offset: { x: 120, y: -10 } }, label: 'req_valid がHighの期間がリクエスト有効期間です', color: '#1473e6', position: 'canvas', comment: '動作説明', visible: false },
+      { id: 'ann_default_callout', type: 'callout', anchor: { signal: 'req_valid', cycle: 3, point: 'rising', offset: { x: 120, y: -10 } }, label: 'req_valid がHighの期間がリクエスト有効期間です', color: '#1473e6', position: 'canvas', comment: '動作説明', visible: false },
       { id: 'ann_default_dependency', type: 'dependency', from: { signal: 'state[1:0]', cycle: 4, point: 'transition-center', offset: { x: 0, y: 0 } }, to: { signal: 'rdata[15:0]', cycle: 6, point: 'transition-center', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'canvas', comment: 'REQ からデータ出力まで', lineType: 'straight', arrowhead: 'end', visible: false },
       { id: 'ann_default_highlight', type: 'highlight', start: { signal: 'req_valid', cycle: 4, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, end: { signal: 'ready', cycle: 10, point: 'cycle-boundary', offset: { x: 0, y: 0 } }, label: '', color: '#1473e6', position: 'background', comment: '処理期間のハイライト', visible: false }
     ],
@@ -496,6 +496,20 @@
   controller.actions.setBottomTab = nextTab => { if (model.view.mode === 'cycle' && nextTab === 'transaction') return; if (model.view.mode === 'transaction' && nextTab === 'signal') return; model.view.tab = nextTab; render(); };
   controller.actions.setProblemFilter = (severity = 'all', signalId = 'all') => { if (!['all', 'err', 'warn', 'info'].includes(severity)) return false; model.view.problemSeverityFilter = severity; model.view.problemSignalFilter = signalId || 'all'; render(); return true; };
   controller.actions.refreshProblems = () => { model.problemRefreshRevision = (model.problemRefreshRevision || 0) + 1; controller.clearValidationCache(); model.validation = controller.getProblems(model.document, { force: true }); render(); return true; };
+  const PROBLEM_CATEGORIES = {
+    schema: ['format-version', 'missing-document', 'missing-timeline', 'missing-signalGroups', 'missing-signals', 'missing-annotations', 'missing-legend', 'missing-layout', 'missing-transactions', 'missing-constraints'],
+    signal: ['invalid-start-order', 'duplicate-signal-id', 'invalid-signal-source', 'invalid-display-name', 'transient-or-unsupported-field', 'non-finite-number', 'invalid-signal-spacing'],
+    bus: ['invalid-bus-range', 'invalid-bus-literal', 'bus-width-overflow'],
+    timeline: ['duplicate-label-anchor-id', 'invalid-label-anchor', 'label-anchor-outside-timeline', 'invalid-resume-label-anchor', 'invalid-label-anchor-owner', 'duplicate-bookmark-id', 'invalid-bookmark', 'duplicate-time-group-id', 'invalid-time-group', 'invalid-time-group-fold-style'],
+    clock: ['invalid-reference-clock', 'invalid-timeline-edge', 'invalid-clock-generator'],
+    annotation: ['invalid-annotation-anchor', 'duplicate-annotation-id', 'invalid-annotation-type', 'invalid-dependency-style', 'invalid-label-offset', 'invalid-label-style'],
+    transaction: ['duplicate-transaction-id', 'invalid-transaction-bounds', 'invalid-transaction-links', 'invalid-transaction-link', 'invalid-transaction-phases', 'invalid-transaction-phase-bounds']
+  };
+  const problemCategoryOf = code => Object.keys(PROBLEM_CATEGORIES).find(category => PROBLEM_CATEGORIES[category].includes(code)) || 'schema';
+  controller.problemCategories = PROBLEM_CATEGORIES;
+  controller.problemCategoryOf = problemCategoryOf;
+  controller.actions.setProblemObjectFilter = (ids = null) => { model.view.problemObjectFilter = Array.isArray(ids) && ids.length ? [...ids] : null; render(); return true; };
+  controller.actions.setProblemCategoryFilter = (categories = null) => { const valid = Array.isArray(categories) ? categories.filter(category => Object.prototype.hasOwnProperty.call(PROBLEM_CATEGORIES, category)) : null; model.view.problemCategoryFilter = valid && valid.length ? valid : null; render(); return true; };
   controller.actions.setFollowSelection = enabled => { model.view.followSelection = enabled; if (enabled) model.view.pinned = false; render(); };
   controller.actions.setPinned = pinned => { model.view.pinned = pinned; if (pinned) model.view.followSelection = false; render(); };
   controller.actions.setSignalVisibility = (signalId, visible) => { const signal = model.document.signals.find(item => item.id === signalId); if (!signal) return false; return incrementalRun('Change signal visibility', () => { signal.display ||= { name: signal.name }; if (visible) delete signal.display.visible; else signal.display.visible = false; model.view.hiddenSignals = model.document.signals.filter(item => item.display?.visible === false).map(item => item.id); }, () => reconcileSignalVisibility(signalId)); };
@@ -679,6 +693,33 @@
     wave.style.transform = zoom === 1 ? '' : `scaleX(${zoom})`;
   };
   controller.actions.selectTransaction = id => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; model.selection = { kind: 'transaction', id }; model.crossHighlight = [...(transaction.linkedSignals || [])]; if (model.view.followSelection && !model.view.pinned) model.view.tab = 'transaction'; render(); return true; };
+  controller.actions.revealSelection = (options = {}) => {
+    const { leftTree = true, cycleRow = true, behavior = 'nearest', id: explicitId } = options;
+    const id = explicitId ?? model.selection?.id;
+    if (!id) return { revealed: false, reason: 'no-selection' };
+    const staleGuard = (model.document.signals.some(item => item.id === id) || (model.document.annotations || []).some(item => item.id === id) || (model.document.transactions || []).some(item => item.id === id));
+    if (!staleGuard) return { revealed: false, reason: 'stale-id' };
+    const result = { revealed: false, leftTree: null, cycleRow: null };
+    if (leftTree) {
+      const row = document.querySelector(`#groups .row[data-signal="${CSS.escape(id)}"]`);
+      if (!row) result.leftTree = 'not-found';
+      else if (row.dataset.filterHidden === 'true') result.leftTree = 'filtered';
+      else if (row.hidden && row.closest('.group')?.classList.contains('collapsed')) {
+        const header = row.closest('.group')?.querySelector('.group-h');
+        header?.scrollIntoView({ block: behavior, inline: 'nearest', behavior: 'auto' });
+        if (header) { header.classList.remove('reveal-pulse'); void header.offsetWidth; header.classList.add('reveal-pulse'); }
+        result.leftTree = 'group-collapsed';
+      } else if (row.hidden) result.leftTree = 'hidden';
+      else { row.scrollIntoView({ block: behavior, inline: 'nearest', behavior: 'auto' }); result.leftTree = 'revealed'; result.revealed = true; }
+    }
+    if (cycleRow) {
+      const canvasRow = document.querySelector(`#cycleCanvas .wave-row[data-signal="${CSS.escape(id)}"]`);
+      if (!canvasRow) result.cycleRow = 'not-found';
+      else if (canvasRow.hidden) result.cycleRow = 'hidden';
+      else { canvasRow.scrollIntoView({ block: behavior, inline: 'nearest', behavior: 'auto' }); result.cycleRow = 'revealed'; result.revealed = true; }
+    }
+    return result;
+  };
   const getBookmark = id => (model.document.bookmarks || []).find(bookmark => bookmark.id === id);
   const nextBookmarkId = () => { const used = new Set((model.document.bookmarks || []).map(bookmark => bookmark.id)); for (let index = 1; index < 1_000_000; index += 1) { const id = `bm_${String(index).padStart(3, '0')}`; if (!used.has(id)) return id; } return null; };
   const validBookmarkStart = value => Number.isFinite(Number(value)) && Number(value) >= Number(model.document.timeline.start) && Number(value) <= Number(model.document.timeline.end);
@@ -740,6 +781,8 @@
   controller.actions.duplicateTransaction = id => { const source = model.document.transactions.find(transaction => transaction.id === id); if (!source) return false; const duration = Number(source.end) - Number(source.start); const start = Number(source.end); const end = start + duration; const offset = start - Number(source.start); const phases = (source.phases || []).map(phase => ({ ...structuredClone(phase), start: Number(phase.start) + offset, end: Number(phase.end) + offset })); return controller.actions.addTransaction({ ...structuredClone(source), id: undefined, name: `${source.name} copy`, start, end, phases }); };
   controller.actions.deleteTransaction = id => transactionRun('Delete transaction', () => { const index = model.document.transactions.findIndex(item => item.id === id); if (index < 0) return false; model.document.transactions.splice(index, 1); model.selection = { kind: 'signal', id: model.document.timeline.referenceClock }; model.crossHighlight = []; });
   controller.actions.updateTransaction = (id, field, value) => transactionRun(`Update transaction ${field}`, () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction || !['name', 'start', 'end', 'lane', 'source', 'destination', 'comment', 'linkedSignals', 'phases'].includes(field)) return false; if (field === 'linkedSignals') { const ids = Array.isArray(value) ? value : []; transaction.linkedSignals = ids.filter(signalId => { const signal = getSignal(signalId); return signal && signal.type !== 'commentRow'; }); model.crossHighlight = [...transaction.linkedSignals]; return true; } if (field === 'phases') { if (!Array.isArray(value)) return false; transaction.phases = value.map(phase => ({ name: String(phase.name || ''), start: Number(phase.start), end: Number(phase.end) })); return true; } transaction[field] = ['start', 'end'].includes(field) ? Number(value) : String(value); });
+  controller.actions.moveTransactionBy = (id, delta) => transactionRun('Reorder transaction', () => { const from = model.document.transactions.findIndex(item => item.id === id); if (from < 0) return false; const to = Math.max(0, Math.min(model.document.transactions.length - 1, from + Number(delta))); if (from === to) return false; const [transaction] = model.document.transactions.splice(from, 1); model.document.transactions.splice(to, 0, transaction); model.selection = { kind: 'transaction', id }; });
+  controller.actions.setTransactionRange = (id, start, end) => transactionRun('Set transaction range', () => { const transaction = model.document.transactions.find(item => item.id === id); if (!transaction) return false; const startValue = Number(start); const endValue = Number(end); if (!Number.isInteger(startValue) || !Number.isInteger(endValue) || endValue <= startValue) return false; const offset = startValue - Number(transaction.start); transaction.start = startValue; transaction.end = endValue; if (Array.isArray(transaction.phases) && transaction.phases.length) { const shifted = transaction.phases.map(phase => ({ ...phase, start: Number(phase.start) + offset, end: Number(phase.end) + offset })); const fits = shifted.every(phase => phase.start >= startValue && phase.end <= endValue); transaction.phases = fits ? shifted : []; } });
   controller.actions.setBusWidthAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align bus width column', () => { model.document.layout.busWidthAlign = alignment; }); };
   controller.actions.setBusWidthMode = mode => { if (!['inline', 'alignedColumn'].includes(mode)) return false; return transactionRun('Change bus width display', () => { model.document.layout.busWidthMode = mode; }); };
   controller.actions.setSignalNameAlignment = alignment => { if (!['left', 'center', 'right'].includes(alignment)) return false; return transactionRun('Align signal name column', () => { model.document.layout.signalNameAlign = alignment; }); };
@@ -1020,7 +1063,54 @@
   rows().forEach(row => row.addEventListener('click', () => controller.actions.selectObject(row)));
   const follow = document.querySelector('#bottomTabs input[type="checkbox"]'); follow?.addEventListener('change', () => controller.actions.setFollowSelection(follow.checked));
   const pin = document.querySelector('#bottomTabs .follow button'); pin?.addEventListener('click', () => controller.actions.setPinned(!model.view.pinned));
-  document.querySelector('.ribbon .txn-only .tool')?.addEventListener('click', () => controller.actions.addTransaction());
+  document.querySelectorAll('.ribbon .txn-only [data-txn-action]').forEach(button => {
+    button.dataset.controlStatus = 'implemented';
+    button.addEventListener('click', () => {
+      const action = button.dataset.txnAction;
+      const id = model.selection?.kind === 'transaction' ? model.selection.id : null;
+      if (action === 'add') controller.actions.addTransaction();
+      else if (id && action === 'duplicate') controller.actions.duplicateTransaction(id);
+      else if (id && action === 'delete') controller.actions.deleteTransaction(id);
+      else if (id && action === 'up') controller.actions.moveTransactionBy(id, -1);
+      else if (id && action === 'down') controller.actions.moveTransactionBy(id, 1);
+      else if (id && action === 'reveal-links') {
+        const transaction = model.document.transactions.find(item => item.id === id);
+        const targetId = (transaction?.linkedSignals || [])[0];
+        if (!targetId) return;
+        if (model.view.mode === 'transaction') controller.actions.setViewMode('split');
+        controller.actions.revealSelection?.({ id: targetId });
+      }
+      else if (id && action === 'apply-range') {
+        const start = model.timeSelection?.rangeStart;
+        const end = model.timeSelection?.rangeEnd;
+        controller.actions.setTransactionRange(id, start, end);
+      }
+    });
+  });
+  controller.registerRenderHook?.('txn-ribbon-buttons', () => {
+    const hasSelection = model.selection?.kind === 'transaction';
+    const selectedTransaction = hasSelection ? model.document.transactions.find(item => item.id === model.selection.id) : null;
+    const hasLinks = Boolean(selectedTransaction?.linkedSignals?.length);
+    const rangeStart = model.timeSelection?.rangeStart;
+    const rangeEnd = model.timeSelection?.rangeEnd;
+    const hasValidRange = Number.isInteger(rangeStart) && Number.isInteger(rangeEnd) && rangeEnd > rangeStart;
+    document.querySelectorAll('.ribbon .txn-only [data-txn-action]').forEach(button => {
+      const action = button.dataset.txnAction;
+      if (action === 'add') return;
+      if (action === 'reveal-links') {
+        button.disabled = !hasSelection || !hasLinks;
+        button.title = !hasSelection ? 'Transactionを選択してください' : !hasLinks ? 'このTransactionにはLinked Signalがありません' : '';
+        return;
+      }
+      if (action === 'apply-range') {
+        button.disabled = !hasSelection || !hasValidRange;
+        button.title = !hasSelection ? 'Transactionを選択してください' : !hasValidRange ? '時間軸で範囲を選択してください' : '';
+        return;
+      }
+      button.disabled = !hasSelection;
+      button.title = hasSelection ? '' : 'Transactionを選択してください';
+    });
+  });
   document.querySelectorAll('.export-tool').forEach(button => button.addEventListener('click', async () => { const format = button.querySelector('.filetype')?.textContent?.toLowerCase() || 'svg'; const result = await controller.export(format); window.TimingChartLastExport = result; if (format === 'pdf') { window.print(); return; } const blob = new Blob([format === 'svg' ? result.text : result.dataUrl], { type: format === 'svg' ? 'image/svg+xml' : 'text/plain' }); const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `timing-chart.${format}`; link.click(); URL.revokeObjectURL(link.href); }));
   render();
 })();
