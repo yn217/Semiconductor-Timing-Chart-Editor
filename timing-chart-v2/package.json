@@ -1,0 +1,31 @@
+{
+  "name": "@timing-chart-v2/workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "typecheck": "tsc -b",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build": "npm run typecheck && npm --workspace @timing-chart-v2/editor run build",
+    "check": "npm run check:boundaries && npm run test && npm run build",
+    "check:ci": "npm run check && npm run test:e2e"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.1",
+    "@types/react": "19.1.10",
+    "@types/react-dom": "19.1.7",
+    "@vitejs/plugin-react": "5.0.2",
+    "typescript": "5.9.2",
+    "vite": "7.3.6",
+    "vitest": "3.2.7"
+  }
+}

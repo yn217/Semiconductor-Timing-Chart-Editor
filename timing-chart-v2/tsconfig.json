@@ -1,0 +1,17 @@
+{
+  "files": [],
+  "references": [
+    { "path": "packages/schema" },
+    { "path": "packages/core" },
+    { "path": "packages/commands" },
+    { "path": "packages/history" },
+    { "path": "packages/geometry" },
+    { "path": "packages/wavedrom-adapter" },
+    { "path": "packages/projection" },
+    { "path": "packages/renderer" },
+    { "path": "packages/ui" },
+    { "path": "packages/export" },
+    { "path": "packages/testing" },
+    { "path": "apps/editor" }
+  ]
+}

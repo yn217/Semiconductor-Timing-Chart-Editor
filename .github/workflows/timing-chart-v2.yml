@@ -1,0 +1,26 @@
+name: Timing Chart V2 Architecture Gate
+
+on:
+  push:
+    branches: [rewrite/v2]
+    paths: ["timing-chart-v2/**", ".github/workflows/timing-chart-v2.yml"]
+  pull_request:
+    paths: ["timing-chart-v2/**", ".github/workflows/timing-chart-v2.yml"]
+
+jobs:
+  phase-0:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: timing-chart-v2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: timing-chart-v2/package-lock.json
+      - run: npm ci
+      - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e

@@ -1,0 +1,14 @@
+{
+  "apps/editor": ["ui", "commands", "history", "projection", "renderer", "wavedrom-adapter", "geometry", "export", "core", "schema"],
+  "schema": [],
+  "core": ["schema"],
+  "commands": ["core", "schema"],
+  "history": ["commands", "core", "schema"],
+  "geometry": ["schema"],
+  "wavedrom-adapter": ["geometry", "schema"],
+  "projection": ["commands", "core", "geometry", "schema"],
+  "renderer": ["projection", "geometry"],
+  "ui": ["commands"],
+  "export": ["core", "geometry", "schema"],
+  "testing": ["commands", "core", "geometry", "history", "projection", "renderer", "schema", "wavedrom-adapter"]
+}

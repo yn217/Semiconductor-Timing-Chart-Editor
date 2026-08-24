@@ -1,0 +1,1 @@
+{"name":"@timing-chart-v2/renderer","version":"0.0.0","private":true,"type":"module","exports":"./dist/index.js","types":"./dist/index.d.ts","dependencies":{"@timing-chart-v2/geometry":"0.0.0","@timing-chart-v2/projection":"0.0.0"}}
