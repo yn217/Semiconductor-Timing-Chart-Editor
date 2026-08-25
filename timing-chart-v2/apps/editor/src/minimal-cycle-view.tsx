@@ -175,11 +175,16 @@ export function MinimalCycleView() {
         const document = session.getSnapshot().document;
         const signal = document.signals.find((candidate) => candidate.id === id);
         if (!signal) throw new Error(`Signal '${id}' is missing.`);
-        const rendered = await adapter.renderWave(id, adapter.toWaveJson({ signal, cycleCount: document.timeline.cycleCount }), owner);
-        const geometry = adapter.extractLocalGeometry(rendered);
-        geometryMaps.set(id, geometry);
-        if (id === document.timeline.referenceClock) referenceGeometry = geometry;
-        return { waveDromRenders: 1, localGeometryBuilds: 1 };
+        try {
+          const rendered = await adapter.renderWave(id, adapter.toWaveJson({ signal, cycleCount: document.timeline.cycleCount }), owner);
+          const geometry = adapter.extractLocalGeometry(rendered);
+          geometryMaps.set(id, geometry);
+          if (id === document.timeline.referenceClock) referenceGeometry = geometry;
+          return { waveDromRenders: 1, localGeometryBuilds: 1 };
+        } catch (error) {
+          setProblem(`Signal '${signal.display.name}' could not be rendered: ${error instanceof Error ? error.message : String(error)}`);
+          return { waveDromRenders: 0, localGeometryBuilds: 0 };
+        }
       },
       disposeWave(id) {
         adapter.dispose(id);

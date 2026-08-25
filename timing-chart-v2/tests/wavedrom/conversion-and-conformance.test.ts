@@ -5,7 +5,6 @@ import {
   WAVEDROM_STATE_TOKENS,
   WAVEDROM_UNSUPPORTED_CAPABILITIES,
   WAVEDROM_VERSION,
-  WaveDromAdapterError,
   renderWaveJsonMarkup,
   toWaveJson,
   type WaveJsonSignal,
@@ -84,7 +83,17 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(() => toWaveJson({ signal: duty, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_DUTY" }));
     const fractional = logicSignal([{ start: 0, value: 0 }, { start: 1.5, value: 1 }]);
     expect(() => toWaveJson({ signal: fractional, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CHANGE_POINT" }));
-    expect(() => toWaveJson({ signal: logicSignal([{ start: 0, value: "maybe" }]), cycleCount: 8 })).toThrowError(WaveDromAdapterError);
+    expect(() => toWaveJson({ signal: logicSignal([{ start: 0, value: "maybe" }]), cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_LOGIC_VALUE" }));
+    const badPeriod = { ...base, generator: { ...base.generator, period: 0 } } as ClockSignal;
+    expect(() => toWaveJson({ signal: badPeriod, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_PERIOD" }));
+    const badPhase = { ...base, generator: { ...base.generator, phase: 0.25 } } as ClockSignal;
+    expect(() => toWaveJson({ signal: badPhase, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_PHASE" }));
+    const badStart = { ...base, generator: { ...base.generator, period: 2, start: 1 } } as ClockSignal;
+    expect(() => toWaveJson({ signal: badStart, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_START" }));
+    const badEnableValue = { ...base, enable: [{ start: 0, value: "maybe" }] } as ClockSignal;
+    expect(() => toWaveJson({ signal: badEnableValue, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_ENABLE" }));
+    const badEnableAlign = { ...base, generator: { ...base.generator, period: 2 }, enable: [{ start: 1, value: 1 }] } as ClockSignal;
+    expect(() => toWaveJson({ signal: badEnableAlign, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_ENABLE" }));
   });
 
   it("pins the production and test renderer to one WaveDrom version", () => {

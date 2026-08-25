@@ -151,7 +151,7 @@ const POINT_MAP: Readonly<Record<string, AnchorPoint>> = {
   falling: "falling-edge",
   "falling-edge": "falling-edge",
   "value-start": "value-start",
-  "value-center": "transition-center",
+  "value-center": "value-center",
   "value-end": "transition-end",
   "transition-start": "transition-start",
   "transition-center": "transition-center",
@@ -239,6 +239,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const signals = list(source.signals ?? cycleView.signals).map(normalizeSignal);
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
+  const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
 
   const groups = list(source.signalGroups).map((value, index) => {
     const group = record(value);
@@ -360,7 +361,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
         end: cycleCount,
         timeBase: "cycle",
         cycleCount,
-        ...(fallbackSignal ? { referenceClock: text(timebase.referenceClock, fallbackSignal) as SignalId } : {}),
+        ...(referenceClockSignal ? { referenceClock: text(timebase.referenceClock, referenceClockSignal) as SignalId } : {}),
         edge: timebase.edge === "falling" ? "falling" : "rising",
         labelAnchors: labelAnchors as unknown as CanonicalDocument["timeline"]["labelAnchors"],
       },
