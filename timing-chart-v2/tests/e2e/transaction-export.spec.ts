@@ -32,6 +32,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
   await expect(inspector.getByLabel("Link REQUEST")).toBeChecked();
   const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const path = await (await save).path();
   await inspector.getByLabel("Transaction name").fill("Temporary"); await inspector.getByLabel("Transaction name").blur();
@@ -53,6 +54,7 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   const rulerCycle2 = page.getByTestId("cycle-ruler").locator("[data-cycle='2']");
   const txBox = await transaction.boundingBox(); const tickBox = await rulerCycle2.boundingBox();
   expect(Math.abs(txBox!.x - tickBox!.x)).toBeLessThan(3);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
   const zoomTx = await transaction.boundingBox(); const zoomTick = await rulerCycle2.boundingBox();
   expect(Math.abs(zoomTx!.x - zoomTick!.x)).toBeLessThan(3);
@@ -67,10 +69,12 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
 test("ripples Transaction ranges through Timeline edits with exact Undo", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Ripple", 2, 6);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline insert count").fill("2");
   await page.getByRole("button", { name: "Insert before" }).click();
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("4");
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("8");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("2");
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("6");
@@ -96,6 +100,7 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
 test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Exported DMA", 2, 6);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
   const download = async (format: "svg" | "png" | "pdf") => {

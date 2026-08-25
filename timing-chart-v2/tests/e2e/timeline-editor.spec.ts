@@ -4,6 +4,7 @@ test("selects a half-open range directly on the geometry-derived ruler", async (
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
   await ruler.locator("[data-cycle='5']").click();
   await expect(page.getByLabel("Timeline range start")).toHaveValue("5");
@@ -19,6 +20,7 @@ test("inserts cycles with full semantic ripple and one Undo entry", async ({ pag
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
@@ -45,6 +47,7 @@ test("deletes a half-open range and preserves the active value at the join", asy
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByRole("button", { name: "Delete range" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -60,6 +63,7 @@ test("creates geometry-positioned Marker and Gap objects without waveform regene
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = await surface.getAttribute("data-render-counters");
   const ruler = page.getByTestId("cycle-ruler");
@@ -87,6 +91,7 @@ test("duplicates the selected cycle state range at a destination in one commit",
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByLabel("Timeline destination").fill("8");
   await page.getByRole("button", { name: "Duplicate to" }).click();
@@ -104,6 +109,7 @@ test("moves the selected range by cycle permutation without changing timeline le
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByLabel("Timeline destination").fill("8");
   await page.getByRole("button", { name: "Move to" }).click();

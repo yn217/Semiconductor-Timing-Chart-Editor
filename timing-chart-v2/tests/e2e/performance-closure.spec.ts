@@ -86,7 +86,7 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
 
   const viewport = page.getByTestId("cycle-viewport"); await viewport.evaluate((element) => { element.scrollTop = 300; element.dispatchEvent(new Event("scroll")); }); await page.waitForTimeout(500);
   const viewBefore = await counters(page); const sessionBeforeView = await sessionCounters(page); const historyBeforeView = await page.getByTestId("history-status").textContent();
-  await viewport.evaluate((element) => { element.scrollLeft += 8; element.dispatchEvent(new Event("scroll")); }); await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click(); await page.waitForTimeout(100);
+  await viewport.evaluate((element) => { element.scrollLeft += 8; element.dispatchEvent(new Event("scroll")); }); await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click(); await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click(); await page.waitForTimeout(100);
   const viewAfter = await counters(page); expect(viewAfter.waveDromRenders).toBe(viewBefore.waveDromRenders); expect(viewAfter.localGeometryBuilds).toBe(viewBefore.localGeometryBuilds); await expect(page.getByTestId("history-status")).toHaveText(historyBeforeView!);
   const sessionAfterView = await sessionCounters(page); expect(sessionAfterView.rowLayoutBuilds).toBe(sessionBeforeView.rowLayoutBuilds); expect(sessionAfterView.commits).toBe(sessionBeforeView.commits);
 

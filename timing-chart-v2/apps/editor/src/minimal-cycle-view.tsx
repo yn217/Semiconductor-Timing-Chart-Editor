@@ -7,7 +7,7 @@ import { DeterministicExportService } from "@timing-chart-v2/export";
 import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -741,6 +741,7 @@ export function MinimalCycleView() {
       zoom={zoom}
       arrowPickStatus={arrowPickStatus}
       selectedSignalId={selectedSignal?.id ?? clock.id}
+      problemsCount={diagnostics.length}
       onRange={setTimelineRange}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
       onCreateAnnotation={createSelectedAnnotation}
@@ -757,6 +758,7 @@ export function MinimalCycleView() {
       onExport={() => setExportVisible(true)}
       onToggleInspector={() => setInspectorVisible((value) => !value)}
       onToggleBottom={() => setBottomVisible((value) => !value)}
+      onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
     />
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label="Cycle View">
@@ -800,23 +802,64 @@ function RibbonIcon({ name }: { readonly name: string }) {
   return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
 }
 
-function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom }: {
-  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId;
+function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, problemsCount, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems }: {
+  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId; readonly problemsCount: number;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
-  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void;
+  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void;
 }) {
+  const insertValueSignal = (type: "binary" | "bus" | "state") => {
+    const targetGroup = document.signalGroups.at(-1);
+    if (!targetGroup) return;
+    const id = nextEntityId("signal", document);
+    const name = `SIGNAL_${document.signals.length + 1}`;
+    const signal = type === "bus" ? valueSignal(id, name, "internal", [{ start: 0, value: "00" }], { type: "bus", width: 8, displayFormat: "hex" })
+      : type === "state" ? valueSignal(id, name, "internal", [{ start: 0, value: "IDLE" }], { type: "state" })
+      : valueSignal(id, name, "internal", [{ start: 0, value: 0 }]);
+    onCommand({ id: nextCommandId("insert_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+  };
+  const insertClockSignal = () => {
+    const targetGroup = document.signalGroups.at(-1);
+    if (!targetGroup) return;
+    const id = signalId(nextEntityId("signal", document));
+    const name = `CLOCK_${document.signals.length + 1}`;
+    const signal: ClockSignal = { id, name, type: "clock", role: "internal", source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } };
+    onCommand({ id: nextCommandId("insert_clock"), type: "signal.create", signal, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+  };
+  const insertGroup = () => {
+    const id = groupId(nextEntityId("group", document));
+    onCommand({ id: nextCommandId("insert_group"), type: "group.create", group: { id, name: `Group ${document.signalGroups.length + 1}`, rows: [] }, index: document.signalGroups.length });
+  };
+  const insertCommentRow = () => {
+    const targetGroup = document.signalGroups.at(-1);
+    if (!targetGroup) return;
+    const id = signalId(nextEntityId("commentRow", document));
+    const name = `Comment ${document.signals.length + 1}`;
+    const commentRow: CommentRow = { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" };
+    onCommand({ id: nextCommandId("insert_comment_row"), type: "commentRow.create", commentRow, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+  };
   return <section className="ribbon" aria-label={`${tab} Ribbon`} data-testid="ribbon">
-    <div className="ribbon-group file-group">
+    {tab === "File" && <div className="ribbon-group file-group">
       <button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span>New</span></button>
       <button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span>Open</span></button>
       <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save</span></button>
       <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save As</span></button>
       <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
-    </div>
-    <div className="ribbon-group history-group"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><b>Edit</b></div>
-    <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>
-    <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
-    <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input type="checkbox" defaultChecked /> Grid</label><label><input type="checkbox" defaultChecked /> Snap</label></div><b>View</b></div>
+    </div>}
+    {tab === "Home" && <div className="ribbon-group history-group"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><b>Edit</b></div>}
+    {tab === "Insert" && <div className="ribbon-group insert-group">
+      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
+      <button type="button" className="ribbon-tool" onClick={insertClockSignal}><RibbonIcon name="i-clock" /><span>Clock</span></button>
+      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("bus")}><RibbonIcon name="i-plus" /><span>Bus</span></button>
+      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("state")}><RibbonIcon name="i-plus" /><span>State</span></button>
+      <button type="button" className="ribbon-tool" onClick={insertGroup}><RibbonIcon name="i-plus" /><span>Group</span></button>
+      <button type="button" className="ribbon-tool" onClick={insertCommentRow}><RibbonIcon name="i-comment" /><span>Comment Row</span></button>
+      <b>Insert</b>
+    </div>}
+    {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>}
+    {tab === "Annotation" && <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>}
+    {tab === "View" && <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input type="checkbox" defaultChecked /> Grid</label><label><input type="checkbox" defaultChecked /> Snap</label></div><b>View</b></div>}
+    {tab === "Review" && <div className="ribbon-group review-group"><button type="button" className="ribbon-tool" onClick={onShowProblems}><RibbonIcon name="i-filter" /><span>Problems</span></button><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
+    {tab === "AI" && <div className="ribbon-group ai-group"><button type="button" className="ribbon-tool" disabled title="AI features are not implemented yet"><RibbonIcon name="i-ai" /><span>AI Assist</span></button><span className="ribbon-placeholder-note">Coming soon</span><b>AI</b></div>}
   </section>;
 }
 
@@ -1157,7 +1200,7 @@ function nextCommandId(scope: string): CommandId {
 }
 
 let entitySequence = 0;
-function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction", document: CanonicalDocument): string {
+function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" | "signal" | "group" | "commentRow", document: CanonicalDocument): string {
   const used = new Set<string>([
     ...document.signals.map((item) => item.id),
     ...document.signalGroups.map((item) => item.id),

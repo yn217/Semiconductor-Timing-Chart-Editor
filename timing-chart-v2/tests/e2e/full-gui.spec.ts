@@ -8,6 +8,7 @@ async function ready(page: Page) {
 async function createTextAnnotation(page: Page) {
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -26,13 +27,14 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   expect(bottom).toMatchObject({ x: 330, height: 270 });
   expect(inspector).toMatchObject({ x: 1372, width: 300 });
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(1);
-  await expect(page.locator(".ribbon-group")).toHaveCount(5);
+  await expect(page.locator(".ribbon-group")).toHaveCount(1);
 });
 
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);
     const owner = await createTextAnnotation(page);
+    if (route === "Ribbon" || route === "Keyboard" || route === "Context Menu" || route === "Inspector") await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
     if (route === "Ribbon") await page.getByTestId("ribbon").getByRole("button", { name: "Delete", exact: true }).click();
     if (route === "Keyboard") { await owner.focus(); await owner.press("Delete"); }
     if (route === "Context Menu") { await owner.locator("[data-role='annotation-label']").click({ button: "right" }); await page.getByRole("menuitem", { name: "Delete" }).click(); }
@@ -61,6 +63,7 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await expect(page.getByTestId("json-panel")).toContainText('"formatVersion": 2');
   await page.getByTestId("json-panel").getByRole("button", { name: "Validate" }).click();
   await expect(page.getByTestId("json-panel")).toContainText("Valid");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
   await expect(page.getByTestId("inspector")).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
@@ -75,6 +78,7 @@ test("saves and reopens through the application service boundary", async ({ page
   await name.fill("SAVED_REQUEST"); await name.blur();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const download = await downloadPromise;
   const path = await download.path();
@@ -126,6 +130,7 @@ test("keeps view-only selection, tabs, zoom and panel state out of History and W
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
