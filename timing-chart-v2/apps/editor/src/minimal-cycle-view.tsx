@@ -213,6 +213,7 @@ export function MinimalCycleView() {
         element.style.transformOrigin = "0 0";
         element.style.scale = `${currentZoom} 1`;
       }
+      viewportElement.style.setProperty("--zoom-x", String(currentZoom));
       const baseWidth = Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
       const width = 440 + baseWidth * currentZoom;
       rendererHost.style.width = `${width}px`;
