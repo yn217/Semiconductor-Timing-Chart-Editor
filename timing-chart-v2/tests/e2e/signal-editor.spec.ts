@@ -91,3 +91,43 @@ test("edits Clock Generator through one semantic history entry", async ({ page }
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders + 1);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds + 1);
 });
+
+test("moves the rendered waveform transition to the edited Start cycle, not just the DOM identity", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const wave = surface.locator("[data-signal-id='sig_cycle_request'] > svg");
+  const ruler = page.getByTestId("cycle-ruler");
+
+  const transitionXs = async () => {
+    const uses = wave.locator("use");
+    const count = await uses.count();
+    const xs: number[] = [];
+    for (let i = 0; i < count; i += 1) {
+      const box = await uses.nth(i).boundingBox();
+      if (box && box.width > 22) xs.push(box.x);
+    }
+    return xs;
+  };
+
+  const beforeXs = await transitionXs();
+  const cycle3X = (await ruler.locator("[data-cycle='3']").boundingBox())!.x;
+  const cycle4X = (await ruler.locator("[data-cycle='4']").boundingBox())!.x;
+  expect(Math.abs(beforeXs[0] - cycle3X)).toBeLessThan(3);
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const row = editor.locator("form.event-row").nth(1);
+
+  const revisionBeforeType = await page.getByTestId("revision-status").textContent();
+  await row.getByLabel("Start 3").fill("4");
+  await expect(page.getByTestId("revision-status")).toHaveText(revisionBeforeType!);
+
+  await row.getByRole("button", { name: "Save" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const afterXs = await transitionXs();
+  expect(Math.abs(afterXs[0] - cycle4X)).toBeLessThan(3);
+  expect(Math.abs(afterXs[0] - cycle3X)).toBeGreaterThan(10);
+});
