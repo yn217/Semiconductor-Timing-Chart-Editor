@@ -234,7 +234,7 @@ export function MinimalCycleView() {
 
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
-      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, clock.id);
+      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
       applyZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);
       publishState();
@@ -259,7 +259,7 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        buildRuler(rulerElement, referenceGeometry, result.snapshot.document, clock.id);
+        buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
         applyZoom(currentZoom);
         refreshOverlays(result.snapshot.document);
         publishState();
