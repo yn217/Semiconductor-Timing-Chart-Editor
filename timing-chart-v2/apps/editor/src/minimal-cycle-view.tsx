@@ -513,6 +513,15 @@ export function MinimalCycleView() {
       rendererHost.dataset.arrowPick = "from";
     };
     const onSelect = (event: MouseEvent) => {
+      const visibilityOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-visibility'][data-tree-signal-id]") : null;
+      if (visibilityOwner?.dataset.treeSignalId) {
+        event.preventDefault();
+        event.stopPropagation();
+        const signalId = visibilityOwner.dataset.treeSignalId as SignalId;
+        const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === signalId);
+        if (signal) commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_visibility"), type: "signal.setVisibility", signalId, visible: signal.display.visible === false });
+        return;
+      }
       const groupOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-branch'][data-group-id]") : null;
       if (groupOwner?.dataset.groupId) {
         setSelectedGroupId(groupOwner.dataset.groupId as GroupId);
@@ -1705,8 +1714,13 @@ function ExportDialog({ snapshot, range, onClose }: { readonly snapshot: Canonic
   const [format, setFormat] = useState<"svg" | "png" | "pdf">("svg");
   const [scope, setScope] = useState<"document" | "selected-range">("document");
   const [scale, setScale] = useState(2);
+  const [pageSize, setPageSize] = useState<"A4" | "Letter" | "wide">("A4");
+  const [orientation, setOrientation] = useState<"portrait" | "landscape">("landscape");
+  const [margin, setMargin] = useState(24);
+  const [fit, setFit] = useState<"width" | "page">("width");
+  const [foldPolicy, setFoldPolicy] = useState<"respect" | "expand">("respect");
   const [status, setStatus] = useState("");
-  const settings = () => ({ scope, ...(scope === "selected-range" ? { range } : {}), scale, page: { size: "A4" as const, orientation: "landscape" as const, margin: 24, fit: "width" as const }, foldPolicy: "respect" as const });
+  const settings = () => ({ scope, ...(scope === "selected-range" ? { range } : {}), scale, page: { size: pageSize, orientation, margin, fit }, foldPolicy });
   const exportNow = async () => {
     setStatus("Generating…");
     try {
@@ -1728,7 +1742,7 @@ function ExportDialog({ snapshot, range, onClose }: { readonly snapshot: Canonic
       setStatus(`${copyFormat.toUpperCase()} copied`);
     } catch (error) { setStatus(error instanceof Error ? error.message : "Clipboard export failed"); }
   };
-  return <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={onClose}>×</button></header><label>Format<select aria-label="Export format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output>{status}</output><button type="button" onClick={() => void copyNow("svg")}>Copy SVG</button><button type="button" onClick={() => void copyNow("png")}>Copy PNG</button><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></footer></section></div>;
+  return <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={onClose}>×</button></header><label>Format<select aria-label="Export format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label><label>Page Size<select aria-label="Export page size" value={pageSize} onChange={(event) => setPageSize(event.target.value as typeof pageSize)}><option value="A4">A4</option><option value="Letter">Letter</option><option value="wide">Wide</option></select></label><label>Orientation<select aria-label="Export orientation" value={orientation} onChange={(event) => setOrientation(event.target.value as typeof orientation)}><option value="landscape">Landscape</option><option value="portrait">Portrait</option></select></label><label>Fit<select aria-label="Export fit" value={fit} onChange={(event) => setFit(event.target.value as typeof fit)}><option value="width">Fit Width</option><option value="page">Fit Page</option></select></label><label>Margin<input aria-label="Export margin" type="number" min="0" step="1" value={margin} onChange={(event) => setMargin(Number(event.target.value))} /></label><label>Fold Policy<select aria-label="Export fold policy" value={foldPolicy} onChange={(event) => setFoldPolicy(event.target.value as typeof foldPolicy)}><option value="respect">Respect Axis Break</option><option value="expand">Expand Folded Ranges</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output>{status}</output><button type="button" onClick={() => void copyNow("svg")}>Copy SVG</button><button type="button" onClick={() => void copyNow("png")}>Copy PNG</button><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></footer></section></div>;
 }
 
 function downloadText(text: string, filename: string): void {

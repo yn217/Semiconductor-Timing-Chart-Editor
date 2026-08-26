@@ -400,7 +400,23 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     name.dataset.role = "tree-signal-name";
     name.textContent = row.name;
     name.title = row.fullPath ?? row.name;
-    shell.replaceChildren(branch, name);
+    const role = document.createElement("span");
+    role.dataset.role = "tree-signal-role";
+    role.textContent = row.kind === "comment" ? "▣" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
+    role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
+    const visibility = document.createElement("button");
+    visibility.type = "button";
+    visibility.dataset.role = "tree-visibility";
+    visibility.dataset.treeSignalId = row.rowId;
+    visibility.setAttribute("aria-label", `Toggle visibility of ${row.name}`);
+    visibility.textContent = "◉";
+    const more = document.createElement("button");
+    more.type = "button";
+    more.dataset.role = "tree-more";
+    more.dataset.treeSignalId = row.rowId;
+    more.setAttribute("aria-label", `More actions for ${row.name}`);
+    more.textContent = "⋮";
+    shell.replaceChildren(branch, name, role, visibility, more);
     return;
   }
   const role = document.createElement("span");

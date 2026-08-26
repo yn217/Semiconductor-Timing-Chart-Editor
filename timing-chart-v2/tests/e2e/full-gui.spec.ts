@@ -50,6 +50,23 @@ test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ pag
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-shell-dut-1672x941.png", animations: "disabled" });
 });
 
+test("Left Signal/Group rows expose V1 role and visibility controls through SemanticCommand", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const row = host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']");
+  await expect(row.locator("[data-role='tree-signal-role']")).toHaveText("i");
+  await expect(row.locator("[data-role='tree-visibility']")).toBeVisible();
+  await expect(row.locator("[data-role='tree-more']")).toBeVisible();
+  const before = await page.getByTestId("history-status").textContent();
+  await row.locator("[data-role='tree-visibility']").click();
+  await expect(page.getByTestId("history-status")).not.toHaveText(before!);
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
+});
+
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);
