@@ -53,6 +53,27 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await expect(page.getByTestId("history-status")).toHaveText(/History 1 \/ Redo 0/);
 });
 
+test("Cut uses the clipboard surface and one canonical delete operation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const row = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await row.click();
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(page.getByTestId("clipboard-status")).toHaveText("Cut REQUEST");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(host.locator("[data-row-id='sig_cycle_request']")).toHaveCount(0);
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await page.keyboard.press("Control+V");
+  await expect(page.getByTestId("clipboard-status")).toContainText("Pasted");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+});
+
 test("Visibility and Arrange route through semantic commands", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
