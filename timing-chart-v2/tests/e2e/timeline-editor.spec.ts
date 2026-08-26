@@ -41,6 +41,52 @@ test("selects a half-open range directly on the geometry-derived ruler", async (
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
 });
 
+test("drag-selects a half-open Canvas range with preview-only movement and Escape cancel", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const wave = host.locator("[data-role='stable-waveform-surface']");
+  const owner = wave.locator("[data-signal-id='sig_cycle_request']");
+  const waveBox = await wave.boundingBox();
+  const ownerBox = await owner.boundingBox();
+  const startBox = await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").boundingBox();
+  const endBox = await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").boundingBox();
+  expect(waveBox).not.toBeNull();
+  expect(ownerBox).not.toBeNull();
+  expect(startBox).not.toBeNull();
+  expect(endBox).not.toBeNull();
+  const y = ownerBox!.y + ownerBox!.height / 2;
+  const before = await host.getAttribute("data-canonical-revision");
+  await page.mouse.move(startBox!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(endBox!.x, y);
+  await expect(host).toHaveAttribute("data-range-drag", "active");
+  await expect(host).toHaveAttribute("data-canonical-revision", before!);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("8");
+  await expect(host).not.toHaveAttribute("data-range-drag", "active");
+  const extensionBox = await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox();
+  expect(extensionBox).not.toBeNull();
+  await page.mouse.move(endBox!.x, y);
+  await page.keyboard.down("Shift");
+  await page.mouse.down();
+  await page.mouse.move(extensionBox!.x, y);
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("10");
+  await page.mouse.move(startBox!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(endBox!.x, y);
+  await page.keyboard.press("Escape");
+  await expect(host).not.toHaveAttribute("data-range-drag", "active");
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("10");
+});
+
 test("inserts cycles with full semantic ripple and one Undo entry", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

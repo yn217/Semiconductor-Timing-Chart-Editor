@@ -506,6 +506,69 @@ export function MinimalCycleView() {
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
+    let rangeDrag: { readonly start: number; readonly anchor: number } | undefined;
+    let suppressCanvasClick = false;
+    const cycleBoundaryAtX = (clientX: number): number | undefined => {
+      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+      if (!waveLayer) return undefined;
+      const bounds = waveLayer.getBoundingClientRect();
+      const x = (clientX - bounds.left) / currentZoom;
+      const candidates = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).entries().filter((candidate) => candidate.kind === "cycle-boundary");
+      let nearest: { cycle: number; distance: number } | undefined;
+      for (const candidate of candidates) {
+        const distance = Math.abs(candidate.point.x - x);
+        if (!nearest || distance < nearest.distance) nearest = { cycle: candidate.anchor.cycle, distance };
+      }
+      return nearest?.cycle;
+    };
+    const rangeFromBoundaries = (first: number, second: number, cycleCount: number) => {
+      const start = Math.min(first, second);
+      const endBoundary = Math.max(first, second);
+      return { start: Math.max(0, Math.min(start, cycleCount - 1)), end: Math.max(1, Math.min(cycleCount, endBoundary > start ? endBoundary : start + 1)) };
+    };
+    const onRangePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0 || !(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return;
+      const cycle = cycleBoundaryAtX(event.clientX);
+      if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
+      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle };
+      rendererHost.dataset.rangeDrag = "active";
+      rendererHost.dataset.rangePreview = `${Math.min(rangeDrag.anchor, cycle)}:${Math.max(rangeDrag.anchor, cycle)}`;
+      (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+      event.preventDefault();
+    };
+    const onRangePointerMove = (event: PointerEvent) => {
+      if (!rangeDrag) return;
+      const cycle = cycleBoundaryAtX(event.clientX);
+      if (cycle === undefined) return;
+      rendererHost.dataset.rangePreview = `${Math.min(rangeDrag.anchor, cycle)}:${Math.max(rangeDrag.anchor, cycle)}`;
+      event.preventDefault();
+    };
+    const onRangePointerUp = (event: PointerEvent) => {
+      if (!rangeDrag) return;
+      const cycle = cycleBoundaryAtX(event.clientX) ?? rangeDrag.start;
+      const next = rangeFromBoundaries(rangeDrag.anchor, cycle, session.getSnapshot().document.timeline.cycleCount);
+      setTimelineRange(next);
+      setSelectedCycle(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
+      rendererHost.dataset.selectedCycle = String(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
+      delete rendererHost.dataset.rangeDrag;
+      delete rendererHost.dataset.rangePreview;
+      rangeDrag = undefined;
+      suppressCanvasClick = true;
+      requestAnimationFrame(() => { suppressCanvasClick = false; });
+      event.preventDefault();
+    };
+    const onRangePointerCancel = () => {
+      if (!rangeDrag) return;
+      rangeDrag = undefined;
+      delete rendererHost.dataset.rangeDrag;
+      delete rendererHost.dataset.rangePreview;
+    };
+    const onRangeKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !rangeDrag) return;
+      rangeDrag = undefined;
+      delete rendererHost.dataset.rangeDrag;
+      delete rendererHost.dataset.rangePreview;
+    };
     const clearDropState = () => {
       for (const element of rendererHost.querySelectorAll<HTMLElement>("[data-drop-position], [data-dragging]")) {
         delete element.dataset.dropPosition;
@@ -688,9 +751,14 @@ export function MinimalCycleView() {
       onSelect(event);
       setContextMenu({ x: event.clientX, y: event.clientY });
     };
-    const onCanvasClick = (event: MouseEvent) => { if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
+    const onCanvasClick = (event: MouseEvent) => { if (suppressCanvasClick) { suppressCanvasClick = false; return; } if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
     rendererHost.addEventListener("click", onCanvasClick);
+    rendererHost.addEventListener("pointerdown", onRangePointerDown);
+    rendererHost.addEventListener("pointermove", onRangePointerMove);
+    rendererHost.addEventListener("pointerup", onRangePointerUp);
+    rendererHost.addEventListener("pointercancel", onRangePointerCancel);
+    rendererHost.ownerDocument.addEventListener("keydown", onRangeKeyDown);
     rendererHost.addEventListener("dragstart", onDragStart);
     rendererHost.addEventListener("dragover", onDragOver);
     rendererHost.addEventListener("drop", onDrop);
@@ -706,6 +774,11 @@ export function MinimalCycleView() {
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
       rendererHost.removeEventListener("click", onCanvasClick);
+      rendererHost.removeEventListener("pointerdown", onRangePointerDown);
+      rendererHost.removeEventListener("pointermove", onRangePointerMove);
+      rendererHost.removeEventListener("pointerup", onRangePointerUp);
+      rendererHost.removeEventListener("pointercancel", onRangePointerCancel);
+      rendererHost.ownerDocument.removeEventListener("keydown", onRangeKeyDown);
       rendererHost.removeEventListener("dragstart", onDragStart);
       rendererHost.removeEventListener("dragover", onDragOver);
       rendererHost.removeEventListener("drop", onDrop);
