@@ -115,6 +115,12 @@ describe("pure Semantic Command planning", () => {
       expect(formatted.document.signals[1]).toMatchObject({ name: "DATA_OUT", role: "output", displayFormat: "binary", display: { name: "DATA_OUT" } });
       expect(formatted.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"] });
     }
+    const inspectorProperties = planCommand(source, { id: commandId("cmd_inspector_properties"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA_INSPECTED", role: "output", signalType: "bus", width: 16, displayFormat: "binary", visible: false, displayAlign: "center", displayOverflow: "wrap", displayStyle: { color: "#114477" } });
+    expect(inspectorProperties.ok).toBe(true);
+    if (inspectorProperties.ok) {
+      expect(inspectorProperties.document.signals[1]).toMatchObject({ name: "DATA_INSPECTED", role: "output", type: "bus", width: 16, displayFormat: "binary", display: { name: "DATA_INSPECTED", visible: false, align: "center", overflow: "wrap", style: { color: "#114477" } } });
+      expect(inspectorProperties.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"], geometryLocal: ["sig_data"] });
+    }
     const retyped = planCommand(source, { id: commandId("cmd_retype"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "internal", signalType: "binary" });
     expect(retyped.ok).toBe(true);
     if (retyped.ok) {

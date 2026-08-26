@@ -38,7 +38,7 @@ unclassified decision.
 | GUI-01 | Multi-group feature-rich Ribbon | KEEP | #176 | Home must contain more than Undo/Redo/Delete. |
 | GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Hierarchy and full-path behavior require closure. |
 | GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Actual WaveDrom geometry and hit-zone acceptance required. |
-| GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Disabled/read-only fields are not final capability. |
+| GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Batch 1B verifies editable Signal/Clock fields through Apply; Group/Annotation/Transaction parity remains open. |
 | GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Comment Row and advanced editing require dedicated owners. |
 | GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | Click-pan and viewport drag are required. |
 | GUI-07 | Status Bar | KEEP | #172/#176 | State and count parity requires evidence. |
@@ -46,7 +46,7 @@ unclassified decision.
 | GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Controls must affect real geometry and mapping. |
 | GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Signal Tree alone is insufficient. |
 | GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Type/style/legend capability is incomplete. |
-| GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Disabled Duty and partial editor are not closure. |
+| GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Batch 1B verifies editable Inspector Clock Generator Duty and Edge Counter; full save/export parity remains open. |
 | GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Advanced JSON and dedicated Comment Row editing required. |
 | GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Pin must be independent from Follow OFF. |
 | GUI-15 | Zoom/Fit/navigation | KEEP | #167/#172/#176 | Fit Selection and navigation evidence required. |

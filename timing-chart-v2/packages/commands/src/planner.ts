@@ -528,13 +528,24 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextType = command.signalType ?? signal.type;
       if (command.displayFormat !== undefined && nextType !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "Display format applies only to bus signals.");
       if (command.width !== undefined && (nextType !== "bus" || !Number.isInteger(command.width) || command.width < 1)) return fail("invalid", "INVALID_SIGNAL_WIDTH", "$.width", "Width must be a positive integer and applies only to bus signals.");
+      if (command.displayAlign !== undefined && !["left", "center", "right"].includes(command.displayAlign)) return fail("invalid", "INVALID_DISPLAY_ALIGN", "$.displayAlign", "Display alignment is invalid.");
+      if (command.displayOverflow !== undefined && !["expand", "ellipsis", "wrap"].includes(command.displayOverflow)) return fail("invalid", "INVALID_DISPLAY_OVERFLOW", "$.displayOverflow", "Display overflow is invalid.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
+      const currentVisible = signal.display.visible !== false;
+      const currentAlign = signal.display.align;
+      const currentOverflow = signal.display.overflow;
+      const currentStyle = signal.display.style;
       const nextFormat = nextType === "bus" ? command.displayFormat ?? currentFormat : undefined;
       const nextWidth = nextType === "bus" ? command.width ?? currentWidth : undefined;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      const nextVisible = command.visible ?? currentVisible;
+      const nextAlign = command.displayAlign ?? currentAlign;
+      const nextOverflow = command.displayOverflow ?? currentOverflow;
+      const nextStyle = command.displayStyle ?? currentStyle;
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && JSON.stringify(currentStyle) === JSON.stringify(nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
       const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
-      const next: Signal = { ...base, type: nextType, name, role: command.role, display: { ...signal.display, name }, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }) };
+      const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
+      const next: Signal = { ...base, type: nextType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }) };
       const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],

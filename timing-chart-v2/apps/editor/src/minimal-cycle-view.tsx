@@ -987,6 +987,7 @@ function InspectorPanel({ signal, group, annotation, transaction, registry, docu
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
   const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");
+  if (Boolean(signal)) return <InspectorSignalEditor signal={signal as Signal} onCommand={onCommand} />;
   return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><button type="button">•••</button></header>
     {!signal && !group && !annotation && !transaction && <section className="inspector-empty">No selection</section>}
     {signal && <>
@@ -997,6 +998,70 @@ function InspectorPanel({ signal, group, annotation, transaction, registry, docu
     {group && <section><h3>Group</h3><label>Name<input aria-label="Inspector group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} onBlur={() => { if (groupName.trim() && groupName.trim() !== group.name) registry.execute("selection.rename", { name: groupName }); }} /></label><label>Spacing Before<input aria-label="Group spacing before" type="number" min="0" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Group spacing after" type="number" min="0" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("group_layout"), type: "group.updateLayout", groupId: group.id, spacingBefore, spacingAfter })}>Apply Group Layout</button><div className="property-row"><span>Rows</span><span>{group.rows.length}</span></div><div className="property-row"><span>Collapsed</span><span>No</span></div></section>}
     {annotation && <section><h3>Annotation</h3><div className="property-row"><span>Type</span><b>{annotation.type}</b></div><div className="property-row"><span>Anchor</span><span>{annotation.anchor?.point ?? annotation.from?.point ?? annotation.start?.point}</span></div><div className="property-row"><span>Offset</span><span>{JSON.stringify((annotation.anchor ?? annotation.from ?? annotation.start)?.offset ?? { x: 0, y: 0 })}</span></div><div className="property-row"><span>Style</span><span>{annotation.lineType ?? "default"}</span></div><div className="property-row"><span>Text</span><span>{annotation.label}</span></div><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Annotation</button></section>}
     {transaction && <section><h3>Transaction</h3><label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /></label><button type="button" onClick={() => onCommand({ id: nextCommandId("transaction_update"), type: "transaction.update", transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane })}>Apply Transaction</button><h3>Linked Signals</h3>{document.signals.filter((item) => item.type !== "commentRow").map((item) => <label className="checkline" key={item.id}>{item.display.name}<input aria-label={`Link ${item.display.name}`} type="checkbox" checked={transaction.linkedSignals?.includes(item.id) ?? false} onChange={(event) => onCommand({ id: nextCommandId("transaction_link"), type: event.target.checked ? "transaction.linkSignal" : "transaction.unlinkSignal", transactionId: transaction.id, signalId: item.id })} /></label>)}<button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>}
+  </aside>;
+}
+
+function InspectorSignalEditor({ signal, onCommand }: { readonly signal: Signal; readonly onCommand: (command: SemanticCommand) => void }) {
+  if (signal.type === "clock") return <InspectorClockEditor signal={signal} onCommand={onCommand} />;
+  if (signal.type === "commentRow") return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span></header><section><h3>Comment Row</h3><div className="property-row"><span>Title</span><b>{signal.title}</b></div><div className="property-row"><span>Scope</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><p className="inspector-note">Comment Row editing is owned by the Bottom Context Editor.</p></section></aside>;
+  return <InspectorValueSignalEditor signal={signal} onCommand={onCommand} />;
+}
+
+function InspectorValueSignalEditor({ signal, onCommand }: { readonly signal: ValueSignal; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [name, setName] = useState(signal.display.name);
+  const [role, setRole] = useState<SignalRole>(signal.role);
+  const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal.type);
+  const [width, setWidth] = useState(signal.width ?? 1);
+  const [format, setFormat] = useState<"hex" | "binary" | "symbolic">(signal.displayFormat ?? "hex");
+  const [visible, setVisible] = useState(signal.display.visible !== false);
+  const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
+  const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
+  const [style, setStyle] = useState(JSON.stringify(signal.display.style ?? {}));
+  const [problem, setProblem] = useState("");
+  const apply = (event: React.FormEvent) => {
+    event.preventDefault();
+    let parsed: Signal["display"]["style"];
+    try {
+      const value: unknown = JSON.parse(style || "{}");
+      if (typeof value !== "object" || value === null || Array.isArray(value)) throw new Error("Style must be a JSON object.");
+      parsed = value as Signal["display"]["style"];
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : "Style must be valid JSON.");
+      return;
+    }
+    setProblem("");
+    onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, displayAlign: align, displayOverflow: overflow, displayStyle: parsed });
+  };
+  const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
+  return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><b>Signal</b></header>
+    <form className="inspector-signal-properties" data-testid="inspector-signal-properties" onSubmit={apply}>
+      <section><h3>Signal</h3>
+        <label>Display Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} /></label>
+        <label>Role<select aria-label="Inspector signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
+        <label>Type<select aria-label="Inspector signal type" value={signalType} onChange={(event) => setSignalType(event.target.value as ValueSignal["type"])}><option value="binary">Binary</option><option value="bus">Bus</option><option value="state">State</option><option value="logic">Logic</option><option value="event">Event</option><option value="pulse">Pulse</option></select></label>
+        {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label></>}
+        <label className="checkline">Visible<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} /></label>
+      </section>
+      <section><h3>Hierarchy</h3><div className="property-row"><span>Instance Path</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><div className="property-row"><span>Signal Name</span><span>{signal.source.signalName}</span></div><div className="property-row"><span>Full Path</span><span title={fullPath}>{fullPath}</span></div><div className="property-row"><span>Bus Range</span><span>{signal.source.msb === undefined ? "—" : `[${signal.source.msb}:${signal.source.lsb ?? 0}]`}</span></div></section>
+      <section><h3>Label Style</h3><label>Align<select aria-label="Inspector label align" value={align} onChange={(event) => setAlign(event.target.value as typeof align)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Overflow<select aria-label="Inspector label overflow" value={overflow} onChange={(event) => setOverflow(event.target.value as typeof overflow)}><option value="ellipsis">Ellipsis</option><option value="expand">Expand</option><option value="wrap">Wrap</option></select></label></section>
+      <section><h3>Waveform / Row Style</h3><label>Style JSON<textarea aria-label="Inspector waveform row style" value={style} onChange={(event) => setStyle(event.target.value)} rows={3} /></label></section>
+      {problem && <div className="editor-problem" role="alert">{problem}</div>}
+      <button type="submit" data-testid="apply-inspector-signal">Apply Signal Properties</button>
+    </form>
+  </aside>;
+}
+
+function InspectorClockEditor({ signal, onCommand }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
+  const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
+  const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
+  return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><b>Clock</b></header>
+    <section><h3>Clock Generator</h3><form className="inspector-clock-generator" aria-label="Inspector Clock Generator" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("inspector_clock_generator"), type: "signal.updateClockGenerator", signalId: signal.id, generator }); }}>
+      <label>Start<input aria-label="Inspector clock start" type="number" min="0" step="1" value={generator.start} onChange={(event) => number("start", event.target.value)} /></label><label>Period<input aria-label="Inspector clock period" type="number" min="1" step="1" value={generator.period} onChange={(event) => number("period", event.target.value)} /></label><label>Duty<input aria-label="Inspector clock duty" type="number" min="0.01" max="1" step="0.01" value={generator.duty} onChange={(event) => number("duty", event.target.value)} /></label><label>Phase<input aria-label="Inspector clock phase" type="number" step="0.5" value={generator.phase} onChange={(event) => number("phase", event.target.value)} /></label><label>Initial<select aria-label="Inspector clock initial" value={generator.initial} onChange={(event) => setGenerator({ ...generator, initial: Number(event.target.value) as 0 | 1 })}><option value="0">0</option><option value="1">1</option></select></label><label>Polarity<select aria-label="Inspector clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label><button type="submit" data-testid="apply-inspector-clock">Apply Clock Generator</button>
+    </form></section>
+    <section><h3>Edge Counter</h3><form className="inspector-edge-counter" aria-label="Inspector Edge Counter" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("inspector_edge_counter"), type: "signal.updateEdgeCounter", signalId: signal.id, edgeCounter }); }}>
+      <label className="checkline">Show<input aria-label="Inspector edge counter show" type="checkbox" checked={edgeCounter.show} onChange={(event) => setEdgeCounter({ ...edgeCounter, show: event.target.checked })} /></label><label>Mode<select aria-label="Inspector edge counter mode" value={edgeCounter.mode} onChange={(event) => setEdgeCounter({ ...edgeCounter, mode: event.target.value as EdgeCounterSettings["mode"] })}><option value="rising">Rising</option><option value="falling">Falling</option><option value="both">Both</option></select></label><label>Start Number<input aria-label="Inspector edge counter start" type="number" value={edgeCounter.startNumber} onChange={(event) => setEdgeCounter({ ...edgeCounter, startNumber: Number(event.target.value) })} /></label><label>Every N<input aria-label="Inspector edge counter every" type="number" min="1" value={edgeCounter.labelEvery} onChange={(event) => setEdgeCounter({ ...edgeCounter, labelEvery: Number(event.target.value) })} /></label><label>Position<select aria-label="Inspector edge counter position" value={edgeCounter.position} onChange={(event) => setEdgeCounter({ ...edgeCounter, position: event.target.value as EdgeCounterSettings["position"] })}><option value="above">Above</option><option value="below">Below</option></select></label><button type="submit" data-testid="apply-inspector-edge-counter">Apply Edge Counter</button>
+    </form></section>
   </aside>;
 }
 

@@ -52,10 +52,11 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Inspector signal name").fill("REQUEST_EDITED");
-  await inspector.getByLabel("Inspector signal name").blur();
+  await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='frozen-signal-name']")).toHaveText("REQUEST_EDITED");
   await inspector.getByLabel("Inspector signal visible").uncheck();
+  await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request']")).toHaveCount(0);
   await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("No validation problems");
@@ -70,12 +71,56 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await expect(page.getByTestId("bottom-editor")).toHaveCount(0);
 });
 
+test("applies Signal Inspector capability fields as one semantic operation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector signal name").fill("DATA_RENAMED");
+  await inspector.getByLabel("Inspector signal role").selectOption("output");
+  await inspector.getByLabel("Inspector signal type").selectOption("bus");
+  await inspector.getByLabel("Inspector signal width").fill("16");
+  await inspector.getByLabel("Inspector bus format").selectOption("binary");
+  await inspector.getByLabel("Inspector label align").selectOption("center");
+  await inspector.getByLabel("Inspector label overflow").selectOption("wrap");
+  await inspector.getByLabel("Inspector waveform row style").fill('{"color":"#114477"}');
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("DATA_RENAMED");
+  await expect(inspector.getByLabel("Inspector signal role")).toHaveValue("output");
+  await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("16");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("binary");
+  await expect(inspector.getByLabel("Inspector label align")).toHaveValue("center");
+  await expect(inspector.getByLabel("Inspector label overflow")).toHaveValue("wrap");
+  await expect(inspector.getByLabel("Inspector waveform row style")).toHaveValue('{"color":"#114477"}');
+});
+
+test("applies Clock Generator Inspector drafts with editable duty and one history entry", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector clock start").fill("1");
+  await inspector.getByLabel("Inspector clock period").fill("4");
+  await inspector.getByLabel("Inspector clock duty").fill("0.25");
+  await inspector.getByLabel("Inspector clock phase").fill("0.5");
+  await inspector.getByLabel("Inspector clock initial").selectOption("1");
+  await inspector.getByLabel("Inspector clock polarity").selectOption("negative");
+  await inspector.getByTestId("apply-inspector-clock").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(inspector.getByLabel("Inspector clock period")).toHaveValue("4");
+  await expect(inspector.getByLabel("Inspector clock duty")).toHaveValue("0.25");
+  await expect(inspector.getByLabel("Inspector clock polarity")).toHaveValue("negative");
+});
+
 test("saves and reopens through the application service boundary", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const name = page.getByTestId("inspector").getByLabel("Inspector signal name");
-  await name.fill("SAVED_REQUEST"); await name.blur();
+  await name.fill("SAVED_REQUEST"); await page.getByTestId("inspector").getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -83,7 +128,7 @@ test("saves and reopens through the application service boundary", async ({ page
   const download = await downloadPromise;
   const path = await download.path();
   expect(path).toBeTruthy();
-  await name.fill("TEMP_REQUEST"); await name.blur();
+  await name.fill("TEMP_REQUEST"); await page.getByTestId("inspector").getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator("input[type='file']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -98,10 +143,10 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const inspector = page.getByTestId("inspector");
-  await inspector.getByLabel("Edge Numbers show").check();
-  await inspector.getByLabel("Edge Numbers mode").selectOption("both");
-  await inspector.getByLabel("Edge Numbers every").fill("2");
-  await inspector.getByRole("button", { name: "Apply Edge Numbers" }).click();
+  await inspector.getByLabel("Inspector edge counter show").check();
+  await inspector.getByLabel("Inspector edge counter mode").selectOption("both");
+  await inspector.getByLabel("Inspector edge counter every").fill("2");
+  await inspector.getByTestId("apply-inspector-edge-counter").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
