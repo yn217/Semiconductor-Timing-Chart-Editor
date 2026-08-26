@@ -237,6 +237,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if ((this.#waveVersions.get(signalId) ?? 0) === version) this.#dirtyWaves.delete(signalId);
       this.#publishCounters();
     }).catch((error: unknown) => {
+      owner.replaceChildren();
       owner.dataset.waveError = error instanceof Error ? error.message : "Unknown waveform render failure";
       this.#publishCounters();
     });

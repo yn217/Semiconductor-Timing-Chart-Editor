@@ -109,6 +109,13 @@ export function MinimalCycleView() {
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
+  const annotationTargetSignalId = (() => {
+    if (selectedSignal && selectedSignal.type !== "commentRow") return selectedSignal.id;
+    const referenceClockId = snapshot.document.timeline.referenceClock;
+    const referenceSignal = referenceClockId ? snapshot.document.signals.find((signal) => signal.id === referenceClockId && signal.type !== "commentRow") : undefined;
+    if (referenceSignal) return referenceSignal.id;
+    return snapshot.document.signals.find((signal) => signal.type !== "commentRow")?.id;
+  })();
   const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
   const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
@@ -177,22 +184,20 @@ export function MinimalCycleView() {
         const document = session.getSnapshot().document;
         const signal = document.signals.find((candidate) => candidate.id === id);
         if (!signal) throw new Error(`Signal '${id}' is missing.`);
+        const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+        const displaySignal = signal.type === "commentRow" ? signal
+          : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
+          : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
         try {
-          const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
-          const displaySignal = signal.type === "commentRow" ? signal
-            : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
-            : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
           const rendered = await adapter.renderWave(id, adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), owner);
           const geometry = adapter.extractLocalGeometry(rendered);
           geometryMaps.set(id, geometry);
           if (id === document.timeline.referenceClock) referenceGeometry = geometry;
-          upsertDiagnostic((item) => item.code === "WAVE_RENDER_ERROR" && item.path === `$.signals[${id}]`, undefined);
           return { waveDromRenders: 1, localGeometryBuilds: 1 };
         } catch (error) {
-          const message = `Signal '${signal.display.name}' could not be rendered: ${error instanceof Error ? error.message : String(error)}`;
-          setProblem(message);
-          upsertDiagnostic((item) => item.code === "WAVE_RENDER_ERROR" && item.path === `$.signals[${id}]`, { code: "WAVE_RENDER_ERROR", path: `$.signals[${id}]`, message });
-          return { waveDromRenders: 0, localGeometryBuilds: 0 };
+          geometryMaps.delete(id);
+          if (id === document.timeline.referenceClock) referenceGeometry = undefined;
+          throw error;
         }
       },
       disposeWave(id) {
@@ -252,6 +257,7 @@ export function MinimalCycleView() {
       buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
       applyZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);
+      collectWaveErrors();
       publishState();
       rendererHost.dataset.cycleViewReady = "true";
     });
@@ -261,6 +267,16 @@ export function MinimalCycleView() {
         const filtered = current.filter((item) => !predicate(item));
         return next ? [...filtered, next] : filtered;
       });
+    };
+
+    const collectWaveErrors = () => {
+      const failed = [...rendererHost.querySelectorAll<HTMLElement>("[data-wave-error]")].map((owner) => ({
+        code: "WAVE_RENDER_ERROR",
+        path: `$.signals[${owner.dataset.signalId}]`,
+        message: owner.dataset.waveError ?? "WaveDrom render failed.",
+      }));
+      setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "WAVE_RENDER_ERROR"), ...failed]);
+      if (failed.length > 0) setProblem(failed[0]!.message);
     };
 
     const applyResult = (result: ReturnType<CommandHistorySession["execute"]>) => {
@@ -286,6 +302,7 @@ export function MinimalCycleView() {
         buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
         applyZoom(currentZoom);
         refreshOverlays(result.snapshot.document);
+        collectWaveErrors();
         publishState();
         rendererHost.dataset.editorIdle = "true";
       });
@@ -317,6 +334,7 @@ export function MinimalCycleView() {
         buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
         applyZoom(currentZoom);
         refreshOverlays(session.getSnapshot().document);
+        collectWaveErrors();
         publishState();
         rendererHost.dataset.editorIdle = "true";
       });
@@ -766,7 +784,7 @@ export function MinimalCycleView() {
       history={history}
       zoom={zoom}
       arrowPickStatus={arrowPickStatus}
-      selectedSignalId={selectedSignal?.id ?? clock.id}
+      selectedSignalId={annotationTargetSignalId}
       problemsCount={diagnostics.length}
       onRange={setTimelineRange}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
@@ -829,7 +847,7 @@ function RibbonIcon({ name }: { readonly name: string }) {
 }
 
 function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, problemsCount, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems }: {
-  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId; readonly problemsCount: number;
+  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
   readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void;
 }) {
@@ -1002,14 +1020,14 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
+function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
   const [type, setType] = useState<AnnotationType>("text");
   return <div className="annotation-toolbar" aria-label="Annotation tools" data-testid="annotation-toolbar">
     <strong>Annotation</strong>
     <select aria-label="Annotation type" value={type} onChange={(event) => setType(event.target.value as AnnotationType)}>
       {(["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
-    <button type="button" onClick={() => onCreate(createAnnotation(type, signalId, range, document))}>Add annotation</button>
+    <button type="button" disabled={!signalId} title={signalId ? undefined : "No timing Signal is available in this document to anchor an Annotation."} onClick={() => signalId && onCreate(createAnnotation(type, signalId, range, document))}>Add annotation</button>
     <button type="button" className={arrowPickStatus === "idle" ? "" : "active"} onClick={onArmArrow}>Pick arrow endpoints</button>
     {arrowPickStatus !== "idle" && <b data-testid="arrow-pick-status">Click {arrowPickStatus} transition</b>}
     <span>Uses selected Signal and Timeline range · drag handles snap to rendered geometry</span>

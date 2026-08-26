@@ -16,21 +16,32 @@ const tabGroups: Record<string, string> = {
   AI: "ai-group",
 };
 
-test("switches Ribbon tab content without touching Canonical, History, or WaveDrom render state", async ({ page }) => {
+test("switches Ribbon tab content without touching Canonical, History, WaveDrom, RowLayout, geometry, or Inspector/Bottom state", async ({ page }) => {
   await ready(page);
-  const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
   const tabs = page.locator(".ribbon-tabs");
   const ribbon = page.getByTestId("ribbon");
 
   const revisionBefore = await page.getByTestId("revision-status").textContent();
   const historyBefore = await page.getByTestId("history-status").textContent();
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const sessionCountersBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
+  const ribbonBoxBefore = await ribbon.boundingBox();
+  const workspaceBoxBefore = await page.locator(".desktop-workspace").boundingBox();
+  const inspectorVisibleBefore = await page.getByTestId("inspector").count();
+  const bottomVisibleBefore = await page.getByTestId("bottom-editor").count();
 
   for (const [tab, groupClass] of Object.entries(tabGroups)) {
     await tabs.getByRole("button", { name: tab, exact: true }).click();
     await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
     await expect(ribbon.locator(".ribbon-group")).toHaveCount(1);
     await expect(ribbon.locator(`.${groupClass}`)).toHaveCount(1);
+    // Ribbon height must never change across tabs, and the waveform workspace must not shift.
+    const ribbonBox = await ribbon.boundingBox();
+    expect(ribbonBox!.height).toBe(ribbonBoxBefore!.height);
+    const workspaceBox = await page.locator(".desktop-workspace").boundingBox();
+    expect(workspaceBox!.y).toBe(workspaceBoxBefore!.y);
   }
 
   await expect(page.getByTestId("revision-status")).toHaveText(revisionBefore!);
@@ -38,6 +49,12 @@ test("switches Ribbon tab content without touching Canonical, History, or WaveDr
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
+  const sessionCountersAfter = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
+  expect(sessionCountersAfter.rowLayoutBuilds).toBe(sessionCountersBefore.rowLayoutBuilds);
+  expect(sessionCountersAfter.commits).toBe(sessionCountersBefore.commits);
+  // Inspector / Bottom Editor visibility state is untouched by pure tab switching.
+  expect(await page.getByTestId("inspector").count()).toBe(inspectorVisibleBefore);
+  expect(await page.getByTestId("bottom-editor").count()).toBe(bottomVisibleBefore);
 });
 
 test("Insert tab creates a real canonical Signal through a SemanticCommand", async ({ page }) => {

@@ -240,6 +240,11 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
+  const legacyReferenceClock = text(timebase.referenceClock);
+  const legacyReferenceClockValid = legacyReferenceClock !== "" && signals.some((signal) => signal.id === legacyReferenceClock && signal.type === "clock");
+  if (legacyReferenceClock !== "" && !legacyReferenceClockValid && referenceClockSignal) {
+    warnings.push({ code: "INVALID_LEGACY_REFERENCE_CLOCK", path: "$.timebase.referenceClock", message: `Legacy referenceClock '${legacyReferenceClock}' does not identify a clock signal in this document; migrated to '${referenceClockSignal}' instead.` });
+  }
 
   const groups = list(source.signalGroups).map((value, index) => {
     const group = record(value);
@@ -361,7 +366,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
         end: cycleCount,
         timeBase: "cycle",
         cycleCount,
-        ...(referenceClockSignal ? { referenceClock: text(timebase.referenceClock, referenceClockSignal) as SignalId } : {}),
+        ...(referenceClockSignal ? { referenceClock: (legacyReferenceClockValid ? legacyReferenceClock : referenceClockSignal) as SignalId } : {}),
         edge: timebase.edge === "falling" ? "falling" : "rising",
         labelAnchors: labelAnchors as unknown as CanonicalDocument["timeline"]["labelAnchors"],
       },
