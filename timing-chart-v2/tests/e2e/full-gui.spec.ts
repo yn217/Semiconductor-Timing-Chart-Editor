@@ -107,6 +107,27 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeVisible();
 });
 
+test("Inspector keeps the V1 sectioned editor geometry for a selected clock", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector).toHaveCSS("width", "300px");
+  await expect(inspector.locator("header")).toContainText("Clock");
+  await expect(inspector.locator("section")).toHaveCount(2);
+  await expect(inspector.getByRole("heading", { name: "Clock Generator" })).toBeVisible();
+  await expect(inspector.getByRole("heading", { name: "Edge Counter" })).toBeVisible();
+  await expect(inspector.getByLabel("Inspector clock period")).toBeVisible();
+  await expect(inspector.getByLabel("Inspector edge counter mode")).toBeVisible();
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(surface).toHaveAttribute("data-render-counters", /waveDromRenders/);
+});
+
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);
