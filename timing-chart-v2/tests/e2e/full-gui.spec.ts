@@ -402,7 +402,9 @@ test("Status Bar exposes derived selection, range, view and renderer state witho
   const status = page.locator(".status-bar");
   const revision = await host.getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
-  await expect(status).toContainText("Tool: Select");
+  await expect(status).toContainText("Ready · Tool: Select");
+  await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 8");
+  await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 0");
   await expect(page.getByTestId("range-status")).toHaveText("Range: [2, 4)");
   await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 2");
   await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 100%");

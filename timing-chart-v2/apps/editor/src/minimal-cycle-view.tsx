@@ -1343,9 +1343,9 @@ export function MinimalCycleView() {
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} onClose={() => setExportVisible(false)} />}
     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
-      <span data-testid="tool-status">Tool: Select</span>
+      <span data-testid="tool-status">Ready · Tool: Select</span>
       <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
-      <span data-testid="range-status">Range: [{timelineRange.start}, {timelineRange.end})</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
+      <span data-testid="signal-count-status">Signals: {snapshot.document.signals.length}</span><span data-testid="annotation-count-status">Annotations: {snapshot.document.annotations.length}</span><span data-testid="range-status">Range: [{timelineRange.start}, {timelineRange.end})</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
       <span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
