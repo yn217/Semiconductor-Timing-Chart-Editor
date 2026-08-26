@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
@@ -119,7 +119,8 @@ export function MinimalCycleView() {
   const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
   const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
-  const diagnostics = [...validateCanonicalDocument(snapshot.document), ...runtimeDiagnostics];
+  const validationDiagnostics = useMemo(() => validateCanonicalDocument(snapshot.document), [snapshot.document]);
+  const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
 
   useEffect(() => {
@@ -282,7 +283,7 @@ export function MinimalCycleView() {
     const applyResult = (result: ReturnType<CommandHistorySession["execute"]>) => {
       if (!result.ok) {
         setProblem(result.reason === "no-op" ? "" : result.problems.map((item) => item.message).join(" "));
-        if (result.reason !== "no-op") upsertDiagnostic((item) => item.code === "COMMAND_REJECTED", { code: "COMMAND_REJECTED", path: "$", message: result.problems.map((item) => item.message).join(" ") });
+        upsertDiagnostic((item) => item.code === "COMMAND_REJECTED", result.reason === "no-op" ? undefined : { code: "COMMAND_REJECTED", path: "$", message: result.problems.map((item) => item.message).join(" ") });
         return;
       }
       delete rendererHost.dataset.editorIdle;
@@ -938,7 +939,7 @@ function ProblemsPanel({ diagnostics, onNavigate }: { readonly diagnostics: read
 }
 
 function JsonPanel({ document }: { readonly document: CanonicalDocument }) {
-  const text = serializeCanonicalDocument(document);
+  const text = useMemo(() => serializeCanonicalDocument(document), [document]);
   const [status, setStatus] = useState("Read only");
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>Generated JSON</strong><span>🔒 Read only</span><button type="button" onClick={() => setStatus("Formatted")}>Format</button><button type="button" onClick={() => setStatus(validateCanonicalDocument(document).length === 0 ? "Valid" : "Invalid")}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(text); setStatus("Copied"); }}>Copy</button><select aria-label="JSON scope"><option>Selected Object</option><option>Whole Document</option></select><output>{status}</output></div><pre>{text}</pre></section>;
 }
