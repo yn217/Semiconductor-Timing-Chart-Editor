@@ -211,6 +211,31 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload']")).toHaveCount(1);
 });
 
+test("filters the Signal/Group tree by display name, path, role, or group without mutating the document", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const revisionBefore = await page.getByTestId("revision-status").textContent();
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const rendersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const filter = page.getByRole("textbox", { name: "Signal tree filter", exact: true });
+  await filter.fill("ready");
+  await expect(host).toHaveAttribute("data-tree-filter", "ready");
+  await expect(host).toHaveAttribute("data-tree-filter-matches", "1");
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_ready']")).toBeVisible();
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeHidden();
+  await filter.fill("output");
+  await expect(host).toHaveAttribute("data-tree-filter-matches", "3");
+  await expect(host.locator("[data-role='left-row'][data-signal-role='output']")).toHaveCount(3);
+  await page.getByLabel("Clear signal tree filter").click();
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeVisible();
+  await expect(page.getByTestId("revision-status")).toHaveText(revisionBefore!);
+  await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
+  const rendersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(rendersAfter.waveDromRenders).toBe(rendersBefore.waveDromRenders);
+  expect(rendersAfter.localGeometryBuilds).toBe(rendersBefore.localGeometryBuilds);
+});
+
 test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap viewport", async ({ page }) => {
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();

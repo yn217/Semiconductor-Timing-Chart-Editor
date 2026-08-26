@@ -126,6 +126,7 @@ export function MinimalCycleView() {
   const [bulkRegistrationText, setBulkRegistrationText] = useState("dut.status binary\ndut.data[7:0] bus\n");
   const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
   const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
+  const [treeFilter, setTreeFilter] = useState("");
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
@@ -156,6 +157,21 @@ export function MinimalCycleView() {
   const bottomSignal = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.signalId === undefined ? undefined : snapshot.document.signals.find((item) => item.id === pinnedBottomSelection.signalId)) : selectedSignal;
   const bottomAnnotation = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.annotationId === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === pinnedBottomSelection.annotationId)) : selectedAnnotation;
   const bottomTransaction = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.transactionId === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === pinnedBottomSelection.transactionId)) : selectedTransaction;
+  useEffect(() => {
+    const root = host.current;
+    if (!root) return;
+    const query = treeFilter.trim().toLocaleLowerCase();
+    let matches = 0;
+    for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row'], [data-role='frozen-row'], [data-role='timing-row']")) {
+      const text = [row.dataset.name, row.dataset.fullPath, row.dataset.instancePath, row.dataset.signalRole, row.dataset.groupName].filter(Boolean).join(" ").toLocaleLowerCase();
+      const visible = query.length === 0 || text.includes(query);
+      row.hidden = !visible;
+      row.dataset.filteredOut = String(!visible);
+      if (visible && row.dataset.kind === "timing" && row.dataset.role === "left-row") matches += 1;
+    }
+    root.dataset.treeFilter = treeFilter;
+    root.dataset.treeFilterMatches = String(matches);
+  }, [snapshot.revision, treeFilter]);
   const validationDiagnostics = useMemo(() => validateCanonicalDocument(snapshot.document), [snapshot.document]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
@@ -1267,7 +1283,7 @@ export function MinimalCycleView() {
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </section>
-      <aside className="left-panel-tail"><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
+      <aside className="left-panel-tail"><label className="tree-filter"><span>Filter</span><input aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="name / path / role" /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
           {bottomTabs.map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
