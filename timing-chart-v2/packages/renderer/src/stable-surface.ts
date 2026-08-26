@@ -83,6 +83,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
     const mounted = new Set(projection.mountedSignalIds);
+    const firstTimingRowByGroup = new Map<string, string>();
+    for (const row of projection.rowLayout) if (row.kind === "timing" && !firstTimingRowByGroup.has(row.groupId)) firstTimingRowByGroup.set(row.groupId, row.rowId);
     for (const [signalId, owner] of this.#waveOwners) if (!mounted.has(signalId)) owner.remove();
     for (const signalId of projection.mountedSignalIds) {
       let owner = this.#waveOwners.get(signalId);
@@ -99,7 +101,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       }
       if (!isNew) { this.#waveOwners.delete(signalId); this.#waveOwners.set(signalId, owner); }
       const row = rows.get(signalId);
-      if (row) place(owner, row);
+      if (row) {
+        owner.dataset.groupId = row.groupId;
+        owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
+        place(owner, row);
+      }
       if (isNew || this.#dirtyWaves.has(signalId)) this.#queueWave(signalId, owner);
     }
     const waveOwnerCacheLimit = Math.max(32, mounted.size * 4);
@@ -394,8 +400,18 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     branch.dataset.role = "tree-branch";
     branch.dataset.groupId = row.groupId;
     branch.draggable = groupStart;
-    if (groupStart) branch.setAttribute("aria-label", `Move group ${row.groupName}`);
-    branch.textContent = groupStart ? row.groupName : "";
+    if (groupStart) {
+      branch.setAttribute("aria-label", `Select ${row.groupName} group`);
+      const collapse = document.createElement("button");
+      collapse.type = "button";
+      collapse.dataset.role = "tree-collapse";
+      collapse.dataset.groupId = row.groupId;
+      collapse.setAttribute("aria-label", `Collapse ${row.groupName} group`);
+      collapse.textContent = "⌄";
+      branch.append(collapse, document.createTextNode(` ${row.groupName}`));
+    } else {
+      branch.textContent = "";
+    }
     const name = document.createElement("span");
     name.dataset.role = "tree-signal-name";
     name.textContent = row.name;

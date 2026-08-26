@@ -127,6 +127,7 @@ export function MinimalCycleView() {
   const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
   const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
   const [treeFilter, setTreeFilter] = useState("");
+  const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
@@ -172,6 +173,16 @@ export function MinimalCycleView() {
     root.dataset.treeFilter = treeFilter;
     root.dataset.treeFilterMatches = String(matches);
   }, [snapshot.revision, treeFilter]);
+  useEffect(() => {
+    const root = host.current;
+    if (!root) return;
+    for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row'], [data-role='frozen-row'], [data-role='timing-row'], [data-role='wave-owner']")) {
+      const collapsed = row.dataset.groupId !== undefined && collapsedGroupIds.has(row.dataset.groupId as GroupId) && (row.dataset.role === "wave-owner" || row.dataset.groupStart !== "true");
+      row.hidden = collapsed;
+      row.dataset.groupCollapsed = String(collapsed);
+    }
+    root.dataset.collapsedGroups = [...collapsedGroupIds].join(",");
+  }, [snapshot.revision, collapsedGroupIds]);
   const validationDiagnostics = useMemo(() => validateCanonicalDocument(snapshot.document), [snapshot.document]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
@@ -513,6 +524,14 @@ export function MinimalCycleView() {
       rendererHost.dataset.arrowPick = "from";
     };
     const onSelect = (event: MouseEvent) => {
+      const collapseOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-collapse'][data-group-id]") : null;
+      if (collapseOwner?.dataset.groupId) {
+        event.preventDefault();
+        event.stopPropagation();
+        const groupId = collapseOwner.dataset.groupId as GroupId;
+        setCollapsedGroupIds((current) => { const next = new Set(current); if (next.has(groupId)) next.delete(groupId); else next.add(groupId); return next; });
+        return;
+      }
       const visibilityOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-visibility'][data-tree-signal-id]") : null;
       if (visibilityOwner?.dataset.treeSignalId) {
         event.preventDefault();

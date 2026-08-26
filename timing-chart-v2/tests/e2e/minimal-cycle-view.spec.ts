@@ -65,7 +65,7 @@ test("synchronizes scrolling through one viewport without regenerating waveforms
   await expect(host).toHaveAttribute("data-viewport-start-y", String(Math.max(0, scroll.top - 34)));
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
   const frozenLeft = await surface.locator("[data-role='frozen-label-rows']").evaluate((element) => Math.round(element.getBoundingClientRect().left));
-  const headingLeft = await page.locator(".column-headings span").nth(1).evaluate((element) => Math.round(element.getBoundingClientRect().left));
+  const headingLeft = await page.locator(".column-headings > span").nth(1).evaluate((element) => Math.round(element.getBoundingClientRect().left));
   expect(Math.abs(frozenLeft - headingLeft)).toBeLessThanOrEqual(1);
 
   await viewport.evaluate((element) => { element.scrollTop = 0; element.scrollLeft = 0; element.dispatchEvent(new Event("scroll")); });

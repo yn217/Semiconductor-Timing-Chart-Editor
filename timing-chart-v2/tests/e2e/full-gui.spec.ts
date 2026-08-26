@@ -85,6 +85,28 @@ test("Left Signal/Group filter is positioned in the V1 pane header and remains D
   await expect(host.locator("[data-role='left-row'][data-name='REQUEST']")).toBeVisible();
 });
 
+test("Group header chevron collapses derived rows without mutating Canonical or History", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const counters = await surface.getAttribute("data-render-counters");
+  const control = host.locator("[data-role='left-row'][data-group-id='grp_cycle_control']");
+  await control.locator("[data-role='tree-collapse']").click();
+  await expect(host).toHaveAttribute("data-collapsed-groups", "grp_cycle_control");
+  await expect(control.first()).toBeVisible();
+  await expect(host.locator("[data-role='left-row'][data-group-id='grp_cycle_control'][data-row-id='sig_cycle_request']")).toHaveAttribute("hidden", "");
+  await expect(host.locator("[data-role='frozen-row'][data-group-id='grp_cycle_control'][data-row-id='sig_cycle_request']")).toHaveAttribute("hidden", "");
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(surface).toHaveAttribute("data-render-counters", counters!);
+  await control.locator("[data-role='tree-collapse']").click();
+  await expect(host).toHaveAttribute("data-collapsed-groups", "");
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeVisible();
+});
+
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);
