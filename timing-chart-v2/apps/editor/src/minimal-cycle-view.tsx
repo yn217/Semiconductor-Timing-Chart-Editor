@@ -1050,6 +1050,7 @@ export function MinimalCycleView() {
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
+          <LegendView document={snapshot.document} />
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </section>
@@ -1098,6 +1099,9 @@ function DocumentProperties({ document, onCommand, onClose }: { readonly documen
   const [figureNumber, setFigureNumber] = useState(document.document.footer.figureNumber);
   const [revision, setRevision] = useState(document.document.footer.revision);
   const [footerText, setFooterText] = useState(document.document.footer.text);
+  const [legendShow, setLegendShow] = useState(document.legend.show);
+  const [legendOrientation, setLegendOrientation] = useState(document.legend.orientation);
+  const [legendUsedRolesOnly, setLegendUsedRolesOnly] = useState(document.legend.usedRolesOnly);
   const lines = (value: string) => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
   return <div className="modal-backdrop"><form className="document-properties" role="dialog" aria-modal="true" aria-label="Document Properties" onSubmit={(event) => {
     event.preventDefault();
@@ -1107,8 +1111,15 @@ function DocumentProperties({ document, onCommand, onClose }: { readonly documen
     <section><h3>Document</h3><label>Title<input aria-label="Document title" value={title} onChange={(event) => setTitle(event.target.value)} /></label><dl><dt>ID</dt><dd>{document.document.id}</dd><dt>Signals</dt><dd>{document.signals.length}</dd><dt>Cycles</dt><dd>{document.timeline.cycleCount}</dd></dl></section>
     <section><h3>Header</h3><label>Subtitle<input aria-label="Document subtitle" value={subtitle} onChange={(event) => setSubtitle(event.target.value)} /></label><label>Description<textarea aria-label="Document description" value={description} onChange={(event) => setDescription(event.target.value)} rows={2} /></label><label>Notes<textarea aria-label="Document notes" value={notes} onChange={(event) => setNotes(event.target.value)} rows={2} /></label><label>Preconditions<textarea aria-label="Document preconditions" value={preconditions} onChange={(event) => setPreconditions(event.target.value)} rows={2} placeholder="One item per line" /></label><label>Constraints<textarea aria-label="Document constraints" value={constraints} onChange={(event) => setConstraints(event.target.value)} rows={2} placeholder="One item per line" /></label><label>Exceptions<textarea aria-label="Document exceptions" value={exceptions} onChange={(event) => setExceptions(event.target.value)} rows={2} placeholder="One item per line" /></label></section>
     <section><h3>Footer</h3><label>Figure Number<input aria-label="Footer figure number" value={figureNumber} onChange={(event) => setFigureNumber(event.target.value)} /></label><label>Revision<input aria-label="Footer revision" value={revision} onChange={(event) => setRevision(event.target.value)} /></label><label>Text<textarea aria-label="Footer text" value={footerText} onChange={(event) => setFooterText(event.target.value)} rows={2} /></label></section>
+    <section><h3>Legend</h3><label className="checkline">Show Legend<input aria-label="Legend show" type="checkbox" checked={legendShow} onChange={(event) => setLegendShow(event.target.checked)} /></label><label>Orientation<select aria-label="Legend orientation" value={legendOrientation} onChange={(event) => setLegendOrientation(event.target.value as typeof legendOrientation)}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label><label className="checkline">Used Roles Only<input aria-label="Legend used roles only" type="checkbox" checked={legendUsedRolesOnly} onChange={(event) => setLegendUsedRolesOnly(event.target.checked)} /></label><button type="button" data-testid="apply-legend" onClick={() => onCommand({ id: nextCommandId("legend_update"), type: "legend.update", legend: { ...document.legend, show: legendShow, orientation: legendOrientation, usedRolesOnly: legendUsedRolesOnly } })}>Apply Legend</button></section>
     <footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="apply-document-properties">Apply Document Properties</button></footer>
   </form></div>;
+}
+
+function LegendView({ document }: { readonly document: CanonicalDocument }) {
+  if (!document.legend.show) return null;
+  const roles = document.legend.usedRolesOnly ? [...new Set(document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.role))] : ["input", "output", "internal"];
+  return <aside className={`editor-legend ${document.legend.orientation}`} data-testid="editor-legend" aria-label="Legend"><strong>Legend</strong>{roles.map((role) => <span key={role} data-legend-role={role}><i />{role}</span>)}</aside>;
 }
 
 function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onToggleGrid, onToggleSnap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {

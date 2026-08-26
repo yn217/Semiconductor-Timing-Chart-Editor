@@ -121,6 +121,24 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("edits and displays the Legend through the canonical presentation command", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend orientation").selectOption("vertical");
+  await properties.getByLabel("Legend used roles only").uncheck();
+  await properties.getByTestId("apply-legend").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const legend = page.getByTestId("editor-legend");
+  await expect(legend).toBeVisible();
+  await expect(legend).toHaveClass(/vertical/);
+  await expect(legend.locator("[data-legend-role]")).toHaveCount(3);
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+});
+
 test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

@@ -45,7 +45,7 @@ unclassified decision.
 | GUI-08 | Cycle/Transaction/Split selector | MERGED | #172 | View-only state must preserve Canonical/History = 0. |
 | GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Batch 2C adds geometry-derived grid lines and real Snap ON/OFF behavior; reference-clock Ruler remains geometry-derived, with fold/invalidation matrix evidence open. |
 | GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds Derived RowLayout path metadata, Scope breadcrumb, stable-ID Reveal, and one-command bulk registration; Save/Open and full hierarchy visual parity remain open. |
-| GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Type/style/legend capability is incomplete. |
+| GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Signal styling was closed in Batch 1B; current batch adds canonical Legend presentation editing and a visible horizontal/vertical role Legend in the Production canvas. Full V1 legend visual/export parity remains open. |
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Batch 1B verifies editable Inspector Clock Generator Duty and Edge Counter; full save/export parity remains open. |
 | GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Batch 1C verifies Advanced JSON Selected Object/Whole Document validation and Apply; full tab parity remains open. |
 | GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Batch 1C verifies Pin freezes context independently while Follow Selection remains a separate tab-follow state. |

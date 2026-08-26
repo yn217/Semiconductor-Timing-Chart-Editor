@@ -416,6 +416,10 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (JSON.stringify(document.document) === JSON.stringify(nextDocument.document)) return fail("no-op", "NO_OP", "$.document", "Document metadata is unchanged.");
       return { ok: true, document: nextDocument, changeSet: {}, inverseChangeSet: {} };
     }
+    case "legend.update": {
+      if (JSON.stringify(document.legend) === JSON.stringify(command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
+      return { ok: true, document: { ...document, legend: command.legend }, changeSet: {}, inverseChangeSet: {} };
+    }
     case "commentRow.create":
       return planCommand(document, { id: command.id, type: "signal.create", signal: command.commentRow, targetGroupId: command.targetGroupId, index: command.index });
     case "commentRow.update": {

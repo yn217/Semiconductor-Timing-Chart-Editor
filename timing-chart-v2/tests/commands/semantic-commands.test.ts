@@ -39,6 +39,18 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.document).toEqual(source.document);
   });
 
+  it("updates Legend presentation without touching waveform domains", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const result = session.execute({ id: commandId("cmd_legend"), type: "legend.update", legend: { ...source.legend, show: true, orientation: "vertical", usedRolesOnly: false } });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.changeSet).toEqual({});
+    expect(session.getSnapshot().document.legend).toMatchObject({ show: true, orientation: "vertical", usedRolesOnly: false });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.legend).toEqual(source.legend);
+  });
+
   it("edits a Transaction through semantic commands and one-entry History", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const transactionId = "txn_read" as TransactionId;
