@@ -218,7 +218,7 @@ body { min-width: 1100px; }
 .status-bar { min-height: 0; height: 27px; display: flex; align-items: center; gap: 14px; padding: 0 12px; border-top: 1px solid #cbd4df; background: #f6f8fb; color: #52647a; font-size: 11px; overflow: hidden; white-space: nowrap; }.status-bar strong { color: #213a59; font-weight: 650; }.status-bar [data-testid="revision-status"], .status-bar [data-testid="history-status"] { color: #304b6b; }.status-bar [data-testid="dirty-status"] { color: #2f6d4f; font-weight: 650; }
 .editor-shell[data-inspector-visible="false"] .desktop-workspace { grid-template-columns: 330px minmax(0, 1fr) 0; }.editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: minmax(0, 1fr) 0; }
 .annotation-hint { align-self: center; color: #718097; font-size: 10px; }
-.signal-editor { min-height: 250px; margin: 0 22px 12px; overflow: auto; border: 1px solid #c7d0dd; border-radius: 8px; background: white; box-shadow: 0 5px 18px #20365210; }
+.signal-editor { min-height: 250px; margin: 0; overflow: auto; border: 0; border-radius: 0; background: white; box-shadow: none; }
 .editor-tabbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-bottom: 1px solid #cad3df; background: #f4f7fa; }
 .editor-tabbar button { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
 .editor-tabbar button:disabled { opacity: .45; }
