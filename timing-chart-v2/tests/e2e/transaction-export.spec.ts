@@ -177,3 +177,35 @@ test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", as
   const png = await download("png"); expect([...png.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   const pdf = await download("pdf"); const pdf2 = await download("pdf"); expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-"); expect(pdf.length).toBeGreaterThan(1_000); expect(pdf).toEqual(pdf2);
 });
+
+test("copies deterministic SVG and PNG through browser Clipboard export", async ({ page }) => {
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4198" });
+  await ready(page);
+  await createTransaction(page, "Clipboard DMA", 2, 6);
+  const surface = page.getByTestId("cycle-surface");
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+    counters: await surface.getAttribute("data-session-counters"),
+  };
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+
+  await dialog.getByRole("button", { name: "Copy SVG" }).click();
+  await expect(dialog.locator("output")).toHaveText("SVG copied");
+  const svgText = await page.evaluate(() => navigator.clipboard.readText());
+  expect(svgText).toContain('data-export-scene="v2"');
+  expect(svgText).toContain('data-wave-engine="wavedrom-3.6.2"');
+
+  await dialog.getByRole("button", { name: "Copy PNG" }).click();
+  await expect(dialog.locator("output")).toHaveText("PNG copied");
+  const clipboardTypes = await page.evaluate(async () => {
+    const items = await navigator.clipboard.read();
+    return items.flatMap((item) => item.types);
+  });
+  expect(clipboardTypes).toContain("image/png");
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
+  expect(await surface.getAttribute("data-session-counters")).toBe(before.counters);
+});

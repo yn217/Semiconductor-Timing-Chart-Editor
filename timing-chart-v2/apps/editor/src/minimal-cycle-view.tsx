@@ -1593,15 +1593,29 @@ function ExportDialog({ snapshot, range, onClose }: { readonly snapshot: Canonic
   const [scope, setScope] = useState<"document" | "selected-range">("document");
   const [scale, setScale] = useState(2);
   const [status, setStatus] = useState("");
+  const settings = () => ({ scope, ...(scope === "selected-range" ? { range } : {}), scale, page: { size: "A4" as const, orientation: "landscape" as const, margin: 24, fit: "width" as const }, foldPolicy: "respect" as const });
   const exportNow = async () => {
     setStatus("Generating…");
     try {
-      const bytes = await new DeterministicExportService().export({ format, snapshot, settings: { scope, ...(scope === "selected-range" ? { range } : {}), scale, page: { size: "A4", orientation: "landscape", margin: 24, fit: "width" }, foldPolicy: "respect" } });
+      const bytes = await new DeterministicExportService().export({ format, snapshot, settings: settings() });
       downloadBytes(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
       setStatus(`${format.toUpperCase()} ready`);
     } catch (error) { setStatus(error instanceof Error ? error.message : "Export failed"); }
   };
-  return <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={onClose}>×</button></header><label>Format<select aria-label="Export format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output>{status}</output><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></footer></section></div>;
+  const copyNow = async (copyFormat: "svg" | "png") => {
+    setStatus("Copying…");
+    try {
+      const bytes = await new DeterministicExportService().export({ format: copyFormat, snapshot, settings: settings() });
+      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") throw new Error("Clipboard API is unavailable in this browser.");
+      const mime = copyFormat === "svg" ? "image/svg+xml" : "image/png";
+      const blobBytes = bytes.slice().buffer as ArrayBuffer;
+      const blob = new Blob([blobBytes], { type: mime });
+      const items = copyFormat === "svg" ? { "image/svg+xml": blob, "text/plain": new Blob([new TextDecoder().decode(bytes)], { type: "text/plain" }) } : { "image/png": blob };
+      await navigator.clipboard.write([new ClipboardItem(items)]);
+      setStatus(`${copyFormat.toUpperCase()} copied`);
+    } catch (error) { setStatus(error instanceof Error ? error.message : "Clipboard export failed"); }
+  };
+  return <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Export Timing Chart" className="export-dialog"><header><h2>Export</h2><button type="button" aria-label="Close export" onClick={onClose}>×</button></header><label>Format<select aria-label="Export format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="svg">SVG</option><option value="png">PNG</option><option value="pdf">PDF</option></select></label><label>Scope<select aria-label="Export scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="document">Entire Document</option><option value="selected-range">Selected Range</option></select></label>{format === "png" && <label>Scale<select aria-label="PNG scale" value={scale} onChange={(event) => setScale(Number(event.target.value))}><option value="1">1x</option><option value="2">2x</option><option value="3">3x</option></select></label>}<div className="export-summary">Canonical source · {snapshot.document.signals.length} signals · {snapshot.document.transactions.length} transactions</div><footer><output>{status}</output><button type="button" onClick={() => void copyNow("svg")}>Copy SVG</button><button type="button" onClick={() => void copyNow("png")}>Copy PNG</button><button type="button" onClick={() => void exportNow()}>Export {format.toUpperCase()}</button></footer></section></div>;
 }
 
 function downloadText(text: string, filename: string): void {
