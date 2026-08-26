@@ -40,10 +40,10 @@ unclassified decision.
 | GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Batch 2A verifies canvas cycle selection and exclusive terminal boundary; Batch 2B verifies geometry-backed half-open drag, Shift extension, reverse-range normalization and Escape preview cancel. Playhead visual and full interaction parity remain open. |
 | GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Batch 1B verifies editable Signal/Clock fields through Apply; Group/Annotation/Transaction parity remains open. |
 | GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON; dedicated Comment Row editor remains open. |
-| GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | Click-pan and viewport drag are required. |
+| GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | Batch 2C adds a row-proportional viewport MiniMap with click-pan and pointer drag pan; large-document scaling and visual parity remain open. |
 | GUI-07 | Status Bar | KEEP | #172/#176 | State and count parity requires evidence. |
 | GUI-08 | Cycle/Transaction/Split selector | MERGED | #172 | View-only state must preserve Canonical/History = 0. |
-| GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Controls must affect real geometry and mapping. |
+| GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Batch 2C adds geometry-derived grid lines and real Snap ON/OFF behavior; reference-clock Ruler remains geometry-derived, with fold/invalidation matrix evidence open. |
 | GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds Derived RowLayout path metadata, Scope breadcrumb, stable-ID Reveal, and one-command bulk registration; Save/Open and full hierarchy visual parity remain open. |
 | GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Type/style/legend capability is incomplete. |
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Batch 1B verifies editable Inspector Clock Generator Duty and Edge Counter; full save/export parity remains open. |

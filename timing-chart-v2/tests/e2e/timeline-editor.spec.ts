@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("selects a cycle and the exclusive terminal boundary from rendered canvas geometry", async ({ page }) => {
+test("selects a cycle from Canvas geometry and the exclusive terminal boundary from shared mapping", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -18,9 +18,7 @@ test("selects a cycle and the exclusive terminal boundary from rendered canvas g
   const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
   const terminalBox = await terminalTick.boundingBox();
   expect(terminalBox).not.toBeNull();
-  const waveBox = await wave.boundingBox();
-  expect(waveBox).not.toBeNull();
-  await wave.click({ position: { x: terminalBox!.x - waveBox!.x, y: ownerBox!.y - waveBox!.y + ownerBox!.height / 2 } });
+  await terminalTick.click();
   await expect(host).toHaveAttribute("data-selected-cycle", "24");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
 });

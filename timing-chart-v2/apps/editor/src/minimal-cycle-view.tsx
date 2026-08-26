@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { RefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
@@ -65,6 +66,7 @@ export function MinimalCycleView() {
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
+  const gridLayer = useRef<HTMLDivElement>(null);
   const execute = useRef<(command: SemanticCommand) => ReturnType<CommandHistorySession["execute"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
   const undo = useRef<() => void>(() => undefined);
   const redo = useRef<() => void>(() => undefined);
@@ -93,6 +95,12 @@ export function MinimalCycleView() {
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
+  const [gridEnabled, setGridEnabled] = useState(true);
+  const gridEnabledRef = useRef(true);
+  gridEnabledRef.current = gridEnabled;
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const snapEnabledRef = useRef(true);
+  snapEnabledRef.current = snapEnabled;
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<"Signal" | "Annotation" | "Transaction" | "Problems" | "JSON">("Signal");
   const [viewMode, setViewMode] = useState<"Cycle" | "Transaction" | "Split">("Cycle");
@@ -187,7 +195,8 @@ export function MinimalCycleView() {
     const rendererHost = host.current;
     const viewportElement = viewport.current;
     const rulerElement = ruler.current;
-    if (!rendererHost || !viewportElement || !rulerElement) return;
+    const gridElement = gridLayer.current;
+    if (!rendererHost || !viewportElement || !rulerElement || !gridElement) return;
 
     let session = new CommandHistorySession(cycleDocument);
     const adapter = new ProductionWaveDromAdapter();
@@ -233,6 +242,9 @@ export function MinimalCycleView() {
       renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps));
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
     };
+    const refreshGrid = (document: CanonicalDocument) => {
+      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight);
+    };
 
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
@@ -270,6 +282,7 @@ export function MinimalCycleView() {
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
       buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
+      refreshGrid(session.getSnapshot().document);
       applyZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);
       collectWaveErrors();
@@ -315,6 +328,7 @@ export function MinimalCycleView() {
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
         buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
+        refreshGrid(result.snapshot.document);
         applyZoom(currentZoom);
         refreshOverlays(result.snapshot.document);
         collectWaveErrors();
@@ -347,6 +361,7 @@ export function MinimalCycleView() {
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
         buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
+        refreshGrid(session.getSnapshot().document);
         applyZoom(currentZoom);
         refreshOverlays(session.getSnapshot().document);
         collectWaveErrors();
@@ -477,9 +492,9 @@ export function MinimalCycleView() {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       if (!waveLayer) return false;
       const bounds = waveLayer.getBoundingClientRect();
-      const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (event.clientX - bounds.left) / currentZoom, y: (event.clientY - bounds.top) / currentZoom }, 32 / currentZoom, ["cycle-boundary", "cycle-center"], ["cycle-boundary"]);
-      if (!snap || snap.anchor.cycle < 0 || snap.anchor.cycle > session.getSnapshot().document.timeline.cycleCount) return false;
-      const cycle = snap.anchor.cycle;
+      const snap = snapEnabledRef.current ? buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (event.clientX - bounds.left) / currentZoom, y: (event.clientY - bounds.top) / currentZoom }, 32 / currentZoom, ["cycle-boundary", "cycle-center"], ["cycle-boundary"]): undefined;
+      const cycle = snapEnabledRef.current ? snap?.anchor.cycle : cycleBoundaryAtX(event.clientX);
+      if (cycle === undefined || cycle < 0 || cycle > session.getSnapshot().document.timeline.cycleCount) return false;
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
       if (event.shiftKey) {
@@ -497,9 +512,13 @@ export function MinimalCycleView() {
       const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
       if (!tick) return;
       const cycle = Number(tick.dataset.cycle);
-      if (!Number.isInteger(cycle) || cycle >= session.getSnapshot().document.timeline.cycleCount) return;
+      if (!Number.isInteger(cycle) || cycle > session.getSnapshot().document.timeline.cycleCount) return;
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
+      if (cycle === session.getSnapshot().document.timeline.cycleCount) {
+        setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
+        return;
+      }
       if (event.shiftKey) {
         const anchor = timelineRangeRef.current.start;
         setTimelineRange({ start: Math.min(anchor, cycle), end: Math.max(anchor, cycle) + 1 });
@@ -514,6 +533,13 @@ export function MinimalCycleView() {
       const bounds = waveLayer.getBoundingClientRect();
       const x = (clientX - bounds.left) / currentZoom;
       const candidates = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).entries().filter((candidate) => candidate.kind === "cycle-boundary");
+      if (!snapEnabledRef.current) {
+        const ordered = [...candidates].sort((left, right) => left.point.x - right.point.x);
+        const x = (clientX - bounds.left) / currentZoom;
+        const terminal = ordered.at(-1);
+        if (terminal && x >= terminal.point.x - 32 / currentZoom) return terminal.anchor.cycle;
+        return ordered.filter((candidate) => candidate.point.x <= x).at(-1)?.anchor.cycle ?? ordered[0]?.anchor.cycle;
+      }
       let nearest: { cycle: number; distance: number } | undefined;
       for (const candidate of candidates) {
         const distance = Math.abs(candidate.point.x - x);
@@ -527,6 +553,7 @@ export function MinimalCycleView() {
       return { start: Math.max(0, Math.min(start, cycleCount - 1)), end: Math.max(1, Math.min(cycleCount, endBoundary > start ? endBoundary : start + 1)) };
     };
     const onRangePointerDown = (event: PointerEvent) => {
+      if (rendererHost.dataset.arrowPick) return;
       if (event.button !== 0 || !(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return;
       const cycle = cycleBoundaryAtX(event.clientX);
       if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
@@ -980,6 +1007,8 @@ export function MinimalCycleView() {
       range={timelineRange}
       history={history}
       zoom={zoom}
+      gridEnabled={gridEnabled}
+      snapEnabled={snapEnabled}
       arrowPickStatus={arrowPickStatus}
       selectedSignalId={annotationTargetSignalId}
       problemsCount={diagnostics.length}
@@ -999,6 +1028,8 @@ export function MinimalCycleView() {
       onCreateAnnotation={createSelectedAnnotation}
       onArrowPick={() => armArrowPick.current()}
       onZoom={(delta) => changeZoom.current(delta)}
+      onToggleGrid={() => setGridEnabled((value) => !value)}
+      onToggleSnap={() => setSnapEnabled((value) => !value)}
       onUndo={() => commandRegistry.current.execute("history.undo")}
       onRedo={() => commandRegistry.current.execute("history.redo")}
       onDelete={() => commandRegistry.current.execute("selection.delete")}
@@ -1017,11 +1048,12 @@ export function MinimalCycleView() {
         <div className="column-headings" aria-hidden="true"><span>Signal / Group</span><span>Role / signal</span><span>Cycle waveform</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
+          <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />
-          <div className="surface-host" ref={host} data-testid="cycle-surface" />
+      <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </section>
-      <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}</aside>
+      <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
           {(["Signal", "Annotation", "Transaction", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
@@ -1041,7 +1073,7 @@ export function MinimalCycleView() {
     <footer className="status-bar">
       <span>Tool: Select</span>
       <span>Selected: <strong data-testid="selection-status">{selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
-      <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: On</span>
+      <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: {snapEnabled ? "On" : "Off"}</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
       <span>{history.dirty ? "Modified" : "Clean"}</span><span>Problems: {diagnostics.length}</span><span>WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
@@ -1055,11 +1087,11 @@ function RibbonIcon({ name }: { readonly name: string }) {
   return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
 }
 
-function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {
-  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number;
+function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onToggleGrid, onToggleSnap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {
+  readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number;
   readonly clipboardStatus: string; readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
-  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
+  readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
 }) {
   const insertValueSignal = (type: "binary" | "bus" | "state") => {
     const targetGroup = document.signalGroups.at(-1);
@@ -1119,7 +1151,7 @@ function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selected
     </div>}
     {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>}
     {tab === "Annotation" && <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>}
-    {tab === "View" && <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input type="checkbox" defaultChecked /> Grid</label><label><input type="checkbox" defaultChecked /> Snap</label></div><b>View</b></div>}
+    {tab === "View" && <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input data-testid="grid-toggle" type="checkbox" checked={gridEnabled} onChange={onToggleGrid} /> Grid</label><label><input data-testid="snap-toggle" type="checkbox" checked={snapEnabled} onChange={onToggleSnap} /> Snap</label></div><b>View</b></div>}
     {tab === "Review" && <div className="ribbon-group review-group"><button type="button" className="ribbon-tool" onClick={onShowProblems}><RibbonIcon name="i-filter" /><span>Problems</span></button><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <div className="ribbon-group ai-group"><button type="button" className="ribbon-tool" disabled title="AI features are not implemented yet"><RibbonIcon name="i-ai" /><span>AI Assist</span></button><span className="ribbon-placeholder-note">Coming soon</span><b>AI</b></div>}
   </section>;
@@ -1343,6 +1375,54 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a"); anchor.href = url; anchor.download = filename; anchor.click();
   setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, visible: boolean, height: number): void {
+  element.dataset.gridEnabled = String(visible);
+  element.style.height = `${height}px`;
+  if (!geometry || !referenceSignalId) return;
+  const lines: HTMLElement[] = [];
+  for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
+    const anchor = geometry.find({ signalId: referenceSignalId, cycle, point: "cycle-start" });
+    if (!anchor) continue;
+    const line = element.ownerDocument.createElement("span");
+    line.dataset.role = "geometry-grid-line";
+    line.dataset.cycle = String(cycle);
+    line.style.transform = `translateX(${anchor.point.x}px)`;
+    line.style.height = `${height}px`;
+    lines.push(line);
+  }
+  element.replaceChildren(...lines);
+}
+
+function MiniMap({ document, viewport }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null> }) {
+  const [metrics, setMetrics] = useState({ top: 0, ratio: 1 });
+  const dragging = useRef(false);
+  const sync = () => {
+    const element = viewport.current;
+    if (!element) return;
+    const scrollable = Math.max(1, element.scrollHeight);
+    setMetrics({ top: element.scrollTop / scrollable, ratio: Math.min(1, element.clientHeight / scrollable) });
+  };
+  useEffect(() => {
+    const element = viewport.current;
+    if (!element) return undefined;
+    sync();
+    element.addEventListener("scroll", sync, { passive: true });
+    return () => element.removeEventListener("scroll", sync);
+  }, [document.signals.length, document.signalGroups.length]);
+  const pan = (clientY: number) => {
+    const element = viewport.current;
+    const minimap = documentRef.current;
+    if (!element || !minimap) return;
+    const bounds = minimap.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height));
+    element.scrollTop = ratio * Math.max(0, element.scrollHeight - element.clientHeight);
+    sync();
+  };
+  const documentRef = useRef<HTMLDivElement>(null);
+  const rows = document.signalGroups.flatMap((group) => group.rows);
+  return <div ref={documentRef} className="minimap" data-testid="minimap" aria-label="MiniMap" onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-rows">{rows.map((rowId) => <span key={rowId} data-row-id={rowId} />)}</div><i data-testid="minimap-viewport" style={{ top: `${metrics.top * 100}%`, height: `${Math.max(4, metrics.ratio * 100)}%` }} /></div>;
 }
 
 function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {

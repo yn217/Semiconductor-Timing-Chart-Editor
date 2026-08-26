@@ -90,6 +90,23 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload']")).toHaveCount(1);
 });
 
+test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap viewport", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const grid = page.getByTestId("geometry-grid");
+  await expect(grid).toHaveAttribute("data-grid-enabled", "true");
+  await expect(grid.locator("[data-role='geometry-grid-line']")).toHaveCount(25);
+  await page.getByTestId("grid-toggle").uncheck();
+  await expect(grid).toHaveAttribute("data-grid-enabled", "false");
+  await page.getByTestId("snap-toggle").uncheck();
+  await expect(page.getByTestId("snap-toggle")).not.toBeChecked();
+  const viewport = page.getByTestId("cycle-viewport");
+  const before = await viewport.evaluate((element) => element.scrollTop);
+  await page.getByTestId("minimap").click({ position: { x: 20, y: 55 } });
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(before);
+  await expect(page.getByTestId("minimap-viewport")).toBeVisible();
+});
+
 test("applies Signal Inspector capability fields as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
