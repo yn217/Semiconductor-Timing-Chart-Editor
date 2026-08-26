@@ -1253,13 +1253,13 @@ export function MinimalCycleView() {
     {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => setBulkRegistrationVisible(false)}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => setBulkRegistrationText(event.target.value)} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} onClose={() => setExportVisible(false)} />}
     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
-    <footer className="status-bar">
-      <span>Tool: Select</span>
+    <footer className="status-bar" aria-label="Editor status">
+      <span data-testid="tool-status">Tool: Select</span>
       <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
-      <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: {snapEnabled ? "On" : "Off"}</span>
+      <span data-testid="range-status">Range: [{timelineRange.start}, {timelineRange.end})</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
-      <span>{history.dirty ? "Modified" : "Clean"}</span><span>Problems: {diagnostics.length}</span><span>WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+      <span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
     </footer>
   </main>;
 }

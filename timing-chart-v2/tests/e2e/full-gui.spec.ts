@@ -192,6 +192,29 @@ test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap view
   await expect(page.getByTestId("minimap-viewport")).toBeVisible();
 });
 
+test("Status Bar exposes derived selection, range, view and renderer state without mutating the document", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const status = page.locator(".status-bar");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  await expect(status).toContainText("Tool: Select");
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [2, 4)");
+  await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 2");
+  await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 100%");
+  await expect(page.getByTestId("snap-status")).toHaveText("Snap: On");
+  await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
+  await page.getByTestId("snap-toggle").uncheck();
+  await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 125%");
+  await expect(page.getByTestId("snap-status")).toHaveText("Snap: Off");
+  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Split");
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+});
+
 test("Fit Selection is a view-only navigation action backed by ruler geometry", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
