@@ -85,6 +85,21 @@ test("Left Signal/Group filter is positioned in the V1 pane header and remains D
   await expect(host.locator("[data-role='left-row'][data-name='REQUEST']")).toBeVisible();
 });
 
+test("Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const add = page.getByRole("button", { name: "Add signal or group" });
+  await add.click();
+  const menu = page.getByRole("menu", { name: "Add signal or group" });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem")).toHaveText(["Signal", "Clock", "Bus", "State", "Group", "Comment Row"]);
+  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-tree-add-1280x720.png", animations: "disabled" });
+  await menu.getByRole("menuitem", { name: "Bus", exact: true }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 9");
+});
+
 test("Group header chevron collapses derived rows without mutating Canonical or History", async ({ page }) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await ready(page);
