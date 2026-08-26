@@ -175,6 +175,21 @@ test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap view
   await expect(page.getByTestId("minimap-viewport")).toBeVisible();
 });
 
+test("Fit Selection is a view-only navigation action backed by ruler geometry", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
+  await expect(page.getByTestId("zoom-status")).toHaveText("200%");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+});
+
 test("applies Signal Inspector capability fields as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

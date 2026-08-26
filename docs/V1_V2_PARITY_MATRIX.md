@@ -49,7 +49,7 @@ unclassified decision.
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Batch 1B verifies editable Inspector Clock Generator Duty and Edge Counter; full save/export parity remains open. |
 | GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Batch 1C verifies Advanced JSON Selected Object/Whole Document validation and Apply; full tab parity remains open. |
 | GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Batch 1C verifies Pin freezes context independently while Follow Selection remains a separate tab-follow state. |
-| GUI-15 | Zoom/Fit/navigation | KEEP | #167/#172/#176 | Fit Selection and navigation evidence required. |
+| GUI-15 | Zoom/Fit/navigation | KEEP | #167/#172/#176 | Current batch adds Fit Selection using ruler-derived geometry and verifies view-only Canonical/History/WaveDrom invariants; pan/keyboard navigation and full V1 visual parity remain open. |
 | GUI-16 | Clipboard/reorder commands | KEEP | #161/#169/#172/#176 | Shared SemanticCommand and fresh IDs required. |
 
 ## Non-GUI V1 contract sections

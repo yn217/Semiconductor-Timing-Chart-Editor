@@ -72,6 +72,7 @@ export function MinimalCycleView() {
   const redo = useRef<() => void>(() => undefined);
   const armArrowPick = useRef<() => void>(() => undefined);
   const changeZoom = useRef<(delta: number) => void>(() => undefined);
+  const fitSelection = useRef<() => void>(() => undefined);
   const openDocument = useRef<(text: string) => void>(() => undefined);
   const newDocument = useRef<() => void>(() => undefined);
   const saveDocument = useRef<() => string | undefined>(() => undefined);
@@ -268,6 +269,17 @@ export function MinimalCycleView() {
       setZoom(currentZoom);
     };
     changeZoom.current = (delta) => applyZoom(currentZoom + delta);
+    fitSelection.current = () => {
+      const selected = timelineRangeRef.current;
+      const startTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${selected.start}']`);
+      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${selected.end}']`);
+      const start = startTick?.offsetLeft ?? 0;
+      const end = endTick?.offsetLeft ?? start + 1;
+      const span = Math.max(1, end - start);
+      const available = Math.max(160, viewportElement.clientWidth - 460);
+      applyZoom(available / span);
+      requestAnimationFrame(() => { viewportElement.scrollLeft = Math.max(0, Math.round(start * currentZoom - 440)); });
+    };
     snapTransactionCycle.current = (clientX) => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       const referenceId = session.getSnapshot().document.timeline.referenceClock;
@@ -1028,6 +1040,7 @@ export function MinimalCycleView() {
       onCreateAnnotation={createSelectedAnnotation}
       onArrowPick={() => armArrowPick.current()}
       onZoom={(delta) => changeZoom.current(delta)}
+      onFitSelection={() => fitSelection.current()}
       onToggleGrid={() => setGridEnabled((value) => !value)}
       onToggleSnap={() => setSnapEnabled((value) => !value)}
       onUndo={() => commandRegistry.current.execute("history.undo")}
@@ -1122,10 +1135,10 @@ function LegendView({ document }: { readonly document: CanonicalDocument }) {
   return <aside className={`editor-legend ${document.legend.orientation}`} data-testid="editor-legend" aria-label="Legend"><strong>Legend</strong>{roles.map((role) => <span key={role} data-legend-role={role}><i />{role}</span>)}</aside>;
 }
 
-function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onToggleGrid, onToggleSnap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {
+function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onToggleGrid, onToggleSnap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number;
   readonly clipboardStatus: string; readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
-  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
+  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void;
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
 }) {
   const insertValueSignal = (type: "binary" | "bus" | "state") => {
@@ -1186,7 +1199,7 @@ function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled,
     </div>}
     {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} /><b>Timeline</b></div>}
     {tab === "Annotation" && <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>}
-    {tab === "View" && <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input data-testid="grid-toggle" type="checkbox" checked={gridEnabled} onChange={onToggleGrid} /> Grid</label><label><input data-testid="snap-toggle" type="checkbox" checked={snapEnabled} onChange={onToggleSnap} /> Snap</label></div><b>View</b></div>}
+    {tab === "View" && <div className="ribbon-group view-group"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span>Zoom out</span></button><output data-testid="zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span>Zoom in</span></button><button type="button" className="ribbon-tool" onClick={onFitSelection}><RibbonIcon name="i-fit" /><span>Fit Selection</span></button><div className="ribbon-toggles"><button type="button" onClick={onToggleInspector}>Inspector</button><button type="button" onClick={onToggleBottom}>Bottom Editor</button><label><input data-testid="grid-toggle" type="checkbox" checked={gridEnabled} onChange={onToggleGrid} /> Grid</label><label><input data-testid="snap-toggle" type="checkbox" checked={snapEnabled} onChange={onToggleSnap} /> Snap</label></div><b>View</b></div>}
     {tab === "Review" && <div className="ribbon-group review-group"><button type="button" className="ribbon-tool" onClick={onShowProblems}><RibbonIcon name="i-filter" /><span>Problems</span></button><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <div className="ribbon-group ai-group"><button type="button" className="ribbon-tool" disabled title="AI features are not implemented yet"><RibbonIcon name="i-ai" /><span>AI Assist</span></button><span className="ribbon-placeholder-note">Coming soon</span><b>AI</b></div>}
   </section>;
