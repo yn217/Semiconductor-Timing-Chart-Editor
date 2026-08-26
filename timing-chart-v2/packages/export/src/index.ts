@@ -20,7 +20,7 @@ export interface ExportRequest {
 
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "group" | "annotation" | "transaction" }
-export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number }
+export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
@@ -103,7 +103,8 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
   const displayCycle = toDisplayCycle(mapping, anchor.cycle, "floor");
-  return { x: LABEL_WIDTH + (displayCycle - start) * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
+  const thresholdOffset = anchor.threshold === undefined ? 0 : Math.max(0, Math.min(1, anchor.threshold));
+  return { x: LABEL_WIDTH + (displayCycle + thresholdOffset) * cycleWidth - start * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
 }
 
 export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
@@ -141,7 +142,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const annotations = document.annotations.map((annotation): ExportAnnotation | undefined => {
     const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, mapping, range.start, cycleWidth);
-    return first && second ? { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y } : undefined;
+    return first && second ? { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.start?.threshold === undefined ? {} : { threshold1: annotation.start.threshold }), ...(annotation.end?.threshold === undefined ? {} : { threshold2: annotation.end.threshold }) } : undefined;
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const width = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
   const height = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
@@ -174,7 +175,12 @@ export function renderExportSvg(scene: ExportScene): string {
     out.push(`<svg data-signal-id="${xml(wave.signalId)}" data-role="${xml(wave.role)}" data-wave-json="${xml(wave.waveJson)}" x="${scene.ruler.x}" y="${wave.y - wave.sourceHeight / 2}" width="${wave.width}" height="${wave.sourceHeight}" viewBox="${wave.cropX} 0 ${wave.width} ${wave.sourceHeight}" overflow="hidden" class="WaveDrom">${inner}</svg>`);
   }
   out.push(`</g><g data-layer="annotations" font-family="Segoe UI,Arial,sans-serif" font-size="11" stroke="#dc2626" fill="none">`);
-  for (const annotation of scene.annotations) out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
+  for (const annotation of scene.annotations) {
+    const metadata = `${annotation.sourceSignalId ? ` data-source-signal-id="${xml(annotation.sourceSignalId)}"` : ""}${annotation.traceOffsetCycles === undefined ? "" : ` data-trace-offset-cycles="${annotation.traceOffsetCycles}"`}${annotation.threshold1 === undefined ? "" : ` data-start-threshold="${annotation.threshold1}"`}${annotation.threshold2 === undefined ? "" : ` data-end-threshold="${annotation.threshold2}"`}`;
+    if (annotation.type === "timingRegion") out.push(`<rect data-annotation-id="${xml(annotation.id)}" data-annotation-type="timingRegion"${metadata} x="${Math.min(annotation.x1, annotation.x2)}" y="0" width="${Math.max(2, Math.abs(annotation.x2 - annotation.x1))}" height="${scene.height}" fill="${xml("#d04a36")}" fill-opacity="${annotation.opacity ?? 0.16}" stroke="none"/>`);
+    else if (annotation.type === "ghostTrace") out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#475569" stroke="none">${xml(annotation.label)}</text></g>`);
+    else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
+  }
   const footer = [layout.figureNumber, layout.revision, layout.footerText].filter((value) => value.length > 0).join(" · ");
   out.push(`</g><g data-layer="legend" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${12 + index * 80}" y="${scene.height - (footer ? 30 : 12)}">${xml(role)}</text>`).join("")}</g>`);
   if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);

@@ -81,6 +81,21 @@ describe("deterministic document export", () => {
     expect(scene.height).toBeGreaterThan(buildExportScene(scaleFixture(2), { format: "svg", scope: "document" }).height);
   });
 
+  it("exports Timing Region and linked Ghost Trace as derived overlay layers", () => {
+    const base = canonicalFixture();
+    const source = base.signals[1]!;
+    const document = { ...base, annotations: [
+      { id: "ann_region" as AnnotationId, type: "timingRegion" as const, label: "Setup", visible: true, opacity: 0.2, start: { signalId: source.id, cycle: 1, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 4, point: "cycle-end" as const } },
+      { id: "ann_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Previous", visible: true, sourceSignalId: source.id, traceOffsetCycles: -1, opacity: 0.5, start: { signalId: source.id, cycle: 2, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 5, point: "cycle-end" as const } },
+    ] };
+    const svg = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    expect(svg).toContain('data-annotation-type="timingRegion"');
+    expect(svg).toContain('data-annotation-type="ghostTrace"');
+    expect(svg).toContain('data-source-signal-id="sig_data"');
+    expect(svg).toContain('data-trace-offset-cycles="-1"');
+    expect(svg).toContain('stroke-dasharray="6 4"');
+  });
+
   it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {
     const document = foldedFixture();
     const respected = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });
