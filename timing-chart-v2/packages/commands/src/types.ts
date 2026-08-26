@@ -14,6 +14,7 @@ import type {
   ClockGenerator,
   EdgeCounterSettings,
   SignalGroup,
+  SignalGroupStyle,
   SignalId,
   SignalRole,
   TimeGroupId,
@@ -51,6 +52,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "group.rename"; groupId: GroupId; name: string }>
   | Readonly<{ id: CommandId; type: "group.move"; groupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "group.updateLayout"; groupId: GroupId; spacingBefore?: number; spacingAfter?: number }>
+  | Readonly<{ id: CommandId; type: "group.updateProperties"; groupId: GroupId; name: string; spacingBefore: number; spacingAfter: number; style: SignalGroupStyle }>
   | Readonly<{ id: CommandId; type: "timeline.insert"; at: number; count: number }>
   | Readonly<{ id: CommandId; type: "timeline.delete"; start: number; end: number }>
   | Readonly<{ id: CommandId; type: "timeline.duplicateRange"; start: number; end: number; at: number }>

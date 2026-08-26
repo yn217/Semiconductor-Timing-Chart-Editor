@@ -340,6 +340,10 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.name = row.name;
     shell.dataset.groupId = row.groupId;
     shell.dataset.groupName = row.groupName;
+    if (row.groupStyle?.showBackground && row.groupStyle.background) shell.style.setProperty("--group-background", row.groupStyle.background);
+    else shell.style.removeProperty("--group-background");
+    if (row.groupStyle?.opacity !== undefined) shell.style.opacity = String(row.groupStyle.opacity); else shell.style.removeProperty("opacity");
+    if (row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
     shell.dataset.groupStart = String(row.groupId !== previousGroupId);
     shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
     shell.dataset.fullPath = row.fullPath ?? row.name;
@@ -349,7 +353,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${row.groupId !== previousGroupId}`;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${row.groupId !== previousGroupId}`;
     if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
     place(shell, row);
     ordered.push(shell);

@@ -1,12 +1,13 @@
 import type { ChangeSet } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { ViewTransform } from "@timing-chart-v2/geometry";
-import type { GroupId, RowId, SignalId, SignalRole } from "@timing-chart-v2/schema";
+import type { GroupId, RowId, SignalGroupStyle, SignalId, SignalRole } from "@timing-chart-v2/schema";
 
 export interface RowLayoutEntry {
   readonly rowId: RowId;
   readonly groupId: GroupId;
   readonly groupName: string;
+  readonly groupStyle?: SignalGroupStyle;
   readonly kind: "timing" | "comment" | "spacer";
   readonly name: string;
   readonly role?: SignalRole;

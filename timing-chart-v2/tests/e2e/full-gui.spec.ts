@@ -232,6 +232,23 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   await expect(inspector.getByLabel("Inspector waveform row style")).toHaveValue('{"color":"#114477"}');
 });
 
+test("applies Group Inspector presentation properties as one semantic operation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='tree-branch'][data-group-id='grp_cycle_control']").first().click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector group name").fill("Control Group");
+  await inspector.getByLabel("Group show background").check();
+  await inspector.getByLabel("Group opacity").fill("0.8");
+  await inspector.getByLabel("Group extend").selectOption("waveform");
+  await inspector.getByTestId("apply-group-properties").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(inspector.getByLabel("Inspector group name")).toHaveValue("Control Group");
+  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("opacity", "0.8");
+  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("background-color", "rgb(238, 245, 252)");
+});
+
 test("applies Clock Generator Inspector drafts with editable duty and one history entry", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

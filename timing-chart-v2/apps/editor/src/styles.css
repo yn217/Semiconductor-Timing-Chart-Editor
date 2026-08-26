@@ -57,6 +57,7 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .surface-host [data-role="annotation-owner"]:focus [data-role="annotation-handle"], .surface-host [data-role="annotation-owner"][data-selected="true"] [data-role="annotation-handle"] { opacity: 1; }
 .surface-host [data-role="annotation-owner"]:focus [data-role="annotation-label"], .surface-host [data-role="annotation-owner"][data-selected="true"] [data-role="annotation-label"] { box-shadow: 0 0 0 2px #2b79c655; }
 .surface-host [data-role="clock-edge-number"] { position: absolute; left: 0; top: 0; z-index: 3; min-width: 12px; color: #145da0; font: 9px/1 Consolas, monospace; text-align: center; pointer-events: none; }
+.surface-host [data-role$="-row"] { background-color: var(--group-background, transparent); border-bottom-color: var(--group-border, #e7ebf0); }
 .surface-host [data-role$="-row"][data-selected="true"] { background-color: #dcecff !important; box-shadow: inset 3px 0 #2677c9; }
 .cycle-ruler { position: absolute; z-index: 18; top: 0; left: 440px; width: var(--wave-width, 640px); height: 34px; background: #f8fafc; border-bottom: 1px solid #cbd4df; pointer-events: none; }
 .cycle-ruler span { position: absolute; top: 0; height: 34px; padding: 9px 0 0 5px; border-left: 1px solid #9eacbd; color: #43516a; font: 10px/1 Consolas, monospace; }

@@ -291,6 +291,19 @@ describe("command execution and atomic history", () => {
     }
   });
 
+  it("applies Group presentation properties in one canonical commit", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const result = session.execute({ id: commandId("cmd_group_properties"), type: "group.updateProperties", groupId: "grp_main" as GroupId, name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, background: "#eef5fc", opacity: 0.8, extend: "both", border: "#aaccee", showHeader: true } });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.changeSet).toMatchObject({ geometryScreenY: ["sig_clk", "sig_data"], minimapOverview: true });
+      expect(result.changeSet.waveSemantics).toBeUndefined();
+      expect(result.changeSet.geometryLocal).toBeUndefined();
+    }
+    expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, opacity: 0.8 } });
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
   it("updates Clock Edge Numbers as presentation-only state", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });

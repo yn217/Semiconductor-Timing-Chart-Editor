@@ -28,7 +28,7 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
       const spacer = spacers.get(rowId);
       if (visibleInGroup > 0) y += document.layout.signalSpacing;
       if (signal) y += signal.spacingBefore ?? 0;
-      const entry = signalEntry(signal, group.id, group.name, y, document.layout.rowHeight, rowId);
+      const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
       if (entry) {
         visibleRows.push(entry);
         y += entry.height + (signal?.spacingAfter ?? 0);
@@ -43,12 +43,13 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
   return { canonicalRowIds, visibleRows, totalHeight: y };
 }
 
-function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
+function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
   if (!signal) return undefined;
   return {
     rowId,
     groupId,
     groupName,
+    ...(groupStyle === undefined ? {} : { groupStyle }),
     kind: signal.type === "commentRow" ? "comment" : "timing",
     name: signal.display.name,
     role: signal.role,
