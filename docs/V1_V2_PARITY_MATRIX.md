@@ -50,7 +50,7 @@ unclassified decision.
 | GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Batch 1C verifies Advanced JSON Selected Object/Whole Document validation and Apply; full tab parity remains open. |
 | GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Batch 1C verifies Pin freezes context independently while Follow Selection remains a separate tab-follow state. |
 | GUI-15 | Zoom/Fit/navigation | KEEP | #167/#172/#176 | Fit Selection uses ruler-derived geometry; current batch adds keyboard viewport pan (Arrow/Page/Home/End) with view-only Canonical/History/WaveDrom invariants. Full V1 navigation and visual parity remain open. |
-| GUI-16 | Clipboard/reorder commands | KEEP | #161/#169/#172/#176 | Copy/Paste/Duplicate/reorder use shared SemanticCommand; current batch adds Ribbon and keyboard Cut with one canonical delete/history operation. Full cut/paste and V1 visual parity remain open. |
+| GUI-16 | Clipboard/reorder commands | KEEP | #161/#169/#172/#176 | Clipboard now snapshots multi-selected Signals with source Group/index metadata; Copy is view-only, while multi-selection Paste/Duplicate/Cut use one atomic Semantic batch with fresh stable IDs. Full V1 visual/Save-Open parity remains open. |
 
 ## Non-GUI V1 contract sections
 
