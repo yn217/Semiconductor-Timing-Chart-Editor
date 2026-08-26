@@ -13,6 +13,20 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("replaces a validated JSON document as one canonical operation", () => {
+    const source = canonicalFixture();
+    const next = { ...source, document: { ...source.document, title: "JSON Edited" } };
+    const plan = planCommand(source, { id: commandId("cmd_json_replace"), type: "document.replace", document: next });
+    expect(plan.ok).toBe(true);
+    if (plan.ok) expect(plan.changeSet).toMatchObject({ fullDocumentReplace: true, timelineSemantics: true });
+    const session = new CommandHistorySession(source);
+    expect(session.execute({ id: commandId("cmd_json_replace_execute"), type: "document.replace", document: next }).ok).toBe(true);
+    expect(session.getSnapshot().document.document.title).toBe("JSON Edited");
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.document.title).toBe(source.document.title);
+  });
+
   it("edits a Transaction through semantic commands and one-entry History", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const transactionId = "txn_read" as TransactionId;

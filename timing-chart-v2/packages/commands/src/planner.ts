@@ -12,7 +12,7 @@ import type {
   TimeGroup,
   Transaction,
 } from "@timing-chart-v2/schema";
-import { isStableId } from "@timing-chart-v2/schema";
+import { isStableId, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 
 export type CommandPlanResult =
@@ -401,6 +401,13 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
 export function planCommand(document: CanonicalDocument, command: SemanticCommand): CommandPlanResult {
   if (!isStableId(command.id)) return fail("invalid", "INVALID_COMMAND_ID", "$.id", "Command ID must be a stable ID.");
   switch (command.type) {
+    case "document.replace": {
+      const problems = validateCanonicalDocument(command.document);
+      if (problems.length > 0) return { ok: false, reason: "invalid", problems };
+      if (JSON.stringify(document) === JSON.stringify(command.document)) return fail("no-op", "NO_OP", "$", "Document is unchanged.");
+      const timingRows = timingSignalIds(document);
+      return { ok: true, document: command.document, changeSet: { fullDocumentReplace: true, rowOrder: orderedRows(command.document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true }, inverseChangeSet: { fullDocumentReplace: true, rowOrder: orderedRows(document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true } };
+    }
     case "commentRow.create":
       return planCommand(document, { id: command.id, type: "signal.create", signal: command.commentRow, targetGroupId: command.targetGroupId, index: command.index });
     case "commentRow.update": {

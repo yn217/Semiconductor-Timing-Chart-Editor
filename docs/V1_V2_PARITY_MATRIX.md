@@ -39,7 +39,7 @@ unclassified decision.
 | GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Hierarchy and full-path behavior require closure. |
 | GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Actual WaveDrom geometry and hit-zone acceptance required. |
 | GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Batch 1B verifies editable Signal/Clock fields through Apply; Group/Annotation/Transaction parity remains open. |
-| GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Comment Row and advanced editing require dedicated owners. |
+| GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON; dedicated Comment Row editor remains open. |
 | GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | Click-pan and viewport drag are required. |
 | GUI-07 | Status Bar | KEEP | #172/#176 | State and count parity requires evidence. |
 | GUI-08 | Cycle/Transaction/Split selector | MERGED | #172 | View-only state must preserve Canonical/History = 0. |
@@ -47,8 +47,8 @@ unclassified decision.
 | GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Signal Tree alone is insufficient. |
 | GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Type/style/legend capability is incomplete. |
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Batch 1B verifies editable Inspector Clock Generator Duty and Edge Counter; full save/export parity remains open. |
-| GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Advanced JSON and dedicated Comment Row editing required. |
-| GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Pin must be independent from Follow OFF. |
+| GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Batch 1C verifies Advanced JSON Selected Object/Whole Document validation and Apply; full tab parity remains open. |
+| GUI-14 | Follow Selection / Pin | KEEP | #172/#176 | Batch 1C verifies Pin freezes context independently while Follow Selection remains a separate tab-follow state. |
 | GUI-15 | Zoom/Fit/navigation | KEEP | #167/#172/#176 | Fit Selection and navigation evidence required. |
 | GUI-16 | Clipboard/reorder commands | KEEP | #161/#169/#172/#176 | Shared SemanticCommand and fresh IDs required. |
 

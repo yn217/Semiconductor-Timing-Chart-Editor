@@ -99,6 +99,10 @@ export function MinimalCycleView() {
   const [followSelection, setFollowSelection] = useState(true);
   const followSelectionRef = useRef(true);
   followSelectionRef.current = followSelection;
+  const [bottomPinned, setBottomPinned] = useState(false);
+  const bottomPinnedRef = useRef(false);
+  bottomPinnedRef.current = bottomPinned;
+  const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const [inspectorVisible, setInspectorVisible] = useState(true);
   const [bottomVisible, setBottomVisible] = useState(true);
   const [propertiesVisible, setPropertiesVisible] = useState(false);
@@ -121,6 +125,9 @@ export function MinimalCycleView() {
   const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
   const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
+  const bottomSignal = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.signalId === undefined ? undefined : snapshot.document.signals.find((item) => item.id === pinnedBottomSelection.signalId)) : selectedSignal;
+  const bottomAnnotation = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.annotationId === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === pinnedBottomSelection.annotationId)) : selectedAnnotation;
+  const bottomTransaction = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.transactionId === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === pinnedBottomSelection.transactionId)) : selectedTransaction;
   const validationDiagnostics = useMemo(() => validateCanonicalDocument(snapshot.document), [snapshot.document]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
@@ -405,7 +412,7 @@ export function MinimalCycleView() {
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
-        if (followSelectionRef.current) setBottomTab("Annotation");
+        if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
         for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === id);
         return;
       }
@@ -433,7 +440,7 @@ export function MinimalCycleView() {
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
-        if (followSelectionRef.current) setBottomTab("Annotation");
+        if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
         pendingArrow = undefined;
         setArrowPickStatus("idle");
         delete rendererHost.dataset.arrowPick;
@@ -457,7 +464,7 @@ export function MinimalCycleView() {
       setSelectedAnnotationId(undefined);
       selectedTransactionRef.current = undefined;
       setSelectedTransactionId(undefined);
-      if (followSelectionRef.current) setBottomTab("Signal");
+      if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
       publishState();
     };
     const onRulerSelect = (event: MouseEvent) => {
@@ -701,11 +708,11 @@ export function MinimalCycleView() {
     setSelectedId(undefined);
     setSelectedTransactionId(undefined);
     selectedTransactionRef.current = undefined;
-    if (followSelectionRef.current) setBottomTab("Annotation");
+    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
   };
   const signalEditor = <SignalEditor
-    key={`${selectedSignal?.id ?? "none"}:${snapshot.revision}`}
-    signal={selectedSignal}
+    key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}`}
+    signal={bottomSignal}
     cycleCount={snapshot.document.timeline.cycleCount}
     history={history}
     groups={snapshot.document.signalGroups}
@@ -731,9 +738,9 @@ export function MinimalCycleView() {
       commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
     }}
   />;
-  const annotationEditor = selectedAnnotation ? <AnnotationEditor
-    key={`${selectedAnnotation.id}:${snapshot.revision}`}
-    annotation={selectedAnnotation}
+  const annotationEditor = bottomAnnotation ? <AnnotationEditor
+    key={`${bottomAnnotation.id}:${snapshot.revision}`}
+    annotation={bottomAnnotation}
     history={history}
     problem={problem}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
@@ -747,11 +754,11 @@ export function MinimalCycleView() {
     selectedSignalRef.current = undefined; setSelectedId(undefined);
     selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
     selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
-    if (followSelectionRef.current) setBottomTab("Transaction");
+    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
   };
   const transactionEditor = <TransactionEditor
-    key={`${selectedTransaction?.id ?? "none"}:${snapshot.revision}`}
-    transaction={selectedTransaction}
+    key={`${bottomTransaction?.id ?? "none"}:${snapshot.revision}`}
+    transaction={bottomTransaction}
     document={snapshot.document}
     history={history}
     onSelect={selectTransaction}
@@ -769,8 +776,8 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = target.kind === "annotation" ? target.id as AnnotationId : undefined;
     setSelectedTransactionId(target.kind === "transaction" ? target.id as TransactionId : undefined);
     selectedTransactionRef.current = target.kind === "transaction" ? target.id as TransactionId : undefined;
-    if (target.kind === "annotation" && followSelectionRef.current) setBottomTab("Annotation");
-    if (target.kind === "transaction" && followSelectionRef.current) setBottomTab("Transaction");
+    if (target.kind === "annotation" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+    if (target.kind === "transaction" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
     if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
 
@@ -818,6 +825,19 @@ export function MinimalCycleView() {
       const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id);
       if (index >= 0 && index + direction >= 0 && index + direction < document.signalGroups.length) commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("home_move_group"), type: "group.move", groupId: selectedGroup.id, index: index + direction });
     }
+  };
+  const toggleBottomPin = () => {
+    if (bottomPinned) {
+      setBottomPinned(false);
+      setPinnedBottomSelection(undefined);
+      return;
+    }
+    setPinnedBottomSelection({
+      ...(selectedId === undefined ? {} : { signalId: selectedId }),
+      ...(selectedAnnotationId === undefined ? {} : { annotationId: selectedAnnotationId }),
+      ...(selectedTransactionId === undefined ? {} : { transactionId: selectedTransactionId }),
+    });
+    setBottomPinned(true);
   };
 
   return <main className="editor-shell" data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)}>
@@ -878,10 +898,10 @@ export function MinimalCycleView() {
         <nav className="bottom-tabs">
           {(["Signal", "Annotation", "Transaction", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
           <span />
-          <label><input type="checkbox" checked={followSelection} onChange={(event) => setFollowSelection(event.target.checked)} /> Follow Selection</label>
-          <button type="button" onClick={() => setFollowSelection(false)}>Pin</button>
+          <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => setFollowSelection(event.target.checked)} /> Follow Selection</label>
+          <button type="button" data-testid="bottom-pin" aria-pressed={bottomPinned} onClick={toggleBottomPin}>{bottomPinned ? "Unpin" : "Pin"}</button>
         </nav>
-        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <JsonPanel document={snapshot.document} />}</div>
+        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}</div>
       </section>}
       {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
     </div>
@@ -1075,6 +1095,48 @@ function JsonPanel({ document }: { readonly document: CanonicalDocument }) {
   const text = useMemo(() => serializeCanonicalDocument(document), [document]);
   const [status, setStatus] = useState("Read only");
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>Generated JSON</strong><span>🔒 Read only</span><button type="button" onClick={() => setStatus("Formatted")}>Format</button><button type="button" onClick={() => setStatus(validateCanonicalDocument(document).length === 0 ? "Valid" : "Invalid")}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(text); setStatus("Copied"); }}>Copy</button><select aria-label="JSON scope"><option>Selected Object</option><option>Whole Document</option></select><output>{status}</output></div><pre>{text}</pre></section>;
+}
+
+function AdvancedJsonPanel({ document, selectedSignal, selectedAnnotation, selectedTransaction, onCommand }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
+  const text = useMemo(() => serializeCanonicalDocument(document), [document]);
+  const [advanced, setAdvanced] = useState(false);
+  const [scope, setScope] = useState<"selected" | "document">("document");
+  const [draft, setDraft] = useState(text);
+  const [status, setStatus] = useState("Read only");
+  const selected = selectedSignal ?? selectedAnnotation ?? selectedTransaction;
+  useEffect(() => { setDraft(scope === "selected" ? JSON.stringify(selected ?? {}, null, 2) : text); }, [scope, selected, text]);
+  const parseDraft = (): unknown => {
+    try { return JSON.parse(draft); } catch { setStatus("Invalid JSON"); return undefined; }
+  };
+  const format = () => {
+    const value = parseDraft();
+    if (value !== undefined) { setDraft(JSON.stringify(value, null, 2)); setStatus("Formatted"); }
+  };
+  const validate = () => {
+    const value = parseDraft();
+    if (value === undefined) return;
+    if (scope === "document") setStatus(validateCanonicalDocument(value as CanonicalDocument).length === 0 ? "Valid" : "Invalid");
+    else setStatus(selected && typeof value === "object" && value !== null && !Array.isArray(value) && (value as { id?: unknown }).id === selected.id ? "Valid" : "Invalid selected object");
+  };
+  const apply = () => {
+    if (!advanced) return;
+    const value = parseDraft();
+    if (value === undefined || typeof value !== "object" || value === null || Array.isArray(value)) { setStatus("JSON object required"); return; }
+    let next = value as CanonicalDocument;
+    if (scope === "selected") {
+      if (!selected) { setStatus("No selected object"); return; }
+      if ((value as { id?: unknown }).id !== selected.id) { setStatus("Selected object ID cannot change"); return; }
+      if (selectedSignal) next = { ...document, signals: document.signals.map((item) => item.id === selectedSignal.id ? value as Signal : item) };
+      else if (selectedAnnotation) next = { ...document, annotations: document.annotations.map((item) => item.id === selectedAnnotation.id ? value as Annotation : item) };
+      else next = { ...document, transactions: document.transactions.map((item) => item.id === selectedTransaction?.id ? value as Transaction : item) };
+    }
+    const problems = validateCanonicalDocument(next);
+    if (problems.length > 0) { setStatus(`Invalid: ${problems[0]?.code ?? "validation"}`); return; }
+    onCommand({ id: nextCommandId("json_replace"), type: "document.replace", document: next });
+    setAdvanced(false);
+    setStatus("Applied");
+  };
+  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span>{advanced ? "✎ Advanced" : "🔒 Read only"}</span><select aria-label="JSON scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(draft); setStatus("Copied"); }}>Copy</button>{advanced && <button type="button" data-testid="apply-advanced-json" onClick={apply}>Apply JSON</button>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => setDraft(event.target.value)} spellCheck={false} /> : <pre>{text}</pre>}</section>;
 }
 
 function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onCommand }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly onCommand: (command: SemanticCommand) => void }) {

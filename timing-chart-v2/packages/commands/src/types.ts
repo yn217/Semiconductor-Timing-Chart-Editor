@@ -1,5 +1,6 @@
 import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core";
 import type {
+  CanonicalDocument,
   AnnotationId,
   Annotation,
   Bookmark,
@@ -26,6 +27,7 @@ import type {
 export type SignalValue = string | number;
 
 export type SemanticCommand =
+  | Readonly<{ id: CommandId; type: "document.replace"; document: CanonicalDocument }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "signal.rename"; signalId: SignalId; name: string }>
