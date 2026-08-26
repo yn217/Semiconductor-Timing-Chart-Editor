@@ -1738,7 +1738,9 @@ function MiniMap({ document, viewport }: { readonly document: Readonly<Canonical
     const element = viewport.current;
     if (!element) return;
     const scrollable = Math.max(1, element.scrollHeight);
-    setMetrics({ top: element.scrollTop / scrollable, ratio: Math.min(1, element.clientHeight / scrollable) });
+    const maxScrollTop = Math.max(1, scrollable - element.clientHeight);
+    const ratio = Math.min(1, element.clientHeight / scrollable);
+    setMetrics({ top: Math.min(1 - ratio, element.scrollTop / maxScrollTop), ratio });
   };
   useEffect(() => {
     const element = viewport.current;
@@ -1758,7 +1760,7 @@ function MiniMap({ document, viewport }: { readonly document: Readonly<Canonical
   };
   const documentRef = useRef<HTMLDivElement>(null);
   const rows = document.signalGroups.flatMap((group) => group.rows);
-  return <div ref={documentRef} className="minimap" data-testid="minimap" aria-label="MiniMap" onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-rows">{rows.map((rowId) => <span key={rowId} data-row-id={rowId} />)}</div><i data-testid="minimap-viewport" style={{ top: `${metrics.top * 100}%`, height: `${Math.max(4, metrics.ratio * 100)}%` }} /></div>;
+  return <div ref={documentRef} className="minimap" data-testid="minimap" aria-label="MiniMap" data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-rows">{rows.map((rowId) => <span key={rowId} data-row-id={rowId} />)}</div><i data-testid="minimap-viewport" style={{ top: `${metrics.top * 100}%`, height: `${Math.max(4, metrics.ratio * 100)}%` }} /></div>;
 }
 
 function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {

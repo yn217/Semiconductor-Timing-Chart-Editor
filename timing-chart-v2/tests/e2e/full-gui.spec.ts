@@ -253,6 +253,33 @@ test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap view
   await expect(page.getByTestId("minimap-viewport")).toBeVisible();
 });
 
+test("MiniMap viewport drag pans the real viewport without canonical or render mutation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const viewport = page.getByTestId("cycle-viewport");
+  const minimap = page.getByTestId("minimap");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    scrollTop: await viewport.evaluate((element) => element.scrollTop),
+    revision: await page.getByTestId("revision-status").textContent(),
+    history: await page.getByTestId("history-status").textContent(),
+    counters: JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>,
+  };
+  const box = await minimap.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + 3);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height - 3, { steps: 4 });
+  await page.mouse.up();
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(before.scrollTop);
+  await expect.poll(() => minimap.getAttribute("data-viewport-top")).not.toBe("0");
+  await expect(page.getByTestId("revision-status")).toHaveText(before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.counters.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.counters.localGeometryBuilds);
+});
+
 test("Status Bar exposes derived selection, range, view and renderer state without mutating the document", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
