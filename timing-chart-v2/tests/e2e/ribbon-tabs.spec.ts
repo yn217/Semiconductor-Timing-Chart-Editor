@@ -35,7 +35,7 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
   for (const [tab, groupClass] of Object.entries(tabGroups)) {
     await tabs.getByRole("button", { name: tab, exact: true }).click();
     await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
-    await expect(ribbon.locator(".ribbon-group")).toHaveCount(tab === "Home" ? 7 : 1);
+    await expect(ribbon.locator(".ribbon-group")).toHaveCount(tab === "Home" ? 12 : 1);
     await expect(ribbon.locator(`.${groupClass}`)).toHaveCount(1);
     // Ribbon height must never change across tabs, and the waveform workspace must not shift.
     const ribbonBox = await ribbon.boundingBox();
@@ -55,6 +55,14 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
   // Inspector / Bottom Editor visibility state is untouched by pure tab switching.
   expect(await page.getByTestId("inspector").count()).toBe(inspectorVisibleBefore);
   expect(await page.getByTestId("bottom-editor").count()).toBe(bottomVisibleBefore);
+
+  await tabs.getByRole("button", { name: "Home", exact: true }).click();
+  await expect(ribbon.locator(".home-file-group").getByRole("button", { name: "Save", exact: true })).toBeVisible();
+  await expect(ribbon.locator(".home-timeline-group").getByTestId("timeline-editor")).toBeVisible();
+  await expect(ribbon.locator(".home-view-group").getByTestId("home-grid-toggle")).toBeVisible();
+  await expect(ribbon.locator(".home-view-group").getByTestId("home-snap-toggle")).toBeVisible();
+  await expect(ribbon.locator(".home-review-group").getByRole("button", { name: "Problems", exact: true })).toBeVisible();
+  await expect(ribbon.locator(".home-export-group").getByRole("button", { name: "SVG / PNG / PDF", exact: true })).toBeVisible();
 });
 
 test("Insert tab creates a real canonical Signal through a SemanticCommand", async ({ page }) => {

@@ -35,7 +35,7 @@ unclassified decision.
 
 | ID | Capability | Decision | V2 owner | Current evidence / gap |
 |---|---|---|---|---|
-| GUI-01 | Multi-group feature-rich Ribbon | KEEP | #176 | Home must contain more than Undo/Redo/Delete. |
+| GUI-01 | Multi-group feature-rich Ribbon | KEEP | #176 | Home now exposes File, History, Clipboard, Edit, Selection, Visibility, Arrange, Timeline, View, Properties, Review and Export groups with existing semantic/view handlers; Chromium layout checks verify the 12-group high-density surface and stable ribbon/workspace geometry. Replacement Pack perceptual diff and complete command matrix remain open. |
 | GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Derived tree now supports DOM-only filtering by display name, path, role and group while retaining stable IDs and canonical state; Hardware Hierarchy browser exposes Scope, Instance Path, Signal, Full Path, Bus width and Group. Full V1 tree visual parity remains open. |
 | GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Batch 2A verifies canvas cycle selection and exclusive terminal boundary; Batch 2B verifies geometry-backed half-open drag, Shift extension, reverse-range normalization and Escape preview cancel; current batch adds a ruler-geometry-backed Playhead with view-only counter evidence. Full interaction parity remains open. |
 | GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Batch 1B verifies editable Signal/Clock fields through Apply; current batches add editable Annotation, Group presentation, and Transaction phase properties through semantic Apply with no WaveDrom regeneration. Full visual parity remains open. |
