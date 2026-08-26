@@ -1654,6 +1654,19 @@ function AnnotationEditor({ annotation, history, problem, onCommand, onUndo, onR
 function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookmark }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onNavigateBookmark: (cycle: number) => void }) {
   const [count, setCount] = useState(1);
   const [destination, setDestination] = useState(8);
+  const [editingGroupId, setEditingGroupId] = useState<TimeGroupId>();
+  const editingGroup = document.timeGroups.find((group) => group.id === editingGroupId);
+  const [groupName, setGroupName] = useState("");
+  const [groupStart, setGroupStart] = useState(0);
+  const [groupEnd, setGroupEnd] = useState(1);
+  const [groupComment, setGroupComment] = useState("");
+  const [groupFoldLabel, setGroupFoldLabel] = useState("");
+  const [groupCollapsed, setGroupCollapsed] = useState(true);
+  const applyTimeGroup = () => {
+    if (!editingGroup) return;
+    onCommand({ id: nextCommandId("time_group_update"), type: "timeGroup.update", timeGroupId: editingGroup.id, name: groupName, start: groupStart, end: groupEnd, comment: groupComment, presentation: { ...(editingGroup.presentation ?? {}), collapsed: groupCollapsed, foldStyle: groupCollapsed ? "axis-break" : "none", foldLabel: groupFoldLabel || groupName } });
+    setEditingGroupId(undefined);
+  };
   const setBoundary = (key: "start" | "end", value: number) => {
     if (key === "start") onRange({ start: Math.max(0, Math.min(value, range.end - 1)), end: range.end });
     else onRange({ start: range.start, end: Math.min(document.timeline.cycleCount, Math.max(value, range.start + 1)) });
@@ -1675,8 +1688,9 @@ function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookma
     </div>
     <div className="timeline-objects">
       {document.bookmarks.map((bookmark) => <span className="timeline-bookmark" key={bookmark.id} data-bookmark-id={bookmark.id}><button type="button" data-testid={`bookmark-jump-${bookmark.id}`} onClick={() => onNavigateBookmark(bookmark.start)} title={`Jump to cycle ${bookmark.start}`}>◆ {bookmark.name}</button><button type="button" aria-label={`Delete ${bookmark.name}`} onClick={() => onCommand({ id: nextCommandId("marker_delete"), type: "bookmark.delete", bookmarkId: bookmark.id })}>×</button></span>)}
-      {document.timeGroups.map((group) => <button type="button" key={group.id} data-time-group-id={group.id} onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })}>// {group.name} ×</button>)}
+      {document.timeGroups.map((group) => <span className="timeline-time-group" key={group.id} data-time-group-id={group.id}><button type="button" data-testid={`time-group-edit-${group.id}`} onClick={() => { setEditingGroupId(group.id); setGroupName(group.name); setGroupStart(group.start); setGroupEnd(group.end); setGroupComment(group.comment ?? ""); setGroupFoldLabel(group.presentation?.foldLabel ?? ""); setGroupCollapsed(group.presentation?.collapsed ?? false); }} title={`Edit ${group.name}`}>// {group.name}</button><button type="button" aria-label={`Delete ${group.name}`} onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })}>×</button></span>)}
     </div>
+    {editingGroup && <form className="time-group-editor" aria-label="Time Group Editor" data-testid="time-group-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Time Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} /></label><label>Start<input aria-label="Time Group start" type="number" min="0" max={document.timeline.cycleCount - 1} value={groupStart} onChange={(event) => setGroupStart(Number(event.target.value))} /></label><label>End<input aria-label="Time Group end" type="number" min="1" max={document.timeline.cycleCount} value={groupEnd} onChange={(event) => setGroupEnd(Number(event.target.value))} /></label><label>Comment<input aria-label="Time Group comment" value={groupComment} onChange={(event) => setGroupComment(event.target.value)} /></label><label>Fold label<input aria-label="Time Group fold label" value={groupFoldLabel} onChange={(event) => setGroupFoldLabel(event.target.value)} /></label><label className="check-label"><input aria-label="Time Group collapsed" type="checkbox" checked={groupCollapsed} onChange={(event) => setGroupCollapsed(event.target.checked)} />Collapsed</label><button type="button" data-testid="apply-time-group" onClick={applyTimeGroup}>Apply</button><button type="button" onClick={() => setEditingGroupId(undefined)}>Cancel</button></form>}
   </div>;
 }
 

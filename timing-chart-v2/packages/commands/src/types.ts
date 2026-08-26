@@ -62,6 +62,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "bookmark.move"; bookmarkId: BookmarkId; start: number }>
   | Readonly<{ id: CommandId; type: "bookmark.delete"; bookmarkId: BookmarkId }>
   | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
+  | Readonly<{ id: CommandId; type: "timeGroup.update"; timeGroupId: TimeGroupId; name: string; start: number; end: number; category?: string; comment?: string; presentation?: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
   | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>

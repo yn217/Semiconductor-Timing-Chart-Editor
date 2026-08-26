@@ -107,6 +107,19 @@ describe("timeline ripple commands", () => {
     expect(session.getSnapshot().document.timeGroups).toEqual([]);
   });
 
+  it("updates a Time Group editor atomically and restores it with Undo", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const timeGroup = { id: "time_editor_gap" as TimeGroupId, name: "Wait", start: 2, end: 5, comment: "initial", presentation: { collapsed: true as const, foldStyle: "axis-break" as const, foldLabel: "WAIT" } };
+    expect(session.execute({ id: commandId("cmd_editor_gap_create"), type: "timeGroup.create", timeGroup }).ok).toBe(true);
+    const result = session.execute({ id: commandId("cmd_editor_gap_update"), type: "timeGroup.update", timeGroupId: timeGroup.id, name: "Idle", start: 1, end: 4, comment: "updated", presentation: { collapsed: false, foldStyle: "none", foldLabel: "IDLE" } });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.changeSet).toMatchObject({ timeGroupSemantics: [timeGroup.id], geometryScreenX: true, waveSemantics: expect.any(Array) });
+    expect(session.getSnapshot().document.timeGroups[0]).toMatchObject({ name: "Idle", start: 1, end: 4, comment: "updated", presentation: { collapsed: false, foldStyle: "none", foldLabel: "IDLE" } });
+    expect(session.historyState().undoDepth).toBe(2);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeGroups[0]).toEqual(timeGroup);
+  });
+
   it("duplicates cycle states and contained point owners with deterministic stable IDs", () => {
     const session = new CommandHistorySession(rippleFixture());
     const result = session.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 });

@@ -925,6 +925,21 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+    case "timeGroup.update": {
+      const index = document.timeGroups.findIndex((item) => item.id === command.timeGroupId);
+      const group = document.timeGroups[index];
+      if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
+      if (!command.name.trim()) return fail("invalid", "EMPTY_TIME_GROUP_NAME", "$.name", "Time Group name must not be empty.");
+      if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
+      if (group.name === command.name && group.start === command.start && group.end === command.end && group.category === command.category && group.comment === command.comment && JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group is unchanged.");
+      const nextGroup: TimeGroup = { id: group.id, name: command.name, start: command.start, end: command.end, ...(command.category === undefined ? {} : { category: command.category }), ...(command.comment === undefined ? {} : { comment: command.comment }), ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
+      const timeGroups = [...document.timeGroups]; timeGroups[index] = nextGroup;
+      const nextDocument = { ...document, timeGroups };
+      const collapseChanged = Boolean(group.presentation?.collapsed) !== Boolean(command.presentation?.collapsed);
+      const rangeChanged = group.start !== command.start || group.end !== command.end;
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(collapseChanged || rangeChanged || Boolean(group.presentation?.collapsed) ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
     case "timeGroup.updatePresentation": {
       const index = document.timeGroups.findIndex((group) => group.id === command.timeGroupId);
       const group = document.timeGroups[index];

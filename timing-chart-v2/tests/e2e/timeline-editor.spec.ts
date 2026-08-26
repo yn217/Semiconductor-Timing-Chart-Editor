@@ -173,11 +173,36 @@ test("creates geometry-positioned Marker without waveform regeneration and a Gap
   expect(countersAfterGap.waveDromRenders).toBeGreaterThan(countersBeforeParsed.waveDromRenders);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
-  await page.locator("[data-time-group-id]").filter({ hasText: "×" }).click();
+  await page.getByRole("button", { name: "Delete Gap 2-4" }).click();
   await expect(ruler.locator("[data-time-group-id]")).toHaveCount(0);
   // removing the Gap restores the previously-hidden cycles to the Ruler.
   await expect(ruler.locator("[data-cycle='2']")).toHaveCount(1);
   await expect(ruler.locator("[data-cycle='3']")).toHaveCount(1);
+});
+
+test("edits a Time Group through one semantic editor operation and supports Undo", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Add gap" }).click();
+  await page.getByTestId(/time-group-edit-/).click();
+  const editor = page.getByTestId("time-group-editor");
+  await expect(editor).toBeVisible();
+  await editor.getByLabel("Time Group name").fill("Idle Window");
+  await editor.getByLabel("Time Group comment").fill("reviewed");
+  await editor.getByLabel("Time Group fold label").fill("IDLE");
+  await editor.getByLabel("Time Group collapsed").uncheck();
+  await editor.getByTestId("apply-time-group").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByRole("button", { name: "// Idle Window" })).toBeVisible();
+  await expect(page.getByTestId("cycle-ruler").locator("[data-time-group-id]")).toHaveCount(0);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByRole("button", { name: "// Gap 2-4" })).toBeVisible();
+  await expect(page.getByTestId("cycle-ruler").locator("[data-time-group-id]")).toHaveCount(1);
 });
 
 test("bookmark list jumps to its geometry-backed cycle without changing the document", async ({ page }) => {
