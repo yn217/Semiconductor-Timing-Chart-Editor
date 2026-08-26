@@ -9,6 +9,6 @@
   "projection": ["commands", "core", "geometry", "schema"],
   "renderer": ["projection", "geometry"],
   "ui": ["commands"],
-  "export": ["core", "geometry", "schema", "wavedrom-adapter"],
+  "export": ["core", "geometry", "projection", "schema", "wavedrom-adapter"],
   "testing": ["commands", "core", "geometry", "history", "projection", "renderer", "schema", "wavedrom-adapter"]
 }

@@ -1,4 +1,5 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
+import { buildDisplayTimeMapping, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { Annotation, CanonicalDocument, Signal, SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -22,7 +23,8 @@ export interface ExportLabel { readonly text: string; readonly x: number; readon
 export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
-export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number }
+export interface ExportRulerTick { readonly cycle: number; readonly text: string }
+export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number; readonly ticks: readonly ExportRulerTick[] }
 
 export interface ExportScene {
   readonly width: number;
@@ -42,11 +44,24 @@ const LABEL_WIDTH = 220;
 const ROW_HEIGHT = 34;
 const TRANSACTION_HEIGHT = 28;
 
-function rangeFor(document: CanonicalDocument, settings: ExportSettings): { start: number; end: number } {
+function toDisplayCycle(mapping: DisplayTimeMapping, sourceCycle: number, bias: "floor" | "ceil"): number {
+  const clamped = Math.max(0, Math.min(mapping.sourceToDisplay.length - 1, sourceCycle));
+  const direct = mapping.sourceToDisplay[clamped];
+  if (direct !== undefined) return direct;
+  const scanOrder = bias === "floor"
+    ? [...Array(clamped + 1).keys()].reverse().concat([...Array(mapping.sourceToDisplay.length - clamped - 1).keys()].map((offset) => clamped + 1 + offset))
+    : [...Array(mapping.sourceToDisplay.length - clamped).keys()].map((offset) => clamped + offset).concat([...Array(clamped).keys()].reverse());
+  for (const cycle of scanOrder) { const value = mapping.sourceToDisplay[cycle]; if (value !== undefined) return value; }
+  return 0;
+}
+
+function rangeFor(document: CanonicalDocument, settings: ExportSettings, mapping: DisplayTimeMapping): { start: number; end: number } {
   const requested = settings.scope === "selected-range" ? settings.range : undefined;
-  if (!requested) return { start: 0, end: document.timeline.cycleCount };
-  const start = Math.max(0, Math.min(document.timeline.cycleCount - 1, Math.trunc(requested.start)));
-  const end = Math.max(start + 1, Math.min(document.timeline.cycleCount, Math.trunc(requested.end)));
+  if (!requested) return { start: 0, end: mapping.displayCycleCount };
+  const sourceStart = Math.max(0, Math.min(document.timeline.cycleCount - 1, Math.trunc(requested.start)));
+  const sourceEnd = Math.max(sourceStart + 1, Math.min(document.timeline.cycleCount, Math.trunc(requested.end)));
+  const start = toDisplayCycle(mapping, sourceStart, "floor");
+  const end = Math.max(start + 1, toDisplayCycle(mapping, sourceEnd - 1, "ceil") + 1);
   return { start, end };
 }
 
@@ -58,45 +73,55 @@ function svgDimensions(markup: string): { width: number; height: number } {
   return { width, height };
 }
 
-function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" | "from" | "to", document: CanonicalDocument, rowY: ReadonlyMap<SignalId, number>, start: number, cycleWidth: number): { x: number; y: number } | undefined {
+function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" | "from" | "to", document: CanonicalDocument, rowY: ReadonlyMap<SignalId, number>, mapping: DisplayTimeMapping, start: number, cycleWidth: number): { x: number; y: number } | undefined {
   const anchor = annotation[field];
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
-  return { x: LABEL_WIDTH + (anchor.cycle - start) * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
+  const displayCycle = toDisplayCycle(mapping, anchor.cycle, "floor");
+  return { x: LABEL_WIDTH + (displayCycle - start) * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
 }
 
 export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
-  const range = rangeFor(document, settings);
+  const mapping = buildDisplayTimeMapping(document.timeline, settings.foldPolicy === "expand" ? [] : document.timeGroups);
+  const range = rangeFor(document, settings, mapping);
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => document.signals.find((signal) => signal.id === id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
   const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
   const transactionTop = 52;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
   const renderedWaves = signals.filter((signal) => signal.type !== "commentRow").map((signal, index) => {
-    const waveJson = toWaveJson({ signal, cycleCount: document.timeline.cycleCount });
+    const displaySignal = signal.type === "clock"
+      ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
+      : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
+    const waveJson = toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount });
     const svgMarkup = renderWaveJsonMarkup(waveJson, index);
     return { signal, waveJson, svgMarkup, ...svgDimensions(svgMarkup) };
   });
-  const cycleWidth = (renderedWaves[0]?.width ?? document.timeline.cycleCount * 20) / document.timeline.cycleCount;
+  const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / mapping.displayCycleCount;
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
   const rowY = new Map(signals.map((signal, index) => [signal.id, waveTop + index * rowHeight + rowHeight / 2]));
   const waveforms = renderedWaves.map(({ signal, waveJson, svgMarkup, width: sourceWidth, height: sourceHeight }): ExportWave => ({ signalId: signal.id, name: signal.display.name, role: signal.role, y: rowY.get(signal.id)!, svgMarkup, sourceWidth, sourceHeight, cropX: range.start * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(waveJson) }));
   const labels: ExportLabel[] = signals.map((signal) => ({ text: signal.display.name, x: 12, y: rowY.get(signal.id)!, kind: "signal" }));
   const groupBands: ExportGroupBand[] = [];
   document.signalGroups.forEach((group) => { const ys = group.rows.map((id) => rowY.get(id as SignalId)).filter((y): y is number => y !== undefined); const first = ys[0]; if (first !== undefined) { labels.push({ text: group.name, x: 12, y: first - rowHeight / 2 - 4, kind: "group" }); groupBands.push({ id: group.id, name: group.name, y: first - rowHeight / 2, height: Math.max(rowHeight, (ys.at(-1)! - first) + rowHeight) }); } });
-  const transactions = document.transactions.filter((transaction) => transaction.end > range.start && transaction.start < range.end).map((transaction): ExportTransaction => {
+  const transactions = document.transactions.map((transaction): ExportTransaction | undefined => {
     const laneId = transaction.laneId ?? "lane_0";
-    const x = LABEL_WIDTH + (Math.max(range.start, transaction.start) - range.start) * cycleWidth;
-    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + lanes.indexOf(laneId) * TRANSACTION_HEIGHT, width: (Math.min(range.end, transaction.end) - Math.max(range.start, transaction.start)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
-  });
+    const displayStart = toDisplayCycle(mapping, transaction.start, "floor");
+    const displayEnd = Math.max(displayStart + 1, toDisplayCycle(mapping, transaction.end, "ceil"));
+    if (displayEnd <= range.start || displayStart >= range.end) return undefined;
+    const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
+    return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + lanes.indexOf(laneId) * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
+  }).filter((transaction): transaction is ExportTransaction => transaction !== undefined);
   const annotations = document.annotations.map((annotation): ExportAnnotation | undefined => {
-    const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, range.start, cycleWidth);
-    const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, range.start, cycleWidth);
+    const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
+    const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, mapping, range.start, cycleWidth);
     return first && second ? { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y } : undefined;
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const width = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
   const height = waveTop + signals.length * rowHeight + 54;
   const legend = document.legend.show ? [...new Set(signals.map((signal) => signal.role))].sort() : [];
-  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth } });
+  const ticks: ExportRulerTick[] = [];
+  for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
+  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks } });
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -104,7 +129,7 @@ const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&
 export function renderExportSvg(scene: ExportScene): string {
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}" data-export-scene="v2" data-wave-engine="wavedrom-${WAVEDROM_VERSION}">`, `<rect width="100%" height="100%" fill="white"/>`];
   out.push(`<g data-layer="ruler" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#334155" stroke="#d5dde7">`);
-  for (let cycle = scene.ruler.start; cycle <= scene.ruler.end; cycle += 1) { const x = scene.ruler.x + (cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="32" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="24" stroke="none">${cycle}</text>`); }
+  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="32" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="24" stroke="none">${xml(tick.text)}</text>`); }
   out.push(`</g><g data-layer="transactions" font-family="Segoe UI,Arial,sans-serif" font-size="11">`);
   for (const item of scene.transactions) out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`);
   out.push(`</g><g data-layer="group-bands">`);

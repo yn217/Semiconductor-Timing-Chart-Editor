@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import type { AnnotationId, CanonicalDocument, GroupId, SignalId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -15,6 +15,20 @@ function scaleFixture(signalCount: number): CanonicalDocument {
     signalGroups: [{ id: "grp_perf" as GroupId, name: "All Signals", rows: signals.map((signal) => signal.id) }],
     annotations: [{ id: "ann_export" as AnnotationId, type: "range", label: "Window", start: { signalId: signals[0]!.id, cycle: 1, point: "cycle-start" }, end: { signalId: signals[1]!.id, cycle: 4, point: "cycle-start" } }],
     transactions: [{ id: "txn_export" as TransactionId, name: "DMA", start: 2, end: 6, laneId: "lane_dma", linkedSignals: [signals[0]!.id] }],
+  };
+}
+
+function foldedFixture(): CanonicalDocument {
+  const base = canonicalFixture();
+  const data = base.signals[1]!;
+  const { referenceClock: _referenceClock, ...timeline } = base.timeline;
+  return {
+    ...base,
+    timeline: { ...timeline, cycleCount: 20, labelAnchors: [{ id: "la_export" as never, source: 1000, display: 5 }] },
+    signals: [base.signals[0]!, { ...data, values: [{ start: 0, value: "00" }, { start: 4, value: "A5" }, { start: 10, value: "FF" }, { start: 16, value: "00" }] }],
+    timeGroups: [{ id: "tg_export" as TimeGroupId, name: "Idle", start: 5, end: 15, presentation: { collapsed: true } }],
+    annotations: [{ id: "ann_export" as AnnotationId, type: "marker", label: "Mid-fold", anchor: { signalId: data.id, cycle: 10, point: "cycle-start" } }],
+    transactions: [{ id: "txn_export" as TransactionId, name: "DMA", start: 2, end: 12, laneId: "lane_dma", linkedSignals: [data.id] }],
   };
 }
 
@@ -47,5 +61,42 @@ describe("deterministic document export", () => {
     const second = await service.export({ format: "pdf", snapshot });
     expect(new TextDecoder().decode(first.slice(0, 8))).toBe("%PDF-1.4");
     expect(first).toEqual(second);
+  });
+
+  it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {
+    const document = foldedFixture();
+    const respected = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });
+    const expanded = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "expand" });
+    expect(respected.ruler.end - respected.ruler.start).toBe(10); // 20 source cycles - 10 hidden by the [5,15) fold
+    expect(expanded.ruler.end - expanded.ruler.start).toBe(20);
+    expect(respected.width).toBeLessThan(expanded.width);
+    // Canonical source data must stay unchanged by either export.
+    expect(document.timeline.cycleCount).toBe(20);
+    expect(document.signals[1]!.values).toHaveLength(4);
+  });
+
+  it("reflects a labelAnchor override in the exported ruler text instead of raw source cycle numbers", () => {
+    const scene = buildExportScene(foldedFixture(), { format: "svg", scope: "document", foldPolicy: "respect" });
+    const resumeTick = scene.ruler.ticks.find((tick) => tick.cycle === 5);
+    expect(resumeTick?.text).toBe("1000");
+    const svg = renderExportSvg(scene);
+    expect(svg).toContain(">1000<");
+  });
+
+  it("shares the same folded time mapping across waveforms, transactions, and annotations", () => {
+    const scene = buildExportScene(foldedFixture(), { format: "svg", scope: "document", foldPolicy: "respect" });
+    // The DMA transaction (source 2..12) ends inside the collapsed [5,15) range and must clamp to
+    // the display-5 fold-resume boundary rather than extending past the compressed export width.
+    const transaction = scene.transactions.find((item) => item.id === "txn_export");
+    // The mid-fold annotation (source cycle 10, hidden inside the fold) must clamp to the last
+    // visible display cycle (4) rather than being placed at its raw, no-longer-meaningful source position.
+    const annotation = scene.annotations.find((item) => item.id === "ann_export");
+    expect(transaction).toBeDefined();
+    expect(annotation).toBeDefined();
+    const foldBoundaryX = scene.ruler.x + (5 - scene.ruler.start) * scene.ruler.cycleWidth;
+    const lastVisibleX = scene.ruler.x + (4 - scene.ruler.start) * scene.ruler.cycleWidth;
+    expect(transaction!.x + transaction!.width).toBeCloseTo(foldBoundaryX, 5);
+    expect(annotation!.x1).toBeCloseTo(lastVisibleX, 5);
+    expect(annotation!.x1).toBeLessThan(foldBoundaryX);
   });
 });
