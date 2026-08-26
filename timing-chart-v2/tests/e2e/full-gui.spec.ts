@@ -370,6 +370,7 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   await inspector.getByLabel("Inspector label align").selectOption("center");
   await inspector.getByLabel("Inspector label overflow").selectOption("wrap");
   await inspector.getByLabel("Inspector waveform row style").fill('{"color":"#114477"}');
+  const before = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -380,6 +381,22 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   await expect(inspector.getByLabel("Inspector label align")).toHaveValue("center");
   await expect(inspector.getByLabel("Inspector label overflow")).toHaveValue("wrap");
   await expect(inspector.getByLabel("Inspector waveform row style")).toHaveValue('{"color":"#114477"}');
+  const styledRow = host.locator("[data-role='left-row'][data-row-id='sig_cycle_data']");
+  await expect(styledRow).toHaveCSS("color", "rgb(17, 68, 119)");
+  await expect(styledRow).toHaveCSS("text-align", "center");
+  await expect(styledRow).toHaveCSS("white-space", "normal");
+  const after = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBeGreaterThan(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBeGreaterThan(before.localGeometryBuilds);
+  await inspector.getByLabel("Inspector waveform row style").fill('{"color":"#225588","fontWeight":"bold"}');
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(styledRow).toHaveCSS("color", "rgb(34, 85, 136)");
+  await expect(styledRow).toHaveCSS("font-weight", "700");
+  const afterStyleOnly = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterStyleOnly.waveDromRenders).toBe(after.waveDromRenders);
+  expect(afterStyleOnly.localGeometryBuilds).toBe(after.localGeometryBuilds);
 });
 
 test("applies Group Inspector presentation properties as one semantic operation", async ({ page }) => {

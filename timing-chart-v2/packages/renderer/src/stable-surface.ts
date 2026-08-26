@@ -370,12 +370,13 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
     shell.dataset.fullPath = row.fullPath ?? row.name;
     if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
+    applyDisplayStyle(shell, row);
     if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
     if (surface === "left" && row.kind === "timing") {
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${row.groupId !== previousGroupId}`;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.groupId !== previousGroupId}`;
     if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
     place(shell, row);
     ordered.push(shell);
@@ -409,6 +410,20 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
   name.dataset.role = "frozen-signal-name";
   name.textContent = row.name;
   shell.replaceChildren(role, name);
+}
+
+function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
+  const style = row.displayStyle ?? {};
+  const color = typeof style.color === "string" && /^#[0-9a-f]{3,8}$/i.test(style.color) ? style.color : undefined;
+  const background = typeof style.background === "string" && /^#[0-9a-f]{3,8}$/i.test(style.background) ? style.background : undefined;
+  const fontWeight = typeof style.fontWeight === "string" && /^(normal|bold|[1-9]00)$/.test(style.fontWeight) ? style.fontWeight : undefined;
+  const fontStyle = style.fontStyle === "italic" || style.fontStyle === "normal" ? style.fontStyle : undefined;
+  if (color) { shell.style.color = color; shell.dataset.signalStyleColor = color; } else { shell.style.removeProperty("color"); delete shell.dataset.signalStyleColor; }
+  if (background) shell.style.backgroundColor = background; else shell.style.removeProperty("background-color");
+  if (fontWeight) shell.style.fontWeight = fontWeight; else shell.style.removeProperty("font-weight");
+  if (fontStyle) shell.style.fontStyle = fontStyle; else shell.style.removeProperty("font-style");
+  if (row.displayAlign) shell.style.textAlign = row.displayAlign; else shell.style.removeProperty("text-align");
+  if (row.displayOverflow === "wrap") { shell.style.whiteSpace = "normal"; shell.style.textOverflow = "clip"; } else if (row.displayOverflow === "expand") { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "clip"; } else { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "ellipsis"; }
 }
 
 function place(element: HTMLElement, row: RowLayoutEntry): void {

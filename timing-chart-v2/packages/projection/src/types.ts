@@ -1,7 +1,7 @@
 import type { ChangeSet } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { ViewTransform } from "@timing-chart-v2/geometry";
-import type { GroupId, RowId, SignalGroupStyle, SignalId, SignalRole } from "@timing-chart-v2/schema";
+import type { GroupId, JsonObject, RowId, SignalGroupStyle, SignalId, SignalRole } from "@timing-chart-v2/schema";
 
 export interface RowLayoutEntry {
   readonly rowId: RowId;
@@ -11,6 +11,9 @@ export interface RowLayoutEntry {
   readonly kind: "timing" | "comment" | "spacer";
   readonly name: string;
   readonly role?: SignalRole;
+  readonly displayStyle?: JsonObject;
+  readonly displayAlign?: "left" | "center" | "right";
+  readonly displayOverflow?: "expand" | "ellipsis" | "wrap";
   readonly instancePath?: readonly string[];
   readonly fullPath?: string;
   readonly y: number;
