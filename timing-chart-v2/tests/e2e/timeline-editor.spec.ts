@@ -55,7 +55,11 @@ test("deletes a half-open range and preserves the active value at the join", asy
   await expect(editor.getByLabel("Start 2")).toHaveValue("2");
   await expect(editor.getByLabel("Value 2")).toHaveValue("1");
   await expect(editor.getByLabel("Start 5")).toHaveValue("5");
-  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='22']")).toHaveCount(0);
+  // Deleting a range shrinks cycleCount from 24 to 22; the new terminal boundary at cycle 22 must
+  // resolve and render, not be silently omitted the way an unresolvable terminal geometry point once
+  // caused (see ruler-terminal-boundary.spec.ts).
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='22']")).toHaveCount(1);
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='23']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
@@ -140,6 +144,9 @@ test("moves the selected range by cycle permutation without changing timeline le
   await expect(editor.getByLabel("Start 9")).toHaveValue("9");
   await expect(editor.getByLabel("Start 10")).toHaveValue("10");
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='23']")).toHaveCount(1);
-  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='24']")).toHaveCount(0);
+  // Moving a range within the timeline does not change cycleCount (still 24); the terminal boundary
+  // tick at cycle 24 must resolve and render like every other tick.
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='24']")).toHaveCount(1);
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='25']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });

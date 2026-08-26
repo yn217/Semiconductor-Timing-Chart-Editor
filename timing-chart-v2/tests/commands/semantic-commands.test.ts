@@ -51,6 +51,17 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.signals.at(-1)).toMatchObject({ id: commentRow.id, title: "Notes" });
   });
 
+  it("rejects an empty-title Comment Row update atomically, leaving document and History untouched", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const commentRow: CommentRow = { id: "comment_atomic" as SignalId, type: "commentRow", name: "Note", role: "internal", source: { instancePath: [], signalName: "note" }, display: { name: "Note" }, title: "Note", body: "Body" };
+    expect(session.execute({ id: commandId("cmd_comment_create_reject"), type: "commentRow.create", commentRow, targetGroupId: "grp_main" as GroupId, index: 2 }).ok).toBe(true);
+    const before = session.getSnapshot();
+    const result = session.execute({ id: commandId("cmd_comment_reject"), type: "commentRow.update", signalId: commentRow.id, title: "   ", body: "Changed" });
+    expect(result.ok).toBe(false);
+    expect(session.getSnapshot().document).toBe(before.document);
+    expect(session.historyState().undoDepth).toBe(1);
+  });
+
   it("unlinks deleted Signals while retaining their Transactions", () => {
     const document = { ...canonicalFixture(), transactions: [{ id: "txn_link" as TransactionId, name: "Linked", start: 1, end: 3, linkedSignals: ["sig_data" as SignalId] }] };
     const plan = planCommand(document, { id: commandId("cmd_delete_linked"), type: "signal.delete", signalId: "sig_data" as SignalId });

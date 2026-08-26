@@ -128,6 +128,13 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     add(entries, cycle, "row-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
     add(entries, cycle, "cycle-end", end);
   }
+  // The terminal timeline boundary (cycle == cycleCount, i.e. the half-open range's exclusive end)
+  // has no per-cycle slot of its own - it's only ever the "cycle-end" of the last cycle. Store it as
+  // a resolvable "cycle-start" at that boundary index too, so callers (Ruler final tick, a Transaction
+  // or TimeGroup ending exactly at cycleCount) can resolve it directly instead of extrapolating.
+  const terminalCycle = boundaries.length - 1;
+  const terminalBoundary = boundaries[terminalCycle];
+  if (terminalBoundary) add(entries, terminalCycle, "cycle-start", terminalBoundary);
 
   const phaseHalfBricks = (waveJson.phase ?? 0) * 2;
   if (!Number.isInteger(phaseHalfBricks)) throw new WaveDromAdapterError("UNSUPPORTED_GEOMETRY_PHASE", "Geometry extraction requires half-cycle-aligned WaveDrom phase.");

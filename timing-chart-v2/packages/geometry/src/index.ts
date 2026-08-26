@@ -128,7 +128,6 @@ export class SemanticSnapCandidateService {
         const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
           { point: "cycle-start", kind: "cycle-boundary" },
           { point: "cycle-center", kind: "cycle-center" },
-          { point: "cycle-center", kind: "signal-row" },
           { point: "transition-center", kind: signal.type === "bus" || signal.type === "state" ? "bus-transition" : "signal-transition" },
           { point: "value-start", kind: "value-boundary" },
           { point: "value-center", kind: "value-boundary" },
