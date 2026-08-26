@@ -149,6 +149,13 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   await page.getByTestId("reveal-in-hierarchy").click();
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await page.getByTestId("hierarchy-open").click();
+  const hierarchy = page.getByTestId("hierarchy-browser");
+  await expect(hierarchy).toBeVisible();
+  await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut.data[7:0]");
+  await hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data'] button").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await hierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByTestId("bulk-register-open").click();
   await page.getByLabel("Bulk signal definitions").fill("dut.core.status binary\ndut.core.payload bus");
   await page.getByTestId("bulk-register-apply").click();

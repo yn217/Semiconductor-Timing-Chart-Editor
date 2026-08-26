@@ -121,6 +121,7 @@ export function MinimalCycleView() {
   const [bottomVisible, setBottomVisible] = useState(true);
   const [propertiesVisible, setPropertiesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [hierarchyVisible, setHierarchyVisible] = useState(false);
   const [bulkRegistrationVisible, setBulkRegistrationVisible] = useState(false);
   const [bulkRegistrationText, setBulkRegistrationText] = useState("dut.status binary\ndut.data[7:0] bus\n");
   const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
@@ -1119,6 +1120,26 @@ export function MinimalCycleView() {
     });
     setBottomPinned(true);
   };
+  const selectHierarchySignal = (id: SignalId) => {
+    const signal = snapshot.document.signals.find((item) => item.id === id);
+    if (!signal) return;
+    selectedSignalRef.current = id;
+    selectedSignalIdsRef.current = new Set([id]);
+    setSelectedSignalIds(new Set([id]));
+    setSelectedId(id);
+    setSelectedGroupId(undefined);
+    selectedAnnotationRef.current = undefined;
+    setSelectedAnnotationId(undefined);
+    selectedTransactionRef.current = undefined;
+    setSelectedTransactionId(undefined);
+    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
+    for (const row of host.current?.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]") ?? []) {
+      const rowId = row.dataset.rowId ?? row.dataset.signalId;
+      const selected = rowId === id;
+      row.dataset.selected = String(selected);
+      row.setAttribute("aria-selected", String(selected));
+    }
+  };
   const revealSelectedInHierarchy = () => {
     if (!selectedSignal) return;
     selectedSignalRef.current = selectedSignal.id;
@@ -1214,7 +1235,7 @@ export function MinimalCycleView() {
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </section>
-      <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
+      <aside className="left-panel-tail"><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
           {bottomTabs.map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
@@ -1227,6 +1248,7 @@ export function MinimalCycleView() {
       {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} />}
     </div>
     {contextMenu && <div className="context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }} onMouseLeave={() => setContextMenu(undefined)}><button type="button" role="menuitem" onClick={() => { const current = selectedSignal?.name ?? selectedGroup?.name; const name = current === undefined ? null : window.prompt("Rename", current); if (name?.trim()) commandRegistry.current.execute("selection.rename", { name }); setContextMenu(undefined); }}>Rename</button><button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }}>Delete</button><button type="button" role="menuitem" onClick={() => { if (selectedSignal) commandRegistry.current.execute("selection.visibility", { visible: selectedSignal.display.visible === false }); setContextMenu(undefined); }}>Visibility</button></div>}
+    {hierarchyVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Hardware Hierarchy" className="hierarchy-browser" data-testid="hierarchy-browser"><header><h2>Hardware Hierarchy</h2><button type="button" aria-label="Close hierarchy" onClick={() => setHierarchyVisible(false)}>×</button></header><p>Derived from canonical Signal source paths. Group placement does not change hardware identity.</p><table><thead><tr><th>Scope</th><th>Signal</th><th>Full Path</th><th>Width</th><th>Group</th></tr></thead><tbody>{snapshot.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => { const scope = signal.source.instancePath.join(".") || "(root)"; const fullPath = [...signal.source.instancePath, signal.source.signalName].join("."); const group = snapshot.document.signalGroups.find((candidate) => candidate.rows.includes(signal.id)); return <tr key={signal.id} data-hierarchy-row-id={signal.id} data-selected={String(signal.id === selectedSignal?.id)}><td>{scope}</td><td><button type="button" onClick={() => selectHierarchySignal(signal.id)}>{signal.display.name}</button></td><td>{fullPath}</td><td>{signal.type === "bus" ? `[${signal.source.msb ?? (signal.width ?? 1) - 1}:${signal.source.lsb ?? 0}]` : "—"}</td><td>{group?.name ?? "—"}</td></tr>; })}</tbody></table></section></div>}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onClose={() => setPropertiesVisible(false)} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => setBulkRegistrationVisible(false)}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => setBulkRegistrationText(event.target.value)} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} onClose={() => setExportVisible(false)} />}
