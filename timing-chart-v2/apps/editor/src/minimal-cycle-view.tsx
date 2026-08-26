@@ -4,7 +4,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DeterministicExportService } from "@timing-chart-v2/export";
-import { DefaultProjectionService, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, DefaultProjectionService, remapValueChangesToDisplay, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
@@ -176,7 +176,11 @@ export function MinimalCycleView() {
         const signal = document.signals.find((candidate) => candidate.id === id);
         if (!signal) throw new Error(`Signal '${id}' is missing.`);
         try {
-          const rendered = await adapter.renderWave(id, adapter.toWaveJson({ signal, cycleCount: document.timeline.cycleCount }), owner);
+          const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+          const displaySignal = signal.type === "commentRow" ? signal
+            : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
+            : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
+          const rendered = await adapter.renderWave(id, adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), owner);
           const geometry = adapter.extractLocalGeometry(rendered);
           geometryMaps.set(id, geometry);
           if (id === document.timeline.referenceClock) referenceGeometry = geometry;
@@ -1322,22 +1326,25 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     element.replaceChildren();
     return;
   }
+  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
   let finalX = 0;
-  for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
-    const point = geometry.find({ signalId: referenceSignalId, cycle, point: "cycle-start" })?.point;
+  for (let display = 0; display <= mapping.displayCycleCount; display += 1) {
+    const point = geometry.find({ signalId: referenceSignalId, cycle: display, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
-    tick.dataset.cycle = String(cycle);
+    tick.dataset.cycle = String(mapping.labelFor(display));
     tick.className = "cycle-tick";
     tick.style.left = `${point.x}px`;
-    tick.textContent = String(cycle);
+    tick.textContent = String(mapping.labelFor(display));
     ticks.push(tick);
     finalX = point.x;
   }
   const overlays: HTMLElement[] = [];
   for (const bookmark of document.bookmarks) {
-    const point = geometry.find({ signalId: referenceSignalId, cycle: bookmark.start, point: "cycle-start" })?.point;
+    const displayCycle = mapping.sourceToDisplay[bookmark.start];
+    if (displayCycle === undefined) continue;
+    const point = geometry.find({ signalId: referenceSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const marker = element.ownerDocument.createElement("span");
     marker.className = "timeline-marker";
@@ -1347,14 +1354,15 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     overlays.push(marker);
   }
   for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
-    const start = geometry.find({ signalId: referenceSignalId, cycle: group.start, point: "cycle-start" })?.point;
-    const end = geometry.find({ signalId: referenceSignalId, cycle: group.end, point: "cycle-start" })?.point;
-    if (!start || !end) continue;
+    const anchorDisplay = (group.end < document.timeline.cycleCount ? mapping.sourceToDisplay[group.end] : undefined)
+      ?? (group.start > 0 ? mapping.sourceToDisplay[group.start - 1] : undefined);
+    if (anchorDisplay === undefined) continue;
+    const point = geometry.find({ signalId: referenceSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
+    if (!point) continue;
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";
     gap.dataset.timeGroupId = group.id;
-    gap.style.left = `${start.x}px`;
-    gap.style.width = `${end.x - start.x}px`;
+    gap.style.left = `${point.x}px`;
     gap.textContent = group.presentation?.foldLabel ?? group.name;
     overlays.push(gap);
   }

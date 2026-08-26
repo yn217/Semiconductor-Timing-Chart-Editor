@@ -59,7 +59,7 @@ test("deletes a half-open range and preserves the active value at the join", asy
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
-test("creates geometry-positioned Marker and Gap objects without waveform regeneration", async ({ page }) => {
+test("creates geometry-positioned Marker without waveform regeneration and a Gap that genuinely compresses the axis", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -68,23 +68,43 @@ test("creates geometry-positioned Marker and Gap objects without waveform regene
   const countersBefore = await surface.getAttribute("data-render-counters");
   const ruler = page.getByTestId("cycle-ruler");
   const cycle2 = Number.parseFloat(await ruler.locator("[data-cycle='2']").evaluate((element) => (element as HTMLElement).style.left));
-  const cycle4 = Number.parseFloat(await ruler.locator("[data-cycle='4']").evaluate((element) => (element as HTMLElement).style.left));
 
   await page.getByRole("button", { name: "Add marker" }).click();
   await expect(ruler.locator("[data-bookmark-id]")).toHaveCount(1);
   expect(Number.parseFloat(await ruler.locator("[data-bookmark-id]").evaluate((element) => (element as HTMLElement).style.left))).toBe(cycle2);
+  // a Marker is view-geometry only — it must not touch WaveDrom or LocalGeometry.
+  expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
+
   await page.getByRole("button", { name: "Add gap" }).click();
   const gap = ruler.locator("[data-time-group-id]");
   await expect(gap).toHaveCount(1);
-  expect(Number.parseFloat(await gap.evaluate((element) => (element as HTMLElement).style.left))).toBe(cycle2);
-  expect(Number.parseFloat(await gap.evaluate((element) => (element as HTMLElement).style.width))).toBe(cycle4 - cycle2);
-  expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
+
+  // the default Timeline range [2, 4) is now genuinely removed from the axis, not just overlaid:
+  // its 2 hidden cycles are gone from the Ruler entirely, and the marker that sat inside the
+  // hidden range (bookmark start=2) is no longer shown either.
+  await expect(ruler.locator("[data-cycle='2']")).toHaveCount(0);
+  await expect(ruler.locator("[data-cycle='3']")).toHaveCount(0);
+  await expect(ruler.locator("[data-bookmark-id]")).toHaveCount(0);
+  // cycle 4's label is preserved (labelAnchors/label mapping keeps the true source number)
+  // but it now renders at the position immediately after the fold, where the gap marker sits.
+  await expect(ruler.locator("[data-cycle='4']")).toHaveCount(1);
+  const resumedLeft = Number.parseFloat(await ruler.locator("[data-cycle='4']").evaluate((element) => (element as HTMLElement).style.left));
+  const gapLeft = Number.parseFloat(await gap.evaluate((element) => (element as HTMLElement).style.left));
+  expect(Math.abs(gapLeft - resumedLeft)).toBeLessThan(1);
+
+  // collapsing a range is a genuine structural change to the effective timeline (unlike Zoom,
+  // a pure view transform), so it is expected — not a bug — that WaveDrom re-renders every
+  // signal with the compressed cycle count.
+  const countersAfterGap = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as { waveDromRenders: number };
+  const countersBeforeParsed = JSON.parse(countersBefore ?? "null") as { waveDromRenders: number };
+  expect(countersAfterGap.waveDromRenders).toBeGreaterThan(countersBeforeParsed.waveDromRenders);
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
-  await page.locator("[data-bookmark-id]").filter({ hasText: "×" }).click();
   await page.locator("[data-time-group-id]").filter({ hasText: "×" }).click();
-  await expect(ruler.locator("[data-bookmark-id]")).toHaveCount(0);
   await expect(ruler.locator("[data-time-group-id]")).toHaveCount(0);
+  // removing the Gap restores the previously-hidden cycles to the Ruler.
+  await expect(ruler.locator("[data-cycle='2']")).toHaveCount(1);
+  await expect(ruler.locator("[data-cycle='3']")).toHaveCount(1);
 });
 
 test("duplicates the selected cycle state range at a destination in one commit", async ({ page }) => {

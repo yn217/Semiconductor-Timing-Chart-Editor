@@ -859,8 +859,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!isStableId(group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.timeGroup.id", "Time Group ID must be stable.");
       if (document.timeGroups.some((item) => item.id === group.id)) return fail("invalid", "DUPLICATE_ID", "$.timeGroup.id", `Time Group '${group.id}' already exists.`);
       if (!Number.isInteger(group.start) || !Number.isInteger(group.end) || group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
-      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true };
-      return { ok: true, document: { ...document, timeGroups: [...document.timeGroups, group] }, changeSet, inverseChangeSet: changeSet };
+      const nextDocument = { ...document, timeGroups: [...document.timeGroups, group] };
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "timeGroup.updatePresentation": {
       const index = document.timeGroups.findIndex((group) => group.id === command.timeGroupId);
@@ -869,8 +870,10 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group presentation is unchanged.");
       const { presentation: _presentation, ...base } = group;
       const timeGroups = [...document.timeGroups]; timeGroups[index] = { ...base, ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
-      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true };
-      return { ok: true, document: { ...document, timeGroups }, changeSet, inverseChangeSet: changeSet };
+      const nextDocument = { ...document, timeGroups };
+      const collapseChanged = Boolean(group.presentation?.collapsed) !== Boolean(command.presentation?.collapsed);
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(collapseChanged ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "timeGroup.delete": {
       const group = document.timeGroups.find((item) => item.id === command.timeGroupId);
@@ -880,8 +883,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         const { ownerTimeGroupId: _owner, ...rest } = anchor;
         return rest;
       });
-      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true };
-      return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: document.timeGroups.filter((item) => item.id !== group.id) }, changeSet, inverseChangeSet: changeSet };
+      const nextDocument = { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: document.timeGroups.filter((item) => item.id !== group.id) };
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
   }
 }
