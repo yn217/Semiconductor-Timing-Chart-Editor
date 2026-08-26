@@ -99,6 +99,31 @@ test("keeps the Split View surface contract and view mode changes view-only", as
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("cross-highlights stable linked Signals when a Transaction is selected", async ({ page }) => {
+  await ready(page);
+  await createTransaction(page, "Linked Packet", 2, 6);
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Link REQUEST").check();
+  const historyBeforeSelection = await page.getByTestId("history-status").textContent();
+  const surface = page.getByTestId("cycle-surface");
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    counters: await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
+  };
+
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").click();
+  const linkedRows = surface.locator("[data-row-id='sig_cycle_request'][data-transaction-linked='true']");
+  await expect(linkedRows.first()).toBeVisible();
+  expect(await linkedRows.count()).toBeGreaterThanOrEqual(2);
+  await expect(page.getByTestId("history-status")).toHaveText(historyBeforeSelection ?? "");
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
+
+  await surface.locator("[data-row-id='sig_cycle_request']").first().click();
+  await expect(surface.locator("[data-row-id='sig_cycle_request'][data-transaction-linked='true']")).toHaveCount(0);
+});
+
 test("ripples Transaction ranges through Timeline edits with exact Undo", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Ripple", 2, 6);

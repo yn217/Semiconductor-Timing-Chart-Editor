@@ -937,6 +937,14 @@ export function MinimalCycleView() {
 
   useEffect(() => { refreshPlayhead.current(); }, [selectedCycle, snapshot.revision]);
 
+  useEffect(() => {
+    const linked = new Set(selectedTransaction?.linkedSignals ?? []);
+    for (const row of host.current?.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]") ?? []) {
+      const id = row.dataset.rowId ?? row.dataset.signalId;
+      row.dataset.transactionLinked = String(id !== undefined && linked.has(id as SignalId));
+    }
+  }, [selectedTransactionId, snapshot.revision]);
+
   const createSelectedAnnotation = (annotation: Annotation) => {
     commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
     selectedAnnotationRef.current = annotation.id;
@@ -1514,7 +1522,7 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedAnnotation, selec
 
 function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onCommand }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
   const lanes = [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort();
-  const [drag, setDrag] = useState<{ id: TransactionId; edge: "body" | "start" | "end" }>();
+  const [drag, setDrag] = useState<{ id: TransactionId; edge: "body" | "start" | "end"; startX: number }>();
   const owner = useRef<HTMLElement>(null);
   const [cycleXs, setCycleXs] = useState<readonly number[]>([]);
   useEffect(() => {
@@ -1532,8 +1540,9 @@ function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onComm
   }, [document.timeline.cycleCount, document.transactions, zoom]);
   const finish = (event: React.PointerEvent, transaction: Transaction) => {
     if (!drag || drag.id !== transaction.id) return;
-    const cycle = onSnap(event.clientX);
     setDrag(undefined);
+    if (event.clientX === drag.startX) return;
+    const cycle = onSnap(event.clientX);
     if (cycle === undefined) return;
     if (drag.edge === "body") {
       const duration = transaction.end - transaction.start;
@@ -1544,7 +1553,7 @@ function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onComm
       if (value !== transaction[drag.edge]) onCommand({ id: nextCommandId("transaction_snap_resize"), type: "transaction.resize", transactionId: transaction.id, edge: drag.edge, value });
     }
   };
-  const capture = (event: React.PointerEvent, next: { id: TransactionId; edge: "body" | "start" | "end" }) => { event.stopPropagation(); event.currentTarget.parentElement?.setPointerCapture(event.pointerId); setDrag(next); };
+  const capture = (event: React.PointerEvent, next: { id: TransactionId; edge: "body" | "start" | "end" }) => { event.stopPropagation(); event.currentTarget.parentElement?.setPointerCapture(event.pointerId); setDrag({ ...next, startX: event.clientX }); };
   const x = (cycle: number) => cycleXs[cycle] ?? cycle / document.timeline.cycleCount * 640;
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom } as React.CSSProperties}><div className="transaction-lane-labels">{lanes.map((lane) => <span key={lane}>{lane}</span>)}</div><div className="transaction-track">{lanes.map((lane, laneIndex) => <div className="transaction-lane" key={lane} style={{ top: laneIndex * 28 }}>{document.transactions.filter((transaction) => (transaction.laneId ?? "lane_0") === lane).map((transaction) => <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: x(transaction.start), width: x(transaction.end) - x(transaction.start) }} onClick={() => onSelect(transaction.id)} onPointerUp={(event) => finish(event, transaction)}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>)}</div>)}</div></section>;
 }
