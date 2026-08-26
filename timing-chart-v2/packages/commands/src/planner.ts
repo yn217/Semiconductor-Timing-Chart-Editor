@@ -910,6 +910,17 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { bookmarkPosition: [bookmark.id], minimapOverview: true };
       return { ok: true, document: { ...document, bookmarks }, changeSet, inverseChangeSet: changeSet };
     }
+    case "bookmark.update": {
+      const index = document.bookmarks.findIndex((item) => item.id === command.bookmarkId);
+      const bookmark = document.bookmarks[index];
+      if (!bookmark) return fail("invalid", "BOOKMARK_NOT_FOUND", "$.bookmarkId", `Bookmark '${command.bookmarkId}' does not exist.`);
+      if (!command.name.trim()) return fail("invalid", "EMPTY_BOOKMARK_NAME", "$.name", "Bookmark name must not be empty.");
+      if (!Number.isInteger(command.start) || command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Bookmark is outside the timeline.");
+      if (bookmark.name === command.name && bookmark.start === command.start && bookmark.comment === command.comment) return fail("no-op", "NO_OP", "$", "Bookmark is unchanged.");
+      const bookmarks = [...document.bookmarks]; bookmarks[index] = { id: bookmark.id, name: command.name, start: command.start, ...(command.comment === undefined ? {} : { comment: command.comment }) };
+      const changeSet: ChangeSet = { bookmarkPosition: [bookmark.id], minimapOverview: true };
+      return { ok: true, document: { ...document, bookmarks }, changeSet, inverseChangeSet: changeSet };
+    }
     case "bookmark.delete": {
       const bookmark = document.bookmarks.find((item) => item.id === command.bookmarkId);
       if (!bookmark) return fail("invalid", "BOOKMARK_NOT_FOUND", "$.bookmarkId", `Bookmark '${command.bookmarkId}' does not exist.`);

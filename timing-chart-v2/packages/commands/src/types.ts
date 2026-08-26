@@ -60,6 +60,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeline.moveRange"; start: number; end: number; to: number }>
   | Readonly<{ id: CommandId; type: "bookmark.create"; bookmark: Bookmark }>
   | Readonly<{ id: CommandId; type: "bookmark.move"; bookmarkId: BookmarkId; start: number }>
+  | Readonly<{ id: CommandId; type: "bookmark.update"; bookmarkId: BookmarkId; name: string; start: number; comment?: string }>
   | Readonly<{ id: CommandId; type: "bookmark.delete"; bookmarkId: BookmarkId }>
   | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
   | Readonly<{ id: CommandId; type: "timeGroup.update"; timeGroupId: TimeGroupId; name: string; start: number; end: number; category?: string; comment?: string; presentation?: TimeGroup["presentation"] }>

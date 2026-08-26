@@ -95,6 +95,19 @@ describe("timeline ripple commands", () => {
     expect(session.historyState().undoDepth).toBe(3);
   });
 
+  it("updates a named Bookmark atomically and restores it with Undo", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const bookmark = { id: "bookmark_editor" as BookmarkId, name: "Review", start: 2, comment: "initial" };
+    expect(session.execute({ id: commandId("cmd_bookmark_editor_create"), type: "bookmark.create", bookmark }).ok).toBe(true);
+    const result = session.execute({ id: commandId("cmd_bookmark_editor_update"), type: "bookmark.update", bookmarkId: bookmark.id, name: "Release", start: 5, comment: "approved" });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.changeSet).toEqual({ bookmarkPosition: [bookmark.id], minimapOverview: true });
+    expect(session.getSnapshot().document.bookmarks[0]).toEqual({ id: bookmark.id, name: "Release", start: 5, comment: "approved" });
+    expect(session.historyState().undoDepth).toBe(2);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.bookmarks[0]).toEqual(bookmark);
+  });
+
   it("owns collapsed gap presentation in a canonical Time Group", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const timeGroup = { id: "time_phase9_gap" as TimeGroupId, name: "Wait", start: 2, end: 5, presentation: { collapsed: true as const, foldStyle: "axis-break" as const, foldLabel: "WAIT" } };

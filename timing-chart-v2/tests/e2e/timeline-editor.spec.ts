@@ -225,6 +225,31 @@ test("bookmark list jumps to its geometry-backed cycle without changing the docu
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
 });
 
+test("edits a named Bookmark through one semantic operation and preserves it through Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Add marker" }).click();
+  await page.getByTestId(/bookmark-edit-/).click();
+  const editor = page.getByTestId("bookmark-editor");
+  await editor.getByLabel("Bookmark name").fill("Review Point");
+  await editor.getByLabel("Bookmark cycle").fill("9");
+  await editor.getByLabel("Bookmark comment").fill("approved");
+  await editor.getByTestId("apply-bookmark").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", "2");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+});
+
 test("duplicates the selected cycle state range at a destination in one commit", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
