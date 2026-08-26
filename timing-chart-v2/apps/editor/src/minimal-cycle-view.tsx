@@ -439,6 +439,23 @@ export function MinimalCycleView() {
         rendererHost.dataset.viewportStartY = String(window.viewportStartY);
       });
     };
+    const onViewportKeyDown = (event: KeyboardEvent) => {
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target?.closest("[data-testid='cycle-viewport']") || target.closest("input, textarea, select, button, [contenteditable='true']")) return;
+      const horizontalStep = Math.max(48, Math.round(viewportElement.clientWidth * 0.18));
+      const verticalStep = Math.max(48, Math.round(viewportElement.clientHeight * 0.75));
+      let left: number | undefined;
+      let top: number | undefined;
+      if (event.key === "ArrowLeft") left = -horizontalStep;
+      else if (event.key === "ArrowRight") left = horizontalStep;
+      else if (event.key === "PageUp") top = -verticalStep;
+      else if (event.key === "PageDown") top = verticalStep;
+      else if (event.key === "Home") left = -viewportElement.scrollWidth;
+      else if (event.key === "End") left = viewportElement.scrollWidth;
+      if (left === undefined && top === undefined) return;
+      event.preventDefault();
+      viewportElement.scrollBy({ ...(left === undefined ? {} : { left }), ...(top === undefined ? {} : { top }), behavior: "auto" });
+    };
     let pendingArrow: "armed" | SemanticAnchor | undefined;
     armArrowPick.current = () => {
       pendingArrow = "armed";
@@ -815,6 +832,7 @@ export function MinimalCycleView() {
     };
     const onCanvasClick = (event: MouseEvent) => { if (suppressCanvasClick) { suppressCanvasClick = false; return; } if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
+    viewportElement.addEventListener("keydown", onViewportKeyDown);
     rendererHost.addEventListener("click", onCanvasClick);
     rendererHost.addEventListener("pointerdown", onRangePointerDown);
     rendererHost.addEventListener("pointermove", onRangePointerMove);
@@ -836,6 +854,7 @@ export function MinimalCycleView() {
       refreshPlayhead.current = () => undefined;
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
+      viewportElement.removeEventListener("keydown", onViewportKeyDown);
       rendererHost.removeEventListener("click", onCanvasClick);
       rendererHost.removeEventListener("pointerdown", onRangePointerDown);
       rendererHost.removeEventListener("pointermove", onRangePointerMove);
@@ -1085,7 +1104,7 @@ export function MinimalCycleView() {
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label="Cycle View">
         <div className="column-headings" aria-hidden="true"><span>Signal / Group</span><span>Role / signal</span><span>Cycle waveform</span></div>
-        <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport">
+        <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" />

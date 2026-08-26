@@ -207,6 +207,28 @@ test("Canvas cycle selection exposes a ruler-geometry-backed playhead without mu
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
+test("Canvas keyboard navigation pans the viewport without canonical or render mutation", async ({ page }) => {
+  await ready(page);
+  const viewport = page.getByTestId("cycle-viewport");
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await viewport.focus();
+  await viewport.press("End");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  const atEnd = await viewport.evaluate((element) => element.scrollLeft);
+  await viewport.press("Home");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollLeft)).toBe(0);
+  await viewport.press("PageDown");
+  await expect.poll(() => viewport.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  expect(atEnd).toBeGreaterThan(0);
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+});
+
 test("applies Signal Inspector capability fields as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
