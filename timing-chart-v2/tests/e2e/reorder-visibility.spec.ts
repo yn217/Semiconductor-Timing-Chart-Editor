@@ -98,6 +98,53 @@ test("moves a signal across groups without changing its semantic role", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("restores exact Canonical/Left/Frozen/Timing row order and stable SVG identity through Undo and Redo of a reorder", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+
+  const frozenOrder = async () => surface.locator("[data-role='frozen-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  const timingOrder = async () => surface.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
+
+  // The Left tree order is driven directly by the Canonical signalGroups.rows order, so it doubles
+  // as the Canonical assertion here alongside the independently-rendered Frozen and Timing surfaces.
+  const orderBefore = await signalOrder(surface);
+  const frozenBefore = await frozenOrder();
+  const timingBefore = await timingOrder();
+  const validSvg = await surface.locator("[data-signal-id='sig_cycle_valid'] > svg").elementHandle();
+
+  const source = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']");
+  const target = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_reset_n']");
+  await source.dragTo(target, { targetPosition: { x: 120, y: 2 } });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const orderMoved = await signalOrder(surface);
+  expect(orderMoved).not.toEqual(orderBefore);
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  expect(await signalOrder(surface)).toEqual(orderBefore);
+  expect(await frozenOrder()).toEqual(frozenBefore);
+  expect(await timingOrder()).toEqual(timingBefore);
+  let restoredSvg = await surface.locator("[data-signal-id='sig_cycle_valid'] > svg").elementHandle();
+  expect(await validSvg!.evaluate((before, after) => before === after, restoredSvg)).toBe(true);
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  expect(await signalOrder(surface)).toEqual(orderMoved);
+  // The lightweight Frozen label shells DO get reordered to match Canonical (like the Left tree),
+  // but the heavy Timing waveform owners intentionally never reorder in the DOM - only their CSS
+  // position changes - to avoid moving/rerendering heavy WaveDrom SVG (see stable-surface.spec.ts).
+  // So Frozen must track Canonical order exactly, while Timing's owner *set* must stay identical.
+  expect(await frozenOrder()).toEqual(orderMoved);
+  expect(new Set(await timingOrder())).toEqual(new Set(timingBefore));
+  restoredSvg = await surface.locator("[data-signal-id='sig_cycle_valid'] > svg").elementHandle();
+  expect(await validSvg!.evaluate((before, after) => before === after, restoredSvg)).toBe(true);
+});
+
 test("cancels a drag preview without canonical or History changes", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
