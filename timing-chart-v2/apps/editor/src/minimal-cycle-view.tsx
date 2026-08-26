@@ -104,6 +104,8 @@ export function MinimalCycleView() {
   const [propertiesVisible, setPropertiesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
+  const clipboardSignalRef = useRef<Signal | undefined>(undefined);
+  const [clipboardStatus, setClipboardStatus] = useState("Empty");
   const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
   const timelineRangeRef = useRef(timelineRange);
@@ -772,6 +774,52 @@ export function MinimalCycleView() {
     if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
 
+  const clearSelection = () => {
+    selectedSignalRef.current = undefined; setSelectedId(undefined);
+    selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
+    selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
+    selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined);
+  };
+  const copySelectedSignal = () => {
+    if (!selectedSignal || selectedSignal.type === "commentRow") { setClipboardStatus("Select a signal to copy"); return; }
+    clipboardSignalRef.current = selectedSignal;
+    setClipboardStatus(`Copied ${selectedSignal.display.name}`);
+  };
+  const createCopiedSignal = (source: Signal | undefined, operation: "paste" | "duplicate") => {
+    if (!source || source.type === "commentRow") { setClipboardStatus("No signal clipboard available"); return; }
+    const document = snapshot.document;
+    const targetGroup = document.signalGroups.find((group) => selectedId !== undefined && group.rows.includes(selectedId)) ?? document.signalGroups.at(-1);
+    if (!targetGroup) return;
+    const id = signalId(nextEntityId("signal", document));
+    const name = `${source.display.name}_${operation}`;
+    const signal: Signal = { ...source, id, name, display: { ...source.display, name }, source: { ...source.source, signalName: name } };
+    const result = commandRegistry.current.execute<SemanticCommand, ReturnType<CommandHistorySession["execute"]>>("semantic.execute", { id: nextCommandId(operation), type: "signal.create", signal, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+    if (result.ok) {
+      selectedSignalRef.current = id; setSelectedId(id);
+      selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
+      setClipboardStatus(operation === "paste" ? `Pasted ${name}` : `Copied ${source.display.name}`);
+    }
+  };
+  const renameSelection = () => {
+    const current = selectedSignal?.display.name ?? selectedGroup?.name;
+    const name = current === undefined ? null : window.prompt("Rename", current);
+    if (name?.trim()) commandRegistry.current.execute("selection.rename", { name: name.trim() });
+  };
+  const setSelectionVisibility = (visible: boolean) => commandRegistry.current.execute("selection.visibility", { visible });
+  const moveSelection = (direction: -1 | 1) => {
+    const document = snapshot.document;
+    if (selectedSignal) {
+      const group = document.signalGroups.find((candidate) => candidate.rows.includes(selectedSignal.id));
+      const index = group?.rows.indexOf(selectedSignal.id) ?? -1;
+      if (group && index >= 0 && index + direction >= 0 && index + direction < group.rows.length) commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("home_move_signal"), type: "signal.move", signalId: selectedSignal.id, targetGroupId: group.id, index: index + direction });
+      return;
+    }
+    if (selectedGroup) {
+      const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id);
+      if (index >= 0 && index + direction >= 0 && index + direction < document.signalGroups.length) commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("home_move_group"), type: "group.move", groupId: selectedGroup.id, index: index + direction });
+    }
+  };
+
   return <main className="editor-shell" data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
@@ -787,6 +835,17 @@ export function MinimalCycleView() {
       arrowPickStatus={arrowPickStatus}
       selectedSignalId={annotationTargetSignalId}
       problemsCount={diagnostics.length}
+      clipboardStatus={clipboardStatus}
+      hasSelectedSignal={selectedSignal !== undefined && selectedSignal.type !== "commentRow"}
+      hasSelectedEntity={(selectedSignal !== undefined && selectedSignal.type !== "commentRow") || selectedGroup !== undefined}
+      onCopy={copySelectedSignal}
+      onPaste={() => createCopiedSignal(clipboardSignalRef.current, "paste")}
+      onDuplicate={() => createCopiedSignal(selectedSignal, "duplicate")}
+      onRename={renameSelection}
+      onClearSelection={clearSelection}
+      onMoveUp={() => moveSelection(-1)}
+      onMoveDown={() => moveSelection(1)}
+      onVisibility={setSelectionVisibility}
       onRange={setTimelineRange}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
       onCreateAnnotation={createSelectedAnnotation}
@@ -847,10 +906,11 @@ function RibbonIcon({ name }: { readonly name: string }) {
   return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
 }
 
-function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, problemsCount, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems }: {
+function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number;
+  readonly clipboardStatus: string; readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void;
-  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void;
+  readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
 }) {
   const insertValueSignal = (type: "binary" | "bus" | "state") => {
     const targetGroup = document.signalGroups.at(-1);
@@ -890,7 +950,15 @@ function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selected
       <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save As</span></button>
       <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
     </div>}
-    {tab === "Home" && <div className="ribbon-group history-group"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><b>Edit</b></div>}
+    {tab === "Home" && <>
+      <div className="ribbon-group history-group" aria-label="History"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><b>History</b></div>
+      <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedSignal} title="Copy is view-only"><RibbonIcon name="i-copy" /><span>Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardStatus.startsWith("Copied")} title={clipboardStatus}><RibbonIcon name="i-paste" /><span>Paste</span></button><button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button><small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
+      <div className="ribbon-group edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span>Rename</span></button><b>Edit</b></div>
+      <div className="ribbon-group selection-group" aria-label="Selection"><button type="button" className="ribbon-tool" onClick={onClearSelection}><RibbonIcon name="i-clear" /><span>Clear</span></button><button type="button" className="ribbon-tool" disabled title="Multi-selection owner is scheduled for the Hierarchy/Selection batch"><RibbonIcon name="i-select-all" /><span>Select All</span></button><b>Selection</b></div>
+      <div className="ribbon-group visibility-group" aria-label="Visibility"><button type="button" className="ribbon-tool" onClick={() => onVisibility(true)} disabled={!hasSelectedSignal}><RibbonIcon name="i-eye" /><span>Show</span></button><button type="button" className="ribbon-tool" onClick={() => onVisibility(false)} disabled={!hasSelectedSignal}><RibbonIcon name="i-eye-off" /><span>Hide</span></button><b>Visibility</b></div>
+      <div className="ribbon-group arrange-group" aria-label="Arrange"><button type="button" className="ribbon-tool" onClick={onMoveUp} disabled={!hasSelectedEntity}><RibbonIcon name="i-up" /><span>Move Up</span></button><button type="button" className="ribbon-tool" onClick={onMoveDown} disabled={!hasSelectedEntity}><RibbonIcon name="i-down" /><span>Move Down</span></button><b>Arrange</b></div>
+      <div className="ribbon-group properties-group" aria-label="Properties"><button type="button" className="ribbon-tool" onClick={onProperties}><RibbonIcon name="i-properties" /><span>Properties</span></button><b>Properties</b></div>
+    </>}
     {tab === "Insert" && <div className="ribbon-group insert-group">
       <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
       <button type="button" className="ribbon-tool" onClick={insertClockSignal}><RibbonIcon name="i-clock" /><span>Clock</span></button>
