@@ -63,6 +63,24 @@ describe("deterministic document export", () => {
     expect(first).toEqual(second);
   });
 
+  it("exports document header/footer through an independent wrapped layout", () => {
+    const document = { ...scaleFixture(2), document: {
+      ...scaleFixture(2).document,
+      title: "Timing Review",
+      header: { subtitle: "Reviewed timing", description: "A description that remains in document layout even when the waveform width changes.", notes: "Notes", preconditions: ["Clock is stable"], constraints: ["Setup must hold"], exceptions: ["Reset window"] },
+      footer: { figureNumber: "Fig. 2", revision: "R3", text: "Internal review" },
+    } };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const svg = renderExportSvg(scene);
+    expect(scene.documentLayout.title).toBe("Timing Review");
+    expect(svg).toContain('data-layer="document-layout"');
+    expect(svg).toContain('data-layout="header"');
+    expect(svg).toContain("Precondition: Clock is stable");
+    expect(svg).toContain('data-layout="footer"');
+    expect(svg).toContain("Fig. 2 · R3 · Internal review");
+    expect(scene.height).toBeGreaterThan(buildExportScene(scaleFixture(2), { format: "svg", scope: "document" }).height);
+  });
+
   it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {
     const document = foldedFixture();
     const respected = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });

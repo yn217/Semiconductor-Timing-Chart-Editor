@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 async function ready(page: Page) {
   await page.goto("/");
@@ -119,6 +120,15 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   await page.locator("input[type='file']").setInputFiles(path!);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const pendingExport = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Export SVG" }).click();
+  const exported = await pendingExport;
+  const exportedText = await readFile((await exported.path())!, "utf8");
+  expect(exportedText).toContain("Timing Review");
+  expect(exportedText).toContain("Reviewed timing");
+  expect(exportedText).toContain("Fig. 2 · R3 · Internal review");
 });
 
 test("edits and displays the Legend through the canonical presentation command", async ({ page }) => {

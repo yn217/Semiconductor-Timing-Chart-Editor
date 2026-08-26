@@ -25,6 +25,7 @@ export interface ExportTransaction { readonly id: string; readonly name: string;
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
 export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number; readonly ticks: readonly ExportRulerTick[] }
+export interface ExportDocumentLayout { readonly title: string; readonly headerLines: readonly string[]; readonly figureNumber: string; readonly revision: string; readonly footerText: string }
 
 export interface ExportScene {
   readonly width: number;
@@ -36,6 +37,7 @@ export interface ExportScene {
   readonly groupBands: readonly ExportGroupBand[];
   readonly legend: readonly string[];
   readonly ruler: ExportRuler;
+  readonly documentLayout: ExportDocumentLayout;
 }
 
 export interface ExportService { export(request: ExportRequest): Promise<Uint8Array> }
@@ -43,6 +45,29 @@ export interface ExportService { export(request: ExportRequest): Promise<Uint8Ar
 const LABEL_WIDTH = 220;
 const ROW_HEIGHT = 34;
 const TRANSACTION_HEIGHT = 28;
+const HEADER_LINE_LIMIT = 112;
+
+function wrapLayoutText(value: string, limit = HEADER_LINE_LIMIT): string[] {
+  const lines: string[] = [];
+  for (const sourceLine of value.split(/\r?\n/)) {
+    if (sourceLine.length === 0) { lines.push(""); continue; }
+    for (let offset = 0; offset < sourceLine.length; offset += limit) lines.push(sourceLine.slice(offset, offset + limit));
+  }
+  return lines;
+}
+
+function buildDocumentLayout(document: CanonicalDocument): ExportDocumentLayout {
+  const header = document.document.header;
+  const headerLines = [
+    ...wrapLayoutText(header.subtitle),
+    ...wrapLayoutText(header.description),
+    ...wrapLayoutText(header.notes),
+    ...header.preconditions.flatMap((line) => wrapLayoutText(`Precondition: ${line}`)),
+    ...header.constraints.flatMap((line) => wrapLayoutText(`Constraint: ${line}`)),
+    ...header.exceptions.flatMap((line) => wrapLayoutText(`Exception: ${line}`)),
+  ].filter((line) => line.length > 0);
+  return Object.freeze({ title: document.document.title, headerLines, figureNumber: document.document.footer.figureNumber, revision: document.document.footer.revision, footerText: document.document.footer.text });
+}
 
 function toDisplayCycle(mapping: DisplayTimeMapping, sourceCycle: number, bias: "floor" | "ceil"): number {
   const clamped = Math.max(0, Math.min(mapping.sourceToDisplay.length - 1, sourceCycle));
@@ -82,11 +107,13 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
 }
 
 export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
+  const documentLayout = buildDocumentLayout(document);
+  const headerHeight = 38 + documentLayout.headerLines.length * 14;
   const mapping = buildDisplayTimeMapping(document.timeline, settings.foldPolicy === "expand" ? [] : document.timeGroups);
   const range = rangeFor(document, settings, mapping);
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => document.signals.find((signal) => signal.id === id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
   const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
-  const transactionTop = 52;
+  const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
   const renderedWaves = signals.filter((signal) => signal.type !== "commentRow").map((signal, index) => {
     const displaySignal = signal.type === "clock"
@@ -117,19 +144,24 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     return first && second ? { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y } : undefined;
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const width = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
-  const height = waveTop + signals.length * rowHeight + 54;
+  const height = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? [...new Set(signals.map((signal) => signal.role))].sort() : [];
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
-  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks } });
+  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout });
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
 export function renderExportSvg(scene: ExportScene): string {
   const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}" data-export-scene="v2" data-wave-engine="wavedrom-${WAVEDROM_VERSION}">`, `<rect width="100%" height="100%" fill="white"/>`];
+  const layout = scene.documentLayout;
+  out.push(`<g data-layer="document-layout" font-family="Segoe UI,Arial,sans-serif" fill="#1e293b"><text data-layout="title" x="12" y="20" font-size="16" font-weight="700">${xml(layout.title)}</text>`);
+  layout.headerLines.forEach((line, index) => out.push(`<text data-layout="header" x="12" y="${38 + index * 14}" font-size="10">${xml(line)}</text>`));
+  out.push(`</g>`);
   out.push(`<g data-layer="ruler" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#334155" stroke="#d5dde7">`);
-  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="32" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="24" stroke="none">${xml(tick.text)}</text>`); }
+  const rulerTop = 24 + 38 + layout.headerLines.length * 14;
+  for (const tick of scene.ruler.ticks) { const x = scene.ruler.x + (tick.cycle - scene.ruler.start) * scene.ruler.cycleWidth; out.push(`<line x1="${x}" y1="${rulerTop}" x2="${x}" y2="${scene.height - 24}"/><text x="${x + 3}" y="${rulerTop - 8}" stroke="none">${xml(tick.text)}</text>`); }
   out.push(`</g><g data-layer="transactions" font-family="Segoe UI,Arial,sans-serif" font-size="11">`);
   for (const item of scene.transactions) out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`);
   out.push(`</g><g data-layer="group-bands">`);
@@ -143,7 +175,10 @@ export function renderExportSvg(scene: ExportScene): string {
   }
   out.push(`</g><g data-layer="annotations" font-family="Segoe UI,Arial,sans-serif" font-size="11" stroke="#dc2626" fill="none">`);
   for (const annotation of scene.annotations) out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
-  out.push(`</g><g data-layer="legend" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${12 + index * 80}" y="${scene.height - 12}">${xml(role)}</text>`).join("")}</g></svg>`);
+  const footer = [layout.figureNumber, layout.revision, layout.footerText].filter((value) => value.length > 0).join(" · ");
+  out.push(`</g><g data-layer="legend" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${12 + index * 80}" y="${scene.height - (footer ? 30 : 12)}">${xml(role)}</text>`).join("")}</g>`);
+  if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
+  out.push(`</svg>`);
   return out.join("");
 }
 
