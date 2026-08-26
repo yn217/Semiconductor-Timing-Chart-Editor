@@ -31,6 +31,25 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   await expect(page.locator(".ribbon-group")).toHaveCount(12);
 });
 
+test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const ribbon = page.getByTestId("ribbon");
+  const metrics = await ribbon.evaluate((element) => ({
+    clientWidth: element.clientWidth,
+    scrollWidth: element.scrollWidth,
+    height: element.getBoundingClientRect().height,
+    groupWidths: [...element.querySelectorAll<HTMLElement>(".ribbon-group")].map((group) => Math.round(group.getBoundingClientRect().width)),
+  }));
+  expect(metrics.height).toBe(147);
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
+  expect(metrics.groupWidths.length).toBe(12);
+  await expect(page.locator(".app-titlebar")).toHaveCSS("height", "32px");
+  await expect(page.locator(".ribbon-tabs")).toHaveCSS("height", "38px");
+  await expect(page.locator(".status-bar")).toHaveCSS("height", "27px");
+  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-shell-dut-1672x941.png", animations: "disabled" });
+});
+
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);
