@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, SemanticSnapCandidateService } from "@timing-chart-v2/geometry";
-import type { SignalId } from "@timing-chart-v2/schema";
+import type { SignalId, TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const signalId = "sig_snap" as SignalId;
@@ -38,5 +38,27 @@ describe("Screen Geometry and snapping", () => {
     const map = new ImmutableLocalGeometryMap(signal.id, [{ cycle: document.timeline.cycleCount, point: "cycle-start", position: { x: 240, y: 0 } }]);
     const index = new SemanticSnapCandidateService().build({ document, geometryMaps: new Map([[signal.id, map]]), rowY: new Map([[signal.id, 0]]) });
     expect(index.nearest({ x: 240, y: 0 }, 1, ["cycle-boundary"])).toMatchObject({ anchor: { cycle: document.timeline.cycleCount, point: "cycle-start" } });
+  });
+
+  it("keeps folded snap candidates in canonical source-cycle coordinates", () => {
+    const source = canonicalFixture();
+    const document = {
+      ...source,
+      timeGroups: [{ id: "time_fold" as TimeGroupId, name: "Fold", start: 2, end: 4, presentation: { collapsed: true, foldStyle: "axis-break" as const, foldLabel: "GAP" } }],
+    };
+    const signal = document.signals[0]!;
+    const map = new ImmutableLocalGeometryMap(signal.id, Array.from({ length: 7 }, (_, cycle) => ({ cycle, point: "cycle-start" as const, position: { x: cycle * 10, y: 0 } })));
+    const sourceByRendered = [0, 1, 4, 5, 6, 7, 8];
+    const renderedBySource = new Map(sourceByRendered.map((sourceCycle, renderedCycle) => [sourceCycle, renderedCycle]));
+    const index = new SemanticSnapCandidateService().build({
+      document,
+      geometryMaps: new Map([[signal.id, map]]),
+      rowY: new Map([[signal.id, 0]]),
+      renderedCycleCount: 6,
+      sourceCycleForRenderedCycle: (cycle) => sourceByRendered[cycle],
+      renderedCycleForSourceCycle: (cycle) => renderedBySource.get(cycle),
+    });
+    expect(index.nearest({ x: 20, y: 0 }, 1, ["cycle-boundary"])).toMatchObject({ anchor: { cycle: 4, point: "cycle-start" } });
+    expect(index.entries().some((candidate) => candidate.anchor.cycle === 2 || candidate.anchor.cycle === 3)).toBe(false);
   });
 });

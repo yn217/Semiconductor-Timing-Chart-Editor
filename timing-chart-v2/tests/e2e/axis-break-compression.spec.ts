@@ -28,6 +28,10 @@ test("a collapsed TimeGroup genuinely compresses the axis instead of overlaying 
   await expect(ruler.locator("[data-cycle='3']")).toHaveCount(0);
   // cycle 4's true source label survives the compression (labelAnchors-backed labeling).
   await expect(ruler.locator("[data-cycle='4']")).toHaveCount(1);
+  const grid = page.getByTestId("geometry-grid");
+  await expect(grid.locator("[data-role='geometry-grid-line'][data-cycle='4']")).toHaveCount(1);
+  await expect(grid.locator("[data-role='geometry-grid-line'][data-cycle='2']")).toHaveCount(0);
+  await expect(grid.locator("[data-role='geometry-grid-line'][data-cycle='3']")).toHaveCount(0);
 
   // this is a genuine structural change to the document (unlike Zoom), so a fresh WaveDrom
   // render and one History entry are expected — not a delta-0 view-only operation.

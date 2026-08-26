@@ -104,6 +104,12 @@ export interface SemanticSnapGeometryInput {
   readonly document: Pick<CanonicalDocument, "signals" | "timeline" | "bookmarks" | "annotations">;
   readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
   readonly rowY: ReadonlyMap<SignalId, number>;
+  /** Number of cycles in the rendered geometry (may be smaller than source time after a fold). */
+  readonly renderedCycleCount?: number;
+  /** Map a rendered/display cycle to its canonical source cycle. */
+  readonly sourceCycleForRenderedCycle?: (renderedCycle: number) => number | undefined;
+  /** Map a canonical source cycle to its rendered/display cycle. */
+  readonly renderedCycleForSourceCycle?: (sourceCycle: number) => number | undefined;
 }
 
 /** Geometry-owned construction of immutable, screen-local semantic snap candidates. */
@@ -113,11 +119,16 @@ export class SemanticSnapCandidateService {
 
   build(input: SemanticSnapGeometryInput): ImmutableSnapIndex {
     const candidates: SnapCandidate[] = [];
+    const renderedCycleCount = input.renderedCycleCount ?? input.document.timeline.cycleCount;
+    const sourceCycleForRenderedCycle = input.sourceCycleForRenderedCycle ?? ((cycle: number) => cycle);
+    const renderedCycleForSourceCycle = input.renderedCycleForSourceCycle ?? ((cycle: number) => cycle);
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
       const signalId = anchor.signalId ?? input.document.timeline.referenceClock;
       if (!signalId) return undefined;
       if (!input.rowY.has(signalId)) return undefined;
-      const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId });
+      const renderedCycle = anchor.cycle === input.document.timeline.cycleCount ? renderedCycleCount : renderedCycleForSourceCycle(anchor.cycle);
+      if (renderedCycle === undefined) return undefined;
+      const local = input.geometryMaps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
       return local ? { x: local.point.x, y: (input.rowY.get(signalId) ?? 0) + local.point.y } : undefined;
     };
     for (const signal of input.document.signals) {
@@ -125,7 +136,9 @@ export class SemanticSnapCandidateService {
       const map = input.geometryMaps.get(signal.id);
       if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
-      for (let cycle = 0; cycle <= input.document.timeline.cycleCount; cycle += 1) {
+      for (let renderedCycle = 0; renderedCycle <= renderedCycleCount; renderedCycle += 1) {
+        const cycle = sourceCycleForRenderedCycle(renderedCycle);
+        if (cycle === undefined) continue;
         const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
           { point: "cycle-start", kind: "cycle-boundary" },
           ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),
@@ -134,7 +147,7 @@ export class SemanticSnapCandidateService {
         ];
         for (const item of points) {
           const anchor: SemanticAnchor = { signalId: signal.id, cycle, point: item.point };
-          const local = map.find(anchor);
+          const local = map.find({ ...anchor, cycle: renderedCycle });
           if (local) candidates.push({ kind: item.kind, anchor, point: { x: local.point.x, y: y + local.point.y }, ownerId: signal.id });
         }
       }

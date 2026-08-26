@@ -805,7 +805,7 @@ export function MinimalCycleView() {
       const document = session.getSnapshot().document;
       const annotation = document.annotations.find((item) => item.id === annotationDrag?.annotationId);
       const anchor = annotation?.[annotationDrag.field];
-      const point = resolveAnchorPoint(anchor, document, projection, geometryMaps);
+      const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, buildDisplayTimeMapping(document.timeline, document.timeGroups));
       if (!annotation || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
       const snap = annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type));
@@ -813,12 +813,14 @@ export function MinimalCycleView() {
         renderer.updateSnapGuide();
         delete rendererHost.dataset.snapKind;
         delete rendererHost.dataset.snapDistance;
+        delete rendererHost.dataset.snapCycle;
         return;
       }
       const row = projection.rowLayout.find((item) => item.rowId === snap.anchor.signalId);
       renderer.updateSnapGuide({ x: snap.point.x, y: snap.point.y, rowY: row?.y ?? 0, rowHeight: row?.height ?? projection.totalHeight, surfaceHeight: projection.totalHeight, label: `${snap.kind} · cycle ${snap.anchor.cycle}` });
       rendererHost.dataset.snapKind = snap.kind;
       rendererHost.dataset.snapDistance = String(Math.round(snap.distance * 100) / 100);
+      rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
     };
     const onAnnotationPointerUp = (event: PointerEvent) => {
       const drag = annotationDrag;
@@ -841,7 +843,7 @@ export function MinimalCycleView() {
       }
       const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
       const anchor = field ? annotation[field] : undefined;
-      const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps);
+      const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, buildDisplayTimeMapping(snapshot.document.timeline, snapshot.document.timeGroups));
       if (!field || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
       const snap = drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type));
@@ -849,6 +851,7 @@ export function MinimalCycleView() {
       if (snap) {
         rendererHost.dataset.snapKind = snap.kind;
         rendererHost.dataset.snapDistance = String(snap.distance);
+        rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
       }
       commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
     };
@@ -1738,13 +1741,14 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
   element.dataset.gridEnabled = String(visible);
   element.style.height = `${height}px`;
   if (!geometry || !referenceSignalId) return;
+  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const lines: HTMLElement[] = [];
-  for (let cycle = 0; cycle <= document.timeline.cycleCount; cycle += 1) {
-    const anchor = geometry.find({ signalId: referenceSignalId, cycle, point: "cycle-start" });
+  for (let displayCycle = 0; displayCycle <= mapping.displayCycleCount; displayCycle += 1) {
+    const anchor = geometry.find({ signalId: referenceSignalId, cycle: displayCycle, point: "cycle-start" });
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");
     line.dataset.role = "geometry-grid-line";
-    line.dataset.cycle = String(cycle);
+    line.dataset.cycle = String(mapping.labelFor(displayCycle));
     line.style.transform = `translateX(${anchor.point.x}px)`;
     line.style.height = `${height}px`;
     lines.push(line);
@@ -2077,11 +2081,13 @@ function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" 
 
 const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
-function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>): Point | undefined {
+function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): Point | undefined {
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
   if (!signalId) return undefined;
-  const local = maps.get(signalId)?.find({ ...anchor, signalId });
+  const renderedCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay[anchor.cycle];
+  if (renderedCycle === undefined) return undefined;
+  const local = maps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
   if (!local) return undefined;
   const row = anchor.signalId ? projection.rowLayout.find((item) => item.rowId === anchor.signalId) : undefined;
   if (anchor.signalId && !row) return undefined;
@@ -2090,9 +2096,10 @@ function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: Canoni
 }
 
 function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>): AnnotationOverlayPrimitive[] {
+  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
-      const point = resolveAnchorPoint(annotation[field], document, projection, maps);
+      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping);
       return point ? [{ field, ...point, ...(annotation[field]?.threshold === undefined ? {} : { threshold: annotation[field]!.threshold }) }] : [];
     });
     if (anchors.length === 0) return [];
@@ -2110,8 +2117,10 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
         for (let cycle = start; cycle <= end; cycle += 1) {
           const sourceCycle = cycle + offset;
           if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
+          const renderedCycle = mapping.sourceToDisplay[sourceCycle];
+          if (renderedCycle === undefined) continue;
           for (const point of ["cycle-start", "transition-center"] as const) {
-            const local = sourceMap.find({ signalId: annotation.sourceSignalId, cycle: sourceCycle, point });
+            const local = sourceMap.find({ signalId: annotation.sourceSignalId, cycle: renderedCycle, point });
             if (local) points.push({ x: local.point.x, y: sourceRowY + local.point.y });
           }
         }
@@ -2167,7 +2176,15 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
 }
 
 function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService()): ImmutableSnapIndex {
-  return service.build({ document, geometryMaps: maps, rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])) });
+  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+  return service.build({
+    document,
+    geometryMaps: maps,
+    rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])),
+    renderedCycleCount: mapping.displayCycleCount,
+    sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
+    renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
+  });
 }
 
 function preferredSnapKinds(type: AnnotationType): readonly SnapKind[] {

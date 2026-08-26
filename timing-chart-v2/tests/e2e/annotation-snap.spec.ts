@@ -156,6 +156,34 @@ test("snaps a dragged endpoint to exact rendered cycle geometry", async ({ page 
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
+test("preserves canonical source-cycle anchors through an Axis Break snap", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("0");
+  await page.getByLabel("Timeline range end").fill("2");
+  const owner = await createAnnotation(page, "arrow");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("2");
+  await page.getByLabel("Timeline range end").fill("4");
+  await page.getByRole("button", { name: "Add gap" }).click();
+  const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
+  const fromBox = await handle.boundingBox();
+  const cycle0 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  expect(fromBox).not.toBeNull();
+  await page.mouse.move(fromBox!.x + 4, fromBox!.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(fromBox!.x + 4 + (cycle5 - cycle0), fromBox!.y + 4);
+  await expect(host).toHaveAttribute("data-snap-kind", "cycle-boundary");
+  await expect(host).toHaveAttribute("data-snap-cycle", "5");
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-snap-cycle", "5");
+});
+
 test("nudges by 1/10 px and cancels pointer preview without a commit", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
