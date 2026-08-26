@@ -180,6 +180,26 @@ test("creates geometry-positioned Marker without waveform regeneration and a Gap
   await expect(ruler.locator("[data-cycle='3']")).toHaveCount(1);
 });
 
+test("bookmark list jumps to its geometry-backed cycle without changing the document", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end").fill("7");
+  await page.getByLabel("Timeline range start").fill("6");
+  await page.getByRole("button", { name: "Add marker" }).click();
+  const bookmark = page.locator("[data-bookmark-id]").first();
+  await expect(bookmark).toBeVisible();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  await page.getByTestId(/bookmark-jump-/).click();
+  await expect(host).toHaveAttribute("data-selected-cycle", "6");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("6");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("7");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+});
+
 test("duplicates the selected cycle state range at a destination in one commit", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
