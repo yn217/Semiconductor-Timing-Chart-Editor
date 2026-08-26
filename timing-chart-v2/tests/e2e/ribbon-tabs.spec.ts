@@ -82,3 +82,46 @@ test("Review tab Problems button navigates to the Problems panel", async ({ page
   await ribbon.getByRole("button", { name: "Problems", exact: true }).click();
   await expect(page.getByTestId("problems-panel")).toBeVisible();
 });
+
+test("AI query previews and applies one scoped SemanticCommand", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "AI", exact: true }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByLabel("AI semantic query").fill("rename selected signal to AI_REQ");
+  await ai.getByRole("button", { name: "Preview" }).click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Preview ready · no document mutation");
+  await expect(ai.getByTestId("ai-preview")).toContainText("Rename");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await ai.getByRole("button", { name: "Apply Preview" }).click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='frozen-signal-name']")).toHaveText("AI_REQ");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · one SemanticCommand");
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+});
+
+test("AI preview cancels and rejects stale revision without mutation", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "AI", exact: true }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByLabel("AI semantic query").fill("hide selected signal");
+  await ai.getByRole("button", { name: "Preview" }).click();
+  await ai.getByRole("button", { name: "Cancel" }).click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Preview cancelled · no document mutation");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await ai.getByRole("button", { name: "Preview" }).click();
+  await page.getByTestId("cycle-surface").click({ position: { x: 24, y: 24 } });
+  await page.keyboard.press("Delete");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(ai.getByRole("button", { name: "Apply Preview" })).toHaveCount(1);
+  await ai.getByRole("button", { name: "Apply Preview" }).click();
+  await expect(ai.getByTestId("ai-status")).toContainText("Conflict · preview revision");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
