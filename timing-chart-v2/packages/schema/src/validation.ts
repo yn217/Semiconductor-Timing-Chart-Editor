@@ -244,6 +244,18 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
     });
   });
 
+  const legendEntryIds = new Set<string>();
+  const legendOrders = new Set<number>();
+  document.legend.items?.forEach((entry, index) => {
+    if (!isStableId(entry.id)) problems.push(problem("INVALID_STABLE_ID", `$.legend.items[${index}].id`, "Legend entry ID must be stable.", entry.id));
+    if (legendEntryIds.has(entry.id)) problems.push(problem("DUPLICATE_ID", `$.legend.items[${index}].id`, `Legend entry ID '${entry.id}' is duplicated.`, entry.id));
+    legendEntryIds.add(entry.id);
+    if (!entry.label.trim()) problems.push(problem("INVALID_LEGEND_ENTRY", `$.legend.items[${index}].label`, "Legend entry label cannot be empty.", entry.id));
+    if (!Number.isInteger(entry.order) || entry.order < 0 || legendOrders.has(entry.order)) problems.push(problem("INVALID_LEGEND_ENTRY", `$.legend.items[${index}].order`, "Legend entry order must be a unique non-negative integer.", entry.id));
+    legendOrders.add(entry.order);
+    if (!(entry.role === "input" || entry.role === "output" || entry.role === "internal")) problems.push(problem("INVALID_LEGEND_ENTRY", `$.legend.items[${index}].role`, "Legend entry role is not supported by the canonical SignalRole contract.", entry.id));
+  });
+
   return problems;
 }
 

@@ -146,7 +146,11 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const width = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
   const height = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
-  const legend = document.legend.show ? [...new Set(signals.map((signal) => signal.role))].sort() : [];
+  const legend = document.legend.show
+    ? document.legend.items?.length
+      ? [...document.legend.items].filter((entry) => entry.visible).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map((entry) => entry.label)
+      : [...new Set(signals.map((signal) => signal.role))].sort()
+    : [];
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
   return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout });

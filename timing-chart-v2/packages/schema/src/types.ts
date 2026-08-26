@@ -241,11 +241,14 @@ export interface Transaction {
 
 export interface Constraint { readonly id: ConstraintId; readonly type: string; readonly data?: JsonObject }
 
+export interface LegendEntry { readonly id: string; readonly role: SignalRole; readonly label: string; readonly visible: boolean; readonly order: number }
+
 export interface Legend {
   readonly show: boolean;
   readonly orientation: "horizontal" | "vertical";
   readonly usedRolesOnly: boolean;
   readonly position: PixelOffset;
+  readonly items?: readonly LegendEntry[];
   readonly style?: JsonObject;
 }
 

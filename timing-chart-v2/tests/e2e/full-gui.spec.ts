@@ -149,6 +149,42 @@ test("edits and displays the Legend through the canonical presentation command",
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
 });
 
+test("edits Legend entry labels, visibility and order, then preserves them through Save/Open and export", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend entries JSON").fill(JSON.stringify([
+    { id: "legend_output", role: "output", label: "Outputs", visible: true, order: 0 },
+    { id: "legend_input", role: "input", label: "Inputs", visible: false, order: 1 },
+    { id: "legend_internal", role: "internal", label: "Core", visible: true, order: 2 },
+  ], null, 2));
+  await properties.getByTestId("apply-legend").click();
+  await expect(properties.getByTestId("legend-status")).toHaveText("Legend applied");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const legend = page.getByTestId("editor-legend");
+  await expect(legend.locator("[data-legend-id='legend_output']")).toHaveText(/Outputs/);
+  await expect(legend.locator("[data-legend-id='legend_internal']")).toHaveText(/Core/);
+  await expect(legend.locator("[data-legend-id='legend_input']")).toHaveCount(0);
+  const save = page.waitForEvent("download");
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await page.locator("input[type='file']").setInputFiles((await (await save).path())!);
+  await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_output']")).toHaveText(/Outputs/);
+  await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_input']")).toHaveCount(0);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const pending = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Export SVG" }).click();
+  const exported = await readFile((await (await pending).path())!);
+  expect(exported.toString("utf8")).toContain(">Outputs<");
+  expect(exported.toString("utf8")).not.toContain(">input<");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+});
+
 test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

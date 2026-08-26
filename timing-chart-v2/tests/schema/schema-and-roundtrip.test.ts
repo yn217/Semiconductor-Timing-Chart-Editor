@@ -88,6 +88,19 @@ describe("semantic validation", () => {
     expect(validateCanonicalDocument(document).some((item) => item.code === "MISSING_CROSS_REFERENCE")).toBe(true);
   });
 
+  it("validates LegendEntry identity, labels and explicit order", () => {
+    const document = clone(canonicalFixture());
+    (document as unknown as { legend: { items: unknown[] } }).legend.items = [
+      { id: "legend_input", role: "input", label: "Inputs", visible: true, order: 0 },
+      { id: "legend_output", role: "output", label: "Outputs", visible: false, order: 1 },
+    ];
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    (document as unknown as { legend: { items: Array<{ id: string; order: number; label: string }> } }).legend.items[1]!.id = "legend_input";
+    (document as unknown as { legend: { items: Array<{ id: string; order: number; label: string }> } }).legend.items[1]!.order = 0;
+    (document as unknown as { legend: { items: Array<{ id: string; order: number; label: string }> } }).legend.items[1]!.label = " ";
+    expect(validateCanonicalDocument(document).map((item) => item.code)).toEqual(expect.arrayContaining(["DUPLICATE_ID", "INVALID_LEGEND_ENTRY"]));
+  });
+
   it.each([
     ["duplicate IDs", (doc: CanonicalDocument) => { (doc.signals as unknown as Array<{ id: string }>)[1]!.id = doc.signals[0]!.id; }, "DUPLICATE_ID"],
     ["duplicate membership", (doc: CanonicalDocument) => { (doc.signalGroups as unknown as Array<{ rows: string[] }>)[0]!.rows.push(doc.signals[0]!.id); }, "DUPLICATE_ROW_MEMBERSHIP"],
