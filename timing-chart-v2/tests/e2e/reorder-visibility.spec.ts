@@ -3,6 +3,26 @@ import { expect, test, type Locator } from "@playwright/test";
 const signalOrder = async (surface: Locator) =>
   surface.locator("[data-role='left-tree-rows'] > [data-row-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
 
+test("creates an empty Signal Group from the tree through one group.create command", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const groupsBefore = await surface.locator("[data-role='tree-branch'][data-group-id]").count();
+  const emptyGroupsBefore = await page.locator("[data-role='empty-group'][data-group-id]").count();
+  await page.getByTestId("create-group").click();
+  await expect(page.locator("[data-role='empty-group'][data-group-id]")).toHaveCount(emptyGroupsBefore + 1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByLabel("Inspector group name")).toHaveValue("Group 4");
+  const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
+  expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
+  await expect(page.locator("[data-role='empty-group'][data-group-id]")).toHaveCount(emptyGroupsBefore);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+});
+
 test("hides and restores a selected signal without rebuilding its stable SVG", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

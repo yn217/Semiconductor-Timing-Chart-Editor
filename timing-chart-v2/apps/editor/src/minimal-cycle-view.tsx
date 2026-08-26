@@ -1215,6 +1215,16 @@ export function MinimalCycleView() {
     if (result.ok) { setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); setBulkRegistrationVisible(false); }
     else setBulkRegistrationStatus(result.problems.map((item) => item.message).join(" "));
   };
+  const createSignalGroup = () => {
+    const id = groupId(nextEntityId("group", snapshot.document));
+    const result = execute.current({ id: nextCommandId("group_create_tree"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index: snapshot.document.signalGroups.length });
+    if (result.ok) {
+      selectedGroupRef.current = id;
+      setSelectedGroupId(id);
+      selectedSignalRef.current = undefined;
+      setSelectedId(undefined);
+    }
+  };
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Problems", "JSON"]
     : viewMode === "Transaction"
@@ -1286,7 +1296,7 @@ export function MinimalCycleView() {
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </section>
-      <aside className="left-panel-tail"><label className="tree-filter"><span>Filter</span><input aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="name / path / role" /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
+    <aside className="left-panel-tail"><label className="tree-filter"><span>Filter</span><input aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="name / path / role" /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button" data-testid="create-group" onClick={createSignalGroup}>＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<div className="empty-group-list" aria-label="Empty signal groups">{snapshot.document.signalGroups.filter((group) => group.rows.length === 0).map((group) => <button type="button" key={group.id} data-role="empty-group" data-group-id={group.id} onClick={() => { selectedGroupRef.current = group.id; setSelectedGroupId(group.id); selectedSignalRef.current = undefined; setSelectedId(undefined); }}>{group.name}</button>)}</div><MiniMap document={snapshot.document} viewport={viewport} /></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
           {bottomTabs.map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
