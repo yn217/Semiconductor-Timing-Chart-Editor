@@ -532,6 +532,27 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
   await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const saved = await downloadPromise;
+  const savedPath = await saved.path();
+  expect(savedPath).toBeTruthy();
+  await inspector.getByLabel("Inspector edge counter count from").selectOption("signal-start");
+  await inspector.getByTestId("apply-inspector-edge-counter").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await page.locator("input[type='file']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("keeps global shortcuts focus-aware and IME-safe", async ({ page }) => {
