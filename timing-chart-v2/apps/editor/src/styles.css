@@ -63,6 +63,7 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .cycle-ruler { pointer-events: auto; }
 .cycle-ruler .cycle-tick { cursor: pointer; }
 .cycle-ruler .cycle-tick[data-range-selected="true"] { background: #cfe5fb; border-left-color: #2679bf; }
+.cycle-ruler [data-role="playhead"] { position: absolute; z-index: 20; top: 0; bottom: 0; width: 2px; background: #d23b31; box-shadow: 0 0 0 1px #ffffffaa; pointer-events: none; }
 .cycle-ruler .timeline-marker { z-index: 4; top: 19px; width: max-content; height: 14px; padding: 1px 4px; border: 0; border-radius: 3px; background: #fff1b8; color: #715900; font: 9px/12px "Segoe UI", sans-serif; }
 .cycle-ruler .timeline-gap { z-index: 3; top: 2px; height: 14px; overflow: hidden; padding: 1px 4px; border: 1px solid #7d6bb2; border-radius: 3px; background: #eee8ffdd; color: #4f3d82; font: 9px/10px "Segoe UI", sans-serif; text-align: center; }
 .cycle-ruler .cycle-tick, .cycle-ruler .timeline-marker, .surface-host [data-role="annotation-label"], .surface-host [data-role="snap-cycle-label"], .surface-host [data-role="clock-edge-number"] { transform-origin: 0 50%; scale: calc(1 / var(--zoom-x, 1)) 1; }

@@ -126,6 +126,9 @@ export function MinimalCycleView() {
   const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
   const [selectedCycle, setSelectedCycle] = useState(2);
+  const selectedCycleRef = useRef(selectedCycle);
+  selectedCycleRef.current = selectedCycle;
+  const refreshPlayhead = useRef<() => void>(() => undefined);
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
@@ -246,6 +249,24 @@ export function MinimalCycleView() {
     const refreshGrid = (document: CanonicalDocument) => {
       renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight);
     };
+    refreshPlayhead.current = () => {
+      const cycle = selectedCycleRef.current;
+      const tick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${cycle}']`);
+      let playhead = rulerElement.querySelector<HTMLElement>("[data-role='playhead']");
+      if (!tick) {
+        playhead?.remove();
+        return;
+      }
+      if (!playhead) {
+        playhead = rulerElement.ownerDocument.createElement("span");
+        playhead.dataset.role = "playhead";
+        playhead.dataset.testid = "playhead";
+        playhead.setAttribute("aria-label", "Playhead");
+        rulerElement.append(playhead);
+      }
+      playhead.dataset.playheadCycle = String(cycle);
+      playhead.style.left = tick.style.left;
+    };
 
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
@@ -340,6 +361,7 @@ export function MinimalCycleView() {
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
         buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
+        refreshPlayhead.current();
         refreshGrid(result.snapshot.document);
         applyZoom(currentZoom);
         refreshOverlays(result.snapshot.document);
@@ -373,6 +395,7 @@ export function MinimalCycleView() {
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
         buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
+        refreshPlayhead.current();
         refreshGrid(session.getSnapshot().document);
         applyZoom(currentZoom);
         refreshOverlays(session.getSnapshot().document);
@@ -810,6 +833,7 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("contextmenu", onContextMenu);
     rendererHost.ownerDocument.addEventListener("keydown", onAnnotationKeyDown);
     return () => {
+      refreshPlayhead.current = () => undefined;
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
       rendererHost.removeEventListener("click", onCanvasClick);
@@ -841,6 +865,8 @@ export function MinimalCycleView() {
       renderer.dispose();
     };
   }, []);
+
+  useEffect(() => { refreshPlayhead.current(); }, [selectedCycle, snapshot.revision]);
 
   const createSelectedAnnotation = (annotation: Annotation) => {
     commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_create"), type: "annotation.create", annotation });

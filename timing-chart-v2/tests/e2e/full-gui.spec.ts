@@ -190,6 +190,23 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
+test("Canvas cycle selection exposes a ruler-geometry-backed playhead without mutation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const ruler = page.getByTestId("cycle-ruler");
+  const before = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await ruler.locator("[data-cycle='6']").click();
+  const playhead = ruler.getByTestId("playhead");
+  await expect(playhead).toHaveAttribute("data-playhead-cycle", "6");
+  await expect(page.getByTestId("selection-status")).toContainText("None");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  expect(await playhead.evaluate((element) => element.style.left)).toBe(await ruler.locator(".cycle-tick[data-cycle='6']").evaluate((element) => (element as HTMLElement).style.left));
+  const after = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+});
+
 test("applies Signal Inspector capability fields as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
