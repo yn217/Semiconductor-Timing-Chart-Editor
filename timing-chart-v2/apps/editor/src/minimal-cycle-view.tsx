@@ -1689,7 +1689,7 @@ function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatu
   return <div className="annotation-toolbar" aria-label="Annotation tools" data-testid="annotation-toolbar">
     <strong>Annotation</strong>
     <select aria-label="Annotation type" value={type} onChange={(event) => setType(event.target.value as AnnotationType)}>
-      {(["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
+      {(["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
     {type === "measurement" && <label>Threshold<select aria-label="Measurement threshold" value={measurementThreshold} onChange={(event) => setMeasurementThreshold(event.target.value as "none" | "30-70")}><option value="none">Cycle anchors</option><option value="30-70">30% → 70%</option></select></label>}
     <button type="button" disabled={!signalId} title={signalId ? undefined : "No timing Signal is available in this document to anchor an Annotation."} onClick={() => signalId && onCreate(createAnnotation(type, signalId, range, document, thresholdPair))}>Add annotation</button>
@@ -1703,9 +1703,9 @@ function createAnnotation(type: AnnotationType, signalId: SignalId, range: { rea
   const id = nextEntityId("annotation", document) as AnnotationId;
   const first: SemanticAnchor = { signalId, cycle: range.start, point: thresholdPair ? "transition-center" : "cycle-start", ...(thresholdPair ? { threshold: thresholdPair.start } : {}) };
   const second: SemanticAnchor = { signalId, cycle: Math.max(range.start, range.end - 1), point: thresholdPair ? "transition-center" : "cycle-end", ...(thresholdPair ? { threshold: thresholdPair.end } : {}) };
-  const base = { id, type, label: `${type} ${range.start}`, visible: true, color: "#d04a36" } as const;
+  const base = { id, type, label: `${type} ${range.start}`, visible: true, color: type === "ghostTrace" ? "#64748b" : "#d04a36", ...(type === "timingRegion" ? { opacity: 0.16 } : {}), ...(type === "ghostTrace" ? { sourceSignalId: signalId, traceOffsetCycles: 0, opacity: 0.55 } : {}) } as const;
   if (type === "arrow" || type === "dependency") return { ...base, from: first, to: second, lineType: "straight", arrowhead: "end" };
-  if (["range", "bracket", "highlight", "measurement"].includes(type)) return { ...base, start: first, end: second };
+  if (["range", "bracket", "highlight", "measurement", "timingRegion", "ghostTrace"].includes(type)) return { ...base, start: first, end: second };
   return { ...base, anchor: first };
 }
 
@@ -1717,6 +1717,8 @@ function AnnotationEditor({ annotation, history, problem, onCommand, onUndo, onR
   const [arrowhead, setArrowhead] = useState<NonNullable<Annotation["arrowhead"]>>(annotation.arrowhead ?? "end");
   const [labelX, setLabelX] = useState(annotation.labelOffset?.x ?? 0);
   const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
+  const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
+  const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor">
     <div className="editor-tabbar">
       <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
@@ -1728,11 +1730,13 @@ function AnnotationEditor({ annotation, history, problem, onCommand, onUndo, onR
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
     <form className="annotation-properties" onSubmit={(event) => {
       event.preventDefault();
-      onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, label, visible, color, ...(annotation.type === "arrow" ? { lineType, arrowhead } : {}) });
+      onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, label, visible, color, ...(annotation.type === "arrow" ? { lineType, arrowhead } : {}), ...(["timingRegion", "ghostTrace"].includes(annotation.type) ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
     }}>
       <label>Label<input aria-label="Annotation label" value={label} onChange={(event) => setLabel(event.target.value)} /></label>
       <label>Color<input aria-label="Annotation color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label>
       <label className="check-label"><input aria-label="Annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Visible</label>
+      {(["timingRegion", "ghostTrace"] as const).includes(annotation.type as "timingRegion") && <label>Opacity<input aria-label="Annotation opacity" type="number" min="0" max="1" step="0.05" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} /></label>}
+      {annotation.type === "ghostTrace" && <><div className="property-row"><span>Source Signal</span><b data-testid="ghost-source-signal">{annotation.sourceSignalId ?? "Missing"}</b></div><label>Cycle Offset<input aria-label="Ghost Trace cycle offset" type="number" step="1" value={traceOffsetCycles} onChange={(event) => setTraceOffsetCycles(Number(event.target.value))} /></label></>}
       {annotation.type === "arrow" && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}
       <button type="submit" data-testid="apply-annotation-properties">Apply</button>
       <button type="button" onClick={() => onCommand({ id: nextCommandId("annotation_reset_offsets"), type: "annotation.resetOffsets", annotationId: annotation.id })}>Reset offsets</button>
@@ -1990,8 +1994,31 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
       return point ? [{ field, ...point, ...(annotation[field]?.threshold === undefined ? {} : { threshold: annotation[field]!.threshold }) }] : [];
     });
     if (anchors.length === 0) return [];
+    const firstAnchor = annotation.start ?? annotation.anchor;
+    const lastAnchor = annotation.end ?? annotation.anchor;
+    const tracePoints = annotation.type === "ghostTrace" && annotation.sourceSignalId && firstAnchor && lastAnchor
+      ? (() => {
+        const sourceMap = maps.get(annotation.sourceSignalId);
+        const sourceRowY = projection.rowLayout.find((row) => row.rowId === annotation.sourceSignalId)?.y;
+        if (!sourceMap || sourceRowY === undefined) return [];
+        const offset = annotation.traceOffsetCycles ?? 0;
+        const points: Point[] = [];
+        const start = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
+        const end = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
+        for (let cycle = start; cycle <= end; cycle += 1) {
+          const sourceCycle = cycle + offset;
+          if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
+          for (const point of ["cycle-start", "transition-center"] as const) {
+            const local = sourceMap.find({ signalId: annotation.sourceSignalId, cycle: sourceCycle, point });
+            if (local) points.push({ x: local.point.x, y: sourceRowY + local.point.y });
+          }
+        }
+        return points;
+      })()
+      : undefined;
     const shape: AnnotationOverlayPrimitive["shape"] = annotation.type === "verticalLine" ? "vertical"
-      : ["range", "highlight"].includes(annotation.type) ? "range"
+      : ["range", "highlight", "timingRegion"].includes(annotation.type) ? "range"
+      : annotation.type === "ghostTrace" ? "trace"
       : ["arrow", "dependency", "measurement", "bracket"].includes(annotation.type) ? "line" : "point";
     return [{
       id: annotation.id,
@@ -1999,11 +2026,15 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
       shape,
       label: annotation.type === "measurement" && annotation.start && annotation.end ? `${annotation.label} · ${annotation.start.threshold === undefined || annotation.end.threshold === undefined ? "cycle anchors" : `${Math.round(annotation.start.threshold * 100)}%→${Math.round(annotation.end.threshold * 100)}%`} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles` : annotation.label,
       visible: annotation.visible,
+      ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }),
+      ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }),
+      ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }),
       ...(annotation.color === undefined ? {} : { color: annotation.color }),
       anchors,
       ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }),
       ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }),
       ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }),
+      ...(tracePoints === undefined ? {} : { tracePoints }),
       surfaceHeight: projection.totalHeight,
     }];
   });

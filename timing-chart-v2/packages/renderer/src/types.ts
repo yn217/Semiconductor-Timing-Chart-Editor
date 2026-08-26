@@ -47,16 +47,22 @@ export interface OverlayAnchorPoint {
 export interface AnnotationOverlayPrimitive {
   readonly id: string;
   readonly type: string;
-  readonly shape: "point" | "line" | "range" | "vertical";
+  readonly shape: "point" | "line" | "range" | "vertical" | "trace";
   readonly label: string;
   readonly visible: boolean;
   readonly color?: string;
+  readonly opacity?: number;
+  readonly sourceSignalId?: string;
+  readonly traceOffsetCycles?: number;
   readonly anchors: readonly OverlayAnchorPoint[];
   readonly labelOffset?: Readonly<{ x: number; y: number }>;
   readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
   readonly arrowhead?: "end" | "start" | "bidirectional" | "none";
   readonly surfaceHeight: number;
+  readonly tracePoints?: readonly Point[];
 }
+
+export interface Point { readonly x: number; readonly y: number }
 
 export interface SnapGuidePrimitive {
   readonly x: number;

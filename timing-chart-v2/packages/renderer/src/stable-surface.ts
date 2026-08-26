@@ -262,6 +262,10 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   owner.dataset.visible = String(primitive.visible);
   owner.dataset.lineType = primitive.lineType ?? "straight";
   owner.dataset.arrowhead = primitive.arrowhead ?? "none";
+  if (primitive.sourceSignalId) owner.dataset.sourceSignalId = primitive.sourceSignalId;
+  else delete owner.dataset.sourceSignalId;
+  if (primitive.traceOffsetCycles !== undefined) owner.dataset.traceOffsetCycles = String(primitive.traceOffsetCycles);
+  else delete owner.dataset.traceOffsetCycles;
   owner.setAttribute("aria-label", `${primitive.type}: ${primitive.label}`);
   owner.hidden = !primitive.visible;
   owner.style.setProperty("--annotation-color", primitive.color ?? "#d04a36");
@@ -284,6 +288,23 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     body.style.transform = `translate(${Math.min(first.x, second.x)}px, 0px)`;
     body.style.width = `${Math.max(2, Math.abs(dx))}px`;
     body.style.height = `${primitive.surfaceHeight}px`;
+    body.dataset.annotationField = first.field;
+  } else if (primitive.shape === "trace") {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.dataset.role = "ghost-trace";
+    svg.setAttribute("width", "100%");
+    svg.setAttribute("height", String(primitive.surfaceHeight));
+    svg.setAttribute("aria-hidden", "true");
+    const polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    polyline.dataset.role = "ghost-trace-path";
+    polyline.setAttribute("points", (primitive.tracePoints ?? []).map((point) => `${point.x},${point.y}`).join(" "));
+    polyline.setAttribute("fill", "none");
+    polyline.setAttribute("stroke", primitive.color ?? "#64748b");
+    polyline.setAttribute("stroke-width", "2");
+    polyline.setAttribute("stroke-dasharray", "6 4");
+    polyline.setAttribute("opacity", String(primitive.opacity ?? 0.55));
+    svg.append(polyline);
+    body.append(svg);
     body.dataset.annotationField = first.field;
   } else {
     if (primitive.lineType === "orthogonal") {

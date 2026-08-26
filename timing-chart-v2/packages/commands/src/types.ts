@@ -82,7 +82,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "annotation.translateOffsets"; annotationId: AnnotationId; delta: PixelOffset }>
   | Readonly<{ id: CommandId; type: "annotation.resetOffsets"; annotationId: AnnotationId }>
   | Readonly<{ id: CommandId; type: "annotation.updateLabelOffset"; annotationId: AnnotationId; labelOffset: PixelOffset }>
-  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"] }>;
+  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"]; sourceSignalId?: SignalId; traceOffsetCycles?: number; opacity?: number }>;
 
 export interface ChangeSet {
   readonly fullDocumentReplace?: boolean;

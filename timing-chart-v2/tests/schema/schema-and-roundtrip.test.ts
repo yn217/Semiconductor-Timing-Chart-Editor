@@ -78,6 +78,16 @@ describe("canonical v2 schema and roundtrip", () => {
 });
 
 describe("semantic validation", () => {
+  it("accepts linked Timing Region/Ghost Trace and rejects a missing Ghost source", () => {
+    const document = clone(canonicalFixture());
+    const annotations = document.annotations as unknown as Array<Record<string, unknown>>;
+    annotations.push({ id: "annotation_timing_region", type: "timingRegion", label: "setup window", visible: true, start: { signalId: "sig_data", cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data", cycle: 4, point: "cycle-end" }, opacity: 0.2 });
+    annotations.push({ id: "annotation_ghost_trace", type: "ghostTrace", label: "previous data", visible: true, sourceSignalId: "sig_data", traceOffsetCycles: -1, opacity: 0.5, start: { signalId: "sig_data", cycle: 2, point: "cycle-start" }, end: { signalId: "sig_data", cycle: 5, point: "cycle-end" } });
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    annotations[1]!.sourceSignalId = "sig_missing";
+    expect(validateCanonicalDocument(document).some((item) => item.code === "MISSING_CROSS_REFERENCE")).toBe(true);
+  });
+
   it.each([
     ["duplicate IDs", (doc: CanonicalDocument) => { (doc.signals as unknown as Array<{ id: string }>)[1]!.id = doc.signals[0]!.id; }, "DUPLICATE_ID"],
     ["duplicate membership", (doc: CanonicalDocument) => { (doc.signalGroups as unknown as Array<{ rows: string[] }>)[0]!.rows.push(doc.signals[0]!.id); }, "DUPLICATE_ROW_MEMBERSHIP"],

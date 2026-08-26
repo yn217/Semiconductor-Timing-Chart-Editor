@@ -176,7 +176,7 @@ export interface SignalGroup {
   readonly style?: SignalGroupStyle;
 }
 
-export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency";
+export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency" | "timingRegion" | "ghostTrace";
 
 export interface Annotation {
   readonly id: AnnotationId;
@@ -194,6 +194,12 @@ export interface Annotation {
   readonly style?: JsonObject;
   readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal";
   readonly arrowhead?: "end" | "start" | "bidirectional" | "none";
+  /** Source signal for a linked Ghost Trace; semantic identity, never a DOM or pixel reference. */
+  readonly sourceSignalId?: SignalId;
+  /** Source-cycle displacement used to compare a Ghost Trace with its source. */
+  readonly traceOffsetCycles?: number;
+  /** Overlay opacity for Timing Region/Ghost Trace, constrained by canonical validation. */
+  readonly opacity?: number;
 }
 
 export interface Bookmark { readonly id: BookmarkId; readonly name: string; readonly start: number; readonly comment?: string }

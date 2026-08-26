@@ -16,19 +16,56 @@ test("creates every Annotation type on a renderer-owned stable overlay surface",
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  const types = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency"];
+  const types = ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace"];
   for (const type of types) await createAnnotation(page, type);
   await expect(surface.locator("[data-role='annotation-owner']")).toHaveCount(types.length);
   for (const type of types) await expect(surface.locator(`[data-annotation-type='${type}']`)).toHaveCount(1);
   await expect(surface.locator("[data-annotation-shape='point']")).toHaveCount(3);
-  await expect(surface.locator("[data-annotation-shape='range']")).toHaveCount(2);
+  await expect(surface.locator("[data-annotation-shape='range']")).toHaveCount(3);
   await expect(surface.locator("[data-annotation-shape='line']")).toHaveCount(4);
+  await expect(surface.locator("[data-annotation-shape='trace'] [data-role='ghost-trace-path']")).toHaveCount(1);
   await expect(surface.locator("[data-annotation-shape='vertical']")).toHaveCount(1);
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
   expect(countersAfter.overlayUpdates).toBe(countersBefore.overlayUpdates + types.length);
   await expect(page.getByTestId("history-status")).toHaveText(`History ${types.length} / Redo 0`);
+});
+
+test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("timingRegion");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await page.getByLabel("Annotation type").selectOption("ghostTrace");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  const ghost = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
+  await expect(ghost.locator("[data-role='ghost-trace-path']")).toHaveCount(1);
+  await ghost.locator("[data-role='annotation-label']").click();
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Ghost Trace cycle offset").fill("2");
+  await editor.getByLabel("Annotation opacity").fill("0.35");
+  await editor.getByRole("button", { name: "Apply" }).click();
+  await expect(ghost).toHaveAttribute("data-annotation-type", "ghostTrace");
+  const sourceSignalId = await ghost.getAttribute("data-source-signal-id");
+  expect(sourceSignalId).toMatch(/^sig_/);
+  await expect(ghost).toHaveAttribute("data-trace-offset-cycles", "2");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await page.locator("input[type='file']").setInputFiles((await (await save).path())!);
+  const reopenedGhost = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
+  await expect(reopenedGhost).toHaveAttribute("data-source-signal-id", sourceSignalId!);
+  await expect(reopenedGhost).toHaveAttribute("data-trace-offset-cycles", "2");
 });
 
 test("creates a geometry-backed 30/70 threshold Measurement and preserves it through Save/Open", async ({ page }) => {

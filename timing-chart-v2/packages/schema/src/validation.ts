@@ -190,13 +190,19 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
 
   document.annotations.forEach((annotation, index) => {
     const required = (["text", "callout", "verticalLine", "marker"] as const).includes(annotation.type as "text") ? ["anchor"]
-      : (["range", "bracket", "highlight", "measurement"] as const).includes(annotation.type as "range") ? ["start", "end"]
+      : (["range", "bracket", "highlight", "measurement", "timingRegion", "ghostTrace"] as const).includes(annotation.type as "range") ? ["start", "end"]
       : ["from", "to"];
     for (const field of required) if (!annotation[field as keyof Annotation]) problems.push(problem("MISSING_ANNOTATION_ANCHOR", `$.annotations[${index}].${field}`, `Annotation type '${annotation.type}' requires '${field}'.`, annotation.id));
     for (const key of ["anchor", "start", "end", "from", "to"] as const) {
       const anchor = annotation[key];
       if (anchor) validateAnchor(anchor, `$.annotations[${index}].${key}`, annotation, signals, document.timeline.cycleCount, problems);
     }
+    if (annotation.type === "ghostTrace") {
+      if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));
+      else if (!signals.has(annotation.sourceSignalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, `Source Signal '${annotation.sourceSignalId}' does not exist.`, annotation.id));
+      if (annotation.traceOffsetCycles !== undefined && !Number.isFinite(annotation.traceOffsetCycles)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].traceOffsetCycles`, "Ghost Trace cycle offset must be finite.", annotation.id));
+    }
+    if ((annotation.type === "timingRegion" || annotation.type === "ghostTrace") && annotation.opacity !== undefined && (!Number.isFinite(annotation.opacity) || annotation.opacity < 0 || annotation.opacity > 1)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].opacity`, "Overlay opacity must be between 0 and 1.", annotation.id));
   });
 
   const timeGroups = new Map(document.timeGroups.map((group) => [group.id, group]));

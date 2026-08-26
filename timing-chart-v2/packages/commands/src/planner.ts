@@ -856,7 +856,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
-      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
+      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
       if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
