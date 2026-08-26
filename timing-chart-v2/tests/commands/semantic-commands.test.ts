@@ -218,6 +218,19 @@ describe("command execution and atomic history", () => {
     expect(session.metrics()).toEqual({ validationRuns: rejectedMetrics.validationRuns + 1, commits: rejectedMetrics.commits });
   });
 
+  it("bulk-registers signals with preserved hardware paths in one history entry", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const first = extraSignal("sig_bulk_status");
+    const second = { ...extraSignal("sig_bulk_data"), source: { instancePath: ["dut", "core"], signalName: "data" } } as Signal;
+    const before = session.metrics();
+    expect(session.execute({ id: commandId("cmd_bulk_register"), type: "signal.bulkCreate", signals: [first, second], targetGroupId: "grp_main" as GroupId, index: 2 })).toMatchObject({ ok: true });
+    expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === second.id)?.source.instancePath).toEqual(["dut", "core"]);
+    expect(session.undo()).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals.some((signal) => signal.id === first.id)).toBe(false);
+  });
+
   it("supports Group lifecycle without implicitly moving rows", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const group = { id: "grp_empty" as GroupId, name: "Empty", rows: [] };

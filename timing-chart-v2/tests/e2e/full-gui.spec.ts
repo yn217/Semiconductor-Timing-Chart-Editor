@@ -71,6 +71,25 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await expect(page.getByTestId("bottom-editor")).toHaveCount(0);
 });
 
+test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const row = host.locator("[data-role='left-tree-rows'] [data-row-id='sig_cycle_data']");
+  await row.click();
+  await expect(row).toHaveAttribute("data-full-path", "dut.data[7:0]");
+  await expect(page.getByTestId("scope-breadcrumb")).toHaveText("Scope: dut");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  await page.getByTestId("reveal-in-hierarchy").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await page.getByTestId("bulk-register-open").click();
+  await page.getByLabel("Bulk signal definitions").fill("dut.core.status binary\ndut.core.payload bus");
+  await page.getByTestId("bulk-register-apply").click();
+  await expect(host).toHaveAttribute("data-history-depth", "1");
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.status']")).toHaveCount(1);
+  await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload']")).toHaveCount(1);
+});
+
 test("applies Signal Inspector capability fields as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

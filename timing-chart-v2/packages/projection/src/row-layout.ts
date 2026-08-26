@@ -52,6 +52,8 @@ function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupI
     kind: signal.type === "commentRow" ? "comment" : "timing",
     name: signal.display.name,
     role: signal.role,
+    instancePath: signal.source.instancePath,
+    fullPath: [...signal.source.instancePath, signal.source.signalName].join("."),
     y,
     height,
   };

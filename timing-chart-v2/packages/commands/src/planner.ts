@@ -2,6 +2,7 @@ import type { ValidationProblem } from "@timing-chart-v2/core";
 import type {
   Annotation,
   CanonicalDocument,
+  CommandId,
   CommentRow,
   RowId,
   Signal,
@@ -14,6 +15,7 @@ import type {
 } from "@timing-chart-v2/schema";
 import { isStableId, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
+import { mergeChangeSets } from "./changeset.js";
 
 export type CommandPlanResult =
   | Readonly<{ ok: true; document: CanonicalDocument; changeSet: ChangeSet; inverseChangeSet: ChangeSet }>
@@ -434,6 +436,20 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { addedSignals: [command.signal.id], rowOrder: [command.signal.id], waveSemantics: command.signal.type === "commentRow" ? [] : [command.signal.id], geometryLocal: command.signal.type === "commentRow" ? [] : [command.signal.id], geometryScreenY: command.signal.type === "commentRow" ? [] : [command.signal.id], minimapOverview: true };
       const inverseChangeSet: ChangeSet = { removedSignals: [command.signal.id], rowOrder: [command.signal.id], minimapOverview: true };
       return { ok: true, document: { ...document, signals: [...document.signals, command.signal], signalGroups: groups }, changeSet, inverseChangeSet };
+    }
+    case "signal.bulkCreate": {
+      if (command.signals.length === 0) return fail("no-op", "NO_OP", "$.signals", "Bulk registration requires at least one signal.");
+      let candidate = document;
+      const forward: ChangeSet[] = [];
+      const inverse: ChangeSet[] = [];
+      for (const [offset, signal] of command.signals.entries()) {
+        const plan = planCommand(candidate, { id: `${command.id}_item_${offset}` as CommandId, type: "signal.create", signal, targetGroupId: command.targetGroupId, index: command.index + offset });
+        if (!plan.ok) return plan;
+        candidate = plan.document;
+        forward.push(plan.changeSet);
+        inverse.unshift(plan.inverseChangeSet);
+      }
+      return { ok: true, document: candidate, changeSet: mergeChangeSets(forward), inverseChangeSet: mergeChangeSets(inverse) };
     }
     case "signal.delete": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);

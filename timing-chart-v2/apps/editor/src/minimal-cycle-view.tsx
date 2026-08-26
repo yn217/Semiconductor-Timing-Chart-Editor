@@ -107,6 +107,10 @@ export function MinimalCycleView() {
   const [bottomVisible, setBottomVisible] = useState(true);
   const [propertiesVisible, setPropertiesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
+  const [bulkRegistrationVisible, setBulkRegistrationVisible] = useState(false);
+  const [bulkRegistrationText, setBulkRegistrationText] = useState("dut.status binary\ndut.data[7:0] bus\n");
+  const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
+  const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const [clipboardStatus, setClipboardStatus] = useState("Empty");
@@ -839,6 +843,32 @@ export function MinimalCycleView() {
     });
     setBottomPinned(true);
   };
+  const revealSelectedInHierarchy = () => {
+    if (!selectedSignal) return;
+    selectedSignalRef.current = selectedSignal.id;
+    setSelectedId(selectedSignal.id);
+    requestAnimationFrame(() => host.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(selectedSignal.id)}']`)?.scrollIntoView({ block: "nearest" }));
+  };
+  const registerBulkSignals = () => {
+    const targetGroupId = bulkRegistrationGroupId ?? snapshot.document.signalGroups.at(-1)?.id;
+    if (!targetGroupId) return;
+    const rows = bulkRegistrationText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    const signals: Signal[] = [];
+    for (const [index, row] of rows.entries()) {
+      const [path, kind = "binary"] = row.split(/\s+/);
+      if (!path) continue;
+      const parts = path.split(".").filter(Boolean);
+      const signalName = parts.pop();
+      if (!signalName) continue;
+      const type = kind.toLowerCase() === "bus" ? "bus" : kind.toLowerCase() === "state" ? "state" : "binary";
+      const id = signalId(`${nextEntityId("signal", snapshot.document)}_bulk_${index}`);
+      signals.push(valueSignal(id, signalName, "internal", [{ start: 0, value: type === "state" ? "IDLE" : type === "bus" ? "00" : 0 }], type === "bus" ? { type, width: 8, displayFormat: "hex" } : { type }));
+      signals[signals.length - 1] = { ...signals[signals.length - 1]!, source: { ...signals[signals.length - 1]!.source, instancePath: parts } };
+    }
+    const result = commandRegistry.current.execute<SemanticCommand, ReturnType<CommandHistorySession["execute"]>>("semantic.execute", { id: nextCommandId("bulk_register_signals"), type: "signal.bulkCreate", signals, targetGroupId, index: snapshot.document.signalGroups.find((group) => group.id === targetGroupId)?.rows.length ?? 0 });
+    if (result.ok) { setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); setBulkRegistrationVisible(false); }
+    else setBulkRegistrationStatus(result.problems.map((item) => item.message).join(" "));
+  };
 
   return <main className="editor-shell" data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
@@ -893,7 +923,7 @@ export function MinimalCycleView() {
           <div className="surface-host" ref={host} data-testid="cycle-surface" />
         </div>
       </section>
-      <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button">＋ Signal</button><span>{snapshot.document.signals.length} signals</span></aside>
+      <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}</aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
           {(["Signal", "Annotation", "Transaction", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
@@ -903,10 +933,11 @@ export function MinimalCycleView() {
         </nav>
         <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}</div>
       </section>}
-      {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
+      {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} />}
     </div>
     {contextMenu && <div className="context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }} onMouseLeave={() => setContextMenu(undefined)}><button type="button" role="menuitem" onClick={() => { const current = selectedSignal?.name ?? selectedGroup?.name; const name = current === undefined ? null : window.prompt("Rename", current); if (name?.trim()) commandRegistry.current.execute("selection.rename", { name }); setContextMenu(undefined); }}>Rename</button><button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }}>Delete</button><button type="button" role="menuitem" onClick={() => { if (selectedSignal) commandRegistry.current.execute("selection.visibility", { visible: selectedSignal.display.visible === false }); setContextMenu(undefined); }}>Visibility</button></div>}
     {propertiesVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Document Properties" className="document-properties"><header><h2>Document Properties</h2><button type="button" aria-label="Close properties" onClick={() => setPropertiesVisible(false)}>×</button></header><dl><dt>Title</dt><dd>{snapshot.document.document.title}</dd><dt>ID</dt><dd>{snapshot.document.document.id}</dd><dt>Revision</dt><dd>{snapshot.document.document.footer.revision}</dd><dt>Signals</dt><dd>{snapshot.document.signals.length}</dd><dt>Cycles</dt><dd>{snapshot.document.timeline.cycleCount}</dd></dl></section></div>}
+    {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => setBulkRegistrationVisible(false)}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => setBulkRegistrationText(event.target.value)} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} onClose={() => setExportVisible(false)} />}
     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
     <footer className="status-bar">
@@ -996,7 +1027,7 @@ function Ribbon({ tab, document, range, history, zoom, arrowPickStatus, selected
   </section>;
 }
 
-function InspectorPanel({ signal, group, annotation, transaction, registry, document, onCommand }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly onCommand: (command: SemanticCommand) => void }) {
+function InspectorPanel({ signal, group, annotation, transaction, registry, document, onCommand, onReveal }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly onCommand: (command: SemanticCommand) => void; readonly onReveal: () => void }) {
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
   const [spacingBefore, setSpacingBefore] = useState(group?.spacingBefore ?? 0);
@@ -1007,7 +1038,7 @@ function InspectorPanel({ signal, group, annotation, transaction, registry, docu
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
   const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");
-  if (Boolean(signal)) return <InspectorSignalEditor signal={signal as Signal} onCommand={onCommand} />;
+  if (Boolean(signal)) return <InspectorSignalEditor signal={signal as Signal} onCommand={onCommand} onReveal={onReveal} />;
   return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><button type="button">•••</button></header>
     {!signal && !group && !annotation && !transaction && <section className="inspector-empty">No selection</section>}
     {signal && <>
@@ -1021,13 +1052,13 @@ function InspectorPanel({ signal, group, annotation, transaction, registry, docu
   </aside>;
 }
 
-function InspectorSignalEditor({ signal, onCommand }: { readonly signal: Signal; readonly onCommand: (command: SemanticCommand) => void }) {
-  if (signal.type === "clock") return <InspectorClockEditor signal={signal} onCommand={onCommand} />;
+function InspectorSignalEditor({ signal, onCommand, onReveal }: { readonly signal: Signal; readonly onCommand: (command: SemanticCommand) => void; readonly onReveal: () => void }) {
+  if (signal.type === "clock") return <InspectorClockEditor signal={signal} onCommand={onCommand} onReveal={onReveal} />;
   if (signal.type === "commentRow") return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span></header><section><h3>Comment Row</h3><div className="property-row"><span>Title</span><b>{signal.title}</b></div><div className="property-row"><span>Scope</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><p className="inspector-note">Comment Row editing is owned by the Bottom Context Editor.</p></section></aside>;
-  return <InspectorValueSignalEditor signal={signal} onCommand={onCommand} />;
+  return <InspectorValueSignalEditor signal={signal} onCommand={onCommand} onReveal={onReveal} />;
 }
 
-function InspectorValueSignalEditor({ signal, onCommand }: { readonly signal: ValueSignal; readonly onCommand: (command: SemanticCommand) => void }) {
+function InspectorValueSignalEditor({ signal, onCommand, onReveal }: { readonly signal: ValueSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onReveal: () => void }) {
   const [name, setName] = useState(signal.display.name);
   const [role, setRole] = useState<SignalRole>(signal.role);
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal.type);
@@ -1062,7 +1093,7 @@ function InspectorValueSignalEditor({ signal, onCommand }: { readonly signal: Va
         {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label></>}
         <label className="checkline">Visible<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} /></label>
       </section>
-      <section><h3>Hierarchy</h3><div className="property-row"><span>Instance Path</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><div className="property-row"><span>Signal Name</span><span>{signal.source.signalName}</span></div><div className="property-row"><span>Full Path</span><span title={fullPath}>{fullPath}</span></div><div className="property-row"><span>Bus Range</span><span>{signal.source.msb === undefined ? "—" : `[${signal.source.msb}:${signal.source.lsb ?? 0}]`}</span></div></section>
+      <section><h3>Hierarchy</h3><div className="property-row"><span>Instance Path</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><div className="property-row"><span>Signal Name</span><span>{signal.source.signalName}</span></div><div className="property-row"><span>Full Path</span><span title={fullPath}>{fullPath}</span></div><div className="property-row"><span>Bus Range</span><span>{signal.source.msb === undefined ? "—" : `[${signal.source.msb}:${signal.source.lsb ?? 0}]`}</span></div><button type="button" data-testid="reveal-in-hierarchy" onClick={onReveal}>Reveal in Hierarchy</button></section>
       <section><h3>Label Style</h3><label>Align<select aria-label="Inspector label align" value={align} onChange={(event) => setAlign(event.target.value as typeof align)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Overflow<select aria-label="Inspector label overflow" value={overflow} onChange={(event) => setOverflow(event.target.value as typeof overflow)}><option value="ellipsis">Ellipsis</option><option value="expand">Expand</option><option value="wrap">Wrap</option></select></label></section>
       <section><h3>Waveform / Row Style</h3><label>Style JSON<textarea aria-label="Inspector waveform row style" value={style} onChange={(event) => setStyle(event.target.value)} rows={3} /></label></section>
       {problem && <div className="editor-problem" role="alert">{problem}</div>}
@@ -1071,7 +1102,7 @@ function InspectorValueSignalEditor({ signal, onCommand }: { readonly signal: Va
   </aside>;
 }
 
-function InspectorClockEditor({ signal, onCommand }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void }) {
+function InspectorClockEditor({ signal, onCommand, onReveal }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onReveal: () => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });

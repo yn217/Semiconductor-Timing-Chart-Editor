@@ -10,6 +10,8 @@ export interface RowLayoutEntry {
   readonly kind: "timing" | "comment" | "spacer";
   readonly name: string;
   readonly role?: SignalRole;
+  readonly instancePath?: readonly string[];
+  readonly fullPath?: string;
   readonly y: number;
   readonly height: number;
 }

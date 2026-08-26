@@ -341,13 +341,15 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.groupId = row.groupId;
     shell.dataset.groupName = row.groupName;
     shell.dataset.groupStart = String(row.groupId !== previousGroupId);
+    shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
+    shell.dataset.fullPath = row.fullPath ?? row.name;
     if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
     if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
     if (surface === "left" && row.kind === "timing") {
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.groupId !== previousGroupId}`;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${row.groupId !== previousGroupId}`;
     if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
     place(shell, row);
     ordered.push(shell);
@@ -370,6 +372,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     const name = document.createElement("span");
     name.dataset.role = "tree-signal-name";
     name.textContent = row.name;
+    name.title = row.fullPath ?? row.name;
     shell.replaceChildren(branch, name);
     return;
   }
