@@ -11,7 +11,7 @@ function revisionNumber(value: string | null) {
   return Number(match?.[1]);
 }
 
-test("Home exposes grouped command surfaces and disables unsupported multi-select with a reason", async ({ page }) => {
+test("Home exposes grouped command surfaces and provides stable-ID Select All", async ({ page }) => {
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
@@ -19,8 +19,14 @@ test("Home exposes grouped command surfaces and disables unsupported multi-selec
     await expect(ribbon.locator(`[aria-label='${group}']`)).toBeVisible();
   }
   const selectAll = ribbon.getByRole("button", { name: "Select All", exact: true });
-  await expect(selectAll).toBeDisabled();
-  await expect(selectAll).toHaveAttribute("title", /Multi-selection owner/);
+  await expect(selectAll).toBeEnabled();
+  await expect(selectAll).toHaveAttribute("title", "Select all timing signals");
+  const beforeRevision = await page.getByTestId("revision-status").textContent();
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  await selectAll.click();
+  await expect(page.getByTestId("selection-status")).toHaveText("8 signals");
+  await expect(page.getByTestId("revision-status")).toHaveText(beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
 });
 
 test("Copy is view-only and Duplicate/Paste use one canonical command with fresh stable IDs", async ({ page }) => {
@@ -51,6 +57,23 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_paste");
   expect(revisionNumber(await page.getByTestId("revision-status").textContent())).toBe(initialRevision + 3);
   await expect(page.getByTestId("history-status")).toHaveText(/History 1 \/ Redo 0/);
+});
+
+test("multi-selection Delete commits selected stable IDs as one atomic operation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const request = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  const readyRow = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']");
+  await request.click();
+  await readyRow.click({ modifiers: ["Control"] });
+  await expect(page.getByTestId("selection-status")).toHaveText("2 signals");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator("[data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(host.locator("[data-row-id='sig_cycle_ready']")).toHaveCount(0);
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
 test("Cut uses the clipboard surface and one canonical delete operation", async ({ page }) => {

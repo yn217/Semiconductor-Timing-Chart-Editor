@@ -68,6 +68,7 @@ export function MinimalCycleView() {
   const ruler = useRef<HTMLDivElement>(null);
   const gridLayer = useRef<HTMLDivElement>(null);
   const execute = useRef<(command: SemanticCommand) => ReturnType<CommandHistorySession["execute"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
+  const executeBatch = useRef<(id: CommandId, commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
   const undo = useRef<() => void>(() => undefined);
   const redo = useRef<() => void>(() => undefined);
   const armArrowPick = useRef<() => void>(() => undefined);
@@ -80,7 +81,10 @@ export function MinimalCycleView() {
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const [selectedId, setSelectedId] = useState<SignalId | undefined>();
+  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
+  const selectedSignalIdsRef = useRef<ReadonlySet<SignalId>>(new Set());
+  selectedSignalIdsRef.current = selectedSignalIds;
   selectedSignalRef.current = selectedId;
   const [selectedGroupId, setSelectedGroupId] = useState<GroupId | undefined>();
   const selectedGroupRef = useRef<GroupId | undefined>(undefined);
@@ -167,9 +171,13 @@ export function MinimalCycleView() {
         } else if (annotationId) {
           const result = execute.current({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
           if (result.ok) { selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined); }
+        } else if (selectedSignalIdsRef.current.size > 1) {
+          const commands = [...selectedSignalIdsRef.current].map((id) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete" as const, signalId: id }));
+          const result = executeBatch.current(nextCommandId("route_delete_selection"), commands);
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
         } else if (signalId) {
           const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); }
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
         }
       }),
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {
@@ -393,6 +401,7 @@ export function MinimalCycleView() {
       });
     };
     execute.current = (command) => { const result = session.execute(command); applyResult(result); return result; };
+    executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result); return result; };
     undo.current = () => applyResult(session.undo());
     redo.current = () => applyResult(session.redo());
     const replaceDocument = (document: CanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
@@ -491,6 +500,7 @@ export function MinimalCycleView() {
         selectedGroupRef.current = groupOwner.dataset.groupId as GroupId;
         setSelectedId(undefined);
         selectedSignalRef.current = undefined;
+        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedAnnotationId(undefined);
         selectedAnnotationRef.current = undefined;
         setSelectedTransactionId(undefined);
@@ -503,6 +513,7 @@ export function MinimalCycleView() {
         selectedAnnotationRef.current = id;
         setSelectedAnnotationId(id);
         setSelectedId(undefined);
+        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
@@ -531,6 +542,7 @@ export function MinimalCycleView() {
         selectedAnnotationRef.current = annotation.id;
         setSelectedAnnotationId(annotation.id);
         setSelectedId(undefined);
+        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
@@ -546,13 +558,19 @@ export function MinimalCycleView() {
       if (!id) return;
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
+      const nextSelected = event.ctrlKey || event.metaKey ? new Set(selectedSignalIdsRef.current) : new Set<SignalId>();
+      if (nextSelected.has(signal.id)) nextSelected.delete(signal.id); else nextSelected.add(signal.id);
+      if (nextSelected.size === 0) nextSelected.add(signal.id);
+      selectedSignalIdsRef.current = nextSelected;
+      setSelectedSignalIds(nextSelected);
+      const primary = nextSelected.has(signal.id) ? signal.id : [...nextSelected][0];
       for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
-        const selected = row.dataset.rowId === id || row.dataset.signalId === id;
+        const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
+        const selected = rowId !== undefined && nextSelected.has(rowId);
         row.dataset.selected = String(selected);
         row.setAttribute("aria-selected", String(selected));
       }
-      rendererHost.dataset.selectedSignalId = id;
-      setSelectedId(signal.id);
+      if (primary) { rendererHost.dataset.selectedSignalId = primary; setSelectedId(primary); selectedSignalRef.current = primary; }
       setSelectedGroupId(undefined);
       selectedAnnotationRef.current = undefined;
       setSelectedAnnotationId(undefined);
@@ -904,6 +922,7 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("contextmenu", onContextMenu);
       rendererHost.ownerDocument.removeEventListener("keydown", onAnnotationKeyDown);
       execute.current = () => ({ ok: false, reason: "no-op", problems: [] });
+      executeBatch.current = () => ({ ok: false, reason: "no-op", problems: [] });
       undo.current = () => undefined;
       redo.current = () => undefined;
       armArrowPick.current = () => undefined;
@@ -999,10 +1018,33 @@ export function MinimalCycleView() {
   };
 
   const clearSelection = () => {
-    selectedSignalRef.current = undefined; setSelectedId(undefined);
+    selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
     selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
     selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
     selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined);
+  };
+  const selectAllSignals = () => {
+    const ids = snapshot.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
+    const selected = new Set(ids);
+    selectedSignalIdsRef.current = selected;
+    setSelectedSignalIds(selected);
+    const primary = ids[0];
+    selectedSignalRef.current = primary;
+    setSelectedId(primary);
+    setSelectedGroupId(undefined);
+    setSelectedAnnotationId(undefined);
+    setSelectedTransactionId(undefined);
+    if (primary) {
+      const rendererHost = host.current;
+      if (rendererHost) {
+        rendererHost.dataset.selectedSignalId = primary;
+        for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
+          const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
+          row.dataset.selected = String(rowId !== undefined && selected.has(rowId));
+          row.setAttribute("aria-selected", String(rowId !== undefined && selected.has(rowId)));
+        }
+      }
+    }
   };
   const copySelectedSignal = () => {
     if (!selectedSignal || selectedSignal.type === "commentRow") { setClipboardStatus("Select a signal to copy"); return; }
@@ -1114,14 +1156,15 @@ export function MinimalCycleView() {
       selectedSignalId={annotationTargetSignalId}
       problemsCount={diagnostics.length}
       clipboardStatus={clipboardStatus}
-      hasSelectedSignal={selectedSignal !== undefined && selectedSignal.type !== "commentRow"}
-      hasSelectedEntity={(selectedSignal !== undefined && selectedSignal.type !== "commentRow") || selectedGroup !== undefined}
+      hasSelectedSignal={selectedSignalIds.size === 1 && selectedSignal !== undefined && selectedSignal.type !== "commentRow"}
+      hasSelectedEntity={(selectedSignalIds.size > 0 && selectedSignal !== undefined && selectedSignal.type !== "commentRow") || selectedGroup !== undefined}
       onCopy={copySelectedSignal}
       onCut={cutSelectedSignal}
       onPaste={() => createCopiedSignal(clipboardSignalRef.current, "paste")}
       onDuplicate={() => createCopiedSignal(selectedSignal, "duplicate")}
       onRename={renameSelection}
       onClearSelection={clearSelection}
+      onSelectAll={selectAllSignals}
       onMoveUp={() => moveSelection(-1)}
       onMoveDown={() => moveSelection(1)}
       onVisibility={setSelectionVisibility}
@@ -1177,7 +1220,7 @@ export function MinimalCycleView() {
     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
     <footer className="status-bar">
       <span>Tool: Select</span>
-      <span>Selected: <strong data-testid="selection-status">{selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
+      <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
       <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: {snapEnabled ? "On" : "Off"}</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
@@ -1226,11 +1269,11 @@ function LegendView({ document }: { readonly document: CanonicalDocument }) {
   return <aside className={`editor-legend ${document.legend.orientation}`} data-testid="editor-legend" aria-label="Legend"><strong>Legend</strong>{roles.map((role) => <span key={role} data-legend-role={role}><i />{role}</span>)}</aside>;
 }
 
-function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onNavigateBookmark, onToggleGrid, onToggleSnap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onMoveUp, onMoveDown, onVisibility }: {
+function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled, arrowPickStatus, selectedSignalId, problemsCount, clipboardStatus, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onNavigateBookmark, onToggleGrid, onToggleSnap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number;
   readonly clipboardStatus: string; readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onNavigateBookmark: (cycle: number) => void;
-  readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
+  readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onSelectAll: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
 }) {
   const insertValueSignal = (type: "binary" | "bus" | "state") => {
     const targetGroup = document.signalGroups.at(-1);
@@ -1274,7 +1317,7 @@ function Ribbon({ tab, document, range, history, zoom, gridEnabled, snapEnabled,
       <div className="ribbon-group history-group" aria-label="History"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span>Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span>Redo</span></button><b>History</b></div>
       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedSignal} title="Copy is view-only"><RibbonIcon name="i-copy" /><span>Copy</span></button><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedSignal}><RibbonIcon name="i-cut" /><span>Cut</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardStatus.startsWith("Copied") && !clipboardStatus.startsWith("Cut")} title={clipboardStatus}><RibbonIcon name="i-paste" /><span>Paste</span></button><button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button><small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
       <div className="ribbon-group edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span>Delete</span></button><button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span>Rename</span></button><b>Edit</b></div>
-      <div className="ribbon-group selection-group" aria-label="Selection"><button type="button" className="ribbon-tool" onClick={onClearSelection}><RibbonIcon name="i-clear" /><span>Clear</span></button><button type="button" className="ribbon-tool" disabled title="Multi-selection owner is scheduled for the Hierarchy/Selection batch"><RibbonIcon name="i-select-all" /><span>Select All</span></button><b>Selection</b></div>
+      <div className="ribbon-group selection-group" aria-label="Selection"><button type="button" className="ribbon-tool" onClick={onClearSelection}><RibbonIcon name="i-clear" /><span>Clear</span></button><button type="button" className="ribbon-tool" onClick={onSelectAll} disabled={document.signals.every((signal) => signal.type === "commentRow")} title="Select all timing signals"><RibbonIcon name="i-select-all" /><span>Select All</span></button><b>Selection</b></div>
       <div className="ribbon-group visibility-group" aria-label="Visibility"><button type="button" className="ribbon-tool" onClick={() => onVisibility(true)} disabled={!hasSelectedSignal}><RibbonIcon name="i-eye" /><span>Show</span></button><button type="button" className="ribbon-tool" onClick={() => onVisibility(false)} disabled={!hasSelectedSignal}><RibbonIcon name="i-eye-off" /><span>Hide</span></button><b>Visibility</b></div>
       <div className="ribbon-group arrange-group" aria-label="Arrange"><button type="button" className="ribbon-tool" onClick={onMoveUp} disabled={!hasSelectedEntity}><RibbonIcon name="i-up" /><span>Move Up</span></button><button type="button" className="ribbon-tool" onClick={onMoveDown} disabled={!hasSelectedEntity}><RibbonIcon name="i-down" /><span>Move Down</span></button><b>Arrange</b></div>
       <div className="ribbon-group properties-group" aria-label="Properties"><button type="button" className="ribbon-tool" onClick={onProperties}><RibbonIcon name="i-properties" /><span>Properties</span></button><b>Properties</b></div>
