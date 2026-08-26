@@ -154,7 +154,10 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     }
     const selected = edges.filter((edge) => signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === edge.kind);
     selected.sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind));
-    selected.forEach((edge, index) => {
+    const countFromDisplay = signal.edgeCounter.countFrom === "visible-range-start" || signal.edgeCounter.countFrom === "selected-edge" ? range.start
+      : signal.edgeCounter.countFrom === "marker" ? Math.min(...document.bookmarks.map((bookmark) => toDisplayPosition(mapping, bookmark.start)), Number.POSITIVE_INFINITY)
+        : Number.NEGATIVE_INFINITY;
+    selected.filter((edge) => toDisplayPosition(mapping, edge.cycle) >= countFromDisplay).forEach((edge, index) => {
       if (index % Math.max(1, signal.edgeCounter.labelEvery) !== 0) return;
       const displayCycle = toDisplayPosition(mapping, edge.cycle);
       if (displayCycle < range.start || displayCycle >= range.end) return;

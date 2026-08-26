@@ -112,6 +112,9 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-edge-counter-id="edge:sig_clk:rising:0"');
     expect(svg).toContain('data-edge-kind="falling"');
     expect(scene.edgeCounters.every((edge) => edge.x >= scene.ruler.x && edge.x <= scene.width)).toBe(true);
+    const visibleRange = buildExportScene({ ...document, signals: [{ ...document.signals[0]!, edgeCounter: { ...document.signals[0]!.edgeCounter, countFrom: "visible-range-start" as const } }, document.signals[1]!] }, { format: "svg", scope: "selected-range", range: { start: 4, end: 7 } });
+    expect(visibleRange.edgeCounters[0]?.cycle).toBeGreaterThanOrEqual(4);
+    expect(visibleRange.edgeCounters[0]?.label).toBe("10");
   });
 
   it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {

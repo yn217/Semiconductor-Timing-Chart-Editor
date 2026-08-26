@@ -524,12 +524,14 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await inspector.getByLabel("Inspector edge counter show").check();
   await inspector.getByLabel("Inspector edge counter mode").selectOption("both");
   await inspector.getByLabel("Inspector edge counter every").fill("2");
+  await inspector.getByLabel("Inspector edge counter count from").selectOption("visible-range-start");
   await inspector.getByTestId("apply-inspector-edge-counter").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(0);
 });
 
 test("keeps global shortcuts focus-aware and IME-safe", async ({ page }) => {
