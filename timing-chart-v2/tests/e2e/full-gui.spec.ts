@@ -71,6 +71,25 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await expect(page.getByTestId("bottom-editor")).toHaveCount(0);
 });
 
+test("applies Annotation Inspector drafts through one semantic command", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const owner = await createTextAnnotation(page);
+  const inspector = page.getByTestId("inspector");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await inspector.getByLabel("Inspector annotation label").fill("Inspector Note");
+  await inspector.getByLabel("Inspector annotation color").fill("#114477");
+  await inspector.getByTestId("apply-inspector-annotation").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(inspector.getByLabel("Inspector annotation label")).toHaveValue("Inspector Note");
+  await expect(owner.locator("[data-role='annotation-label']")).toHaveText("Inspector Note");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+});
+
 test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
