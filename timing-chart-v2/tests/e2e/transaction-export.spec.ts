@@ -219,3 +219,20 @@ test("copies deterministic SVG and PNG through browser Clipboard export", async 
   expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
   expect(await surface.getAttribute("data-session-counters")).toBe(before.counters);
 });
+
+test("Export dialog applies page and fit settings to the exported scene", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  await dialog.getByLabel("Export page size").selectOption("A4");
+  await dialog.getByLabel("Export orientation").selectOption("portrait");
+  await dialog.getByLabel("Export fit").selectOption("page");
+  await dialog.getByLabel("Export margin").fill("32");
+  const pending = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Export SVG" }).click();
+  const download = await pending;
+  const text = (await readFile((await download.path())!)).toString("utf8");
+  expect(text).toContain('viewBox="0 0 794 1123"');
+  expect(text).toContain('data-layer="page-content"');
+});

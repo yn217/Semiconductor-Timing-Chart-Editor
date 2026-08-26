@@ -27,6 +27,7 @@ export interface ExportEdgeCounter { readonly id: string; readonly signalId: Sig
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
 export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number; readonly ticks: readonly ExportRulerTick[] }
 export interface ExportDocumentLayout { readonly title: string; readonly headerLines: readonly string[]; readonly figureNumber: string; readonly revision: string; readonly footerText: string }
+export interface ExportPageLayout { readonly width: number; readonly height: number; readonly margin: number; readonly fit: "width" | "page"; readonly contentScale: number; readonly contentOffsetX: number; readonly contentOffsetY: number }
 
 export interface ExportScene {
   readonly width: number;
@@ -40,6 +41,7 @@ export interface ExportScene {
   readonly legend: readonly string[];
   readonly ruler: ExportRuler;
   readonly documentLayout: ExportDocumentLayout;
+  readonly page?: ExportPageLayout;
 }
 
 export interface ExportService { export(request: ExportRequest): Promise<Uint8Array> }
@@ -118,6 +120,29 @@ function toDisplayPosition(mapping: DisplayTimeMapping, sourceCycle: number): nu
   return left + (right - left) * (clamped - lower);
 }
 
+function pageDimensions(page: NonNullable<ExportSettings["page"]>): { width: number; height: number } {
+  const base = page.size === "A4" ? { width: 1123, height: 794 } : page.size === "Letter" ? { width: 1056, height: 816 } : { width: 1600, height: 900 };
+  return page.orientation === "portrait" ? { width: base.height, height: base.width } : base;
+}
+
+function pageLayout(page: NonNullable<ExportSettings["page"]>, contentWidth: number, contentHeight: number): ExportPageLayout {
+  if (!Number.isFinite(page.margin) || page.margin < 0) throw new Error("Export page margin must be finite and non-negative.");
+  const dimensions = pageDimensions(page);
+  const availableWidth = Math.max(1, dimensions.width - page.margin * 2);
+  const availableHeight = Math.max(1, dimensions.height - page.margin * 2);
+  const contentScale = page.fit === "page"
+    ? Math.min(availableWidth / contentWidth, availableHeight / contentHeight)
+    : availableWidth / contentWidth;
+  const width = page.fit === "page" ? dimensions.width : dimensions.width;
+  const height = page.fit === "page" ? dimensions.height : page.margin * 2 + contentHeight * contentScale;
+  return Object.freeze({
+    width, height, margin: page.margin, fit: page.fit,
+    contentScale,
+    contentOffsetX: page.margin + (availableWidth - contentWidth * contentScale) / 2,
+    contentOffsetY: page.fit === "page" ? page.margin + (availableHeight - contentHeight * contentScale) / 2 : page.margin,
+  });
+}
+
 export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
   const documentLayout = buildDocumentLayout(document);
   const headerHeight = 38 + documentLayout.headerLines.length * 14;
@@ -181,8 +206,8 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, mapping, range.start, cycleWidth);
     return first && second ? { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.start?.threshold === undefined ? {} : { threshold1: annotation.start.threshold }), ...(annotation.end?.threshold === undefined ? {} : { threshold2: annotation.end.threshold }) } : undefined;
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
-  const width = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
-  const height = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
+  const contentWidth = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
+  const contentHeight = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show
     ? document.legend.items?.length
       ? [...document.legend.items].filter((entry) => entry.visible).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map((entry) => entry.label)
@@ -190,13 +215,14 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     : [];
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
-  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, edgeCounters, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout });
+  const page = settings.page ? pageLayout(settings.page, contentWidth, contentHeight) : undefined;
+  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, edgeCounters, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
 export function renderExportSvg(scene: ExportScene): string {
-  const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}" data-export-scene="v2" data-wave-engine="wavedrom-${WAVEDROM_VERSION}">`, `<rect width="100%" height="100%" fill="white"/>`];
+  const out = [`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 ${scene.width} ${scene.height}" width="${scene.width}" height="${scene.height}" data-export-scene="v2" data-wave-engine="wavedrom-${WAVEDROM_VERSION}">`, `<rect width="100%" height="100%" fill="white"/>`, ...(scene.page ? [`<g data-layer="page-content" transform="translate(${scene.page.contentOffsetX} ${scene.page.contentOffsetY}) scale(${scene.page.contentScale})">`] : [])];
   const layout = scene.documentLayout;
   out.push(`<g data-layer="document-layout" font-family="Segoe UI,Arial,sans-serif" fill="#1e293b"><text data-layout="title" x="12" y="20" font-size="16" font-weight="700">${xml(layout.title)}</text>`);
   layout.headerLines.forEach((line, index) => out.push(`<text data-layout="header" x="12" y="${38 + index * 14}" font-size="10">${xml(line)}</text>`));
@@ -227,6 +253,7 @@ export function renderExportSvg(scene: ExportScene): string {
   const footer = [layout.figureNumber, layout.revision, layout.footerText].filter((value) => value.length > 0).join(" · ");
   out.push(`</g><g data-layer="legend" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${12 + index * 80}" y="${scene.height - (footer ? 30 : 12)}">${xml(role)}</text>`).join("")}</g>`);
   if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);
+  if (scene.page) out.push(`</g>`);
   out.push(`</svg>`);
   return out.join("");
 }

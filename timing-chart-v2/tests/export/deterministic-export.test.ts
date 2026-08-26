@@ -63,6 +63,20 @@ describe("deterministic document export", () => {
     expect(first).toEqual(second);
   });
 
+  it("applies page size, orientation, margin and fit through the shared ExportScene", () => {
+    const document = scaleFixture(2);
+    const page = { size: "A4" as const, orientation: "portrait" as const, margin: 32, fit: "page" as const };
+    const scene = buildExportScene(document, { format: "svg", scope: "document", page });
+    expect(scene.width).toBe(794);
+    expect(scene.height).toBe(1123);
+    expect(scene.page).toMatchObject({ margin: 32, fit: "page" });
+    expect(scene.page!.contentScale).toBeGreaterThan(0);
+    const svg = renderExportSvg(scene);
+    expect(svg).toContain('data-layer="page-content"');
+    expect(svg).toContain('viewBox="0 0 794 1123"');
+    expect(svg).toContain(`translate(${scene.page!.contentOffsetX} ${scene.page!.contentOffsetY}) scale(${scene.page!.contentScale})`);
+  });
+
   it("exports document header/footer through an independent wrapped layout", () => {
     const document = { ...scaleFixture(2), document: {
       ...scaleFixture(2).document,
