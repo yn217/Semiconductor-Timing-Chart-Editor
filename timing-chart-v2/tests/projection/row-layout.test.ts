@@ -37,7 +37,7 @@ describe("RowLayout and projection invariants", () => {
     document.signalGroups = [0, 1, 2].map((index) => ({ id: `grp_${index}` as GroupId, name: `G${index}`, rows: [`sig_${index}` as SignalId], spacingBefore: 10, spacingAfter: 11 }));
     const result = calculateRowLayout(document);
     expect(result.visibleRows).toHaveLength(2);
-    expect(result.totalHeight).toBe(2 * (10 + document.layout.rowHeight + 11));
+    expect(result.totalHeight).toBe(2 * (10 + 32 + document.layout.rowHeight + 11));
   });
 
   it("returns zero height when every group is fully hidden", () => {
@@ -50,11 +50,12 @@ describe("RowLayout and projection invariants", () => {
     const result = calculateRowLayout(layoutFixture());
     expect(result.canonicalRowIds).toEqual(["sig_clk", "spacer_gap", "sig_data"]);
     expect(result.visibleRows).toMatchObject([
-      { rowId: "sig_clk", kind: "timing", y: 2, height: 20 },
-      { rowId: "spacer_gap", kind: "spacer", y: 27, height: 10 },
-      { rowId: "sig_data", kind: "timing", y: 43, height: 20 },
+      { rowId: "sig_clk", kind: "timing", y: 34, height: 20 },
+      { rowId: "spacer_gap", kind: "spacer", y: 59, height: 10 },
+      { rowId: "sig_data", kind: "timing", y: 75, height: 20 },
     ]);
-    expect(result.totalHeight).toBe(66);
+    expect(result.groupHeaders).toMatchObject([{ rowId: "grp_main:header", groupId: "grp_main", groupName: "Main", y: 2, height: 32 }]);
+    expect(result.totalHeight).toBe(98);
   });
 
   it("keeps Left, Frozen, and Timing mounted IDs identical", () => {
@@ -81,8 +82,8 @@ describe("RowLayout and projection invariants", () => {
       viewport: { viewportStartY: 40, viewportEndY: 70, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
     });
     expect(projection.visibleRowIds).toHaveLength(3);
-    expect(projection.mountedRowIds).toEqual(["sig_data"]);
-    expect(projection.mountedSignalIds).toEqual(["sig_data"]);
+    expect(projection.mountedRowIds).toEqual(["sig_clk", "spacer_gap", "sig_data"]);
+    expect(projection.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
     expect(projection.waveSignalIds).toEqual([]);
   });
 

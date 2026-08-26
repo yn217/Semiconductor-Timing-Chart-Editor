@@ -1,4 +1,4 @@
-import type { RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
+import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
 
 interface Layers {
@@ -16,6 +16,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #leftRows = new Map<string, HTMLElement>();
   readonly #frozenRows = new Map<string, HTMLElement>();
   readonly #timingRows = new Map<string, HTMLElement>();
+  readonly #leftGroupHeaders = new Map<string, HTMLElement>();
+  readonly #frozenGroupHeaders = new Map<string, HTMLElement>();
+  readonly #timingGroupHeaders = new Map<string, HTMLElement>();
   readonly #waveOwners = new Map<WaveSignalId, HTMLElement>();
   readonly #overlayOwners = new Map<string, HTMLElement>();
   readonly #overlaySignatures = new Map<string, string>();
@@ -61,7 +64,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
     const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, rows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
-    this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.reduce((sum, item) => sum + item.moves, 0) };
+    const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
+    this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
     layers.root.style.height = `${projection.totalHeight}px`;
     layers.root.dataset.revision = String(projection.revision);
     layers.root.dataset.canonicalRowIds = projection.canonicalRowIds.join(",");
@@ -388,7 +392,12 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     ordered.push(shell);
     previousGroupId = row.groupId;
   }
-  if (ordered.length !== layer.children.length || ordered.some((shell, index) => layer.children[index] !== shell)) { layer.replaceChildren(...ordered); moves = ordered.length; }
+  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader);
+  if (ordered.length !== currentRows.length || ordered.some((shell, index) => currentRows[index] !== shell)) {
+    const currentHeaders = Array.from(layer.children).filter((child) => (child as HTMLElement).dataset.groupHeader);
+    layer.replaceChildren(...ordered, ...currentHeaders);
+    moves = ordered.length;
+  }
   return { creates, destroys, moves };
 }
 
@@ -400,18 +409,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     branch.dataset.role = "tree-branch";
     branch.dataset.groupId = row.groupId;
     branch.draggable = groupStart;
-    if (groupStart) {
-      branch.setAttribute("aria-label", `Select ${row.groupName} group`);
-      const collapse = document.createElement("button");
-      collapse.type = "button";
-      collapse.dataset.role = "tree-collapse";
-      collapse.dataset.groupId = row.groupId;
-      collapse.setAttribute("aria-label", `Collapse ${row.groupName} group`);
-      collapse.textContent = "⌄";
-      branch.append(collapse, document.createTextNode(` ${row.groupName}`));
-    } else {
-      branch.textContent = "";
-    }
+    branch.textContent = "";
     const name = document.createElement("span");
     name.dataset.role = "tree-signal-name";
     name.textContent = row.name;
@@ -444,6 +442,67 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
   shell.replaceChildren(role, name);
 }
 
+function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, headerIds: readonly GroupHeaderLayoutEntry["rowId"][], headers: readonly GroupHeaderLayoutEntry[], surface: string): { creates: number; destroys: number; moves: number } {
+  const active = new Set<string>(headerIds);
+  let creates = 0, destroys = 0, moves = 0;
+  for (const [id, shell] of cache) if (!active.has(id)) { shell.remove(); cache.delete(id); destroys += 1; }
+  const byId = new Map(headers.map((header) => [header.rowId, header]));
+  const ordered: HTMLElement[] = [];
+  for (const id of headerIds) {
+    const header = byId.get(id);
+    if (!header) continue;
+    let shell = cache.get(id);
+    if (!shell) {
+      shell = element(layer.ownerDocument, "div", `${surface}-group-header`);
+      shell.dataset.rowId = id;
+      cache.set(id, shell);
+      creates += 1;
+    }
+    shell.dataset.groupId = header.groupId;
+    shell.dataset.groupName = header.groupName;
+    shell.dataset.groupHeader = "true";
+    if (header.groupStyle?.showBackground && header.groupStyle.background) shell.style.setProperty("--group-background", header.groupStyle.background);
+    else shell.style.removeProperty("--group-background");
+    if (header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
+    else shell.style.removeProperty("--group-border");
+    if (surface === "left") populateGroupHeader(shell, header);
+    else if (surface === "frozen") shell.textContent = header.groupName;
+    else shell.replaceChildren();
+    place(shell, header);
+    ordered.push(shell);
+  }
+  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader);
+  const currentHeaders = Array.from(layer.children).filter((child) => (child as HTMLElement).dataset.groupHeader);
+  if (ordered.length !== currentHeaders.length || ordered.some((shell, index) => currentHeaders[index] !== shell)) {
+    layer.replaceChildren(...currentRows, ...ordered);
+    moves += ordered.length;
+  }
+  return { creates, destroys, moves };
+}
+
+function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry): void {
+  const document = shell.ownerDocument;
+  const branch = document.createElement("span");
+  branch.dataset.role = "tree-branch";
+  branch.dataset.groupId = header.groupId;
+  branch.draggable = true;
+  branch.setAttribute("aria-label", `Select ${header.groupName} group`);
+  const collapse = document.createElement("button");
+  collapse.type = "button";
+  collapse.dataset.role = "tree-collapse";
+  collapse.dataset.groupId = header.groupId;
+  collapse.setAttribute("aria-label", `Collapse ${header.groupName} group`);
+  collapse.textContent = "⌄";
+  branch.append(collapse, document.createTextNode(` ${header.groupName}`));
+  const more = document.createElement("button");
+  more.type = "button";
+  more.dataset.role = "tree-group-more";
+  more.dataset.groupId = header.groupId;
+  more.setAttribute("aria-label", `More actions for ${header.groupName}`);
+  more.textContent = "⋮";
+  shell.replaceChildren(branch, more);
+}
+
 function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
   const style = row.displayStyle ?? {};
   const color = typeof style.color === "string" && /^#[0-9a-f]{3,8}$/i.test(style.color) ? style.color : undefined;
@@ -458,7 +517,7 @@ function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
   if (row.displayOverflow === "wrap") { shell.style.whiteSpace = "normal"; shell.style.textOverflow = "clip"; } else if (row.displayOverflow === "expand") { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "clip"; } else { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "ellipsis"; }
 }
 
-function place(element: HTMLElement, row: RowLayoutEntry): void {
+function place(element: HTMLElement, row: Pick<RowLayoutEntry, "y" | "height">): void {
   element.style.transform = `translateY(${row.y}px)`;
   element.style.height = `${row.height}px`;
 }

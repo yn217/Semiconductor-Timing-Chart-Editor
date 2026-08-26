@@ -94,7 +94,14 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   const history = await page.getByTestId("history-status").textContent();
   const counters = await surface.getAttribute("data-render-counters");
   const control = host.locator("[data-role='left-row'][data-group-id='grp_cycle_control']");
-  await control.locator("[data-role='tree-collapse']").click();
+  const controlHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']");
+  await expect(host.locator("[data-role='left-group-header']")).toHaveCount(2);
+  await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(2);
+  await expect(host.locator("[data-role='timing-group-header']")).toHaveCount(2);
+  await expect(controlHeader).toHaveAttribute("data-group-name", "Control");
+  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-group-headers-1672x941.png" });
+  await expect(controlHeader).toBeVisible();
+  await controlHeader.locator("[data-role='tree-collapse']").click();
   await expect(host).toHaveAttribute("data-collapsed-groups", "grp_cycle_control");
   await expect(control.first()).toBeVisible();
   await expect(host.locator("[data-role='left-row'][data-group-id='grp_cycle_control'][data-row-id='sig_cycle_request']")).toHaveAttribute("hidden", "");
@@ -102,7 +109,7 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await expect(surface).toHaveAttribute("data-render-counters", counters!);
-  await control.locator("[data-role='tree-collapse']").click();
+  await controlHeader.locator("[data-role='tree-collapse']").click();
   await expect(host).toHaveAttribute("data-collapsed-groups", "");
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeVisible();
 });
@@ -511,7 +518,7 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
 test("applies Group Inspector presentation properties as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
-  await host.locator("[data-role='tree-branch'][data-group-id='grp_cycle_control']").first().click();
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch']").click();
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Inspector group name").fill("Control Group");
   await inspector.getByLabel("Group show background").check();

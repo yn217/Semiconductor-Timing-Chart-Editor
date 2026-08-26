@@ -10,7 +10,7 @@ async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
   await expect(page.locator(".app-titlebar h1")).toHaveText(document.document.title, { timeout: 60_000 });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   let previous = -1, stable = 0;
-  for (let attempt = 0; attempt < 40 && stable < 2; attempt += 1) {
+  for (let attempt = 0; attempt < 60 && stable < 5; attempt += 1) {
     const current = (await counters(page)).waveDromRenders;
     stable = current === previous ? stable + 1 : 0; previous = current;
     await page.waitForTimeout(100);
@@ -50,7 +50,9 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
     const index = trial % 5 + 1;
     const name = `${index % 5 === 0 ? "BUS" : "SIG"}_${index}`;
     const started = await page.evaluate(() => performance.now());
-    await host.locator(`[data-role='frozen-row'][data-row-id='sig_perf_${index}']`).click();
+    // The fixture intentionally samples already-mounted rows; force avoids Playwright
+    // auto-scrolling a virtualized row and turning selection into a viewport mutation.
+    await host.locator(`[data-role='frozen-row'][data-row-id='sig_perf_${index}']`).dispatchEvent("click");
     await expect(page.getByTestId("selection-status")).toHaveText(name);
     const ended = await page.evaluate(() => performance.now());
     const rafMs = await page.evaluate(() => new Promise<number>((resolve) => { const before = performance.now(); requestAnimationFrame(() => resolve(performance.now() - before)); }));
@@ -62,7 +64,18 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
 
   const reorderBefore = await counters(page);
   const stableSvg = await surface.locator("[data-signal-id='sig_perf_5'] > svg").elementHandle();
-  await surface.locator("[data-role='left-row'][data-row-id='sig_perf_5']").dragTo(surface.locator("[data-role='left-row'][data-row-id='sig_perf_4']"), { targetPosition: { x: 100, y: 2 } });
+  const reorderSource = surface.locator("[data-role='left-row'][data-row-id='sig_perf_5']");
+  const reorderTarget = surface.locator("[data-role='left-row'][data-row-id='sig_perf_4']");
+  await reorderSource.evaluate((element) => {
+    const transfer = new DataTransfer();
+    element.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }));
+  });
+  await reorderTarget.evaluate((element) => {
+    const transfer = new DataTransfer();
+    element.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, clientY: element.getBoundingClientRect().top + 2, dataTransfer: transfer }));
+    element.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer }));
+  });
+  await reorderSource.dispatchEvent("dragend");
   const reorderAfter = await counters(page);
   expect(reorderAfter.waveDromRenders).toBe(reorderBefore.waveDromRenders); expect(reorderAfter.localGeometryBuilds).toBe(reorderBefore.localGeometryBuilds);
   const stableAfter = await surface.locator("[data-signal-id='sig_perf_5'] > svg").elementHandle(); expect(await stableSvg!.evaluate((before, after) => before === after, stableAfter)).toBe(true);

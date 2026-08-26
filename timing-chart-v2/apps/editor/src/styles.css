@@ -27,6 +27,13 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .surface-host [data-role="snap-signal-highlight"] { position: absolute; left: 0; right: 0; background: color-mix(in srgb, #2374e1 9%, transparent); }
 .surface-host [data-role="snap-cycle-label"] { position: absolute; padding: 2px 5px; border-radius: 3px; color: #fff; background: #175eb8; font-size: 10px; white-space: nowrap; }
 .surface-host [data-role$="-row"], .surface-host [data-role="wave-owner"] { position: absolute; width: 100%; overflow: hidden; border-bottom: 1px solid #e7ebf0; cursor: default; }
+.surface-host [data-role$="-group-header"] { position: absolute; width: 100%; height: 32px; display: flex; align-items: center; overflow: hidden; border-bottom: 1px solid #cbd4df; background: #f3f6fa; color: #405875; font-size: 11px; font-weight: 700; }
+.surface-host [data-role="left-group-header"] { z-index: 16; justify-content: space-between; padding: 0 8px 0 10px; }
+.surface-host [data-role="frozen-group-header"] { z-index: 15; padding: 0 10px; }
+.surface-host [data-role="timing-group-header"] { z-index: 11; background: #f7f9fc; }
+.surface-host [data-role="left-group-header"] [data-role="tree-branch"] { display: flex; align-items: center; min-width: 0; overflow: hidden; color: #405875; font-size: 11px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.surface-host [data-role="left-group-header"] [data-role="tree-collapse"], .surface-host [data-role="tree-group-more"] { flex: 0 0 22px; width: 22px; height: 24px; padding: 0; border: 0; border-radius: 3px; background: transparent; color: #405c78; cursor: pointer; }
+.surface-host [data-role="left-group-header"] [data-role="tree-collapse"]:hover, .surface-host [data-role="tree-group-more"]:hover { background: var(--gui-hover-bg); }
 .surface-host [data-role="left-row"], .surface-host [data-role="frozen-row"] { display: grid; align-items: center; gap: 7px; padding: 0 10px; font-size: 12px; }
 .surface-host [data-role="left-row"] { grid-template-columns: 74px minmax(0, 1fr) 24px 22px 20px; }
 .surface-host [data-role="frozen-row"] { grid-template-columns: 58px minmax(0, 1fr); }

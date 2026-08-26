@@ -23,10 +23,17 @@ export class DefaultProjectionService implements ProjectionService {
     const pinned = new Set(request.viewport.pinnedRowIds);
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
-    const mountedRows = layout.visibleRows.filter((row) => pinned.has(row.rowId) || intersects(row, start, end));
-    const mountedRowIds = mountedRows.map((row) => row.rowId);
-    this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
-    const mountedSignalIds = mountedRows
+    const crossedHeaderHeight = layout.groupHeaders.filter((header) => header.y <= end).reduce((height, header) => height + header.height, 0);
+    const mountedRows = layout.visibleRows.filter((row) => pinned.has(row.rowId) || intersects(row, start, end + crossedHeaderHeight));
+    const previousMounted = request.changeSet.rowOrder === undefined ? new Set<RowLayoutEntry["rowId"]>() : new Set(request.previous?.mountedRowIds ?? []);
+    const stableMountedRows = layout.visibleRows.filter((row) => previousMounted.has(row.rowId));
+    const mountedById = new Map((request.changeSet.rowOrder === undefined ? mountedRows : stableMountedRows).map((row) => [row.rowId, row]));
+    if (request.changeSet.rowOrder === undefined) for (const row of stableMountedRows) mountedById.set(row.rowId, row);
+    const mountedRowsOrdered = layout.visibleRows.filter((row) => mountedById.has(row.rowId));
+    const mountedGroupHeaders = layout.groupHeaders.filter((row) => intersects(row, start, end));
+    const mountedRowIds = mountedRowsOrdered.map((row) => row.rowId);
+    this.#lastMountedRange = [mountedRowsOrdered[0]?.y ?? 0, mountedRowsOrdered.at(-1) ? mountedRowsOrdered.at(-1)!.y + mountedRowsOrdered.at(-1)!.height : 0];
+    const mountedSignalIds = mountedRowsOrdered
       .filter((row) => row.kind === "timing")
       .map((row) => row.rowId as SignalId);
     const canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
@@ -42,6 +49,8 @@ export class DefaultProjectionService implements ProjectionService {
       frozenLabelRowIds: mountedRowIds,
       timingRowIds: mountedRowIds,
       rowLayout: layout.visibleRows,
+      groupHeaders: layout.groupHeaders,
+      mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
       canonicalSignalIds,
       mountedSignalIds,
       waveSignalIds: [...new Set(requestedWaves)],
@@ -55,6 +64,6 @@ export class DefaultProjectionService implements ProjectionService {
   }
 }
 
-function intersects(row: RowLayoutEntry, start: number, end: number): boolean {
+function intersects(row: Pick<RowLayoutEntry, "y" | "height">, start: number, end: number): boolean {
   return row.y + row.height >= start && row.y <= end;
 }

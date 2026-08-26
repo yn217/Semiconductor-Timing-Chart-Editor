@@ -7,7 +7,7 @@ test("reorders row shells without rerendering or moving heavy WaveDrom SVG owner
   await expect(host).toHaveAttribute("data-phase5-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
 
-  const ids = async (role: string) => surface.locator(`[data-role='${role}'] > [data-row-id]`).evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  const ids = async (role: string) => surface.locator(`[data-role='${role}'] > [data-role$='-row'][data-row-id]`).evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
   expect(await ids("left-tree-rows")).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
   expect(await ids("frozen-label-rows")).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
   expect(await ids("timing-semantic-rows")).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
@@ -45,6 +45,6 @@ test("reorders row shells without rerendering or moving heavy WaveDrom SVG owner
   expect(await clockSvg!.evaluate((before, after) => before === after, currentClockSvg)).toBe(true);
   expect(await probeSvg!.evaluate((before, after) => before === after, currentProbeSvg)).toBe(true);
   expect(JSON.parse(await surface.getAttribute("data-render-counters") ?? "null")).toEqual({ waveDromRenders: 2, localGeometryBuilds: 2, rowPositionUpdates: 4, overlayUpdates: 0 });
-  await expect(surface.locator("[data-role='wave-owner'][data-signal-id='sig_phase3_probe']")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 0)");
-  await expect(surface.locator("[data-role='wave-owner'][data-signal-id='sig_phase4_clock']")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 34)");
+  await expect(surface.locator("[data-role='wave-owner'][data-signal-id='sig_phase3_probe']")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 32)");
+  await expect(surface.locator("[data-role='wave-owner'][data-signal-id='sig_phase4_clock']")).toHaveCSS("transform", "matrix(1, 0, 0, 1, 0, 66)");
 });

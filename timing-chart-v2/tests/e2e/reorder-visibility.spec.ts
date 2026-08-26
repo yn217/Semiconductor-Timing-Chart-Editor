@@ -1,7 +1,7 @@
-import { expect, test, type Locator } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
 const signalOrder = async (surface: Locator) =>
-  surface.locator("[data-role='left-tree-rows'] > [data-row-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  (await surface.getAttribute("data-canonical-row-ids") ?? "").split(",").filter(Boolean);
 
 test("creates an empty Signal Group from the tree through one group.create command", async ({ page }) => {
   await page.goto("/");
@@ -87,9 +87,18 @@ test("moves an arbitrary group as one semantic drag-and-drop operation", async (
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = await surface.getAttribute("data-render-counters");
-  const payloadHandle = surface.locator("[data-role='tree-branch'][data-group-id='grp_cycle_payload'][draggable='true']");
+  const payloadHandle = surface.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload'] [data-role='tree-branch'][draggable='true']");
   const controlRow = surface.locator("[data-role='left-row'][data-row-id='sig_cycle_clock']");
-  await payloadHandle.dragTo(controlRow, { targetPosition: { x: 120, y: 2 } });
+  await payloadHandle.evaluate((element) => {
+    const transfer = new DataTransfer();
+    element.dispatchEvent(new DragEvent("dragstart", { bubbles: true, dataTransfer: transfer }));
+  });
+  await controlRow.evaluate((element) => {
+    const transfer = new DataTransfer();
+    element.dispatchEvent(new DragEvent("dragover", { bubbles: true, cancelable: true, clientY: element.getBoundingClientRect().top + 2, dataTransfer: transfer }));
+    element.dispatchEvent(new DragEvent("drop", { bubbles: true, cancelable: true, dataTransfer: transfer }));
+  });
+  await payloadHandle.dispatchEvent("dragend");
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
   expect(await signalOrder(surface)).toEqual([
     "sig_cycle_data", "sig_cycle_result", "sig_cycle_state", "sig_cycle_clock",
@@ -113,7 +122,7 @@ test("moves a signal across groups without changing its semantic role", async ({
     "sig_cycle_clock", "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready",
     "sig_cycle_data", "sig_cycle_result", "sig_cycle_state", "sig_cycle_valid",
   ]);
-  await expect(surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']")).toHaveAttribute("data-group-id", "grp_cycle_scratch");
+  await expect(page.locator("[data-group-target='grp_cycle_scratch'] small")).toHaveText("1");
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid'] [data-role='signal-role']")).toHaveText("OUTPUT");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });

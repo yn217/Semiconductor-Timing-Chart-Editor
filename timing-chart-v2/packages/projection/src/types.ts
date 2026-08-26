@@ -20,6 +20,15 @@ export interface RowLayoutEntry {
   readonly height: number;
 }
 
+export interface GroupHeaderLayoutEntry {
+  readonly rowId: RowId;
+  readonly groupId: GroupId;
+  readonly groupName: string;
+  readonly groupStyle?: SignalGroupStyle;
+  readonly y: number;
+  readonly height: number;
+}
+
 export interface RenderProjection {
   readonly revision: number;
   readonly canonicalRowIds: readonly RowId[];
@@ -29,6 +38,8 @@ export interface RenderProjection {
   readonly frozenLabelRowIds: readonly RowId[];
   readonly timingRowIds: readonly RowId[];
   readonly rowLayout: readonly RowLayoutEntry[];
+  readonly groupHeaders: readonly GroupHeaderLayoutEntry[];
+  readonly mountedGroupHeaderIds: readonly RowId[];
   readonly canonicalSignalIds: readonly SignalId[];
   readonly mountedSignalIds: readonly SignalId[];
   readonly waveSignalIds: readonly SignalId[];

@@ -12,7 +12,7 @@ test("projects canonical rows into aligned tree, frozen labels, and waveform sur
     "sig_cycle_clock", "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready",
     "sig_cycle_valid", "sig_cycle_data", "sig_cycle_result", "sig_cycle_state",
   ];
-  const rowIds = async (role: string) => surface.locator(`[data-role='${role}'] > [data-row-id]`).evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  const rowIds = async (role: string) => surface.locator(`[data-role='${role}'] > [data-role$='-row'][data-row-id]`).evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
   expect(await rowIds("left-tree-rows")).toEqual(expected);
   expect(await rowIds("frozen-label-rows")).toEqual(expected);
   expect(await rowIds("timing-semantic-rows")).toEqual(expected);
