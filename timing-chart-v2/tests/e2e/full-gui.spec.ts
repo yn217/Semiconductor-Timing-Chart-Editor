@@ -26,7 +26,7 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   expect(workspace).toMatchObject({ y: 217 });
   expect(bottom).toMatchObject({ x: 330, height: 270 });
   expect(inspector).toMatchObject({ x: 1372, width: 300 });
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(0);
   await expect(page.locator(".ribbon-group")).toHaveCount(7);
 });
 
@@ -274,6 +274,7 @@ test("applies Group Inspector presentation properties as one semantic operation"
 test("applies Transaction Inspector phases through one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
   await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByLabel("New Transaction name").fill("Transfer");
   await page.getByLabel("New Transaction start").fill("2");

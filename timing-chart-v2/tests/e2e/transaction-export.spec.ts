@@ -7,6 +7,7 @@ async function ready(page: Page) {
 }
 
 async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
   await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" }).click();
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill(name);
@@ -64,6 +65,38 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+});
+
+test("keeps the Split View surface contract and view mode changes view-only", async ({ page }) => {
+  await ready(page);
+  const panel = page.locator(".cycle-panel");
+  const surface = page.getByTestId("cycle-surface");
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+    counters: await surface.getAttribute("data-session-counters"),
+  };
+
+  await expect(panel).toHaveAttribute("data-view-mode", "Cycle");
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(panel).toHaveAttribute("data-view-mode", "Transaction");
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(0);
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(1);
+
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(panel).toHaveAttribute("data-view-mode", "Split");
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  await expect(surface).toBeVisible();
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(1);
+
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
+  expect(await surface.getAttribute("data-session-counters")).toBe(before.counters);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("ripples Transaction ranges through Timeline edits with exact Undo", async ({ page }) => {

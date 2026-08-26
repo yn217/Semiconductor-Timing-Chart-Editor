@@ -1137,12 +1137,17 @@ export function MinimalCycleView() {
     if (result.ok) { setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); setBulkRegistrationVisible(false); }
     else setBulkRegistrationStatus(result.problems.map((item) => item.message).join(" "));
   };
+  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Problems" | "JSON")[] = viewMode === "Cycle"
+    ? ["Signal", "Annotation", "Problems", "JSON"]
+    : viewMode === "Transaction"
+      ? ["Transaction", "Annotation", "Problems", "JSON"]
+      : ["Signal", "Transaction", "Annotation", "Problems", "JSON"];
 
   return <main className="editor-shell" data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const).map((tab) => <button type="button" key={tab} className={ribbonTab === tab ? "active" : ""} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
-      <div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => setViewMode(mode)}>{mode}</button>)}</div>
+      <div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => { setViewMode(mode); if (mode === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal"); if (mode === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction"); }}>{mode}</button>)}</div>
     </nav>
     <Ribbon
       tab={ribbonTab}
@@ -1191,7 +1196,7 @@ export function MinimalCycleView() {
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
     />
     <div className="desktop-workspace">
-      <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label="Cycle View">
+      <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
         <div className="column-headings" aria-hidden="true"><span>Signal / Group</span><span>Role / signal</span><span>Cycle waveform</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
@@ -1204,7 +1209,7 @@ export function MinimalCycleView() {
       <aside className="left-panel-tail"><button type="button">＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<MiniMap document={snapshot.document} viewport={viewport} /></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
         <nav className="bottom-tabs">
-          {(["Signal", "Annotation", "Transaction", "Problems", "JSON"] as const).map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
+          {bottomTabs.map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
           <span />
           <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => setFollowSelection(event.target.checked)} /> Follow Selection</label>
           <button type="button" data-testid="bottom-pin" aria-pressed={bottomPinned} onClick={toggleBottomPin}>{bottomPinned ? "Unpin" : "Pin"}</button>
