@@ -7,7 +7,7 @@ import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, DefaultProjectionService, remapValueChangesToDisplay, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -90,6 +90,7 @@ export function MinimalCycleView() {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: cycleDocument });
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
   const [problem, setProblem] = useState("");
+  const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
   const [ribbonTab, setRibbonTab] = useState("Home");
@@ -111,7 +112,8 @@ export function MinimalCycleView() {
   const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
   const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
-  const diagnostics = validateCanonicalDocument(snapshot.document);
+  const diagnostics = [...validateCanonicalDocument(snapshot.document), ...runtimeDiagnostics];
+  const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
 
   useEffect(() => {
     const registry = commandRegistry.current;
@@ -184,9 +186,12 @@ export function MinimalCycleView() {
           const geometry = adapter.extractLocalGeometry(rendered);
           geometryMaps.set(id, geometry);
           if (id === document.timeline.referenceClock) referenceGeometry = geometry;
+          upsertDiagnostic((item) => item.code === "WAVE_RENDER_ERROR" && item.path === `$.signals[${id}]`, undefined);
           return { waveDromRenders: 1, localGeometryBuilds: 1 };
         } catch (error) {
-          setProblem(`Signal '${signal.display.name}' could not be rendered: ${error instanceof Error ? error.message : String(error)}`);
+          const message = `Signal '${signal.display.name}' could not be rendered: ${error instanceof Error ? error.message : String(error)}`;
+          setProblem(message);
+          upsertDiagnostic((item) => item.code === "WAVE_RENDER_ERROR" && item.path === `$.signals[${id}]`, { code: "WAVE_RENDER_ERROR", path: `$.signals[${id}]`, message });
           return { waveDromRenders: 0, localGeometryBuilds: 0 };
         }
       },
@@ -251,9 +256,17 @@ export function MinimalCycleView() {
       rendererHost.dataset.cycleViewReady = "true";
     });
 
+    const upsertDiagnostic = (predicate: (item: DocumentProblem) => boolean, next: DocumentProblem | undefined) => {
+      setRuntimeDiagnostics((current) => {
+        const filtered = current.filter((item) => !predicate(item));
+        return next ? [...filtered, next] : filtered;
+      });
+    };
+
     const applyResult = (result: ReturnType<CommandHistorySession["execute"]>) => {
       if (!result.ok) {
         setProblem(result.reason === "no-op" ? "" : result.problems.map((item) => item.message).join(" "));
+        if (result.reason !== "no-op") upsertDiagnostic((item) => item.code === "COMMAND_REJECTED", { code: "COMMAND_REJECTED", path: "$", message: result.problems.map((item) => item.message).join(" ") });
         return;
       }
       delete rendererHost.dataset.editorIdle;
@@ -266,6 +279,7 @@ export function MinimalCycleView() {
       });
       setHistory(session.historyState());
       setProblem("");
+      upsertDiagnostic((item) => item.code === "COMMAND_REJECTED", undefined);
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
@@ -279,7 +293,7 @@ export function MinimalCycleView() {
     execute.current = (command) => { const result = session.execute(command); applyResult(result); return result; };
     undo.current = () => applyResult(session.undo());
     redo.current = () => applyResult(session.redo());
-    const replaceDocument = (document: CanonicalDocument) => {
+    const replaceDocument = (document: CanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
       geometryMaps.clear();
@@ -296,6 +310,7 @@ export function MinimalCycleView() {
       selectedTransactionRef.current = undefined;
       setSelectedTransactionId(undefined);
       setProblem("");
+      setRuntimeDiagnostics(migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message })));
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
@@ -310,9 +325,10 @@ export function MinimalCycleView() {
       const parsed = parseDocument(text);
       if (!parsed.ok) {
         setProblem(parsed.problems.map((item) => item.message).join(" "));
+        upsertDiagnostic((item) => item.code === "OPEN_FAILED", { code: "OPEN_FAILED", path: "$", message: parsed.problems.map((item) => item.message).join(" ") });
         return;
       }
-      replaceDocument(parsed.document);
+      replaceDocument(parsed.document, parsed.warnings);
     };
     newDocument.current = () => replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] });
     saveDocument.current = () => {
@@ -801,7 +817,7 @@ export function MinimalCycleView() {
       <span>Cycle {timelineRange.start}</span><span>Zoom: {Math.round(zoom * 100)}%</span><span>Snap: On</span>
       <span data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
-      <span>{history.dirty ? "Modified" : "Clean"}</span><span>Problems: {diagnostics.length}</span><span>WaveDrom: Ready</span>
+      <span>{history.dirty ? "Modified" : "Clean"}</span><span>Problems: {diagnostics.length}</span><span>WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
     </footer>
   </main>;
 }
