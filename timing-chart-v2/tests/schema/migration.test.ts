@@ -74,4 +74,30 @@ describe("migrateV1", () => {
     expect(document.timeline.referenceClock).toBe("sig_clk_b");
     expect(warnings.some((warning) => warning.code === "INVALID_LEGACY_REFERENCE_CLOCK")).toBe(false);
   });
+
+  it("rounds a fractional V1 change point to an integer cycle and warns, instead of passing it through to a canonical document validation would silently accept but WaveDrom/geometry cannot render", () => {
+    const source = v1Document({
+      signals: [{ id: "sig_data", name: "DATA", type: "binary", role: "input", values: [{ start: 0, value: 0 }, { start: 4.5, value: 1 }, { start: 7, value: 0 }] }],
+    });
+    const { document, warnings } = migrateV1(source);
+    const values = document.signals[0]!.type !== "commentRow" && document.signals[0]!.type !== "clock" ? document.signals[0]!.values : [];
+    expect(values.map((change) => change.start)).toEqual([0, 5, 7]);
+    expect(values.every((change) => Number.isInteger(change.start))).toBe(true);
+    expect(warnings.some((warning) => warning.code === "MIGRATION_FRACTIONAL_CYCLE_ROUNDED")).toBe(true);
+    expect(validateCanonicalDocument(document)).toHaveLength(0);
+  });
+
+  it("deterministically merges a sub-cycle pulse that collapses onto an adjacent integer cycle after rounding, keeping strictly-sorted change points", () => {
+    // 13:0 -> 13.5:1 (a half-cycle blip) -> 14:0; rounding 13.5 to 14 collides with the existing
+    // 14:0 entry. The later value must win so the result stays strictly increasing and valid.
+    const source = v1Document({
+      signals: [{ id: "sig_data", name: "DATA", type: "binary", role: "input", values: [{ start: 0, value: 0 }, { start: 13, value: 0 }, { start: 13.5, value: 1 }, { start: 14, value: 0 }] }],
+      timeline: { cycleCount: 20 },
+    });
+    const { document, warnings } = migrateV1(source);
+    const values = document.signals[0]!.type !== "commentRow" && document.signals[0]!.type !== "clock" ? document.signals[0]!.values : [];
+    expect(values.map((change) => ({ start: change.start, value: change.value }))).toEqual([{ start: 0, value: 0 }, { start: 13, value: 0 }, { start: 14, value: 0 }]);
+    expect(warnings.some((warning) => warning.code === "MIGRATION_SUB_CYCLE_CHANGE_MERGED")).toBe(true);
+    expect(validateCanonicalDocument(document)).toHaveLength(0);
+  });
 });

@@ -88,8 +88,8 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
   let previous = -1;
   changes.forEach((change, index) => {
     const changePath = `${path}[${index}]`;
-    if (!Number.isFinite(change.start) || change.start < 0 || change.start >= cycleCount) {
-      problems.push(problem("TIMELINE_OUT_OF_RANGE", `${changePath}.start`, `Change point must satisfy 0 <= start < ${cycleCount}.`, signal.id));
+    if (!Number.isInteger(change.start) || change.start < 0 || change.start >= cycleCount) {
+      problems.push(problem("TIMELINE_OUT_OF_RANGE", `${changePath}.start`, `Change point must be an integer cycle satisfying 0 <= start < ${cycleCount}.`, signal.id));
     }
     if (change.start <= previous) problems.push(problem("CHANGE_POINTS_NOT_STRICTLY_SORTED", `${changePath}.start`, "Change points must be strictly increasing with no duplicate start.", signal.id));
     previous = change.start;
@@ -102,8 +102,8 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
 }
 
 function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annotation, signals: ReadonlyMap<string, Signal>, cycleCount: number, problems: DocumentProblem[]): void {
-  if (!Number.isFinite(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
-    problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `Annotation anchor must satisfy 0 <= cycle < ${cycleCount}.`, annotation.id));
+  if (!Number.isInteger(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
+    problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `Annotation anchor must be an integer cycle satisfying 0 <= cycle < ${cycleCount}.`, annotation.id));
   }
   if (anchor.signalId !== undefined) {
     const target = signals.get(anchor.signalId);
@@ -177,7 +177,7 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
 
   document.signals.forEach((signal, index) => {
     if (signal.type === "clock") {
-      if (signal.generator.start < 0 || signal.generator.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.signals[${index}].generator.start`, "Clock generator start is outside the timeline.", signal.id));
+      if (!Number.isInteger(signal.generator.start) || signal.generator.start < 0 || signal.generator.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.signals[${index}].generator.start`, "Clock generator start must be an integer cycle inside the timeline.", signal.id));
       if (signal.enable) validateChanges(signal, signal.enable, `$.signals[${index}].enable`, document.timeline.cycleCount, problems);
     } else if (signal.type !== "commentRow") {
       validateChanges(signal, signal.values, `$.signals[${index}].values`, document.timeline.cycleCount, problems);
@@ -198,10 +198,10 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
   const timeGroups = new Map(document.timeGroups.map((group) => [group.id, group]));
   const labelAnchors = new Map(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
   document.bookmarks.forEach((bookmark, index) => {
-    if (bookmark.start < 0 || bookmark.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.bookmarks[${index}].start`, "Bookmark is outside the source timeline.", bookmark.id));
+    if (!Number.isInteger(bookmark.start) || bookmark.start < 0 || bookmark.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.bookmarks[${index}].start`, "Bookmark must be an integer cycle within the source timeline.", bookmark.id));
   });
   document.timeGroups.forEach((group, index) => {
-    if (group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) problems.push(problem("INVALID_TIME_GROUP_RANGE", `$.timeGroups[${index}]`, "Time Group must use a half-open range within the source timeline.", group.id));
+    if (!Number.isInteger(group.start) || !Number.isInteger(group.end) || group.start < 0 || group.start >= group.end || group.end > document.timeline.cycleCount) problems.push(problem("INVALID_TIME_GROUP_RANGE", `$.timeGroups[${index}]`, "Time Group must use an integer-cycle half-open range within the source timeline.", group.id));
     const resume = group.presentation?.resumeLabelAnchorId;
     if (resume && !labelAnchors.has(resume)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, `Label anchor '${resume}' does not exist.`, group.id));
     if (resume) {
@@ -212,7 +212,8 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
   });
   const labelSources = new Map<number, string>();
   document.timeline.labelAnchors.forEach((anchor, index) => {
-    if (anchor.source < 0 || anchor.source > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].source`, "Ruler label anchor is outside the source timeline.", anchor.id));
+    if (!Number.isInteger(anchor.source) || anchor.source < 0 || anchor.source > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].source`, "Ruler label anchor source must be an integer cycle within the source timeline.", anchor.id));
+    if (!Number.isInteger(anchor.display)) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].display`, "Ruler label anchor display value must be an integer cycle.", anchor.id));
     if (anchor.ownerTimeGroupId && !timeGroups.has(anchor.ownerTimeGroupId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.timeline.labelAnchors[${index}].ownerTimeGroupId`, `Time Group '${anchor.ownerTimeGroupId}' does not exist.`, anchor.id));
     const prior = labelSources.get(anchor.source);
     if (prior !== undefined) problems.push(problem("DUPLICATE_LABEL_ANCHOR_SOURCE", `$.timeline.labelAnchors[${index}].source`, `Source ${anchor.source} is already owned by label anchor '${prior}'.`, anchor.id));
@@ -224,9 +225,9 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
     }
   });
   document.transactions.forEach((transaction, index) => {
-    if (transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.transactions[${index}]`, "Transaction must use a half-open range within the source timeline.", transaction.id));
+    if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.transactions[${index}]`, "Transaction must use an integer-cycle half-open range within the source timeline.", transaction.id));
     transaction.phases?.forEach((phase, phaseIndex) => {
-      if (phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be a half-open subrange of its transaction.", transaction.id));
+      if (!Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be an integer-cycle half-open subrange of its transaction.", transaction.id));
     });
     transaction.linkedSignals?.forEach((signalId, signalIndex) => {
       if (!signals.has(signalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals[${signalIndex}]`, `Signal '${signalId}' does not exist.`, transaction.id));

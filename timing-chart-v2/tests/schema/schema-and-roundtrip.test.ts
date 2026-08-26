@@ -86,6 +86,7 @@ describe("semantic validation", () => {
     ["bus overflow", (doc: CanonicalDocument) => { (doc.signals[1] as unknown as { values: Array<{ value: string }> }).values[1]!.value = "1FF"; }, "BUS_WIDTH_OVERFLOW"],
     ["non-finite values", (doc: CanonicalDocument) => { (doc.layout as unknown as { rowHeight: number }).rowHeight = Number.NaN; }, "NON_FINITE_NUMBER"],
     ["invalid stable IDs", (doc: CanonicalDocument) => { (doc.signals as unknown as Array<{ id: string }>)[1]!.id = "1 invalid"; }, "INVALID_STABLE_ID"],
+    ["fractional change points", (doc: CanonicalDocument) => { (doc.signals[1] as unknown as { values: Array<{ start: number }> }).values[1]!.start = 4.5; }, "TIMELINE_OUT_OF_RANGE"],
   ])("rejects %s", (_name, mutate, code) => {
     const document = clone(canonicalFixture());
     mutate(document);

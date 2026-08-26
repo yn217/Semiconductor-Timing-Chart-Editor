@@ -55,20 +55,44 @@ function optionalNumber(target: MutableRecord, key: string, source: unknown): vo
   if (typeof source === "number") target[key] = source;
 }
 
-function normalizeChanges(value: unknown, fallback: string | number): SignalValueChange[] {
+// V1 permitted fractional cycle positions (e.g. a half-cycle glitch pulse); V2's AnchorPoint/
+// WaveDrom/geometry contract is integer-cycle only. Migration deterministically rounds to the
+// nearest cycle and records a warning rather than silently truncating or rejecting the document.
+function roundCycle(value: unknown, fallback: number, warnings: MigrationWarning[], path: string): number {
+  const raw = number(value, fallback);
+  const rounded = Math.round(raw);
+  if (raw !== rounded) warnings.push({ code: "MIGRATION_FRACTIONAL_CYCLE_ROUNDED", path, message: `Fractional cycle position ${raw} was rounded to ${rounded}; V2 requires integer-cycle timing.` });
+  return rounded;
+}
+
+function normalizeChanges(value: unknown, fallback: string | number, warnings: MigrationWarning[], basePath: string): SignalValueChange[] {
   const changes = list(value).map((entry, index) => {
     const source = record(entry);
     const result: MutableRecord = {
-      start: number(source.start, index === 0 ? 0 : index),
+      start: roundCycle(source.start, index === 0 ? 0 : index, warnings, `${basePath}[${index}].start`),
       value: typeof source.value === "string" || typeof source.value === "number" ? source.value : fallback,
     };
     if (typeof source.comment === "string") result.comment = source.comment;
     return result as unknown as SignalValueChange;
   });
-  return changes.length > 0 ? changes : [{ start: 0, value: fallback }];
+  // Rounding two distinct fractional-cycle change points can collapse them onto the same integer
+  // cycle (e.g. a sub-cycle pulse at 13.5 rounds onto an already-present change at 14). Keep the
+  // chronologically later value deterministically rather than leaving a duplicate start that fails
+  // strict-sort validation, and record what was discarded.
+  const merged: SignalValueChange[] = [];
+  for (const change of changes) {
+    const last = merged.at(-1);
+    if (last && last.start === change.start) {
+      warnings.push({ code: "MIGRATION_SUB_CYCLE_CHANGE_MERGED", path: basePath, message: `A sub-cycle value change collapsed onto cycle ${change.start} after integer-cycle rounding; the earlier value at that cycle was discarded.` });
+      merged[merged.length - 1] = change;
+    } else {
+      merged.push(change);
+    }
+  }
+  return merged.length > 0 ? merged : [{ start: 0, value: fallback }];
 }
 
-function normalizeSignal(value: unknown, index: number): Signal {
+function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[]): Signal {
   const source = record(value);
   const id = text(source.id, deterministicId("signal", index)) as SignalId;
   const type = ["binary", "bus", "state", "logic", "event", "pulse", "clock", "commentRow"].includes(text(source.type))
@@ -112,7 +136,7 @@ function normalizeSignal(value: unknown, index: number): Signal {
     const generator = record(source.generator);
     const edgeCounter = record(source.edgeCounter);
     common.generator = {
-      start: number(generator.start, 0),
+      start: roundCycle(generator.start, 0, warnings, `$.signals[${index}].generator.start`),
       period: number(generator.period, 1),
       duty: number(generator.duty, 0.5),
       phase: number(generator.phase, 0),
@@ -131,11 +155,11 @@ function normalizeSignal(value: unknown, index: number): Signal {
       offset: { x: number(edgeOffset.x, 0), y: number(edgeOffset.y, -6) },
       ...(typeof edgeCounter.anchorId === "string" ? { anchorId: edgeCounter.anchorId } : {}),
     };
-    if (Array.isArray(source.enable)) common.enable = normalizeChanges(source.enable, 1);
+    if (Array.isArray(source.enable)) common.enable = normalizeChanges(source.enable, 1, warnings, `$.signals[${index}].enable`);
     return common as unknown as ClockSignal;
   }
 
-  common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0);
+  common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`);
   optionalNumber(common, "width", source.width);
   if (["hex", "binary", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
   return common as unknown as Signal;
@@ -152,25 +176,28 @@ const POINT_MAP: Readonly<Record<string, AnchorPoint>> = {
   "falling-edge": "falling-edge",
   "value-start": "value-start",
   "value-center": "value-center",
+  // V2's AnchorPoint has no "value-end": the end of a value region is, by definition, the start
+  // of the next transition, so "value-end" deterministically maps to "transition-end" rather than
+  // being silently dropped or misclassified as a mid-value point.
   "value-end": "transition-end",
   "transition-start": "transition-start",
   "transition-center": "transition-center",
   "transition-end": "transition-end",
 };
 
-function normalizeAnchor(value: unknown, fallbackSignal: SignalId | undefined, externalOffset?: unknown): MutableRecord {
+function normalizeAnchor(value: unknown, fallbackSignal: SignalId | undefined, externalOffset: unknown, warnings: MigrationWarning[], path: string): MutableRecord {
   const source = record(value);
   const sourceOffset = record(source.offset ?? externalOffset);
   const signalId = text(source.signalId, text(source.signal, fallbackSignal));
   return {
     ...(signalId ? { signalId } : {}),
-    cycle: number(source.cycle, 0),
+    cycle: roundCycle(source.cycle, 0, warnings, `${path}.cycle`),
     point: POINT_MAP[text(source.point, text(source.anchor, text(source.edge, "cycle-start")))] ?? "cycle-start",
     offset: { x: number(sourceOffset.x, 0), y: number(sourceOffset.y, 0) },
   };
 }
 
-function normalizeAnnotation(value: unknown, index: number, fallbackSignal: SignalId | undefined): Annotation {
+function normalizeAnnotation(value: unknown, index: number, fallbackSignal: SignalId | undefined, warnings: MigrationWarning[]): Annotation {
   const source = record(value);
   const typeMap: Readonly<Record<string, string>> = { dependencyArrow: "dependency", vline: "verticalLine", "vertical-line": "verticalLine" };
   const sourceType = text(source.type, "text");
@@ -185,7 +212,7 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
   if (typeof source.comment === "string") result.comment = source.comment;
   const offsets: Readonly<Record<string, unknown>> = { anchor: source.offset, start: source.startOffset ?? source.offset, end: source.endOffset ?? source.offset, from: source.startOffset, to: source.endOffset };
   for (const key of ["anchor", "start", "end", "from", "to"] as const) {
-    if (source[key] !== undefined) result[key] = normalizeAnchor(source[key], fallbackSignal, offsets[key]);
+    if (source[key] !== undefined) result[key] = normalizeAnchor(source[key], fallbackSignal, offsets[key], warnings, `$.annotations[${index}].${key}`);
   }
   if (source.labelOffset !== undefined) {
     const offset = record(source.labelOffset);
@@ -202,17 +229,17 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
   return result as unknown as Annotation;
 }
 
-function normalizeTransaction(value: unknown, index: number): Transaction {
+function normalizeTransaction(value: unknown, index: number, warnings: MigrationWarning[]): Transaction {
   const source = record(value);
-  const phases = list(source.phases).map((phase) => {
+  const phases = list(source.phases).map((phase, phaseIndex) => {
     const item = record(phase);
-    return { name: text(item.name), start: number(item.start, 0), end: number(item.end, 0) };
+    return { name: text(item.name), start: roundCycle(item.start, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].start`), end: roundCycle(item.end, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].end`) };
   });
   const result: MutableRecord = {
     id: text(source.id, deterministicId("transaction", index)),
     name: text(source.name, `Transaction ${index + 1}`),
-    start: number(source.start, 0),
-    end: number(source.end, 0),
+    start: roundCycle(source.start, 0, warnings, `$.transactions[${index}].start`),
+    end: roundCycle(source.end, 0, warnings, `$.transactions[${index}].end`),
   };
   if (typeof (source.source ?? source.from) === "string") result.source = source.source ?? source.from;
   if (typeof (source.destination ?? source.to) === "string") result.destination = source.destination ?? source.to;
@@ -236,7 +263,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const sourceTimeline = record(source.timeline);
   const timebase = { ...record(sourceDocument.timebase), ...sourceTimeline };
   const cycleCount = Math.max(1, Math.trunc(number(timebase.cycleCount, number(sourceDocument.cycleCount, 10))));
-  const signals = list(source.signals ?? cycleView.signals).map(normalizeSignal);
+  const signals = list(source.signals ?? cycleView.signals).map((value, index) => normalizeSignal(value, index, warnings));
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
@@ -284,8 +311,8 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     if (!groups.some((group) => group.rows.includes(id))) warnings.push({ code: "MIGRATION_ORPHAN_ROW", path: "$.signalGroups", message: `Signal '${id}' remains orphaned and will be rejected by validation.` });
   }
 
-  const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal));
-  const transactions = list(source.transactions ?? transactionView.transactions).map(normalizeTransaction);
+  const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings));
+  const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings));
   if (Array.isArray(transactionView.lanes) && transactionView.lanes.length > 0) {
     warnings.push({ code: "MIGRATION_TRANSACTION_LANES", path: "$.transactionView.lanes", message: "Lane IDs remain on transaction source/destination; legacy lane display names are not canonical fields." });
   }
@@ -294,22 +321,22 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     const anchor = record(value);
     return {
       id: text(anchor.id, deterministicId("label_anchor", index)),
-      source: number(anchor.source, 0),
-      display: number(anchor.display, 0),
+      source: roundCycle(anchor.source, 0, warnings, `$.timeline.labelAnchors[${index}].source`),
+      display: roundCycle(anchor.display, 0, warnings, `$.timeline.labelAnchors[${index}].display`),
       ...(typeof anchor.ownerTimeGroupId === "string" ? { ownerTimeGroupId: anchor.ownerTimeGroupId } : {}),
     };
   });
   const bookmarks = list(source.bookmarks).map((value, index) => {
     const bookmark = record(value);
-    return { id: text(bookmark.id, deterministicId("bookmark", index)), name: text(bookmark.name, `Bookmark ${index + 1}`), start: number(bookmark.start, 0), ...(typeof bookmark.comment === "string" ? { comment: bookmark.comment } : {}) };
+    return { id: text(bookmark.id, deterministicId("bookmark", index)), name: text(bookmark.name, `Bookmark ${index + 1}`), start: roundCycle(bookmark.start, 0, warnings, `$.bookmarks[${index}].start`), ...(typeof bookmark.comment === "string" ? { comment: bookmark.comment } : {}) };
   });
   const timeGroups: MutableRecord[] = list(source.timeGroups).map((value, index) => {
     const group = record(value);
-    return { id: text(group.id, deterministicId("time_group", index)), name: text(group.name, `Time Group ${index + 1}`), start: number(group.start, 0), end: number(group.end, cycleCount), ...(typeof group.category === "string" ? { category: group.category } : {}), ...(typeof group.comment === "string" ? { comment: group.comment } : {}), ...(jsonObject(group.presentation) ? { presentation: jsonObject(group.presentation) } : {}) };
+    return { id: text(group.id, deterministicId("time_group", index)), name: text(group.name, `Time Group ${index + 1}`), start: roundCycle(group.start, 0, warnings, `$.timeGroups[${index}].start`), end: roundCycle(group.end, cycleCount, warnings, `$.timeGroups[${index}].end`), ...(typeof group.category === "string" ? { category: group.category } : {}), ...(typeof group.comment === "string" ? { comment: group.comment } : {}), ...(jsonObject(group.presentation) ? { presentation: jsonObject(group.presentation) } : {}) };
   });
   for (const [gapIndex, value] of list(sourceTimeline.gaps).entries()) {
     const gap = record(value);
-    timeGroups.push({ id: deterministicId("time_gap", gapIndex), name: text(gap.label, `Gap ${gapIndex + 1}`), start: number(gap.start, 0), end: number(gap.end, cycleCount), presentation: { collapsed: true, foldStyle: "axis-break", ...(typeof gap.label === "string" ? { foldLabel: gap.label } : {}) } });
+    timeGroups.push({ id: deterministicId("time_gap", gapIndex), name: text(gap.label, `Gap ${gapIndex + 1}`), start: roundCycle(gap.start, 0, warnings, `$.timeline.gaps[${gapIndex}].start`), end: roundCycle(gap.end, cycleCount, warnings, `$.timeline.gaps[${gapIndex}].end`), presentation: { collapsed: true, foldStyle: "axis-break", ...(typeof gap.label === "string" ? { foldLabel: gap.label } : {}) } });
   }
   for (const anchor of labelAnchors) {
     if (anchor.ownerTimeGroupId === undefined) continue;
