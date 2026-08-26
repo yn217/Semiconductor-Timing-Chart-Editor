@@ -67,6 +67,24 @@ test("Left Signal/Group rows expose V1 role and visibility controls through Sema
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
 });
 
+test("Left Signal/Group filter is positioned in the V1 pane header and remains DOM-only", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const search = page.getByTestId("signal-tree-search-top");
+  await expect(search).toBeVisible();
+  await expect(search).toHaveValue("");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  await search.fill("ready");
+  await expect(host.locator("[data-role='left-row'][data-name='READY']")).toBeVisible();
+  await expect(host.locator("[data-role='left-row'][data-name='REQUEST']")).toBeHidden();
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await page.getByRole("button", { name: "Clear signal tree filter" }).click();
+  await expect(host.locator("[data-role='left-row'][data-name='REQUEST']")).toBeVisible();
+});
+
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
   test(`routes Annotation delete through the shared command registry from ${route}`, async ({ page }) => {
     await ready(page);
