@@ -304,6 +304,18 @@ describe("command execution and atomic history", () => {
     expect(session.historyState().undoDepth).toBe(1);
   });
 
+  it("updates Transaction phases atomically and rejects phases outside the transaction", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const created = session.execute({ id: commandId("cmd_txn_phase_create"), type: "transaction.create", transaction: { id: "txn_phase" as TransactionId, name: "Transfer", start: 2, end: 8 } });
+    expect(created.ok).toBe(true);
+    const result = session.execute({ id: commandId("cmd_txn_phase_update"), type: "transaction.update", transactionId: "txn_phase" as TransactionId, name: "Transfer", start: 2, end: 8, phases: [{ name: "Address", start: 2, end: 4 }, { name: "Data", start: 4, end: 7 }] });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]?.phases).toEqual([{ name: "Address", start: 2, end: 4 }, { name: "Data", start: 4, end: 7 }]);
+    expect(session.historyState().undoDepth).toBe(2);
+    const rejected = session.execute({ id: commandId("cmd_txn_phase_invalid"), type: "transaction.update", transactionId: "txn_phase" as TransactionId, name: "Transfer", start: 2, end: 8, phases: [{ name: "Bad", start: 1, end: 3 }] });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
+  });
+
   it("updates Clock Edge Numbers as presentation-only state", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });

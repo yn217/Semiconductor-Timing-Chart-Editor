@@ -249,6 +249,22 @@ test("applies Group Inspector presentation properties as one semantic operation"
   await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("background-color", "rgb(238, 245, 252)");
 });
 
+test("applies Transaction Inspector phases through one semantic operation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("New Transaction name").fill("Transfer");
+  await page.getByLabel("New Transaction start").fill("2");
+  await page.getByLabel("New Transaction end").fill("8");
+  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.getByTestId("inspector").getByLabel("Transaction phases").fill('[{"name":"Address","start":2,"end":4},{"name":"Data","start":4,"end":7}]');
+  await page.getByTestId("inspector").getByTestId("apply-transaction-properties").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction phases")).toHaveValue(/Address/);
+});
+
 test("applies Clock Generator Inspector drafts with editable duty and one history entry", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

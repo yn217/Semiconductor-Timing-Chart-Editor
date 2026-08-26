@@ -713,10 +713,12 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$", "Transaction must use a half-open source-time range.");
-      if (transaction.phases?.some((phase) => phase.start < command.start || phase.end > command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$", "Updated range cannot exclude an existing transaction phase.");
-      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined)) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
+      const phases = command.phases === undefined ? transaction.phases : command.phases;
+      if (phases?.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < command.start || phase.start >= phase.end || phase.end > command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", "Transaction phases must be named integer-cycle half-open subranges.");
+      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined) && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
       const { laneId: _oldLane, ...base } = transaction;
-      const next: Transaction = { ...base, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}) };
+      const { phases: _oldPhases, ...withoutPhases } = base;
+      const next: Transaction = { ...withoutPhases, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}), ...(phases && phases.length > 0 ? { phases } : {}) };
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };

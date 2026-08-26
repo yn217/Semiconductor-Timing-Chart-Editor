@@ -20,6 +20,7 @@ import type {
   TimeGroupId,
   TimeGroup,
   Transaction,
+  TransactionPhase,
   TransactionId,
   CommentRow,
   ValueSignal,
@@ -66,7 +67,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
-  | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string }>
+  | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string; phases?: readonly TransactionPhase[] }>
   | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
   | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>
