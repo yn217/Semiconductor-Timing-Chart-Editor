@@ -27,6 +27,8 @@ export interface SemanticAnchor {
   readonly signalId?: SignalId;
   readonly cycle: number;
   readonly point: AnchorPoint;
+  /** Fraction along a rendered transition segment; persisted semantic intent, never screen coordinates. */
+  readonly threshold?: number;
   readonly offset?: PixelOffset;
 }
 

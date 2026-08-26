@@ -151,7 +151,7 @@
     },
     "anchor": {
       "type": "object", "additionalProperties": false, "required": ["cycle", "point"],
-      "properties": { "signalId": { "$ref": "#/$defs/stableId" }, "cycle": { "type": "number", "minimum": 0 }, "point": { "enum": ["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"] }, "offset": { "$ref": "#/$defs/offset" } }
+      "properties": { "signalId": { "$ref": "#/$defs/stableId" }, "cycle": { "type": "number", "minimum": 0 }, "point": { "enum": ["cycle-start", "cycle-center", "cycle-end", "transition-start", "transition-center", "transition-end", "rising-edge", "falling-edge", "value-start", "value-center", "row-center"] }, "threshold": { "type": "number", "minimum": 0, "maximum": 1 }, "offset": { "$ref": "#/$defs/offset" } }
     },
     "annotation": {
       "type": "object", "additionalProperties": false, "required": ["id", "type", "label", "visible"],

@@ -17,10 +17,11 @@ export interface LocalGeometryMap {
 export interface LocalGeometryEntry {
   readonly cycle: number;
   readonly point: AnchorPoint;
+  readonly threshold?: number;
   readonly position: Point;
 }
 
-const keyOf = (cycle: number, point: AnchorPoint): string => `${cycle}:${point}`;
+const keyOf = (cycle: number, point: AnchorPoint, threshold?: number): string => `${cycle}:${point}:${threshold ?? ""}`;
 
 export class ImmutableLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
@@ -28,12 +29,12 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
 
   constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[]) {
     this.signalId = signalId;
-    this.#entries = new Map(entries.map((entry) => [keyOf(entry.cycle, entry.point), Object.freeze({ ...entry.position })]));
+    this.#entries = new Map(entries.map((entry) => [keyOf(entry.cycle, entry.point, entry.threshold), Object.freeze({ ...entry.position })]));
   }
 
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined {
     if (anchor.signalId !== this.signalId) return undefined;
-    const base = this.#entries.get(keyOf(anchor.cycle, anchor.point));
+    const base = this.#entries.get(keyOf(anchor.cycle, anchor.point, anchor.threshold));
     if (!base) return undefined;
     const point = Object.freeze({ x: base.x + (anchor.offset?.x ?? 0), y: base.y + (anchor.offset?.y ?? 0) });
     return Object.freeze({ signalId: this.signalId, anchor, point });

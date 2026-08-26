@@ -41,6 +41,7 @@ export interface OverlayAnchorPoint {
   readonly field: "anchor" | "start" | "end" | "from" | "to";
   readonly x: number;
   readonly y: number;
+  readonly threshold?: number;
 }
 
 export interface AnnotationOverlayPrimitive {

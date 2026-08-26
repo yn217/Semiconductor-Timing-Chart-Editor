@@ -57,21 +57,20 @@ function parsePrimaryStroke(path: string): Segment[] {
   return segments;
 }
 
-function transitionInterval(svg: SVGElement, brickId: string): Readonly<{ start: number; end: number }> | undefined {
+function transitionSegments(svg: SVGElement, brickId: string): readonly Segment[] {
   const brick = Array.from(svg.querySelectorAll<SVGGElement>("defs g[id]")).find((item) => item.id === brickId);
   if (!brick) throw new WaveDromAdapterError("MISSING_WAVEDROM_BRICK", `Rendered SVG does not contain brick '${brickId}'.`);
-  const intervals: Array<Readonly<{ start: number; end: number }>> = [];
+  const segments: Segment[] = [];
   for (const path of Array.from(brick.querySelectorAll<SVGPathElement>("path.s1"))) {
     const d = path.getAttribute("d");
     if (!d) continue;
     for (const segment of parsePrimaryStroke(d)) {
       const ys = [segment.start.y, segment.control1?.y, segment.control2?.y, segment.end.y].filter((value): value is number => value !== undefined);
       if (Math.max(...ys) === Math.min(...ys)) continue;
-      intervals.push({ start: Math.min(segment.start.x, segment.end.x), end: Math.max(segment.start.x, segment.end.x) });
+      segments.push(segment);
     }
   }
-  if (intervals.length === 0) return undefined;
-  return { start: Math.min(...intervals.map((item) => item.start)), end: Math.max(...intervals.map((item) => item.end)) };
+  return segments;
 }
 
 function groupById<T extends Element>(svg: SVGElement, id: string): T {
@@ -100,8 +99,20 @@ function hrefOf(element: SVGUseElement): string {
   return href.slice(1);
 }
 
-function add(entries: LocalGeometryEntry[], cycle: number, anchorPoint: AnchorPoint, position: Point): void {
-  if (!entries.some((entry) => entry.cycle === cycle && entry.point === anchorPoint)) entries.push({ cycle, point: anchorPoint, position });
+function add(entries: LocalGeometryEntry[], cycle: number, anchorPoint: AnchorPoint, position: Point, threshold?: number): void {
+  if (!entries.some((entry) => entry.cycle === cycle && entry.point === anchorPoint && entry.threshold === threshold)) entries.push({ cycle, point: anchorPoint, ...(threshold === undefined ? {} : { threshold }), position });
+}
+
+function interpolateSegment(segment: Segment, fraction: number): Point {
+  const clamped = Math.max(0, Math.min(1, fraction));
+  if (segment.control1 && segment.control2) {
+    const inverse = 1 - clamped;
+    return point(
+      inverse ** 3 * segment.start.x + 3 * inverse ** 2 * clamped * segment.control1.x + 3 * inverse * clamped ** 2 * segment.control2.x + clamped ** 3 * segment.end.x,
+      inverse ** 3 * segment.start.y + 3 * inverse ** 2 * clamped * segment.control1.y + 3 * inverse * clamped ** 2 * segment.control2.y + clamped ** 3 * segment.end.y,
+    );
+  }
+  return point(segment.start.x + (segment.end.x - segment.start.x) * clamped, segment.start.y + (segment.end.y - segment.start.y) * clamped);
 }
 
 export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeometryMap {
@@ -167,8 +178,10 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     const use = uses[visibleIndex];
     let valueStart = boundary;
     if (slot > 0 && use) {
-      const interval = transitionInterval(svg, hrefOf(use));
-      if (interval) {
+      const segments = transitionSegments(svg, hrefOf(use));
+      const interval = segments.length === 0 ? undefined : { start: Math.min(...segments.map((item) => Math.min(item.start.x, item.end.x))), end: Math.max(...segments.map((item) => Math.max(item.start.x, item.end.x))) };
+      const segment = segments[0];
+      if (interval && segment) {
         const translated = useTranslation(use);
         const start = transformPoint(drawMatrix, point(translated.x + interval.start, translated.y));
         const end = transformPoint(drawMatrix, point(translated.x + interval.end, translated.y));
@@ -176,6 +189,11 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
         add(entries, cycle, "transition-start", point(start.x, rowY));
         add(entries, cycle, "transition-center", center);
         add(entries, cycle, "transition-end", point(end.x, rowY));
+        for (const threshold of [0.3, 0.7]) {
+          const thresholdPoint = interpolateSegment(segment, threshold);
+          const transformed = transformPoint(drawMatrix, point(translated.x + thresholdPoint.x, translated.y + thresholdPoint.y));
+          add(entries, cycle, "transition-center", transformed, threshold);
+        }
         valueStart = point(end.x, rowY);
         const previous = [...waveJson.wave.slice(0, slot)].reverse().find((item) => item !== "." && item !== "|");
         if (previous === "0" && token === "1") add(entries, cycle, "rising-edge", center);

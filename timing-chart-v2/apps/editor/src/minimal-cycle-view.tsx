@@ -1670,22 +1670,25 @@ function MiniMap({ document, viewport }: { readonly document: Readonly<Canonical
 
 function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
   const [type, setType] = useState<AnnotationType>("text");
+  const [measurementThreshold, setMeasurementThreshold] = useState<"none" | "30-70">("none");
+  const thresholdPair = measurementThreshold === "30-70" ? { start: 0.3, end: 0.7 } : undefined;
   return <div className="annotation-toolbar" aria-label="Annotation tools" data-testid="annotation-toolbar">
     <strong>Annotation</strong>
     <select aria-label="Annotation type" value={type} onChange={(event) => setType(event.target.value as AnnotationType)}>
       {(["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency"] as const).map((item) => <option key={item} value={item}>{item}</option>)}
     </select>
-    <button type="button" disabled={!signalId} title={signalId ? undefined : "No timing Signal is available in this document to anchor an Annotation."} onClick={() => signalId && onCreate(createAnnotation(type, signalId, range, document))}>Add annotation</button>
+    {type === "measurement" && <label>Threshold<select aria-label="Measurement threshold" value={measurementThreshold} onChange={(event) => setMeasurementThreshold(event.target.value as "none" | "30-70")}><option value="none">Cycle anchors</option><option value="30-70">30% → 70%</option></select></label>}
+    <button type="button" disabled={!signalId} title={signalId ? undefined : "No timing Signal is available in this document to anchor an Annotation."} onClick={() => signalId && onCreate(createAnnotation(type, signalId, range, document, thresholdPair))}>Add annotation</button>
     <button type="button" className={arrowPickStatus === "idle" ? "" : "active"} onClick={onArmArrow}>Pick arrow endpoints</button>
     {arrowPickStatus !== "idle" && <b data-testid="arrow-pick-status">Click {arrowPickStatus} transition</b>}
     <span>Uses selected Signal and Timeline range · drag handles snap to rendered geometry</span>
   </div>;
 }
 
-function createAnnotation(type: AnnotationType, signalId: SignalId, range: { readonly start: number; readonly end: number }, document: CanonicalDocument): Annotation {
+function createAnnotation(type: AnnotationType, signalId: SignalId, range: { readonly start: number; readonly end: number }, document: CanonicalDocument, thresholdPair?: { readonly start: number; readonly end: number }): Annotation {
   const id = nextEntityId("annotation", document) as AnnotationId;
-  const first: SemanticAnchor = { signalId, cycle: range.start, point: "cycle-start" };
-  const second: SemanticAnchor = { signalId, cycle: Math.max(range.start, range.end - 1), point: "cycle-end" };
+  const first: SemanticAnchor = { signalId, cycle: range.start, point: thresholdPair ? "transition-center" : "cycle-start", ...(thresholdPair ? { threshold: thresholdPair.start } : {}) };
+  const second: SemanticAnchor = { signalId, cycle: Math.max(range.start, range.end - 1), point: thresholdPair ? "transition-center" : "cycle-end", ...(thresholdPair ? { threshold: thresholdPair.end } : {}) };
   const base = { id, type, label: `${type} ${range.start}`, visible: true, color: "#d04a36" } as const;
   if (type === "arrow" || type === "dependency") return { ...base, from: first, to: second, lineType: "straight", arrowhead: "end" };
   if (["range", "bracket", "highlight", "measurement"].includes(type)) return { ...base, start: first, end: second };
@@ -1970,7 +1973,7 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps);
-      return point ? [{ field, ...point }] : [];
+      return point ? [{ field, ...point, ...(annotation[field]?.threshold === undefined ? {} : { threshold: annotation[field]!.threshold }) }] : [];
     });
     if (anchors.length === 0) return [];
     const shape: AnnotationOverlayPrimitive["shape"] = annotation.type === "verticalLine" ? "vertical"
@@ -1980,7 +1983,7 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
       id: annotation.id,
       type: annotation.type,
       shape,
-      label: annotation.type === "measurement" && annotation.start && annotation.end ? `${annotation.label} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles` : annotation.label,
+      label: annotation.type === "measurement" && annotation.start && annotation.end ? `${annotation.label} · ${annotation.start.threshold === undefined || annotation.end.threshold === undefined ? "cycle anchors" : `${Math.round(annotation.start.threshold * 100)}%→${Math.round(annotation.end.threshold * 100)}%`} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles` : annotation.label,
       visible: annotation.visible,
       ...(annotation.color === undefined ? {} : { color: annotation.color }),
       anchors,

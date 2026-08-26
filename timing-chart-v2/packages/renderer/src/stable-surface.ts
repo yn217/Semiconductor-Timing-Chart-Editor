@@ -306,6 +306,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     const handle = document.createElement("span");
     handle.dataset.role = "annotation-handle";
     handle.dataset.annotationField = anchor.field;
+    if (anchor.threshold !== undefined) handle.dataset.anchorThreshold = String(anchor.threshold);
     handle.style.transform = `translate(${anchor.x}px, ${anchor.y}px)`;
     return handle;
   });

@@ -99,6 +99,14 @@ describe("semantic validation", () => {
     expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("MISSING_CROSS_REFERENCE");
   });
 
+  it("accepts 30/70 semantic transition thresholds and rejects threshold misuse", () => {
+    const document = clone(canonicalFixture());
+    (document.annotations as unknown as unknown[]).push({ id: "ann_threshold", type: "measurement", label: "30-70", visible: true, start: { signalId: document.signals[1]!.id, cycle: 3, point: "transition-center", threshold: 0.3 }, end: { signalId: document.signals[1]!.id, cycle: 6, point: "transition-center", threshold: 0.7 } });
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    (document.annotations as unknown as Array<{ end: { threshold: number } }>).at(-1)!.end.threshold = 1.2;
+    expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("SCHEMA_MAXIMUM");
+  });
+
   it.each([
     ["binary width", "binary", "width", 1],
     ["binary display format", "binary", "displayFormat", "binary"],

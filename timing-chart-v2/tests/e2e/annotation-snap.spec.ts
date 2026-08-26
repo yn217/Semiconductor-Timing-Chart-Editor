@@ -31,6 +31,35 @@ test("creates every Annotation type on a renderer-owned stable overlay surface",
   await expect(page.getByTestId("history-status")).toHaveText(`History ${types.length} / Redo 0`);
 });
 
+test("creates a geometry-backed 30/70 threshold Measurement and preserves it through Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("3");
+  await page.getByLabel("Timeline range end").fill("8");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("measurement");
+  await page.getByLabel("Measurement threshold").selectOption("30-70");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const measurement = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+  await expect(measurement).toHaveAttribute("aria-label", /30%→70%/);
+  await expect(measurement.locator("[data-role='annotation-handle'][data-anchor-threshold='0.3']")).toHaveCount(1);
+  await expect(measurement.locator("[data-role='annotation-handle'][data-anchor-threshold='0.7']")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  await page.locator("input[type='file']").setInputFiles((await download.path())!);
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(1);
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveAttribute("aria-label", /30%→70%/);
+});
+
 test("updates Annotation style and label offset without waveform regeneration", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

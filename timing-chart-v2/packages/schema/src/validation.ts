@@ -105,6 +105,10 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
   if (!Number.isInteger(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
     problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `Annotation anchor must be an integer cycle satisfying 0 <= cycle < ${cycleCount}.`, annotation.id));
   }
+  if (anchor.threshold !== undefined) {
+    if (!Number.isFinite(anchor.threshold) || anchor.threshold < 0 || anchor.threshold > 1) problems.push(problem("INVALID_ANCHOR_THRESHOLD", `${path}.threshold`, "Anchor threshold must be a finite fraction between 0 and 1.", annotation.id));
+    if (!(anchor.point === "transition-start" || anchor.point === "transition-center" || anchor.point === "transition-end")) problems.push(problem("INVALID_ANCHOR_THRESHOLD_POINT", `${path}.threshold`, "Anchor threshold requires a transition point.", annotation.id));
+  }
   if (anchor.signalId !== undefined) {
     const target = signals.get(anchor.signalId);
     if (!target) problems.push(problem("MISSING_CROSS_REFERENCE", `${path}.signalId`, `Signal '${anchor.signalId}' does not exist.`, annotation.id));
