@@ -410,6 +410,12 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const timingRows = timingSignalIds(document);
       return { ok: true, document: command.document, changeSet: { fullDocumentReplace: true, rowOrder: orderedRows(command.document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true }, inverseChangeSet: { fullDocumentReplace: true, rowOrder: orderedRows(document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true } };
     }
+    case "document.updateMetadata": {
+      if (!command.title.trim()) return fail("invalid", "EMPTY_DOCUMENT_TITLE", "$.title", "Document title must not be empty.");
+      const nextDocument = { ...document, document: { ...document.document, title: command.title, header: command.header, footer: command.footer } };
+      if (JSON.stringify(document.document) === JSON.stringify(nextDocument.document)) return fail("no-op", "NO_OP", "$.document", "Document metadata is unchanged.");
+      return { ok: true, document: nextDocument, changeSet: {}, inverseChangeSet: {} };
+    }
     case "commentRow.create":
       return planCommand(document, { id: command.id, type: "signal.create", signal: command.commentRow, targetGroupId: command.targetGroupId, index: command.index });
     case "commentRow.update": {

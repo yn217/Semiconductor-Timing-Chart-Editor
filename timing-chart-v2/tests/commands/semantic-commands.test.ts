@@ -27,6 +27,18 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.document.title).toBe(source.document.title);
   });
 
+  it("updates Header and Footer metadata as one non-waveform operation", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const result = session.execute({ id: commandId("cmd_metadata"), type: "document.updateMetadata", title: "Timing Review", header: { ...source.document.header, subtitle: "Reviewed timing", constraints: ["Setup must hold"] }, footer: { ...source.document.footer, figureNumber: "Fig. 2", revision: "R3", text: "Internal review" } });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.changeSet).toEqual({});
+    expect(session.getSnapshot().document.document).toMatchObject({ title: "Timing Review", header: { subtitle: "Reviewed timing", constraints: ["Setup must hold"] }, footer: { figureNumber: "Fig. 2", revision: "R3", text: "Internal review" } });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.document).toEqual(source.document);
+  });
+
   it("edits a Transaction through semantic commands and one-entry History", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const transactionId = "txn_read" as TransactionId;

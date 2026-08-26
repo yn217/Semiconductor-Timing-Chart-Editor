@@ -90,6 +90,37 @@ test("applies Annotation Inspector drafts through one semantic command", async (
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
+test("edits Header and Footer metadata through Document Properties and reopens it", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Document title").fill("Timing Review");
+  await properties.getByLabel("Document subtitle").fill("Reviewed timing");
+  await properties.getByLabel("Document constraints").fill("Setup must hold\nClock must be stable");
+  await properties.getByLabel("Footer figure number").fill("Fig. 2");
+  await properties.getByLabel("Footer revision").fill("R3");
+  await properties.getByLabel("Footer text").fill("Internal review");
+  await properties.getByTestId("apply-document-properties").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  const path = await download.path();
+  expect(path).toBeTruthy();
+  await page.locator("input[type='file']").setInputFiles(path!);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registration", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
