@@ -124,15 +124,12 @@ export class SemanticSnapCandidateService {
       const map = input.geometryMaps.get(signal.id);
       if (!map) continue;
       const y = input.rowY.get(signal.id) ?? 0;
-      for (let cycle = 0; cycle < input.document.timeline.cycleCount; cycle += 1) {
+      for (let cycle = 0; cycle <= input.document.timeline.cycleCount; cycle += 1) {
         const points: readonly { readonly point: AnchorPoint; readonly kind: SnapKind }[] = [
           { point: "cycle-start", kind: "cycle-boundary" },
-          { point: "cycle-center", kind: "cycle-center" },
-          { point: "transition-center", kind: signal.type === "bus" || signal.type === "state" ? "bus-transition" : "signal-transition" },
-          { point: "value-start", kind: "value-boundary" },
-          { point: "value-center", kind: "value-boundary" },
-          { point: "row-center", kind: "signal-row" },
-          ...(signal.type === "clock" ? [{ point: "rising-edge" as const, kind: "clock-edge" as const }, { point: "falling-edge" as const, kind: "clock-edge" as const }] : []),
+          ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "cycle-center" as const, kind: "cycle-center" as const }]),
+          ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "transition-center" as const, kind: signal.type === "bus" || signal.type === "state" ? "bus-transition" as const : "signal-transition" as const }]),
+          ...(cycle === input.document.timeline.cycleCount ? [] : [{ point: "value-start" as const, kind: "value-boundary" as const }, { point: "value-center" as const, kind: "value-boundary" as const }, { point: "row-center" as const, kind: "signal-row" as const }, ...(signal.type === "clock" ? [{ point: "rising-edge" as const, kind: "clock-edge" as const }, { point: "falling-edge" as const, kind: "clock-edge" as const }] : [])]),
         ];
         for (const item of points) {
           const anchor: SemanticAnchor = { signalId: signal.id, cycle, point: item.point };

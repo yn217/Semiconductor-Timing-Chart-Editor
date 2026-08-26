@@ -37,7 +37,7 @@ unclassified decision.
 |---|---|---|---|---|
 | GUI-01 | Multi-group feature-rich Ribbon | KEEP | #176 | Home must contain more than Undo/Redo/Delete. |
 | GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Hierarchy and full-path behavior require closure. |
-| GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Actual WaveDrom geometry and hit-zone acceptance required. |
+| GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Batch 2A verifies canvas cycle selection and exclusive terminal boundary from WaveDrom local geometry; range drag, playhead visual, and full interaction parity remain open. |
 | GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Batch 1B verifies editable Signal/Clock fields through Apply; Group/Annotation/Transaction parity remains open. |
 | GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON; dedicated Comment Row editor remains open. |
 | GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | Click-pan and viewport drag are required. |

@@ -116,6 +116,7 @@ export function MinimalCycleView() {
   const [clipboardStatus, setClipboardStatus] = useState("Empty");
   const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
+  const [selectedCycle, setSelectedCycle] = useState(2);
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
@@ -471,11 +472,34 @@ export function MinimalCycleView() {
       if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
       publishState();
     };
+    const selectCanvasCycle = (event: MouseEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return false;
+      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+      if (!waveLayer) return false;
+      const bounds = waveLayer.getBoundingClientRect();
+      const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (event.clientX - bounds.left) / currentZoom, y: (event.clientY - bounds.top) / currentZoom }, 32 / currentZoom, ["cycle-boundary", "cycle-center"], ["cycle-boundary"]);
+      if (!snap || snap.anchor.cycle < 0 || snap.anchor.cycle > session.getSnapshot().document.timeline.cycleCount) return false;
+      const cycle = snap.anchor.cycle;
+      setSelectedCycle(cycle);
+      rendererHost.dataset.selectedCycle = String(cycle);
+      if (event.shiftKey) {
+        const anchor = timelineRangeRef.current.start;
+        setTimelineRange({ start: Math.min(anchor, cycle), end: Math.min(session.getSnapshot().document.timeline.cycleCount, Math.max(anchor, cycle) + 1) });
+      } else if (cycle === session.getSnapshot().document.timeline.cycleCount) {
+        setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
+      } else {
+        setTimelineRange({ start: cycle, end: cycle + 1 });
+      }
+      publishState();
+      return true;
+    };
     const onRulerSelect = (event: MouseEvent) => {
       const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
       if (!tick) return;
       const cycle = Number(tick.dataset.cycle);
       if (!Number.isInteger(cycle) || cycle >= session.getSnapshot().document.timeline.cycleCount) return;
+      setSelectedCycle(cycle);
+      rendererHost.dataset.selectedCycle = String(cycle);
       if (event.shiftKey) {
         const anchor = timelineRangeRef.current.start;
         setTimelineRange({ start: Math.min(anchor, cycle), end: Math.max(anchor, cycle) + 1 });
@@ -664,8 +688,9 @@ export function MinimalCycleView() {
       onSelect(event);
       setContextMenu({ x: event.clientX, y: event.clientY });
     };
+    const onCanvasClick = (event: MouseEvent) => { if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
-    rendererHost.addEventListener("click", onSelect);
+    rendererHost.addEventListener("click", onCanvasClick);
     rendererHost.addEventListener("dragstart", onDragStart);
     rendererHost.addEventListener("dragover", onDragOver);
     rendererHost.addEventListener("drop", onDrop);
@@ -680,7 +705,7 @@ export function MinimalCycleView() {
     return () => {
       cancelAnimationFrame(frame);
       viewportElement.removeEventListener("scroll", onScroll);
-      rendererHost.removeEventListener("click", onSelect);
+      rendererHost.removeEventListener("click", onCanvasClick);
       rendererHost.removeEventListener("dragstart", onDragStart);
       rendererHost.removeEventListener("dragover", onDragOver);
       rendererHost.removeEventListener("drop", onDrop);

@@ -1,5 +1,30 @@
 import { expect, test } from "@playwright/test";
 
+test("selects a cycle and the exclusive terminal boundary from rendered canvas geometry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const wave = host.locator("[data-role='stable-waveform-surface']");
+  const owner = wave.locator("[data-signal-id='sig_cycle_request']");
+  const cycleTick = page.getByTestId("cycle-ruler").locator("[data-cycle='5']");
+  const tickBox = await cycleTick.boundingBox();
+  const ownerBox = await owner.boundingBox();
+  expect(tickBox).not.toBeNull();
+  expect(ownerBox).not.toBeNull();
+  await page.mouse.click(tickBox!.x + 1, ownerBox!.y + ownerBox!.height / 2);
+  await expect(host).toHaveAttribute("data-selected-cycle", "5");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("5");
+  const terminalTick = page.getByTestId("cycle-ruler").locator("[data-cycle='24']");
+  const terminalBox = await terminalTick.boundingBox();
+  expect(terminalBox).not.toBeNull();
+  const waveBox = await wave.boundingBox();
+  expect(waveBox).not.toBeNull();
+  await wave.click({ position: { x: terminalBox!.x - waveBox!.x, y: ownerBox!.y - waveBox!.y + ownerBox!.height / 2 } });
+  await expect(host).toHaveAttribute("data-selected-cycle", "24");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
+});
+
 test("selects a half-open range directly on the geometry-derived ruler", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

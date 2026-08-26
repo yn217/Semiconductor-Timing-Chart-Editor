@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { DefaultScreenGeometryProjector, ImmutableSnapIndex } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, SemanticSnapCandidateService } from "@timing-chart-v2/geometry";
 import type { SignalId } from "@timing-chart-v2/schema";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 const signalId = "sig_snap" as SignalId;
 
@@ -29,5 +30,13 @@ describe("Screen Geometry and snapping", () => {
     ]);
     expect(index.nearest({ x: 100, y: 20 }, 1)).toMatchObject({ kind: "annotation", ownerId: "ann_1" });
     expect(index.nearest({ x: 100, y: 20 }, 1, undefined, ["cycle-boundary", "clock-edge"])).toMatchObject({ kind: "cycle-boundary" });
+  });
+
+  it("exposes the exclusive terminal boundary from WaveDrom local geometry", () => {
+    const document = canonicalFixture();
+    const signal = document.signals.find((item) => item.type !== "commentRow")!;
+    const map = new ImmutableLocalGeometryMap(signal.id, [{ cycle: document.timeline.cycleCount, point: "cycle-start", position: { x: 240, y: 0 } }]);
+    const index = new SemanticSnapCandidateService().build({ document, geometryMaps: new Map([[signal.id, map]]), rowY: new Map([[signal.id, 0]]) });
+    expect(index.nearest({ x: 240, y: 0 }, 1, ["cycle-boundary"])).toMatchObject({ anchor: { cycle: document.timeline.cycleCount, point: "cycle-start" } });
   });
 });
