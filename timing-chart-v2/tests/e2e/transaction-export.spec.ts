@@ -157,6 +157,14 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
 
 test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", async ({ page }) => {
   await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector edge counter show").check();
+  await inspector.getByLabel("Inspector edge counter mode").selectOption("both");
+  await inspector.getByTestId("apply-inspector-edge-counter").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']")).not.toHaveCount(0);
   await createTransaction(page, "Exported DMA", 2, 6);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
@@ -173,6 +181,8 @@ test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", as
   expect(svgText).toContain('data-transaction-id=');
   expect(svgText).toContain('data-signal-id="sig_cycle_state"');
   expect(svgText).toContain('data-wave-engine="wavedrom-3.6.2"');
+  expect(svgText).toContain('data-layer="edge-counters"');
+  expect(svgText).toContain('data-signal-id="sig_cycle_clock"');
   expect(svgText).not.toMatch(/Ribbon|Inspector|selection-handle|snap-guide/);
   const png = await download("png"); expect([...png.slice(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
   const pdf = await download("pdf"); const pdf2 = await download("pdf"); expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-"); expect(pdf.length).toBeGreaterThan(1_000); expect(pdf).toEqual(pdf2);

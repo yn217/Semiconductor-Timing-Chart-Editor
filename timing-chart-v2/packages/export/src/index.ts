@@ -23,6 +23,7 @@ export interface ExportLabel { readonly text: string; readonly x: number; readon
 export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
+export interface ExportEdgeCounter { readonly id: string; readonly signalId: SignalId; readonly kind: "rising" | "falling"; readonly cycle: number; readonly x: number; readonly y: number; readonly label: string }
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
 export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number; readonly ticks: readonly ExportRulerTick[] }
 export interface ExportDocumentLayout { readonly title: string; readonly headerLines: readonly string[]; readonly figureNumber: string; readonly revision: string; readonly footerText: string }
@@ -35,6 +36,7 @@ export interface ExportScene {
   readonly annotations: readonly ExportAnnotation[];
   readonly transactions: readonly ExportTransaction[];
   readonly groupBands: readonly ExportGroupBand[];
+  readonly edgeCounters: readonly ExportEdgeCounter[];
   readonly legend: readonly string[];
   readonly ruler: ExportRuler;
   readonly documentLayout: ExportDocumentLayout;
@@ -107,6 +109,15 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   return { x: LABEL_WIDTH + (displayCycle + thresholdOffset) * cycleWidth - start * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
 }
 
+function toDisplayPosition(mapping: DisplayTimeMapping, sourceCycle: number): number {
+  const clamped = Math.max(0, Math.min(mapping.sourceToDisplay.length - 1, sourceCycle));
+  const lower = Math.floor(clamped);
+  const upper = Math.min(mapping.sourceToDisplay.length - 1, lower + 1);
+  const left = mapping.sourceToDisplay[lower] ?? 0;
+  const right = mapping.sourceToDisplay[upper] ?? left;
+  return left + (right - left) * (clamped - lower);
+}
+
 export function buildExportScene(document: CanonicalDocument, settings: ExportSettings): ExportScene {
   const documentLayout = buildDocumentLayout(document);
   const headerHeight = 38 + documentLayout.headerLines.length * 14;
@@ -128,6 +139,29 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
   const rowY = new Map(signals.map((signal, index) => [signal.id, waveTop + index * rowHeight + rowHeight / 2]));
   const waveforms = renderedWaves.map(({ signal, waveJson, svgMarkup, width: sourceWidth, height: sourceHeight }): ExportWave => ({ signalId: signal.id, name: signal.display.name, role: signal.role, y: rowY.get(signal.id)!, svgMarkup, sourceWidth, sourceHeight, cropX: range.start * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(waveJson) }));
+  const edgeCounters: ExportEdgeCounter[] = [];
+  for (const { signal } of renderedWaves) {
+    if (signal.type !== "clock" || !signal.edgeCounter.show) continue;
+    const period = signal.generator.period;
+    const start = Math.max(0, signal.generator.start + signal.generator.phase);
+    const halfPeriod = period / 2;
+    const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
+    for (let cycle = start; cycle < mapping.displayCycleCount; cycle += period) {
+      const activeKind = signal.generator.polarity === "positive" ? "rising" : "falling";
+      const oppositeKind = activeKind === "rising" ? "falling" : "rising";
+      edges.push({ kind: activeKind, cycle });
+      if (cycle + halfPeriod < mapping.displayCycleCount) edges.push({ kind: oppositeKind, cycle: cycle + halfPeriod });
+    }
+    const selected = edges.filter((edge) => signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === edge.kind);
+    selected.sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind));
+    selected.forEach((edge, index) => {
+      if (index % Math.max(1, signal.edgeCounter.labelEvery) !== 0) return;
+      const displayCycle = toDisplayPosition(mapping, edge.cycle);
+      if (displayCycle < range.start || displayCycle >= range.end) return;
+      const row = rowY.get(signal.id) ?? waveTop;
+      edgeCounters.push({ id: `edge:${signal.id}:${edge.kind}:${edge.cycle}`, signalId: signal.id, kind: edge.kind, cycle: edge.cycle, x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth + signal.edgeCounter.offset.x, y: row + signal.edgeCounter.offset.y + (signal.edgeCounter.position === "above" ? -6 : 10), label: String(signal.edgeCounter.startNumber + index) });
+    });
+  }
   const labels: ExportLabel[] = signals.map((signal) => ({ text: signal.display.name, x: 12, y: rowY.get(signal.id)!, kind: "signal" }));
   const groupBands: ExportGroupBand[] = [];
   document.signalGroups.forEach((group) => { const ys = group.rows.map((id) => rowY.get(id as SignalId)).filter((y): y is number => y !== undefined); const first = ys[0]; if (first !== undefined) { labels.push({ text: group.name, x: 12, y: first - rowHeight / 2 - 4, kind: "group" }); groupBands.push({ id: group.id, name: group.name, y: first - rowHeight / 2, height: Math.max(rowHeight, (ys.at(-1)! - first) + rowHeight) }); } });
@@ -153,7 +187,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     : [];
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
-  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout });
+  return Object.freeze({ width, height, waveforms, labels, annotations, transactions, groupBands, edgeCounters, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout });
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -185,6 +219,8 @@ export function renderExportSvg(scene: ExportScene): string {
     else if (annotation.type === "ghostTrace") out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#475569" stroke="none">${xml(annotation.label)}</text></g>`);
     else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
   }
+  out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);
+  for (const edge of scene.edgeCounters) out.push(`<text data-edge-counter-id="${xml(edge.id)}" data-signal-id="${xml(edge.signalId)}" data-edge-kind="${edge.kind}" data-cycle="${edge.cycle}" x="${edge.x}" y="${edge.y}">${xml(edge.label)}</text>`);
   const footer = [layout.figureNumber, layout.revision, layout.footerText].filter((value) => value.length > 0).join(" · ");
   out.push(`</g><g data-layer="legend" font-family="Segoe UI,Arial,sans-serif" font-size="10">${scene.legend.map((role, index) => `<text x="${12 + index * 80}" y="${scene.height - (footer ? 30 : 12)}">${xml(role)}</text>`).join("")}</g>`);
   if (footer) out.push(`<text data-layout="footer" x="12" y="${scene.height - 12}" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d">${xml(footer)}</text>`);

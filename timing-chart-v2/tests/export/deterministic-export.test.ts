@@ -96,6 +96,24 @@ describe("deterministic document export", () => {
     expect(svg).toContain('stroke-dasharray="6 4"');
   });
 
+  it("exports clock edge counters from the same scene cycle mapping", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      signals: [{ ...clock, edgeCounter: { ...clock.edgeCounter, show: true, mode: "both" as const, startNumber: 10, labelEvery: 1 } }, base.signals[1]!],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const svg = renderExportSvg(scene);
+    expect(scene.edgeCounters.length).toBeGreaterThan(4);
+    expect(scene.edgeCounters[0]?.label).toBe("10");
+    expect(scene.edgeCounters[1]?.label).toBe("11");
+    expect(svg).toContain('data-layer="edge-counters"');
+    expect(svg).toContain('data-edge-counter-id="edge:sig_clk:rising:0"');
+    expect(svg).toContain('data-edge-kind="falling"');
+    expect(scene.edgeCounters.every((edge) => edge.x >= scene.ruler.x && edge.x <= scene.width)).toBe(true);
+  });
+
   it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {
     const document = foldedFixture();
     const respected = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });
