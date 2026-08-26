@@ -199,6 +199,15 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   const hierarchy = page.getByTestId("hierarchy-browser");
   await expect(hierarchy).toBeVisible();
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut.data[7:0]");
+  await expect(hierarchy.locator("thead")).toContainText("Relative Path");
+  await hierarchy.getByTestId("hierarchy-path-view").click();
+  await expect(hierarchy.getByTestId("hierarchy-path-view")).toHaveAttribute("aria-pressed", "true");
+  await hierarchy.getByLabel("Hierarchy scope").selectOption("dut");
+  const scopedData = hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']");
+  await expect(scopedData).toHaveCount(1);
+  await expect(scopedData).toContainText("dut");
+  await expect(scopedData).toContainText("data[7:0]");
+  await hierarchy.getByLabel("Hierarchy scope").selectOption("all");
   await hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data'] button").click();
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await hierarchy.getByRole("button", { name: "Close hierarchy" }).click();

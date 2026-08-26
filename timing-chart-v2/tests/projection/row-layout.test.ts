@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, DefaultProjectionService, calculateRowLayout } from "@timing-chart-v2/projection";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -20,6 +20,16 @@ function layoutFixture(): CanonicalDocument {
 }
 
 describe("RowLayout and projection invariants", () => {
+  it("derives stable hierarchy entries without changing group placement semantics", () => {
+    const document = canonicalFixture();
+    const entries = buildHardwareHierarchyEntries(document, "hierarchy");
+    expect(entries.map((entry) => entry.signalId)).toEqual(["sig_clk", "sig_data"]);
+    expect(entries.find((entry) => entry.signalId === "sig_data")).toMatchObject({ scope: "(root)", relativePath: "DATA", fullPath: "DATA", groupName: "Main", width: "[7:0]" });
+    expect(hardwareHierarchyScopes(document)).toEqual(["(root)"]);
+    const scoped = buildHardwareHierarchyEntries({ ...document, signals: document.signals.map((signal) => ({ ...signal, source: { ...signal.source, instancePath: signal.id === "sig_data" ? ["dut"] : [] } })) }, "group", "dut");
+    expect(scoped.map((entry) => entry.signalId)).toEqual(["sig_data"]);
+  });
+
   it.each([0, 1, 2])("does not retain spacing for a fully hidden group at index %i", (hiddenIndex) => {
     const document = canonicalFixture();
     const template = document.signals[1]!;
