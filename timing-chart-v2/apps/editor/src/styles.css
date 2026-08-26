@@ -148,6 +148,7 @@ body { min-width: 1100px; }
 .bottom-content { flex: 1; min-height: 0; overflow: auto; }
 .bottom-content > .signal-editor { min-height: 100%; display: block; }.bottom-content .editor-tabbar { height: 37px; }.bottom-content .editor-tabbar .editor-tab { display: none; }
 .empty-editor { padding: 24px; color: #68768a; }
+.comment-row-editor { max-width: 620px; padding: 14px 18px; }.comment-row-editor h2 { margin: 0 0 12px; font-size: 14px; }.comment-row-editor label { display: grid; gap: 4px; margin: 10px 0; color: #5c687c; font-size: 11px; font-weight: 650; }.comment-row-editor input, .comment-row-editor textarea { border: 1px solid #b9c5d3; border-radius: 3px; padding: 6px; font: 12px/1.35 "Segoe UI", sans-serif; }.comment-row-editor button { height: 29px; border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; }
 .inspector { grid-column: 3; grid-row: 1 / 3; min-height: 0; overflow: auto; border-left: 1px solid #c7d0dd; background: white; }
 .inspector > header { position: sticky; top: 0; z-index: 2; height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid #d0d7e1; background: #f8fafc; }
 .inspector > header button { border: 0; background: transparent; }.inspector section { padding: 11px 13px; border-bottom: 1px solid #dfe4ea; }

@@ -469,7 +469,7 @@ export function MinimalCycleView() {
       }
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-row-id]") : null;
       const id = target?.dataset.rowId;
-      if (!id || !id.startsWith("sig_")) return;
+      if (!id) return;
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
       for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
@@ -1571,9 +1571,24 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
         {signal.type === "bus" && <label>Display<select aria-label="Bus display format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label>}
         <button type="submit" data-testid="save-signal-properties">Apply properties</button>
       </form>
-      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} /> : signal.type === "commentRow" ? <div className="editor-empty">Comment rows are edited in a later context editor.</div> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
     </>}
   </section>;
+}
+
+function CommentRowEditor({ signal, onCommand }: { readonly signal: CommentRow; readonly onCommand: (command: SemanticCommand) => void }) {
+  const [title, setTitle] = useState(signal.title);
+  const [body, setBody] = useState(signal.body);
+  return <form className="comment-row-editor" aria-label="Comment Row Editor" data-testid="comment-row-editor" onSubmit={(event) => {
+    event.preventDefault();
+    onCommand({ id: nextCommandId("comment_row_update"), type: "commentRow.update", signalId: signal.id, title, body });
+  }}>
+    <h2>Comment Row</h2>
+    <div className="property-row"><span>Scope</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div>
+    <label>Title<input aria-label="Comment Row title" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
+    <label>Body<textarea aria-label="Comment Row body" value={body} onChange={(event) => setBody(event.target.value)} rows={4} /></label>
+    <button type="submit" data-testid="apply-comment-row">Apply Comment Row</button>
+  </form>;
 }
 
 function ClockGeneratorEditor({ signal, onCommand }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void }) {

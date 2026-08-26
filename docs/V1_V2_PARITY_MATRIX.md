@@ -39,7 +39,7 @@ unclassified decision.
 | GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Hierarchy and full-path behavior require closure. |
 | GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Batch 2A verifies canvas cycle selection and exclusive terminal boundary; Batch 2B verifies geometry-backed half-open drag, Shift extension, reverse-range normalization and Escape preview cancel. Playhead visual and full interaction parity remain open. |
 | GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Batch 1B verifies editable Signal/Clock fields through Apply; Group/Annotation/Transaction parity remains open. |
-| GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON; dedicated Comment Row editor remains open. |
+| GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON. Current batch adds a dedicated Comment Row transient-draft/apply editor, fixes stable-ID selection for generated comment rows, and verifies Save/Open; full visual parity of the remaining context tabs remains open. |
 | GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | Batch 2C adds a row-proportional viewport MiniMap with click-pan and pointer drag pan; large-document scaling and visual parity remain open. |
 | GUI-07 | Status Bar | KEEP | #172/#176 | State and count parity requires evidence. |
 | GUI-08 | Cycle/Transaction/Split selector | MERGED | #172 | View-only state must preserve Canonical/History = 0. |

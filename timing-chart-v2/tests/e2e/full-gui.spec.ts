@@ -151,6 +151,38 @@ test("applies Clock Generator Inspector drafts with editable duty and one histor
   await expect(inspector.getByLabel("Inspector clock polarity")).toHaveValue("negative");
 });
 
+test("edits a Comment Row through the dedicated Bottom Context Editor", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Comment Row", exact: true }).click();
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
+  const commentRow = host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]");
+  await expect(commentRow).toHaveAttribute("data-kind", "comment");
+  await commentRow.click();
+  await expect(page.getByTestId("selection-status")).toContainText("Comment");
+  const editor = page.getByTestId("comment-row-editor");
+  await expect(editor).toBeVisible();
+  const beforeRevision = Number(await host.getAttribute("data-canonical-revision"));
+  await editor.getByLabel("Comment Row title").fill("Timing Note");
+  await editor.getByLabel("Comment Row body").fill("Review boundary behavior at cycle 0.");
+  await editor.getByTestId("apply-comment-row").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(beforeRevision + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(editor.getByLabel("Comment Row title")).toHaveValue("Timing Note");
+  await expect(commentRow).toContainText("Timing Note");
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  const path = await download.path();
+  expect(path).toBeTruthy();
+  await page.locator("input[type='file']").setInputFiles(path!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]")).toContainText("Timing Note");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("saves and reopens through the application service boundary", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
