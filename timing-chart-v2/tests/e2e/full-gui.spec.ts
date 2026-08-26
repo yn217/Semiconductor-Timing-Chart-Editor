@@ -117,6 +117,8 @@ test("Inspector keeps the V1 sectioned editor geometry for a selected clock", as
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const inspector = page.getByTestId("inspector");
   await expect(inspector).toHaveCSS("width", "300px");
+  await expect(inspector.getByTestId("minimap")).toBeVisible();
+  await expect(page.locator(".left-panel-tail").getByTestId("minimap")).toHaveCount(0);
   await expect(inspector.locator("header")).toContainText("Clock");
   await expect(inspector.locator("section")).toHaveCount(2);
   await expect(inspector.getByRole("heading", { name: "Clock Generator" })).toBeVisible();
@@ -126,6 +128,7 @@ test("Inspector keeps the V1 sectioned editor geometry for a selected clock", as
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await expect(surface).toHaveAttribute("data-render-counters", /waveDromRenders/);
+  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-inspector-minimap-1672x941.png", animations: "disabled" });
 });
 
 for (const route of ["Ribbon", "Keyboard", "Context Menu", "Inspector"] as const) {
