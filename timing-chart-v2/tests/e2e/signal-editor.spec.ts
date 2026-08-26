@@ -73,6 +73,25 @@ test("updates row properties without WaveDrom regeneration", async ({ page }) =>
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
 });
 
+test("Bottom Signal editor exposes editable type and bus width through one semantic command", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const editor = page.getByTestId("signal-editor");
+  await expect(editor.getByLabel("Signal type")).toHaveValue("bus");
+  const revisionBefore = await page.getByTestId("revision-status").textContent();
+  await editor.getByLabel("Signal role").selectOption("output");
+  await editor.getByLabel("Signal width").fill("16");
+  await editor.getByTestId("save-signal-properties").click();
+  await expect(page.getByTestId("revision-status")).not.toHaveText(revisionBefore!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(editor.getByLabel("Signal width")).toHaveValue("16");
+  await page.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(editor.getByLabel("Signal width")).toHaveValue("8");
+});
+
 test("edits Clock Generator through one semantic history entry", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
@@ -90,6 +109,20 @@ test("edits Clock Generator through one semantic history entry", async ({ page }
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders + 1);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds + 1);
+});
+
+test("Bottom Clock editor keeps Duty editable and applies it through the clock SemanticCommand", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const editor = page.getByTestId("signal-editor");
+  const duty = editor.getByLabel("Clock duty");
+  await expect(duty).toBeEnabled();
+  await duty.fill("0.25");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(duty).toHaveValue("0.25");
 });
 
 test("moves the rendered waveform transition to the edited Start cycle, not just the DOM identity", async ({ page }) => {
