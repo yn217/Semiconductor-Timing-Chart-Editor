@@ -12,6 +12,9 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
 
   const list = page.getByTestId("annotation-list");
   await expect(list.locator("[data-annotation-list-id]")).toHaveCount(2);
+  await expect(list.locator(".annotation-list-header")).toContainText("Start");
+  await expect(list.locator(".annotation-list-header")).toContainText("End");
+  await expect(list.locator(".annotation-list-header")).toContainText("Label / Text");
   const ids = await list.locator("[data-annotation-list-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-list-id")));
   expect(ids).toEqual(ids.filter((id): id is string => id !== null));
   expect(new Set(ids).size).toBe(2);
