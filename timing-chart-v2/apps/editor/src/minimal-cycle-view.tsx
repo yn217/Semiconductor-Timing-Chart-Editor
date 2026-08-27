@@ -1050,6 +1050,16 @@ export function MinimalCycleView() {
     selectedTransactionRef.current = undefined;
     if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
   };
+  const selectAnnotation = (id: AnnotationId) => {
+    selectedAnnotationRef.current = id;
+    setSelectedAnnotationId(id);
+    setSelectedId(undefined);
+    selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
+    setSelectedGroupId(undefined);
+    setSelectedTransactionId(undefined);
+    selectedTransactionRef.current = undefined;
+    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+  };
   const signalEditor = <SignalEditor
     key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}`}
     signal={bottomSignal}
@@ -1084,30 +1094,18 @@ export function MinimalCycleView() {
     annotations={snapshot.document.annotations}
     history={history}
     problem={problem}
-    onSelect={(id) => {
-      selectedAnnotationRef.current = id;
-      setSelectedAnnotationId(id);
-      setSelectedId(undefined);
-      selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
-      setSelectedGroupId(undefined);
-      setSelectedTransactionId(undefined);
-      selectedTransactionRef.current = undefined;
-      if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+    onSelect={selectAnnotation}
+    onCreate={(type) => { if (annotationTargetSignalId) createSelectedAnnotation(createAnnotation(type, annotationTargetSignalId, timelineRange, snapshot.document)); }}
+    onDuplicate={(source) => {
+      const duplicate = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
+      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
+      selectAnnotation(duplicate.id);
     }}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onDelete={() => commandRegistry.current.execute("selection.delete")}
-  /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={(id) => {
-    selectedAnnotationRef.current = id;
-    setSelectedAnnotationId(id);
-    setSelectedId(undefined);
-    selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
-    setSelectedGroupId(undefined);
-    setSelectedTransactionId(undefined);
-    selectedTransactionRef.current = undefined;
-    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
-  }} /><div className="empty-editor">Select or create an Annotation.</div></>;
+  /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
     selectedTransactionRef.current = id;
     setSelectedTransactionId(id);
@@ -2064,7 +2062,7 @@ function AnnotationList({ annotations, selectedId, onSelect }: { readonly annota
   </div>;
 }
 
-function AnnotationEditor({ annotation, annotations, history, problem, onSelect, onCommand, onUndo, onRedo, onDelete }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void }) {
+function AnnotationEditor({ annotation, annotations, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void }) {
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
   const [visible, setVisible] = useState(annotation.visible);
@@ -2074,6 +2072,7 @@ function AnnotationEditor({ annotation, annotations, history, problem, onSelect,
   const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
   const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
   const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
+  const [previewRevision, setPreviewRevision] = useState(0);
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor">
     <div className="editor-tabbar">
       <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
@@ -2081,6 +2080,14 @@ function AnnotationEditor({ annotation, annotations, history, problem, onSelect,
       <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
       <button type="button" onClick={onDelete} data-testid="delete-annotation">Delete</button>
+    </div>
+    <div className="annotation-context-toolbar" role="toolbar" aria-label="Annotation operations" data-testid="annotation-context-toolbar">
+      <button type="button" aria-label="Create context annotation" onClick={() => onCreate("text")}>＋ Add Annotation</button>
+      <button type="button" onClick={() => onDuplicate(annotation)}>Duplicate</button>
+      <button type="button" onClick={onDelete}>Delete</button>
+      <button type="button" onClick={() => setPreviewRevision((value) => value + 1)}>⟳ Preview Update</button>
+      <button type="button" onClick={() => downloadText(JSON.stringify(annotations, null, 2), "annotations.json")}>Export</button>
+      <output data-testid="annotation-preview-status">Preview {previewRevision > 0 ? `updated ${previewRevision}` : "ready"}</output>
     </div>
     <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}

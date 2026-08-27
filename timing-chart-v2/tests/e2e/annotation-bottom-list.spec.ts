@@ -7,14 +7,19 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
   await page.getByLabel("Annotation type").selectOption("text");
-  await page.getByRole("button", { name: "Add annotation" }).click();
-  await page.getByRole("button", { name: "Add annotation" }).click();
+  const annotationTools = page.getByTestId("annotation-toolbar");
+  await annotationTools.getByRole("button", { name: "Add annotation" }).click();
+  await annotationTools.getByRole("button", { name: "Add annotation" }).click();
 
   const list = page.getByTestId("annotation-list");
   await expect(list.locator("[data-annotation-list-id]")).toHaveCount(2);
   await expect(list.locator(".annotation-list-header")).toContainText("Start");
   await expect(list.locator(".annotation-list-header")).toContainText("End");
   await expect(list.locator(".annotation-list-header")).toContainText("Label / Text");
+  await expect(page.getByRole("toolbar", { name: "Annotation operations" })).toBeVisible();
+  await expect(page.getByTestId("annotation-preview-status")).toHaveText("Preview ready");
+  await page.getByRole("button", { name: "⟳ Preview Update" }).click();
+  await expect(page.getByTestId("annotation-preview-status")).toHaveText("Preview updated 1");
   const ids = await list.locator("[data-annotation-list-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-list-id")));
   expect(ids).toEqual(ids.filter((id): id is string => id !== null));
   expect(new Set(ids).size).toBe(2);
