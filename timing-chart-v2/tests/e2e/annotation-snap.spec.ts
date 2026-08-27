@@ -156,6 +156,26 @@ test("snaps a dragged endpoint to exact rendered cycle geometry", async ({ page 
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
+test("Snap OFF changes annotation endpoint interaction to free geometry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const owner = await createAnnotation(page, "arrow");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("snap-toggle").uncheck();
+  const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
+  const box = await handle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 3, box!.y + 3);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 17, box!.y + 3);
+  await expect(host.locator("[data-role='snap-point']")).toHaveCount(0);
+  await expect(host).not.toHaveAttribute("data-snap-kind");
+  await page.mouse.up();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+});
+
 test("preserves canonical source-cycle anchors through an Axis Break snap", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

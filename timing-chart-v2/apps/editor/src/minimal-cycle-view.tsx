@@ -370,6 +370,7 @@ export function MinimalCycleView() {
       const referenceRow = referenceId ? projection.rowLayout.find((row) => row.rowId === referenceId) : undefined;
       if (!waveLayer || !referenceRow) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
+      if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
       const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (clientX - bounds.left) / currentZoom, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
       return snap?.anchor.cycle;
     };
@@ -841,7 +842,7 @@ export function MinimalCycleView() {
       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, buildDisplayTimeMapping(document.timeline, document.timeGroups));
       if (!annotation || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
-      const snap = annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type));
+      const snap = snapEnabledRef.current ? annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       if (!snap) {
         renderer.updateSnapGuide();
         delete rendererHost.dataset.snapKind;
@@ -879,7 +880,7 @@ export function MinimalCycleView() {
       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, buildDisplayTimeMapping(snapshot.document.timeline, snapshot.document.timeGroups));
       if (!field || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
-      const snap = drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type));
+      const snap = snapEnabledRef.current ? drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {
         rendererHost.dataset.snapKind = snap.kind;
