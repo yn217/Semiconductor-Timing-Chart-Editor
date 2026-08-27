@@ -61,6 +61,11 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     }
     svg.setAttribute("data-wave-owner", signalId);
     svg.setAttribute("data-wave-render-index", String(renderIndex));
+    // WaveDrom's default SVG is sized from the row height. The browser's default
+    // preserveAspectRatio=meet therefore leaves the waveform at its intrinsic
+    // brick width when the editor provides a wider screen column. Stretch only
+    // the rendered SVG viewport; Local Geometry removes this root screen matrix.
+    svg.setAttribute("preserveAspectRatio", "none");
     mount.setAttribute("data-wave-owner", signalId);
     mount.replaceChildren(svg);
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };

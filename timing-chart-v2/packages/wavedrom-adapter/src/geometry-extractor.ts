@@ -79,10 +79,37 @@ function groupById<T extends Element>(svg: SVGElement, id: string): T {
   return element;
 }
 
-function matrixOf(group: SVGGElement): MatrixLike {
-  const matrix = group.getCTM();
-  if (!matrix) throw new WaveDromAdapterError("DETACHED_WAVEDROM_SVG", "WaveDrom SVG must be mounted before Local Geometry extraction.");
-  return matrix;
+function multiply(left: MatrixLike, right: MatrixLike): MatrixLike {
+  return {
+    a: left.a * right.a + left.c * right.b,
+    b: left.b * right.a + left.d * right.b,
+    c: left.a * right.c + left.c * right.d,
+    d: left.b * right.c + left.d * right.d,
+    e: left.a * right.e + left.c * right.f + left.e,
+    f: left.b * right.e + left.d * right.f + left.f,
+  };
+}
+
+function inverse(matrix: MatrixLike): MatrixLike {
+  const determinant = matrix.a * matrix.d - matrix.b * matrix.c;
+  if (!Number.isFinite(determinant) || determinant === 0) throw new WaveDromAdapterError("INVALID_WAVEDROM_MATRIX", "WaveDrom SVG exposed a non-invertible transform.");
+  return {
+    a: matrix.d / determinant,
+    b: -matrix.b / determinant,
+    c: -matrix.c / determinant,
+    d: matrix.a / determinant,
+    e: (matrix.c * matrix.f - matrix.d * matrix.e) / determinant,
+    f: (matrix.b * matrix.e - matrix.a * matrix.f) / determinant,
+  };
+}
+
+function matrixOf(svg: SVGGraphicsElement, group: SVGGElement): MatrixLike {
+  const rootMatrix = svg.getScreenCTM();
+  const groupMatrix = group.getScreenCTM();
+  if (!rootMatrix || !groupMatrix) throw new WaveDromAdapterError("DETACHED_WAVEDROM_SVG", "WaveDrom SVG must be mounted before Local Geometry extraction.");
+  // Express the group transform in the SVG root's user coordinates. This keeps
+  // Local Geometry independent from the responsive Screen Geometry viewport.
+  return multiply(inverse(rootMatrix), groupMatrix);
 }
 
 function useTranslation(element: SVGUseElement): Point {
@@ -119,8 +146,8 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   const { svg, renderIndex, waveJson } = rendered;
   const lanes = groupById<SVGGElement>(svg, `lanes_${renderIndex}`);
   const draw = groupById<SVGGElement>(svg, `wavelane_draw_0_${renderIndex}`);
-  const laneMatrix = matrixOf(lanes);
-  const drawMatrix = matrixOf(draw);
+  const laneMatrix = matrixOf(svg as SVGGraphicsElement, lanes);
+  const drawMatrix = matrixOf(svg as SVGGraphicsElement, draw);
   const gridLines = Array.from(lanes.querySelectorAll<SVGLineElement>(`[id^="gmark_"]`))
     .map((line) => ({ x: Number(line.getAttribute("x1")), y1: Number(line.getAttribute("y1")), y2: Number(line.getAttribute("y2")) }))
     .filter((line) => [line.x, line.y1, line.y2].every(Number.isFinite))
