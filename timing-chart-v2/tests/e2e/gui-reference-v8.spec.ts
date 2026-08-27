@@ -45,5 +45,13 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(await page.locator("[data-role='tree-signal-role'] .comment-icon, [data-role='signal-role'] .comment-icon").count()).toBeGreaterThan(0);
   expect(await page.locator("[data-role='tree-visibility'] svg, [data-role='tree-more'] svg, [data-role='tree-collapse'] svg").count()).toBeGreaterThan(0);
   expect(await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before);
+  const bottomToolbar = page.getByTestId("signal-event-toolbar");
+  await expect(bottomToolbar).toBeVisible();
+  for (const action of ["event-presets", "event-duplicate", "event-import-action", "event-export-action", "event-preview-action"]) {
+    await expect(page.getByTestId(action).locator("svg")).toHaveCount(1);
+  }
+  await page.getByTestId("event-preview-action").click();
+  await expect(page.getByTestId("event-preview-status")).toContainText("Preview only");
+  expect(await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before);
   await page.screenshot({ path: "artifacts/gui-v8/reference-contract-dut.png", animations: "disabled" });
 });

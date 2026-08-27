@@ -100,7 +100,7 @@ test("Bottom Signal event toolbar provides command-backed row operations and vie
   const editor = page.getByTestId("signal-editor");
   const toolbar = page.getByTestId("signal-event-toolbar");
   await expect(toolbar).toBeVisible();
-  await expect(toolbar.getByRole("button")).toHaveText(["Add Row", "Duplicate", "Delete", "Import", "Export", "Preview Update"]);
+  await expect(toolbar.getByRole("button")).toHaveText(["Presets", "Duplicate", "Import...", "Export...", "Preview", "Add Row", "Duplicate", "Delete", "Import", "Export", "Preview Update"]);
   const revisionBefore = await page.getByTestId("revision-status").textContent();
   const historyBefore = await page.getByTestId("history-status").textContent();
   await toolbar.getByTestId("event-preview").click();

@@ -300,6 +300,9 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .inspector > .minimap { height: 143px; flex-basis: 143px; }
 .editor-shell[data-visual-reference="true"] .bottom-tabs { height: 38px; }
 .editor-shell[data-visual-reference="true"] .status-bar { height: 25px; min-height: 25px; }
+.event-toolbar .bottom-action { display: inline-flex; align-items: center; gap: 4px; }
+.event-toolbar .bottom-action svg { width: 15px; height: 15px; }
+.event-presets { display: inline-flex; align-items: center; margin-left: 4px; }
 .editor-shell[data-visual-reference="true"] .home-display-toggles { display: grid; grid-template-columns: 65px 76px; grid-template-rows: 28px 28px; gap: 4px 7px; align-self: center; }
 .editor-shell[data-visual-reference="true"] .home-display-toggles .home-toggle { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 3px; }
 .editor-shell[data-visual-reference="true"] .home-display-toggles .home-toggle:nth-child(1) { grid-column: 1; grid-row: 1; }

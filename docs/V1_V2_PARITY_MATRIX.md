@@ -87,3 +87,15 @@ All future closure work must preserve:
   History entry and one ChangeSet.
 - View-only actions have Canonical/History/Dirty delta zero.
 - V1 runtime code is reference-only and is not copied into V2.
+
+## v8 GUI migration evidence
+
+The approved v8 pack is fixed at `references/v2-gui-reference-v8/`. The
+Bottom Context Editor now exposes real command-backed Signal Event actions for
+Presets, Duplicate, Import, Export, and Preview using the shared SVG sprite.
+Preview and Presets remain view-only; Duplicate and Import use the existing
+semantic command path. Browser evidence is in
+`timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts` and
+`timing-chart-v2/tests/e2e/signal-editor.spec.ts`; v8 shell geometry and
+counter invariants are asserted without changing the WaveDrom adapter or
+canonical architecture.

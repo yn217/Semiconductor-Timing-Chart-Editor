@@ -2397,6 +2397,7 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
   const [value, setValue] = useState(quickValue(signal));
   const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
   const [preview, setPreview] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = signal.values.find((change) => change.start === selectedStart);
   const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
@@ -2432,6 +2433,11 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
   return <div className="event-editor">
     <div className="event-heading"><h2>Event Table</h2><span>End and duration are derived</span></div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
+      <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="event-presets"><RibbonIcon name="i-settings" /><span>Presets</span></button>
+      <button type="button" className="bottom-action" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
+      <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="event-import-action"><RibbonIcon name="i-import" /><span>Import...</span></button>
+      <button type="button" className="bottom-action" onClick={exportValues} data-testid="event-export-action"><RibbonIcon name="i-export" /><span>Export...</span></button>
+      <button type="button" className="bottom-action" onClick={() => setPreview((current) => !current)} aria-pressed={preview} data-testid="event-preview-action"><RibbonIcon name="i-preview" /><span>Preview</span></button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate-row">Duplicate</button>
       <button type="button" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
@@ -2439,6 +2445,7 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       <button type="button" onClick={exportValues} data-testid="event-export">Export</button>
       <button type="button" onClick={() => setPreview((current) => !current)} data-testid="event-preview">Preview Update</button>
       <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import signal events" onChange={(event) => { const file = event.target.files?.[0]; if (file) importValues(file); event.currentTarget.value = ""; }} />
+      {presetsOpen && <div className="event-presets" role="group" aria-label="Event value presets"><QuickValues signal={signal} setValue={setValue} /></div>}
       {preview && <output className="event-preview" data-testid="event-preview-status">Preview only · canonical data unchanged</output>}
     </div>
     <div className="event-table" role="table" aria-label="Signal events">
