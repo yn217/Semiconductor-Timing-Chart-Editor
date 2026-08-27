@@ -614,6 +614,7 @@ test("Canvas range drag supports reverse and Shift extension while Escape cancel
   const xAt = async (cycle: number) => Number.parseFloat(await ruler.locator(`[data-cycle='${cycle}']`).evaluate((element) => (element as HTMLElement).style.left));
   expect(waveBox && requestBox).toBeTruthy();
   const y = requestBox!.y + requestBox!.height / 2;
+  const countersBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as { snapIndexBuilds: number };
 
   await page.mouse.move(waveBox!.x + await xAt(7), y);
   await page.mouse.down();
@@ -622,6 +623,8 @@ test("Canvas range drag supports reverse and Shift extension while Escape cancel
   await expect(host).toHaveAttribute("data-range-preview", "3:7");
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  const countersDuring = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as { snapIndexBuilds: number };
+  expect(countersDuring.snapIndexBuilds - countersBefore.snapIndexBuilds).toBe(1);
   await page.mouse.up();
   await expect(host).not.toHaveAttribute("data-range-drag");
   await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 7)");

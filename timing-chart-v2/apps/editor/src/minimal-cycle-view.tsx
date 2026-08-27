@@ -331,6 +331,14 @@ export function MinimalCycleView() {
     };
     const renderer = new StableTimingChartRenderer(provider);
     const snapService = new SemanticSnapCandidateService();
+    let snapIndex: ImmutableSnapIndex | undefined;
+    const currentSnapIndex = () => {
+      if (!snapIndex) {
+        snapIndex = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService);
+        publishState();
+      }
+      return snapIndex;
+    };
     renderer.mount(rendererHost);
     const initialSnapshot = session.getSnapshot();
     let window: VirtualizationWindow = viewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
@@ -432,7 +440,7 @@ export function MinimalCycleView() {
       if (!waveLayer || !referenceRow) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
       if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
-      const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (clientX - bounds.left) / currentZoom, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+      const snap = currentSnapIndex().nearest({ x: (clientX - bounds.left) / currentZoom, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
       return snap?.anchor.cycle;
     };
     publishState();
@@ -473,6 +481,7 @@ export function MinimalCycleView() {
       }
       delete rendererHost.dataset.editorIdle;
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection });
+      snapIndex = undefined;
       renderer.update(projection);
       setSnapshot(result.snapshot);
       setValidationDiagnostics([]);
@@ -504,6 +513,7 @@ export function MinimalCycleView() {
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
       geometryMaps.clear();
+      snapIndex = undefined;
       referenceGeometry = undefined;
       window = viewportWindow(viewportElement, document.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window });
@@ -563,6 +573,7 @@ export function MinimalCycleView() {
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         window = next;
         projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection });
+        snapIndex = undefined;
         renderer.update(projection);
         rendererHost.dataset.viewportStartY = String(window.viewportStartY);
       });
@@ -639,7 +650,7 @@ export function MinimalCycleView() {
         const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
         if (!waveLayer) return;
         const bounds = waveLayer.getBoundingClientRect();
-        const snap = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps).nearest({ x: (event.clientX - bounds.left) / currentZoom, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
+        const snap = currentSnapIndex().nearest({ x: (event.clientX - bounds.left) / currentZoom, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
         if (!snap) {
           setProblem("No rendered transition is within the 12 px snap tolerance.");
           return;
@@ -738,7 +749,7 @@ export function MinimalCycleView() {
       if (!waveLayer) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
       const x = (clientX - bounds.left) / currentZoom;
-      const candidates = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).entries().filter((candidate) => candidate.kind === "cycle-boundary");
+      const candidates = currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary");
       if (!snapEnabledRef.current) {
         const ordered = [...candidates].sort((left, right) => left.point.x - right.point.x);
         const x = (clientX - bounds.left) / currentZoom;
@@ -892,7 +903,7 @@ export function MinimalCycleView() {
       const field = fieldElement?.dataset.annotationField as typeof annotationFields[number] | undefined;
       annotationDrag = {
         annotationId: owner.dataset.annotationId as AnnotationId,
-        ...(field ? { field, snapIndex: buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService) } : {}),
+        ...(field ? { field, snapIndex: currentSnapIndex() } : {}),
         label,
         startX: event.clientX,
         startY: event.clientY,
