@@ -26,7 +26,7 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const ruler = page.getByTestId("cycle-ruler");
-  const fileInput = page.locator("input[type='file']");
+  const fileInput = page.locator("input[type='file'][accept='.json,.tcd']");
 
   const docA = fixture("doc-a", "Document A", "clk_external", 12);
   const docB = fixture("doc-b", "Document B", "clk_other", 8);

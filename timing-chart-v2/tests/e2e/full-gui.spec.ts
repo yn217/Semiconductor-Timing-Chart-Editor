@@ -239,7 +239,7 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   const download = await downloadPromise;
   const path = await download.path();
   expect(path).toBeTruthy();
-  await page.locator("input[type='file']").setInputFiles(path!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
@@ -673,7 +673,7 @@ test("edits a Comment Row through the dedicated Bottom Context Editor", async ({
   const download = await downloadPromise;
   const path = await download.path();
   expect(path).toBeTruthy();
-  await page.locator("input[type='file']").setInputFiles(path!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]")).toContainText("Timing Note");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -694,7 +694,7 @@ test("saves and reopens through the application service boundary", async ({ page
   expect(path).toBeTruthy();
   await name.fill("TEMP_REQUEST"); await page.getByTestId("inspector").getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await page.locator("input[type='file']").setInputFiles(path!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='frozen-signal-name']")).toHaveText("SAVED_REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
