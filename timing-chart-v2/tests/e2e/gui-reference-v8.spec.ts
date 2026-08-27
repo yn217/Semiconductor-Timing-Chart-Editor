@@ -41,6 +41,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
+  await expect(page.getByTestId("selection-status")).toHaveText("clk");
+  await expect(page.getByTestId("inspector")).toContainText("Clock");
   await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
   const treeMore = page.locator(".tree-more-button");
@@ -62,13 +64,11 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(await page.locator("[data-role='tree-signal-role'] .comment-icon, [data-role='signal-role'] .comment-icon").count()).toBeGreaterThan(0);
   expect(await page.locator("[data-role='tree-visibility'] svg, [data-role='tree-more'] svg, [data-role='tree-collapse'] svg").count()).toBeGreaterThan(0);
   expect(await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before);
-  const bottomToolbar = page.getByTestId("signal-event-toolbar");
+  const bottomToolbar = page.getByTestId("clock-context-toolbar");
   await expect(bottomToolbar).toBeVisible();
-  for (const action of ["event-presets", "event-duplicate", "event-import-action", "event-export-action", "event-preview-action"]) {
-    await expect(page.getByTestId(action).locator("svg")).toHaveCount(1);
-  }
-  await page.getByTestId("event-preview-action").click();
-  await expect(page.getByTestId("event-preview-status")).toContainText("Preview only");
+  await expect(bottomToolbar.getByRole("button")).toHaveText(["Presets", "Duplicate", "Import...", "Export...", "Preview"]);
+  await page.getByTestId("clock-preview").click();
+  await expect(page.getByTestId("clock-preview-status")).toContainText("Preview only");
   expect(await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before);
   await page.screenshot({ path: "artifacts/gui-v8/reference-contract-dut.png", animations: "disabled" });
 });

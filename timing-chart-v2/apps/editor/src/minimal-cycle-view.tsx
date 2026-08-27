@@ -130,8 +130,8 @@ export function MinimalCycleView() {
   const saveDocument = useRef<() => string | undefined>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_data") : undefined);
-  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_data")]) : new Set());
+  const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_clock") : undefined);
+  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_clock")]) : new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
   const selectedSignalIdsRef = useRef<ReadonlySet<SignalId>>(new Set());
   selectedSignalIdsRef.current = selectedSignalIds;
