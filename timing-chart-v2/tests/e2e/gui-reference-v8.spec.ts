@@ -54,6 +54,13 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
   expect(firstWave?.width ?? 0).toBeGreaterThan(890);
   await expect(page.getByTestId("selection-status")).toHaveText("clk");
+  await expect(page.getByTestId("tool-status")).toHaveText("Ready");
+  await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 10");
+  await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 0");
+  await expect(page.getByTestId("range-status")).toHaveText("Time Range: 0 – 10 cycles");
+  await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 100%");
+  await expect(page.getByTestId("revision-status")).toBeHidden();
+  await expect(page.getByTestId("history-status")).toBeHidden();
   await expect(page.getByTestId("inspector")).toContainText("Clock");
   await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
   await expect(page.getByTestId("clock-context-toolbar").locator("svg")).toHaveCount(5);
