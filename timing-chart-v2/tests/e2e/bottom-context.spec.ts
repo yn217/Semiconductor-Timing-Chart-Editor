@@ -55,3 +55,22 @@ test("Whole Document JSON stays read-only until Advanced mode and validates befo
   await json.getByRole("button", { name: "Validate", exact: true }).click();
   await expect(json).toContainText("Valid");
 });
+
+test("Advanced JSON applies a selected Group through one document command", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch'][data-group-id='grp_cycle_control']").first().click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.getByRole("button", { name: "JSON", exact: true }).click();
+  const json = page.getByTestId("json-panel");
+  await json.getByTestId("json-advanced-toggle").click();
+  await json.getByLabel("JSON scope").selectOption("selected");
+  const editor = json.getByLabel("Advanced JSON");
+  const selected = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
+  selected.name = "CONTROL_JSON";
+  await editor.fill(JSON.stringify(selected, null, 2));
+  await json.getByTestId("apply-advanced-json").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']")).toContainText("CONTROL_JSON");
+});

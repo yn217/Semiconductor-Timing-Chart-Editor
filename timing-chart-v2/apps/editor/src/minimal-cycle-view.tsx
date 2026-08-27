@@ -1480,7 +1480,7 @@ export function MinimalCycleView() {
           <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => setFollowSelection(event.target.checked)} /> 選択に追従</label>
           <button type="button" data-testid="bottom-pin" aria-label={bottomPinned ? "Unpin" : "Pin"} aria-pressed={bottomPinned} onClick={toggleBottomPin}><span className="bottom-pin-label" data-v1-label={bottomPinned ? "ピン解除" : "ピン留め"}>{bottomPinned ? "Unpin" : "Pin"}</span></button>
         </nav>
-        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}</div>
+        <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={selectedGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}</div>
       </section>}
       {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} /></aside>}
     </div>
@@ -1842,13 +1842,13 @@ function JsonPanel({ document }: { readonly document: CanonicalDocument }) {
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>Generated JSON</strong><span>🔒 Read only</span><button type="button" onClick={() => setStatus("Formatted")}>Format</button><button type="button" onClick={() => setStatus(validateCanonicalDocument(document).length === 0 ? "Valid" : "Invalid")}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(text); setStatus("Copied"); }}>Copy</button><select aria-label="JSON scope"><option>Selected Object</option><option>Whole Document</option></select><output>{status}</output></div><pre>{text}</pre></section>;
 }
 
-function AdvancedJsonPanel({ document, selectedSignal, selectedAnnotation, selectedTransaction, onCommand }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
+function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onCommand }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
   const text = useMemo(() => serializeCanonicalDocument(document), [document]);
   const [advanced, setAdvanced] = useState(false);
   const [scope, setScope] = useState<"selected" | "document">("document");
   const [draft, setDraft] = useState(text);
   const [status, setStatus] = useState("Read only");
-  const selected = selectedSignal ?? selectedAnnotation ?? selectedTransaction;
+  const selected = selectedSignal ?? selectedGroup ?? selectedAnnotation ?? selectedTransaction;
   useEffect(() => { setDraft(scope === "selected" ? JSON.stringify(selected ?? {}, null, 2) : text); }, [scope, selected, text]);
   const parseDraft = (): unknown => {
     try { return JSON.parse(draft); } catch { setStatus("Invalid JSON"); return undefined; }
@@ -1873,6 +1873,7 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedAnnotation, selec
       if ((value as { id?: unknown }).id !== selected.id) { setStatus("Selected object ID cannot change"); return; }
       if (selectedSignal) next = { ...document, signals: document.signals.map((item) => item.id === selectedSignal.id ? value as Signal : item) };
       else if (selectedAnnotation) next = { ...document, annotations: document.annotations.map((item) => item.id === selectedAnnotation.id ? value as Annotation : item) };
+      else if (selectedGroup) next = { ...document, signalGroups: document.signalGroups.map((item) => item.id === selectedGroup.id ? value as SignalGroup : item) };
       else next = { ...document, transactions: document.transactions.map((item) => item.id === selectedTransaction?.id ? value as Transaction : item) };
     }
     const problems = validateCanonicalDocument(next);
