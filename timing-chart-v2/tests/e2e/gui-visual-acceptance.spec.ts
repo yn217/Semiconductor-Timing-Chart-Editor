@@ -57,6 +57,7 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
   await page.setViewportSize(viewport);
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='10']")).toHaveCount(1);
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
   await page.getByTestId("bottom-pin").click();

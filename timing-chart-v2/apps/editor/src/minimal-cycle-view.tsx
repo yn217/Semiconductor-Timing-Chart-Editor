@@ -70,15 +70,16 @@ const v1ReferenceComment: CommentRow = {
 
 const v1ReferenceDocument: CanonicalDocument = {
   ...cycleDocument,
+  timeline: { ...cycleDocument.timeline, end: 10, cycleCount: 10 },
   document: { ...cycleDocument.document, title: "Semiconductor Timing Chart — V1 Reference", header: { ...cycleDocument.document.header, subtitle: "Protocol timing reference" } },
   signals: [...cycleDocument.signals, v1ReferenceComment],
   signalGroups: cycleDocument.signalGroups.map((group) => group.id === "grp_cycle_control" ? { ...group, rows: [...group.rows, v1ReferenceComment.id] } : group),
   annotations: [
     { id: "v1_ref_text" as AnnotationId, type: "text", label: "Request phase", visible: true, color: "#7a3bb8", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
     { id: "v1_ref_marker" as AnnotationId, type: "marker", label: "Start", visible: true, color: "#d04a36", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
-    { id: "v1_ref_range" as AnnotationId, type: "range", label: "Active", visible: true, color: "#4a87c7", start: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_valid"), cycle: 10, point: "cycle-end" } },
+    { id: "v1_ref_range" as AnnotationId, type: "range", label: "Active", visible: true, color: "#4a87c7", start: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_valid"), cycle: 9, point: "cycle-end" } },
     { id: "v1_ref_measurement" as AnnotationId, type: "measurement", label: "Latency", visible: true, color: "#d04a36", start: { signalId: signalId("sig_cycle_request"), cycle: 3, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 5, point: "cycle-end" } },
-    { id: "v1_ref_timing" as AnnotationId, type: "timingRegion", label: "Execution", visible: true, color: "#5f8fc6", opacity: 0.16, start: { signalId: signalId("sig_cycle_request"), cycle: 7, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 12, point: "cycle-end" } },
+    { id: "v1_ref_timing" as AnnotationId, type: "timingRegion", label: "Execution", visible: true, color: "#5f8fc6", opacity: 0.16, start: { signalId: signalId("sig_cycle_request"), cycle: 7, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 9, point: "cycle-end" } },
   ],
   legend: { show: true, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
 };
