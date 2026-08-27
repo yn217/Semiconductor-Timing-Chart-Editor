@@ -1944,11 +1944,44 @@ function InspectorValueSignalEditor({ signal, document, viewport, onCommand, onR
 }
 
 function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal }: { readonly signal: ClockSignal; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => void; readonly onReveal: () => void }) {
+  const [name, setName] = useState(signal.name);
+  const [role, setRole] = useState<SignalRole>(signal.role);
+  const [visible, setVisible] = useState(signal.display.visible !== false);
+  const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
+  const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
+  const styleObject = signal.display.style ?? {};
+  const styleString = (key: string, fallback: string) => typeof styleObject[key] === "string" ? styleObject[key] as string : fallback;
+  const styleNumber = (key: string, fallback: number) => typeof styleObject[key] === "number" ? styleObject[key] as number : fallback;
+  const [textColor, setTextColor] = useState(styleString("color", "#152033"));
+  const [rowBackground, setRowBackground] = useState(styleString("background", "#ffffff"));
+  const [fontFamily, setFontFamily] = useState(styleString("fontFamily", "Inter"));
+  const [fontSize, setFontSize] = useState(styleNumber("fontSize", 12));
+  const [bold, setBold] = useState(styleObject.fontWeight === "bold");
+  const [italic, setItalic] = useState(styleObject.fontStyle === "italic");
+  const [underline, setUnderline] = useState(styleString("textDecoration", "").includes("underline"));
+  const [strikethrough, setStrikethrough] = useState(styleString("textDecoration", "").includes("line-through"));
+  const [waveformColor, setWaveformColor] = useState(styleString("waveformColor", "#111111"));
+  const [waveformBackground, setWaveformBackground] = useState(styleString("waveformBackground", "#ffffff"));
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
+  const applyProperties = (event: React.FormEvent) => {
+    event.preventDefault();
+    const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
+    onCommand({ id: nextCommandId("inspector_clock_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, visible, displayAlign: align, displayOverflow: overflow, displayStyle: { ...styleObject, color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground } });
+  };
   return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><b>Clock</b></header>
     <div className="inspector-scroll">
+    <section><h3>Signal Properties</h3><form className="inspector-clock-properties" aria-label="Inspector Clock Properties" onSubmit={applyProperties}>
+      <label>Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} /></label>
+      <label>Type<select aria-label="Inspector signal type" value="clock" disabled><option value="clock">Clock</option></select></label>
+      <label>Role<select aria-label="Inspector signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
+      <label className="checkline">Show in waveform<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} /></label>
+      <button type="submit" data-testid="apply-inspector-clock-properties">Apply Properties</button>
+    </form></section>
+    <section><h3>Source / Hierarchy</h3><div className="property-row"><span>Instance Path</span><span>{signal.source.instancePath.join(".") || "(top)"}</span></div><div className="property-row"><span>Leaf Signal</span><span>{signal.source.signalName}</span></div><div className="property-row"><span>Bus Range</span><span>—</span></div><button type="button" data-testid="reveal-in-hierarchy" onClick={onReveal}>Reveal in Hierarchy</button></section>
+    <section><h3>Label Style</h3><label>Text Color<input aria-label="Inspector text color" type="color" value={textColor} onChange={(event) => setTextColor(event.target.value)} /></label><label>Background<input aria-label="Inspector label background" type="color" value={rowBackground} onChange={(event) => setRowBackground(event.target.value)} /></label><label>Font<input aria-label="Inspector label font" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)} /></label><label>Size<input aria-label="Inspector label size" type="number" min="6" max="48" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /></label><div className="inspector-style-checks"><label className="checkline">Bold<input aria-label="Inspector label bold" type="checkbox" checked={bold} onChange={(event) => setBold(event.target.checked)} /></label><label className="checkline">Italic<input aria-label="Inspector label italic" type="checkbox" checked={italic} onChange={(event) => setItalic(event.target.checked)} /></label><label className="checkline">Underline<input aria-label="Inspector label underline" type="checkbox" checked={underline} onChange={(event) => setUnderline(event.target.checked)} /></label><label className="checkline">Strikethrough<input aria-label="Inspector label strikethrough" type="checkbox" checked={strikethrough} onChange={(event) => setStrikethrough(event.target.checked)} /></label></div><label>Align<select aria-label="Inspector label align" value={align} onChange={(event) => setAlign(event.target.value as typeof align)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Overflow<select aria-label="Inspector label overflow" value={overflow} onChange={(event) => setOverflow(event.target.value as typeof overflow)}><option value="ellipsis">Ellipsis</option><option value="expand">Expand</option><option value="wrap">Wrap</option></select></label></section>
+    <section><h3>Waveform / Timing</h3><label>Waveform Color<input aria-label="Inspector waveform color" type="color" value={waveformColor} onChange={(event) => setWaveformColor(event.target.value)} /></label><label>Row Background<input aria-label="Inspector waveform background" type="color" value={waveformBackground} onChange={(event) => setWaveformBackground(event.target.value)} /></label></section>
     <section><h3>Clock Generator</h3><form className="inspector-clock-generator" aria-label="Inspector Clock Generator" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("inspector_clock_generator"), type: "signal.updateClockGenerator", signalId: signal.id, generator }); }}>
       <label>Start<input aria-label="Inspector clock start" type="number" min="0" step="1" value={generator.start} onChange={(event) => number("start", event.target.value)} /></label><label>Period<input aria-label="Inspector clock period" type="number" min="1" step="1" value={generator.period} onChange={(event) => number("period", event.target.value)} /></label><label>Duty<input aria-label="Inspector clock duty" type="number" min="0.01" max="1" step="0.01" value={generator.duty} onChange={(event) => number("duty", event.target.value)} /></label><label>Phase<input aria-label="Inspector clock phase" type="number" step="0.5" value={generator.phase} onChange={(event) => number("phase", event.target.value)} /></label><label>Initial<select aria-label="Inspector clock initial" value={generator.initial} onChange={(event) => setGenerator({ ...generator, initial: Number(event.target.value) as 0 | 1 })}><option value="0">0</option><option value="1">1</option></select></label><label>Polarity<select aria-label="Inspector clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label><button type="submit" data-testid="apply-inspector-clock">Apply Clock Generator</button>
     </form></section>

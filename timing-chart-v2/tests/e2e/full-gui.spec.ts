@@ -142,7 +142,7 @@ test("Inspector keeps the V1 sectioned editor geometry for a selected clock", as
   await expect(inspector.getByTestId("minimap")).toBeVisible();
   await expect(page.locator(".left-panel-tail").getByTestId("minimap")).toHaveCount(0);
   await expect(inspector.locator("header")).toContainText("Clock");
-  await expect(inspector.locator("section")).toHaveCount(2);
+  await expect(inspector.locator("section")).toHaveCount(6);
   await expect(inspector.getByRole("heading", { name: "Clock Generator" })).toBeVisible();
   await expect(inspector.getByRole("heading", { name: "Edge Counter" })).toBeVisible();
   await expect(inspector.getByLabel("Inspector clock period")).toBeVisible();
@@ -809,6 +809,29 @@ test("applies Clock Generator Inspector drafts with editable duty and one histor
   await expect(inspector.getByLabel("Inspector clock period")).toHaveValue("4");
   await expect(inspector.getByLabel("Inspector clock duty")).toHaveValue("0.25");
   await expect(inspector.getByLabel("Inspector clock polarity")).toHaveValue("negative");
+});
+
+test("Clock Inspector exposes common Signal Properties, hierarchy and style through one command", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByRole("heading", { name: "Signal Properties" })).toBeVisible();
+  await expect(inspector.getByRole("heading", { name: "Source / Hierarchy" })).toBeVisible();
+  await expect(inspector.getByRole("heading", { name: "Label Style" })).toBeVisible();
+  await expect(inspector.getByRole("heading", { name: "Waveform / Timing" })).toBeVisible();
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await inspector.getByLabel("Inspector signal name").fill("clk_main");
+  await inspector.getByLabel("Inspector signal role").selectOption("internal");
+  await inspector.getByLabel("Inspector label align").selectOption("center");
+  await inspector.getByTestId("apply-inspector-clock-properties").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("clk_main");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
 test("edits a Comment Row through the dedicated Bottom Context Editor", async ({ page }) => {

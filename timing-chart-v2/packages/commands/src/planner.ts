@@ -12,6 +12,7 @@ import type {
   SemanticAnchor,
   TimeGroup,
   Transaction,
+  ValueSignal,
 } from "@timing-chart-v2/schema";
 import { isStableId, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
@@ -569,7 +570,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const signal = document.signals[index];
       const name = command.name.trim();
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
-      if (signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "This property command applies only to value signals.");
+      if (signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "This property command does not apply to Comment Rows.");
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Signal name cannot be empty.");
       const nextType = command.signalType ?? signal.type;
       if (command.displayFormat !== undefined && nextType !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "Display format applies only to bus signals.");
@@ -589,9 +590,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
       if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && JSON.stringify(currentStyle) === JSON.stringify(nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
-      const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
       const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
-      const next: Signal = { ...base, type: nextType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }) };
+      const next: Signal = signal.type === "clock"
+        ? { ...signal, name, role: command.role, display: nextDisplay }
+        : (() => {
+          const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
+          const valueType = (command.signalType ?? signal.type) as ValueSignal["type"];
+          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }) };
+        })();
       const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],
