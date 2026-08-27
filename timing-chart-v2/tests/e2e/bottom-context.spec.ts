@@ -73,4 +73,13 @@ test("Advanced JSON applies a selected Group through one document command", asyn
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']")).toContainText("CONTROL_JSON");
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await downloadPromise).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']")).toContainText("CONTROL_JSON");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
