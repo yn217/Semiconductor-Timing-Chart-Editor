@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
@@ -1551,6 +1551,21 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onSelectAll: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void;
 }) {
   const [homeOverflowOpen, setHomeOverflowOpen] = useState(false);
+  useLayoutEffect(() => {
+    if (tab !== "Home") return;
+    const root = window.document.querySelector<HTMLElement>("[data-testid='ribbon']");
+    if (!root) return;
+    const labels: Record<string, string> = { New: "新規", Open: "開く", Save: "保存", "Save As": "名前を付けて保存", Undo: "元に戻す", Redo: "やり直し", Copy: "コピー", Cut: "切取", Paste: "貼付", Duplicate: "複製", Delete: "削除", Rename: "名前変更", Clear: "クリア", "Select All": "すべて選択", Show: "表示", Hide: "非表示", "Move Up": "上へ", "Move Down": "下へ", "Zoom −": "ズーム－", "Zoom +": "ズーム＋", "Fit Selection": "選択に合わせる" };
+    for (const button of root.querySelectorAll<HTMLButtonElement>(".ribbon-tool")) {
+      const span = button.querySelector("span");
+      const label = span?.textContent?.trim();
+      const v1Label = label === undefined ? undefined : labels[label];
+      if (label && v1Label) {
+        button.setAttribute("aria-label", label);
+        span?.setAttribute("data-v1-label", v1Label);
+      }
+    }
+  });
   const insertValueSignal = (type: "binary" | "bus" | "state") => {
     const targetGroup = document.signalGroups.at(-1);
     if (!targetGroup) return;
