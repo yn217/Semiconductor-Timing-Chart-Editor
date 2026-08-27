@@ -16,7 +16,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 720
       await overflow.click();
       const menu = ribbon.getByRole("menu", { name: "More Home Commands" });
       await expect(menu).toBeVisible();
-      for (const label of ["Undo", "Copy", "Paste", "Delete", "Select All", "Hide", "Move Down", "Properties", "Problems", "SVG / PNG / PDF"]) {
+      for (const label of ["New", "Open", "Save", "Save As", "Recent", "Undo", "Copy", "Paste", "Delete", "Select All", "Hide", "Move Down", "Properties", "Problems", "SVG / PNG / PDF"]) {
         await expect(menu.getByRole("button", { name: label, exact: true })).toBeVisible();
       }
       const revision = await page.getByTestId("revision-status").textContent();
