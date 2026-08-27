@@ -293,6 +293,8 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .column-headings { height: 37px; grid-template-columns: 265px 209px minmax(640px, 1fr); }
 .editor-shell[data-visual-reference="true"] .cycle-viewport { height: calc(100% - 37px); }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="timing-chart-surface"] { grid-template-columns: 265px 209px var(--wave-width, 640px); }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="wave-owner"] svg { width: 100%; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="frozen-label-rows"] { left: 265px !important; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="left-row"],
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="frozen-row"],
