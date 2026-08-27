@@ -20,7 +20,8 @@ export interface ExportRequest {
 
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
-export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number }
+export interface ExportPoint { readonly x: number; readonly y: number }
+export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly tracePoints?: readonly ExportPoint[] }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
 export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
@@ -122,6 +123,23 @@ function toDisplayPosition(mapping: DisplayTimeMapping, sourceCycle: number): nu
   return left + (right - left) * (clamped - lower);
 }
 
+function waveTokenAt(wave: string, period: number, cycle: number): string {
+  const slot = Math.max(0, Math.min(wave.length - 1, Math.floor(cycle / Math.max(1, period))));
+  for (let index = slot; index >= 0; index -= 1) {
+    const token = wave[index];
+    if (token && token !== "." && token !== "|") return token;
+  }
+  return wave[0] ?? "0";
+}
+
+function traceYForWaveToken(token: string, row: number, height: number): number {
+  const low = Math.max(1, Math.min(height - 1, 20));
+  const high = Math.max(0, Math.min(height - 1, 0));
+  if (token === "1" || token === "p") return row - height / 2 + high;
+  if (token === "0" || token === "n") return row - height / 2 + low;
+  return row - height / 2 + (high + low) / 2;
+}
+
 function pageDimensions(page: NonNullable<ExportSettings["page"]>): { width: number; height: number } {
   const base = page.size === "A4" ? { width: 1123, height: 794 } : page.size === "Letter" ? { width: 1056, height: 816 } : { width: 1600, height: 900 };
   return page.orientation === "portrait" ? { width: base.height, height: base.width } : base;
@@ -218,9 +236,27 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + lanes.indexOf(laneId) * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
   }).filter((transaction): transaction is ExportTransaction => transaction !== undefined);
   const annotations = document.annotations.map((annotation): ExportAnnotation | undefined => {
+    const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
+    const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;
     const first = anchorPoint(annotation, annotation.anchor ? "anchor" : annotation.start ? "start" : "from", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, annotation.end ? "end" : annotation.to ? "to" : annotation.anchor ? "anchor" : "from", document, rowY, mapping, range.start, cycleWidth);
-    return first && second ? { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.start?.threshold === undefined ? {} : { threshold1: annotation.start.threshold }), ...(annotation.end?.threshold === undefined ? {} : { threshold2: annotation.end.threshold }) } : undefined;
+    if (!first || !second) return undefined;
+    const sourceWave = annotation.type === "ghostTrace" && annotation.sourceSignalId ? renderedWaves.find((item) => item.signal.id === annotation.sourceSignalId) : undefined;
+    const tracePoints = sourceWave && firstAnchor && lastAnchor ? (() => {
+      const offset = annotation.traceOffsetCycles ?? 0;
+      const startCycle = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));
+      const endCycle = Math.min(document.timeline.cycleCount, Math.ceil(Math.max(firstAnchor.cycle, lastAnchor.cycle)));
+      const points: ExportPoint[] = [];
+      for (let cycle = startCycle; cycle <= endCycle; cycle += 1) {
+        const sourceCycle = cycle + offset;
+        if (sourceCycle < 0 || sourceCycle > document.timeline.cycleCount) continue;
+        const displayCycle = toDisplayPosition(mapping, sourceCycle);
+        if (displayCycle < range.start || displayCycle > range.end) continue;
+        points.push({ x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth, y: traceYForWaveToken(waveTokenAt(sourceWave.waveJson.wave, sourceWave.waveJson.period ?? 1, sourceCycle), rowY.get(sourceWave.signal.id) ?? first.y, sourceWave.height) });
+      }
+      return points.length > 1 ? points : undefined;
+    })() : undefined;
+    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.start?.threshold === undefined ? {} : { threshold1: annotation.start.threshold }), ...(annotation.end?.threshold === undefined ? {} : { threshold2: annotation.end.threshold }), ...(tracePoints === undefined ? {} : { tracePoints }) };
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const contentWidth = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
   const contentHeight = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
@@ -265,7 +301,11 @@ export function renderExportSvg(scene: ExportScene): string {
   for (const annotation of scene.annotations) {
     const metadata = `${annotation.sourceSignalId ? ` data-source-signal-id="${xml(annotation.sourceSignalId)}"` : ""}${annotation.traceOffsetCycles === undefined ? "" : ` data-trace-offset-cycles="${annotation.traceOffsetCycles}"`}${annotation.threshold1 === undefined ? "" : ` data-start-threshold="${annotation.threshold1}"`}${annotation.threshold2 === undefined ? "" : ` data-end-threshold="${annotation.threshold2}"`}`;
     if (annotation.type === "timingRegion") out.push(`<rect data-annotation-id="${xml(annotation.id)}" data-annotation-type="timingRegion"${metadata} x="${Math.min(annotation.x1, annotation.x2)}" y="0" width="${Math.max(2, Math.abs(annotation.x2 - annotation.x1))}" height="${scene.height}" fill="${xml("#d04a36")}" fill-opacity="${annotation.opacity ?? 0.16}" stroke="none"/>`);
-    else if (annotation.type === "ghostTrace") out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#475569" stroke="none">${xml(annotation.label)}</text></g>`);
+    else if (annotation.type === "ghostTrace") {
+      const points = annotation.tracePoints?.map((point) => `${point.x},${point.y}`).join(" ");
+      const path = points ? `<polyline data-role="ghost-trace-path" points="${points}"` : `<line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"`;
+      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}>${path} fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#475569" stroke="none">${xml(annotation.label)}</text></g>`);
+    }
     else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
   }
   out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);

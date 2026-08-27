@@ -114,9 +114,12 @@ describe("deterministic document export", () => {
       { id: "ann_region" as AnnotationId, type: "timingRegion" as const, label: "Setup", visible: true, opacity: 0.2, start: { signalId: source.id, cycle: 1, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 4, point: "cycle-end" as const } },
       { id: "ann_ghost" as AnnotationId, type: "ghostTrace" as const, label: "Previous", visible: true, sourceSignalId: source.id, traceOffsetCycles: -1, opacity: 0.5, start: { signalId: source.id, cycle: 2, point: "cycle-start" as const }, end: { signalId: source.id, cycle: 5, point: "cycle-end" as const } },
     ] };
-    const svg = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const svg = renderExportSvg(scene);
     expect(svg).toContain('data-annotation-type="timingRegion"');
     expect(svg).toContain('data-annotation-type="ghostTrace"');
+    expect(scene.annotations.find((item) => item.id === "ann_ghost")?.tracePoints?.length).toBeGreaterThan(1);
+    expect(svg).toContain('data-role="ghost-trace-path"');
     expect(svg).toContain('data-source-signal-id="sig_data"');
     expect(svg).toContain('data-trace-offset-cycles="-1"');
     expect(svg).toContain('stroke-dasharray="6 4"');

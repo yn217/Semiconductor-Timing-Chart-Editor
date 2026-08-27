@@ -165,3 +165,11 @@ compressed ruler and WaveDrom lanes. `tests/export/deterministic-export.test.ts`
 and `timing-chart-v2/tests/e2e/export-fold-mapping.spec.ts` verify that
 respecting folds emits the boundary layer while Expand emits none; source time
 and canonical state remain unchanged.
+
+Ghost Trace export parity is now derived from the source signal's WaveDrom
+wave tokens and shared source/display mapping. ExportScene emits a stable
+polyline with source signal and cycle-offset metadata, and SVG/PNG/PDF share
+that overlay path. Unit coverage is in
+`timing-chart-v2/tests/export/deterministic-export.test.ts`; browser export
+coverage is in `timing-chart-v2/tests/e2e/transaction-export.spec.ts`.
+The complete V1 visual trace matrix remains open.
