@@ -277,11 +277,13 @@ export function MinimalCycleView() {
     const rendererHost = host.current;
     const viewportElement = viewport.current;
     if (!rendererHost || !viewportElement) return;
-    const baseWidth = Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
+    const baseWidth = visualReference
+      ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - 160)
+      : Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
     const width = leftPaneWidth + 210 + baseWidth * zoom;
     rendererHost.style.width = `${width}px`;
     rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
-  }, [leftPaneWidth, zoom]);
+  }, [inspectorWidth, leftPaneWidth, visualReference, zoom]);
 
   useEffect(() => {
     const rendererHost = host.current;
@@ -371,7 +373,9 @@ export function MinimalCycleView() {
         element.style.scale = `${currentZoom} 1`;
       }
       viewportElement.style.setProperty("--zoom-x", String(currentZoom));
-      const baseWidth = Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
+      const baseWidth = visualReference
+        ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - 160)
+        : Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
       const width = timelineOffset() + baseWidth * currentZoom;
       rendererHost.style.width = `${width}px`;
       rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
@@ -1397,7 +1401,7 @@ export function MinimalCycleView() {
     leftPaneResizeRef.current = undefined;
   };
 
-  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
+  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {([{ key: "File", label: "ファイル" }, { key: "Home", label: "ホーム" }, { key: "Insert", label: "挿入" }, { key: "Timeline", label: "Transaction", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "注釈" }, { key: "View", label: "表示" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const).map((tab) => <button type="button" key={tab.key} aria-label={"compatibilityLabel" in tab ? tab.compatibilityLabel : tab.key} className={ribbonTab === tab.key ? "active" : ""} onClick={() => setRibbonTab(tab.key)}>{tab.label}</button>)}
