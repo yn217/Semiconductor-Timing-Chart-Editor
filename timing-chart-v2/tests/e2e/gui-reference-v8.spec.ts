@@ -47,6 +47,9 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("inspector")).toContainText("Clock");
   await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
+  const minimap = page.getByTestId("minimap");
+  await expect(minimap).toBeVisible();
+  expect((await minimap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(140);
   const treeMore = page.locator(".tree-more-button");
   await treeMore.click();
   await page.getByRole("menu", { name: "More tree actions" }).getByRole("menuitem", { name: "Collapse All Groups" }).click();
