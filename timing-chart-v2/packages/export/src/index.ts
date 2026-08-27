@@ -19,7 +19,7 @@ export interface ExportRequest {
 }
 
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
-export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "group" | "annotation" | "transaction" }
+export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
 export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
@@ -191,6 +191,10 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     });
   }
   const labels: ExportLabel[] = signals.map((signal) => ({ text: signal.display.name, x: 12, y: rowY.get(signal.id)!, kind: "signal" }));
+  for (const signal of signals) {
+    if (signal.type !== "commentRow") continue;
+    labels.push({ text: signal.body || signal.title || signal.display.name, x: LABEL_WIDTH, y: rowY.get(signal.id)!, kind: "comment" });
+  }
   const groupBands: ExportGroupBand[] = [];
   document.signalGroups.forEach((group) => { const ys = group.rows.map((id) => rowY.get(id as SignalId)).filter((y): y is number => y !== undefined); const first = ys[0]; if (first !== undefined) { labels.push({ text: group.name, x: 12, y: first - rowHeight / 2 - 4, kind: "group" }); groupBands.push({ id: group.id, name: group.name, y: first - rowHeight / 2, height: Math.max(rowHeight, (ys.at(-1)! - first) + rowHeight) }); } });
   const transactions = document.transactions.map((transaction): ExportTransaction | undefined => {
@@ -235,7 +239,7 @@ export function renderExportSvg(scene: ExportScene): string {
   out.push(`</g><g data-layer="group-bands">`);
   for (const band of scene.groupBands) out.push(`<rect data-group-id="${xml(band.id)}" x="0" y="${band.y}" width="${scene.width}" height="${band.height}" fill="#f8fafc" fill-opacity="0.22" stroke="#d8e0e9"/>`);
   out.push(`</g><g data-layer="labels" font-family="Segoe UI,Arial,sans-serif" font-size="11" fill="#1e293b">`);
-  for (const label of scene.labels) out.push(`<text data-label-kind="${label.kind}" x="${label.x}" y="${label.y + 4}">${xml(label.text)}</text>`);
+  for (const label of scene.labels) out.push(`<text data-label-kind="${label.kind}" x="${label.x}" y="${label.y + 4}"${label.kind === "comment" ? ` fill="#9144d3"` : ""}>${xml(label.text)}</text>`);
   out.push(`</g><g data-layer="waveforms">`);
   for (const wave of scene.waveforms) {
     const inner = wave.svgMarkup.slice(wave.svgMarkup.indexOf(">") + 1, wave.svgMarkup.lastIndexOf("</svg>"));

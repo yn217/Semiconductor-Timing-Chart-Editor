@@ -125,6 +125,16 @@ view-only Expand All Groups, Collapse All Groups, and Clear Filter actions.
 These actions operate only on derived tree presentation state and are
 browser-verified with Canonical revision, History and Dirty deltas of zero.
 
+## Batch evidence update
+
+Comment Row export parity is verified for the current batch: the body is
+emitted as a derived purple label at the shared waveform origin, while the
+Comment Row remains excluded from WaveDrom waveform generation. Unit coverage
+is in `tests/export/deterministic-export.test.ts`; browser coverage is in
+`tests/e2e/full-gui.spec.ts` and `tests/e2e/transaction-export.spec.ts`.
+PNG and PDF inherit the same ExportScene path. Full V1 export visual closure
+remains open.
+
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its
 own nested presentation subgroup. Existing History,

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import type { AnnotationId, CanonicalDocument, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -33,6 +33,18 @@ function foldedFixture(): CanonicalDocument {
 }
 
 describe("deterministic document export", () => {
+  it("exports Comment Row body at the waveform origin without sending it to WaveDrom", () => {
+    const base = canonicalFixture();
+    const comment: CommentRow = { id: "comment_export" as SignalId, type: "commentRow", name: "Review note", role: "internal", source: { instancePath: [], signalName: "review_note" }, display: { name: "Review note" }, title: "Review note", body: "Starts at cycle zero" };
+    const document = { ...base, signals: [...base.signals, comment], signalGroups: base.signalGroups.map((group, index) => index === 0 ? { ...group, rows: [...group.rows, comment.id] } : group) };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const svg = renderExportSvg(scene);
+    expect(scene.waveforms.some((wave) => wave.signalId === comment.id)).toBe(false);
+    expect(scene.labels).toContainEqual({ text: comment.body, x: 220, y: expect.any(Number), kind: "comment" });
+    expect(svg).toContain("Starts at cycle zero");
+    expect(svg).toContain('data-label-kind="comment"');
+  });
+
   it("exports every virtualized-offscreen Signal and excludes editor chrome", () => {
     const scene = buildExportScene(scaleFixture(100), { format: "svg", scope: "document" });
     const first = renderExportSvg(scene);
