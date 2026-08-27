@@ -39,6 +39,10 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
   await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
+  await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
+  await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
+  await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
+  await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
   expect(metrics.rowY.left.length).toBeGreaterThan(0);
   expect(Math.max(...metrics.rowY.left.map((y, index) => Math.abs(y - (metrics.rowY.frozen[index] ?? y))))).toBeLessThanOrEqual(1);
   const signalWaveRows = await page.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => {

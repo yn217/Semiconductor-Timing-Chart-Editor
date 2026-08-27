@@ -107,6 +107,13 @@ shape. It is selected only by the `visual-reference` query parameter; the
 normal production fixture and runtime architecture are unchanged. Browser
 evidence remains in `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts`.
 
+The same visual-reference fixture now presents the approved English shell
+vocabulary (`Signals / Groups`, `Time Scale: Cycle`, `Reference: clk`,
+`Signal Editor`, `Annotations`, `Checks`, and `Follow Selection`) while the
+normal V2 surface retains its existing product vocabulary. This is a
+presentation-only reference route; no canonical command or persistence path
+is forked.
+
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its
 own nested presentation subgroup. Existing History,
