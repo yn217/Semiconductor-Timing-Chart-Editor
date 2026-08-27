@@ -1688,18 +1688,26 @@ function InspectorPanel({ signal, group, annotation, transaction, registry, docu
 }
 
 function InspectorAnnotationEditor({ annotation, document, viewport, onCommand, onDelete }: { readonly annotation: Annotation; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => void; readonly onDelete: () => void }) {
+  type AnchorField = "anchor" | "start" | "end" | "from" | "to";
+  const anchorFields: readonly AnchorField[] = (["anchor", "start", "end", "from", "to"] as const).filter((field) => (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[field] !== undefined);
+  const firstAnchorField = anchorFields[0] ?? "anchor";
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
   const [visible, setVisible] = useState(annotation.visible);
   const [lineType, setLineType] = useState<NonNullable<Annotation["lineType"]>>(annotation.lineType ?? "straight");
   const [arrowhead, setArrowhead] = useState<NonNullable<Annotation["arrowhead"]>>(annotation.arrowhead ?? "end");
+  const [anchorField, setAnchorField] = useState<AnchorField>(firstAnchorField);
+  const initialAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[firstAnchorField];
+  const [anchorX, setAnchorX] = useState(initialAnchor?.offset?.x ?? 0);
+  const [anchorY, setAnchorY] = useState(initialAnchor?.offset?.y ?? 0);
+  const selectedAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[anchorField];
   return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><b>Annotation</b></header>
     <form className="inspector-annotation-properties" aria-label="Inspector Annotation" onSubmit={(event) => {
       event.preventDefault();
       onCommand({ id: nextCommandId("inspector_annotation_properties"), type: "annotation.updateProperties", annotationId: annotation.id, label, visible, color, ...(annotation.type === "arrow" ? { lineType, arrowhead } : {}) });
     }}>
       <section><h3>Annotation</h3><div className="property-row"><span>Type</span><b>{annotation.type}</b></div><label>Label<input aria-label="Inspector annotation label" value={label} onChange={(event) => setLabel(event.target.value)} /></label><label>Color<input aria-label="Inspector annotation color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label><label className="checkline">Visible<input aria-label="Inspector annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} /></label>{annotation.type === "arrow" && <><label>Line<select aria-label="Inspector annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Inspector annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}</section>
-      <section><div className="property-row"><span>Anchor</span><span>{annotation.anchor?.point ?? annotation.from?.point ?? annotation.start?.point}</span></div><div className="property-row"><span>Offset</span><span>{JSON.stringify((annotation.anchor ?? annotation.from ?? annotation.start)?.offset ?? { x: 0, y: 0 })}</span></div><button type="submit" data-testid="apply-inspector-annotation">Apply Annotation</button><button type="button" className="danger" onClick={onDelete}>Delete Annotation</button></section>
+      <section><div className="property-row"><span>Anchor</span><span>{selectedAnchor?.point ?? "—"}</span></div><div className="annotation-anchor-editor" aria-label="Inspector Annotation Anchor"><label>Endpoint<select aria-label="Inspector annotation endpoint" value={anchorField} onChange={(event) => { const nextField = event.target.value as AnchorField; const nextAnchor = (annotation as Partial<Record<AnchorField, SemanticAnchor>>)[nextField]; setAnchorField(nextField); setAnchorX(nextAnchor?.offset?.x ?? 0); setAnchorY(nextAnchor?.offset?.y ?? 0); }}>{anchorFields.map((field) => <option key={field} value={field}>{field}</option>)}</select></label><label>X offset<input aria-label="Inspector annotation anchor X" type="number" value={anchorX} onChange={(event) => setAnchorX(Number(event.target.value))} /></label><label>Y offset<input aria-label="Inspector annotation anchor Y" type="number" value={anchorY} onChange={(event) => setAnchorY(Number(event.target.value))} /></label><button type="button" data-testid="apply-inspector-annotation-anchor" disabled={!selectedAnchor} onClick={() => { if (selectedAnchor) onCommand({ id: nextCommandId("inspector_annotation_anchor"), type: "annotation.setAnchor", annotationId: annotation.id, field: anchorField, anchor: { ...selectedAnchor, offset: { x: anchorX, y: anchorY } } }); }}>Apply Anchor</button></div><button type="submit" data-testid="apply-inspector-annotation">Apply Annotation</button><button type="button" className="danger" onClick={onDelete}>Delete Annotation</button></section>
     </form>
     <MiniMap document={document} viewport={viewport} />
   </aside>;
