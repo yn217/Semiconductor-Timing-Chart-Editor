@@ -491,7 +491,7 @@ test("Bottom Signal Context Editor keeps the V1 continuous center editing surfac
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await expect(bottom).toHaveCSS("grid-column-start", "2");
   await expect(bottom).toHaveCSS("grid-column-end", "auto");
-  await expect(bottom.locator(".bottom-tabs")).toHaveCSS("height", "39px");
+  await expect(bottom.locator(".bottom-tabs")).toHaveCSS("height", "38px");
   await expect(bottom.getByTestId("signal-editor")).toBeVisible();
   await expect(bottom.getByTestId("signal-editor")).toContainText("REQUEST · binary");
   await expect(bottom.getByRole("table", { name: "Signal events" })).toBeVisible();

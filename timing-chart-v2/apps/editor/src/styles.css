@@ -195,7 +195,7 @@ body { min-width: 1100px; }
 .bottom-resize-handle { position: absolute; z-index: 25; top: -4px; left: 0; right: 0; height: 8px; cursor: ns-resize; touch-action: none; }
 .bottom-resize-handle::after { content: ""; position: absolute; top: 3px; left: 50%; width: 42px; height: 2px; transform: translateX(-50%); border-radius: 2px; background: #9aaabd; opacity: .75; }
 .bottom-resize-handle:hover::after, .bottom-resize-handle:focus-visible::after { background: #2678bc; opacity: 1; }
-.bottom-tabs { flex: 0 0 39px; display: flex; align-items: end; padding: 0 9px; border-bottom: 1px solid #cbd3dd; }
+.bottom-tabs { flex: 0 0 38px; display: flex; align-items: end; padding: 0 9px; border-bottom: 1px solid #cbd3dd; }
 .bottom-tabs button { height: 37px; padding: 0 15px; border: 0; background: transparent; }
 .bottom-tabs button.active { margin-bottom: -1px; border: 1px solid #599df0; border-bottom: 2px solid white; border-radius: 4px 4px 0 0; color: #086fd2; }
 .bottom-tabs > span { flex: 1; }.bottom-tabs label { align-self: center; font-size: 10px; }
