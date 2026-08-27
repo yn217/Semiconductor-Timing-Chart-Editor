@@ -98,6 +98,7 @@ export function MinimalCycleView() {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: cycleDocument });
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
   const [problem, setProblem] = useState("");
+  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => validateCanonicalDocument(cycleDocument));
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
@@ -186,7 +187,6 @@ export function MinimalCycleView() {
     }
     root.dataset.collapsedGroups = [...collapsedGroupIds].join(",");
   }, [snapshot.revision, collapsedGroupIds]);
-  const validationDiagnostics = useMemo(() => validateCanonicalDocument(snapshot.document), [snapshot.document]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
 
@@ -413,6 +413,7 @@ export function MinimalCycleView() {
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection });
       renderer.update(projection);
       setSnapshot(result.snapshot);
+      setValidationDiagnostics([]);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
         return { start, end: Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount)) };
@@ -447,6 +448,7 @@ export function MinimalCycleView() {
       renderer.update(projection);
       rulerElement.replaceChildren();
       setSnapshot(session.getSnapshot());
+      setValidationDiagnostics([]);
       setHistory(session.historyState());
       setSelectedId(undefined);
       selectedAnnotationRef.current = undefined;
