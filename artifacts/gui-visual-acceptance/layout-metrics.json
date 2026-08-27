@@ -1,0 +1,245 @@
+{
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "source": {
+    "reference": "references/gui-replacement-pack/00_overall_cycle_view.png",
+    "dut": "V2 production /"
+  },
+  "target": {
+    "title": {
+      "x": 0,
+      "y": 0,
+      "width": 1672,
+      "height": 32
+    },
+    "tabs": {
+      "x": 0,
+      "y": 32,
+      "width": 1672,
+      "height": 38
+    },
+    "ribbon": {
+      "x": 0,
+      "y": 70,
+      "width": 1672,
+      "height": 147
+    },
+    "workspace": {
+      "x": 0,
+      "y": 217,
+      "width": 1672,
+      "height": 697
+    },
+    "left": {
+      "x": 0,
+      "y": 217,
+      "width": 330,
+      "height": 697
+    },
+    "center": {
+      "x": 330,
+      "y": 217,
+      "width": 1042,
+      "height": 697
+    },
+    "bottom": {
+      "x": 330,
+      "y": 644,
+      "width": 1042,
+      "height": 270
+    },
+    "inspector": {
+      "x": 1372,
+      "y": 217,
+      "width": 300,
+      "height": 697
+    },
+    "status": {
+      "x": 0,
+      "y": 914,
+      "width": 1672,
+      "height": 27
+    }
+  },
+  "metrics": {
+    "viewport": {
+      "width": 1672,
+      "height": 941,
+      "devicePixelRatio": 1
+    },
+    "actual": {
+      "title": {
+        "x": 0,
+        "y": 0,
+        "width": 1672,
+        "height": 32,
+        "top": 0,
+        "right": 1672,
+        "bottom": 32,
+        "left": 0
+      },
+      "tabs": {
+        "x": 0,
+        "y": 32,
+        "width": 1672,
+        "height": 38,
+        "top": 32,
+        "right": 1672,
+        "bottom": 70,
+        "left": 0
+      },
+      "ribbon": {
+        "x": 0,
+        "y": 70,
+        "width": 1672,
+        "height": 147,
+        "top": 70,
+        "right": 1672,
+        "bottom": 217,
+        "left": 0
+      },
+      "workspace": {
+        "x": 0,
+        "y": 217,
+        "width": 1672,
+        "height": 697,
+        "top": 217,
+        "right": 1672,
+        "bottom": 914,
+        "left": 0
+      },
+      "bottom": {
+        "x": 330,
+        "y": 644,
+        "width": 1042,
+        "height": 270,
+        "top": 644,
+        "right": 1372,
+        "bottom": 914,
+        "left": 330
+      },
+      "inspector": {
+        "x": 1372,
+        "y": 217,
+        "width": 300,
+        "height": 697,
+        "top": 217,
+        "right": 1672,
+        "bottom": 914,
+        "left": 1372
+      },
+      "status": {
+        "x": 0,
+        "y": 914,
+        "width": 1672,
+        "height": 27,
+        "top": 914,
+        "right": 1672,
+        "bottom": 941,
+        "left": 0
+      },
+      "left": {
+        "x": 0,
+        "y": 217,
+        "width": 330,
+        "height": 697
+      },
+      "center": {
+        "x": 330,
+        "y": 217,
+        "width": 1042,
+        "height": 697
+      }
+    },
+    "derived": {
+      "center": {
+        "x": 330,
+        "y": 217,
+        "width": 1042,
+        "height": 697
+      },
+      "leftPaneWidth": 330,
+      "inspectorWidth": 300,
+      "bottomHeight": 270
+    },
+    "differences": {
+      "title": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "tabs": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "ribbon": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "workspace": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "bottom": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "inspector": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "status": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "left": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      },
+      "center": {
+        "x": 0,
+        "y": 0,
+        "width": 0,
+        "height": 0
+      }
+    },
+    "ribbonOverflow": {
+      "clientWidth": 1672,
+      "scrollWidth": 1672
+    }
+  },
+  "geometryPass": true,
+  "ribbonNoHorizontalScroll": true,
+  "visualDiff": {
+    "changedPixels": 264217,
+    "comparedPixels": 1221156,
+    "diffPercent": 0.21636629554291179,
+    "threshold": 0.05,
+    "pass": false,
+    "waveformViewportMasked": true
+  },
+  "acceptance": "diagnostic-gap-report",
+  "artifacts": [
+    "reference.png",
+    "dut.png",
+    "diff.png",
+    "layout-metrics.json"
+  ]
+}

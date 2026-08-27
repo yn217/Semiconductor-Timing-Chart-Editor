@@ -128,5 +128,11 @@ masked: Ribbon, left pane, role/signal columns, waveform viewport bounds,
 Inspector, Bottom, splitter, MiniMap, and Status. Only WaveDrom trace interior
 may be masked when its separate geometry conformance evidence is attached.
 
+The reproducible V2 production evidence command is
+`npm run visual:acceptance` from `timing-chart-v2/`. It writes the four files
+under `artifacts/gui-visual-acceptance/`. The screenshot diff is diagnostic and
+does not convert a visual gap into a pass; `layout-metrics.json` records the
+geometry/ribbon gates and the explicit `acceptance` state.
+
 Major layout metrics target 0–2px against the replacement-pack reference;
 existing documented cross-platform allowances must be explicit.
