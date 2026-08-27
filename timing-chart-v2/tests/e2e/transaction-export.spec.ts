@@ -188,6 +188,42 @@ test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", as
   const pdf = await download("pdf"); const pdf2 = await download("pdf"); expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-"); expect(pdf.length).toBeGreaterThan(1_000); expect(pdf).toEqual(pdf2);
 });
 
+test("exports canonical Header/Footer through browser SVG, PNG and PDF", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Document subtitle").fill("Browser export header");
+  await properties.getByLabel("Footer figure number").fill("Fig. Browser");
+  await properties.getByLabel("Footer revision").fill("R4");
+  await properties.getByLabel("Footer text").fill("Export acceptance");
+  await properties.getByTestId("apply-document-properties").click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  const surface = page.locator("[data-role='timing-chart-surface']");
+  const before = { revision: await surface.getAttribute("data-canonical-revision"), history: await surface.getAttribute("data-history-depth"), counters: await surface.getAttribute("data-render-counters") };
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const download = async (format: "svg" | "png" | "pdf") => {
+    await dialog.getByLabel("Export format").selectOption(format);
+    const pending = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: `Export ${format.toUpperCase()}` }).click();
+    return readFile((await (await pending).path())!);
+  };
+  const svg = (await download("svg")).toString("utf8");
+  expect(svg).toContain("Browser export header");
+  expect(svg).toContain("Fig. Browser · R4 · Export acceptance");
+  const png = await download("png");
+  expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  expect(png.readUInt32BE(20)).toBeGreaterThan(250);
+  const pdf = await download("pdf");
+  expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+  expect(pdf.length).toBeGreaterThan(1_000);
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
+  expect(await surface.getAttribute("data-render-counters")).toBe(before.counters);
+});
+
 test("copies deterministic SVG and PNG through browser Clipboard export", async ({ page }) => {
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4198" });
   await ready(page);
