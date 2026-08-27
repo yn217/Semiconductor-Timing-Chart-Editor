@@ -444,6 +444,24 @@ test("View controls expose functional Ruler and MiniMap visibility toggles witho
   expect(after.localGeometryBuilds).toBe(before.counters.localGeometryBuilds);
 });
 
+test("MiniMap renders a derived waveform overview for every canonical row without mutation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    renders: await surface.getAttribute("data-render-counters"),
+  };
+  const minimap = page.getByTestId("inspector").getByTestId("minimap");
+  await expect(minimap.locator("[data-row-id]")).toHaveCount(8);
+  await expect(minimap.locator(".minimap-segment")).toHaveCount(21);
+  await expect(minimap.locator(".minimap-segment-clock")).toHaveCount(1);
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  expect(await surface.getAttribute("data-render-counters")).toBe(before.renders);
+});
+
 test("MiniMap viewport drag pans the real viewport without canonical or render mutation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

@@ -202,7 +202,12 @@ body { min-width: 1100px; }
 .empty-group-list button { flex: 1 1 0; min-width: 0; overflow: hidden; padding: 0 4px; color: #29425e; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
 .minimap { position: relative; flex: 0 0 38px; height: 58px; margin-left: auto; overflow: hidden; border: 1px solid #aebed0; border-radius: 3px; background: #edf3f9; cursor: crosshair; }
 .minimap-rows { position: absolute; inset: 3px; display: flex; flex-direction: column; gap: 1px; }
-.minimap-rows span { flex: 1; min-height: 1px; background: #7e9ab4; opacity: .65; }
+.minimap-rows span { position: relative; flex: 1; min-height: 1px; background: #dbe6f0; opacity: .82; }
+.minimap-segment { position: absolute; top: 0; bottom: 0; min-width: 1px; background: #527fa6; }
+.minimap-segment-low { background: #9bb2c8; }
+.minimap-segment-high { background: #3e709a; }
+.minimap-segment-clock { top: -1px; bottom: -1px; background: #314f70; }
+.minimap-segment-comment { background: #9a67c2; }
 .minimap > i { position: absolute; left: 0; right: 0; min-height: 4px; border: 1px solid #126bc0; background: #75b8ef66; pointer-events: none; }
 .inspector > .minimap { flex: 0 0 104px; width: auto; height: 104px; margin: 0; padding: 10px 12px 12px; border: 0; border-top: 1px solid #dbe3ee; border-radius: 0; background: #fbfcfe; cursor: crosshair; }
 .inspector > .minimap::before { content: "MiniMap"; display: block; height: 18px; color: #52677d; font-size: 11px; font-weight: 650; }
