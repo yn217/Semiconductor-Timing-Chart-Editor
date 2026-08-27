@@ -170,6 +170,20 @@ describe("pure Semantic Command planning", () => {
     expect(removed.ok).toBe(true);
     if (removed.ok) expect((removed.document.signals[1] as Extract<Signal, { values: unknown }>).values).toHaveLength(1);
   });
+
+  it("imports a complete event table as one semantic operation", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const before = session.metrics();
+    const values = [{ start: 0, value: "0" }, { start: 2, value: "1", comment: "imported" }, { start: 6, value: "0" }];
+    const result = session.execute({ id: commandId("cmd_replace_values"), type: "signal.replaceValues", signalId: "sig_data" as SignalId, values });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
+    expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(source.signals.find((signal) => signal.id === "sig_data")?.values);
+  });
 });
 
 describe("command execution and atomic history", () => {

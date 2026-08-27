@@ -512,6 +512,19 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.replaceValues": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
+      const values = [...command.values].sort((left, right) => left.start - right.start);
+      if (values.length === 0) return fail("invalid", "EMPTY_VALUES", "$.values", "A value signal must retain at least one change point.");
+      if (values.some((change) => !Number.isInteger(change.start) || change.start < 0 || change.start >= document.timeline.cycleCount)) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.values", "Every change point must be inside the timeline.");
+      if (new Set(values.map((change) => change.start)).size !== values.length) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.values", "Change points must be unique.");
+      if (JSON.stringify(signal.values) === JSON.stringify(values)) return fail("no-op", "NO_OP", "$.values", "Signal values are unchanged.");
+      const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
+      const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      return { ok: true, document: replaceSignal(document, index, { ...signal, values }), changeSet, inverseChangeSet: changeSet };
+    }
     case "signal.replaceValue": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
