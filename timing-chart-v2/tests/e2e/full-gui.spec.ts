@@ -695,7 +695,10 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("binary");
   await expect(inspector.getByLabel("Inspector label align")).toHaveValue("center");
   await expect(inspector.getByLabel("Inspector label overflow")).toHaveValue("wrap");
-  await expect(inspector.getByLabel("Inspector waveform row style")).toHaveValue('{"color":"#114477"}');
+  const appliedStyle = JSON.parse(await inspector.getByLabel("Inspector waveform row style").inputValue()) as Record<string, unknown>;
+  expect(appliedStyle.color).toBe("#114477");
+  expect(appliedStyle.fontFamily).toBe("Segoe UI");
+  expect(appliedStyle.fontSize).toBe(12);
   const styledRow = host.locator("[data-role='left-row'][data-row-id='sig_cycle_data']");
   await expect(styledRow).toHaveCSS("color", "rgb(17, 68, 119)");
   await expect(styledRow).toHaveCSS("text-align", "center");

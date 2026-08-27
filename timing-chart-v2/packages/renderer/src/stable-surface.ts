@@ -527,10 +527,16 @@ function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
   const background = typeof style.background === "string" && /^#[0-9a-f]{3,8}$/i.test(style.background) ? style.background : undefined;
   const fontWeight = typeof style.fontWeight === "string" && /^(normal|bold|[1-9]00)$/.test(style.fontWeight) ? style.fontWeight : undefined;
   const fontStyle = style.fontStyle === "italic" || style.fontStyle === "normal" ? style.fontStyle : undefined;
+  const fontFamily = typeof style.fontFamily === "string" && style.fontFamily.length <= 120 ? style.fontFamily : undefined;
+  const fontSize = typeof style.fontSize === "number" && style.fontSize >= 6 && style.fontSize <= 48 ? style.fontSize : undefined;
+  const textDecoration = typeof style.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(style.textDecoration) ? style.textDecoration : undefined;
   if (color) { shell.style.color = color; shell.dataset.signalStyleColor = color; } else { shell.style.removeProperty("color"); delete shell.dataset.signalStyleColor; }
   if (background) shell.style.backgroundColor = background; else shell.style.removeProperty("background-color");
   if (fontWeight) shell.style.fontWeight = fontWeight; else shell.style.removeProperty("font-weight");
   if (fontStyle) shell.style.fontStyle = fontStyle; else shell.style.removeProperty("font-style");
+  if (fontFamily) shell.style.fontFamily = fontFamily; else shell.style.removeProperty("font-family");
+  if (fontSize) shell.style.fontSize = `${fontSize}px`; else shell.style.removeProperty("font-size");
+  if (textDecoration !== undefined) shell.style.textDecoration = textDecoration; else shell.style.removeProperty("text-decoration");
   if (row.displayAlign) shell.style.textAlign = row.displayAlign; else shell.style.removeProperty("text-align");
   if (row.displayOverflow === "wrap") { shell.style.whiteSpace = "normal"; shell.style.textOverflow = "clip"; } else if (row.displayOverflow === "expand") { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "clip"; } else { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "ellipsis"; }
 }

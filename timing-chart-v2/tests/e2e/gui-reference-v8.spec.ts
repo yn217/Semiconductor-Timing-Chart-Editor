@@ -55,3 +55,30 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before);
   await page.screenshot({ path: "artifacts/gui-v8/reference-contract-dut.png", animations: "disabled" });
 });
+
+test("applies the v8 Signal Inspector style controls as one semantic operation", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector text color").fill("#224466");
+  await inspector.getByLabel("Inspector label background").fill("#eef5ff");
+  await inspector.getByLabel("Inspector label font").fill("Arial");
+  await inspector.getByLabel("Inspector label size").fill("14");
+  await inspector.getByLabel("Inspector label bold").check();
+  await inspector.getByLabel("Inspector label underline").check();
+  const before = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const row = host.locator("[data-role='left-row'][data-row-id='sig_cycle_data']");
+  await expect(row).toHaveCSS("color", "rgb(34, 68, 102)");
+  await expect(row).toHaveCSS("font-family", /Arial/);
+  await expect(row).toHaveCSS("font-size", "14px");
+  await expect(row).toHaveCSS("font-weight", "700");
+  await expect(row).toHaveCSS("text-decoration-line", "underline");
+  const after = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+});
