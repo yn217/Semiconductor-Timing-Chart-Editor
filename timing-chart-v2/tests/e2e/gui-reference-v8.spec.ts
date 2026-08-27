@@ -54,6 +54,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("selection-status")).toHaveText("clk");
   await expect(page.getByTestId("inspector")).toContainText("Clock");
   await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
+  await expect(page.getByTestId("clock-context-toolbar").locator("svg")).toHaveCount(5);
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible();

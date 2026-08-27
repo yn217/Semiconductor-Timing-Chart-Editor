@@ -2467,11 +2467,11 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
   const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
-      <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="clock-presets">Presets</button>
-      <button type="button" className="bottom-action" onClick={onDuplicate} data-testid="clock-duplicate">Duplicate</button>
-      <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="clock-import">Import...</button>
-      <button type="button" className="bottom-action" onClick={exportSettings} data-testid="clock-export">Export...</button>
-      <button type="button" className="bottom-action" onClick={() => setPreview((current) => !current)} aria-pressed={preview} data-testid="clock-preview">Preview</button>
+      <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="clock-presets"><RibbonIcon name="i-settings" /><span>Presets</span></button>
+      <button type="button" className="bottom-action" onClick={onDuplicate} data-testid="clock-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
+      <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="clock-import"><RibbonIcon name="i-import" /><span>Import...</span></button>
+      <button type="button" className="bottom-action" onClick={exportSettings} data-testid="clock-export"><RibbonIcon name="i-export" /><span>Export...</span></button>
+      <button type="button" className="bottom-action" onClick={() => setPreview((current) => !current)} aria-pressed={preview} data-testid="clock-preview"><RibbonIcon name="i-preview" /><span>Preview</span></button>
       <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import clock settings" onChange={(event) => { const file = event.target.files?.[0]; if (file) importSettings(file); event.currentTarget.value = ""; }} />
       {presetsOpen && <div className="event-presets" role="group" aria-label="Clock presets"><button type="button" onClick={() => setGenerator({ ...generator, duty: 0.5 })}>50% duty</button><button type="button" onClick={() => setGenerator({ ...generator, duty: 0.25 })}>25% duty</button></div>}
       {preview && <output className="event-preview" data-testid="clock-preview-status">Preview only · canonical data unchanged</output>}
