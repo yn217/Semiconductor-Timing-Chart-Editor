@@ -7,18 +7,18 @@ const viewport = { width: 1672, height: 941 } as const;
 const appRoot = process.cwd();
 const repositoryRoot = resolve(appRoot, "..");
 const outputRoot = resolve(repositoryRoot, "artifacts", "gui-visual-acceptance");
-const referencePath = resolve(repositoryRoot, "references", "gui-replacement-pack", "00_overall_cycle_view.png");
+const referencePath = resolve(repositoryRoot, "references", "v2-gui-reference-v8", "golden-home-cycle-1672x941.png");
 
 const target = {
-  title: { x: 0, y: 0, width: 1672, height: 32 },
-  tabs: { x: 0, y: 32, width: 1672, height: 38 },
-  ribbon: { x: 0, y: 70, width: 1672, height: 147 },
-  workspace: { x: 0, y: 217, width: 1672, height: 697 },
-  left: { x: 0, y: 217, width: 330, height: 697 },
-  center: { x: 330, y: 217, width: 1042, height: 697 },
-  bottom: { x: 330, y: 644, width: 1042, height: 270 },
-  inspector: { x: 1372, y: 217, width: 300, height: 697 },
-  status: { x: 0, y: 914, width: 1672, height: 27 },
+  title: { x: 0, y: 0, width: 1672, height: 31 },
+  tabs: { x: 0, y: 31, width: 1672, height: 34 },
+  ribbon: { x: 0, y: 65, width: 1672, height: 102 },
+  workspace: { x: 0, y: 167, width: 1672, height: 749 },
+  left: { x: 0, y: 167, width: 265, height: 749 },
+  center: { x: 265, y: 167, width: 1110, height: 749 },
+  bottom: { x: 265, y: 676, width: 1110, height: 240 },
+  inspector: { x: 1375, y: 167, width: 297, height: 749 },
+  status: { x: 0, y: 916, width: 1672, height: 25 },
 } as const;
 
 function roundedRect(value: { x: number; y: number; width: number; height: number }) {
@@ -81,8 +81,9 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     const actual = Object.fromEntries(Object.entries(selectors).map(([name, selector]) => [name, rect(selector)])) as Record<string, { x: number; y: number; width: number; height: number }>;
     const inspector = actual.inspector as DOMRect;
     const workspace = actual.workspace as DOMRect;
+    const workspaceElement = document.querySelector<HTMLElement>(selectors.workspace);
     const bottom = actual.bottom as DOMRect;
-    const leftWidth = Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--gui-left-width"));
+    const leftWidth = Number.parseFloat(getComputedStyle(workspaceElement).getPropertyValue("--gui-left-width"));
     const left = { x: workspace.x, y: workspace.y, width: leftWidth, height: workspace.height };
     const center = { x: left.x + left.width, y: workspace.y, width: inspector.x - (left.x + left.width), height: workspace.height };
     actual.left = left;
@@ -103,11 +104,11 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
 
   const reference = PNG.sync.read(await readFile(resolve(outputRoot, "reference.png")));
   const dut = PNG.sync.read(await readFile(resolve(outputRoot, "dut.png")));
-  const comparison = comparePng(reference, dut, { left: target.center.x, top: target.center.y, right: target.inspector.x, bottom: target.center.y + 338 });
+  const comparison = comparePng(reference, dut, { left: target.center.x, top: target.center.y + 36, right: target.inspector.x, bottom: target.bottom.y });
   await writeFile(resolve(outputRoot, "diff.png"), PNG.sync.write(comparison.diff));
   const report = {
     viewport,
-    source: { reference: "references/gui-replacement-pack/00_overall_cycle_view.png", dut: "V2 production /" },
+    source: { reference: "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png", dut: "V2 visual-reference /?visual-reference" },
     target,
     metrics,
     geometryPass: Object.values(metrics.differences).every((values) => Object.values(values as Record<string, number>).every((value) => value <= 2)),
