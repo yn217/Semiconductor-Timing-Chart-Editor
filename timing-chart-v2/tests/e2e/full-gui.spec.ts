@@ -314,7 +314,7 @@ test("edits Legend entry labels, visibility and order, then preserves them throu
   await properties.getByRole("button", { name: "Close properties" }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
-  await page.locator("input[type='file']").setInputFiles((await (await save).path())!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await (await save).path())!);
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_output']")).toHaveText(/Outputs/);
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_input']")).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
@@ -733,7 +733,7 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await inspector.getByLabel("Inspector edge counter count from").selectOption("signal-start");
   await inspector.getByTestId("apply-inspector-edge-counter").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await page.locator("input[type='file']").setInputFiles(savedPath!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);

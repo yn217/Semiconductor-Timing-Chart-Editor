@@ -37,7 +37,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const path = await (await save).path();
   await inspector.getByLabel("Transaction name").fill("Temporary"); await inspector.getByLabel("Transaction name").blur();
-  await page.locator("input[type='file']").setInputFiles(path!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" }).click();
   await page.getByTestId("transaction-editor").getByRole("button", { name: /AXI Burst/ }).click();
   await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("AXI Burst");

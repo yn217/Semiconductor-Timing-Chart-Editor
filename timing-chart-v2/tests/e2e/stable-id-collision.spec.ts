@@ -26,7 +26,7 @@ test("never generates a colliding Stable ID after a page reload resets the in-me
   // Simulate a fresh session: full page reload resets the module-level id counter to 0.
   await page.reload();
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file']").setInputFiles(path!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   // Insert two more signals from this fresh, counter-reset session.

@@ -62,7 +62,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
-  await page.locator("input[type='file']").setInputFiles((await (await save).path())!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await (await save).path())!);
   const reopenedGhost = host.locator("[data-role='annotation-owner'][data-annotation-type='ghostTrace']");
   await expect(reopenedGhost).toHaveAttribute("data-source-signal-id", sourceSignalId!);
   await expect(reopenedGhost).toHaveAttribute("data-trace-offset-cycles", "2");
@@ -92,7 +92,7 @@ test("creates a geometry-backed 30/70 threshold Measurement and preserves it thr
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const download = await downloadPromise;
-  await page.locator("input[type='file']").setInputFiles((await download.path())!);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await download.path())!);
   await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(1);
   await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveAttribute("aria-label", /30%→70%/);
 });

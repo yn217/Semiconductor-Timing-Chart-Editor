@@ -6,7 +6,7 @@ test.setTimeout(120_000);
 
 async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
   const document = generatePerformanceDocument(spec);
-  await page.locator("input[type='file']").setInputFiles({ name: `${document.document.id}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: `${document.document.id}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
   await expect(page.locator(".app-titlebar h1")).toHaveText(document.document.title, { timeout: 60_000 });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
   let previous = -1, stable = 0;

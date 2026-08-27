@@ -28,7 +28,7 @@ test("surfaces an Open failure in the Problems panel", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator("input[type='file']").setInputFiles({ name: "bad.tcd", mimeType: "application/json", buffer: Buffer.from("{ not json") });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "bad.tcd", mimeType: "application/json", buffer: Buffer.from("{ not json") });
   await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("OPEN_FAILED");
 });
@@ -43,7 +43,7 @@ test("surfaces a V1->V2 migration warning after opening a legacy document", asyn
     timebase: { cycleCount: 10 },
     signals: [{ id: "sig_clk", name: "CLK", type: "clock", generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" } }],
   };
-  await page.locator("input[type='file']").setInputFiles({ name: "v1.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(v1Doc)) });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "v1.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(v1Doc)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("MIGRATED_V1_TO_V2");
@@ -64,7 +64,7 @@ test("surfaces a V1->V2 migration warning after opening a legacy document", asyn
     layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
     checkSettings: {},
   };
-  await page.locator("input[type='file']").setInputFiles({ name: "v2.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(doc2)) });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "v2.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(doc2)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("problems-panel")).not.toContainText("MIGRATED_V1_TO_V2");
 });

@@ -38,7 +38,7 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
 
   for (const [index, { meta, path }] of samples.entries()) {
     const source = await readFile(path);
-    await page.locator("input[type='file']").setInputFiles({ name: meta.file, mimeType: "application/json", buffer: source });
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: meta.file, mimeType: "application/json", buffer: source });
     const host = page.getByTestId("cycle-surface");
     await expect(page.locator(".app-titlebar h1")).toHaveText(meta.title, { timeout: 60_000 });
     await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
@@ -56,7 +56,7 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     const saved = await pendingSave;
     const savedPath = await saved.path();
     expect(savedPath).toBeTruthy();
-    await page.locator("input[type='file']").setInputFiles(savedPath!);
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
     await expect(page.locator(".app-titlebar h1")).toHaveText(meta.title, { timeout: 60_000 });
     await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await expect(host).toHaveAttribute("data-canonical-revision", "0");
@@ -76,7 +76,7 @@ test("exports SVG for all 20 immutable Golden Samples without mutating Canonical
   const evidence: Array<Record<string, unknown>> = [];
 
   for (const { meta, path } of samples) {
-    await page.locator("input[type='file']").setInputFiles({ name: meta.file, mimeType: "application/json", buffer: await readFile(path) });
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: meta.file, mimeType: "application/json", buffer: await readFile(path) });
     const host = page.getByTestId("cycle-surface");
     await expect(page.locator(".app-titlebar h1")).toHaveText(meta.title, { timeout: 60_000 });
     await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });

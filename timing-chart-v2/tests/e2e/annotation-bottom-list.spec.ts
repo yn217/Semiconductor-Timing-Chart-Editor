@@ -35,4 +35,9 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
   await expect(surface).toHaveAttribute("data-render-counters", counters!);
+  const importedId = "annotation_imported";
+  await page.getByLabel("Import annotations").setInputFiles({ name: "annotations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify([{ id: importedId, type: "text", label: "Imported", visible: true, anchor: { signalId: "sig_cycle_request", cycle: 2, point: "cycle-start" } }])) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(page.getByTestId("annotation-list").locator(`[data-annotation-list-id="${importedId}"]`)).toHaveAttribute("data-selected", "true");
 });

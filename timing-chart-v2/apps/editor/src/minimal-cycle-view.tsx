@@ -1092,6 +1092,7 @@ export function MinimalCycleView() {
     key={`${bottomAnnotation.id}:${snapshot.revision}`}
     annotation={bottomAnnotation}
     annotations={snapshot.document.annotations}
+    document={snapshot.document}
     history={history}
     problem={problem}
     onSelect={selectAnnotation}
@@ -2062,7 +2063,7 @@ function AnnotationList({ annotations, selectedId, onSelect }: { readonly annota
   </div>;
 }
 
-function AnnotationEditor({ annotation, annotations, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void }) {
+function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void }) {
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
   const [visible, setVisible] = useState(annotation.visible);
@@ -2073,6 +2074,21 @@ function AnnotationEditor({ annotation, annotations, history, problem, onSelect,
   const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
   const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
   const [previewRevision, setPreviewRevision] = useState(0);
+  const [importStatus, setImportStatus] = useState("Import annotations JSON");
+  const fileInput = useRef<HTMLInputElement>(null);
+  const importAnnotations = async (file: File) => {
+    try {
+      const parsed: unknown = JSON.parse(await file.text());
+      const items = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "annotations" in parsed ? (parsed as { annotations: unknown }).annotations : undefined);
+      if (!Array.isArray(items) || items.some((item) => item === null || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string")) throw new Error("Expected an annotation array with stable IDs.");
+      onCommand({ id: nextCommandId("annotation_import"), type: "document.replace", document: { ...document, annotations: items as Annotation[] } });
+      const first = items[0] as { id?: unknown } | undefined;
+      if (typeof first?.id === "string") onSelect(first.id as AnnotationId);
+      setImportStatus(`Imported ${items.length} annotation${items.length === 1 ? "" : "s"}`);
+    } catch (error) {
+      setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
+    }
+  };
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor">
     <div className="editor-tabbar">
       <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
@@ -2087,7 +2103,10 @@ function AnnotationEditor({ annotation, annotations, history, problem, onSelect,
       <button type="button" onClick={onDelete}>Delete</button>
       <button type="button" onClick={() => setPreviewRevision((value) => value + 1)}>⟳ Preview Update</button>
       <button type="button" onClick={() => downloadText(JSON.stringify(annotations, null, 2), "annotations.json")}>Export</button>
+      <button type="button" onClick={() => fileInput.current?.click()}>Import</button>
+      <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import annotations" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAnnotations(file); event.currentTarget.value = ""; }} />
       <output data-testid="annotation-preview-status">Preview {previewRevision > 0 ? `updated ${previewRevision}` : "ready"}</output>
+      <output data-testid="annotation-import-status">{importStatus}</output>
     </div>
     <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
