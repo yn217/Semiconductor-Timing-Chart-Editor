@@ -99,3 +99,12 @@ semantic command path. Browser evidence is in
 `timing-chart-v2/tests/e2e/signal-editor.spec.ts`; v8 shell geometry and
 counter invariants are asserted without changing the WaveDrom adapter or
 canonical architecture.
+
+The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
+File, Edit, Layout, Time, Zoom/Display and Options. Existing History,
+Clipboard, Selection, Visibility, Arrange, Properties, Review and Export
+command groups remain reachable inside those surfaces; the grouping layer is
+presentation-only and does not introduce a second command owner. Browser
+evidence and the no-scroll assertion are in
+`timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts` and the Ribbon tab and
+responsive tests.
