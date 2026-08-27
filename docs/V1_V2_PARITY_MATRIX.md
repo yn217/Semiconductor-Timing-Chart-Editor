@@ -114,6 +114,12 @@ normal V2 surface retains its existing product vocabulary. This is a
 presentation-only reference route; no canonical command or persistence path
 is forked.
 
+The V8 reference view also exposes the Golden shell vocabulary and context
+headers (`Signals / Groups`, `Role`, `Signal / Annotation`, `Time Scale`, and
+`Reference`) plus the dense English Bottom Editor tabs and Follow Selection
+control. These are visual-reference presentation states only; the normal V2
+surface continues to retain the product's existing labels and all commands.
+
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its
 own nested presentation subgroup. Existing History,
