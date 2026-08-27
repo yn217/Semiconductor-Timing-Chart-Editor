@@ -68,12 +68,39 @@ const v1ReferenceComment: CommentRow = {
   title: "Address phase", body: "Address phase (req_valid = 1)",
 };
 
+const v8ReferenceProcessingComment: CommentRow = {
+  id: signalId("sig_v8_reference_processing_comment"), type: "commentRow", name: "Processing note", role: "internal",
+  source: { instancePath: ["dut"], signalName: "processing_note" }, display: { name: "Processing note" },
+  title: "Processing note", body: "Processing note (busy / state)",
+};
+
+const v8ReferenceLatencyComment: CommentRow = {
+  id: signalId("sig_v8_reference_latency_comment"), type: "commentRow", name: "Read latency", role: "internal",
+  source: { instancePath: ["dut"], signalName: "read_latency" }, display: { name: "Read latency" },
+  title: "Read latency", body: "Read latency measurement",
+};
+
+const v8ReferenceClock: ClockSignal = { ...clock, name: "clk", source: { instancePath: ["dut"], signalName: "clk" }, display: { name: "clk" }, generator: { ...clock.generator, period: 1 } };
+const v8ReferenceSignals: readonly (ClockSignal | ValueSignal)[] = [
+  valueSignal("sig_cycle_reset_n", "req_valid", "input", [{ start: 0, value: 0 }, { start: 3, value: 1 }]),
+  valueSignal("sig_cycle_request", "req_addr[7:0]", "input", [{ start: 0, value: "00" }, { start: 2, value: "12" }, { start: 6, value: "34" }], { type: "bus", width: 8, displayFormat: "hex" }),
+  v8ReferenceClock,
+  valueSignal("sig_cycle_ready", "busy", "internal", [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }]),
+  valueSignal("sig_cycle_valid", "state[1:0]", "internal", [{ start: 0, value: "IDLE" }, { start: 3, value: "REQ" }, { start: 6, value: "WAIT" }, { start: 8, value: "RESP" }], { type: "bus", width: 2 }),
+  valueSignal("sig_cycle_data", "ready", "output", [{ start: 0, value: 0 }, { start: 8, value: 1 }]),
+  valueSignal("sig_cycle_result", "rdata[15:0]", "output", [{ start: 0, value: "XXXX" }, { start: 7, value: "0000" }], { type: "bus", width: 16, displayFormat: "hex" }),
+];
+
 const v1ReferenceDocument: CanonicalDocument = {
   ...cycleDocument,
   timeline: { ...cycleDocument.timeline, end: 10, cycleCount: 10 },
-  document: { ...cycleDocument.document, title: "Semiconductor Timing Chart — V1 Reference", header: { ...cycleDocument.document.header, subtitle: "Protocol timing reference" } },
-  signals: [...cycleDocument.signals, v1ReferenceComment],
-  signalGroups: cycleDocument.signalGroups.map((group) => group.id === "grp_cycle_control" ? { ...group, rows: [...group.rows, v1ReferenceComment.id] } : group),
+  document: { ...cycleDocument.document, title: "AXI-lite Read Timing.tmr — Timing Editor Pro", header: { ...cycleDocument.document.header, subtitle: "Protocol timing reference" } },
+  signals: [...v8ReferenceSignals, v1ReferenceComment, v8ReferenceProcessingComment, v8ReferenceLatencyComment],
+  signalGroups: [
+    { id: groupId("grp_cycle_control"), name: "Input", rows: ["sig_cycle_reset_n", "sig_cycle_request", v1ReferenceComment.id, "sig_cycle_clock"] as SignalId[] },
+    { id: groupId("grp_cycle_payload"), name: "Internal Control", rows: ["sig_cycle_ready", "sig_cycle_valid", v8ReferenceProcessingComment.id] as SignalId[] },
+    { id: groupId("grp_cycle_scratch"), name: "Output", rows: ["sig_cycle_data", "sig_cycle_result", v8ReferenceLatencyComment.id] as SignalId[] },
+  ],
   annotations: [
     { id: "v1_ref_text" as AnnotationId, type: "text", label: "Request phase", visible: true, color: "#7a3bb8", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
     { id: "v1_ref_marker" as AnnotationId, type: "marker", label: "Start", visible: true, color: "#d04a36", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
@@ -106,8 +133,8 @@ export function MinimalCycleView() {
   const saveDocument = useRef<() => string | undefined>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_valid") : undefined);
-  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_valid")]) : new Set());
+  const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_data") : undefined);
+  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_data")]) : new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
   const selectedSignalIdsRef = useRef<ReadonlySet<SignalId>>(new Set());
   selectedSignalIdsRef.current = selectedSignalIds;
@@ -1464,7 +1491,7 @@ export function MinimalCycleView() {
   return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
-      {([{ key: "File", label: "ファイル" }, { key: "Home", label: "ホーム" }, { key: "Insert", label: "挿入" }, { key: "Timeline", label: "Transaction", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "注釈" }, { key: "View", label: "表示" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const).map((tab) => <button type="button" key={tab.key} aria-label={"compatibilityLabel" in tab ? tab.compatibilityLabel : tab.key} className={ribbonTab === tab.key ? "active" : ""} onClick={() => setRibbonTab(tab.key)}>{tab.label}</button>)}
+      {([{ key: "File", label: "ファイル" }, { key: "Home", label: "ホーム" }, { key: "Insert", label: "挿入" }, { key: "Timeline", label: "Transaction", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "注釈" }, { key: "View", label: "表示" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const).map((tab) => <button type="button" key={tab.key} aria-label={"compatibilityLabel" in tab ? tab.compatibilityLabel : tab.key} className={ribbonTab === tab.key ? "active" : ""} onClick={() => setRibbonTab(tab.key)}>{visualReference ? ({ File: "File", Home: "Home", Insert: "Insert", Timeline: "Transaction", Annotation: "Annotation", View: "View", Review: "Check", AI: "AI" } as Record<string, string>)[tab.key] : tab.label}</button>)}
       <div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => { setViewMode(mode); if (mode === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal"); if (mode === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction"); }}>{mode}</button>)}</div>
     </nav>
     <Ribbon

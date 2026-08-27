@@ -38,7 +38,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
-  await expect(page.getByLabel("Display")).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
   expect(metrics.rowY.left.length).toBeGreaterThan(0);
   expect(Math.max(...metrics.rowY.left.map((y, index) => Math.abs(y - (metrics.rowY.frozen[index] ?? y))))).toBeLessThanOrEqual(1);
   const signalWaveRows = await page.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => {

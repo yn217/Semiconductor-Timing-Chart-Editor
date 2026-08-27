@@ -100,6 +100,13 @@ semantic command path. Browser evidence is in
 counter invariants are asserted without changing the WaveDrom adapter or
 canonical architecture.
 
+The visual-reference route now uses an independent V2 canonical fixture that
+matches the approved Golden's ten-row hierarchy (Input, Internal Control and
+Output), three comment rows, stable role presentation and reference clock
+shape. It is selected only by the `visual-reference` query parameter; the
+normal production fixture and runtime architecture are unchanged. Browser
+evidence remains in `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts`.
+
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its
 own nested presentation subgroup. Existing History,
