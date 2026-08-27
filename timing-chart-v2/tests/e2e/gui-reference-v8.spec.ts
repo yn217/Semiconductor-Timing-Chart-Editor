@@ -47,7 +47,6 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(timeGroup).toBeVisible();
   await expect(timeGroup.getByRole("button", { name: "Insert one cycle" })).toBeVisible();
   await expect(timeGroup.getByRole("button", { name: "Delete one cycle" })).toBeVisible();
-  await expect(timeGroup.getByLabel("N cycle count")).toHaveValue("2");
   await expect(page.locator(".home-timeline-group .timeline-toolbar")).toHaveCount(0);
   await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");

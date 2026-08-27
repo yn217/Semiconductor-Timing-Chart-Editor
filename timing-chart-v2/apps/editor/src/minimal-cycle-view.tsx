@@ -1707,7 +1707,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
 }) {
   const [homeOverflowOpen, setHomeOverflowOpen] = useState(false);
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
-  const [compactCycleCount, setCompactCycleCount] = useState(2);
+  const [compactCycleCount] = useState(2);
   useLayoutEffect(() => {
     if (tab !== "Home") return;
     const root = window.document.querySelector<HTMLElement>("[data-testid='ribbon']");
@@ -1783,7 +1783,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         <button type="button" className="ribbon-tool" aria-label="Delete one cycle" onClick={() => onCommand({ id: nextCommandId("v8_cycle_delete"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + 1) })}><RibbonIcon name="i-delete" /><span>Cycle<br />Delete</span></button>
         <button type="button" className="ribbon-tool" aria-label={`Insert ${compactCycleCount} cycles`} onClick={() => onCommand({ id: nextCommandId("v8_n_cycle_insert"), type: "timeline.insert", at: range.start, count: compactCycleCount })}><RibbonIcon name="i-plus" /><span>N Cycle<br />Insert</span></button>
         <button type="button" className="ribbon-tool" aria-label={`Delete ${compactCycleCount} cycles`} onClick={() => onCommand({ id: nextCommandId("v8_n_cycle_delete"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + compactCycleCount) })}><RibbonIcon name="i-delete" /><span>N Cycle<br />Delete</span></button>
-        <label className="v8-cycle-count"><span>N</span><input aria-label="N cycle count" type="number" min="1" max={document.timeline.cycleCount} value={compactCycleCount} onChange={(event) => setCompactCycleCount(Math.max(1, Number(event.target.value) || 1))} /></label>
         <b>Time</b>
       </> : <><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></>}</div>
       </div>
