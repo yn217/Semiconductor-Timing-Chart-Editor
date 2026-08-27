@@ -86,9 +86,11 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 - At `1672x941`, all normal Home commands fit without Ribbon horizontal
   scrolling.
 - At `1280x720`, retain the three-pane composition with compact groups and
-  bounded pane sizes.
+  bounded pane sizes; Home keeps the direct V1-compatible command surface and
+  has no horizontal Ribbon scroll.
 - At the `1024` class, collapse or expose overflow by explicit controls while
   retaining access to every command and keeping the center waveform usable.
+  The production More Home Commands menu is the explicit overflow surface.
 - Pane resize and collapse are view-only operations and must not affect
   Canonical, History, Dirty, or validation counters.
 

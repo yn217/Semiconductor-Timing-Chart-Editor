@@ -151,6 +151,11 @@ body { min-width: 1100px; }
 .ribbon-group > b { position: absolute; right: 0; bottom: 3px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
 .file-group { width: 310px; }.history-group { width: 152px; }.timeline-group { width: 484px; }.annotation-group { width: 375px; }.view-group { width: 310px; }
 .home-file-group { width: 168px; }.history-group { width: 90px; }.clipboard-group { width: 168px; }.edit-group, .selection-group, .visibility-group, .arrange-group { width: 88px; }.home-timeline-group { width: 300px; }.home-view-group { width: 220px; }.properties-group, .home-review-group { width: 88px; }.home-export-group { width: 105px; }.home-toggle { display: grid; grid-template-columns: 14px auto; align-items: center; gap: 3px; color: #445b73; font-size: 10px; white-space: nowrap; }.home-file-group .ribbon-tool, .history-group .ribbon-tool, .clipboard-group .ribbon-tool, .edit-group .ribbon-tool, .selection-group .ribbon-tool, .visibility-group .ribbon-tool, .arrange-group .ribbon-tool { min-width: 34px; padding-inline: 2px; font-size: 9px; gap: 3px; }.home-file-group .ribbon-tool svg, .history-group .ribbon-tool svg, .clipboard-group .ribbon-tool svg, .edit-group .ribbon-tool svg, .selection-group .ribbon-tool svg, .visibility-group .ribbon-tool svg, .arrange-group .ribbon-tool svg { width: 22px; height: 22px; }.home-file-group, .history-group, .clipboard-group, .edit-group, .selection-group, .visibility-group, .arrange-group { gap: 4px; padding-inline: 6px; }
+.home-overflow-group { position: relative; display: none; width: 88px; height: 146px; padding: 7px 8px 22px; border-right: 1px solid #d4dbe4; }
+.home-overflow-menu { position: absolute; top: 58px; right: 5px; z-index: 80; display: grid; grid-template-columns: repeat(2, minmax(108px, 1fr)); gap: 3px 5px; width: 300px; padding: 8px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; }
+.home-overflow-menu strong { grid-column: 1 / -1; margin-top: 3px; color: #405875; font-size: 10px; }
+.home-overflow-menu button { min-height: 26px; padding: 3px 7px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; text-align: left; }
+.home-overflow-menu button:hover { background: var(--gui-hover-bg); }.home-overflow-menu button:disabled { opacity: .4; }
 .ribbon-tool { min-width: 47px; height: 86px; padding: 5px 4px; border: 0; border-radius: 4px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #25384f; font-size: 10px; }
 .ribbon-tool:hover { background: #eaf3fc; }.ribbon-tool:disabled { opacity: .4; }
 .ribbon-tool svg { width: 28px; height: 28px; }
@@ -279,4 +284,21 @@ body { min-width: 1100px; }
 .quick-values button { min-width: 30px; padding-inline: 6px; }
 .status-bar { display: flex; align-items: center; gap: 28px; padding: 0 22px; border-top: 1px solid #cbd3dd; background: #f8fafc; color: #566278; font-size: 11px; }
 .status-bar span:last-child { margin-left: auto; }
+@media (min-width: 1101px) and (max-width: 1300px) {
+  .ribbon { zoom: .8; width: 125%; }
+}
+@media (max-width: 1100px) {
+  body { min-width: 0; }
+  .home-file-group, .history-group, .clipboard-group, .edit-group, .selection-group, .visibility-group, .arrange-group, .properties-group, .home-review-group, .home-export-group { display: none; }
+  .home-overflow-group { display: flex; align-items: center; }
+  .desktop-workspace { grid-template-columns: 250px minmax(0, 1fr) 240px; }
+  :root { --gui-left-width: 250px; --gui-inspector-width: 240px; }
+}
+@media (max-width: 1100px) {
+  .desktop-workspace { grid-template-columns: 250px minmax(0, 1fr) 240px; }
+  .column-headings { grid-template-columns: 250px 170px minmax(420px, 1fr); }
+  .surface-host [data-role="timing-chart-surface"] { grid-template-columns: 250px 170px var(--wave-width, 640px); }
+  .surface-host [data-role="frozen-label-rows"] { left: 250px !important; }
+  .cycle-ruler, .geometry-grid { left: 420px; }
+}
 @media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
