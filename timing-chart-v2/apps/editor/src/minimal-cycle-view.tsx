@@ -1081,13 +1081,33 @@ export function MinimalCycleView() {
   const annotationEditor = bottomAnnotation ? <AnnotationEditor
     key={`${bottomAnnotation.id}:${snapshot.revision}`}
     annotation={bottomAnnotation}
+    annotations={snapshot.document.annotations}
     history={history}
     problem={problem}
+    onSelect={(id) => {
+      selectedAnnotationRef.current = id;
+      setSelectedAnnotationId(id);
+      setSelectedId(undefined);
+      selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
+      setSelectedGroupId(undefined);
+      setSelectedTransactionId(undefined);
+      selectedTransactionRef.current = undefined;
+      if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+    }}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onDelete={() => commandRegistry.current.execute("selection.delete")}
-  /> : <div className="empty-editor">Select or create an Annotation.</div>;
+  /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={(id) => {
+    selectedAnnotationRef.current = id;
+    setSelectedAnnotationId(id);
+    setSelectedId(undefined);
+    selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
+    setSelectedGroupId(undefined);
+    setSelectedTransactionId(undefined);
+    selectedTransactionRef.current = undefined;
+    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+  }} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
     selectedTransactionRef.current = id;
     setSelectedTransactionId(id);
@@ -2036,7 +2056,13 @@ function createAnnotation(type: AnnotationType, signalId: SignalId, range: { rea
   return { ...base, anchor: first };
 }
 
-function AnnotationEditor({ annotation, history, problem, onCommand, onUndo, onRedo, onDelete }: { readonly annotation: Annotation; readonly history: HistoryState; readonly problem: string; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void }) {
+function AnnotationList({ annotations, selectedId, onSelect }: { readonly annotations: readonly Annotation[]; readonly selectedId: AnnotationId | undefined; readonly onSelect: (id: AnnotationId) => void }) {
+  return <div className="annotation-list" role="list" aria-label="Annotations" data-testid="annotation-list">
+    {annotations.map((item, index) => <button type="button" role="listitem" key={item.id} data-annotation-list-id={item.id} data-selected={String(item.id === selectedId)} aria-label={`Select annotation ${item.label || item.type}`} onClick={() => onSelect(item.id)}><span className="annotation-list-index">{index + 1}</span><span className="annotation-list-type">{item.type}</span><span className="annotation-list-label">{item.label || "(untitled)"}</span></button>)}
+  </div>;
+}
+
+function AnnotationEditor({ annotation, annotations, history, problem, onSelect, onCommand, onUndo, onRedo, onDelete }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void }) {
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
   const [visible, setVisible] = useState(annotation.visible);
@@ -2054,6 +2080,7 @@ function AnnotationEditor({ annotation, history, problem, onCommand, onUndo, onR
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
       <button type="button" onClick={onDelete} data-testid="delete-annotation">Delete</button>
     </div>
+    <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
     <form className="annotation-properties" onSubmit={(event) => {
       event.preventDefault();
