@@ -112,7 +112,7 @@ export function MinimalCycleView() {
   const [selectedGroupId, setSelectedGroupId] = useState<GroupId | undefined>();
   const selectedGroupRef = useRef<GroupId | undefined>(undefined);
   selectedGroupRef.current = selectedGroupId;
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>(() => visualReference ? "v1_ref_text" as AnnotationId : undefined);
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>();
   const selectedAnnotationRef = useRef<AnnotationId | undefined>(undefined);
   selectedAnnotationRef.current = selectedAnnotationId;
   const [selectedTransactionId, setSelectedTransactionId] = useState<TransactionId | undefined>();

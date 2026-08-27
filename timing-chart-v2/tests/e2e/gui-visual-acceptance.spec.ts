@@ -57,6 +57,11 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
   await page.setViewportSize(viewport);
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
+  await page.getByTestId("bottom-pin").click();
+  await host.locator("[data-role='annotation-owner'][data-annotation-id='v1_ref_text'] [data-role='annotation-label']").click();
+  await expect(page.locator(".inspector-shell > .inspector")).toContainText("Annotation");
 
   await copyFile(referencePath, resolve(outputRoot, "reference.png"));
   await page.screenshot({ path: resolve(outputRoot, "dut.png"), animations: "disabled" });
@@ -116,5 +121,5 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
   expect(metrics.ribbonOverflow.scrollWidth).toBeLessThanOrEqual(metrics.ribbonOverflow.clientWidth + 1);
   await expect(page.getByTestId("ribbon")).toBeVisible();
   await expect(page.getByTestId("bottom-editor")).toBeVisible();
-  await expect(page.getByTestId("inspector")).toBeVisible();
+  await expect(page.locator(".inspector-shell > .inspector")).toBeVisible();
 });
