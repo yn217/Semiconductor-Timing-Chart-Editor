@@ -43,4 +43,6 @@ test("Export respects a collapsed TimeGroup: shorter SVG width, no hidden cycle 
   // The folded cycles (2, 3) must not appear as ruler tick labels in the exported SVG.
   expect(svgAfter).not.toMatch(/<text x="[\d.]+" y="24" stroke="none">2<\/text>/);
   expect(svgAfter).not.toMatch(/<text x="[\d.]+" y="24" stroke="none">3<\/text>/);
+  expect(svgAfter).toContain('data-layer="axis-breaks"');
+  expect(svgAfter).toContain('data-axis-break-id=');
 });

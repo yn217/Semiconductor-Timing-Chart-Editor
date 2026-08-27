@@ -157,3 +157,11 @@ view-only layout operation: the browser test
 `timing-chart-v2/tests/e2e/reorder-visibility.spec.ts` verifies that the
 Canonical revision, History, WaveDrom and LocalGeometry counters remain
 unchanged while the Tree and Inspector stay synchronized.
+
+Axis Break export parity is now explicit in the shared ExportScene. Collapsed
+Time Groups produce derived paired boundary marks with stable Time Group IDs,
+source `[start,end)` metadata and the same display-time X mapping used by the
+compressed ruler and WaveDrom lanes. `tests/export/deterministic-export.test.ts`
+and `timing-chart-v2/tests/e2e/export-fold-mapping.spec.ts` verify that
+respecting folds emits the boundary layer while Expand emits none; source time
+and canonical state remain unchanged.

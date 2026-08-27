@@ -23,6 +23,7 @@ export interface ExportLabel { readonly text: string; readonly x: number; readon
 export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
+export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
 export interface ExportEdgeCounter { readonly id: string; readonly signalId: SignalId; readonly kind: "rising" | "falling"; readonly cycle: number; readonly x: number; readonly y: number; readonly label: string }
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
 export interface ExportRuler { readonly start: number; readonly end: number; readonly x: number; readonly cycleWidth: number; readonly ticks: readonly ExportRulerTick[] }
@@ -37,6 +38,7 @@ export interface ExportScene {
   readonly annotations: readonly ExportAnnotation[];
   readonly transactions: readonly ExportTransaction[];
   readonly groupBands: readonly ExportGroupBand[];
+  readonly axisBreaks: readonly ExportAxisBreak[];
   readonly edgeCounters: readonly ExportEdgeCounter[];
   readonly legend: readonly string[];
   readonly ruler: ExportRuler;
@@ -197,6 +199,16 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   }
   const groupBands: ExportGroupBand[] = [];
   document.signalGroups.forEach((group) => { const ys = group.rows.map((id) => rowY.get(id as SignalId)).filter((y): y is number => y !== undefined); const first = ys[0]; if (first !== undefined) { labels.push({ text: group.name, x: 12, y: first - rowHeight / 2 - 4, kind: "group" }); groupBands.push({ id: group.id, name: group.name, y: first - rowHeight / 2, height: Math.max(rowHeight, (ys.at(-1)! - first) + rowHeight) }); } });
+  const axisBreaks: ExportAxisBreak[] = settings.foldPolicy === "expand" ? [] : document.timeGroups
+    .filter((group) => group.presentation?.collapsed)
+    .map((group): ExportAxisBreak => ({
+      id: group.id,
+      name: group.presentation?.foldLabel || group.name,
+      sourceStart: group.start,
+      sourceEnd: group.end,
+      x: LABEL_WIDTH + (toDisplayCycle(mapping, group.start, "floor") - range.start) * cycleWidth,
+    }))
+    .filter((item) => item.x >= LABEL_WIDTH && item.x <= LABEL_WIDTH + (range.end - range.start) * cycleWidth);
   const transactions = document.transactions.map((transaction): ExportTransaction | undefined => {
     const laneId = transaction.laneId ?? "lane_0";
     const displayStart = toDisplayCycle(mapping, transaction.start, "floor");
@@ -220,7 +232,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });
   const page = settings.page ? pageLayout(settings.page, contentWidth, contentHeight) : undefined;
-  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, edgeCounters, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
+  return Object.freeze({ width: page?.width ?? contentWidth, height: page?.height ?? contentHeight, waveforms, labels, annotations, transactions, groupBands, axisBreaks, edgeCounters, legend, ruler: { start: range.start, end: range.end, x: LABEL_WIDTH, cycleWidth, ticks }, documentLayout, ...(page === undefined ? {} : { page }) });
 }
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -238,6 +250,10 @@ export function renderExportSvg(scene: ExportScene): string {
   for (const item of scene.transactions) out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`);
   out.push(`</g><g data-layer="group-bands">`);
   for (const band of scene.groupBands) out.push(`<rect data-group-id="${xml(band.id)}" x="0" y="${band.y}" width="${scene.width}" height="${band.height}" fill="#f8fafc" fill-opacity="0.22" stroke="#d8e0e9"/>`);
+  out.push(`</g><g data-layer="axis-breaks" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d" stroke="#52677d">`);
+  for (const item of scene.axisBreaks) {
+    out.push(`<g data-axis-break-id="${xml(item.id)}" data-source-start="${item.sourceStart}" data-source-end="${item.sourceEnd}"><path d="M${item.x - 4} 22 l4 8 l4 -8 M${item.x - 4} ${scene.height - 30} l4 8 l4 -8" fill="none" stroke-width="1.5"/><text x="${item.x + 8}" y="38" fill="#52677d" stroke="none">${xml(item.name)}</text></g>`);
+  }
   out.push(`</g><g data-layer="labels" font-family="Segoe UI,Arial,sans-serif" font-size="11" fill="#1e293b">`);
   for (const label of scene.labels) out.push(`<text data-label-kind="${label.kind}" x="${label.x}" y="${label.y + 4}"${label.kind === "comment" ? ` fill="#9144d3"` : ""}>${xml(label.text)}</text>`);
   out.push(`</g><g data-layer="waveforms">`);

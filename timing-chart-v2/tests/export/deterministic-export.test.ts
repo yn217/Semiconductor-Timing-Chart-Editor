@@ -150,6 +150,8 @@ describe("deterministic document export", () => {
     expect(respected.ruler.end - respected.ruler.start).toBe(10); // 20 source cycles - 10 hidden by the [5,15) fold
     expect(expanded.ruler.end - expanded.ruler.start).toBe(20);
     expect(respected.width).toBeLessThan(expanded.width);
+    expect(respected.axisBreaks).toEqual([{ id: "tg_export", name: "Idle", sourceStart: 5, sourceEnd: 15, x: expect.any(Number) }]);
+    expect(expanded.axisBreaks).toHaveLength(0);
     // Canonical source data must stay unchanged by either export.
     expect(document.timeline.cycleCount).toBe(20);
     expect(document.signals[1]!.values).toHaveLength(4);
@@ -161,6 +163,8 @@ describe("deterministic document export", () => {
     expect(resumeTick?.text).toBe("1000");
     const svg = renderExportSvg(scene);
     expect(svg).toContain(">1000<");
+    expect(svg).toContain('data-layer="axis-breaks"');
+    expect(svg).toContain('data-axis-break-id="tg_export"');
   });
 
   it("shares the same folded time mapping across waveforms, transactions, and annotations", () => {
