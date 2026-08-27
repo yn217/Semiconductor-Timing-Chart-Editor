@@ -43,6 +43,14 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
   await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
+  const treeMore = page.locator(".tree-more-button");
+  await treeMore.click();
+  await page.getByRole("menu", { name: "More tree actions" }).getByRole("menuitem", { name: "Collapse All Groups" }).click();
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await treeMore.click();
+  await page.getByRole("menu", { name: "More tree actions" }).getByRole("menuitem", { name: "Expand All Groups" }).click();
+  await expect(page.locator("[data-role='left-row'][data-row-id='sig_cycle_reset_n']")).toBeVisible();
   expect(metrics.rowY.left.length).toBeGreaterThan(0);
   expect(Math.max(...metrics.rowY.left.map((y, index) => Math.abs(y - (metrics.rowY.frozen[index] ?? y))))).toBeLessThanOrEqual(1);
   const signalWaveRows = await page.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => {

@@ -120,6 +120,11 @@ headers (`Signals / Groups`, `Role`, `Signal / Annotation`, `Time Scale`, and
 control. These are visual-reference presentation states only; the normal V2
 surface continues to retain the product's existing labels and all commands.
 
+GUI-02 tree parity evidence also includes the header-level More menu with
+view-only Expand All Groups, Collapse All Groups, and Clear Filter actions.
+These actions operate only on derived tree presentation state and are
+browser-verified with Canonical revision, History and Dirty deltas of zero.
+
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its
 own nested presentation subgroup. Existing History,
