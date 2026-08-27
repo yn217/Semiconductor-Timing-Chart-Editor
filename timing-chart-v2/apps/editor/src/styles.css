@@ -328,9 +328,12 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="frozen-row"] { grid-template-columns: 61px 148px; padding: 0; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-branch"] { display: none; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"],
-.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"] { height: 20px; min-width: 28px; padding: 0; border-radius: 4px; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"] { height: 20px; width: 28px; min-width: 28px; padding: 0; border-radius: 4px; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"] { height: 20px; width: 28px; min-width: 28px; justify-self: start; padding: 0; border-radius: 4px; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"] { justify-self: center; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="internal"],
-.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="internal"] { min-width: 42px; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="comment"],
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="comment"] { min-width: 24px; width: 24px; }
 .editor-shell[data-visual-reference="true"] .surface-icon { width: 16px; height: 16px; display: block; }
