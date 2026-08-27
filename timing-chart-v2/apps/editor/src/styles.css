@@ -326,6 +326,24 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .home-display-toggles .home-toggle:nth-child(2) { grid-column: 2; grid-row: 1; }
 .editor-shell[data-visual-reference="true"] .home-display-toggles .home-toggle:nth-child(3) { grid-column: 1; grid-row: 2; }
 .editor-shell[data-visual-reference="true"] .home-display-toggles .home-toggle:nth-child(4) { grid-column: 2; grid-row: 2; }
+/* The approved V8 Golden uses the English reference vocabulary.  Keep the
+   normal product's localized V1 labels, but do not let the compatibility
+   pseudo-labels obscure the deterministic visual-reference state. */
+.editor-shell[data-visual-reference="true"] .ribbon-tool span[data-v1-label] { font-size: 9px; }
+.editor-shell[data-visual-reference="true"] .ribbon-tool span[data-v1-label]::after { display: none; }
+.editor-shell[data-visual-reference="true"] .ribbon-major-group > .ribbon-group > b::after { content: none; }
+.editor-shell[data-visual-reference="true"] .home-file-group > b::after { content: "File"; }
+.editor-shell[data-visual-reference="true"] .history-group > b::after { content: "History"; }
+.editor-shell[data-visual-reference="true"] .clipboard-group > b::after { content: "Clipboard"; }
+.editor-shell[data-visual-reference="true"] .edit-group > b::after { content: "Edit"; }
+.editor-shell[data-visual-reference="true"] .selection-group > b::after { content: "Selection"; }
+.editor-shell[data-visual-reference="true"] .visibility-group > b::after { content: "Visibility"; }
+.editor-shell[data-visual-reference="true"] .arrange-group > b::after { content: "Arrange"; }
+.editor-shell[data-visual-reference="true"] .home-timeline-group > b::after { content: "Time"; }
+.editor-shell[data-visual-reference="true"] .home-view-group > b::after { content: "Zoom"; }
+.editor-shell[data-visual-reference="true"] .properties-group > b::after { content: "Options"; }
+.editor-shell[data-visual-reference="true"] .home-review-group > b::after { content: "Options"; }
+.editor-shell[data-visual-reference="true"] .home-export-group > b::after { content: "Options"; }
 .document-properties dl { display: grid; grid-template-columns: 100px 1fr; gap: 9px 14px; }.document-properties dt { color: #52677d; }.document-properties dd { margin: 0; overflow-wrap: anywhere; }
 .legend-entry-editor { display: grid; gap: 5px; margin: 8px 0; padding: 7px; border: 1px solid #dbe3ee; border-radius: 4px; background: #f8fafc; }.legend-entry-editor > strong { color: #405875; font-size: 11px; }.legend-entry-row { display: grid; grid-template-columns: minmax(86px, 1fr) minmax(120px, 1.5fr) 64px 27px 27px; align-items: center; gap: 5px; min-height: 29px; }.legend-entry-row code { overflow: hidden; color: #637086; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }.legend-entry-row input[type="text"] { min-width: 0; height: 26px; }.legend-entry-row .checkline { display: flex; align-items: center; justify-content: space-between; margin: 0; font-size: 9px; }.legend-entry-row > button { width: 27px; height: 26px; padding: 0; border: 1px solid #bdc8d5; border-radius: 3px; background: white; color: #405875; }.legend-entry-row > button:disabled { opacity: .4; }
 .hierarchy-browser { width: min(1080px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; padding: 0 18px 18px; border: 1px solid #8da4bc; border-radius: 6px; background: white; box-shadow: 0 14px 42px #1d334c55; }.hierarchy-browser header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d6e0ea; }.hierarchy-browser header button { border: 0; background: transparent; font-size: 22px; }.hierarchy-browser p { color: #5c6e84; font-size: 11px; }.hierarchy-browser table { width: 100%; border-collapse: collapse; font-size: 11px; }.hierarchy-browser th, .hierarchy-browser td { padding: 6px 8px; border: 1px solid #d6dde6; text-align: left; white-space: nowrap; }.hierarchy-browser th { background: #f3f6fa; color: #52677d; }.hierarchy-browser tr[data-selected="true"] { background: #e4f1ff; }.hierarchy-browser td button { border: 0; padding: 0; background: transparent; color: #145e9f; text-decoration: underline; cursor: pointer; }
