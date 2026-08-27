@@ -34,6 +34,11 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(metrics.bottom.height).toBe(240);
   expect(metrics.status.height).toBe(25);
   expect(metrics.ribbonOverflow.scrollWidth).toBeLessThanOrEqual(metrics.ribbonOverflow.clientWidth + 1);
+  const viewMode = page.locator(".view-mode");
+  await expect(viewMode).toBeVisible();
+  expect((await viewMode.boundingBox())?.y ?? -1).toBe(0);
+  await expect(viewMode).toContainText("View Mode:");
+  await expect(viewMode.getByRole("button", { name: "Cycle" })).toHaveClass(/active/);
   await expect(page.locator(".ribbon-major-group")).toHaveCount(6);
   for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
