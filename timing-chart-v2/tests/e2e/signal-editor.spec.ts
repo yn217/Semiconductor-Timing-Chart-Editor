@@ -189,6 +189,26 @@ test("Bottom Clock editor exposes Edge Counter settings through its own semantic
   await expect(editor.getByLabel("Clock edge counter show")).not.toBeChecked();
 });
 
+test("Bottom Clock context toolbar exposes real preset, duplicate, import, export and preview actions", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const toolbar = page.getByTestId("clock-context-toolbar");
+  await expect(toolbar.getByRole("button")).toHaveText(["Presets", "Duplicate", "Import...", "Export...", "Preview"]);
+  const revision = await page.getByTestId("revision-status").textContent();
+  const history = await page.getByTestId("history-status").textContent();
+  await toolbar.getByTestId("clock-preview").click();
+  await expect(page.getByTestId("clock-preview-status")).toContainText("canonical data unchanged");
+  await expect(page.getByTestId("revision-status")).toHaveText(revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await toolbar.getByTestId("clock-presets").click();
+  await toolbar.getByRole("button", { name: "50% duty", exact: true }).click();
+  await toolbar.getByTestId("clock-duplicate").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("selection-status")).toHaveText("CLOCK_duplicate");
+});
+
 test("moves the rendered waveform transition to the edited Start cycle, not just the DOM identity", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

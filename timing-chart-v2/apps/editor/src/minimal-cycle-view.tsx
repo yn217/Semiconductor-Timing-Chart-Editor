@@ -1146,6 +1146,7 @@ export function MinimalCycleView() {
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onVisibility={(_signalId, visible) => commandRegistry.current.execute("selection.visibility", { visible })}
+    onDuplicate={() => { if (bottomSignal) createCopiedSignals(selectedClipboardSignals(), "duplicate"); }}
     onDropToGroup={(kind, id, targetGroupId) => {
       const document = snapshot.document;
       const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
@@ -2383,10 +2384,11 @@ interface SignalEditorProps {
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onVisibility: (signalId: SignalId, visible: boolean) => void;
+  readonly onDuplicate: () => void;
   readonly onDropToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
 }
 
-function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDropToGroup }: SignalEditorProps) {
+function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDuplicate, onDropToGroup }: SignalEditorProps) {
   const [name, setName] = useState(signal?.display.name ?? "");
   const [role, setRole] = useState<SignalRole>(signal?.role ?? "internal");
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal?.type === "clock" || signal?.type === "commentRow" ? "binary" : signal?.type ?? "binary");
@@ -2431,7 +2433,7 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
         {signalType === "bus" && <><label>Width<input aria-label="Signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Display<select aria-label="Bus display format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label></>}
         <button type="submit" data-testid="save-signal-properties">Apply properties</button>
       </form>
-      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
     </>}
   </section>;
 }
@@ -2451,11 +2453,26 @@ function CommentRowEditor({ signal, onCommand }: { readonly signal: CommentRow; 
   </form>;
 }
 
-function ClockGeneratorEditor({ signal, onCommand }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void }) {
+function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onDuplicate: () => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
+  const [presetsOpen, setPresetsOpen] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
+  const exportSettings = () => { const blob = new Blob([JSON.stringify({ signalId: signal.id, name: signal.name, generator, edgeCounter }, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
+  const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
   return <div className="clock-editor">
+    <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
+      <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="clock-presets">Presets</button>
+      <button type="button" className="bottom-action" onClick={onDuplicate} data-testid="clock-duplicate">Duplicate</button>
+      <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="clock-import">Import...</button>
+      <button type="button" className="bottom-action" onClick={exportSettings} data-testid="clock-export">Export...</button>
+      <button type="button" className="bottom-action" onClick={() => setPreview((current) => !current)} aria-pressed={preview} data-testid="clock-preview">Preview</button>
+      <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import clock settings" onChange={(event) => { const file = event.target.files?.[0]; if (file) importSettings(file); event.currentTarget.value = ""; }} />
+      {presetsOpen && <div className="event-presets" role="group" aria-label="Clock presets"><button type="button" onClick={() => setGenerator({ ...generator, duty: 0.5 })}>50% duty</button><button type="button" onClick={() => setGenerator({ ...generator, duty: 0.25 })}>25% duty</button></div>}
+      {preview && <output className="event-preview" data-testid="clock-preview-status">Preview only · canonical data unchanged</output>}
+    </div>
     <form className="clock-generator" aria-label="Clock Generator" onSubmit={(event) => {
       event.preventDefault();
       onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator });
