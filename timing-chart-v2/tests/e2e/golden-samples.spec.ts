@@ -17,6 +17,8 @@ const manifests = [
   resolve(repoRoot, "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/manifest.json"),
 ];
 
+test.setTimeout(120_000);
+
 async function samplesFromManifests() {
   const samples: Array<{ readonly meta: GoldenSample; readonly path: string }> = [];
   for (const manifestPath of manifests) {
@@ -45,7 +47,18 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     const counters = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, unknown>;
     const diagnostics = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, unknown>;
     expect(title).toBe(meta.title);
-    evidence.push({ file: meta.file, title, cycles: meta.cycles, signalCount: meta.signalCount, transactionCount: meta.transactionCount, coverage: meta.coverage, counters, diagnostics });
+    const fileTab = page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true });
+    if (!((await fileTab.getAttribute("class")) ?? "").split(/\s+/).includes("active")) await fileTab.click();
+    const pendingSave = page.waitForEvent("download");
+    await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+    const saved = await pendingSave;
+    const savedPath = await saved.path();
+    expect(savedPath).toBeTruthy();
+    await page.locator("input[type='file']").setInputFiles(savedPath!);
+    await expect(page.locator(".app-titlebar h1")).toHaveText(meta.title, { timeout: 60_000 });
+    await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+    await expect(host).toHaveAttribute("data-canonical-revision", "0");
+    evidence.push({ file: meta.file, title, cycles: meta.cycles, signalCount: meta.signalCount, transactionCount: meta.transactionCount, coverage: meta.coverage, saveOpen: true, counters, diagnostics });
   }
 
   await testInfo.attach("golden-samples-browser-evidence.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
