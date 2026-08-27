@@ -150,3 +150,10 @@ presentation-only and does not introduce a second command owner. Browser
 evidence and the no-scroll assertion are in
 `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts` and the Ribbon tab and
 responsive tests.
+
+The Group Inspector now reflects the selected Group's derived collapse state
+and can toggle that state from the Inspector. This is intentionally a
+view-only layout operation: the browser test
+`timing-chart-v2/tests/e2e/reorder-visibility.spec.ts` verifies that the
+Canonical revision, History, WaveDrom and LocalGeometry counters remain
+unchanged while the Tree and Inspector stay synchronized.

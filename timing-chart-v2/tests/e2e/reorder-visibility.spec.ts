@@ -23,6 +23,29 @@ test("creates an empty Signal Group from the tree through one group.create comma
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
 });
 
+test("Group Inspector reflects and controls view-only collapse state", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const group = surface.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch']");
+  await group.click();
+  const inspector = page.getByTestId("inspector");
+  const collapse = inspector.getByLabel("Inspector group collapsed");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await expect(collapse).not.toBeChecked();
+  await collapse.check();
+  await expect(collapse).toBeChecked();
+  await expect(host).toHaveAttribute("data-collapsed-groups", "grp_cycle_control");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await collapse.uncheck();
+  await expect(host).toHaveAttribute("data-collapsed-groups", "");
+});
+
 test("hides and restores a selected signal without rebuilding its stable SVG", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
