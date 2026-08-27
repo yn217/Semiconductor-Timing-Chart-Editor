@@ -603,6 +603,50 @@ test("Canvas cycle selection exposes a ruler-geometry-backed playhead without mu
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
+test("Canvas range drag supports reverse and Shift extension while Escape cancels preview", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const waveLayer = surface.locator("[data-role='stable-waveform-surface']");
+  const waveBox = await waveLayer.boundingBox();
+  const requestBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']").boundingBox();
+  const ruler = page.getByTestId("cycle-ruler");
+  const xAt = async (cycle: number) => Number.parseFloat(await ruler.locator(`[data-cycle='${cycle}']`).evaluate((element) => (element as HTMLElement).style.left));
+  expect(waveBox && requestBox).toBeTruthy();
+  const y = requestBox!.y + requestBox!.height / 2;
+
+  await page.mouse.move(waveBox!.x + await xAt(7), y);
+  await page.mouse.down();
+  await page.mouse.move(waveBox!.x + await xAt(3), y);
+  await expect(host).toHaveAttribute("data-range-drag", "active");
+  await expect(host).toHaveAttribute("data-range-preview", "3:7");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await page.mouse.up();
+  await expect(host).not.toHaveAttribute("data-range-drag");
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 7)");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  await page.keyboard.down("Shift");
+  await page.mouse.move(waveBox!.x + await xAt(7), y);
+  await page.mouse.down();
+  await page.mouse.move(waveBox!.x + await xAt(9), y);
+  await page.mouse.up();
+  await page.keyboard.up("Shift");
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 9)");
+
+  await page.mouse.move(waveBox!.x + await xAt(5), y);
+  await page.mouse.down();
+  await page.mouse.move(waveBox!.x + await xAt(8), y);
+  await expect(host).toHaveAttribute("data-range-drag", "active");
+  await page.keyboard.press("Escape");
+  await expect(host).not.toHaveAttribute("data-range-drag");
+  await page.mouse.up();
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 9)");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("Canvas keyboard navigation pans the viewport without canonical or render mutation", async ({ page }) => {
   await ready(page);
   const viewport = page.getByTestId("cycle-viewport");
