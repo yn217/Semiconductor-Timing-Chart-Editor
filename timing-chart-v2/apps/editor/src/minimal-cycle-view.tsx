@@ -62,7 +62,30 @@ const cycleDocument: CanonicalDocument = {
   checkSettings: {},
 };
 
+const v1ReferenceComment: CommentRow = {
+  id: signalId("sig_v1_reference_comment"), type: "commentRow", name: "Address phase", role: "internal",
+  source: { instancePath: ["dut"], signalName: "address_phase" }, display: { name: "Address phase" },
+  title: "Address phase", body: "Address phase (req_valid = 1)",
+};
+
+const v1ReferenceDocument: CanonicalDocument = {
+  ...cycleDocument,
+  document: { ...cycleDocument.document, title: "Semiconductor Timing Chart — V1 Reference", header: { ...cycleDocument.document.header, subtitle: "Protocol timing reference" } },
+  signals: [...cycleDocument.signals, v1ReferenceComment],
+  signalGroups: cycleDocument.signalGroups.map((group) => group.id === "grp_cycle_control" ? { ...group, rows: [...group.rows, v1ReferenceComment.id] } : group),
+  annotations: [
+    { id: "v1_ref_text" as AnnotationId, type: "text", label: "Request phase", visible: true, color: "#7a3bb8", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
+    { id: "v1_ref_marker" as AnnotationId, type: "marker", label: "Start", visible: true, color: "#d04a36", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
+    { id: "v1_ref_range" as AnnotationId, type: "range", label: "Active", visible: true, color: "#4a87c7", start: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_valid"), cycle: 10, point: "cycle-end" } },
+    { id: "v1_ref_measurement" as AnnotationId, type: "measurement", label: "Latency", visible: true, color: "#d04a36", start: { signalId: signalId("sig_cycle_request"), cycle: 3, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 5, point: "cycle-end" } },
+    { id: "v1_ref_timing" as AnnotationId, type: "timingRegion", label: "Execution", visible: true, color: "#5f8fc6", opacity: 0.16, start: { signalId: signalId("sig_cycle_request"), cycle: 7, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 12, point: "cycle-end" } },
+  ],
+  legend: { show: true, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
+};
+
 export function MinimalCycleView() {
+  const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
+  const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
@@ -80,8 +103,8 @@ export function MinimalCycleView() {
   const saveDocument = useRef<() => string | undefined>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
-  const [selectedId, setSelectedId] = useState<SignalId | undefined>();
-  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(new Set());
+  const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_valid") : undefined);
+  const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_valid")]) : new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
   const selectedSignalIdsRef = useRef<ReadonlySet<SignalId>>(new Set());
   selectedSignalIdsRef.current = selectedSignalIds;
@@ -89,16 +112,16 @@ export function MinimalCycleView() {
   const [selectedGroupId, setSelectedGroupId] = useState<GroupId | undefined>();
   const selectedGroupRef = useRef<GroupId | undefined>(undefined);
   selectedGroupRef.current = selectedGroupId;
-  const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>();
+  const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>(() => visualReference ? "v1_ref_text" as AnnotationId : undefined);
   const selectedAnnotationRef = useRef<AnnotationId | undefined>(undefined);
   selectedAnnotationRef.current = selectedAnnotationId;
   const [selectedTransactionId, setSelectedTransactionId] = useState<TransactionId | undefined>();
   const selectedTransactionRef = useRef<TransactionId | undefined>(undefined);
   selectedTransactionRef.current = selectedTransactionId;
-  const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: cycleDocument });
+  const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: initialDocument });
   const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
   const [problem, setProblem] = useState("");
-  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => validateCanonicalDocument(cycleDocument));
+  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => validateCanonicalDocument(initialDocument));
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
@@ -266,7 +289,7 @@ export function MinimalCycleView() {
     const gridElement = gridLayer.current;
     if (!rendererHost || !viewportElement || !rulerElement || !gridElement) return;
 
-    let session = new CommandHistorySession(cycleDocument);
+    let session = new CommandHistorySession(initialDocument);
     const adapter = new ProductionWaveDromAdapter();
     const projectionService = new DefaultProjectionService();
     let referenceGeometry: LocalGeometryMap | undefined;

@@ -55,7 +55,7 @@ function comparePng(reference: PNG, dut: PNG, mask: { left: number; top: number;
 test("generates V1 reference vs V2 production visual evidence at the locked viewport", async ({ page }) => {
   await mkdir(outputRoot, { recursive: true });
   await page.setViewportSize(viewport);
-  await page.goto("/");
+  await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 
   await copyFile(referencePath, resolve(outputRoot, "reference.png"));
