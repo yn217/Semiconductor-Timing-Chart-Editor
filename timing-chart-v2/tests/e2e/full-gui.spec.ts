@@ -253,6 +253,32 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   expect(exportedText).toContain("Fig. 2 · R3 · Internal review");
 });
 
+test("Save As downloads the canonical document with a requested filename without mutation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    counters: await surface.getAttribute("data-render-counters"),
+  };
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save As", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Save As" });
+  await dialog.getByLabel("Save As filename").fill("review-copy");
+  const downloadPromise = page.waitForEvent("download");
+  await dialog.getByTestId("save-as-submit").click();
+  const download = await downloadPromise;
+
+  expect(download.suggestedFilename()).toBe("review-copy.tcd.json");
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  expect(await surface.getAttribute("data-render-counters")).toBe(before.counters);
+});
+
 test("edits and displays the Legend through the canonical presentation command", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
