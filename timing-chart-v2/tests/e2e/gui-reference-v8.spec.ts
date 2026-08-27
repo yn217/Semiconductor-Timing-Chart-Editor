@@ -40,6 +40,13 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   }
   await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
+  const treeSearch = page.getByTestId("signal-tree-search-top");
+  await expect(treeSearch).toBeVisible();
+  const treeSearchBox = await treeSearch.boundingBox();
+  expect(treeSearchBox?.y ?? 0).toBeGreaterThanOrEqual(204);
+  expect(treeSearchBox?.y ?? 0).toBeLessThan(220);
+  await expect(page.locator(".tree-add-button")).toHaveAttribute("aria-label", "Add signal or group");
+  expect((await page.locator(".tree-add-button").boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(60);
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
   const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
   expect(firstWave?.width ?? 0).toBeGreaterThan(890);
