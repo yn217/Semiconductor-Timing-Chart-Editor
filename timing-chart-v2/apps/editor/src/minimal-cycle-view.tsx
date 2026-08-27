@@ -101,14 +101,11 @@ const v1ReferenceDocument: CanonicalDocument = {
     { id: groupId("grp_cycle_payload"), name: "Internal Control", rows: ["sig_cycle_ready", "sig_cycle_valid", v8ReferenceProcessingComment.id] as SignalId[] },
     { id: groupId("grp_cycle_scratch"), name: "Output", rows: ["sig_cycle_data", "sig_cycle_result", v8ReferenceLatencyComment.id] as SignalId[] },
   ],
-  annotations: [
-    { id: "v1_ref_text" as AnnotationId, type: "text", label: "Request phase", visible: true, color: "#7a3bb8", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
-    { id: "v1_ref_marker" as AnnotationId, type: "marker", label: "Start", visible: true, color: "#d04a36", anchor: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" } },
-    { id: "v1_ref_range" as AnnotationId, type: "range", label: "Active", visible: true, color: "#4a87c7", start: { signalId: signalId("sig_cycle_valid"), cycle: 6, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_valid"), cycle: 9, point: "cycle-end" } },
-    { id: "v1_ref_measurement" as AnnotationId, type: "measurement", label: "Latency", visible: true, color: "#d04a36", start: { signalId: signalId("sig_cycle_request"), cycle: 3, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 5, point: "cycle-end" } },
-    { id: "v1_ref_timing" as AnnotationId, type: "timingRegion", label: "Execution", visible: true, color: "#5f8fc6", opacity: 0.16, start: { signalId: signalId("sig_cycle_request"), cycle: 7, point: "cycle-start" }, end: { signalId: signalId("sig_cycle_ready"), cycle: 9, point: "cycle-end" } },
-  ],
-  legend: { show: true, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
+  // The approved V8 Home Golden is the neutral Cycle state: overlays and the
+  // editable legend are available in production, but not visible in this
+  // reference fixture unless the Golden explicitly shows them.
+  annotations: [],
+  legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
 };
 
 export function MinimalCycleView() {
@@ -204,8 +201,8 @@ export function MinimalCycleView() {
   const [clipboardStatus, setClipboardStatus] = useState("Empty");
   const [clipboardAvailable, setClipboardAvailable] = useState(false);
   const commandRegistry = useRef(new UiCommandRegistry());
-  const [timelineRange, setTimelineRange] = useState({ start: 2, end: 4 });
-  const [selectedCycle, setSelectedCycle] = useState(2);
+  const [timelineRange, setTimelineRange] = useState(() => visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
+  const [selectedCycle, setSelectedCycle] = useState(() => visualReference ? 0 : 2);
   const selectedCycleRef = useRef(selectedCycle);
   selectedCycleRef.current = selectedCycle;
   const refreshPlayhead = useRef<() => void>(() => undefined);
