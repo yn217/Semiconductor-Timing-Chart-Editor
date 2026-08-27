@@ -567,6 +567,15 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollLeft = element.scrollWidth; });
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
+  await expect.poll(() => page.getByTestId("cycle-viewport").evaluate((element) => element.scrollLeft)).toBe(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  const afterFitAll = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterFitAll.waveDromRenders).toBe(after.waveDromRenders);
+  expect(afterFitAll.localGeometryBuilds).toBe(after.localGeometryBuilds);
 });
 
 test("Canvas cycle selection exposes a ruler-geometry-backed playhead without mutation", async ({ page }) => {
