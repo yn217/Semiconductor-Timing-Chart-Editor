@@ -15,6 +15,9 @@ test("Annotation Inspector edits the selected endpoint offset through one semant
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await inspector.getByLabel("Inspector annotation endpoint").selectOption("from");
+  await inspector.getByLabel("Inspector annotation anchor signal").selectOption("sig_cycle_ready");
+  await inspector.getByLabel("Inspector annotation anchor cycle").fill("8");
+  await inspector.getByLabel("Inspector annotation anchor point").selectOption("rising-edge");
   await inspector.getByLabel("Inspector annotation anchor X").fill("7");
   await inspector.getByLabel("Inspector annotation anchor Y").fill("-3");
   await inspector.getByTestId("apply-inspector-annotation-anchor").click();
@@ -24,4 +27,7 @@ test("Annotation Inspector edits the selected endpoint offset through one semant
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
   await expect(inspector.getByLabel("Inspector annotation anchor X")).toHaveValue("7");
   await expect(inspector.getByLabel("Inspector annotation anchor Y")).toHaveValue("-3");
+  await expect(inspector.getByLabel("Inspector annotation anchor signal")).toHaveValue("sig_cycle_ready");
+  await expect(inspector.getByLabel("Inspector annotation anchor cycle")).toHaveValue("8");
+  await expect(inspector.getByLabel("Inspector annotation anchor point")).toHaveValue("rising-edge");
 });
