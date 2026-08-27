@@ -560,6 +560,14 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("50");
+  await expect(page.getByTestId("zoom-status")).toHaveText("50%");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  const afterPreset = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterPreset.waveDromRenders).toBe(before.waveDromRenders);
+  expect(afterPreset.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await page.getByLabel("Zoom preset").selectOption("100");
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("200%");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
