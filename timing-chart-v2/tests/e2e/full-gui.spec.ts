@@ -384,6 +384,34 @@ test("View controls expose geometry-backed Grid/Snap and a pannable MiniMap view
   await expect(page.getByTestId("minimap-viewport")).toBeVisible();
 });
 
+test("View controls expose functional Ruler and MiniMap visibility toggles without mutation", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    counters: JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>,
+  };
+  await page.getByTestId("ruler-toggle").uncheck();
+  await page.getByTestId("minimap-toggle").uncheck();
+  await expect(page.getByTestId("cycle-ruler")).toBeHidden();
+  await expect(page.getByTestId("minimap")).toBeHidden();
+  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-view-toggles-1280x720.png", animations: "disabled" });
+  await page.getByTestId("ruler-toggle").check();
+  await page.getByTestId("minimap-toggle").check();
+  await expect(page.getByTestId("cycle-ruler")).toBeVisible();
+  await expect(page.getByTestId("minimap")).toBeVisible();
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.counters.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.counters.localGeometryBuilds);
+});
+
 test("MiniMap viewport drag pans the real viewport without canonical or render mutation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
