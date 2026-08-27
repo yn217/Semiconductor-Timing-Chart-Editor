@@ -38,7 +38,7 @@ also cover `1280x720` and the `1024` class.
 | Selected background | `#eef6ff` | component-local | Shared selected token must be used for tree, columns, and editors. |
 | Hover background | `#f1f6fc` | component-local | Shared hover token must be used. |
 | Left width | 330px | V2 grid has 230px tree + 210px frozen label | Preserve 330px total left signal/group pane contract. |
-| Inspector width | 300px | not fixed by V2 shell contract | Preserve 300px default with bounded resize. |
+| Inspector width | 300px | 300px default with bounded 240–420px view-only resize | Preserve 300px default with bounded resize. |
 | Ribbon height | 146px | current shell is 76px header plus local surfaces | V1 multi-group ribbon target is 146px after title/tab rows. |
 | Title height | 32px | 76px app header | V1 title/app bar target is 32px. |
 | Tab row height | 38px | not equivalent in current shell | Preserve 38px ribbon tab row. |
@@ -114,7 +114,7 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 | Role column | role badge in tree and canvas, separate from trace | V2 has role and frozen label surfaces | Preserve the boundary and tokenized badge styling. |
 | Signal column | 145px canvas label area, 36px rows | V2 layout defaults role 62px/name 178px and 30px rows | Contract gap: adopt measured V1-compatible tokens or document an approved exception. |
 | Waveform viewport | center remaining width; ruler 34px; no dead blank region | V2 surface is scrollable with a 640px minimum wave width | Keep center-first composition and validate bounds independently of trace paths. |
-| Inspector | fixed 300px default, continuous beside bottom | capability exists but shell width is not fixed by the V1 contract | Add tokenized 300px default, min/max and resize behavior. |
+| Inspector | fixed 300px default, continuous beside bottom | capability exists with tokenized 300px default and 240–420px view-only resize | Complete remaining Inspector visual/field parity; resize and collapse behavior are covered by `gui-inspector-resize.spec.ts`. |
 | Bottom | center-only, 270px, 38px tabs | center editor uses a bounded 180–420px view-only splitter and existing collapse toggle | Keep the splitter/collapse metrics and complete the remaining V1 tab/editor visual matrix. |
 | MiniMap | Inspector lower section, 80px canvas | V2 MiniMap component exists | Match placement/size and retain functional pan behavior. |
 | Status | 27px, derived counts and range | V2 status bar uses 32px row | Align height and field ordering with V1. |

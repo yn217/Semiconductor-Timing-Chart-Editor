@@ -121,6 +121,8 @@ export function MinimalCycleView() {
   bottomPinnedRef.current = bottomPinned;
   const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const [inspectorVisible, setInspectorVisible] = useState(true);
+  const [inspectorWidth, setInspectorWidth] = useState(300);
+  const inspectorResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
   const [bottomVisible, setBottomVisible] = useState(true);
   const [bottomHeight, setBottomHeight] = useState(270);
   const bottomResizeRef = useRef<{ readonly startY: number; readonly startHeight: number } | undefined>(undefined);
@@ -1301,8 +1303,23 @@ export function MinimalCycleView() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     bottomResizeRef.current = undefined;
   };
+  const startInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    inspectorResizeRef.current = { startX: event.clientX, startWidth: inspectorWidth };
+  };
+  const moveInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = inspectorResizeRef.current;
+    if (!resize) return;
+    const nextWidth = Math.max(240, Math.min(420, resize.startWidth - (event.clientX - resize.startX)));
+    if (nextWidth !== inspectorWidth) setInspectorWidth(nextWidth);
+  };
+  const finishInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!inspectorResizeRef.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    inspectorResizeRef.current = undefined;
+  };
 
-  return <main className="editor-shell" style={{ "--gui-bottom-height": `${bottomHeight}px` } as React.CSSProperties} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-bottom-height={bottomHeight}>
+  return <main className="editor-shell" style={{ "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const).map((tab) => <button type="button" key={tab} className={ribbonTab === tab ? "active" : ""} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
@@ -1382,7 +1399,7 @@ export function MinimalCycleView() {
         </nav>
         <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}</div>
       </section>}
-      {inspectorVisible && <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} />}
+      {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} /></aside>}
     </div>
     {contextMenu && <div className="context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }} onMouseLeave={() => setContextMenu(undefined)}><button type="button" role="menuitem" onClick={() => { const current = selectedSignal?.name ?? selectedGroup?.name; const name = current === undefined ? null : window.prompt("Rename", current); if (name?.trim()) commandRegistry.current.execute("selection.rename", { name }); setContextMenu(undefined); }}>Rename</button><button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }}>Delete</button><button type="button" role="menuitem" onClick={() => { if (selectedSignal) commandRegistry.current.execute("selection.visibility", { visible: selectedSignal.display.visible === false }); setContextMenu(undefined); }}>Visibility</button></div>}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
