@@ -149,6 +149,8 @@ export function MinimalCycleView() {
   const [inspectorVisible, setInspectorVisible] = useState(true);
   const [leftPaneWidth, setLeftPaneWidth] = useState(330);
   const leftPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
+  const [frozenPaneWidth, setFrozenPaneWidth] = useState(() => visualReference ? 160 : 210);
+  const frozenPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
   const [inspectorWidth, setInspectorWidth] = useState(300);
   const inspectorResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
   const [bottomVisible, setBottomVisible] = useState(true);
@@ -283,10 +285,10 @@ export function MinimalCycleView() {
     const baseWidth = visualReference
       ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - 160)
       : Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
-    const width = leftPaneWidth + 210 + baseWidth * zoom;
+    const width = leftPaneWidth + frozenPaneWidth + baseWidth * zoom;
     rendererHost.style.width = `${width}px`;
     rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
-  }, [inspectorWidth, leftPaneWidth, visualReference, zoom]);
+  }, [frozenPaneWidth, inspectorWidth, leftPaneWidth, visualReference, zoom]);
 
   useEffect(() => {
     const rendererHost = host.current;
@@ -1414,8 +1416,23 @@ export function MinimalCycleView() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     leftPaneResizeRef.current = undefined;
   };
+  const startFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    frozenPaneResizeRef.current = { startX: event.clientX, startWidth: frozenPaneWidth };
+  };
+  const moveFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = frozenPaneResizeRef.current;
+    if (!resize) return;
+    const nextWidth = Math.max(160, Math.min(360, resize.startWidth + (event.clientX - resize.startX)));
+    if (nextWidth !== frozenPaneWidth) setFrozenPaneWidth(nextWidth);
+  };
+  const finishFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!frozenPaneResizeRef.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    frozenPaneResizeRef.current = undefined;
+  };
 
-  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
+  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {([{ key: "File", label: "ファイル" }, { key: "Home", label: "ホーム" }, { key: "Insert", label: "挿入" }, { key: "Timeline", label: "Transaction", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "注釈" }, { key: "View", label: "表示" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const).map((tab) => <button type="button" key={tab.key} aria-label={"compatibilityLabel" in tab ? tab.compatibilityLabel : tab.key} className={ribbonTab === tab.key ? "active" : ""} onClick={() => setRibbonTab(tab.key)}>{tab.label}</button>)}
@@ -1478,7 +1495,8 @@ export function MinimalCycleView() {
     />
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
-        <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={280} aria-valuemax={420} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
+         <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={280} aria-valuemax={420} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
+         <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
         <div className="column-headings"><span className="left-column-heading"><strong>信号 / グループ</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="name / path / role" /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}</span><span aria-label="Role / signal">Role / 信号</span><span>Cycle waveform</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
