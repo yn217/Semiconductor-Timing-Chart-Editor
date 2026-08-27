@@ -121,6 +121,8 @@ export function MinimalCycleView() {
   bottomPinnedRef.current = bottomPinned;
   const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const [inspectorVisible, setInspectorVisible] = useState(true);
+  const [leftPaneWidth, setLeftPaneWidth] = useState(330);
+  const leftPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
   const [inspectorWidth, setInspectorWidth] = useState(300);
   const inspectorResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
   const [bottomVisible, setBottomVisible] = useState(true);
@@ -250,6 +252,16 @@ export function MinimalCycleView() {
   useEffect(() => {
     const rendererHost = host.current;
     const viewportElement = viewport.current;
+    if (!rendererHost || !viewportElement) return;
+    const baseWidth = Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
+    const width = leftPaneWidth + 210 + baseWidth * zoom;
+    rendererHost.style.width = `${width}px`;
+    rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
+  }, [leftPaneWidth, zoom]);
+
+  useEffect(() => {
+    const rendererHost = host.current;
+    const viewportElement = viewport.current;
     const rulerElement = ruler.current;
     const gridElement = gridLayer.current;
     if (!rendererHost || !viewportElement || !rulerElement || !gridElement) return;
@@ -326,6 +338,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, waveAdapter: adapter.metrics() });
     };
     let currentZoom = 1;
+    const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + 210;
     const applyZoom = (next: number) => {
       currentZoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
       const scalable = [rulerElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
@@ -335,7 +348,7 @@ export function MinimalCycleView() {
       }
       viewportElement.style.setProperty("--zoom-x", String(currentZoom));
       const baseWidth = Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
-      const width = 440 + baseWidth * currentZoom;
+      const width = timelineOffset() + baseWidth * currentZoom;
       rendererHost.style.width = `${width}px`;
       rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
       rendererHost.dataset.zoom = String(currentZoom);
@@ -349,9 +362,9 @@ export function MinimalCycleView() {
       const start = startTick?.offsetLeft ?? 0;
       const end = endTick?.offsetLeft ?? start + 1;
       const span = Math.max(1, end - start);
-      const available = Math.max(160, viewportElement.clientWidth - 460);
+      const available = Math.max(160, viewportElement.clientWidth - timelineOffset() - 20);
       applyZoom(available / span);
-      requestAnimationFrame(() => { viewportElement.scrollLeft = Math.max(0, Math.round(start * currentZoom - 440)); });
+      requestAnimationFrame(() => { viewportElement.scrollLeft = Math.max(0, Math.round(start * currentZoom - timelineOffset())); });
     };
     navigateToCycle.current = (cycle) => {
       const document = session.getSnapshot().document;
@@ -1318,8 +1331,23 @@ export function MinimalCycleView() {
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     inspectorResizeRef.current = undefined;
   };
+  const startLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    leftPaneResizeRef.current = { startX: event.clientX, startWidth: leftPaneWidth };
+  };
+  const moveLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = leftPaneResizeRef.current;
+    if (!resize) return;
+    const nextWidth = Math.max(280, Math.min(420, resize.startWidth + (event.clientX - resize.startX)));
+    if (nextWidth !== leftPaneWidth) setLeftPaneWidth(nextWidth);
+  };
+  const finishLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!leftPaneResizeRef.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    leftPaneResizeRef.current = undefined;
+  };
 
-  return <main className="editor-shell" style={{ "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
+  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const).map((tab) => <button type="button" key={tab} className={ribbonTab === tab ? "active" : ""} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
@@ -1379,6 +1407,7 @@ export function MinimalCycleView() {
     />
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
+        <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={280} aria-valuemax={420} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
         <div className="column-headings"><span className="left-column-heading"><strong>Signal / Group</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="name / path / role" /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}</span><span>Role / signal</span><span>Cycle waveform</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}

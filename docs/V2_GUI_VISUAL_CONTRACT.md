@@ -37,7 +37,7 @@ also cover `1280x720` and the `1024` class.
 | Panel background | `#fff` | mixed white/blue-gray | Panel surfaces are white; shell background may be neutral. |
 | Selected background | `#eef6ff` | component-local | Shared selected token must be used for tree, columns, and editors. |
 | Hover background | `#f1f6fc` | component-local | Shared hover token must be used. |
-| Left width | 330px | V2 grid has 230px tree + 210px frozen label | Preserve 330px total left signal/group pane contract. |
+| Left width | 330px | 330px default with bounded 280–420px view-only splitter; frozen label and waveform offsets share the width token | Preserve 330px default and bounded resize behavior. |
 | Inspector width | 300px | 300px default with bounded 240–420px view-only resize | Preserve 300px default with bounded resize. |
 | Ribbon height | 146px | current shell is 76px header plus local surfaces | V1 multi-group ribbon target is 146px after title/tab rows. |
 | Title height | 32px | 76px app header | V1 title/app bar target is 32px. |
@@ -110,7 +110,7 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 | Component | V1 | V2 current | Gap / required change |
 |---|---|---|---|
 | Ribbon | 146px grouped Office-style surface, no scroll at reference viewport | sparse/locally composed controls; current styles permit `overflow-x` in ribbon implementations | Match V1 grouping, dimensions, and zero-scroll acceptance. |
-| Left Tree | dedicated 330px Signal/Group pane with search and role/visibility columns | split tree/frozen columns totaling 440px in `.surface-host` | Reconcile V2 internal geometry to the V1 pane boundary without losing stable-column behavior. |
+| Left Tree | dedicated 330px Signal/Group pane with search and role/visibility columns | tokenized 330px default pane with bounded 280–420px splitter; frozen label remains a separate derived column | Preserve the V1 pane boundary while keeping stable-column behavior and shared geometry offsets. |
 | Role column | role badge in tree and canvas, separate from trace | V2 has role and frozen label surfaces | Preserve the boundary and tokenized badge styling. |
 | Signal column | 145px canvas label area, 36px rows | V2 layout defaults role 62px/name 178px and 30px rows | Contract gap: adopt measured V1-compatible tokens or document an approved exception. |
 | Waveform viewport | center remaining width; ruler 34px; no dead blank region | V2 surface is scrollable with a 640px minimum wave width | Keep center-first composition and validate bounds independently of trace paths. |
