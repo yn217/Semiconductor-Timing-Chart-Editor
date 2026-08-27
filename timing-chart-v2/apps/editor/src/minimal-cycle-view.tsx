@@ -473,6 +473,7 @@ export function MinimalCycleView() {
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
       buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock, visualReference ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth) : undefined);
+      refreshPlayhead.current();
       refreshGrid(session.getSnapshot().document);
       applyZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);

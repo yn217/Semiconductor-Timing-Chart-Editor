@@ -48,6 +48,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.locator(".tree-add-button")).toHaveAttribute("aria-label", "Add signal or group");
   expect((await page.locator(".tree-add-button").boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(60);
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
+  await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", "0");
   const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
   expect(firstWave?.width ?? 0).toBeGreaterThan(890);
   await expect(page.getByTestId("selection-status")).toHaveText("clk");
