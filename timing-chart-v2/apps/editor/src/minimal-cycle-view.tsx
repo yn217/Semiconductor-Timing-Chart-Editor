@@ -482,6 +482,12 @@ export function MinimalCycleView() {
       delete rendererHost.dataset.editorIdle;
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection });
       snapIndex = undefined;
+      const changed = result.changeSet;
+      const referenceSignalId = result.snapshot.document.timeline.referenceClock;
+      const referenceWaveChanged = referenceSignalId !== undefined && (changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.waveSemantics?.includes(referenceSignalId) === true || changed.geometryLocal?.includes(referenceSignalId) === true);
+      const refreshRuler = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.bookmarkPosition !== undefined || referenceWaveChanged;
+      const refreshGridNow = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || referenceWaveChanged;
+      const refreshOverlaysNow = refreshRuler || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined;
       renderer.update(projection);
       setSnapshot(result.snapshot);
       setValidationDiagnostics([]);
@@ -495,11 +501,11 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
+        if (refreshRuler) buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
         refreshPlayhead.current();
-        refreshGrid(result.snapshot.document);
+        if (refreshGridNow) refreshGrid(result.snapshot.document);
         applyZoom(currentZoom);
-        refreshOverlays(result.snapshot.document);
+        if (refreshOverlaysNow) refreshOverlays(result.snapshot.document);
         collectWaveErrors();
         publishState();
         rendererHost.dataset.editorIdle = "true";
