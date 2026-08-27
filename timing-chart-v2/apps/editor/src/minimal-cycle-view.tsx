@@ -693,26 +693,26 @@ export function MinimalCycleView() {
       if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
       publishState();
     };
-    const selectCanvasCycle = (event: MouseEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return false;
-      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-      if (!waveLayer) return false;
-      const bounds = waveLayer.getBoundingClientRect();
-      const snap = snapEnabledRef.current ? buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService).nearest({ x: (event.clientX - bounds.left) / currentZoom, y: (event.clientY - bounds.top) / currentZoom }, 32 / currentZoom, ["cycle-boundary", "cycle-center"], ["cycle-boundary"]): undefined;
-      const cycle = snapEnabledRef.current ? snap?.anchor.cycle : cycleBoundaryAtX(event.clientX);
-      if (cycle === undefined || cycle < 0 || cycle > session.getSnapshot().document.timeline.cycleCount) return false;
+    const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
+      const cycleCount = session.getSnapshot().document.timeline.cycleCount;
+      if (cycle < 0 || cycle > cycleCount) return false;
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
-      if (event.shiftKey) {
+      if (shiftKey) {
         const anchor = timelineRangeRef.current.start;
-        setTimelineRange({ start: Math.min(anchor, cycle), end: Math.min(session.getSnapshot().document.timeline.cycleCount, Math.max(anchor, cycle) + 1) });
-      } else if (cycle === session.getSnapshot().document.timeline.cycleCount) {
+        setTimelineRange({ start: Math.min(anchor, cycle), end: Math.min(cycleCount, Math.max(anchor, cycle) + 1) });
+      } else if (cycle === cycleCount) {
         setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
       } else {
         setTimelineRange({ start: cycle, end: cycle + 1 });
       }
       publishState();
       return true;
+    };
+    const selectCanvasCycle = (event: MouseEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return false;
+      const cycle = cycleBoundaryAtX(event.clientX);
+      return cycle === undefined ? false : applyCanvasCycleSelection(cycle, event.shiftKey);
     };
     const onRulerSelect = (event: MouseEvent) => {
       const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
@@ -731,7 +731,7 @@ export function MinimalCycleView() {
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
-    let rangeDrag: { readonly start: number; readonly anchor: number } | undefined;
+    let rangeDrag: { readonly start: number; readonly anchor: number; readonly startClientX: number; moved: boolean } | undefined;
     let suppressCanvasClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
@@ -763,9 +763,7 @@ export function MinimalCycleView() {
       if (event.button !== 0 || !(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return;
       const cycle = cycleBoundaryAtX(event.clientX);
       if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
-      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle };
-      rendererHost.dataset.rangeDrag = "active";
-      rendererHost.dataset.rangePreview = `${Math.min(rangeDrag.anchor, cycle)}:${Math.max(rangeDrag.anchor, cycle)}`;
+      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, startClientX: event.clientX, moved: false };
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
       event.preventDefault();
     };
@@ -773,12 +771,26 @@ export function MinimalCycleView() {
       if (!rangeDrag) return;
       const cycle = cycleBoundaryAtX(event.clientX);
       if (cycle === undefined) return;
+      if (!rangeDrag.moved && Math.abs(event.clientX - rangeDrag.startClientX) < 4) return;
+      rangeDrag.moved = true;
       rendererHost.dataset.rangePreview = `${Math.min(rangeDrag.anchor, cycle)}:${Math.max(rangeDrag.anchor, cycle)}`;
+      rendererHost.dataset.rangeDrag = "active";
       event.preventDefault();
     };
     const onRangePointerUp = (event: PointerEvent) => {
       if (!rangeDrag) return;
       const cycle = cycleBoundaryAtX(event.clientX) ?? rangeDrag.start;
+      if (!rangeDrag.moved) {
+        rangeDrag = undefined;
+        delete rendererHost.dataset.rangeDrag;
+        delete rendererHost.dataset.rangePreview;
+        suppressCanvasClick = true;
+        const clickCycle = cycleBoundaryAtX(event.clientX);
+        if (clickCycle !== undefined) applyCanvasCycleSelection(clickCycle, event.shiftKey);
+        requestAnimationFrame(() => { suppressCanvasClick = false; });
+        event.preventDefault();
+        return;
+      }
       const next = rangeFromBoundaries(rangeDrag.anchor, cycle, session.getSnapshot().document.timeline.cycleCount);
       setTimelineRange(next);
       setSelectedCycle(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
