@@ -192,7 +192,7 @@ export function MinimalCycleView() {
   const [treeAddMenuOpen, setTreeAddMenuOpen] = useState(false);
   const [treeMoreMenuOpen, setTreeMoreMenuOpen] = useState(false);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
-  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number } | undefined>();
+  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "annotation" } | undefined>();
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
   const copySelectedSignalRef = useRef<() => void>(() => undefined);
@@ -1047,7 +1047,7 @@ export function MinimalCycleView() {
       if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id]")) return;
       event.preventDefault();
       onSelect(event);
-      setContextMenu({ x: event.clientX, y: event.clientY });
+      setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : "signal" });
     };
     const onCanvasClick = (event: MouseEvent) => { if (suppressCanvasClick) { suppressCanvasClick = false; return; } if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
@@ -1482,6 +1482,8 @@ export function MinimalCycleView() {
     frozenPaneResizeRef.current = undefined;
   };
 
+  const hasSelectedSignal = selectedSignalIds.size > 0 && selectedSignal !== undefined && selectedSignal.type !== "commentRow";
+  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined;
   return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
@@ -1569,7 +1571,18 @@ export function MinimalCycleView() {
       </section>}
       {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} /></aside>}
     </div>
-    {contextMenu && <div className="context-menu" role="menu" style={{ left: contextMenu.x, top: contextMenu.y }} onMouseLeave={() => setContextMenu(undefined)}><button type="button" role="menuitem" onClick={() => { const current = selectedSignal?.name ?? selectedGroup?.name; const name = current === undefined ? null : window.prompt("Rename", current); if (name?.trim()) commandRegistry.current.execute("selection.rename", { name }); setContextMenu(undefined); }}>Rename</button><button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }}>Delete</button><button type="button" role="menuitem" onClick={() => { if (selectedSignal) commandRegistry.current.execute("selection.visibility", { visible: selectedSignal.display.visible === false }); setContextMenu(undefined); }}>Visibility</button></div>}
+    {contextMenu && <div className="context-menu" role="menu" aria-label="Signal context menu" data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+      <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Copy</button>
+      <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Cut</button>
+      <button type="button" role="menuitem" onClick={() => { pasteSelectedSignalRef.current(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
+      <button type="button" role="menuitem" onClick={() => { createCopiedSignals(selectedClipboardSignals(), "duplicate"); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Duplicate</button>
+      <button type="button" role="menuitem" onClick={() => { moveSelection(-1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Up</button>
+      <button type="button" role="menuitem" onClick={() => { moveSelection(1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Down</button>
+      <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(true); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Show</button>
+      <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(false); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Hide</button>
+      <button type="button" role="menuitem" onClick={() => { renameSelection(); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Rename</button>
+      <button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }} disabled={!hasSelectedEntity && selectedAnnotation === undefined}>Delete</button>
+    </div>}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onClose={() => setPropertiesVisible(false)} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => setBulkRegistrationVisible(false)}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => setBulkRegistrationText(event.target.value)} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals}>Register Signals</button></footer></section></div>}

@@ -146,3 +146,23 @@ test("Visibility and Arrange route through semantic commands", async ({ page }) 
   expect(after.waveDromRenders).toBeGreaterThanOrEqual(before.waveDromRenders);
   await expect(page.getByTestId("history-status")).toHaveText(/History 3 \/ Redo 0/);
 });
+
+test("Context Menu exposes shared commands", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const row = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
+  const menu = page.getByTestId("signal-context-menu");
+  await expect(menu).toBeVisible();
+  for (const label of ["Copy", "Cut", "Paste", "Duplicate", "Move Up", "Move Down", "Show", "Hide", "Rename", "Delete"]) await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
+  const revision = await page.getByTestId("revision-status").textContent();
+  const history = await page.getByTestId("history-status").textContent();
+  await menu.getByRole("menuitem", { name: "Copy", exact: true }).click();
+  await expect(page.getByTestId("revision-status")).toHaveText(revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
+  await page.getByTestId("signal-context-menu").getByRole("menuitem", { name: "Duplicate", exact: true }).click();
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_duplicate");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
