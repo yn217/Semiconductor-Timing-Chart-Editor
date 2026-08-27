@@ -278,6 +278,12 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .ribbon-group { height: 101px; padding: 5px 7px 17px; }
 .editor-shell[data-visual-reference="true"] .ribbon-tool { height: 66px; min-width: 51px; padding: 3px; gap: 4px; }
 .editor-shell[data-visual-reference="true"] .ribbon-tool svg { width: 19px; height: 19px; }
+.editor-shell[data-visual-reference="true"] .home-view-group { width: 148px; }
+.editor-shell[data-visual-reference="true"] .ribbon-major-group[data-major-group="Zoom"]::after { right: auto; width: 148px; }
+.editor-shell[data-visual-reference="true"] .home-zoom-controls { min-width: 0; flex: 1 1 auto; }
+.editor-shell[data-visual-reference="true"] .home-zoom-controls .ribbon-tool { min-width: 31px; }
+.editor-shell[data-visual-reference="true"] .home-zoom-controls .ribbon-tool:has([data-v1-label="選択に合わせる"]) { display: none; }
+.editor-shell[data-visual-reference="true"] .home-display-subgroup { width: 148px; flex: 0 0 148px; }
 .editor-shell[data-visual-reference="true"] .desktop-workspace { grid-template-columns: 265px minmax(0, 1fr) 297px; grid-template-rows: minmax(260px, 1fr) 240px; }
 .editor-shell[data-visual-reference="true"] .column-headings { height: 37px; grid-template-columns: 265px 209px minmax(640px, 1fr); }
 .editor-shell[data-visual-reference="true"] .cycle-viewport { height: calc(100% - 37px); }
