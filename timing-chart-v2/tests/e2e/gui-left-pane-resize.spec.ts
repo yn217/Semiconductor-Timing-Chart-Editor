@@ -58,6 +58,15 @@ test("Signal label and timing splitter resizes shared geometry columns without m
   await expect(resizer).toHaveAttribute("aria-valuenow", String(resizedWidth));
   await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${Number(await shell.getAttribute("data-left-pane-width"))}px ${resizedWidth}px 640px`);
   await expect(page.getByTestId("cycle-ruler")).toHaveCSS("left", `${Number(await shell.getAttribute("data-left-pane-width")) + resizedWidth}px`);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Zoom preset").selectOption("150");
+  await expect(page.getByTestId("zoom-status")).toHaveText("150%");
+  const resizedOffset = Number(await shell.getAttribute("data-left-pane-width")) + resizedWidth;
+  const geometry = await host.evaluate((element) => ({
+    surfaceWidth: Number.parseFloat(getComputedStyle(element).width),
+    waveWidth: Number.parseFloat(getComputedStyle(element).getPropertyValue("--wave-width")),
+  }));
+  expect(geometry.surfaceWidth).toBe(resizedOffset + geometry.waveWidth * 1.5);
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await host.getAttribute("data-history-depth")).toBe(before.history);
   expect(await host.getAttribute("data-session-counters")).toBe(before.session);
