@@ -286,6 +286,7 @@ body { min-width: 1100px; }
   --gui-frozen-width: 209px;
   --gui-inspector-width: 297px;
   --gui-bottom-height: 240px;
+  --wave-width: calc(100vw - var(--gui-left-width) - var(--gui-inspector-width) - var(--gui-frozen-width));
   --gui-row-height: 31px;
   --gui-role-width: 61px;
   --gui-signal-width: 148px;

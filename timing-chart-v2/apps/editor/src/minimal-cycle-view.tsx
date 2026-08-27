@@ -308,7 +308,7 @@ export function MinimalCycleView() {
     const viewportElement = viewport.current;
     if (!rendererHost || !viewportElement) return;
     const baseWidth = visualReference
-      ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - 160)
+      ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth)
       : Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
     const width = leftPaneWidth + frozenPaneWidth + baseWidth * zoom;
     rendererHost.style.width = `${width}px`;
@@ -375,7 +375,7 @@ export function MinimalCycleView() {
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
     };
     const refreshGrid = (document: CanonicalDocument) => {
-      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight);
+      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, visualReference ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth) : undefined);
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -412,7 +412,7 @@ export function MinimalCycleView() {
       }
       viewportElement.style.setProperty("--zoom-x", String(currentZoom));
       const baseWidth = visualReference
-        ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - 160)
+        ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth)
         : Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--wave-width")) || 640;
       const width = timelineOffset() + baseWidth * currentZoom;
       rendererHost.style.width = `${width}px`;
@@ -472,7 +472,7 @@ export function MinimalCycleView() {
 
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
-      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
+      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock, visualReference ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth) : undefined);
       refreshGrid(session.getSnapshot().document);
       applyZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);
@@ -526,7 +526,7 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        if (refreshRuler) buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock);
+        if (refreshRuler) buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock, visualReference ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth) : undefined);
         refreshPlayhead.current();
         if (refreshGridNow) refreshGrid(result.snapshot.document);
         applyZoom(currentZoom);
@@ -563,7 +563,7 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock);
+        buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock, visualReference ? Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth) : undefined);
         refreshPlayhead.current();
         refreshGrid(session.getSnapshot().document);
         applyZoom(currentZoom);
@@ -2157,11 +2157,13 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, visible: boolean, height: number): void {
+function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number): void {
   element.dataset.gridEnabled = String(visible);
   element.style.height = `${height}px`;
   if (!geometry || !referenceSignalId) return;
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+  const terminal = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
+  const scale = screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24);
   const lines: HTMLElement[] = [];
   for (let displayCycle = 0; displayCycle <= mapping.displayCycleCount; displayCycle += 1) {
     const anchor = geometry.find({ signalId: referenceSignalId, cycle: displayCycle, point: "cycle-start" });
@@ -2169,7 +2171,7 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
     const line = element.ownerDocument.createElement("span");
     line.dataset.role = "geometry-grid-line";
     line.dataset.cycle = String(mapping.labelFor(displayCycle));
-    line.style.transform = `translateX(${anchor.point.x}px)`;
+    line.style.transform = `translateX(${anchor.point.x * scale}px)`;
     line.style.height = `${height}px`;
     lines.push(line);
   }
@@ -2765,7 +2767,7 @@ function viewportWindow(viewport: HTMLElement, referenceClock?: SignalId): Virtu
   };
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined): void {
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number): void {
   if (!geometry || !referenceSignalId) {
     element.dataset.geometryError = "Reference-clock geometry unavailable";
     element.replaceChildren();
@@ -2773,6 +2775,8 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   }
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
+  const terminalPoint = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
+  const scale = screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24);
   let finalX = 0;
   for (let display = 0; display <= mapping.displayCycleCount; display += 1) {
     const point = geometry.find({ signalId: referenceSignalId, cycle: display, point: "cycle-start" })?.point;
@@ -2780,7 +2784,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     const tick = element.ownerDocument.createElement("span");
     tick.dataset.cycle = String(mapping.labelFor(display));
     tick.className = "cycle-tick";
-    tick.style.left = `${point.x}px`;
+    tick.style.left = `${point.x * scale}px`;
     tick.textContent = String(mapping.labelFor(display));
     ticks.push(tick);
     finalX = point.x;
@@ -2813,5 +2817,6 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   }
   element.replaceChildren(...ticks, ...overlays);
   element.dataset.source = "local-geometry";
-  element.parentElement?.style.setProperty("--wave-width", `${Math.ceil(finalX + 24)}px`);
+  const targetWidth = screenWidth === undefined ? Math.ceil(finalX + 24) : Math.ceil(screenWidth);
+  element.parentElement?.style.setProperty("--wave-width", `${targetWidth}px`);
 }

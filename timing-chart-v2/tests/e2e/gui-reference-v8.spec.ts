@@ -41,6 +41,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
+  const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
+  expect(firstWave?.width ?? 0).toBeGreaterThan(890);
   await expect(page.getByTestId("selection-status")).toHaveText("clk");
   await expect(page.getByTestId("inspector")).toContainText("Clock");
   await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
