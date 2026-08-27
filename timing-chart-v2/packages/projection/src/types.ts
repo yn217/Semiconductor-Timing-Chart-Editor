@@ -10,6 +10,8 @@ export interface RowLayoutEntry {
   readonly groupStyle?: SignalGroupStyle;
   readonly kind: "timing" | "comment" | "spacer";
   readonly name: string;
+  readonly commentTitle?: string;
+  readonly commentBody?: string;
   readonly role?: SignalRole;
   readonly displayStyle?: JsonObject;
   readonly displayAlign?: "left" | "center" | "right";

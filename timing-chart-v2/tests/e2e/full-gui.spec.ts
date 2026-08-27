@@ -866,6 +866,25 @@ test("edits a Comment Row through the dedicated Bottom Context Editor", async ({
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("renders Comment Row content at the shared cycle-0 canvas boundary", async ({ page }) => {
+  await page.goto("/?visual-reference");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  const commentRow = host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]").first();
+  await commentRow.scrollIntoViewIfNeeded();
+  const commentContent = host.locator("[data-role='timing-row'][data-kind='comment'] [data-role='comment-row-content']");
+  await expect(commentContent).toHaveCount(3);
+  await expect(commentContent.first()).toHaveAttribute("data-cycle", "0");
+  const contentBox = await commentContent.first().boundingBox();
+  const rowBox = await host.locator("[data-role='timing-row'][data-kind='comment']").first().boundingBox();
+  const waveformBox = await host.locator("[data-role='wave-owner']").first().boundingBox();
+  expect(contentBox).not.toBeNull();
+  expect(rowBox).not.toBeNull();
+  expect(waveformBox).not.toBeNull();
+  expect(Math.abs(rowBox!.x - waveformBox!.x)).toBeLessThanOrEqual(1);
+  expect(contentBox!.x).toBeGreaterThanOrEqual(rowBox!.x);
+});
+
 test("saves and reopens through the application service boundary", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

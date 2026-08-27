@@ -398,7 +398,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.groupId !== previousGroupId}`;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.groupId !== previousGroupId}`;
     if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
     place(shell, row);
     ordered.push(shell);
@@ -414,7 +414,16 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
 }
 
 function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string, groupStart: boolean): void {
-  if (surface === "timing") return;
+  if (surface === "timing") {
+    if (row.kind !== "comment") return;
+    const comment = shell.ownerDocument.createElement("span");
+    comment.dataset.role = "comment-row-content";
+    comment.dataset.cycle = "0";
+    comment.setAttribute("aria-label", `${row.commentTitle ?? row.name} at cycle 0`);
+    comment.textContent = row.commentBody || row.commentTitle || row.name;
+    shell.replaceChildren(comment);
+    return;
+  }
   const document = shell.ownerDocument;
   if (surface === "left") {
     const branch = document.createElement("span");

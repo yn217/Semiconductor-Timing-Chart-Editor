@@ -73,6 +73,8 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .surface-host [data-signal-role="input"] [data-role="signal-role"] { background: #e3f1ff; color: #1b5b96; }
 .surface-host [data-signal-role="output"] [data-role="signal-role"] { background: #e4f6ec; color: #216843; }
 .surface-host [data-role="timing-row"] { width: var(--wave-width, 640px); }
+.surface-host [data-role="timing-row"][data-kind="comment"] { display: flex; align-items: center; width: var(--wave-width, 640px); color: #9144d3; font-size: 12px; }
+.surface-host [data-role="comment-row-content"] { display: block; overflow: hidden; padding: 0 10px; text-overflow: ellipsis; white-space: nowrap; }
 .surface-host [data-role="wave-owner"] { width: var(--wave-width, 640px); pointer-events: none; }
 .surface-host [data-role="wave-owner"] svg { display: block; overflow: visible; }
 .surface-host [data-role="annotation-owner"] { position: absolute; inset: 0; pointer-events: none; outline: none; }

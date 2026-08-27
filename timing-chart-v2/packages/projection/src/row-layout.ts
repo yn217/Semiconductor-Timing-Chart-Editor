@@ -57,6 +57,7 @@ function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupI
     ...(groupStyle === undefined ? {} : { groupStyle }),
     kind: signal.type === "commentRow" ? "comment" : "timing",
     name: signal.display.name,
+    ...(signal.type === "commentRow" ? { commentTitle: signal.title, commentBody: signal.body } : {}),
     role: signal.role,
     ...(signal.display.style === undefined ? {} : { displayStyle: signal.display.style }),
     ...(signal.display.align === undefined ? {} : { displayAlign: signal.display.align }),
