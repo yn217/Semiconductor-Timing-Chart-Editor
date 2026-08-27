@@ -101,7 +101,8 @@ counter invariants are asserted without changing the WaveDrom adapter or
 canonical architecture.
 
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
-File, Edit, Layout, Time, Zoom/Display and Options. Existing History,
+File, Edit, Layout, Time, Zoom and Options, with Display represented as its
+own nested presentation subgroup. Existing History,
 Clipboard, Selection, Visibility, Arrange, Properties, Review and Export
 command groups remain reachable inside those surfaces; the grouping layer is
 presentation-only and does not introduce a second command owner. Browser

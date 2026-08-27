@@ -35,9 +35,10 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(metrics.status.height).toBe(25);
   expect(metrics.ribbonOverflow.scrollWidth).toBeLessThanOrEqual(metrics.ribbonOverflow.clientWidth + 1);
   await expect(page.locator(".ribbon-major-group")).toHaveCount(6);
-  for (const name of ["File", "Edit", "Layout", "Time", "Zoom / Display", "Options"]) {
+  for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
+  await expect(page.getByLabel("Display")).toBeVisible();
   expect(metrics.rowY.left.length).toBeGreaterThan(0);
   expect(Math.max(...metrics.rowY.left.map((y, index) => Math.abs(y - (metrics.rowY.frozen[index] ?? y))))).toBeLessThanOrEqual(1);
   const signalWaveRows = await page.locator("[data-role='wave-owner'][data-signal-id]").evaluateAll((owners) => owners.map((owner) => {
