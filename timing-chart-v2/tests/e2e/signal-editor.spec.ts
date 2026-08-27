@@ -167,6 +167,28 @@ test("Bottom Clock editor keeps Duty editable and applies it through the clock S
   await expect(duty).toHaveValue("0.25");
 });
 
+test("Bottom Clock editor exposes Edge Counter settings through its own semantic command", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const editor = page.getByTestId("signal-editor");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await editor.getByLabel("Clock edge counter show").check();
+  await editor.getByLabel("Clock edge counter mode").selectOption("falling");
+  await editor.getByLabel("Clock edge counter count from").selectOption("visible-range-start");
+  await editor.getByTestId("apply-clock-edge-counter").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(editor.getByLabel("Clock edge counter mode")).toHaveValue("falling");
+  const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(after.waveDromRenders).toBe(before.waveDromRenders);
+  expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
+  await editor.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(editor.getByLabel("Clock edge counter show")).not.toBeChecked();
+});
+
 test("moves the rendered waveform transition to the edited Start cycle, not just the DOM identity", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
