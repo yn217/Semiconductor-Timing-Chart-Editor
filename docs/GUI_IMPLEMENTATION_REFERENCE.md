@@ -5,10 +5,11 @@ The generated PNG mockups are design sources, but production must not repeatedly
 
 ## Priority
 1. Product/behavior specifications
-2. `docs/GUI_VISUAL_CONTRACT.md`
-3. Replacement Pack `production/index.html` + `styles.css` + `icons.svg` + `app-ui.js`
-4. Fixed Golden PNGs under `references/gui-replacement-pack/`
-5. Existing production implementation
+2. Approved v8 overrides: `references/v2-gui-reference-v8/gui-reference.json`
+3. `docs/GUI_VISUAL_CONTRACT.md`
+4. v8 `index.html` + `styles.css` + `golden-home-cycle-1672x941.png`
+5. Replacement Pack `production/index.html` + `styles.css` + `icons.svg` + `app-ui.js`
+6. Existing production implementation
 
 If production differs from the Replacement Pack without an approved spec change, production is wrong.
 
@@ -16,8 +17,8 @@ If production differs from the Replacement Pack without an approved spec change,
 - title bar + app title/status
 - Ribbon tab strip
 - Office-style Home Ribbon with visible group boundaries/captions
-- left Signal/Group pane: 330 px target
-- right Inspector pane: 300 px target
+- left Signal/Group pane: 265 px target in v8 reference mode
+- right Inspector pane: 297 px target in v8 reference mode
 - Ribbon: 146 px target after title/menu rows
 - Bottom Editor: 270 px target in Cycle View
 - center waveform viewport above the Bottom Editor

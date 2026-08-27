@@ -35,4 +35,16 @@
   <symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
   <symbol id="i-more-vertical" viewBox="0 0 24 24"><circle cx="12" cy="5" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="12" cy="19" r="1.8"/></symbol>
+  <symbol id="i-save-as" viewBox="0 0 24 24"><path d="M4 3h13l3 3v15H4zM7 3v6h8V3M7 14h8v7" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M18 12v6M15 15h6" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-import" viewBox="0 0 24 24"><path d="M4 14v6h16v-6M12 3v12M8 11l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-preview" viewBox="0 0 24 24"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.8" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h16v16H4zM4 10h16M4 16h16M10 4v16M16 4v16" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-snap" viewBox="0 0 24 24"><path d="M5 5h5M14 5h5M5 19h5M14 19h5M5 5v5M19 5v5M5 14v5M19 14v5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="2.3" fill="none" stroke="currentColor" stroke-width="1.6"/></symbol>
+  <symbol id="i-ruler" viewBox="0 0 24 24"><path d="M4 17 17 4l3 3L7 20H4zM9 15l-2-2M12 12l-2-2M15 9l-2-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-minimap" viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="14" rx="1" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="7" y="8" width="6" height="8" fill="none" stroke="currentColor" stroke-width="1.4"/><path d="M15 8h3M15 11h3M15 14h3" stroke="currentColor" stroke-width="1.3"/></symbol>
+  <symbol id="i-n-cycle-add" viewBox="0 0 24 24"><path d="M3 7h18M3 17h18M7 5v14M17 5v14M12 9v6M9 12h6" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-n-cycle-del" viewBox="0 0 24 24"><path d="M3 7h18M3 17h18M7 5v14M17 5v14M9 12h6" fill="none" stroke="currentColor" stroke-width="1.4"/></symbol>
+  <symbol id="i-align-interval" viewBox="0 0 24 24"><path d="M4 6h16M4 18h16M8 4v4M16 4v4M8 16v4M16 16v4M10 12h4M12 10v4" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-group" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M9 9v10" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-auto-layout" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="14" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 7h4v10M7 10v4h10" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
 </svg>

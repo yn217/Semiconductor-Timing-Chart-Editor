@@ -1,0 +1,193 @@
+{
+  "referenceVersion": "8.0",
+  "viewport": {
+    "width": 1672,
+    "height": 941,
+    "dpr": 1
+  },
+  "rows": [
+    {
+      "name": "req_valid",
+      "roleY": 235,
+      "signalY": 235,
+      "waveY": 235,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    },
+    {
+      "name": "req_addr[7:0]",
+      "roleY": 266,
+      "signalY": 266,
+      "waveY": 266,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    },
+    {
+      "name": "clk",
+      "roleY": 328,
+      "signalY": 328,
+      "waveY": 328,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    },
+    {
+      "name": "busy",
+      "roleY": 359,
+      "signalY": 359,
+      "waveY": 359,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    },
+    {
+      "name": "state[1:0]",
+      "roleY": 390,
+      "signalY": 390,
+      "waveY": 390,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    },
+    {
+      "name": "ready",
+      "roleY": 452,
+      "signalY": 452,
+      "waveY": 452,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    },
+    {
+      "name": "rdata[15:0]",
+      "roleY": 483,
+      "signalY": 483,
+      "waveY": 483,
+      "roleVsWave": 0,
+      "signalVsWave": 0
+    }
+  ],
+  "maxRowAlignmentDeltaPx": 0,
+  "ribbon": {
+    "box": {
+      "x": 0,
+      "y": 65,
+      "width": 1672,
+      "height": 102
+    },
+    "displayLayout": "two-row-2x2",
+    "grid": {
+      "x": 1285,
+      "y": 72.5,
+      "width": 65,
+      "height": 28
+    },
+    "snap": {
+      "x": 1285,
+      "y": 104.5,
+      "width": 65,
+      "height": 28
+    },
+    "ruler": {
+      "x": 1357,
+      "y": 104.5,
+      "width": 76,
+      "height": 28
+    },
+    "minimap": {
+      "x": 1357,
+      "y": 72.5,
+      "width": 76,
+      "height": 28
+    },
+    "gridAndSnapSameColumnDeltaPx": 0,
+    "snapBelowGrid": true,
+    "horizontalScroll": false
+  },
+  "v8": {
+    "referenceVersion": "8.0",
+    "viewport": {
+      "width": 1672,
+      "height": 941,
+      "dpr": 1
+    },
+    "badges": {
+      "leftInput": {
+        "x": 8,
+        "y": 285,
+        "width": 28,
+        "height": 20
+      },
+      "centerInput": {
+        "x": 281,
+        "y": 240,
+        "width": 28,
+        "height": 20
+      },
+      "leftOutput": {
+        "x": 8,
+        "y": 568,
+        "width": 28,
+        "height": 20
+      },
+      "centerOutput": {
+        "x": 281,
+        "y": 457,
+        "width": 28,
+        "height": 20
+      },
+      "leftWire": {
+        "x": 8,
+        "y": 442,
+        "width": 42,
+        "height": 20
+      },
+      "centerWire": {
+        "x": 274,
+        "y": 364,
+        "width": 42,
+        "height": 20
+      },
+      "leftComment": {
+        "x": 8,
+        "y": 346.5,
+        "width": 24,
+        "height": 21
+      },
+      "centerComment": {
+        "x": 283,
+        "y": 301.5,
+        "width": 24,
+        "height": 21
+      }
+    },
+    "bottomActions": {
+      "duplicate": {
+        "x": 518.73,
+        "y": 723,
+        "width": 93.44,
+        "height": 27
+      },
+      "import": {
+        "x": 619.17,
+        "y": 723,
+        "width": 87.28,
+        "height": 27
+      },
+      "export": {
+        "x": 713.45,
+        "y": 723,
+        "width": 87.31,
+        "height": 27
+      },
+      "preview": {
+        "x": 807.77,
+        "y": 723,
+        "width": 85,
+        "height": 27
+      }
+    },
+    "badgeWidthDeltaPx": {
+      "input": 0,
+      "output": 0,
+      "wire": 0,
+      "comment": 0
+    }
+  }
+}

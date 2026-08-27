@@ -69,7 +69,7 @@ test("updates row properties without WaveDrom regeneration", async ({ page }) =>
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
   await expect(page.getByTestId("selection-status")).toHaveText("REQ_VALID");
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQ_VALID");
-  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='signal-role']")).toHaveText("OUTPUT");
+  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='signal-role']")).toHaveText("o");
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
 });
 

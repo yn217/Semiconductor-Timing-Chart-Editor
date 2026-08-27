@@ -4,12 +4,12 @@
 GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` と executable reference を **Visual Acceptance Contract** とする。
 
 優先順位:
-1. `docs/GUI_VISUAL_CONTRACT.md`
-2. `docs/GUI_IMPLEMENTATION_REFERENCE.md`
-3. `references/gui-replacement-pack/` と `gui-mockup/index.html` / `styles.css` / `icons.svg`（Production実装用Reference）
-4. Golden GUI images (`references/gui-replacement-pack/`)
-5. `docs/GUI_SPEC.md`
-6. 既存Production GUI
+1. Product behavior specification
+2. Explicit v8 overrides in `references/v2-gui-reference-v8/gui-reference.json`
+3. `docs/GUI_VISUAL_CONTRACT.md`
+4. `docs/GUI_IMPLEMENTATION_REFERENCE.md`
+5. v8 `index.html` / `styles.css` / `golden-home-cycle-1672x941.png`
+6. Existing Replacement Pack and Production GUI
 
 `TimingChart_GUI_Replacement_Pack` は「参考」ではなく、Productionへ移植する実装用DOM/CSS/Icon Reference。Productionはこれを基準にし、同じ機能を別レイアウトへ再設計してはならない。
 

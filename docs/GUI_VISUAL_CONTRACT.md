@@ -7,6 +7,8 @@ Golden images were designed at approximately `1672 x 941` px.
 
 At this reference viewport, preserve the same information hierarchy and approximate layout proportions. Responsive behavior may adapt at other sizes, but must not collapse the desktop UI into a generic one-row toolbar.
 
+The approved v8 executable reference is fixed at `references/v2-gui-reference-v8/`. Its Chromium-rendered `golden-home-cycle-1672x941.png` and `gui-reference.json` override older geometry values here. At 1672 x 941 / DPR 1 the shell targets are: title 31 px, tabs 34 px, Ribbon 102 px, left 265 px, role 61 px, signal 148 px, Inspector 297 px, center Bottom 240 px, MiniMap 143 px, and status 25 px. Role presentation is `i`, `o`, `wire`, and comment rows use the shared SVG comment badge. Grid/MiniMap are the first Display row; Snap/Ruler are the second, with Grid and Snap sharing one X column.
+
 ## 2. Required desktop composition
 
 ```text

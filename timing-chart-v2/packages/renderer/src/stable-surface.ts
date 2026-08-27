@@ -1,6 +1,18 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
 
+const iconSprite = "/gui-mockup/icons.svg";
+
+function icon(document: Document, name: string, className: string): SVGSVGElement {
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("class", className);
+  svg.setAttribute("aria-hidden", "true");
+  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+  use.setAttribute("href", `${iconSprite}#${name}`);
+  svg.append(use);
+  return svg;
+}
+
 interface Layers {
   readonly root: HTMLElement;
   readonly left: HTMLElement;
@@ -416,26 +428,32 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     name.title = row.fullPath ?? row.name;
     const role = document.createElement("span");
     role.dataset.role = "tree-signal-role";
-    role.textContent = row.kind === "comment" ? "▣" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
+    role.textContent = row.kind === "comment" ? "" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
+    role.dataset.presentation = row.kind === "comment" ? "comment" : row.role ?? "internal";
+    if (row.kind === "comment") role.append(icon(document, "i-comment", "surface-icon comment-icon"));
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
     const visibility = document.createElement("button");
     visibility.type = "button";
     visibility.dataset.role = "tree-visibility";
     visibility.dataset.treeSignalId = row.rowId;
     visibility.setAttribute("aria-label", `Toggle visibility of ${row.name}`);
-    visibility.textContent = "◉";
+    visibility.append(icon(document, "i-eye", "surface-icon eye-icon"));
     const more = document.createElement("button");
     more.type = "button";
     more.dataset.role = "tree-more";
     more.dataset.treeSignalId = row.rowId;
     more.setAttribute("aria-label", `More actions for ${row.name}`);
-    more.textContent = "⋮";
-    shell.replaceChildren(branch, name, role, visibility, more);
+    more.append(icon(document, "i-more-vertical", "surface-icon more-icon"));
+    // Keep the draggable branch node mounted for command routing, but let the
+    // visual contract place the role badge before the signal name.
+    shell.replaceChildren(role, name, visibility, more, branch);
     return;
   }
   const role = document.createElement("span");
   role.dataset.role = "signal-role";
-  role.textContent = row.role?.toUpperCase() ?? "";
+  role.textContent = row.kind === "comment" ? "" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
+  role.dataset.presentation = row.kind === "comment" ? "comment" : row.role ?? "internal";
+  if (row.kind === "comment") role.append(icon(document, "i-comment", "surface-icon comment-icon"));
   const name = document.createElement("span");
   name.dataset.role = "frozen-signal-name";
   name.textContent = row.name;
@@ -492,14 +510,14 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
   collapse.dataset.role = "tree-collapse";
   collapse.dataset.groupId = header.groupId;
   collapse.setAttribute("aria-label", `Collapse ${header.groupName} group`);
-  collapse.textContent = "⌄";
+  collapse.append(icon(document, "i-chevron-down", "surface-icon chevron-icon"));
   branch.append(collapse, document.createTextNode(` ${header.groupName}`));
   const more = document.createElement("button");
   more.type = "button";
   more.dataset.role = "tree-group-more";
   more.dataset.groupId = header.groupId;
   more.setAttribute("aria-label", `More actions for ${header.groupName}`);
-  more.textContent = "⋮";
+  more.append(icon(document, "i-more-vertical", "surface-icon more-icon"));
   shell.replaceChildren(branch, more);
 }
 

@@ -1,0 +1,133 @@
+{
+  "version": "8.0",
+  "status": "interactive-golden-reference",
+  "goldenViewport": {
+    "width": 1672,
+    "height": 941,
+    "dpr": 1
+  },
+  "priority": [
+    "explicitOverrides",
+    "golden-home-cycle-1672x941.png",
+    "rendered-reference.png",
+    "index.html/styles.css/app.js"
+  ],
+  "regions": {
+    "titleBar": {
+      "height": 31
+    },
+    "tabs": {
+      "height": 34
+    },
+    "ribbon": {
+      "height": 102
+    },
+    "leftPanel": {
+      "width": 265
+    },
+    "roleColumn": {
+      "width": 61
+    },
+    "signalColumn": {
+      "width": 148
+    },
+    "inspector": {
+      "width": 297
+    },
+    "bottomEditor": {
+      "height": 240
+    },
+    "statusBar": {
+      "height": 25
+    },
+    "minimap": {
+      "height": 143
+    }
+  },
+  "explicitOverrides": {
+    "leftTree.groupDisclosure": "inline-svg-chevron",
+    "leftTree.groupCollapseScope": "left-tree-only",
+    "leftTree.visibilityControl": true,
+    "leftTree.visibilityIcon": "inline-svg-eye/eye-off",
+    "leftTree.groupMoreMenu": true,
+    "leftTree.signalMoreMenu": true,
+    "rolePresentation.input": "i",
+    "rolePresentation.output": "o",
+    "rolePresentation.internal": "wire",
+    "annotationIcon": "inline-svg-comment-outline",
+    "center.roleAndSignalColumns": "separate",
+    "rightPanel.minimap": "fixed-bottom",
+    "ribbon.horizontalScroll": false,
+    "ribbon.icons": "inline-svg",
+    "waveform.cursor": "blue-cycle-zero",
+    "waveform.header": "Time Scale / Reference Clock",
+    "center.rowAlignment": "role/signal/waveform-same-y",
+    "center.labelRulerSpacerHeight": 31,
+    "golden.source": "chromium-rendered-reference-not-ai-generated",
+    "ribbon.iconFamily": "golden-thin-line",
+    "ribbon.timeLabels": "explicit-two-line",
+    "ribbon.layoutLabels": "explicit-two-line-where-needed",
+    "ribbon.display.layout": "two-row-2x2",
+    "ribbon.display.row1": [
+      "grid",
+      "minimap"
+    ],
+    "ribbon.display.row2": [
+      "snap",
+      "ruler"
+    ],
+    "ribbon.display.gridAndSnapSameColumn": true,
+    "roleBadge.input.widthPx": 28,
+    "roleBadge.output.widthPx": 28,
+    "roleBadge.internal.widthPx": 42,
+    "roleBadge.comment.widthPx": 24,
+    "roleBadge.leftAndCenterSameGeometry": true,
+    "bottomEditor.icons": "inline-svg-thin-line",
+    "bottomEditor.duplicateIcon": "overlapping-documents",
+    "bottomEditor.importIcon": "arrow-down-to-tray",
+    "bottomEditor.exportIcon": "arrow-up-from-tray",
+    "bottomEditor.previewIcon": "eye"
+  },
+  "behavior": {
+    "groupCollapse": {
+      "leftTreeOnly": true,
+      "waveformVisibilityUnchanged": true,
+      "canonicalDelta": 0,
+      "historyDelta": 0
+    },
+    "visibility": {
+      "clickEyeTogglesWaveformRow": true,
+      "leftTreeRowRemainsMounted": true
+    },
+    "selection": {
+      "updatesInspector": true,
+      "updatesBottomEditor": true
+    }
+  },
+  "knownDefectsResolved": [
+    {
+      "id": "GOLDEN-ROW-OFFSET-001",
+      "description": "Role/Signal labels were one row above their waveform rows because only Waveform reserved ruler height.",
+      "fix": "Insert 31px label-ruler-spacer in both Role and Signal/Annotation columns.",
+      "status": "fixed"
+    },
+    {
+      "id": "RIBBON-GOLDEN-002",
+      "description": "Ribbon icons drifted from Golden and Display controls were too large/single-row.",
+      "fix": "Golden thin-line icons + compact 2-row Display; Grid above Snap.",
+      "status": "fixed"
+    },
+    {
+      "id": "BOTTOM-ICON-001",
+      "description": "Bottom toolbar used Unicode/text-symbol icons and inconsistent geometry.",
+      "fix": "Replace Duplicate/Import/Export/Preview with inline SVG icons from the same thin-line family.",
+      "status": "fixed"
+    },
+    {
+      "id": "ROLE-BADGE-WIDTH-001",
+      "description": "Left Tree role badge widths differed from Center Role column.",
+      "fix": "Use shared CSS tokens for input/output/wire/comment badge widths.",
+      "status": "fixed"
+    }
+  ]
+}

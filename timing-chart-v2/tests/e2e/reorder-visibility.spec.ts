@@ -123,7 +123,7 @@ test("moves a signal across groups without changing its semantic role", async ({
     "sig_cycle_data", "sig_cycle_result", "sig_cycle_state", "sig_cycle_valid",
   ]);
   await expect(page.locator("[data-group-target='grp_cycle_scratch'] small")).toHaveText("1");
-  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid'] [data-role='signal-role']")).toHaveText("OUTPUT");
+  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid'] [data-role='signal-role']")).toHaveText("o");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 

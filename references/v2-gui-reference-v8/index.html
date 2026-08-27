@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Timing Editor Pro - Golden Reference</title><link rel="stylesheet" href="styles.css"></head>
+<body>
+<div class="app">
+  <header class="titlebar"><span class="app-mark">∿</span>AXI-lite Read Timing.tmr — Timing Editor Pro
+    <div class="view-modes">View Mode:<button class="mode active">Cycle</button><button class="mode">Transaction</button><button class="mode">Split</button></div>
+  </header>
+  <nav class="tabs"><button class="tab">File</button><button class="tab active">Home</button><button class="tab">Insert</button><button class="tab">Edit</button><button class="tab">View</button><button class="tab">Check</button><button class="tab">AI</button></nav>
+  <section class="ribbon" data-golden-region="ribbon">
+  <div class="rgroup file-group"><div class="rcontrols">
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3h7l3 3v11H5Z" fill="none" stroke="currentColor" stroke-width="1.35"/><path d="M12 3v3h3M10 9v5M7.5 11.5h5" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg><span class="rb-label">New</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 7h5l1.5 1.8h8.5L16 16H4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/><path d="M4 7V4.5h5.5L11 7" fill="none" stroke="currentColor" stroke-width="1.35"/></svg><span class="rb-label">Open</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h10.5L17 5.5V17H4Z" fill="none" stroke="currentColor" stroke-width="1.35"/><path d="M6 3v5h7V3M6.5 12h7" fill="none" stroke="currentColor" stroke-width="1.35"/></svg><span class="rb-label">Save</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h10.5L17 5.5V17H4Z" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M6 3v5h7V3M6.5 12h5" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="m12.3 14.7 3.4-3.4 1.3 1.3-3.4 3.4-1.9.5z" fill="none" stroke="currentColor" stroke-width="1.1"/></svg><span class="rb-label">Save As</span></button>
+  </div><div class="rcap">File</div></div>
+
+  <div class="rgroup edit-group"><div class="rcontrols">
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M8 5 4 8.5 8 12M4.5 8.5h6c3 0 5 1.7 5 4.5" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="rb-label">Undo</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m12 5 4 3.5-4 3.5M15.5 8.5h-6c-3 0-5 1.7-5 4.5" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="rb-label">Redo</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="5" cy="5" r="2.2" fill="none" stroke="currentColor" stroke-width="1.25"/><circle cx="5" cy="15" r="2.2" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="m7 6.6 8 6.8M7 13.4l8-6.8" fill="none" stroke="currentColor" stroke-width="1.25"/></svg><span class="rb-label">Cut</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><rect x="7" y="5" width="9" height="11" rx="1" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M4 13V4h9" fill="none" stroke="currentColor" stroke-width="1.3"/></svg><span class="rb-label">Copy</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M7 4h6M8 3h4v3H8Z" fill="none" stroke="currentColor" stroke-width="1.25"/><rect x="5" y="5" width="10" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.25"/></svg><span class="rb-label">Paste</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M5 6h10M8 3.5h4M6.5 6l.8 10h5.4l.8-10" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg><span class="rb-label">Delete</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="4" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.25"/><rect x="7" y="7" width="9" height="9" rx="1" fill="none" stroke="currentColor" stroke-width="1.25"/></svg><span class="rb-label">Duplicate</span></button>
+  </div><div class="rcap">Edit</div></div>
+
+  <div class="rgroup time-group"><div class="rcontrols">
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 16V4M5.5 8.5 10 4l4.5 4.5" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="rb-label">Up</span></button><button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M5.5 11.5 10 16l4.5-4.5" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/></svg><span class="rb-label">Down</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 15h12M6 5v10M14 5v10" fill="none" stroke="currentColor" stroke-width="1.15"/><path d="M10 7.5v5M7.5 10h5" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg><span class="rb-label">Cycle<br>Insert</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 5h12M4 15h12M6 5v10M14 5v10" fill="none" stroke="currentColor" stroke-width="1.15"/><path d="M7.5 10h5" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round"/></svg><span class="rb-label">Cycle<br>Delete</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 5h13M3.5 15h13M5.5 5v10M14.5 5v10" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M7 12V8l4 4V8" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M13 9v4M11 11h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg><span class="rb-label">N Cycle<br>Insert</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 5h13M3.5 15h13M5.5 5v10M14.5 5v10" fill="none" stroke="currentColor" stroke-width="1.1"/><path d="M7 12V8l4 4V8" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/><path d="M11 11h4" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round"/></svg><span class="rb-label">N Cycle<br>Delete</span></button>
+  </div><div class="rcap">Time</div></div>
+
+  <div class="rgroup layout-group"><div class="rcontrols">
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.5 6h13M6 10h8M3.5 14h13" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M10 3.5v13" fill="none" stroke="currentColor" stroke-width="1"/></svg><span class="rb-label">Align<br>Interval</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 6h12M4 10h12M4 14h12" fill="none" stroke="currentColor" stroke-width="1.25"/><path d="M7 4v4M13 8v4M7 12v4" fill="none" stroke="currentColor" stroke-width="1.05"/></svg><span class="rb-label">Group</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h4.5v4.5H4zM11.5 11.5H16V16h-4.5z" fill="none" stroke="currentColor" stroke-width="1.15"/><path d="M13.7 4v4M11.7 6h4M4 13.7h4M6 11.7v4" fill="none" stroke="currentColor" stroke-width="1.1"/></svg><span class="rb-label">Auto<br>Layout</span></button>
+  </div><div class="rcap">Layout</div></div>
+
+  <div class="rgroup zoom-group"><div class="rcontrols">
+    <button class="rb " id="zoomOut"><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="1.35"/><path d="m11.4 11.4 5 5M5.7 8h4.6" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg><span class="rb-label">Zoom<br>Out</span></button>
+    <button class="rb zoom-value"><span class="zoom-pill" id="zoomPct">100%</span><span class="rb-label">100%</span></button>
+    <button class="rb " id="zoomIn"><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="8" cy="8" r="4.4" fill="none" stroke="currentColor" stroke-width="1.35"/><path d="m11.4 11.4 5 5M5.7 8h4.6M8 5.7v4.6" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg><span class="rb-label">Zoom<br>In</span></button>
+    <button class="rb " ><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7V4h3M13 4h3v3M16 13v3h-3M7 16H4v-3" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/></svg><span class="rb-label">Fit<br>All</span></button>
+  </div><div class="rcap">Zoom</div></div>
+
+  <div class="rgroup display-group"><div class="display-two-row">
+    <button class="display-mini toggle on display-grid-control" data-toggle="grid"><svg class="display-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 4h12v12H4zM8 4v12M12 4v12M4 8h12M4 12h12" fill="none" stroke="currentColor" stroke-width="1.05"/></svg><span>Grid</span></button>
+    <button class="display-mini toggle on display-minimap-control" data-toggle="minimap"><svg class="display-icon" viewBox="0 0 20 20" aria-hidden="true"><rect x="3" y="4" width="14" height="12" rx="1" fill="none" stroke="currentColor" stroke-width="1.15"/><path d="M5 7h9M5 9.5h10M5 12h7M5 14h9" fill="none" stroke="currentColor" stroke-width="1"/></svg><span>MiniMap</span></button>
+    <button class="display-mini toggle on display-snap-control" data-toggle="snap"><span class="checkmark-box">✓</span><span>Snap</span></button>
+    <button class="display-mini toggle on display-ruler-control" data-toggle="ruler"><svg class="display-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14v8H3zM6 6v3M9 6v2M12 6v3M15 6v2" fill="none" stroke="currentColor" stroke-width="1.1"/></svg><span>Ruler</span></button>
+  </div><div class="rcap">Display</div></div>
+
+  <div class="rgroup options-group"><div class="rcontrols">
+    <button class="rb more-button"><svg class="ribbon-icon" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.2" fill="currentColor"/><circle cx="10" cy="10" r="1.2" fill="currentColor"/><circle cx="16" cy="10" r="1.2" fill="currentColor"/></svg><span class="rb-label">More<br><span class="caret">⌄</span></span></button>
+  </div><div class="rcap">Options</div></div>
+</section>
+
+  <main class="workspace">
+    <aside class="left">
+      <div class="panel-head">Signals / Groups<span class="spacer"></span><button class="add-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>Add</button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+      <div class="left-tools"><input id="searchBox" class="search" placeholder="Filter signals..."><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 4h14l-5.3 6v4.7L8.3 16v-6Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg></button></div>
+      <div class="tree">
+        <div class="group-row" data-group="input"><button class="mini-btn chevron" aria-expanded="true"><svg class="chev-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span>Input</span><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="input" data-signal="req_valid" data-role="input"><span class="role ri">i</span><span class="name ">req_valid</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="input" data-signal="req_addr[7:0]" data-role="input"><span class="role ri">i</span><span class="name ">req_addr[7:0]</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="input" data-signal="Address phase" data-role="input" data-kind="comment"><span class="comment-badge"><svg class="comment-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 4h13.2v9H9l-4 2.5.8-2.5H3.4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span><span class="name comment-name">Address phase</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="input" data-signal="clk" data-role="input"><span class="role ri">i</span><span class="name ">clk</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="group-row" data-group="internal"><button class="mini-btn chevron" aria-expanded="true"><svg class="chev-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span>Internal Control</span><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="internal" data-signal="busy" data-role="internal"><span class="role rw">wire</span><span class="name ">busy</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="internal" data-signal="state[1:0]" data-role="internal"><span class="role rw">wire</span><span class="name ">state[1:0]</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="internal" data-signal="Processing note" data-role="internal" data-kind="comment"><span class="comment-badge"><svg class="comment-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 4h13.2v9H9l-4 2.5.8-2.5H3.4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span><span class="name comment-name">Processing note</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="group-row" data-group="output"><button class="mini-btn chevron" aria-expanded="true"><svg class="chev-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 7l6 6 6-6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button><span>Output</span><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="output" data-signal="ready" data-role="output"><span class="role ro">o</span><span class="name ">ready</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="output" data-signal="rdata[15:0]" data-role="output"><span class="role ro">o</span><span class="name ">rdata[15:0]</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+        <div class="signal-row" data-group-child="output" data-signal="Read latency" data-role="output" data-kind="comment"><span class="comment-badge"><svg class="comment-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 4h13.2v9H9l-4 2.5.8-2.5H3.4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span><span class="name comment-name">Read latency</span><button class="mini-btn eye on" aria-label="Hide waveform"><svg class="eye-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35"/><circle cx="10" cy="10" r="2.1" fill="none" stroke="currentColor" stroke-width="1.35"/></svg></button><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+      </div>
+    </aside>
+
+    <section class="center">
+      <div class="upper">
+        <div class="role-col">
+          <div class="col-head">Role</div><div class="label-ruler-spacer" aria-hidden="true"></div>
+          <div class="role-item" data-row="req_valid"><span class="role ri">i</span></div>
+          <div class="role-item" data-row="req_addr[7:0]"><span class="role ri">i</span></div>
+          <div class="role-item" data-row="Address phase"><span class="comment-badge"><svg class="comment-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 4h13.2v9H9l-4 2.5.8-2.5H3.4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span></div>
+          <div class="role-item" data-row="clk"><span class="role ri">i</span></div>
+          <div class="role-item" data-row="busy"><span class="role rw">wire</span></div>
+          <div class="role-item" data-row="state[1:0]"><span class="role rw">wire</span></div>
+          <div class="role-item" data-row="Processing note"><span class="comment-badge"><svg class="comment-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 4h13.2v9H9l-4 2.5.8-2.5H3.4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span></div>
+          <div class="role-item" data-row="ready"><span class="role ro">o</span></div>
+          <div class="role-item" data-row="rdata[15:0]"><span class="role ro">o</span></div>
+          <div class="role-item" data-row="Read latency"><span class="comment-badge"><svg class="comment-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="M3.4 4h13.2v9H9l-4 2.5.8-2.5H3.4Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span></div>
+        </div>
+        <div class="signal-col">
+          <div class="col-head">Signal / Annotation</div><div class="label-ruler-spacer" aria-hidden="true"></div>
+          <div class="signal-item" data-row="req_valid">req_valid</div>
+          <div class="signal-item" data-row="req_addr[7:0]">req_addr[7:0]</div>
+          <div class="signal-item comment" data-row="Address phase">Address phase</div>
+          <div class="signal-item" data-row="clk">clk</div>
+          <div class="signal-item" data-row="busy">busy</div>
+          <div class="signal-item" data-row="state[1:0]">state[1:0]</div>
+          <div class="signal-item comment" data-row="Processing note">Processing note</div>
+          <div class="signal-item" data-row="ready">ready</div>
+          <div class="signal-item" data-row="rdata[15:0]">rdata[15:0]</div>
+          <div class="signal-item comment" data-row="Read latency">Read latency</div>
+        </div>
+        <div class="wave">
+          <div class="wave-head"><span><b>Time Scale:</b> Cycle</span><span class="clock-ref"><b>Reference:</b> clk <svg class="" viewBox="0 0 20 20" aria-hidden="true"><path d="M3 13h3V6h3v7h3V4h3v9h2" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/></svg></span></div>
+          <div class="ruler"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+          <div class="cursor"></div><div class="cursor-dot">0</div>
+          <div class="wrow" data-row="req_valid"><svg viewBox="0 0 1000 31" preserveAspectRatio="none"><path d="M0 22H320V8H1000" fill="none" stroke="#111" stroke-width="1.35"/></svg></div>
+          <div class="wrow" data-row="req_addr[7:0]"><svg viewBox="0 0 1000 31" preserveAspectRatio="none"><path d="M0 22H255L275 9H690L710 22H1000" fill="none" stroke="#111" stroke-width="1.2"/></svg><span style="position:absolute;left:12%;top:7px">00</span><span style="position:absolute;left:48%;top:7px">12</span><span style="position:absolute;left:84%;top:7px">34</span></div>
+          <div class="ann" data-row="Address phase">Address phase (req_valid = 1.0 period)</div>
+          <div class="wrow" data-row="clk"><svg viewBox="0 0 1000 31" preserveAspectRatio="none"><path d="M0 22H55V7H110V22H165V7H220V22H275V7H330V22H385V7H440V22H495V7H550V22H605V7H660V22H715V7H770V22H825V7H880V22H935V7H990" fill="none" stroke="#111" stroke-width="1.2"/></svg></div>
+          <div class="wrow" data-row="busy"><svg viewBox="0 0 1000 31" preserveAspectRatio="none"><path d="M0 22H230V8H610V22H1000" fill="none" stroke="#111" stroke-width="1.2"/></svg></div>
+          <div class="wrow" data-row="state[1:0]"><span style="position:absolute;left:10%;top:7px">IDLE</span><span style="position:absolute;left:36%;top:7px">REQ</span><span style="position:absolute;left:64%;top:7px">WAIT</span><span style="position:absolute;left:87%;top:7px">RESP</span></div>
+          <div class="ann" data-row="Processing note">Processing: New request is latched</div>
+          <div class="wrow" data-row="ready"><svg viewBox="0 0 1000 31" preserveAspectRatio="none"><path d="M0 22H820V8H1000" fill="none" stroke="#111" stroke-width="1.2"/></svg></div>
+          <div class="wrow" data-row="rdata[15:0]"><span style="position:absolute;left:28%;top:7px">XXXX</span><span style="position:absolute;left:70%;top:7px">0000</span></div>
+          <div class="ann" data-row="Read latency">Read data available 5 cycles after request accepted</div>
+        </div>
+      </div>
+
+      <div class="bottom">
+        <div class="bottom-tabs"><button class="btab active" data-tab="signal">Signal Editor</button><button class="btab" data-tab="annotations">Annotations</button><button class="btab" data-tab="checks">Checks</button><button class="btab" data-tab="json">JSON</button>
+          <div class="follow"><label><input type="checkbox" checked> Follow Selection</label><button class="small-btn">Pin</button></div>
+        </div>
+        <div class="bottom-body" id="bottomBody">
+          <div class="editor-head"><b>Signal:</b><span id="editSignal">clk</span><b>Type:</b><span id="editType">Clock</span><button class="small-btn bottom-action"><svg class="bottom-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+  <path d="M5 7.5A6 6 0 1 1 4.6 13" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+  <path d="M5 4.5v3.8H1.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><span>Presets</span></button><button class="small-btn bottom-action"><svg class="bottom-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+  <rect x="4" y="4" width="9" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+  <rect x="7" y="7" width="9" height="9" rx="1.2" fill="none" stroke="currentColor" stroke-width="1.3"/>
+</svg><span>Duplicate</span></button><button class="small-btn bottom-action"><svg class="bottom-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+  <path d="M10 3v8M6.7 8 10 11.3 13.3 8" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 12.5v3h11v-3" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><span>Import...</span></button><button class="small-btn bottom-action"><svg class="bottom-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+  <path d="M10 11V3M6.7 6.3 10 3l3.3 3.3" fill="none" stroke="currentColor" stroke-width="1.45" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M4.5 12.5v3h11v-3" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linecap="round" stroke-linejoin="round"/>
+</svg><span>Export...</span></button><button class="small-btn bottom-action"><svg class="bottom-action-icon" viewBox="0 0 20 20" aria-hidden="true">
+  <path d="M2.5 10s2.6-4.2 7.5-4.2 7.5 4.2 7.5 4.2-2.6 4.2-7.5 4.2S2.5 10 2.5 10Z" fill="none" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
+  <circle cx="10" cy="10" r="2.25" fill="none" stroke="currentColor" stroke-width="1.35"/>
+</svg><span>Preview</span></button></div>
+          <div class="form-grid">
+            <div class="field"><label>Start (cycle)</label><input value="0"></div><div class="field"><label>Period (cycles)</label><input value="1"></div><div class="field"><label>Duty (%)</label><input value="50"></div><div class="field"><label>Phase (cycles)</label><input value="0"></div>
+            <div class="field"><label>Initial level</label><select><option>0</option><option>1</option></select></div><div class="field"><label>Edge</label><select><option>Rising</option><option>Falling</option></select></div><div class="field"><label></label><label><input type="checkbox"> Inverted</label></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="right">
+      <div class="panel-head">Inspector<span class="spacer"></span><button class="mini-btn"><svg class="" viewBox="0 0 20 20" aria-hidden="true"><circle cx="4" cy="10" r="1.3" fill="currentColor"/><circle cx="10" cy="10" r="1.3" fill="currentColor"/><circle cx="16" cy="10" r="1.3" fill="currentColor"/></svg></button></div>
+      <div class="inspector">
+        <section class="section"><h3>Signal Properties</h3>
+          <div class="prop"><span>Name</span><input id="insName" value="clk"></div><div class="prop"><span>Type</span><select id="insType"><option>Clock</option><option>Signal</option><option>Bus</option></select></div>
+          <div class="prop"><span>Role</span><select id="insRole"><option>input</option><option>output</option><option>wire</option></select></div><label><input id="insVisible" type="checkbox" checked> Show in waveform</label>
+        </section>
+        <section class="section"><h3>Source / Hierarchy</h3><div class="prop"><span>Instance Path</span><b>(top)</b></div><div class="prop"><span>Leaf Signal</span><b id="leafSignal">clk</b></div><div class="prop"><span>Bus Range</span><span>—</span></div></section>
+        <section class="section"><h3>Label Style</h3>
+          <div class="prop"><span>Text Color</span><div class="swatch black"></div></div><div class="prop"><span>Background</span><div class="swatch"></div></div><div class="prop"><span>Font</span><input value="Inter"></div><div class="prop"><span>Size</span><input value="12"></div>
+          <div class="checks"><label><input type="checkbox"> Bold</label><label><input type="checkbox"> Italic</label><label><input type="checkbox"> Underline</label><label><input type="checkbox"> Strikethrough</label></div><div class="prop"><span>Align</span><select><option>Center</option><option>Left</option><option>Right</option></select></div>
+        </section>
+        <section class="section"><h3>Waveform / Timing</h3><div class="prop"><span>Waveform Color</span><div class="swatch black"></div></div><div class="prop"><span>Row Background</span><div class="swatch"></div></div></section>
+      </div>
+      <div class="minimap" id="minimap"><div class="minimap-title">Minimap</div><div class="mini"><div class="mini-lines"></div><div class="mini-view"></div></div></div>
+    </aside>
+  </main>
+  <footer class="status"><span>Ready</span><span>Selected: <b id="statusSelected">clk</b></span><div class="status-right"><span>Signals: 10</span><span>Annotations: 5</span><span>Checks: 0</span><span>Time Range: 0 – 8 cycles</span><span id="statusZoom">Zoom: 100%</span></div></footer>
+</div>
+<script src="app.js"></script>
+</body></html>
