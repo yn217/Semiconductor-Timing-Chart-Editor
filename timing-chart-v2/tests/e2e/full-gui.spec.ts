@@ -650,6 +650,47 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   expect(afterStyleOnly.localGeometryBuilds).toBe(after.localGeometryBuilds);
 });
 
+test("Signal Inspector properties survive Undo/Redo and Save/Open", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const signalRow = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']");
+  await signalRow.click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector signal name").fill("DATA_PERSISTED");
+  await inspector.getByLabel("Inspector signal role").selectOption("output");
+  await inspector.getByLabel("Inspector signal type").selectOption("bus");
+  await inspector.getByLabel("Inspector signal width").fill("16");
+  await inspector.getByLabel("Inspector bus format").selectOption("binary");
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const savePromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await savePromise).path();
+  expect(savedPath).toBeTruthy();
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("DATA[7:0]");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("DATA_PERSISTED");
+  await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("16");
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await signalRow.click();
+  await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("DATA_PERSISTED");
+  await expect(inspector.getByLabel("Inspector signal role")).toHaveValue("output");
+  await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("16");
+  await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("binary");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("applies Group Inspector presentation properties as one semantic operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
