@@ -271,6 +271,26 @@ test("edits and displays the Legend through the canonical presentation command",
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
 });
 
+test("Legend editor exposes stable-ID label, visibility and ordering controls", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  const editor = properties.getByTestId("legend-entry-editor");
+  const input = editor.locator("[data-legend-entry-id='legend_input']");
+  await expect(editor.locator("[data-legend-entry-id]")).toHaveCount(3);
+  await properties.getByLabel("Legend show").check();
+  await input.getByLabel("Legend label legend_input").fill("Inputs");
+  await input.getByLabel("Legend visibility legend_input").uncheck();
+  await editor.locator("[data-legend-entry-id='legend_output']").getByRole("button", { name: "Move legend_output up" }).click();
+  await properties.getByTestId("apply-legend").click();
+  await expect(properties.getByTestId("legend-status")).toHaveText("Legend applied");
+  await page.screenshot({ path: ".tmp_gui_reference/gui-batch-legend-editor-1280x720.png", fullPage: true });
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_input']")).toHaveCount(0);
+  await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_output']")).toHaveText(/output/);
+});
+
 test("edits Legend entry labels, visibility and order, then preserves them through Save/Open and export", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
