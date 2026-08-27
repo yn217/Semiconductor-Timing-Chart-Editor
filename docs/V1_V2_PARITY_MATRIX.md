@@ -135,6 +135,12 @@ is in `tests/export/deterministic-export.test.ts`; browser coverage is in
 PNG and PDF inherit the same ExportScene path. Full V1 export visual closure
 remains open.
 
+Split View parity was also extended in this batch: Home retains the Signal
+command groups and exposes Add/Duplicate/Delete Transaction actions while
+Split is active. The actions use the existing SemanticCommand path and are
+covered by `tests/e2e/transaction-export.spec.ts`; full V1 visual closure
+remains open.
+
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its
 own nested presentation subgroup. Existing History,

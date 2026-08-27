@@ -99,6 +99,24 @@ test("keeps the Split View surface contract and view mode changes view-only", as
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("Split View Home exposes command-backed Transaction actions", async ({ page }) => {
+  await ready(page);
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  const home = page.getByTestId("ribbon");
+  const transactionGroup = home.locator(".transaction-home-group");
+  await expect(transactionGroup).toBeVisible();
+  const surface = page.getByTestId("cycle-surface");
+  await transactionGroup.getByRole("button", { name: /Transaction/ }).click();
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").click();
+  const beforeRevision = await surface.getAttribute("data-canonical-revision");
+  await transactionGroup.getByRole("button", { name: "Duplicate" }).click();
+  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(2);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(String(Number(beforeRevision) + 1));
+});
+
 test("cross-highlights stable linked Signals when a Transaction is selected", async ({ page }) => {
   await ready(page);
   await createTransaction(page, "Linked Packet", 2, 6);
