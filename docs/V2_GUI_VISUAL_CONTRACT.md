@@ -115,7 +115,7 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 | Signal column | 145px canvas label area, 36px rows | V2 layout defaults role 62px/name 178px and 30px rows | Contract gap: adopt measured V1-compatible tokens or document an approved exception. |
 | Waveform viewport | center remaining width; ruler 34px; no dead blank region | V2 surface is scrollable with a 640px minimum wave width | Keep center-first composition and validate bounds independently of trace paths. |
 | Inspector | fixed 300px default, continuous beside bottom | capability exists but shell width is not fixed by the V1 contract | Add tokenized 300px default, min/max and resize behavior. |
-| Bottom | center-only, 270px, 38px tabs | center editor capability exists; shell split is not yet V1-locked | Restore height/splitter/collapse metrics and tab layout. |
+| Bottom | center-only, 270px, 38px tabs | center editor uses a bounded 180–420px view-only splitter and existing collapse toggle | Keep the splitter/collapse metrics and complete the remaining V1 tab/editor visual matrix. |
 | MiniMap | Inspector lower section, 80px canvas | V2 MiniMap component exists | Match placement/size and retain functional pan behavior. |
 | Status | 27px, derived counts and range | V2 status bar uses 32px row | Align height and field ordering with V1. |
 | View Mode | right side of tab row | V2 selector exists in app surface | Lock position, dimensions, and view-only counter invariant. |

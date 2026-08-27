@@ -122,6 +122,8 @@ export function MinimalCycleView() {
   const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const [inspectorVisible, setInspectorVisible] = useState(true);
   const [bottomVisible, setBottomVisible] = useState(true);
+  const [bottomHeight, setBottomHeight] = useState(270);
+  const bottomResizeRef = useRef<{ readonly startY: number; readonly startHeight: number } | undefined>(undefined);
   const [propertiesVisible, setPropertiesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [hierarchyVisible, setHierarchyVisible] = useState(false);
@@ -1284,8 +1286,23 @@ export function MinimalCycleView() {
     : viewMode === "Transaction"
       ? ["Transaction", "Annotation", "Problems", "JSON"]
       : ["Signal", "Transaction", "Annotation", "Problems", "JSON"];
+  const startBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    bottomResizeRef.current = { startY: event.clientY, startHeight: bottomHeight };
+  };
+  const moveBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = bottomResizeRef.current;
+    if (!resize) return;
+    const nextHeight = Math.max(180, Math.min(420, resize.startHeight - (event.clientY - resize.startY)));
+    if (nextHeight !== bottomHeight) setBottomHeight(nextHeight);
+  };
+  const finishBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!bottomResizeRef.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    bottomResizeRef.current = undefined;
+  };
 
-  return <main className="editor-shell" data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)}>
+  return <main className="editor-shell" style={{ "--gui-bottom-height": `${bottomHeight}px` } as React.CSSProperties} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-bottom-height={bottomHeight}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
       {(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const).map((tab) => <button type="button" key={tab} className={ribbonTab === tab ? "active" : ""} onClick={() => setRibbonTab(tab)}>{tab}</button>)}
@@ -1354,8 +1371,9 @@ export function MinimalCycleView() {
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
       </section>
-    <aside className="left-panel-tail"><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button" data-testid="create-group" onClick={createSignalGroup}>＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<div className="empty-group-list" aria-label="Empty signal groups">{snapshot.document.signalGroups.filter((group) => group.rows.length === 0).map((group) => <button type="button" key={group.id} data-role="empty-group" data-group-id={group.id} onClick={() => { selectedGroupRef.current = group.id; setSelectedGroupId(group.id); selectedSignalRef.current = undefined; setSelectedId(undefined); }}>{group.name}</button>)}</div></aside>
+      <aside className="left-panel-tail"><button type="button" data-testid="hierarchy-open" onClick={() => setHierarchyVisible(true)}>Hierarchy</button><button type="button" data-testid="create-group" onClick={createSignalGroup}>＋ Group</button><button type="button" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}>＋ Signal</button><span>{snapshot.document.signals.length} signals</span>{selectedSignal && <span data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}<div className="empty-group-list" aria-label="Empty signal groups">{snapshot.document.signalGroups.filter((group) => group.rows.length === 0).map((group) => <button type="button" key={group.id} data-role="empty-group" data-group-id={group.id} onClick={() => { selectedGroupRef.current = group.id; setSelectedGroupId(group.id); selectedSignalRef.current = undefined; setSelectedId(undefined); }}>{group.name}</button>)}</div></aside>
       {bottomVisible && <section className="bottom-editor" data-testid="bottom-editor">
+        <div className="bottom-resize-handle" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} onPointerDown={startBottomResize} onPointerMove={moveBottomResize} onPointerUp={finishBottomResize} onPointerCancel={finishBottomResize} />
         <nav className="bottom-tabs">
           {bottomTabs.map((tab) => <button type="button" key={tab} className={bottomTab === tab ? "active" : ""} onClick={() => setBottomTab(tab)}>{tab}</button>)}
           <span />
