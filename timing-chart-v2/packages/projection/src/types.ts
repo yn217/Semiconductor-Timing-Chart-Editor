@@ -16,6 +16,7 @@ export interface RowLayoutEntry {
   readonly displayStyle?: JsonObject;
   readonly displayAlign?: "left" | "center" | "right";
   readonly displayOverflow?: "expand" | "ellipsis" | "wrap";
+  readonly visible: boolean;
   readonly instancePath?: readonly string[];
   readonly fullPath?: string;
   readonly y: number;

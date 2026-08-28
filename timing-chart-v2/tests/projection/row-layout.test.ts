@@ -30,21 +30,25 @@ describe("RowLayout and projection invariants", () => {
     expect(scoped.map((entry) => entry.signalId)).toEqual(["sig_data"]);
   });
 
-  it.each([0, 1, 2])("does not retain spacing for a fully hidden group at index %i", (hiddenIndex) => {
+  it.each([0, 1, 2])("retains hidden navigation rows and group placement at index %i", (hiddenIndex) => {
     const document = canonicalFixture();
     const template = document.signals[1]!;
     document.signals = [0, 1, 2].map((index) => ({ ...template, id: `sig_${index}` as SignalId, name: `S${index}`, source: { ...template.source, signalName: `S${index}` }, display: { ...template.display, name: `S${index}`, visible: index !== hiddenIndex } }));
     document.signalGroups = [0, 1, 2].map((index) => ({ id: `grp_${index}` as GroupId, name: `G${index}`, rows: [`sig_${index}` as SignalId], spacingBefore: 10, spacingAfter: 11 }));
     const result = calculateRowLayout(document);
+    expect(result.navigationRows).toHaveLength(3);
     expect(result.visibleRows).toHaveLength(2);
-    expect(result.totalHeight).toBe(2 * (10 + 32 + document.layout.rowHeight + 11));
+    expect(result.totalHeight).toBe(3 * (10 + 32 + document.layout.rowHeight + 11));
   });
 
-  it("returns zero height when every group is fully hidden", () => {
+  it("retains navigation height when every signal is hidden", () => {
     const document = canonicalFixture();
     document.signals = document.signals.map((signal) => ({ ...signal, display: { ...signal.display, visible: false } }));
     document.signalGroups = document.signalGroups.map((group) => ({ ...group, spacingBefore: 10, spacingAfter: 11 }));
-    expect(calculateRowLayout(document)).toMatchObject({ visibleRows: [], totalHeight: 0 });
+    const result = calculateRowLayout(document);
+    expect(result.visibleRows).toEqual([]);
+    expect(result.navigationRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
+    expect(result.totalHeight).toBe(115);
   });
   it("derives absolute Y from canonical spacing without persisting it", () => {
     const result = calculateRowLayout(layoutFixture());
@@ -116,6 +120,22 @@ describe("RowLayout and projection invariants", () => {
     });
     expect(projection.mountedSignalIds).toEqual(["sig_clk"]);
     expect(projection.waveSignalIds).toEqual(["sig_data"]);
+  });
+
+  it("keeps hidden signals in navigation while excluding them from timing and waveform projections", () => {
+    const document = layoutFixture();
+    document.signals = document.signals.map((signal) => signal.id === "sig_clk" ? { ...signal, display: { ...signal.display, visible: false } } : signal);
+    const projection = new DefaultProjectionService().project({
+      snapshot: { revision: 1, document } as CanonicalSnapshot,
+      changeSet: { rowPresentation: ["sig_clk" as RowId] },
+      viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+    });
+    expect(projection.leftRowIds).toContain("sig_clk");
+    expect(projection.frozenLabelRowIds).toContain("sig_clk");
+    expect(projection.timingRowIds).not.toContain("sig_clk");
+    expect(projection.mountedSignalIds).not.toContain("sig_clk");
+    expect(projection.canonicalSignalIds).toContain("sig_clk");
+    expect(projection.visibleRowIds).not.toContain("sig_clk");
   });
 
   it("reuses canonical RowLayout for view-only scroll projections", () => {

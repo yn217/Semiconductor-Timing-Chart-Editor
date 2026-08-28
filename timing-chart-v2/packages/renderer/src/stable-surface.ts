@@ -154,7 +154,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     }
     const mounted = new Set(projection.mountedSignalIds);
     const firstTimingRowByGroup = new Map<string, string>();
-    for (const row of projection.rowLayout) if (row.kind === "timing" && !firstTimingRowByGroup.has(row.groupId)) firstTimingRowByGroup.set(row.groupId, row.rowId);
+    for (const rowId of projection.timingRowIds) {
+      const row = rows.get(rowId);
+      if (row?.kind === "timing" && !firstTimingRowByGroup.has(row.groupId)) firstTimingRowByGroup.set(row.groupId, row.rowId);
+    }
     for (const [signalId, owner] of this.#waveOwners) if (!mounted.has(signalId)) owner.remove();
     for (const signalId of projection.mountedSignalIds) {
       let owner = this.#waveOwners.get(signalId);
@@ -454,6 +457,14 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     }
     const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.groupId !== previousGroupId}`;
     if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
+    if (surface === "left" && row.kind === "timing") {
+      const visibility = shell.querySelector<HTMLElement>("[data-role='tree-visibility']");
+      if (visibility) {
+        visibility.setAttribute("aria-pressed", String(row.visible));
+        visibility.dataset.visibilityState = row.visible ? "on" : "off";
+        visibility.setAttribute("aria-label", `${row.visible ? "Hide" : "Show"} ${row.name}`);
+      }
+    }
     place(shell, row);
     ordered.push(shell);
     previousGroupId = row.groupId;
@@ -603,7 +614,9 @@ function place(element: HTMLElement, row: Pick<RowLayoutEntry, "y" | "height">):
 
 function assertCrossSurfaceInvariant(projection: RenderProjection): void {
   const expected = projection.mountedRowIds.join("\u0000");
-  if (projection.leftRowIds.join("\u0000") !== expected || projection.frozenLabelRowIds.join("\u0000") !== expected || projection.timingRowIds.join("\u0000") !== expected) {
+  const mounted = new Set(projection.mountedRowIds);
+  const timingIsMounted = projection.timingRowIds.every((rowId) => mounted.has(rowId));
+  if (projection.leftRowIds.join("\u0000") !== expected || projection.frozenLabelRowIds.join("\u0000") !== expected || !timingIsMounted) {
     throw new Error("Cross-surface row ID invariant failed.");
   }
 }

@@ -61,7 +61,9 @@ test("Left Signal/Group rows expose V1 role and visibility controls through Sema
   const before = await page.getByTestId("history-status").textContent();
   await row.locator("[data-role='tree-visibility']").click();
   await expect(page.getByTestId("history-status")).not.toHaveText(before!);
-  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
+  await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request'] [data-role='tree-visibility']")).toBeVisible();
+  await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);

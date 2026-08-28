@@ -3,6 +3,9 @@ import type { GroupHeaderLayoutEntry, RowLayoutEntry } from "./types.js";
 
 export interface RowLayoutResult {
   readonly canonicalRowIds: readonly RowId[];
+  /** Rows retained by navigation surfaces, including intentionally hidden signals. */
+  readonly navigationRows: readonly RowLayoutEntry[];
+  /** Rows that may be rendered by the waveform/timing projection. */
   readonly visibleRows: readonly RowLayoutEntry[];
   readonly groupHeaders: readonly GroupHeaderLayoutEntry[];
   readonly totalHeight: number;
@@ -13,39 +16,43 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
   const spacers = new Map<string, SpacerRow>();
   for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacers.set(spacer.id, spacer);
   const canonicalRowIds = document.signalGroups.flatMap((group) => group.rows);
+  const navigationRows: RowLayoutEntry[] = [];
   const visibleRows: RowLayoutEntry[] = [];
   const groupHeaders: GroupHeaderLayoutEntry[] = [];
   let y = 0;
 
   for (const group of document.signalGroups) {
-    const visibleGroupRows = group.rows.filter((rowId) => {
+    const groupRows = group.rows.filter((rowId) => {
       const signal = signals.get(rowId);
-      return signal?.display.visible !== false && (signal !== undefined || spacers.has(rowId));
+      return signal !== undefined || spacers.has(rowId);
     });
-    if (visibleGroupRows.length === 0) continue;
+    if (groupRows.length === 0) continue;
     y += group.spacingBefore ?? 0;
     const headerRowId = `${group.id}:header` as RowLayoutEntry["rowId"];
     groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), y, height: 32 });
     y += 32;
     let visibleInGroup = 0;
-    for (const rowId of visibleGroupRows) {
+    for (const rowId of groupRows) {
       const signal = signals.get(rowId);
       const spacer = spacers.get(rowId);
       if (visibleInGroup > 0) y += document.layout.signalSpacing;
       if (signal) y += signal.spacingBefore ?? 0;
       const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
       if (entry) {
-        visibleRows.push(entry);
+        navigationRows.push(entry);
+        if (entry.visible) visibleRows.push(entry);
         y += entry.height + (signal?.spacingAfter ?? 0);
       } else if (spacer) {
-        visibleRows.push({ rowId, groupId: group.id, groupName: group.name, kind: "spacer", name: "", y, height: spacer.height });
-        y += spacer.height;
+        const spacerEntry = { rowId, groupId: group.id, groupName: group.name, kind: "spacer" as const, name: "", visible: true, y, height: spacer.height };
+        navigationRows.push(spacerEntry);
+        visibleRows.push(spacerEntry);
+        y += spacerEntry.height;
       }
       visibleInGroup += 1;
     }
     y += group.spacingAfter ?? 0;
   }
-  return { canonicalRowIds, visibleRows, groupHeaders, totalHeight: y };
+  return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y };
 }
 
 function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {
@@ -62,6 +69,7 @@ function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupI
     ...(signal.display.style === undefined ? {} : { displayStyle: signal.display.style }),
     ...(signal.display.align === undefined ? {} : { displayAlign: signal.display.align }),
     ...(signal.display.overflow === undefined ? {} : { displayOverflow: signal.display.overflow }),
+    visible: signal.display.visible !== false,
     instancePath: signal.source.instancePath,
     fullPath: [...signal.source.instancePath, signal.source.signalName].join("."),
     y,
