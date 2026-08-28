@@ -228,9 +228,9 @@
   "geometryPass": true,
   "ribbonNoHorizontalScroll": true,
   "visualDiff": {
-    "changedPixels": 152476,
+    "changedPixels": 152725,
     "comparedPixels": 1048322,
-    "diffPercent": 0.14544767733578043,
+    "diffPercent": 0.14568519977640457,
     "threshold": 0.05,
     "pass": false,
     "waveformViewportMasked": true

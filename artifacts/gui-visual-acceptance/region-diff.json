@@ -38,27 +38,27 @@
       "y": 167,
       "width": 265,
       "height": 749,
-      "changedPixels": 26206,
+      "changedPixels": 26455,
       "comparedPixels": 198485,
-      "diffPercent": 0.13203012822127616
+      "diffPercent": 0.13328463108043428
     },
     "Role": {
       "x": 265,
       "y": 167,
       "width": 61,
       "height": 509,
-      "changedPixels": 13822,
+      "changedPixels": 14004,
       "comparedPixels": 31049,
-      "diffPercent": 0.44516731617765465
+      "diffPercent": 0.4510290186479436
     },
     "Signal": {
       "x": 326,
       "y": 167,
       "width": 148,
       "height": 509,
-      "changedPixels": 23577,
+      "changedPixels": 23476,
       "comparedPixels": 75332,
-      "diffPercent": 0.31297456592152073
+      "diffPercent": 0.31163383422715446
     },
     "Ruler": {
       "x": 474,
@@ -74,9 +74,9 @@
       "y": 203,
       "width": 901,
       "height": 473,
-      "changedPixels": 63601,
+      "changedPixels": 64240,
       "comparedPixels": 426173,
-      "diffPercent": 0.14923751621993886
+      "diffPercent": 0.15073690731228867
     },
     "Inspector": {
       "x": 1375,
