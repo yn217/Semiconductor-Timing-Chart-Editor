@@ -331,6 +331,13 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="stable-waveform-surface"],
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="annotation-overlay-surface"],
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(9px); }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="frozen-group-header"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="timing-group-header"] { display: none; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="frozen-label-rows"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="timing-semantic-rows"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="stable-waveform-surface"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="annotation-overlay-surface"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(-44px); }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="left-row"] { grid-template-columns: 28px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
 .editor-shell[data-visual-reference="true"] .left-column-heading { align-items: flex-start; padding-top: 9px; }
 .editor-shell[data-visual-reference="true"] .left-column-heading > label { position: absolute; top: 37px; right: 0; left: 0; z-index: 21; display: block; height: 35px; padding: 4px 7px; border-top: 1px solid #d6dde6; background: #fbfcfe; }
