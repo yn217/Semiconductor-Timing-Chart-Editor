@@ -7,7 +7,7 @@ async function ready(page: Page) {
 
 const tabGroups: Record<string, string> = {
   File: "file-group",
-  Home: "history-group",
+  Home: "home-file-group",
   Insert: "insert-group",
   Timeline: "timeline-group",
   Annotation: "annotation-group",
@@ -35,7 +35,7 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
   for (const [tab, groupClass] of Object.entries(tabGroups)) {
     await tabs.getByRole("button", { name: tab, exact: true }).click();
     await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
-    await expect(ribbon.locator(".ribbon-group")).toHaveCount(tab === "Home" ? 12 : 1);
+    await expect(ribbon.locator(".ribbon-group")).toHaveCount(tab === "Home" ? 7 : 1);
     await expect(ribbon.locator(`.${groupClass}`)).toHaveCount(1);
     // Ribbon height must never change across tabs, and the waveform workspace must not shift.
     const ribbonBox = await ribbon.boundingBox();
@@ -58,11 +58,10 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
 
   await tabs.getByRole("button", { name: "Home", exact: true }).click();
   await expect(ribbon.locator(".home-file-group").getByRole("button", { name: "Save", exact: true })).toBeVisible();
-  await expect(ribbon.locator(".home-timeline-group").getByTestId("timeline-editor")).toBeVisible();
-  await expect(ribbon.locator(".home-view-group").getByTestId("home-grid-toggle")).toBeVisible();
-  await expect(ribbon.locator(".home-view-group").getByTestId("home-snap-toggle")).toBeVisible();
-  await expect(ribbon.locator(".home-review-group").getByRole("button", { name: "Problems", exact: true })).toBeVisible();
-  await expect(ribbon.locator(".home-export-group").getByRole("button", { name: "SVG / PNG / PDF", exact: true })).toBeVisible();
+  await expect(ribbon.locator(".home-timeline-group").getByRole("button", { name: "Insert one cycle", exact: true })).toBeVisible();
+  await expect(ribbon.locator(".home-display-group").getByTestId("home-grid-toggle")).toBeVisible();
+  await expect(ribbon.locator(".home-display-group").getByTestId("home-snap-toggle")).toBeVisible();
+  await expect(ribbon.locator(".home-overflow-group").getByRole("button", { name: "More", exact: true })).toBeVisible();
 });
 
 test("Insert tab creates a real canonical Signal through a SemanticCommand", async ({ page }) => {
@@ -125,7 +124,7 @@ test("AI preview cancels and rejects stale revision without mutation", async ({ 
   await expect(ai.getByTestId("ai-status")).toHaveText("Preview cancelled · no document mutation");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await ai.getByRole("button", { name: "Preview" }).click();
-  await page.getByTestId("cycle-surface").click({ position: { x: 24, y: 24 } });
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.keyboard.press("Delete");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ai.getByRole("button", { name: "Apply Preview" })).toHaveCount(1);
