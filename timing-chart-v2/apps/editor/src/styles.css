@@ -360,6 +360,13 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="comment"],
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="comment"] { min-width: 24px; width: 24px; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="input"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="input"] { background: #e4f6ec; color: #216843; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="output"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="output"] { background: #e3f1ff; color: #1b5b96; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-signal-role"][data-presentation="comment"],
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="signal-role"][data-presentation="comment"] { border: 1px solid #aa72e6; background: white; color: #8c47d3; }
+.editor-shell[data-visual-reference="true"] .surface-host [data-role="frozen-signal-name"] { padding-left: 8px; }
 .editor-shell[data-visual-reference="true"] .surface-icon { width: 16px; height: 16px; display: block; }
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-visibility"],
 .editor-shell[data-visual-reference="true"] .surface-host [data-role="tree-more"],
