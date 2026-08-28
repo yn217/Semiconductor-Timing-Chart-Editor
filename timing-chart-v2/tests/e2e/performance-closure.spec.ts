@@ -131,6 +131,31 @@ test("1000x1000 virtualization mounts viewport-scale rows and avoids duplicate b
   await testInfo.attach("phase13-1000-virtualization.json", { body: Buffer.from(JSON.stringify({ fixture: "perf_1000x1000", diagnostic, domNodes: await page.locator("*").count() }, null, 2)), contentType: "application/json" });
 });
 
+test("viewport-only projection remains bounded at 1k, 5k, and 10k rows", async ({ page }, testInfo) => {
+  await start(page);
+  const measurements: Array<Record<string, unknown>> = [];
+  for (const signalCount of [1_000, 5_000, 10_000] as const) {
+    await openFixture(page, { signalCount, cycleCount: 100 });
+    const viewport = page.getByTestId("cycle-viewport");
+    const before = await sessionCounters(page);
+    await viewport.evaluate((element) => { element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight) / 2; element.dispatchEvent(new Event("scroll")); });
+    await page.waitForTimeout(250);
+    const after = await sessionCounters(page);
+    const rowLayoutBefore = before.rowLayoutBuilds;
+    const rowLayoutAfter = after.rowLayoutBuilds;
+    const visited = after.viewportRowsVisited - before.viewportRowsVisited;
+    const binarySteps = after.viewportBinarySearchSteps - before.viewportBinarySearchSteps;
+    expect(after.fullVisibleRowScans - before.fullVisibleRowScans).toBe(0);
+    expect(rowLayoutAfter - rowLayoutBefore).toBe(0);
+    expect(visited).toBeGreaterThan(0);
+    expect(visited).toBeLessThan(200);
+    expect(binarySteps).toBeGreaterThan(0);
+    measurements.push({ signalCount, mountedRows: after.lastMountedRange, viewportRowsVisited: visited, viewportBinarySearchSteps: binarySteps, fullVisibleRowScansDelta: after.fullVisibleRowScans - before.fullVisibleRowScans, rowLayoutBuildsDelta: rowLayoutAfter - rowLayoutBefore });
+  }
+  await testInfo.attach("phase14-viewport-scale-browser.json", { body: Buffer.from(JSON.stringify(measurements, null, 2)), contentType: "application/json" });
+  console.log(`[phase14-browser-scale] ${JSON.stringify(measurements)}`);
+});
+
 test("repeated Open A/B/A releases old owners and does not stack handlers", async ({ page }, testInfo) => {
   await start(page); const cdp = await page.context().newCDPSession(page); await cdp.send("Performance.enable");
   const evidence: unknown[] = [];
