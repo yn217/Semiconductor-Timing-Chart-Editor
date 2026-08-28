@@ -27,7 +27,8 @@ export class DefaultProjectionService implements ProjectionService {
     const mountedRows = layout.visibleRows.filter((row) => pinned.has(row.rowId) || intersects(row, start, end + crossedHeaderHeight));
     const previousMounted = request.changeSet.rowOrder === undefined ? new Set<RowLayoutEntry["rowId"]>() : new Set(request.previous?.mountedRowIds ?? []);
     const stableMountedRows = layout.visibleRows.filter((row) => previousMounted.has(row.rowId));
-    const mountedById = new Map((request.changeSet.rowOrder === undefined ? mountedRows : stableMountedRows).map((row) => [row.rowId, row]));
+    const rowsToMount = request.changeSet.rowOrder === undefined ? mountedRows : [...stableMountedRows, ...mountedRows];
+    const mountedById = new Map(rowsToMount.map((row) => [row.rowId, row]));
     if (request.changeSet.rowOrder === undefined) for (const row of stableMountedRows) mountedById.set(row.rowId, row);
     const mountedRowsOrdered = layout.visibleRows.filter((row) => mountedById.has(row.rowId));
     const mountedGroupHeaders = layout.groupHeaders.filter((row) => intersects(row, start, end));

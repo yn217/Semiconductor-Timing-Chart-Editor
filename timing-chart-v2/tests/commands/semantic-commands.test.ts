@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -343,6 +343,22 @@ describe("command execution and atomic history", () => {
     }
     expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ name: "Main Signals", spacingBefore: 3, spacingAfter: 9, style: { showBackground: true, opacity: 0.8 } });
     expect(session.historyState().undoDepth).toBe(1);
+  });
+
+  it("creates, resizes, deletes and undoes a stable Spacer row with targeted Y invalidation", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const spacerId = "spacer_test" as SpacerId;
+    const created = session.execute({ id: commandId("cmd_spacer_create"), type: "spacer.create", spacer: { id: spacerId, height: 18 }, targetGroupId: "grp_main" as GroupId, index: 1 });
+    expect(created.ok).toBe(true);
+    if (created.ok) expect(created.changeSet).toMatchObject({ rowOrder: [spacerId], geometryScreenY: ["sig_data"], minimapOverview: true });
+    expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ rows: ["sig_clk", spacerId, "sig_data"], spacers: [{ id: spacerId, height: 18 }] });
+    expect(session.execute({ id: commandId("cmd_spacer_update"), type: "spacer.update", spacerId, height: 42 }).ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(42);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(18);
+    expect(session.execute({ id: commandId("cmd_spacer_delete"), type: "spacer.delete", spacerId }).ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ rows: ["sig_clk", "sig_data"] });
+    expect(session.getSnapshot().document.signalGroups[0]).not.toHaveProperty("spacers");
   });
 
   it("updates Transaction phases atomically and rejects phases outside the transaction", () => {

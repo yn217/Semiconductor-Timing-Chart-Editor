@@ -39,9 +39,9 @@ function orderedVisibleTimingRows(document: CanonicalDocument): readonly SignalI
   });
 }
 
-function geometryRowsFrom(document: CanonicalDocument, signalId: SignalId): SignalId[] {
+function geometryRowsFrom(document: CanonicalDocument, rowId: RowId): SignalId[] {
   const rows = orderedRows(document);
-  const start = rows.indexOf(signalId);
+  const start = rows.indexOf(rowId);
   if (start < 0) return [];
   const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
   return rows.slice(start).filter((id): id is SignalId => {
@@ -654,6 +654,49 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (JSON.stringify(signal.edgeCounter) === JSON.stringify(settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
       const changeSet: ChangeSet = { rowPresentation: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
+    }
+    case "spacer.create": {
+      const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
+      const group = document.signalGroups[groupIndex];
+      if (!group) return fail("invalid", "GROUP_NOT_FOUND", "$.targetGroupId", `Group '${command.targetGroupId}' does not exist.`);
+      if (!isStableId(command.spacer.id)) return fail("invalid", "INVALID_STABLE_ID", "$.spacer.id", "Spacer ID must be stable.");
+      if (canonicalIds(document).has(command.spacer.id)) return fail("invalid", "DUPLICATE_ID", "$.spacer.id", `Spacer '${command.spacer.id}' already exists.`);
+      if (!Number.isFinite(command.spacer.height) || command.spacer.height <= 0) return fail("invalid", "INVALID_SPACER_HEIGHT", "$.spacer.height", "Spacer height must be finite and positive.");
+      if (!Number.isInteger(command.index) || command.index < 0 || command.index > group.rows.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Spacer insertion index is outside the group rows.");
+      const rows = [...group.rows]; rows.splice(command.index, 0, command.spacer.id);
+      const nextGroup: SignalGroup = { ...group, rows, spacers: [...(group.spacers ?? []), command.spacer] };
+      const groups = [...document.signalGroups]; groups[groupIndex] = nextGroup;
+      const nextDocument = { ...document, signalGroups: groups };
+      const affectedTimingRows = geometryRowsFrom(nextDocument, command.spacer.id);
+      const changeSet: ChangeSet = { rowOrder: [command.spacer.id], geometryScreenY: affectedTimingRows, annotationPosition: annotationsForSignals(document, affectedTimingRows), minimapOverview: true };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
+    case "spacer.update": {
+      const groupIndex = document.signalGroups.findIndex((group) => group.spacers?.some((spacer) => spacer.id === command.spacerId));
+      const group = document.signalGroups[groupIndex];
+      const spacer = group?.spacers?.find((item) => item.id === command.spacerId);
+      if (!group || !spacer) return fail("invalid", "SPACER_NOT_FOUND", "$.spacerId", `Spacer '${command.spacerId}' does not exist.`);
+      if (!Number.isFinite(command.height) || command.height <= 0) return fail("invalid", "INVALID_SPACER_HEIGHT", "$.height", "Spacer height must be finite and positive.");
+      if (spacer.height === command.height) return fail("no-op", "NO_OP", "$", "Spacer height is unchanged.");
+      const nextGroup: SignalGroup = { ...group, spacers: group.spacers!.map((item) => item.id === spacer.id ? { ...item, height: command.height } : item) };
+      const groups = [...document.signalGroups]; groups[groupIndex] = nextGroup;
+      const nextDocument = { ...document, signalGroups: groups };
+      const changeSet: ChangeSet = { rowPresentation: [spacer.id], geometryScreenY: geometryRowsFrom(document, spacer.id), minimapOverview: true };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
+    case "spacer.delete": {
+      const groupIndex = document.signalGroups.findIndex((group) => group.spacers?.some((spacer) => spacer.id === command.spacerId));
+      const group = document.signalGroups[groupIndex];
+      const spacer = group?.spacers?.find((item) => item.id === command.spacerId);
+      if (!group || !spacer) return fail("invalid", "SPACER_NOT_FOUND", "$.spacerId", `Spacer '${command.spacerId}' does not exist.`);
+      const rows = group.rows.filter((rowId) => rowId !== spacer.id);
+      const remaining = group.spacers!.filter((item) => item.id !== spacer.id);
+      const { spacers: _removedSpacers, ...groupWithoutSpacers } = group;
+      const nextGroup: SignalGroup = { ...groupWithoutSpacers, rows, ...(remaining.length > 0 ? { spacers: remaining } : {}) };
+      const groups = [...document.signalGroups]; groups[groupIndex] = nextGroup;
+      const nextDocument = { ...document, signalGroups: groups };
+      const changeSet: ChangeSet = { rowOrder: [spacer.id], geometryScreenY: geometryRowsFrom(document, spacer.id), minimapOverview: true };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "group.create": {
       if (command.group.rows.length > 0 || (command.group.spacers?.length ?? 0) > 0) return fail("invalid", "GROUP_CREATE_NOT_EMPTY", "$.group", "Group creation cannot implicitly move existing rows.");

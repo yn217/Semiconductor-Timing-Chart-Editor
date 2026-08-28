@@ -8,12 +8,13 @@ import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
+const spacerId = (value: string) => value as SpacerId;
 
 const clock: ClockSignal = {
   id: signalId("sig_cycle_clock"), name: "CLOCK", type: "clock", role: "input",
@@ -1868,8 +1869,10 @@ function InspectorPanel({ signal, group, annotation, transaction, collapsedGroup
   if (Boolean(signal)) return <InspectorSignalEditor signal={signal as Signal} document={document} viewport={viewport} onCommand={onCommand} onReveal={onReveal} />;
   if (Boolean(annotation)) return <InspectorAnnotationEditor annotation={annotation as Annotation} document={document} viewport={viewport} onCommand={onCommand} onDelete={() => registry.execute("selection.delete")} />;
   if (!group && !transaction) return <LayoutInspector document={document} viewport={viewport} onCommand={onCommand} />;
+  const spacerEditor = group ? <section data-testid="inspector-spacers"><h3>Spacer Rows</h3><button type="button" data-testid="add-spacer" onClick={() => onCommand({ id: nextCommandId("spacer_create"), type: "spacer.create", spacer: { id: spacerId(nextEntityId("spacer", document)), height: 24 }, targetGroupId: group.id, index: group.rows.length })}>Add Spacer</button>{(group.spacers ?? []).map((spacer) => <form key={spacer.id} data-spacer-id={spacer.id} onSubmit={(event) => { event.preventDefault(); const height = Number(new FormData(event.currentTarget).get("height")); onCommand({ id: nextCommandId("spacer_update"), type: "spacer.update", spacerId: spacer.id, height }); }}><code>{spacer.id}</code><label>Height<input name="height" aria-label={`Spacer height ${spacer.id}`} type="number" min="1" step="1" defaultValue={spacer.height} /></label><button type="submit">Apply Height</button><button type="button" onClick={() => onCommand({ id: nextCommandId("spacer_delete"), type: "spacer.delete", spacerId: spacer.id })}>Delete</button></form>)}</section> : null;
   return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><button type="button">•••</button></header>
     {!signal && !group && !annotation && !transaction && <section className="inspector-empty">No selection</section>}
+    {spacerEditor}
     {signal && <>
       <section><h3>Signal</h3><div className="property-row"><span>Type</span><b>{signal.type}</b></div><label>Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} onBlur={() => { if (name.trim() && name.trim() !== signal.name) registry.execute("selection.rename", { name }); }} /></label><label>Role<select aria-label="Inspector signal role" value={signal.role} disabled><option>{signal.role}</option></select></label><label>Width<input value={signal.type === "bus" ? signal.width ?? "" : 1} readOnly /></label><label className="checkline">Visible<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => { setVisible(event.target.checked); registry.execute("selection.visibility", { visible: event.target.checked }); }} /></label><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Signal</button></section>
       <section><h3>Layout</h3><div className="property-row"><span>Row height</span><span>{document.layout.rowHeight}px</span></div><div className="property-row"><span>Spacing</span><span>{document.layout.signalSpacing}px</span></div></section>
@@ -2660,7 +2663,7 @@ function nextCommandId(scope: string): CommandId {
 }
 
 let entitySequence = 0;
-function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" | "signal" | "group" | "commentRow", document: CanonicalDocument): string {
+function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" | "signal" | "group" | "commentRow" | "spacer", document: CanonicalDocument): string {
   const used = new Set<string>([
     ...document.signals.map((item) => item.id),
     ...document.signalGroups.map((item) => item.id),

@@ -74,6 +74,26 @@ describe("RowLayout and projection invariants", () => {
     expect(projection.waveSignalIds).toEqual(["sig_clk", "sig_data"]);
   });
 
+  it("mounts a newly inserted stable row during a row-order update", () => {
+    const service = new DefaultProjectionService();
+    const beforeDocument = canonicalFixture();
+    const before = service.project({
+      snapshot: { revision: 0, document: beforeDocument } as CanonicalSnapshot,
+      changeSet: { fullDocumentReplace: true },
+      viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+    });
+    const afterDocument = layoutFixture();
+    const after = service.project({
+      snapshot: { revision: 1, document: afterDocument } as CanonicalSnapshot,
+      changeSet: { rowOrder: [spacerId], geometryScreenY: ["sig_data"] },
+      viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+      previous: before,
+    });
+    expect(after.mountedRowIds).toContain(spacerId);
+    expect(after.leftRowIds).toEqual(after.mountedRowIds);
+    expect(after.timingRowIds).toEqual(after.mountedRowIds);
+  });
+
   it("virtualizes row shells and timing SVGs while preserving canonical visible IDs", () => {
     const document = layoutFixture();
     const projection = new DefaultProjectionService().project({

@@ -183,3 +183,14 @@ unchanged. Unit coverage is in
 coverage including Undo/Redo and Save/Open is in
 `timing-chart-v2/tests/e2e/signal-spacing.spec.ts`. Comment Row spacing and
 full V1 visual parity remain open.
+
+Spacer Row lifecycle parity is now implemented through the Group Inspector.
+Add, height update, and delete are separate stable-ID SemanticCommands and
+use derived RowLayout screen-Y invalidation without WaveDrom or Local Geometry
+rebuilds. Projection now includes newly inserted rows during row-order updates,
+so a visible Spacer is mounted immediately rather than waiting for a scroll
+event. Unit coverage is in
+`timing-chart-v2/tests/commands/semantic-commands.test.ts` and
+`timing-chart-v2/tests/projection/row-layout.test.ts`; browser coverage is in
+`timing-chart-v2/tests/e2e/spacer-row.spec.ts`. Full V1 visual parity remains
+open.
