@@ -26,6 +26,45 @@ test("selects a cycle from Canvas geometry and the exclusive terminal boundary f
   await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
 });
 
+test("selects Cycle 0 and the terminal boundary from the rendered waveform", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const wave = host.locator("[data-role='stable-waveform-surface']");
+  const owner = wave.locator("[data-signal-id='sig_cycle_request']");
+  const ownerBox = await owner.boundingBox();
+  const cycle0 = await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").boundingBox();
+  const terminal = await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox();
+  expect(ownerBox).not.toBeNull();
+  expect(cycle0).not.toBeNull();
+  expect(terminal).not.toBeNull();
+
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await host.getAttribute("data-history-depth"),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await page.mouse.click(cycle0!.x + 1, ownerBox!.y + ownerBox!.height / 2);
+  await expect(host).toHaveAttribute("data-selected-cycle", "0");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("0");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("1");
+
+  const viewport = page.getByTestId("cycle-viewport");
+  await viewport.evaluate((element) => { element.scrollLeft = element.scrollWidth; element.dispatchEvent(new Event("scroll")); });
+  const terminalAfterScroll = await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox();
+  const ownerAfterScroll = await owner.boundingBox();
+  expect(terminalAfterScroll).not.toBeNull();
+  expect(ownerAfterScroll).not.toBeNull();
+  await page.mouse.click(terminalAfterScroll!.x + 1, ownerAfterScroll!.y + ownerAfterScroll!.height / 2);
+  await expect(host).toHaveAttribute("data-selected-cycle", "24");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("23");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(host).toHaveAttribute("data-history-depth", before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
 test("selects a half-open range directly on the geometry-derived ruler", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
