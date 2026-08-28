@@ -43,6 +43,7 @@ export class ImmutableLocalGeometryMap implements LocalGeometryMap {
 
 export interface ScreenGeometryProjector {
   toScreen(local: LocalAnchorGeometry, transform: ViewTransform): Point;
+  fromScreen(screen: Point, transform: ViewTransform): Point;
 }
 
 export class DefaultScreenGeometryProjector implements ScreenGeometryProjector {
@@ -51,6 +52,14 @@ export class DefaultScreenGeometryProjector implements ScreenGeometryProjector {
     return Object.freeze({
       x: (local.point.x - transform.scrollX) * transform.zoom,
       y: (local.point.y - transform.scrollY) * transform.zoom,
+    });
+  }
+
+  fromScreen(screen: Point, transform: ViewTransform): Point {
+    if (!Number.isFinite(transform.zoom) || transform.zoom <= 0) throw new Error("Screen Geometry zoom must be positive and finite.");
+    return Object.freeze({
+      x: screen.x / transform.zoom + transform.scrollX,
+      y: screen.y / transform.zoom + transform.scrollY,
     });
   }
 }

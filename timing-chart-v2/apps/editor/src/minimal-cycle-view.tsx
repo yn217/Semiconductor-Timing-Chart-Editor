@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
-import { SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
@@ -327,6 +327,7 @@ export function MinimalCycleView() {
 
     let session = new CommandHistorySession(initialDocument);
     const adapter = new ProductionWaveDromAdapter();
+    const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
     let referenceGeometry: LocalGeometryMap | undefined;
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
@@ -494,7 +495,8 @@ export function MinimalCycleView() {
       if (!waveLayer || !referenceRow) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
       if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
-      const snap = currentSnapIndex().nearest({ x: (clientX - bounds.left) / currentZoom, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+      const localPointer = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });
+      const snap = currentSnapIndex().nearest({ x: localPointer.x, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
       publishState();
       return snap?.anchor.cycle;
     };
@@ -712,7 +714,8 @@ export function MinimalCycleView() {
         const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
         if (!waveLayer) return;
         const bounds = waveLayer.getBoundingClientRect();
-        const snap = currentSnapIndex().nearest({ x: (event.clientX - bounds.left) / currentZoom, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
+        const localPointer = screenGeometry.fromScreen({ x: event.clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });
+        const snap = currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
         publishState();
         if (!snap) {
           setProblem("No rendered transition is within the 12 px snap tolerance.");
@@ -816,7 +819,7 @@ export function MinimalCycleView() {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       if (!waveLayer) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
-      const x = (clientX - bounds.left) / currentZoom;
+      const x = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x;
       const candidates = currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary");
       if (!snapEnabledRef.current) {
         const ordered = [...candidates].sort((left, right) => left.point.x - right.point.x);
@@ -1009,7 +1012,7 @@ export function MinimalCycleView() {
     const onAnnotationPointerMove = (event: PointerEvent) => {
       if (!annotationDrag) return;
       const screenDx = Math.round(event.clientX - annotationDrag.startX);
-      const dx = Math.round(screenDx / currentZoom);
+      const dx = Math.round(screenGeometry.fromScreen({ x: screenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - annotationDrag.startY);
       annotationDrag.owner.style.translate = `${screenDx}px ${dy}px`;
       if (!annotationDrag.field || annotationDrag.label) return;
@@ -1037,7 +1040,7 @@ export function MinimalCycleView() {
     const onAnnotationPointerUp = (event: PointerEvent) => {
       const drag = annotationDrag;
       if (!drag) return;
-      const dx = Math.round((event.clientX - drag.startX) / currentZoom);
+      const dx = Math.round(screenGeometry.fromScreen({ x: event.clientX - drag.startX, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - drag.startY);
       drag.owner.style.translate = "";
       annotationDrag = undefined;

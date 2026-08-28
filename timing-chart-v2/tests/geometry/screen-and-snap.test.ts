@@ -10,6 +10,14 @@ describe("Screen Geometry and snapping", () => {
     const projector = new DefaultScreenGeometryProjector();
     const point = projector.toScreen({ signalId, anchor: { signalId, cycle: 2, point: "rising-edge" }, point: { x: 120, y: 35 } }, { scrollX: 20, scrollY: 5, zoom: 1.5 });
     expect(point).toEqual({ x: 150, y: 45 });
+    expect(projector.fromScreen(point, { scrollX: 20, scrollY: 5, zoom: 1.5 })).toEqual({ x: 120, y: 35 });
+  });
+
+  it.each([0.5, 1, 1.5, 2])("round-trips local coordinates at %sx zoom", (zoom) => {
+    const projector = new DefaultScreenGeometryProjector();
+    const local = { signalId, anchor: { signalId, cycle: 2, point: "rising-edge" as const }, point: { x: 120, y: 35 } };
+    const transform = { scrollX: 17, scrollY: 9, zoom };
+    expect(projector.fromScreen(projector.toScreen(local, transform), transform)).toEqual(local.point);
   });
 
   it("returns the exact nearest semantic candidate inside tolerance", () => {
