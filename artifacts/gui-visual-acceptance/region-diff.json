@@ -1,0 +1,118 @@
+{
+  "viewport": {
+    "width": 1672,
+    "height": 941
+  },
+  "source": "golden-home-cycle-1672x941.png",
+  "threshold": 24,
+  "regions": {
+    "Title": {
+      "x": 0,
+      "y": 0,
+      "width": 1672,
+      "height": 31,
+      "changedPixels": 10569,
+      "comparedPixels": 51832,
+      "diffPercent": 0.2039087822194783
+    },
+    "Tabs": {
+      "x": 0,
+      "y": 31,
+      "width": 1672,
+      "height": 34,
+      "changedPixels": 2022,
+      "comparedPixels": 56848,
+      "diffPercent": 0.035568533633549115
+    },
+    "Ribbon": {
+      "x": 0,
+      "y": 65,
+      "width": 1672,
+      "height": 102,
+      "changedPixels": 16615,
+      "comparedPixels": 170544,
+      "diffPercent": 0.09742353879350783
+    },
+    "Left Tree": {
+      "x": 0,
+      "y": 167,
+      "width": 265,
+      "height": 749,
+      "changedPixels": 26206,
+      "comparedPixels": 198485,
+      "diffPercent": 0.13203012822127616
+    },
+    "Role": {
+      "x": 265,
+      "y": 167,
+      "width": 61,
+      "height": 509,
+      "changedPixels": 13822,
+      "comparedPixels": 31049,
+      "diffPercent": 0.44516731617765465
+    },
+    "Signal": {
+      "x": 326,
+      "y": 167,
+      "width": 148,
+      "height": 509,
+      "changedPixels": 23577,
+      "comparedPixels": 75332,
+      "diffPercent": 0.31297456592152073
+    },
+    "Ruler": {
+      "x": 474,
+      "y": 167,
+      "width": 901,
+      "height": 36,
+      "changedPixels": 1506,
+      "comparedPixels": 32436,
+      "diffPercent": 0.0464298927118017
+    },
+    "Waveform": {
+      "x": 474,
+      "y": 203,
+      "width": 901,
+      "height": 473,
+      "changedPixels": 63601,
+      "comparedPixels": 426173,
+      "diffPercent": 0.14923751621993886
+    },
+    "Inspector": {
+      "x": 1375,
+      "y": 167,
+      "width": 297,
+      "height": 749,
+      "changedPixels": 69406,
+      "comparedPixels": 222453,
+      "diffPercent": 0.31200298490018114
+    },
+    "Bottom": {
+      "x": 265,
+      "y": 676,
+      "width": 1110,
+      "height": 240,
+      "changedPixels": 20886,
+      "comparedPixels": 266400,
+      "diffPercent": 0.0784009009009009
+    },
+    "MiniMap": {
+      "x": 1375,
+      "y": 801,
+      "width": 297,
+      "height": 115,
+      "changedPixels": 31749,
+      "comparedPixels": 34155,
+      "diffPercent": 0.92955643390426
+    },
+    "Status Bar": {
+      "x": 0,
+      "y": 916,
+      "width": 1672,
+      "height": 25,
+      "changedPixels": 4496,
+      "comparedPixels": 41800,
+      "diffPercent": 0.10755980861244019
+    }
+  }
+}

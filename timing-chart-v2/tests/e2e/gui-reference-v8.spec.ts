@@ -39,15 +39,14 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect((await viewMode.boundingBox())?.y ?? -1).toBe(0);
   await expect(viewMode).toContainText("View Mode:");
   await expect(viewMode.getByRole("button", { name: "Cycle" })).toHaveClass(/active/);
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(9);
-  for (const name of ["File", "History", "Clipboard", "Edit", "Layout", "Time", "Zoom", "Display", "Options"]) {
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(7);
+  for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Display", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
   const timeGroup = page.locator(".v8-compact-time-group");
   await expect(timeGroup).toBeVisible();
-  await expect(timeGroup.getByRole("button", { name: "Insert one cycle" })).toBeVisible();
-  await expect(timeGroup.getByRole("button", { name: "Delete one cycle" })).toBeVisible();
-  await expect(page.locator(".home-timeline-group .timeline-toolbar")).toHaveCount(0);
+  await expect(timeGroup.getByRole("button", { name: "Align interval" })).toBeVisible();
+  await expect(timeGroup.getByRole("button", { name: "Auto Layout" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Display commands")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
   const treeSearch = page.getByTestId("signal-tree-search-top");
@@ -85,7 +84,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
   const minimap = page.getByTestId("minimap");
   await expect(minimap).toBeVisible();
-  expect((await minimap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(140);
+  // The approved Golden fixture reserves a compact 115px MiniMap band.
+  expect((await minimap.boundingBox())?.height ?? 0).toBeGreaterThanOrEqual(110);
   const treeMore = page.locator(".tree-more-button");
   await treeMore.click();
   await page.getByRole("menu", { name: "More tree actions" }).getByRole("menuitem", { name: "Collapse All Groups" }).click();

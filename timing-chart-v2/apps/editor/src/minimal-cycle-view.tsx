@@ -396,6 +396,34 @@ export function MinimalCycleView() {
       playhead.dataset.playheadCycle = String(cycle);
       playhead.style.left = tick.style.left;
     };
+    const refreshRangePreview = () => {
+      const preview = rendererHost.dataset.rangePreview;
+      let element = rulerElement.querySelector<HTMLElement>("[data-role='range-preview']");
+      if (!preview) {
+        element?.remove();
+        return;
+      }
+      const [startText, endText] = preview.split(":");
+      const start = Number(startText);
+      const end = Number(endText);
+      const startTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${start}']`);
+      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${end}']`);
+      if (!startTick || !endTick || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
+        element?.remove();
+        return;
+      }
+      if (!element) {
+        element = rulerElement.ownerDocument.createElement("span");
+        element.dataset.role = "range-preview";
+        element.dataset.testid = "range-preview";
+        element.setAttribute("aria-hidden", "true");
+        rulerElement.append(element);
+      }
+      element.dataset.rangeStart = String(start);
+      element.dataset.rangeEnd = String(end);
+      element.style.left = startTick.style.left;
+      element.style.width = `${Math.max(1, endTick.offsetLeft - startTick.offsetLeft)}px`;
+    };
 
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
@@ -819,6 +847,7 @@ export function MinimalCycleView() {
       rangeDrag.moved = true;
       rendererHost.dataset.rangePreview = `${Math.min(rangeDrag.anchor, cycle)}:${Math.max(rangeDrag.anchor, cycle)}`;
       rendererHost.dataset.rangeDrag = "active";
+      refreshRangePreview();
       event.preventDefault();
     };
     const onRangePointerUp = (event: PointerEvent) => {
@@ -828,6 +857,7 @@ export function MinimalCycleView() {
         rangeDrag = undefined;
         delete rendererHost.dataset.rangeDrag;
         delete rendererHost.dataset.rangePreview;
+        refreshRangePreview();
         suppressCanvasClick = true;
         const clickCycle = cycleBoundaryAtX(event.clientX);
         if (clickCycle !== undefined) applyCanvasCycleSelection(clickCycle, event.shiftKey);
@@ -841,6 +871,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.selectedCycle = String(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
+      refreshRangePreview();
       rangeDrag = undefined;
       suppressCanvasClick = true;
       requestAnimationFrame(() => { suppressCanvasClick = false; });
@@ -851,12 +882,14 @@ export function MinimalCycleView() {
       rangeDrag = undefined;
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
+      refreshRangePreview();
     };
     const onRangeKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !rangeDrag) return;
       rangeDrag = undefined;
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
+      refreshRangePreview();
     };
     const clearDropState = () => {
       for (const element of rendererHost.querySelectorAll<HTMLElement>("[data-drop-position], [data-dragging]")) {
@@ -1554,7 +1587,7 @@ export function MinimalCycleView() {
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
          <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={280} aria-valuemax={420} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
-        <div className="column-headings"><span className="left-column-heading"><strong>{visualReference ? "Signals / Groups" : "信号 / グループ"}</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="name / path / role" /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}<button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button>{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span>{visualReference ? <><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{"Time Scale: Cycle    Reference: clk"}</span></> : <><span aria-label="Role / signal">Role / 信号</span><span>Cycle waveform</span></>}</div>
+        <div className="column-headings"><span className="left-column-heading"><strong>{visualReference ? "Signals / Groups" : "信号 / グループ"}</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder={visualReference ? "Filter signals..." : "name / path / role"} /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}<button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button>{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span>{visualReference ? <><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{"Time Scale: Cycle    Reference: clk"}</span></> : <><span aria-label="Role / signal">Role / 信号</span><span>Cycle waveform</span></>}</div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
@@ -1773,7 +1806,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span>Save As</span></button>
       <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
     </div>}
-    {tab === "Home" && <>
+    {tab === "Home" && (visualReference ? <V8GoldenHomeRibbon document={document} range={range} history={history} gridEnabled={gridEnabled} snapEnabled={snapEnabled} rulerEnabled={rulerEnabled} minimapEnabled={minimapEnabled} hasSelectedSignal={hasSelectedSignal} hasSelectedEntity={hasSelectedEntity} onCommand={onCommand} onNew={onNew} onOpen={onOpen} onSave={onSave} onSaveAs={onSaveAs} onUndo={onUndo} onRedo={onRedo} onCopy={onCopy} onCut={onCut} onPaste={onPaste} onDelete={onDelete} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onZoom={onZoom} onFitAll={onFitAll} onToggleGrid={onToggleGrid} onToggleSnap={onToggleSnap} onToggleRuler={onToggleRuler} onToggleMinimap={onToggleMinimap} /> : <>
       <div className="ribbon-major-group" data-major-group="File" aria-label="File commands">
        <div className="ribbon-group home-file-group" aria-label="File"><button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span data-v1-label="新規">New</span></button><button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span data-v1-label="開く">Open</span></button><button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span data-v1-label="保存">Save</span></button><button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span data-v1-label="名前を付けて保存">Save As</span></button><b>File</b></div>
       </div>
@@ -1781,10 +1814,10 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
        <div className="ribbon-group history-group" aria-label="History"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span data-v1-label="元に戻す">Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span data-v1-label="やり直し">Redo</span></button><b>History</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Clipboard" aria-label="Clipboard commands">
-       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedSignal} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedSignal}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button><button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button><small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
+       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedSignal}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedSignal} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button>{!visualReference && <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button>}<small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Edit" aria-label="Edit commands">
-       <div className="ribbon-group edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button><button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span data-v1-label="名前変更">Rename</span></button><b>Edit</b></div>
+       <div className="ribbon-group edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button>{visualReference ? <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button> : <button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span data-v1-label="名前変更">Rename</span></button>}<b>Edit</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Layout" aria-label="Layout commands">
        <div className="ribbon-group selection-group" aria-label="Selection"><button type="button" className="ribbon-tool" onClick={onClearSelection}><RibbonIcon name="i-clear" /><span data-v1-label="クリア">Clear</span></button><button type="button" className="ribbon-tool" onClick={onSelectAll} disabled={document.signals.every((signal) => signal.type === "commentRow")} title="Select all timing signals"><RibbonIcon name="i-select-all" /><span data-v1-label="すべて選択">Select All</span></button><b>Selection</b></div>
@@ -1829,7 +1862,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         </div>}
         <b>More</b>
       </div>
-    </>}
+    </>) }
     {tab === "Insert" && <div className="ribbon-group insert-group">
       <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
       <button type="button" className="ribbon-tool" onClick={insertClockSignal}><RibbonIcon name="i-clock" /><span>Clock</span></button>
@@ -1845,6 +1878,30 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {tab === "Review" && <div className="ribbon-group review-group"><button type="button" className="ribbon-tool" onClick={onShowProblems}><RibbonIcon name="i-filter" /><span>Problems</span></button><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <div className="ribbon-group ai-group"><AIOperationPanel document={document} revision={revision} selectedSignalId={selectedSignalId} onCommand={onCommand} /><b>AI</b></div>}
   </section>;
+}
+
+function V8GoldenHomeRibbon({ document, range, history, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, hasSelectedSignal, hasSelectedEntity, onCommand, onNew, onOpen, onSave, onSaveAs, onUndo, onRedo, onCopy, onCut, onPaste, onDelete, onDuplicate, onMoveUp, onMoveDown, onZoom, onFitAll, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap }: {
+  readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState;
+  readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean;
+  readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
+  readonly onCommand: (command: SemanticCommand) => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onSaveAs: () => void;
+  readonly onUndo: () => void; readonly onRedo: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDelete: () => void; readonly onDuplicate: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onZoom: (delta: number) => void; readonly onFitAll: () => void;
+  readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void;
+}) {
+  const cycleCommand = (type: "timeline.insert" | "timeline.delete", count: number) => {
+    if (type === "timeline.insert") onCommand({ id: nextCommandId("v8_timeline_insert"), type, at: range.start, count });
+    else onCommand({ id: nextCommandId("v8_timeline_delete"), type, start: range.start, end: Math.min(document.timeline.cycleCount, range.start + count) });
+  };
+  const tool = (label: string, icon: string, action: () => void, disabled = false) => <button type="button" className="ribbon-tool v8-golden-tool" aria-label={label} onClick={action} disabled={disabled}><RibbonIcon name={icon} /><span>{label}</span></button>;
+  return <>
+    <div className="ribbon-major-group v8-golden-major" data-major-group="File" aria-label="File commands">{tool("New", "i-new", onNew)}{tool("Open", "i-open", onOpen)}{tool("Save", "i-save", onSave)}{tool("Save As", "i-save", onSaveAs)}<b>File</b></div>
+    <div className="ribbon-major-group v8-golden-major" data-major-group="Edit" aria-label="Edit commands">{tool("Undo", "i-undo", onUndo, !history.canUndo)}{tool("Redo", "i-redo", onRedo, !history.canRedo)}{tool("Cut", "i-cut", onCut, !hasSelectedSignal)}{tool("Copy", "i-copy", onCopy, !hasSelectedSignal)}{tool("Paste", "i-paste", onPaste, !history.canUndo && !history.canRedo)}{tool("Delete", "i-delete", onDelete)}{tool("Duplicate", "i-duplicate", onDuplicate, !hasSelectedSignal)}<b>Edit</b></div>
+    <div className="ribbon-major-group v8-golden-major" data-major-group="Layout" aria-label="Layout commands">{tool("Up", "i-up", onMoveUp, !hasSelectedEntity)}{tool("Down", "i-down", onMoveDown, !hasSelectedEntity)}{tool("Cycle Insert", "i-plus", () => cycleCommand("timeline.insert", 1))}{tool("Cycle Delete", "i-delete", () => cycleCommand("timeline.delete", 1))}{tool("N Cycle Insert", "i-plus", () => cycleCommand("timeline.insert", 2))}{tool("N Cycle Delete", "i-delete", () => cycleCommand("timeline.delete", 2))}<b>Layout</b></div>
+    <div className="ribbon-major-group v8-golden-major v8-compact-time-group" data-major-group="Time" aria-label="Time commands">{tool("Align interval", "i-align", () => undefined)}{tool("Group", "i-group", () => undefined)}{tool("Auto Layout", "i-layout", () => undefined)}<b>Time</b></div>
+    <div className="ribbon-major-group v8-golden-major" data-major-group="Zoom" aria-label="Zoom commands">{tool("Zoom Out", "i-zoom-out", () => onZoom(-0.25))}<output>100%</output>{tool("Zoom In", "i-zoom-in", () => onZoom(0.25))}{tool("Fit All", "i-fit", onFitAll)}<b>Zoom</b></div>
+    <div className="ribbon-major-group v8-golden-major" data-major-group="Display" aria-label="Display commands"><label><input data-testid="home-grid-toggle" type="checkbox" checked={gridEnabled} onChange={onToggleGrid} /> Grid</label><label><input data-testid="home-minimap-toggle" type="checkbox" checked={minimapEnabled} onChange={onToggleMinimap} /> MiniMap</label><label><input data-testid="home-snap-toggle" type="checkbox" checked={snapEnabled} onChange={onToggleSnap} /> Snap</label><label><input data-testid="home-ruler-toggle" type="checkbox" checked={rulerEnabled} onChange={onToggleRuler} /> Ruler</label><b>Display</b></div>
+    <div className="ribbon-major-group v8-golden-major v8-golden-options" data-major-group="Options" aria-label="Options commands">{tool("More", "i-more", () => undefined)}<b>Options</b></div>
+  </>;
 }
 
 function InspectorPanel({ signal, group, annotation, transaction, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, onCommand, onReveal }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => void; readonly onReveal: () => void }) {

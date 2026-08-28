@@ -21,6 +21,21 @@ const target = {
   status: { x: 0, y: 916, width: 1672, height: 25 },
 } as const;
 
+const visualRegions = {
+  Title: target.title,
+  Tabs: target.tabs,
+  Ribbon: target.ribbon,
+  "Left Tree": target.left,
+  Role: { x: 265, y: 167, width: 61, height: 509 },
+  Signal: { x: 326, y: 167, width: 148, height: 509 },
+  Ruler: { x: 474, y: 167, width: 901, height: 36 },
+  Waveform: { x: 474, y: 203, width: 901, height: 473 },
+  Inspector: target.inspector,
+  Bottom: target.bottom,
+  MiniMap: { x: 1375, y: 801, width: 297, height: 115 },
+  "Status Bar": target.status,
+} as const;
+
 function roundedRect(value: { x: number; y: number; width: number; height: number }) {
   return Object.fromEntries(Object.entries(value).map(([key, number]) => [key, Math.round(number * 100) / 100]));
 }
@@ -52,14 +67,30 @@ function comparePng(reference: PNG, dut: PNG, mask: { left: number; top: number;
   return { diff, changedPixels, comparedPixels, diffPercent: changedPixels / comparedPixels };
 }
 
+function compareRegion(reference: PNG, dut: PNG, region: { x: number; y: number; width: number; height: number }) {
+  let changedPixels = 0;
+  let comparedPixels = 0;
+  const left = Math.max(0, region.x);
+  const top = Math.max(0, region.y);
+  const right = Math.min(reference.width, region.x + region.width);
+  const bottom = Math.min(reference.height, region.y + region.height);
+  for (let y = top; y < bottom; y += 1) {
+    for (let x = left; x < right; x += 1) {
+      const index = (y * reference.width + x) * 4;
+      const delta = Math.abs(reference.data[index] - dut.data[index]) + Math.abs(reference.data[index + 1] - dut.data[index + 1]) + Math.abs(reference.data[index + 2] - dut.data[index + 2]);
+      comparedPixels += 1;
+      if (delta > 24) changedPixels += 1;
+    }
+  }
+  return { ...region, changedPixels, comparedPixels, diffPercent: comparedPixels === 0 ? 0 : changedPixels / comparedPixels };
+}
+
 test("generates V1 reference vs V2 production visual evidence at the locked viewport", async ({ page }) => {
   await mkdir(outputRoot, { recursive: true });
   await page.setViewportSize(viewport);
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='10']")).toHaveCount(1);
-  const host = page.getByTestId("cycle-surface");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   await expect(page.locator(".inspector-shell > .inspector")).toContainText("Clock");
 
   await copyFile(referencePath, resolve(outputRoot, "reference.png"));
@@ -104,6 +135,8 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
   const dut = PNG.sync.read(await readFile(resolve(outputRoot, "dut.png")));
   const comparison = comparePng(reference, dut, { left: target.center.x, top: target.center.y + 36, right: target.inspector.x, bottom: target.bottom.y });
   await writeFile(resolve(outputRoot, "diff.png"), PNG.sync.write(comparison.diff));
+  const regionDiff = Object.fromEntries(Object.entries(visualRegions).map(([name, region]) => [name, compareRegion(reference, dut, region)]));
+  await writeFile(resolve(outputRoot, "region-diff.json"), `${JSON.stringify({ viewport, source: "golden-home-cycle-1672x941.png", threshold: 24, regions: regionDiff }, null, 2)}\n`);
   const report = {
     viewport,
     source: { reference: "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png", dut: "V2 visual-reference /?visual-reference" },
@@ -113,7 +146,7 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     ribbonNoHorizontalScroll: metrics.ribbonOverflow.scrollWidth <= metrics.ribbonOverflow.clientWidth + 1,
     visualDiff: { ...comparison, diff: undefined, threshold: 0.05, pass: comparison.diffPercent <= 0.05, waveformViewportMasked: true },
     acceptance: "diagnostic-gap-report",
-    artifacts: ["reference.png", "dut.png", "diff.png", "layout-metrics.json"],
+    artifacts: ["reference.png", "dut.png", "diff.png", "region-diff.json", "layout-metrics.json"],
   };
   await writeFile(resolve(outputRoot, "layout-metrics.json"), `${JSON.stringify(report, null, 2)}\n`);
 
