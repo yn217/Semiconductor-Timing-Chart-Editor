@@ -287,6 +287,9 @@ body { min-width: 1100px; }
 .document-properties label { display: grid; gap: 4px; margin: 9px 0; color: #52677d; font-size: 11px; }.document-properties input, .document-properties textarea { width: 100%; box-sizing: border-box; border: 1px solid #b9c5d3; border-radius: 3px; padding: 6px; font: 12px/1.35 "Segoe UI", sans-serif; }.document-properties footer { display: flex; justify-content: flex-end; gap: 8px; padding-top: 10px; }.document-properties footer button { height: 29px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }.document-properties footer button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
 .document-properties header { display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #d6e0ea; }
 .document-properties header button { border: 0; background: transparent; font-size: 22px; }
+.rename-dialog { width: min(420px, calc(100vw - 48px)); }
+.rename-dialog h2 { margin: 14px 0; font-size: 16px; color: #20364d; }
+.rename-dialog .dialog-error { margin: 4px 0 0; color: #b3261e; font-size: 11px; }
 
 /* v8 approved visual contract.  The normal editor keeps its responsive V2
    layout; the reference mode is the deterministic Chromium acceptance mode. */

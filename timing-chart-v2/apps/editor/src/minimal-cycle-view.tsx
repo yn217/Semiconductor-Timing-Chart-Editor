@@ -195,6 +195,9 @@ export function MinimalCycleView() {
   const [treeMoreMenuOpen, setTreeMoreMenuOpen] = useState(false);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "annotation" } | undefined>();
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameDraft, setRenameDraft] = useState("");
+  const [renameError, setRenameError] = useState("");
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
   const clipboardGroupRef = useRef<{ readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number } | undefined>(undefined);
@@ -1501,8 +1504,20 @@ export function MinimalCycleView() {
   pasteSelectedSignalRef.current = pasteSelectedEntity;
   const renameSelection = () => {
     const current = selectedSignal?.display.name ?? selectedGroup?.name;
-    const name = current === undefined ? null : window.prompt("Rename", current);
-    if (name?.trim()) commandRegistry.current.execute("selection.rename", { name: name.trim() });
+    if (current === undefined) return;
+    setRenameDraft(current);
+    setRenameError("");
+    setRenameDialogOpen(true);
+  };
+  const applyRename = () => {
+    const name = renameDraft.trim();
+    if (!name) {
+      setRenameError("Name is required.");
+      return;
+    }
+    commandRegistry.current.execute("selection.rename", { name });
+    setRenameDialogOpen(false);
+    setRenameError("");
   };
   const setSelectionVisibility = (visible: boolean) => commandRegistry.current.execute("selection.visibility", { visible });
   const moveSelection = (direction: -1 | 1) => {
@@ -1782,6 +1797,12 @@ export function MinimalCycleView() {
       <button type="button" role="menuitem" onClick={() => { renameSelection(); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Rename</button>
       <button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }} disabled={!hasSelectedEntity && selectedAnnotation === undefined}>Delete</button>
     </div>}
+    {renameDialogOpen && <div className="modal-backdrop" data-testid="rename-dialog-backdrop"><form role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); applyRename(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setRenameDialogOpen(false); } }}>
+      <header><h2 id="rename-dialog-title">Rename</h2><button type="button" aria-label="Close rename dialog" onClick={() => setRenameDialogOpen(false)}>×</button></header>
+      <label>New name<input autoFocus aria-label="New name" value={renameDraft} onChange={(event) => { setRenameDraft(event.target.value); setRenameError(""); }} /></label>
+      {renameError && <p role="alert" className="dialog-error">{renameError}</p>}
+      <footer><button type="button" onClick={() => setRenameDialogOpen(false)}>Cancel</button><button type="submit" data-testid="apply-rename">Apply</button></footer>
+    </form></div>}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onClose={() => setPropertiesVisible(false)} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => setBulkRegistrationVisible(false)}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => setBulkRegistrationText(event.target.value)} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals}>Register Signals</button></footer></section></div>}

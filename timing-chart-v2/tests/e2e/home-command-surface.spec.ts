@@ -166,3 +166,31 @@ test("Context Menu exposes shared commands", async ({ page }) => {
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
+
+test("Rename uses the shared app-owned dialog with atomic Apply and view-only Cancel", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const row = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  await row.click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const beforeRevision = await page.getByTestId("revision-status").textContent();
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Rename", exact: true }).click();
+  await expect(page.getByTestId("rename-dialog")).toBeVisible();
+  await page.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByTestId("rename-dialog")).toHaveCount(0);
+  await expect(page.getByTestId("revision-status")).toHaveText(beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Rename", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await expect(page.getByTestId("rename-dialog")).toHaveCount(0);
+  await expect(page.getByTestId("revision-status")).toHaveText(beforeRevision!);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Rename", exact: true }).click();
+  await page.getByLabel("New name").fill("REQUEST_RENAMED");
+  await page.getByTestId("apply-rename").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_RENAMED");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
