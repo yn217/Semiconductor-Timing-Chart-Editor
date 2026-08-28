@@ -39,6 +39,17 @@ function orderedVisibleTimingRows(document: CanonicalDocument): readonly SignalI
   });
 }
 
+function geometryRowsFrom(document: CanonicalDocument, signalId: SignalId): SignalId[] {
+  const rows = orderedRows(document);
+  const start = rows.indexOf(signalId);
+  if (start < 0) return [];
+  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  return rows.slice(start).filter((id): id is SignalId => {
+    const signal = signals.get(id as SignalId);
+    return signal !== undefined && signal.type !== "commentRow" && signal.display.visible !== false;
+  });
+}
+
 function changedPositions<T extends string>(before: readonly T[], after: readonly T[]): T[] {
   const beforeIndex = new Map(before.map((id, index) => [id, index]));
   const afterIndex = new Map(after.map((id, index) => [id, index]));
@@ -589,6 +600,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (command.width !== undefined && (nextType !== "bus" || !Number.isInteger(command.width) || command.width < 1)) return fail("invalid", "INVALID_SIGNAL_WIDTH", "$.width", "Width must be a positive integer and applies only to bus signals.");
       if (command.displayAlign !== undefined && !["left", "center", "right"].includes(command.displayAlign)) return fail("invalid", "INVALID_DISPLAY_ALIGN", "$.displayAlign", "Display alignment is invalid.");
       if (command.displayOverflow !== undefined && !["expand", "ellipsis", "wrap"].includes(command.displayOverflow)) return fail("invalid", "INVALID_DISPLAY_OVERFLOW", "$.displayOverflow", "Display overflow is invalid.");
+      if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_SIGNAL_SPACING", "$.spacing", "Signal spacing must be finite and non-negative.");
       const currentFormat = signal.type === "bus" ? signal.displayFormat : undefined;
       const currentWidth = signal.type === "bus" ? signal.width : undefined;
       const currentVisible = signal.display.visible !== false;
@@ -601,18 +613,22 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextAlign = command.displayAlign ?? currentAlign;
       const nextOverflow = command.displayOverflow ?? currentOverflow;
       const nextStyle = command.displayStyle ?? currentStyle;
-      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && JSON.stringify(currentStyle) === JSON.stringify(nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
+      const nextSpacingBefore = command.spacingBefore ?? signal.spacingBefore;
+      const nextSpacingAfter = command.spacingAfter ?? signal.spacingAfter;
+      if (signal.name === name && signal.role === command.role && signal.type === nextType && currentFormat === nextFormat && currentWidth === nextWidth && currentVisible === nextVisible && currentAlign === nextAlign && currentOverflow === nextOverflow && signal.spacingBefore === nextSpacingBefore && signal.spacingAfter === nextSpacingAfter && JSON.stringify(currentStyle) === JSON.stringify(nextStyle)) return fail("no-op", "NO_OP", "$", "Signal properties are unchanged.");
       const nextDisplay = { ...signal.display, name, visible: nextVisible, ...(nextAlign === undefined ? {} : { align: nextAlign }), ...(nextOverflow === undefined ? {} : { overflow: nextOverflow }), ...(nextStyle === undefined ? {} : { style: nextStyle }) };
       const next: Signal = signal.type === "clock"
-        ? { ...signal, name, role: command.role, display: nextDisplay }
+        ? { ...signal, name, role: command.role, display: nextDisplay, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) }
         : (() => {
           const { type: _type, width: _width, displayFormat: _displayFormat, ...base } = signal;
           const valueType = (command.signalType ?? signal.type) as ValueSignal["type"];
-          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }) };
+          return { ...base, type: valueType, name, role: command.role, display: nextDisplay, ...(nextWidth === undefined ? {} : { width: nextWidth }), ...(nextFormat === undefined ? {} : { displayFormat: nextFormat }), ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
         })();
       const waveformChanged = signal.type !== nextType || currentFormat !== nextFormat || currentWidth !== nextWidth;
+      const spacingChanged = signal.spacingBefore !== nextSpacingBefore || signal.spacingAfter !== nextSpacingAfter;
       const changeSet: ChangeSet = {
         rowPresentation: [signal.id],
+        ...(spacingChanged ? { geometryScreenY: geometryRowsFrom(document, signal.id) } : {}),
         ...(waveformChanged ? { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: dependentAnnotations(document, signal.id).map((annotation) => annotation.id) } : {}),
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };

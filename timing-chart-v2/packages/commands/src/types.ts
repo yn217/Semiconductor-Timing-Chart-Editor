@@ -45,7 +45,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.moveValue"; signalId: SignalId; fromStart: number; toStart: number }>
   | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
-  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: "hex" | "binary" | "symbolic"; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"] }>
+  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: "hex" | "binary" | "symbolic"; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number }>
   | Readonly<{ id: CommandId; type: "commentRow.create"; commentRow: CommentRow; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string }>
   | Readonly<{ id: CommandId; type: "commentRow.delete"; signalId: SignalId }>

@@ -178,6 +178,14 @@ describe("pure Semantic Command planning", () => {
       expect(inspectorProperties.document.signals[1]).toMatchObject({ name: "DATA_INSPECTED", role: "output", type: "bus", width: 16, displayFormat: "binary", display: { name: "DATA_INSPECTED", visible: false, align: "center", overflow: "wrap", style: { color: "#114477" } } });
       expect(inspectorProperties.changeSet).toMatchObject({ rowPresentation: ["sig_data"], waveSemantics: ["sig_data"], geometryLocal: ["sig_data"] });
     }
+    const spacing = planCommand(source, { id: commandId("cmd_signal_spacing"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "output", spacingBefore: 3, spacingAfter: 5 });
+    expect(spacing.ok).toBe(true);
+    if (spacing.ok) {
+      expect(spacing.document.signals[1]).toMatchObject({ spacingBefore: 3, spacingAfter: 5 });
+      expect(spacing.changeSet).toMatchObject({ rowPresentation: ["sig_data"], geometryScreenY: ["sig_data"] });
+      expect(spacing.changeSet.waveSemantics).toBeUndefined();
+      expect(spacing.changeSet.geometryLocal).toBeUndefined();
+    }
     const retyped = planCommand(source, { id: commandId("cmd_retype"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "internal", signalType: "binary" });
     expect(retyped.ok).toBe(true);
     if (retyped.ok) {

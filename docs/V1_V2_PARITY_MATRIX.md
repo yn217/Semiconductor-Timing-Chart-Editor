@@ -173,3 +173,13 @@ that overlay path. Unit coverage is in
 `timing-chart-v2/tests/export/deterministic-export.test.ts`; browser export
 coverage is in `timing-chart-v2/tests/e2e/transaction-export.spec.ts`.
 The complete V1 visual trace matrix remains open.
+
+Signal individual spacing parity is now wired for Value and Clock rows. The
+Inspector keeps `spacingBefore` and `spacingAfter` as transient drafts and
+applies them through `signal.updateProperties`; the Planner emits only the
+affected downstream screen-Y rows, leaving WaveDrom and Local Geometry
+unchanged. Unit coverage is in
+`timing-chart-v2/tests/commands/semantic-commands.test.ts`, and real-browser
+coverage including Undo/Redo and Save/Open is in
+`timing-chart-v2/tests/e2e/signal-spacing.spec.ts`. Comment Row spacing and
+full V1 visual parity remain open.
