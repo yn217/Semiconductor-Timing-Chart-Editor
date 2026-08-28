@@ -1,0 +1,4 @@
+/* Shared tokens. Region selectors must not be added here. */
+:root {
+  --gui-token-wire-badge-width: 34px;
+}

@@ -1,0 +1,11 @@
+{
+  "Ribbon": ["apps/editor/src/styles/ribbon.css", "apps/editor/src/styles/responsive.css"],
+  "LeftTree": ["apps/editor/src/styles/left-tree.css", "apps/editor/src/styles/role-badge.css"],
+  "CenterColumns": ["apps/editor/src/styles/center-columns.css", "apps/editor/src/styles/role-badge.css"],
+  "Waveform": ["apps/editor/src/styles/waveform.css"],
+  "Inspector": ["apps/editor/src/styles/inspector.css"],
+  "Bottom": ["apps/editor/src/styles/bottom-editor.css"],
+  "MiniMap": ["apps/editor/src/styles/minimap.css"],
+  "Status": ["apps/editor/src/styles/status-bar.css"],
+  "Shared": ["apps/editor/src/styles/tokens.css", "apps/editor/src/styles/app-shell.css"]
+}
