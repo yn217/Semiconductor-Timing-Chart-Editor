@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
-test("matches the v8 shell contract without mutating canonical state", async ({ page }) => {
+test("matches the v8 shell contract without mutating canonical state", async ({ page }, testInfo) => {
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await expect(page.locator(".ribbon-tabs > button:not(.compatibility-tab)")).toHaveText(["File", "Home", "Insert", "Edit", "View", "Check", "AI"]);
@@ -72,7 +72,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   const firstWave = await page.locator("[data-role='wave-owner']").first().boundingBox();
   expect(firstWave?.width ?? 0).toBeGreaterThan(890);
   await expect(page.getByTestId("selection-status")).toHaveText("clk");
-  await expect(page.getByTestId("tool-status")).toHaveText("Ready");
+  await expect(page.getByTestId("tool-status")).toHaveText("Ready · Tool: Select");
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 10");
   await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 0");
   await expect(page.getByTestId("range-status")).toHaveText("Time Range: 0 – 10 cycles");
@@ -112,7 +112,11 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await page.getByTestId("clock-preview").click();
   await expect(page.getByTestId("clock-preview-status")).toContainText("Preview only");
   expect(await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before);
-  await page.screenshot({ path: "artifacts/gui-v8/reference-contract-dut.png", animations: "disabled" });
+  // Keep the DUT capture attached to this test invocation. Playwright's
+  // outputPath is retry/worker collision-safe and is already disposable via
+  // the repository's test-results policy, while preserving the screenshot in
+  // the test report for failure/debug inspection.
+  await page.screenshot({ path: testInfo.outputPath("reference-contract-dut.png"), animations: "disabled" });
 });
 
 test("applies the v8 Signal Inspector style controls as one semantic operation", async ({ page }) => {
