@@ -11,7 +11,7 @@ on:
   schedule:
     - cron: "23 17 * * *"
   push:
-    branches: [rewrite/v2]
+    branches: [main]
     paths: ["timing-chart-v2/**", ".github/workflows/timing-chart-v2.yml"]
   pull_request:
     paths: ["timing-chart-v2/**", ".github/workflows/timing-chart-v2.yml"]
