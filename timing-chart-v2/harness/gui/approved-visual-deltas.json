@@ -1,0 +1,9 @@
+{
+  "wireBadge": {
+    "status": "approved",
+    "reason": "User requested a narrower wire badge after Golden v8 approval",
+    "surfaces": ["left-tree", "frozen-role"],
+    "oldWidth": 42,
+    "newWidth": 34
+  }
+}
