@@ -5,6 +5,7 @@ test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 test("matches the v8 shell contract without mutating canonical state", async ({ page }) => {
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(page.locator(".ribbon-tabs > button:not(.compatibility-tab)")).toHaveText(["File", "Home", "Insert", "Edit", "View", "Check", "AI"]);
   const before = await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");
   const metrics = await page.evaluate(() => {
     const rect = (selector: string) => {
