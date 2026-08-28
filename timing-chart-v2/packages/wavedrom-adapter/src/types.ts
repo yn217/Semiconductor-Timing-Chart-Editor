@@ -37,6 +37,11 @@ export interface RenderedWave {
 
 export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
+  readonly renderCallsBySignal: Readonly<Record<string, number>>;
+  readonly cacheHits: number;
+  readonly cacheMisses: number;
+  readonly mounts: number;
+  readonly disposals: number;
   readonly geometryBuilds: number;
   readonly geometryMatrixReads: number;
   readonly activeOwners: number;

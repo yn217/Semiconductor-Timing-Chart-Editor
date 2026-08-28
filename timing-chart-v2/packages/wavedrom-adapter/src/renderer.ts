@@ -31,11 +31,22 @@ interface ActiveOwner {
   readonly rendered: RenderedWave;
 }
 
+interface MarkupCacheEntry {
+  readonly key: string;
+  readonly markup: string;
+}
+
 export class ProductionWaveDromAdapter implements WaveDromAdapter {
   readonly #renderIndices = new Map<SignalId, number>();
   readonly #active = new Map<SignalId, ActiveOwner>();
+  readonly #markupCache = new Map<SignalId, MarkupCacheEntry>();
+  readonly #renderCallsBySignal = new Map<SignalId, number>();
   #nextRenderIndex = 0;
   #renderCalls = 0;
+  #cacheHits = 0;
+  #cacheMisses = 0;
+  #mounts = 0;
+  #disposals = 0;
   #geometryBuilds = 0;
   #geometryMatrixReads = 0;
 
@@ -52,7 +63,19 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
       this.#nextRenderIndex += 1;
       this.#renderIndices.set(signalId, renderIndex);
     }
-    const markup = renderWaveJsonMarkup(waveJson, renderIndex);
+    this.#renderCalls += 1;
+    this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
+    const cacheKey = `${WAVEDROM_VERSION}\u0000${JSON.stringify(waveJson)}`;
+    const cached = this.#markupCache.get(signalId);
+    let markup: string;
+    if (cached?.key === cacheKey) {
+      markup = cached.markup;
+      this.#cacheHits += 1;
+    } else {
+      markup = renderWaveJsonMarkup(waveJson, renderIndex);
+      this.#markupCache.set(signalId, { key: cacheKey, markup });
+      this.#cacheMisses += 1;
+    }
     const template = mount.ownerDocument.createElement("template");
     template.innerHTML = markup.trim();
     const svg = template.content.firstElementChild;
@@ -70,7 +93,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     mount.replaceChildren(svg);
     const rendered: RenderedWave = { signalId, ownerKey: signalId, svg: svg as SVGElement, renderIndex, waveJson };
     this.#active.set(signalId, { mount, rendered });
-    this.#renderCalls += 1;
+    this.#mounts += 1;
     return rendered;
   }
 
@@ -86,13 +109,16 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     if (owner) this.#clearOwner(owner);
     this.#active.delete(signalId);
     this.#renderIndices.delete(signalId);
+    this.#markupCache.delete(signalId);
+    this.#renderCallsBySignal.delete(signalId);
   }
 
   metrics(): WaveDromAdapterMetrics {
-    return { renderCalls: this.#renderCalls, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
+    return { renderCalls: this.#renderCalls, renderCallsBySignal: Object.fromEntries(this.#renderCallsBySignal), cacheHits: this.#cacheHits, cacheMisses: this.#cacheMisses, mounts: this.#mounts, disposals: this.#disposals, geometryBuilds: this.#geometryBuilds, geometryMatrixReads: this.#geometryMatrixReads, activeOwners: this.#active.size, allocatedRenderIndices: this.#renderIndices.size };
   }
 
   #clearOwner(owner: ActiveOwner): void {
+    this.#disposals += 1;
     if (owner.rendered.svg.parentElement === owner.mount) owner.rendered.svg.remove();
     if (owner.mount.getAttribute("data-wave-owner") === owner.rendered.signalId) owner.mount.removeAttribute("data-wave-owner");
   }
