@@ -11,6 +11,8 @@ test("surfaces a WaveDrom render failure in the Problems panel and status bar, a
   await page.getByTestId("apply-clock-generator").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.locator(".status-bar")).toContainText("WaveDrom: Error");
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(0);
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'] > svg")).toHaveCount(1);
   await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("WAVE_RENDER_ERROR");
   await expect(page.getByTestId("problems-panel")).toContainText("phase aligned to a half cycle");
@@ -20,6 +22,7 @@ test("surfaces a WaveDrom render failure in the Problems panel and status bar, a
   await page.getByTestId("apply-clock-generator").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.locator(".status-bar")).toContainText("WaveDrom: Ready");
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(1);
   await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("No validation problems");
 });
