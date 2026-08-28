@@ -223,12 +223,14 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
     const xs: number[] = [];
     for (let i = 0; i < count; i += 1) {
       const box = await uses.nth(i).boundingBox();
-      if (box && box.width > 22) xs.push(box.x);
+      const shape = await uses.nth(i).getAttribute("xlink:href");
+      if (box && Number.isFinite(box.x) && box.width > 0 && box.height > 0 && shape?.includes("m")) xs.push(box.x);
     }
     return xs;
   };
 
   const beforeXs = await transitionXs();
+  expect(beforeXs.length).toBeGreaterThan(0);
   const cycle3X = (await ruler.locator("[data-cycle='3']").boundingBox())!.x;
   const cycle4X = (await ruler.locator("[data-cycle='4']").boundingBox())!.x;
   expect(Math.abs(beforeXs[0] - cycle3X)).toBeLessThan(3);
@@ -245,6 +247,7 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   const afterXs = await transitionXs();
+  expect(afterXs.length).toBeGreaterThan(0);
   expect(Math.abs(afterXs[0] - cycle4X)).toBeLessThan(3);
   expect(Math.abs(afterXs[0] - cycle3X)).toBeGreaterThan(10);
 });
