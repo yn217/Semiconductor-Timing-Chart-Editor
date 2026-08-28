@@ -406,7 +406,7 @@ export function MinimalCycleView() {
     const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-frozen-width")) || 210);
     const applyZoom = (next: number) => {
       currentZoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
-      const scalable = [rulerElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
+      const scalable = [rulerElement, gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
       for (const element of scalable) {
         element.style.transformOrigin = "0 0";
         element.style.scale = `${currentZoom} 1`;
@@ -2221,8 +2221,9 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");
     line.dataset.role = "geometry-grid-line";
+    line.className = "geometry-grid-line";
     line.dataset.cycle = String(mapping.labelFor(displayCycle));
-    line.style.transform = `translateX(${anchor.point.x * scale}px)`;
+    line.style.left = `${anchor.point.x * scale}px`;
     line.style.height = `${height}px`;
     lines.push(line);
   }
