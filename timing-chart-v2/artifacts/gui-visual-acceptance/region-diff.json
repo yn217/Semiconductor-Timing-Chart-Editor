@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "bbaf42f08c290c94eb0dd8b826272df15004c106",
-    "sourceFingerprint": "bc239c71021231ad9117974810ecbb82ea8419917fdb9ae8122963ced668b3c4",
-    "generatedAt": "2026-08-28T16:24:47.797Z",
+    "testedCommit": "0a3dd783e28e51d0756b32c15f29da96907d2f04",
+    "sourceFingerprint": "ecb28f9d12f5ab10d02415140cb9f09a3ad7ced24ac56c9830ab89fa090b5eeb",
+    "generatedAt": "2026-08-28T16:52:20.087Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "viewport": {
@@ -35,9 +35,9 @@
       "y": 65,
       "width": 1672,
       "height": 102,
-      "changedPixels": 21750,
+      "changedPixels": 17469,
       "comparedPixels": 170544,
-      "diffPercent": 0.12753307064452576
+      "diffPercent": 0.10243104418801013
     },
     "Left Tree": {
       "x": 0,
@@ -89,9 +89,9 @@
       "y": 167,
       "width": 297,
       "height": 749,
-      "changedPixels": 43178,
+      "changedPixels": 43177,
       "comparedPixels": 222453,
-      "diffPercent": 0.19409942774428757
+      "diffPercent": 0.1940949324126894
     },
     "Bottom": {
       "x": 265,
@@ -116,9 +116,9 @@
       "y": 916,
       "width": 1672,
       "height": 25,
-      "changedPixels": 6128,
+      "changedPixels": 5648,
       "comparedPixels": 41800,
-      "diffPercent": 0.14660287081339712
+      "diffPercent": 0.1351196172248804
     }
   }
 }
