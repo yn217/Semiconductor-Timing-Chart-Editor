@@ -9,6 +9,9 @@ export class DefaultProjectionService implements ProjectionService {
   #layout: ReturnType<typeof calculateRowLayout> | undefined;
   #projectionBuilds = 0;
   #viewportOnlyBuilds = 0;
+  #fullVisibleRowScans = 0;
+  #viewportRowsVisited = 0;
+  #viewportBinarySearchSteps = 0;
   #rowLayoutBuilds = 0;
   #lastMountedRange: readonly [number, number] = [0, 0];
   #rowIndexById = new Map<RowLayoutEntry["rowId"], number>();
@@ -30,6 +33,7 @@ export class DefaultProjectionService implements ProjectionService {
       this.#viewportOnlyBuilds += 1;
       return this.#projectViewportOnly(request, layout);
     }
+    this.#fullVisibleRowScans += layout.visibleRows.length;
     const visibleRowIds = layout.visibleRows.map((row) => row.rowId);
     const pinned = new Set(request.viewport.pinnedRowIds);
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
@@ -73,17 +77,18 @@ export class DefaultProjectionService implements ProjectionService {
   }
 
   diagnostics() {
-    return Object.freeze({ projectionBuilds: this.#projectionBuilds, viewportOnlyBuilds: this.#viewportOnlyBuilds, rowLayoutBuilds: this.#rowLayoutBuilds, lastMountedRange: this.#lastMountedRange });
+    return Object.freeze({ projectionBuilds: this.#projectionBuilds, viewportOnlyBuilds: this.#viewportOnlyBuilds, fullVisibleRowScans: this.#fullVisibleRowScans, viewportRowsVisited: this.#viewportRowsVisited, viewportBinarySearchSteps: this.#viewportBinarySearchSteps, rowLayoutBuilds: this.#rowLayoutBuilds, lastMountedRange: this.#lastMountedRange });
   }
 
   #projectViewportOnly(request: ProjectionRequest, layout: RowLayoutResult): RenderProjection {
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
-    const firstHeader = upperBound(layout.groupHeaders, request.viewport.viewportEndY, (header) => header.y);
+    const firstHeader = upperBound(layout.groupHeaders, request.viewport.viewportEndY, (header) => header.y, () => { this.#viewportBinarySearchSteps += 1; });
     const crossedHeaderHeight = this.#groupHeaderPrefixHeights[firstHeader] ?? 0;
     const rangeEnd = end + crossedHeaderHeight;
-    const firstRow = lowerBound(layout.navigationRows, start, (row) => row.y + row.height);
-    const afterLastRow = upperBound(layout.navigationRows, rangeEnd, (row) => row.y);
+    const firstRow = lowerBound(layout.navigationRows, start, (row) => row.y + row.height, () => { this.#viewportBinarySearchSteps += 1; });
+    const afterLastRow = upperBound(layout.navigationRows, rangeEnd, (row) => row.y, () => { this.#viewportBinarySearchSteps += 1; });
+    this.#viewportRowsVisited += Math.max(0, afterLastRow - firstRow);
     const candidateIds = new Set<RowLayoutEntry["rowId"]>();
     for (let index = firstRow; index < afterLastRow; index += 1) candidateIds.add(layout.navigationRows[index]!.rowId);
     for (const rowId of request.viewport.pinnedRowIds) candidateIds.add(rowId);
@@ -94,7 +99,7 @@ export class DefaultProjectionService implements ProjectionService {
       .sort((left, right) => left - right)
       .map((index) => layout.navigationRows[index]!);
     const mountedGroupHeaders = layout.groupHeaders
-      .slice(Math.max(0, lowerBound(layout.groupHeaders, start, (header) => header.y + header.height)), firstHeader + 1)
+      .slice(Math.max(0, lowerBound(layout.groupHeaders, start, (header) => header.y + header.height, () => { this.#viewportBinarySearchSteps += 1; })), firstHeader + 1)
       .filter((header) => intersects(header, start, end));
     const mountedRowIds = mountedRows.map((row) => row.rowId);
     this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
@@ -115,10 +120,11 @@ export class DefaultProjectionService implements ProjectionService {
   }
 }
 
-function lowerBound<T>(items: readonly T[], target: number, value: (item: T) => number): number {
+function lowerBound<T>(items: readonly T[], target: number, value: (item: T) => number, onStep?: () => void): number {
   let low = 0;
   let high = items.length;
   while (low < high) {
+    onStep?.();
     const middle = Math.floor((low + high) / 2);
     if (value(items[middle]!) < target) low = middle + 1;
     else high = middle;
@@ -126,10 +132,11 @@ function lowerBound<T>(items: readonly T[], target: number, value: (item: T) => 
   return low;
 }
 
-function upperBound<T>(items: readonly T[], target: number, value: (item: T) => number): number {
+function upperBound<T>(items: readonly T[], target: number, value: (item: T) => number, onStep?: () => void): number {
   let low = 0;
   let high = items.length;
   while (low < high) {
+    onStep?.();
     const middle = Math.floor((low + high) / 2);
     if (value(items[middle]!) <= target) low = middle + 1;
     else high = middle;

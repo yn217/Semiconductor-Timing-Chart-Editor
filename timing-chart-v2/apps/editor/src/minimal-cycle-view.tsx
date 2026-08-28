@@ -640,6 +640,7 @@ export function MinimalCycleView() {
         snapIndex = undefined;
         renderer.update(projection);
         rendererHost.dataset.viewportStartY = String(window.viewportStartY);
+        publishState();
       });
     };
     const onViewportKeyDown = (event: KeyboardEvent) => {

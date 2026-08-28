@@ -143,7 +143,7 @@ describe("RowLayout and projection invariants", () => {
     const service = new DefaultProjectionService();
     const first = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport: { viewportStartY: 0, viewportEndY: 25, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } });
     service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport: { viewportStartY: 40, viewportEndY: 70, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] }, previous: first });
-    expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, viewportOnlyBuilds: 1, rowLayoutBuilds: 1 });
+    expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, viewportOnlyBuilds: 1, fullVisibleRowScans: 3, viewportRowsVisited: expect.any(Number), viewportBinarySearchSteps: expect.any(Number), rowLayoutBuilds: 1 });
     service.project({ snapshot: { revision: 1, document } as CanonicalSnapshot, changeSet: { rowPresentation: ["sig_data" as RowId] }, viewport: { viewportStartY: 40, viewportEndY: 70, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } });
     expect(service.diagnostics().rowLayoutBuilds).toBe(2);
   });
@@ -165,6 +165,6 @@ describe("RowLayout and projection invariants", () => {
     expect(scrolled.mountedRowIds).toEqual(["sig_clk", "sig_data"]);
     expect(scrolled.rowLayout).toBe(first.rowLayout);
     expect(scrolled.canonicalRowIds).toBe(first.canonicalRowIds);
-    expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, viewportOnlyBuilds: 1, rowLayoutBuilds: 1 });
+    expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, viewportOnlyBuilds: 1, fullVisibleRowScans: 3, viewportRowsVisited: 1, viewportBinarySearchSteps: expect.any(Number), rowLayoutBuilds: 1 });
   });
 });
