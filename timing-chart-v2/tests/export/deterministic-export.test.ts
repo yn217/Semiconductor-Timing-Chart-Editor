@@ -63,6 +63,13 @@ describe("deterministic document export", () => {
     expect(first).not.toMatch(/Inspector|Ribbon|selection-handle|snap-guide/);
   });
 
+  it("exports the canonical editable Legend position", () => {
+    const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.legendPosition).toEqual({ x: 36, y: 48 });
+    expect(renderExportSvg(scene)).toContain('<g data-layer="legend" transform="translate(36 48)"');
+  });
+
   it("supports selected-range SVG and deterministic PDF bytes", async () => {
     const document = scaleFixture(3);
     const service = new DeterministicExportService();

@@ -290,6 +290,10 @@ body { min-width: 1100px; }
 .rename-dialog { width: min(420px, calc(100vw - 48px)); }
 .rename-dialog h2 { margin: 14px 0; font-size: 16px; color: #20364d; }
 .rename-dialog .dialog-error { margin: 4px 0 0; color: #b3261e; font-size: 11px; }
+.legend-position-editor { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.legend-position-editor label { margin: 0; }
+.editor-legend { cursor: grab; }
+.editor-legend:active { cursor: grabbing; }
 
 /* v8 approved visual contract.  The normal editor keeps its responsive V2
    layout; the reference mode is the deterministic Chromium acceptance mode. */
