@@ -139,7 +139,9 @@ Split View parity was also extended in this batch: Home retains the Signal
 command groups and exposes Add/Duplicate/Delete Transaction actions while
 Split is active. The actions use the existing SemanticCommand path and are
 covered by `tests/e2e/transaction-export.spec.ts`; full V1 visual closure
-remains open.
+remains open. The same suite now exports from an active Split View and asserts
+that the canonical ExportScene contains both stable signal and transaction
+layers while Canonical, History, and render counters remain unchanged.
 
 The Home Ribbon now exposes an explicit V8 major-surface grouping layer for
 File, Edit, Layout, Time, Zoom and Options, with Display represented as its

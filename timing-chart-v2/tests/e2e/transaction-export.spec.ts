@@ -67,6 +67,37 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
+test("exports both synchronized signal and transaction layers from Split View", async ({ page }) => {
+  await ready(page);
+  await createTransaction(page, "Split Export", 2, 6);
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+  await expect(page.getByTestId("cycle-surface")).toBeVisible();
+
+  const surface = page.getByTestId("cycle-surface");
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+    counters: await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
+  };
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const pending = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Export SVG" }).click();
+  const bytes = await (await pending).path();
+  const svg = await readFile(bytes!);
+  const text = svg.toString("utf8");
+
+  expect(text).toContain('data-signal-id="sig_cycle_clock"');
+  expect(text).toContain('data-transaction-id=');
+  expect(text).toContain("Split Export");
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
+  expect(await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
+});
+
 test("keeps the Split View surface contract and view mode changes view-only", async ({ page }) => {
   await ready(page);
   const panel = page.locator(".cycle-panel");
