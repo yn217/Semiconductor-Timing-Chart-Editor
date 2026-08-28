@@ -97,7 +97,12 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const box = await annotation.locator("[data-role='annotation-body']").boundingBox(); await page.mouse.move(box!.x + 2, box!.y + 2); await page.mouse.down(); await page.mouse.move(box!.x + 10, box!.y + 4); await annotation.dispatchEvent("pointercancel"); await page.mouse.up();
   expect(await counters(page)).toEqual(previewBefore); await expect(page.getByTestId("history-status")).toHaveText(historyBeforePreview!);
 
-  const viewport = page.getByTestId("cycle-viewport"); await viewport.evaluate((element) => { element.scrollTop = 300; element.dispatchEvent(new Event("scroll")); }); await page.waitForTimeout(500);
+  const viewport = page.getByTestId("cycle-viewport"); const sessionBeforeScroll = await sessionCounters(page); await viewport.evaluate((element) => { element.scrollTop = 300; element.dispatchEvent(new Event("scroll")); }); await page.waitForTimeout(500);
+  const sessionAfterScroll = await sessionCounters(page);
+  expect(sessionAfterScroll.fullVisibleRowScans).toBe(sessionBeforeScroll.fullVisibleRowScans);
+  expect(sessionAfterScroll.viewportOnlyBuilds).toBeGreaterThan(sessionBeforeScroll.viewportOnlyBuilds);
+  expect(sessionAfterScroll.viewportRowsVisited).toBeGreaterThan(0);
+  expect(sessionAfterScroll.rowLayoutBuilds).toBe(sessionBeforeScroll.rowLayoutBuilds);
   const viewBefore = await counters(page); const sessionBeforeView = await sessionCounters(page); const historyBeforeView = await page.getByTestId("history-status").textContent();
   await viewport.evaluate((element) => { element.scrollLeft += 8; element.dispatchEvent(new Event("scroll")); }); await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click(); await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click(); await page.waitForTimeout(100);
   const viewAfter = await counters(page); expect(viewAfter.waveDromRenders).toBe(viewBefore.waveDromRenders); expect(viewAfter.localGeometryBuilds).toBe(viewBefore.localGeometryBuilds); await expect(page.getByTestId("history-status")).toHaveText(historyBeforeView!);
