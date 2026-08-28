@@ -116,6 +116,8 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
     else {
       const valueOnly = anchor.point === "value-start" || anchor.point === "value-center";
       if (valueOnly && target.type === "clock") problems.push(problem("INVALID_ANCHOR_POINT", `${path}.point`, `Point '${anchor.point}' requires a value signal.`, annotation.id));
+      const edgeOnly = anchor.point === "rising-edge" || anchor.point === "falling-edge";
+      if (edgeOnly && (target.type === "bus" || target.type === "state")) problems.push(problem("INVALID_ANCHOR_POINT", `${path}.point`, `Point '${anchor.point}' is not defined for ${target.type} signals.`, annotation.id));
     }
   } else if (["rising-edge", "falling-edge", "value-start", "value-center", "row-center"].includes(anchor.point)) {
     problems.push(problem("ANCHOR_SIGNAL_REQUIRED", `${path}.signalId`, `Point '${anchor.point}' requires signalId.`, annotation.id));

@@ -172,6 +172,7 @@ describe("semantic validation", () => {
   it("rejects anchor points that are incompatible with their signal target", () => {
     const document = clone(canonicalFixture());
     (document.annotations as unknown as Array<Record<string, unknown>>).push({ id: "ann_bad_point", type: "text", label: "bad", visible: true, anchor: { signalId: "sig_clk", cycle: 1, point: "value-center" } });
+    (document.annotations as unknown as Array<Record<string, unknown>>).push({ id: "ann_bad_edge", type: "text", label: "bad edge", visible: true, anchor: { signalId: "sig_data", cycle: 1, point: "rising-edge" } });
     expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("INVALID_ANCHOR_POINT");
   });
 
