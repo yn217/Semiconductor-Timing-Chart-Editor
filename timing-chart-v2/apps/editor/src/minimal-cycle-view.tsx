@@ -2024,7 +2024,7 @@ function InspectorValueSignalEditor({ signal, document, viewport, onCommand, onR
      onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, spacingBefore, spacingAfter, displayAlign: align, displayOverflow: overflow, displayStyle: { ...parsedStyle, ...structuredStyle } });
   };
   const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
-  return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><b>Signal</b></header>
+  return <aside className="inspector" data-testid="inspector" data-inspector-context="signal"><header><span>Inspector</span><b>Signal</b></header>
     <form className="inspector-signal-properties" data-testid="inspector-signal-properties" onSubmit={apply}>
       <section><h3>Signal</h3>
         <label>Display Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} /></label>
@@ -2074,7 +2074,7 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal 
     const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
      onCommand({ id: nextCommandId("inspector_clock_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, visible, spacingBefore, spacingAfter, displayAlign: align, displayOverflow: overflow, displayStyle: { ...styleObject, color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground } });
   };
-  return <aside className="inspector" data-testid="inspector"><header><span>Inspector</span><b>Clock</b></header>
+  return <aside className="inspector" data-testid="inspector" data-inspector-context="clock"><header><span>Inspector</span><b>Clock</b></header>
     <div className="inspector-scroll">
     <section><h3>Signal Properties</h3><form className="inspector-clock-properties" aria-label="Inspector Clock Properties" onSubmit={applyProperties}>
       <label>Name<input aria-label="Inspector signal name" value={name} onChange={(event) => setName(event.target.value)} /></label>
