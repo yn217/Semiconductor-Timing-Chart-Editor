@@ -2,8 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const matrixPath = path.join(root, "docs", "v1-v2-parity.json");
+const argumentValue = (name, fallback) => {
+  const index = process.argv.indexOf(name);
+  return index >= 0 && process.argv[index + 1] ? path.resolve(process.argv[index + 1]) : fallback;
+};
+const matrixPath = argumentValue("--matrix", path.join(root, "docs", "v1-v2-parity.json"));
+const sourceManifestPath = argumentValue("--manifest", path.join(root, "docs", "v1-v2-source-manifest.json"));
 const matrix = JSON.parse(fs.readFileSync(matrixPath, "utf8"));
+const sourceManifest = JSON.parse(fs.readFileSync(sourceManifestPath, "utf8"));
 const requiredFields = [
   "v1Source", "requirement", "decision", "v2OwnerIssue", "canonicalOwner",
   "commandOwner", "viewOwner", "exportOwner", "unit", "e2e", "visual",
@@ -12,6 +18,7 @@ const requiredFields = [
 const fail = (message) => { throw new Error(`[v1-v2-parity] ${message}`); };
 
 if (matrix.schemaVersion !== 1) fail("unsupported schemaVersion");
+if (sourceManifest.schemaVersion !== 1 || !Array.isArray(sourceManifest.issues)) fail("invalid V1 source manifest");
 if (!Array.isArray(matrix.requirements) || matrix.requirements.length < 20) fail("requirements inventory is unexpectedly small");
 if (!Array.isArray(matrix.independentContracts) || matrix.independentContracts.length < 20) fail("independent contract inventory is incomplete");
 if (!Array.isArray(matrix.legacyIssueCoverage) || matrix.legacyIssueCoverage.length < 50) fail("legacy issue universe is incomplete");
@@ -34,6 +41,14 @@ for (const id of highRisk) if (!ids.has(id)) fail(`missing high-risk GUI row ${i
 const coverage = matrix.legacyIssueCoverage;
 if (new Set(coverage).size !== coverage.length) fail("duplicate legacy issue number");
 if (coverage.some((number) => !Number.isInteger(number) || number <= 0 || number >= 161)) fail("legacy issue coverage contains an invalid pre-V2 number");
+const manifestIssues = sourceManifest.issues;
+if (new Set(manifestIssues).size !== manifestIssues.length) fail("duplicate source-manifest issue number");
+if (manifestIssues.some((number) => !Number.isInteger(number) || number <= 0 || number >= 161)) fail("source manifest contains an invalid pre-V2 number");
+const sortedIssues = (issues) => [...issues].sort((left, right) => left - right);
+const missingFromMatrix = manifestIssues.filter((issue) => !coverage.includes(issue));
+const staleMatrixIssues = coverage.filter((issue) => !manifestIssues.includes(issue));
+if (missingFromMatrix.length || staleMatrixIssues.length) fail(`source-universe mismatch: missingFromMatrix=${missingFromMatrix.join(",") || "none"}, staleMatrixIssues=${staleMatrixIssues.join(",") || "none"}`);
+if (JSON.stringify(sortedIssues(manifestIssues)) !== JSON.stringify(sortedIssues(coverage))) fail("source-manifest and matrix coverage ordering/content differ");
 const allRows = [...matrix.requirements, ...matrix.independentContracts];
 const rowIds = new Set(allRows.map(({ id }) => id));
 const independentFields = ["v1Source", "requirement", "decision", "v2OwnerIssue", "acceptance", "implementationEvidence", "unit", "e2e", "visual", "export", "status"];
@@ -51,6 +66,8 @@ for (const assignment of matrix.legacyIssueAssignments) {
 }
 const unmapped = coverage.filter((issue) => !assigned.has(issue));
 if (unmapped.length !== 0) fail(`UNMAPPED_LEGACY_ISSUE=${unmapped.length}: ${unmapped.join(",")}`);
+const unknownAssignments = [...assigned.keys()].filter((issue) => !manifestIssues.includes(issue));
+if (unknownAssignments.length !== 0) fail(`assignment references issue outside source manifest: ${unknownAssignments.join(",")}`);
 const duplicateContractIds = allRows.length - new Set(allRows.map(({ id }) => id)).size;
 if (duplicateContractIds !== 0) fail(`duplicate contract ID count=${duplicateContractIds}`);
 const unclassified = allRows.filter(({ decision }) => !decision).length;
@@ -63,8 +80,12 @@ for (const contract of allRows.filter(({ decision }) => decision === "MERGED")) 
   const evidence = [contract.acceptance, contract.implementationEvidence, contract.unit, contract.e2e, contract.visual, contract.export].every(Boolean);
   if (!evidence) fail(`${contract.id} is MERGED without evidence fields`);
 }
+for (const requirement of allRows) {
+  if (requirement.decision === "KEEP" && (!requirement.v2OwnerIssue || !String(requirement.v2OwnerIssue).trim())) fail(`${requirement.id} is KEEP without V2 owner`);
+  if (requirement.decision === "DEFER" && (!requirement.v2OwnerIssue || !String(requirement.v2OwnerIssue).trim() || !String(requirement.notes ?? "").trim())) fail(`${requirement.id} is DEFER without owner/reason`);
+}
 if (matrix.decisionPolicy.dropCount !== 0 || matrix.decisionPolicy.deferCount !== 0) fail("decision policy counts are not zero");
 if (allRows.some(({ decision }) => decision === "DROP" || decision === "DEFER")) fail("inventory contains DROP/DEFER despite zero policy");
 
 const counts = Object.fromEntries(["KEEP", "MERGED", "DEFER", "DROP"].map((decision) => [decision, allRows.filter((row) => row.decision === decision).length]));
-console.log(`V1/V2 parity inventory passed: ${allRows.length} contract rows (${matrix.requirements.length} grouped + ${matrix.independentContracts.length} independent), ${coverage.length} legacy issue references, UNCLASSIFIED=0, UNMAPPED_LEGACY_ISSUE=0, UNKNOWN_V2_OWNER=0, GUI-01..GUI-16 missing=0, conflicting decision=0, KEEP=${counts.KEEP}, MERGED=${counts.MERGED}, DEFER=${counts.DEFER}, DROP=${counts.DROP}.`);
+console.log(`V1/V2 parity inventory passed: ${allRows.length} contract rows (${matrix.requirements.length} grouped + ${matrix.independentContracts.length} independent), ${manifestIssues.length} manifest issues == ${coverage.length} matrix issues, UNCLASSIFIED=0, UNMAPPED_LEGACY_ISSUE=0, UNKNOWN_V2_OWNER=0, GUI-01..GUI-16 missing=0, conflicting decision=0, KEEP=${counts.KEEP}, MERGED=${counts.MERGED}, DEFER=${counts.DEFER}, DROP=${counts.DROP}.`);

@@ -18,6 +18,12 @@ The machine-readable source of truth is
 `Command Owner`, `View Owner`, `Export Owner`, `Unit`, `E2E`, `Visual`,
 `Save/Open`, `Performance`, and `Notes`.
 
+The independent pre-V2 source universe is recorded in
+[`v1-v2-source-manifest.json`](./v1-v2-source-manifest.json). The parity
+checker compares that manifest with both the matrix coverage and the contract
+assignments; an Issue cannot be silently removed from both the inventory and
+its assignment list.
+
 The `independentContracts` section prevents acceptance loss through broad
 grouping. It separately tracks Split View, Hardware Hierarchy/Full Path/Scope,
 Canvas Cycle Selection, Range Selection, Grid, Snap, Ruler, MiniMap,
@@ -28,8 +34,9 @@ Samples, and Export. Each currently has `status: OPEN_GAP` unless its evidence
 is complete.
 
 `legacyIssueAssignments` maps every issue in `legacyIssueCoverage` to at least
-one contract ID. The checker fails on any unmapped issue, unknown owner or
-unclassified decision.
+one contract ID. Run `npm run check:parity` (also included in `npm run check`
+and `npm run check:ci`) to fail on any unmapped issue, unknown owner,
+unclassified decision, stale source manifest, or MERGED row without evidence.
 
 ## High-Risk GUI section
 
