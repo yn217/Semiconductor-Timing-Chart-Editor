@@ -28,6 +28,7 @@ describe("buildDisplayTimeMapping", () => {
     expect(mapping.sourceToDisplay[15]).toBe(5); // first cycle after the gap
     expect(mapping.displayToSource[5]).toBe(15);
     expect(mapping.displayToSource[9]).toBe(19);
+    expect(mapping.labelFor(mapping.displayCycleCount)).toBe(20);
   });
 
   it("handles multiple non-overlapping collapsed ranges", () => {

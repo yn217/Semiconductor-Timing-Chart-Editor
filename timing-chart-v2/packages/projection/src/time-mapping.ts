@@ -35,7 +35,11 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     displayCycleCount: display,
     sourceToDisplay,
     displayToSource,
-    labelFor: (displayCycle) => labelOverrides.get(displayCycle) ?? displayToSource[displayCycle] ?? displayCycle,
+    // The exclusive terminal boundary is not a rendered cycle slot and is
+    // therefore absent from displayToSource. It must still retain the
+    // canonical half-open timeline end label after a fold; never fall back to
+    // the last visible source cycle (or an arbitrary display index).
+    labelFor: (displayCycle) => displayCycle === display ? timeline.cycleCount : labelOverrides.get(displayCycle) ?? displayToSource[displayCycle] ?? displayCycle,
   };
 }
 

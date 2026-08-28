@@ -154,6 +154,30 @@ test("positions a transaction ending at cycleCount on the actual terminal ruler 
   expect(Math.abs((transactionBox!.x + transactionBox!.width) - terminal!.x)).toBeLessThanOrEqual(1);
 });
 
+test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Add gap" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const tick = page.getByTestId("cycle-ruler").locator("[data-cycle='8']");
+  const before = await tick.boundingBox();
+  expect(before).not.toBeNull();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+  await page.getByLabel("New Transaction name").fill("Folded transfer");
+  await page.getByLabel("New Transaction start").fill("4");
+  await page.getByLabel("New Transaction end").fill("8");
+  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(transaction).toHaveCount(1);
+  const after = await transaction.boundingBox();
+  expect(after).not.toBeNull();
+  expect(Math.abs((after!.x + after!.width) - before!.x)).toBeLessThanOrEqual(1);
+});
+
 test("drag-selects a geometry-backed half-open range directly on the cycle ruler", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

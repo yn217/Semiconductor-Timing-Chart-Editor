@@ -2270,19 +2270,20 @@ function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onComm
   const lanes = [...new Set(["lane_0", ...document.transactions.map((transaction) => transaction.laneId ?? "lane_0")])].sort();
   const [drag, setDrag] = useState<{ id: TransactionId; edge: "body" | "start" | "end"; startX: number }>();
   const owner = useRef<HTMLElement>(null);
-  const [cycleXs, setCycleXs] = useState<readonly number[]>([]);
+  const [cycleXs, setCycleXs] = useState<readonly { readonly cycle: number; readonly x: number }[]>([]);
   useEffect(() => {
     setCycleXs([]);
     let frame = 0; let attempts = 0;
     const read = () => {
       const ruler = owner.current?.parentElement?.querySelector<HTMLElement>(".cycle-ruler");
-      const values = Array.from(ruler?.querySelectorAll<HTMLElement>("[data-cycle]") ?? []).map((tick) => Number.parseFloat(tick.style.left));
+      const values = Array.from(ruler?.querySelectorAll<HTMLElement>("[data-cycle]") ?? []).map((tick) => ({ cycle: Number(tick.dataset.cycle), x: Number.parseFloat(tick.style.left) }));
       // Transaction edges must use the complete LocalGeometry-derived ruler,
       // including the exclusive terminal boundary. Never synthesize a final
       // X from a presumed uniform pitch when the terminal geometry is not yet
       // available (or when a folded axis makes the intervals non-uniform).
-      if (values.length >= document.timeline.cycleCount + 1 && values.slice(0, document.timeline.cycleCount + 1).every(Number.isFinite)) {
-        setCycleXs(values.slice(0, document.timeline.cycleCount + 1));
+      const terminal = values.find((value) => value.cycle === document.timeline.cycleCount);
+      if (terminal && values.every((value) => Number.isInteger(value.cycle) && Number.isFinite(value.x))) {
+        setCycleXs(values);
       }
       else if (attempts++ < 20) frame = requestAnimationFrame(read);
     };
@@ -2304,8 +2305,8 @@ function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onComm
     }
   };
   const capture = (event: React.PointerEvent, next: { id: TransactionId; edge: "body" | "start" | "end" }) => { event.stopPropagation(); event.currentTarget.parentElement?.setPointerCapture(event.pointerId); setDrag({ ...next, startX: event.clientX }); };
-  const x = (cycle: number) => cycleXs[cycle];
-  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom } as React.CSSProperties}><div className="transaction-lane-labels">{lanes.map((lane) => <span key={lane}>{lane}</span>)}</div><div className="transaction-track">{lanes.map((lane, laneIndex) => <div className="transaction-lane" key={lane} style={{ top: laneIndex * 28 }}>{cycleXs.slice(0, document.timeline.cycleCount + 1).map((left, cycle) => <i className="transaction-geometry-line" aria-hidden="true" key={`cycle-${cycle}`} style={{ left }} />)}{document.transactions.filter((transaction) => (transaction.laneId ?? "lane_0") === lane).map((transaction) => { const startX = x(transaction.start); const endX = x(transaction.end); if (startX === undefined || endX === undefined) return null; return <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: startX, width: endX - startX }} onClick={() => onSelect(transaction.id)} onPointerUp={(event) => finish(event, transaction)}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>; })}</div>)}</div></section>;
+  const x = (cycle: number) => cycleXs.find((value) => value.cycle === cycle)?.x;
+  return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom } as React.CSSProperties}><div className="transaction-lane-labels">{lanes.map((lane) => <span key={lane}>{lane}</span>)}</div><div className="transaction-track">{lanes.map((lane, laneIndex) => <div className="transaction-lane" key={lane} style={{ top: laneIndex * 28 }}>{cycleXs.map((value) => <i className="transaction-geometry-line" aria-hidden="true" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}{document.transactions.filter((transaction) => (transaction.laneId ?? "lane_0") === lane).map((transaction) => { const startX = x(transaction.start); const endX = x(transaction.end); if (startX === undefined || endX === undefined) return null; return <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: startX, width: endX - startX }} onClick={() => onSelect(transaction.id)} onPointerUp={(event) => finish(event, transaction)}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>; })}</div>)}</div></section>;
 }
 
 function LayoutInspector({ document, viewport, onCommand }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => void }) {
