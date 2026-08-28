@@ -1,4 +1,5 @@
 {
+  "gitHead": "d5e47b907729aa12f883d6b4a93197e84cdb084a",
   "viewport": {
     "width": 1672,
     "height": 941
@@ -29,36 +30,36 @@
       "y": 65,
       "width": 1672,
       "height": 102,
-      "changedPixels": 16615,
+      "changedPixels": 19566,
       "comparedPixels": 170544,
-      "diffPercent": 0.09742353879350783
+      "diffPercent": 0.11472699127497889
     },
     "Left Tree": {
       "x": 0,
       "y": 167,
       "width": 265,
       "height": 749,
-      "changedPixels": 26509,
+      "changedPixels": 24104,
       "comparedPixels": 198485,
-      "diffPercent": 0.13355669194145653
+      "diffPercent": 0.12143990729778069
     },
     "Role": {
       "x": 265,
       "y": 167,
       "width": 61,
       "height": 509,
-      "changedPixels": 9228,
+      "changedPixels": 7226,
       "comparedPixels": 31049,
-      "diffPercent": 0.29720763953750523
+      "diffPercent": 0.23272891236432736
     },
     "Signal": {
       "x": 326,
       "y": 167,
       "width": 148,
       "height": 509,
-      "changedPixels": 10112,
+      "changedPixels": 10059,
       "comparedPixels": 75332,
-      "diffPercent": 0.1342324642914034
+      "diffPercent": 0.13352891201614187
     },
     "Ruler": {
       "x": 474,
@@ -83,36 +84,36 @@
       "y": 167,
       "width": 297,
       "height": 749,
-      "changedPixels": 69159,
+      "changedPixels": 43177,
       "comparedPixels": 222453,
-      "diffPercent": 0.31089263799544176
+      "diffPercent": 0.1940949324126894
     },
     "Bottom": {
       "x": 265,
       "y": 676,
       "width": 1110,
       "height": 240,
-      "changedPixels": 20886,
+      "changedPixels": 21891,
       "comparedPixels": 266400,
-      "diffPercent": 0.0784009009009009
+      "diffPercent": 0.08217342342342342
     },
     "MiniMap": {
       "x": 1375,
       "y": 801,
       "width": 297,
       "height": 115,
-      "changedPixels": 31749,
+      "changedPixels": 7538,
       "comparedPixels": 34155,
-      "diffPercent": 0.92955643390426
+      "diffPercent": 0.22069975113453374
     },
     "Status Bar": {
       "x": 0,
       "y": 916,
       "width": 1672,
       "height": 25,
-      "changedPixels": 4496,
+      "changedPixels": 6128,
       "comparedPixels": 41800,
-      "diffPercent": 0.10755980861244019
+      "diffPercent": 0.14660287081339712
     }
   }
 }

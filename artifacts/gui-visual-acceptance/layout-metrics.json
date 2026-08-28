@@ -1,4 +1,15 @@
 {
+  "gitHead": "d5e47b907729aa12f883d6b4a93197e84cdb084a",
+  "generatedAt": "2026-08-28T07:07:18.904Z",
+  "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6",
+  "capture": {
+    "browser": "chromium",
+    "viewport": [
+      1672,
+      941
+    ],
+    "dpr": 1
+  },
   "viewport": {
     "width": 1672,
     "height": 941
@@ -228,19 +239,27 @@
   "geometryPass": true,
   "ribbonNoHorizontalScroll": true,
   "visualDiff": {
-    "changedPixels": 152532,
-    "comparedPixels": 1048322,
-    "diffPercent": 0.14550109603728625,
+    "changedPixels": 207433,
+    "comparedPixels": 1573352,
+    "diffPercent": 0.13184144425405123,
     "threshold": 0.05,
     "pass": false,
-    "waveformViewportMasked": true
+    "pixelDeltaThreshold": 24,
+    "mask": {
+      "left": 0,
+      "top": 0,
+      "right": 0,
+      "bottom": 0
+    }
   },
-  "acceptance": "diagnostic-gap-report",
+  "acceptance": "FAIL",
   "artifacts": [
     "reference.png",
     "dut.png",
     "diff.png",
+    "overlay-50.png",
     "region-diff.json",
-    "layout-metrics.json"
+    "layout-metrics.json",
+    "critical-icon-crops/*"
   ]
 }
