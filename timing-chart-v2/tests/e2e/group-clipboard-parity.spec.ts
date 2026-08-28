@@ -66,3 +66,27 @@ test("copies, pastes, and duplicates a group as one semantic batch", async ({ pa
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("cuts and pastes a group with its rows as one semantic batch", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const ribbon = page.getByTestId("ribbon");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload'] [data-role='tree-branch']").click();
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("clipboard-status")).toHaveText("Cut Payload group");
+  await expect(surface.locator("[data-role='left-row'][data-group-id='grp_cycle_payload'][data-row-id]")).toHaveCount(0);
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByTestId("selection-status")).toHaveText("Payload");
+  const download = page.waitForEvent("download");
+  await ribbon.getByRole("button", { name: "Save", exact: true }).click();
+  await download;
+  const savedDocument = await page.evaluate(() => JSON.parse(localStorage.getItem("timing-chart-v2.recent") ?? "null"));
+  const groups = savedDocument.signalGroups.filter((group: { name: string }) => group.name === "Payload");
+  expect(groups).toHaveLength(1);
+  expect(groups[0].id).not.toBe("grp_cycle_payload");
+  expect(groups[0].rows).toHaveLength(3);
+});

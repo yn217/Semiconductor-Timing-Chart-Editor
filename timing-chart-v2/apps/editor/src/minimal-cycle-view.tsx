@@ -1323,6 +1323,31 @@ export function MinimalCycleView() {
   };
   copySelectedSignalRef.current = copySelectedSignal;
   const cutSelectedSignal = () => {
+    const selectedGroup = selectedGroupRef.current === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.id === selectedGroupRef.current);
+    if (selectedGroup) {
+      const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
+      clipboardGroupRef.current = { group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) };
+      clipboardAnnotationRef.current = undefined;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      setClipboardAvailable(true);
+      const commands: SemanticCommand[] = [];
+      for (const rowId of selectedGroup.rows) {
+        if (snapshot.document.signals.some((signal) => signal.id === rowId)) commands.push({ id: nextCommandId("cut_group_signal"), type: "signal.delete", signalId: rowId as SignalId });
+        else commands.push({ id: nextCommandId("cut_group_spacer"), type: "spacer.delete", spacerId: rowId as SpacerId });
+      }
+      commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: selectedGroup.id });
+      const result = executeBatch.current(nextCommandId("cut_group"), commands);
+      if (result.ok) {
+        selectedGroupRef.current = undefined;
+        setSelectedGroupId(undefined);
+        selectedSignalRef.current = undefined;
+        setSelectedId(undefined);
+        setSelectedSignalIds(new Set());
+        setClipboardStatus(`Cut ${selectedGroup.name} group`);
+      }
+      return;
+    }
     const sources = selectedClipboardSignals();
     const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
     if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to cut"); return; }
@@ -1710,7 +1735,7 @@ export function MinimalCycleView() {
     </div>
     {contextMenu && <div className="context-menu" role="menu" aria-label="Signal context menu" data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
       <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Copy</button>
-      <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Cut</button>
+      <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Cut</button>
       <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
       <button type="button" role="menuitem" onClick={() => { duplicateSelectedEntity(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Duplicate</button>
       <button type="button" role="menuitem" onClick={() => { moveSelection(-1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Up</button>
@@ -1905,7 +1930,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span>Save As</span></button>
       <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
     </div>}
-    {tab === "Home" && (visualReference ? <V8GoldenHomeRibbon document={document} range={range} history={history} gridEnabled={gridEnabled} snapEnabled={snapEnabled} rulerEnabled={rulerEnabled} minimapEnabled={minimapEnabled} hasSelectedSignal={hasSelectedSignal} hasSelectedEntity={hasSelectedEntity} onCommand={onCommand} onNew={onNew} onOpen={onOpen} onSave={onSave} onSaveAs={onSaveAs} onUndo={onUndo} onRedo={onRedo} onCopy={onCopy} onCut={onCut} onPaste={onPaste} onDelete={onDelete} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onZoom={onZoom} onFitAll={onFitAll} onToggleGrid={onToggleGrid} onToggleSnap={onToggleSnap} onToggleRuler={onToggleRuler} onToggleMinimap={onToggleMinimap} onOpenTimeline={onOpenTimeline} onOpenProperties={onProperties} onShowProblems={onShowProblems} /> : <>
+      {tab === "Home" && (visualReference ? <V8GoldenHomeRibbon document={document} range={range} history={history} gridEnabled={gridEnabled} snapEnabled={snapEnabled} rulerEnabled={rulerEnabled} minimapEnabled={minimapEnabled} hasSelectedSignal={hasSelectedSignal} hasSelectedClipboard={hasSelectedClipboard} hasSelectedEntity={hasSelectedEntity} onCommand={onCommand} onNew={onNew} onOpen={onOpen} onSave={onSave} onSaveAs={onSaveAs} onUndo={onUndo} onRedo={onRedo} onCopy={onCopy} onCut={onCut} onPaste={onPaste} onDelete={onDelete} onDuplicate={onDuplicate} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onZoom={onZoom} onFitAll={onFitAll} onToggleGrid={onToggleGrid} onToggleSnap={onToggleSnap} onToggleRuler={onToggleRuler} onToggleMinimap={onToggleMinimap} onOpenTimeline={onOpenTimeline} onOpenProperties={onProperties} onShowProblems={onShowProblems} /> : <>
       <div className="ribbon-major-group" data-major-group="File" aria-label="File commands">
        <div className="ribbon-group home-file-group" aria-label="File"><button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span data-v1-label="新規">New</span></button><button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span data-v1-label="開く">Open</span></button><button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span data-v1-label="保存">Save</span></button><button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span data-v1-label="名前を付けて保存">Save As</span></button><b>File</b></div>
       </div>
@@ -1913,7 +1938,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
        <div className="ribbon-group history-group" aria-label="History"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span data-v1-label="元に戻す">Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span data-v1-label="やり直し">Redo</span></button><b>History</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Clipboard" aria-label="Clipboard commands">
-       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedSignal}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedClipboard} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button>{!visualReference && <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedClipboard}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button>}<small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
+       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedClipboard}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedClipboard} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button>{!visualReference && <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedClipboard}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button>}<small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Edit" aria-label="Edit commands">
        <div className="ribbon-group edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button>{visualReference ? <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button> : <button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span data-v1-label="名前変更">Rename</span></button>}<b>Edit</b></div>
@@ -1979,10 +2004,10 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   </section>;
 }
 
-function V8GoldenHomeRibbon({ document, range, history, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, hasSelectedSignal, hasSelectedEntity, onCommand, onNew, onOpen, onSave, onSaveAs, onUndo, onRedo, onCopy, onCut, onPaste, onDelete, onDuplicate, onMoveUp, onMoveDown, onZoom, onFitAll, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onOpenTimeline, onOpenProperties, onShowProblems }: {
+function V8GoldenHomeRibbon({ document, range, history, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, onCommand, onNew, onOpen, onSave, onSaveAs, onUndo, onRedo, onCopy, onCut, onPaste, onDelete, onDuplicate, onMoveUp, onMoveDown, onZoom, onFitAll, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onOpenTimeline, onOpenProperties, onShowProblems }: {
   readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState;
   readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean;
-  readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
+  readonly hasSelectedSignal: boolean; readonly hasSelectedClipboard: boolean; readonly hasSelectedEntity: boolean;
   readonly onCommand: (command: SemanticCommand) => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onSaveAs: () => void;
   readonly onUndo: () => void; readonly onRedo: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDelete: () => void; readonly onDuplicate: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onZoom: (delta: number) => void; readonly onFitAll: () => void;
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void; readonly onOpenTimeline: () => void; readonly onOpenProperties: () => void; readonly onShowProblems: () => void;
@@ -1995,7 +2020,7 @@ function V8GoldenHomeRibbon({ document, range, history, gridEnabled, snapEnabled
   const tool = (label: string, icon: string, action: () => void, disabled = false) => <button type="button" className="ribbon-tool v8-golden-tool" aria-label={label} onClick={action} disabled={disabled}><RibbonIcon name={icon} /><span>{label}</span></button>;
   return <>
     <div className="ribbon-major-group v8-golden-major" data-major-group="File" aria-label="File commands">{tool("New", "i-new", onNew)}{tool("Open", "i-open", onOpen)}{tool("Save", "i-save", onSave)}{tool("Save As", "i-save", onSaveAs)}<b>File</b></div>
-    <div className="ribbon-major-group v8-golden-major" data-major-group="Edit" aria-label="Edit commands">{tool("Undo", "i-undo", onUndo, !history.canUndo)}{tool("Redo", "i-redo", onRedo, !history.canRedo)}{tool("Cut", "i-cut", onCut, !hasSelectedSignal)}{tool("Copy", "i-copy", onCopy, !hasSelectedSignal)}{tool("Paste", "i-paste", onPaste, !history.canUndo && !history.canRedo)}{tool("Delete", "i-delete", onDelete)}{tool("Duplicate", "i-duplicate", onDuplicate, !hasSelectedSignal)}<b>Edit</b></div>
+    <div className="ribbon-major-group v8-golden-major" data-major-group="Edit" aria-label="Edit commands">{tool("Undo", "i-undo", onUndo, !history.canUndo)}{tool("Redo", "i-redo", onRedo, !history.canRedo)}{tool("Cut", "i-cut", onCut, !hasSelectedClipboard)}{tool("Copy", "i-copy", onCopy, !hasSelectedClipboard)}{tool("Paste", "i-paste", onPaste, !history.canUndo && !history.canRedo)}{tool("Delete", "i-delete", onDelete)}{tool("Duplicate", "i-duplicate", onDuplicate, !hasSelectedClipboard)}<b>Edit</b></div>
     <div className="ribbon-major-group v8-golden-major" data-major-group="Layout" aria-label="Layout commands">{tool("Up", "i-up", onMoveUp, !hasSelectedEntity)}{tool("Down", "i-down", onMoveDown, !hasSelectedEntity)}{tool("Cycle Insert", "i-plus", () => cycleCommand("timeline.insert", 1))}{tool("Cycle Delete", "i-delete", () => cycleCommand("timeline.delete", 1))}{tool("N Cycle Insert", "i-plus", () => cycleCommand("timeline.insert", 2))}{tool("N Cycle Delete", "i-delete", () => cycleCommand("timeline.delete", 2))}<b>Layout</b></div>
     <div className="ribbon-major-group v8-golden-major v8-compact-time-group" data-major-group="Time" aria-label="Time commands">{tool("Align interval", "i-align", onOpenTimeline)}{tool("Group", "i-group", () => onCommand({ id: nextCommandId("v8_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }))}{tool("Auto Layout", "i-layout", () => onCommand({ id: nextCommandId("v8_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }))}<b>Time</b></div>
     <div className="ribbon-major-group v8-golden-major" data-major-group="Zoom" aria-label="Zoom commands">{tool("Zoom Out", "i-zoom-out", () => onZoom(-0.25))}<output>100%</output>{tool("Zoom In", "i-zoom-in", () => onZoom(0.25))}{tool("Fit All", "i-fit", onFitAll)}<b>Zoom</b></div>
