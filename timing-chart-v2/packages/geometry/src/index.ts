@@ -68,6 +68,8 @@ export interface SnapResult extends SnapCandidate { readonly distance: number }
 
 export class ImmutableSnapIndex {
   readonly #candidates: readonly SnapCandidate[];
+  #queries = 0;
+  #candidatesVisited = 0;
 
   constructor(candidates: readonly SnapCandidate[]) {
     this.#candidates = Object.freeze(candidates.map((candidate) => Object.freeze({ ...candidate, anchor: Object.freeze({ ...candidate.anchor }), point: Object.freeze({ ...candidate.point }) })));
@@ -75,9 +77,11 @@ export class ImmutableSnapIndex {
 
   nearest(point: Point, tolerance: number, kinds?: readonly SnapKind[], preferredKinds?: readonly SnapKind[]): SnapResult | undefined {
     if (!Number.isFinite(tolerance) || tolerance < 0) throw new Error("Snap tolerance must be finite and non-negative.");
+    this.#queries += 1;
     const allowed = kinds ? new Set(kinds) : undefined;
     let result: SnapResult | undefined;
     for (const candidate of this.#candidates) {
+      this.#candidatesVisited += 1;
       if (allowed && !allowed.has(candidate.kind)) continue;
       const distance = Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y);
       if (distance > tolerance || (result && (distance > result.distance || (distance === result.distance && queryPriority(candidate.kind, preferredKinds) <= queryPriority(result.kind, preferredKinds))))) continue;
@@ -88,6 +92,10 @@ export class ImmutableSnapIndex {
 
   entries(): readonly SnapCandidate[] {
     return this.#candidates;
+  }
+
+  metrics(): Readonly<{ queries: number; candidatesVisited: number }> {
+    return Object.freeze({ queries: this.#queries, candidatesVisited: this.#candidatesVisited });
   }
 }
 

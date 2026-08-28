@@ -430,7 +430,7 @@ export function MinimalCycleView() {
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, waveAdapter: adapter.metrics() });
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, waveAdapter: adapter.metrics() });
     };
     let currentZoom = 1;
     const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-frozen-width")) || 210);
@@ -495,6 +495,7 @@ export function MinimalCycleView() {
       const bounds = waveLayer.getBoundingClientRect();
       if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
       const snap = currentSnapIndex().nearest({ x: (clientX - bounds.left) / currentZoom, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+      publishState();
       return snap?.anchor.cycle;
     };
     publishState();
@@ -712,6 +713,7 @@ export function MinimalCycleView() {
         if (!waveLayer) return;
         const bounds = waveLayer.getBoundingClientRect();
         const snap = currentSnapIndex().nearest({ x: (event.clientX - bounds.left) / currentZoom, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
+        publishState();
         if (!snap) {
           setProblem("No rendered transition is within the 12 px snap tolerance.");
           return;
@@ -1018,6 +1020,7 @@ export function MinimalCycleView() {
       if (!annotation || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
       const snap = snapEnabledRef.current ? annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
+      publishState();
       if (!snap) {
         renderer.updateSnapGuide();
         delete rendererHost.dataset.snapKind;
@@ -1056,6 +1059,7 @@ export function MinimalCycleView() {
       if (!field || !anchor || !point) return;
       const desired = { x: point.x + dx, y: point.y + dy };
       const snap = snapEnabledRef.current ? drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
+      publishState();
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {
         rendererHost.dataset.snapKind = snap.kind;
