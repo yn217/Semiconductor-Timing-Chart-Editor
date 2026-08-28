@@ -237,22 +237,19 @@ export function MinimalCycleView() {
     let matches = 0;
     for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row'], [data-role='frozen-row'], [data-role='timing-row']")) {
       const text = [row.dataset.name, row.dataset.fullPath, row.dataset.instancePath, row.dataset.signalRole, row.dataset.groupName].filter(Boolean).join(" ").toLocaleLowerCase();
-      const visible = query.length === 0 || text.includes(query);
+      const collapsed = row.dataset.role === "left-row" && row.dataset.groupId !== undefined && collapsedGroupIds.has(row.dataset.groupId as GroupId) && row.dataset.groupStart !== "true";
+      const visible = (query.length === 0 || text.includes(query)) && !collapsed;
       row.hidden = !visible;
       row.dataset.filteredOut = String(!visible);
+      row.dataset.groupCollapsed = String(collapsed);
       if (visible && row.dataset.kind === "timing" && row.dataset.role === "left-row") matches += 1;
     }
     root.dataset.treeFilter = treeFilter;
     root.dataset.treeFilterMatches = String(matches);
-  }, [snapshot.revision, treeFilter]);
+  }, [snapshot.revision, treeFilter, collapsedGroupIds]);
   useEffect(() => {
     const root = host.current;
     if (!root) return;
-    for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row'], [data-role='frozen-row'], [data-role='timing-row'], [data-role='wave-owner']")) {
-      const collapsed = row.dataset.groupId !== undefined && collapsedGroupIds.has(row.dataset.groupId as GroupId) && (row.dataset.role === "wave-owner" || row.dataset.groupStart !== "true");
-      row.hidden = collapsed;
-      row.dataset.groupCollapsed = String(collapsed);
-    }
     root.dataset.collapsedGroups = [...collapsedGroupIds].join(",");
   }, [snapshot.revision, collapsedGroupIds]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
