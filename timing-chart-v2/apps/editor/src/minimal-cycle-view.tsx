@@ -197,6 +197,7 @@ export function MinimalCycleView() {
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "annotation" } | undefined>();
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
+  const clipboardAnnotationRef = useRef<Annotation | undefined>(undefined);
   const copySelectedSignalRef = useRef<() => void>(() => undefined);
   const cutSelectedSignalRef = useRef<() => void>(() => undefined);
   const pasteSelectedSignalRef = useRef<() => void>(() => undefined);
@@ -1282,7 +1283,7 @@ export function MinimalCycleView() {
     }
   };
   const selectedClipboardSignals = () => snapshot.document.signals
-    .filter((signal) => selectedSignalIds.has(signal.id) && signal.type !== "commentRow")
+    .filter((signal) => selectedSignalIds.has(signal.id))
     .map((signal) => {
       const group = snapshot.document.signalGroups.find((candidate) => candidate.rows.includes(signal.id));
       return group ? { signal, groupId: group.id, index: group.rows.indexOf(signal.id) } : undefined;
@@ -1290,7 +1291,17 @@ export function MinimalCycleView() {
     .filter((item): item is { readonly signal: Signal; readonly groupId: GroupId; readonly index: number } => item !== undefined);
   const copySelectedSignal = () => {
     const sources = selectedClipboardSignals();
-    if (sources.length === 0) { setClipboardStatus("Select a signal to copy"); return; }
+    const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
+    if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to copy"); return; }
+    if (annotation !== undefined && sources.length === 0) {
+      clipboardAnnotationRef.current = annotation;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      setClipboardAvailable(true);
+      setClipboardStatus(`Copied ${annotation.label || annotation.type} annotation`);
+      return;
+    }
+    clipboardAnnotationRef.current = undefined;
     clipboardSignalsRef.current = sources;
     clipboardSignalRef.current = sources[0]?.signal;
     setClipboardAvailable(true);
@@ -1299,7 +1310,22 @@ export function MinimalCycleView() {
   copySelectedSignalRef.current = copySelectedSignal;
   const cutSelectedSignal = () => {
     const sources = selectedClipboardSignals();
-    if (sources.length === 0) { setClipboardStatus("Select a signal to cut"); return; }
+    const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
+    if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to cut"); return; }
+    if (annotation !== undefined && sources.length === 0) {
+      clipboardAnnotationRef.current = annotation;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      setClipboardAvailable(true);
+      const result = execute.current({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: annotation.id });
+      if (result.ok) {
+        selectedAnnotationRef.current = undefined;
+        setSelectedAnnotationId(undefined);
+        setClipboardStatus(`Cut ${annotation.label || annotation.type} annotation`);
+      }
+      return;
+    }
+    clipboardAnnotationRef.current = undefined;
     clipboardSignalsRef.current = sources;
     clipboardSignalRef.current = sources[0]?.signal;
     setClipboardAvailable(true);
@@ -1323,13 +1349,13 @@ export function MinimalCycleView() {
     for (const source of input) {
       const targetGroup = selectedGroup ?? document.signalGroups.find((group) => group.id === source.groupId) ?? document.signalGroups.at(-1);
       if (!targetGroup) continue;
-      const id = signalId(nextEntityId("signal", { ...document, signals: [...document.signals, ...created] }));
+      const id = signalId(nextEntityId(source.signal.type === "commentRow" ? "commentRow" : "signal", { ...document, signals: [...document.signals, ...created] }));
       const name = `${source.signal.display.name}_${operation}${input.length > 1 ? `_${created.length + 1}` : ""}`;
       const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name }, source: { ...source.signal.source, signalName: name } };
       created.push(signal);
       const index = targetGroup.rows.length + (insertedByGroup.get(targetGroup.id) ?? 0);
       insertedByGroup.set(targetGroup.id, (insertedByGroup.get(targetGroup.id) ?? 0) + 1);
-      commands.push({ id: nextCommandId(`${operation}_item`), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
+      commands.push({ id: nextCommandId(`${operation}_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: targetGroup.id, index } as SemanticCommand);
     }
     if (commands.length === 0) return;
     const result = executeBatch.current(nextCommandId(operation), commands);
@@ -1341,7 +1367,23 @@ export function MinimalCycleView() {
       setClipboardStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
     }
   };
-  pasteSelectedSignalRef.current = () => createCopiedSignals(clipboardSignalsRef.current, "paste");
+  const createCopiedAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
+    const annotation = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
+    const result = execute.current({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
+    if (result.ok) {
+      selectAnnotation(annotation.id);
+      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`);
+    }
+  };
+  const pasteSelectedEntity = () => {
+    if (clipboardAnnotationRef.current) createCopiedAnnotation(clipboardAnnotationRef.current, "paste");
+    else createCopiedSignals(clipboardSignalsRef.current, "paste");
+  };
+  const duplicateSelectedEntity = () => {
+    if (selectedAnnotation) createCopiedAnnotation(selectedAnnotation, "duplicate");
+    else createCopiedSignals(selectedClipboardSignals(), "duplicate");
+  };
+  pasteSelectedSignalRef.current = pasteSelectedEntity;
   const renameSelection = () => {
     const current = selectedSignal?.display.name ?? selectedGroup?.name;
     const name = current === undefined ? null : window.prompt("Rename", current);
@@ -1519,7 +1561,7 @@ export function MinimalCycleView() {
     frozenPaneResizeRef.current = undefined;
   };
 
-  const hasSelectedSignal = selectedSignalIds.size > 0 && selectedSignal !== undefined && selectedSignal.type !== "commentRow";
+  const hasSelectedSignal = (selectedSignalIds.size > 0 && selectedSignal !== undefined) || selectedAnnotation !== undefined;
   const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined;
   return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
@@ -1545,12 +1587,12 @@ export function MinimalCycleView() {
       selectedTransactionId={selectedTransactionId}
       clipboardStatus={clipboardStatus}
       clipboardAvailable={clipboardAvailable}
-      hasSelectedSignal={selectedSignalIds.size > 0 && selectedSignal !== undefined && selectedSignal.type !== "commentRow"}
-      hasSelectedEntity={(selectedSignalIds.size > 0 && selectedSignal !== undefined && selectedSignal.type !== "commentRow") || selectedGroup !== undefined}
+      hasSelectedSignal={hasSelectedSignal}
+      hasSelectedEntity={hasSelectedEntity}
       onCopy={copySelectedSignal}
       onCut={cutSelectedSignal}
-      onPaste={() => createCopiedSignals(clipboardSignalsRef.current, "paste")}
-      onDuplicate={() => createCopiedSignals(selectedClipboardSignals(), "duplicate")}
+      onPaste={pasteSelectedEntity}
+      onDuplicate={duplicateSelectedEntity}
       onRename={renameSelection}
       onClearSelection={clearSelection}
       onSelectAll={selectAllSignals}
@@ -1615,8 +1657,8 @@ export function MinimalCycleView() {
     {contextMenu && <div className="context-menu" role="menu" aria-label="Signal context menu" data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
       <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Copy</button>
       <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Cut</button>
-      <button type="button" role="menuitem" onClick={() => { pasteSelectedSignalRef.current(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
-      <button type="button" role="menuitem" onClick={() => { createCopiedSignals(selectedClipboardSignals(), "duplicate"); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Duplicate</button>
+      <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
+      <button type="button" role="menuitem" onClick={() => { duplicateSelectedEntity(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Duplicate</button>
       <button type="button" role="menuitem" onClick={() => { moveSelection(-1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Up</button>
       <button type="button" role="menuitem" onClick={() => { moveSelection(1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Down</button>
       <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(true); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Show</button>
