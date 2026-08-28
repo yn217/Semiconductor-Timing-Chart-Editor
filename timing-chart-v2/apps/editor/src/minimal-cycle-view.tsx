@@ -66,28 +66,28 @@ const cycleDocument: CanonicalDocument = {
 const v1ReferenceComment: CommentRow = {
   id: signalId("sig_v1_reference_comment"), type: "commentRow", name: "Address phase", role: "internal",
   source: { instancePath: ["dut"], signalName: "address_phase" }, display: { name: "Address phase" },
-  title: "Address phase", body: "Address phase (req_valid = 1)",
+  title: "Address phase", body: "Address phase (req_valid = 1.0 period)",
 };
 
 const v8ReferenceProcessingComment: CommentRow = {
   id: signalId("sig_v8_reference_processing_comment"), type: "commentRow", name: "Processing note", role: "internal",
   source: { instancePath: ["dut"], signalName: "processing_note" }, display: { name: "Processing note" },
-  title: "Processing note", body: "Processing note (busy / state)",
+  title: "Processing note", body: "Processing: New request is latched",
 };
 
 const v8ReferenceLatencyComment: CommentRow = {
   id: signalId("sig_v8_reference_latency_comment"), type: "commentRow", name: "Read latency", role: "internal",
   source: { instancePath: ["dut"], signalName: "read_latency" }, display: { name: "Read latency" },
-  title: "Read latency", body: "Read latency measurement",
+  title: "Read latency", body: "Read data available 5 cycles after request accepted",
 };
 
-const v8ReferenceClock: ClockSignal = { ...clock, name: "clk", source: { instancePath: ["dut"], signalName: "clk" }, display: { name: "clk" }, generator: { ...clock.generator, period: 1 } };
+const v8ReferenceClock: ClockSignal = { ...clock, name: "clk", source: { instancePath: [], signalName: "clk" }, display: { name: "clk" }, generator: { ...clock.generator, period: 1 } };
 const v8ReferenceSignals: readonly (ClockSignal | ValueSignal)[] = [
   valueSignal("sig_cycle_reset_n", "req_valid", "input", [{ start: 0, value: 0 }, { start: 3, value: 1 }]),
-  valueSignal("sig_cycle_request", "req_addr[7:0]", "input", [{ start: 0, value: "00" }, { start: 2, value: "12" }, { start: 6, value: "34" }], { type: "bus", width: 8, displayFormat: "hex" }),
+  valueSignal("sig_cycle_request", "req_addr[7:0]", "input", [{ start: 0, value: "00" }, { start: 3, value: "12" }, { start: 7, value: "34" }], { type: "bus", width: 8, displayFormat: "hex" }),
   v8ReferenceClock,
   valueSignal("sig_cycle_ready", "busy", "internal", [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }]),
-  valueSignal("sig_cycle_valid", "state[1:0]", "internal", [{ start: 0, value: "IDLE" }, { start: 3, value: "REQ" }, { start: 6, value: "WAIT" }, { start: 8, value: "RESP" }], { type: "bus", width: 2 }),
+  valueSignal("sig_cycle_valid", "state[1:0]", "internal", [{ start: 0, value: "IDLE" }, { start: 2, value: "REQ" }, { start: 6, value: "WAIT" }, { start: 8, value: "RESP" }], { type: "bus", width: 2 }),
   valueSignal("sig_cycle_data", "ready", "output", [{ start: 0, value: 0 }, { start: 8, value: 1 }]),
   valueSignal("sig_cycle_result", "rdata[15:0]", "output", [{ start: 0, value: "XXXX" }, { start: 7, value: "0000" }], { type: "bus", width: 16, displayFormat: "hex" }),
 ];
