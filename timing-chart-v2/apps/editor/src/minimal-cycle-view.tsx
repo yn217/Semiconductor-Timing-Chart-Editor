@@ -15,6 +15,8 @@ import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
 const spacerId = (value: string) => value as SpacerId;
+const LEFT_PANE_MIN_WIDTH = 265;
+const LEFT_PANE_MAX_WIDTH = 420;
 
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
 
@@ -222,7 +224,7 @@ export function MinimalCycleView() {
   bottomPinnedRef.current = bottomPinned;
   const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const [inspectorVisible, setInspectorVisible] = useState(true);
-  const [leftPaneWidth, setLeftPaneWidth] = useState(265);
+  const [leftPaneWidth, setLeftPaneWidth] = useState(LEFT_PANE_MIN_WIDTH);
   const leftPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
   const [frozenPaneWidth, setFrozenPaneWidth] = useState(209);
   const frozenPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
@@ -1724,7 +1726,7 @@ export function MinimalCycleView() {
   const moveLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
     const resize = leftPaneResizeRef.current;
     if (!resize) return;
-    const nextWidth = Math.max(280, Math.min(420, resize.startWidth + (event.clientX - resize.startX)));
+    const nextWidth = Math.max(LEFT_PANE_MIN_WIDTH, Math.min(LEFT_PANE_MAX_WIDTH, resize.startWidth + (event.clientX - resize.startX)));
     if (nextWidth !== leftPaneWidth) setLeftPaneWidth(nextWidth);
   };
   const finishLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1819,7 +1821,7 @@ export function MinimalCycleView() {
     />
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
-         <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={280} aria-valuemax={420} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
+         <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
         <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}<button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button>{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{"Time Scale: Cycle    Reference: clk"}</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
