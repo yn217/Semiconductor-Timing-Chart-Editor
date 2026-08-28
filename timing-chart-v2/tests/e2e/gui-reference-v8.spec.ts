@@ -140,3 +140,22 @@ test("applies the v8 Signal Inspector style controls as one semantic operation",
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
+
+test("V8 Home secondary actions stay connected to real navigation and semantic commands", async ({ page }) => {
+  await page.goto("/?visual-reference");
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Align interval" }).click();
+  await expect(page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true })).toHaveClass(/active/);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Group" }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await ribbon.getByRole("button", { name: "More" }).click();
+  const more = page.getByRole("menu", { name: "More Home Commands" });
+  await expect(more.getByRole("menuitem", { name: "Document Properties" })).toBeVisible();
+  await expect(more.getByRole("menuitem", { name: "Problems" })).toBeVisible();
+  await more.getByRole("menuitem", { name: "Problems" }).click();
+  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "Problems" })).toHaveClass(/active/);
+  await expect(page.getByTestId("bottom-editor")).toBeVisible();
+});

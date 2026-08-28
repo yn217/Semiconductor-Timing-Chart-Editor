@@ -412,6 +412,10 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .ribbon-major-group[data-major-group="Options"] .home-export-group { display: none; }
 .editor-shell[data-visual-reference="true"] .ribbon-major-group[data-major-group="Layout"]:not(.v8-golden-major) { display: none; }
 .editor-shell[data-visual-reference="true"] .v8-golden-major { box-sizing: border-box; gap: 0; padding: 5px 4px 17px; }
+.editor-shell[data-visual-reference="true"] .v8-golden-options { position: relative; }
+.editor-shell[data-visual-reference="true"] .v8-more-menu { position: absolute; top: 65px; right: 4px; z-index: 40; display: grid; min-width: 150px; padding: 4px; border: 1px solid #9eafc3; border-radius: 3px; background: #fff; box-shadow: 0 4px 12px #1d355733; }
+.editor-shell[data-visual-reference="true"] .v8-more-menu button { height: 27px; padding: 0 8px; border: 0; background: transparent; color: #24384f; font-size: 10px; text-align: left; white-space: nowrap; }
+.editor-shell[data-visual-reference="true"] .v8-more-menu button:hover { background: #e8f1ff; }
 .editor-shell[data-visual-reference="true"] .v8-golden-major:nth-child(1) { width: 216px; }
 .editor-shell[data-visual-reference="true"] .v8-golden-major:nth-child(2) { width: 324px; }
 .editor-shell[data-visual-reference="true"] .v8-golden-major:nth-child(3) { width: 333px; }
