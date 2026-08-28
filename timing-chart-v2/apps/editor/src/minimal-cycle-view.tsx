@@ -429,10 +429,17 @@ export function MinimalCycleView() {
     let window: VirtualizationWindow = viewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
     let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window });
     renderer.update(projection);
+    let rulerBuilds = 0;
+    let edgeCounterResolvePasses = 0;
     const refreshOverlays = (document: CanonicalDocument) => {
       renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps));
+      edgeCounterResolvePasses += 1;
       renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timelineRangeRef.current, selectedCycleRef.current));
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
+    };
+    const rebuildRuler = (document: CanonicalDocument) => {
+      rulerBuilds += 1;
+      buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
     };
     const refreshGrid = (document: CanonicalDocument) => {
       renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
@@ -487,7 +494,7 @@ export function MinimalCycleView() {
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, waveAdapter: adapter.metrics() });
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnostics(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, waveAdapter: adapter.metrics() });
     };
     let currentZoom = 1;
     const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-frozen-width")) || 210);
@@ -560,7 +567,7 @@ export function MinimalCycleView() {
 
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
-      buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
+      rebuildRuler(session.getSnapshot().document);
       refreshPlayhead.current();
       refreshGrid(session.getSnapshot().document);
       applyZoom(currentZoom);
@@ -601,7 +608,10 @@ export function MinimalCycleView() {
       const referenceWaveChanged = referenceSignalId !== undefined && (changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.waveSemantics?.includes(referenceSignalId) === true || changed.geometryLocal?.includes(referenceSignalId) === true);
       const refreshRuler = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.bookmarkPosition !== undefined || referenceWaveChanged;
       const refreshGridNow = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || referenceWaveChanged;
-      const refreshOverlaysNow = refreshRuler || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined;
+      // Row presentation (for example a signal rename or role/style edit) does
+      // not change annotation anchor coordinates. Re-resolve overlays only for
+      // actual screen-Y/order changes or an explicit annotation dependency.
+      const refreshOverlaysNow = refreshRuler || changed.rowOrder !== undefined || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined;
       renderer.update(projection);
       setSnapshot(result.snapshot);
       setValidationDiagnostics([]);
@@ -615,7 +625,7 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        if (refreshRuler) buildRuler(rulerElement, referenceGeometry, result.snapshot.document, result.snapshot.document.timeline.referenceClock, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
+        if (refreshRuler) rebuildRuler(result.snapshot.document);
         refreshPlayhead.current();
         if (refreshGridNow) refreshGrid(result.snapshot.document);
         applyZoom(currentZoom);
@@ -652,7 +662,7 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        buildRuler(rulerElement, referenceGeometry, session.getSnapshot().document, session.getSnapshot().document.timeline.referenceClock, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
+        rebuildRuler(session.getSnapshot().document);
         refreshPlayhead.current();
         refreshGrid(session.getSnapshot().document);
         applyZoom(currentZoom);
@@ -2251,7 +2261,7 @@ function InspectorValueSignalEditor({ signal, document, viewport, onCommand, onR
     const parsedStyle = parsed ?? {};
     const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
     const structuredStyle = { color: typeof parsedStyle.color === "string" ? parsedStyle.color : textColor, background: typeof parsedStyle.background === "string" ? parsedStyle.background : rowBackground, fontFamily: typeof parsedStyle.fontFamily === "string" ? parsedStyle.fontFamily : fontFamily, fontSize: typeof parsedStyle.fontSize === "number" ? parsedStyle.fontSize : fontSize, fontWeight: typeof parsedStyle.fontWeight === "string" ? parsedStyle.fontWeight : (bold ? "bold" : "normal"), fontStyle: typeof parsedStyle.fontStyle === "string" ? parsedStyle.fontStyle : (italic ? "italic" : "normal"), textDecoration: typeof parsedStyle.textDecoration === "string" ? parsedStyle.textDecoration : decorations, waveformColor: typeof parsedStyle.waveformColor === "string" ? parsedStyle.waveformColor : waveformColor, waveformBackground: typeof parsedStyle.waveformBackground === "string" ? parsedStyle.waveformBackground : waveformBackground };
-     onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, spacingBefore, spacingAfter, displayAlign: align, displayOverflow: overflow, displayStyle: { ...parsedStyle, ...structuredStyle } });
+    onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, displayStyle: { ...parsedStyle, ...structuredStyle } });
   };
   const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
   return <aside className="inspector" data-testid="inspector" data-inspector-context="signal"><header><span>Inspector</span><b>Signal</b></header>
