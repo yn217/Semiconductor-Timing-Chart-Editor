@@ -49,6 +49,13 @@ test("records approved badge visual evidence", async ({ page }) => {
     const selector = presentation === "comment" ? "[data-role='left-row'][data-kind='comment'] [data-role='tree-signal-role']" : `[data-role='left-row'][data-signal-role='${presentation}']:not([data-kind='comment']) [data-role='tree-signal-role']`;
     const box = await page.locator(selector).first().boundingBox();
     expect(box).not.toBeNull();
+    const textWidth = await page.locator(selector).first().evaluate((element) => {
+      const node = element.firstChild;
+      if (!node) return 0;
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      return Math.round(range.getBoundingClientRect().width * 100) / 100;
+    });
     const region = { x: Math.max(0, Math.floor(box!.x)), y: Math.max(0, Math.floor(box!.y)), width: Math.ceil(box!.width), height: Math.ceil(box!.height) };
     const goldenCrop = crop(golden, region);
     const dutCrop = crop(dut, region);
@@ -56,7 +63,7 @@ test("records approved badge visual evidence", async ({ page }) => {
     await writeFile(resolve(outputRoot, `${presentation === "internal" ? "wire" : presentation}-golden.png`), PNG.sync.write(goldenCrop));
     await writeFile(resolve(outputRoot, `${presentation === "internal" ? "wire" : presentation}-dut.png`), PNG.sync.write(dutCrop));
     await writeFile(resolve(outputRoot, `${presentation === "internal" ? "wire" : presentation}-diff.png`), PNG.sync.write(result.diff));
-    report[presentation] = { region, leftFrozenParity: true, goldenPass: presentation === "internal" ? false : result.diffPercent <= 0.05, goldenDiffPercent: result.diffPercent, goldenStatus: presentation === "internal" ? "approved-delta" : "golden" };
+    report[presentation] = { region, leftFrozenParity: true, goldenPass: presentation === "internal" ? false : result.diffPercent <= 0.05, goldenDiffPercent: result.diffPercent, textWidth, innerPadding: (box!.width - textWidth) / 2, goldenStatus: presentation === "internal" ? "approved-delta" : "golden" };
   }
   const wire = report.internal as { goldenStatus: string };
   report.wire = { ...(report.internal as object), goldenStatus: wire.goldenStatus, approvedDelta: true, width: 34, gap: 5, overlap: 0 };
