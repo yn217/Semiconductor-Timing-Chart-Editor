@@ -39,8 +39,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect((await viewMode.boundingBox())?.y ?? -1).toBe(0);
   await expect(viewMode).toContainText("View Mode:");
   await expect(viewMode.getByRole("button", { name: "Cycle" })).toHaveClass(/active/);
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(6);
-  for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Options"]) {
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(7);
+  for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Display", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
   const timeGroup = page.locator(".v8-compact-time-group");
@@ -48,7 +48,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(timeGroup.getByRole("button", { name: "Insert one cycle" })).toBeVisible();
   await expect(timeGroup.getByRole("button", { name: "Delete one cycle" })).toBeVisible();
   await expect(page.locator(".home-timeline-group .timeline-toolbar")).toHaveCount(0);
-  await expect(page.getByTestId("ribbon").getByLabel("Display")).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByLabel("Display commands")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
   const treeSearch = page.getByTestId("signal-tree-search-top");
   await expect(treeSearch).toBeVisible();
@@ -60,6 +60,9 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
   await expect(page.locator('.column-headings [aria-label="Role"]')).toHaveText("Role");
   await expect(page.locator('.column-headings [aria-label="Signal / Annotation"]')).toHaveText("Signal / Annotation");
+  for (const groupName of ["Zoom", "Display"]) {
+    await expect(page.locator(`.ribbon-major-group[data-major-group="${groupName}"]`)).toHaveJSProperty("scrollWidth", await page.locator(`.ribbon-major-group[data-major-group="${groupName}"]`).evaluate((element) => element.clientWidth));
+  }
   await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", "0");
   expect((await page.locator("[data-role='tree-signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
   expect((await page.locator("[data-role='signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
