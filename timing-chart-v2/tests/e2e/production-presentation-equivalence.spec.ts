@@ -29,13 +29,17 @@ async function readContract(page: Page): Promise<PresentationContract> {
     if (!shell) throw new Error("Missing editor shell");
     const style = getComputedStyle(shell);
     const tokenNames = ["--gui-left-width", "--gui-frozen-width", "--gui-inspector-width", "--gui-bottom-height", "--gui-row-height", "--gui-role-width", "--gui-signal-width", "--gui-ribbon-height"];
+    const frame = (selector: string) => {
+      const box = rect(selector);
+      return { x: box.x, y: box.y, width: box.width, height: 0 };
+    };
     return {
       topLevel: Array.from(shell.children).map((element) => `${element.tagName.toLowerCase()}.${element.className}`),
       tabs: Array.from(document.querySelectorAll<HTMLElement>(".ribbon-tabs > button")).map((button) => normalize(button.textContent)),
       ribbonGroups,
       geometry: {
         ribbon: rect("[data-testid='ribbon']"),
-        left: rect(".surface-host"),
+        left: frame(".desktop-workspace"),
         bottom: rect("[data-testid='bottom-editor']"),
         inspector: rect(".inspector-shell"),
         minimap: rect("[data-testid='minimap']"),
