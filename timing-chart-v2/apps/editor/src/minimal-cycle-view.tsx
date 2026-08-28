@@ -2435,8 +2435,13 @@ function MiniMap({ document, viewport }: { readonly document: Readonly<Canonical
     if (!element) return undefined;
     sync();
     element.addEventListener("scroll", sync, { passive: true });
-    return () => element.removeEventListener("scroll", sync);
-  }, [document.signals.length, document.signalGroups.length]);
+    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(sync);
+    observer?.observe(element);
+    return () => {
+      element.removeEventListener("scroll", sync);
+      observer?.disconnect();
+    };
+  }, [document]);
   const pan = (clientX: number, clientY: number) => {
     const element = viewport.current;
     const minimap = documentRef.current;
