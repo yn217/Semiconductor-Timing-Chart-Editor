@@ -7,6 +7,7 @@ const viewport = { width: 1672, height: 941 } as const;
 const appRoot = process.cwd();
 const repositoryRoot = resolve(appRoot, "..");
 const outputRoot = resolve(repositoryRoot, "artifacts", "gui-visual-acceptance");
+const cropRoot = resolve(outputRoot, "critical-icon-crops");
 const referencePath = resolve(repositoryRoot, "references", "v2-gui-reference-v8", "golden-home-cycle-1672x941.png");
 
 const target = {
@@ -98,8 +99,15 @@ function blendPng(reference: PNG, dut: PNG): PNG {
   return overlay;
 }
 
+function cropPng(source: PNG, region: { x: number; y: number; width: number; height: number }): PNG {
+  const crop = new PNG({ width: region.width, height: region.height });
+  PNG.bitblt(source, crop, region.x, region.y, region.width, region.height, 0, 0);
+  return crop;
+}
+
 test("generates V1 reference vs V2 production visual evidence at the locked viewport", async ({ page }) => {
   await mkdir(outputRoot, { recursive: true });
+  await mkdir(cropRoot, { recursive: true });
   await page.setViewportSize(viewport);
   await page.goto("/?visual-reference");
   await page.addStyleTag({ content: "*, *::before, *::after { animation: none !important; transition: none !important; }" });
@@ -151,7 +159,21 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
   const mask = { left: 0, top: 0, right: 0, bottom: 0 } as const;
   const comparison = comparePng(reference, dut, mask);
   await writeFile(resolve(outputRoot, "diff.png"), PNG.sync.write(comparison.diff));
-  await writeFile(resolve(outputRoot, "overlay-50.png"), PNG.sync.write(blendPng(reference, dut)));
+  const overlay = blendPng(reference, dut);
+  await writeFile(resolve(outputRoot, "overlay-50.png"), PNG.sync.write(overlay));
+  const criticalIconCrops = {
+    Chevron: { x: 0, y: 167, width: 265, height: 80 },
+    Eye: { x: 0, y: 247, width: 265, height: 100 },
+    "Eye-off": { x: 0, y: 347, width: 265, height: 100 },
+    More: { x: 0, y: 447, width: 265, height: 100 },
+    Comment: { x: 0, y: 547, width: 265, height: 129 },
+  } as const;
+  for (const [name, region] of Object.entries(criticalIconCrops)) {
+    await writeFile(resolve(cropRoot, `${name.toLowerCase()}-golden.png`), PNG.sync.write(cropPng(reference, region)));
+    await writeFile(resolve(cropRoot, `${name.toLowerCase()}-dut.png`), PNG.sync.write(cropPng(dut, region)));
+    await writeFile(resolve(cropRoot, `${name.toLowerCase()}-diff.png`), PNG.sync.write(cropPng(comparison.diff, region)));
+    await writeFile(resolve(cropRoot, `${name.toLowerCase()}-overlay-50.png`), PNG.sync.write(cropPng(overlay, region)));
+  }
   const regionDiff = Object.fromEntries(Object.entries(visualRegions).map(([name, region]) => [name, compareRegion(reference, dut, region)]));
   await writeFile(resolve(outputRoot, "region-diff.json"), `${JSON.stringify({ viewport, source: "golden-home-cycle-1672x941.png", threshold: 24, regions: regionDiff }, null, 2)}\n`);
   const report = {
@@ -163,7 +185,7 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     ribbonNoHorizontalScroll: metrics.ribbonOverflow.scrollWidth <= metrics.ribbonOverflow.clientWidth + 1,
     visualDiff: { ...comparison, diff: undefined, threshold: 0.05, pass: comparison.diffPercent <= 0.05, pixelDeltaThreshold: 24, mask },
     acceptance: "FAIL",
-    artifacts: ["reference.png", "dut.png", "diff.png", "overlay-50.png", "region-diff.json", "layout-metrics.json"],
+    artifacts: ["reference.png", "dut.png", "diff.png", "overlay-50.png", "region-diff.json", "layout-metrics.json", "critical-icon-crops/*"],
   };
   report.acceptance = report.geometryPass && report.visualDiff.pass ? "PASS" : "FAIL";
   await writeFile(resolve(outputRoot, "layout-metrics.json"), `${JSON.stringify(report, null, 2)}\n`);

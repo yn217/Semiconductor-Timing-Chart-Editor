@@ -21,9 +21,10 @@
     "harness:capture": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",
     "harness:diff": "node scripts/check-golden-diff.mjs",
     "harness:check": "npm run check:production-presentation && node scripts/check-golden-integrity.mjs",
+    "check:left-tree-icons": "node scripts/check-left-tree-icons.mjs",
     "harness:verify": "node scripts/run-harness-verify.mjs",
     "build": "npm run typecheck && npm --workspace @timing-chart-v2/editor run build",
-    "check": "npm run check:boundaries && npm run check:performance-architecture && npm run test && npm run build",
+    "check": "npm run check:boundaries && npm run check:performance-architecture && npm run check:production-presentation && npm run check:left-tree-icons && npm run test && npm run build",
     "test:perf:pr": "playwright test tests/e2e/performance-closure.spec.ts --grep-invert nightly/manual",
     "test:perf:nightly": "playwright test tests/e2e/performance-closure.spec.ts",
     "check:ci": "npm run check && npm run test:e2e"

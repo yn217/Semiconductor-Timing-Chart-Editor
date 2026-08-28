@@ -1,15 +1,56 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
 
-const iconSprite = "/gui-mockup/icons.svg";
-
-function icon(document: Document, name: string, className: string): SVGSVGElement {
+function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-right" | "eye" | "eye-off" | "more" | "comment", className: string): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("class", className);
   svg.setAttribute("aria-hidden", "true");
-  const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
-  use.setAttribute("href", `${iconSprite}#${name}`);
-  svg.append(use);
+  const append = (tag: "path" | "circle") => {
+    const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    svg.append(element);
+    return element;
+  };
+  if (name === "chevron-down" || name === "chevron-right") {
+    const path = append("path");
+    path.setAttribute("d", name === "chevron-down" ? "M6 9l6 6 6-6" : "M9 6l6 6-6 6");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+  } else if (name === "eye" || name === "eye-off") {
+    const path = append("path");
+    path.setAttribute("d", name === "eye" ? "M2 12s4-6 10-6 10 6 10 6-4 6-10 6S2 12 2 12z" : "M3 3l18 18M10.6 6.2A10.8 10.8 0 0 1 12 6c6 0 10 6 10 6a17.6 17.6 0 0 1-3.2 3.5M6.2 7.8C3.6 9.4 2 12 2 12s4 6 10 6a10.8 10.8 0 0 0 2.5-.3");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.6");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    if (name === "eye") {
+      const pupil = append("circle");
+      pupil.setAttribute("cx", "12");
+      pupil.setAttribute("cy", "12");
+      pupil.setAttribute("r", "2.5");
+      pupil.setAttribute("fill", "none");
+      pupil.setAttribute("stroke", "currentColor");
+      pupil.setAttribute("stroke-width", "1.6");
+    }
+  } else if (name === "more") {
+    for (const cy of [5, 12, 19]) {
+      const dot = append("circle");
+      dot.setAttribute("cx", "12");
+      dot.setAttribute("cy", String(cy));
+      dot.setAttribute("r", "1.8");
+      dot.setAttribute("fill", "currentColor");
+    }
+  } else if (name === "comment") {
+    const path = append("path");
+    path.setAttribute("d", "M4 4h16v12H9l-5 4z");
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "1.6");
+  }
   return svg;
 }
 
@@ -439,20 +480,20 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     role.dataset.role = "tree-signal-role";
     role.textContent = row.kind === "comment" ? "" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
     role.dataset.presentation = row.kind === "comment" ? "comment" : row.role ?? "internal";
-    if (row.kind === "comment") role.append(icon(document, "i-comment", "surface-icon comment-icon"));
+    if (row.kind === "comment") role.append(createLeftTreeIcon(document, "comment", "surface-icon comment-icon"));
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
     const visibility = document.createElement("button");
     visibility.type = "button";
     visibility.dataset.role = "tree-visibility";
     visibility.dataset.treeSignalId = row.rowId;
     visibility.setAttribute("aria-label", `Toggle visibility of ${row.name}`);
-    visibility.append(icon(document, "i-eye", "surface-icon eye-icon"));
+    visibility.append(createLeftTreeIcon(document, "eye", "surface-icon eye-icon"));
     const more = document.createElement("button");
     more.type = "button";
     more.dataset.role = "tree-more";
     more.dataset.treeSignalId = row.rowId;
     more.setAttribute("aria-label", `More actions for ${row.name}`);
-    more.append(icon(document, "i-more-vertical", "surface-icon more-icon"));
+    more.append(createLeftTreeIcon(document, "more", "surface-icon more-icon"));
     // Keep the draggable branch node mounted for command routing, but let the
     // visual contract place the role badge before the signal name.
     shell.replaceChildren(role, name, visibility, more, branch);
@@ -462,7 +503,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
   role.dataset.role = "signal-role";
   role.textContent = row.kind === "comment" ? "" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
   role.dataset.presentation = row.kind === "comment" ? "comment" : row.role ?? "internal";
-  if (row.kind === "comment") role.append(icon(document, "i-comment", "surface-icon comment-icon"));
+  if (row.kind === "comment") role.append(createLeftTreeIcon(document, "comment", "surface-icon comment-icon"));
   const name = document.createElement("span");
   name.dataset.role = "frozen-signal-name";
   name.textContent = row.name;
@@ -519,14 +560,14 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
   collapse.dataset.role = "tree-collapse";
   collapse.dataset.groupId = header.groupId;
   collapse.setAttribute("aria-label", `Collapse ${header.groupName} group`);
-  collapse.append(icon(document, "i-chevron-down", "surface-icon chevron-icon"));
+  collapse.append(createLeftTreeIcon(document, "chevron-down", "surface-icon chevron-icon"));
   branch.append(collapse, document.createTextNode(` ${header.groupName}`));
   const more = document.createElement("button");
   more.type = "button";
   more.dataset.role = "tree-group-more";
   more.dataset.groupId = header.groupId;
   more.setAttribute("aria-label", `More actions for ${header.groupName}`);
-  more.append(icon(document, "i-more-vertical", "surface-icon more-icon"));
+  more.append(createLeftTreeIcon(document, "more", "surface-icon more-icon"));
   shell.replaceChildren(branch, more);
 }
 
