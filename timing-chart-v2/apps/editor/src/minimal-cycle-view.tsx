@@ -419,7 +419,7 @@ export function MinimalCycleView() {
     let snapIndex: ImmutableSnapIndex | undefined;
     const currentSnapIndex = () => {
       if (!snapIndex) {
-        snapIndex = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService);
+        snapIndex = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService, screenGeometryScale);
         publishState();
       }
       return snapIndex;
@@ -431,15 +431,16 @@ export function MinimalCycleView() {
     renderer.update(projection);
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
+    let screenGeometryScale = 1;
     const refreshOverlays = (document: CanonicalDocument) => {
-      renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps));
+      renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, screenGeometryScale));
       edgeCounterResolvePasses += 1;
-      renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timelineRangeRef.current, selectedCycleRef.current));
+      renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timelineRangeRef.current, selectedCycleRef.current, screenGeometryScale));
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
     };
     const rebuildRuler = (document: CanonicalDocument) => {
       rulerBuilds += 1;
-      buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
+      screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
     };
     const refreshGrid = (document: CanonicalDocument) => {
       renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
@@ -559,7 +560,7 @@ export function MinimalCycleView() {
       const bounds = waveLayer.getBoundingClientRect();
       if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
       const localPointer = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });
-      const snap = currentSnapIndex().nearest({ x: localPointer.x, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+       const snap = currentSnapIndex().nearest({ x: localPointer.x, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
       publishState();
       return snap?.anchor.cycle;
     };
@@ -1089,9 +1090,9 @@ export function MinimalCycleView() {
       const document = session.getSnapshot().document;
       const annotation = document.annotations.find((item) => item.id === annotationDrag?.annotationId);
       const anchor = annotation?.[annotationDrag.field];
-      const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, buildDisplayTimeMapping(document.timeline, document.timeGroups));
+       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, buildDisplayTimeMapping(document.timeline, document.timeGroups), screenGeometryScale);
       if (!annotation || !anchor || !point) return;
-      const desired = { x: point.x + dx, y: point.y + dy };
+       const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
       const snap = snapEnabledRef.current ? annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       publishState();
       if (!snap) {
@@ -1104,13 +1105,14 @@ export function MinimalCycleView() {
       const row = projection.rowLayout.find((item) => item.rowId === snap.anchor.signalId);
       renderer.updateSnapGuide({ x: snap.point.x, y: snap.point.y, rowY: row?.y ?? 0, rowHeight: row?.height ?? projection.totalHeight, surfaceHeight: projection.totalHeight, label: `${snap.kind} · cycle ${snap.anchor.cycle}` });
       rendererHost.dataset.snapKind = snap.kind;
-      rendererHost.dataset.snapDistance = String(Math.round(snap.distance * 100) / 100);
+       rendererHost.dataset.snapDistance = String(normalizeSnapDistance(snap.distance));
       rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
     };
     const onAnnotationPointerUp = (event: PointerEvent) => {
       const drag = annotationDrag;
       if (!drag) return;
-      const dx = Math.round(screenGeometry.fromScreen({ x: event.clientX - drag.startX, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
+       const rawScreenDx = event.clientX - drag.startX;
+       const dx = Math.round(screenGeometry.fromScreen({ x: rawScreenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - drag.startY);
       drag.owner.style.translate = "";
       annotationDrag = undefined;
@@ -1128,15 +1130,15 @@ export function MinimalCycleView() {
       }
       const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
       const anchor = field ? annotation[field] : undefined;
-      const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, buildDisplayTimeMapping(snapshot.document.timeline, snapshot.document.timeGroups));
+       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, buildDisplayTimeMapping(snapshot.document.timeline, snapshot.document.timeGroups), screenGeometryScale);
       if (!field || !anchor || !point) return;
-      const desired = { x: point.x + dx, y: point.y + dy };
+       const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + dy };
       const snap = snapEnabledRef.current ? drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       publishState();
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {
         rendererHost.dataset.snapKind = snap.kind;
-        rendererHost.dataset.snapDistance = String(snap.distance);
+         rendererHost.dataset.snapDistance = String(normalizeSnapDistance(snap.distance));
         rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
       }
       commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
@@ -3006,7 +3008,7 @@ function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" 
 
 const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
-function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): Point | undefined {
+function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups), xScale = 1): Point | undefined {
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
   if (!signalId) return undefined;
@@ -3017,14 +3019,18 @@ function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: Canoni
   const row = anchor.signalId ? projection.rowLayout.find((item) => item.rowId === anchor.signalId) : undefined;
   if (anchor.signalId && !row) return undefined;
   const rowY = row?.y ?? 0;
-  return { x: local.point.x, y: rowY + local.point.y };
+  const referenceClock = document.timeline.referenceClock;
+  const sharedBoundary = anchor.point === "cycle-start" && referenceClock !== undefined
+    ? maps.get(referenceClock)?.find({ ...anchor, signalId: referenceClock, cycle: renderedCycle })?.point
+    : undefined;
+  return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }
 
-function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>): AnnotationOverlayPrimitive[] {
+function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, xScale = 1): AnnotationOverlayPrimitive[] {
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
-      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping);
+      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);
       return point ? [{ field, ...point, ...(annotation[field]?.threshold === undefined ? {} : { threshold: annotation[field]!.threshold }) }] : [];
     });
     if (anchors.length === 0) return [];
@@ -3046,7 +3052,7 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
           if (renderedCycle === undefined) continue;
           for (const point of ["cycle-start", "transition-center"] as const) {
             const local = sourceMap.find({ signalId: annotation.sourceSignalId, cycle: renderedCycle, point });
-            if (local) points.push({ x: local.point.x, y: sourceRowY + local.point.y });
+            if (local) points.push({ x: local.point.x * xScale, y: sourceRowY + local.point.y });
           }
         }
         return points;
@@ -3076,7 +3082,7 @@ function projectAnnotationOverlays(document: CanonicalDocument, projection: Rend
   });
 }
 
-function projectEdgeCounters(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, visibleRange: Readonly<{ start: number; end: number }>, selectedCycle: number): EdgeCounterOverlayPrimitive[] {
+function projectEdgeCounters(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, visibleRange: Readonly<{ start: number; end: number }>, selectedCycle: number, xScale = 1): EdgeCounterOverlayPrimitive[] {
   return document.signals.flatMap((signal) => {
     if (signal.type !== "clock" || !signal.edgeCounter.show) return [];
     const map = maps.get(signal.id);
@@ -3087,7 +3093,7 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
       for (const kind of ["rising", "falling"] as const) {
         if (signal.edgeCounter.mode !== "both" && signal.edgeCounter.mode !== kind) continue;
         const local = map.find({ signalId: signal.id, cycle, point: kind === "rising" ? "rising-edge" : "falling-edge" });
-        if (local) edges.push({ x: local.point.x, y: rowY + local.point.y, kind, cycle });
+        if (local) edges.push({ x: local.point.x * xScale, y: rowY + local.point.y, kind, cycle });
       }
     }
     edges.sort((left, right) => left.x - right.x || left.kind.localeCompare(right.kind));
@@ -3100,11 +3106,21 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
   });
 }
 
-function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService()): ImmutableSnapIndex {
+function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+  const referenceMap = document.timeline.referenceClock === undefined ? undefined : maps.get(document.timeline.referenceClock);
+  const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
+    signalId: map.signalId,
+    find: (anchor: SemanticAnchor) => {
+      const local = map.find(anchor);
+      if (!local) return undefined;
+      const sharedBoundary = anchor.point === "cycle-start" ? referenceMap?.find({ ...anchor, ...(document.timeline.referenceClock === undefined ? {} : { signalId: document.timeline.referenceClock }) })?.point : undefined;
+      return { ...local, point: { ...local.point, x: (sharedBoundary?.x ?? local.point.x) * xScale } };
+    },
+  }]));
   return service.build({
     document,
-    geometryMaps: maps,
+    geometryMaps: screenMaps,
     rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])),
     renderedCycleCount: mapping.displayCycleCount,
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
@@ -3116,6 +3132,11 @@ function preferredSnapKinds(type: AnnotationType): readonly SnapKind[] {
   if (type === "dependency" || type === "arrow") return ["clock-edge", "signal-transition", "bus-transition", "value-boundary", "cycle-boundary"];
   if (type === "verticalLine" || type === "marker") return ["cycle-boundary", "clock-edge"];
   return ["annotation", "marker", "value-boundary", "cycle-boundary", "cycle-center", "signal-row"];
+}
+
+/** Treat sub-half-pixel floating-point noise as exact screen-geometry alignment. */
+function normalizeSnapDistance(distance: number): number {
+  return Math.abs(distance) < 0.5 ? 0 : Math.round(distance * 100) / 100;
 }
 
 function withAddedOffset(anchor: SemanticAnchor, x: number, y: number): SemanticAnchor {
@@ -3139,11 +3160,11 @@ function viewportWindow(viewport: HTMLElement, referenceClock?: SignalId): Virtu
   };
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number): void {
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number): number {
   if (!geometry || !referenceSignalId) {
     element.dataset.geometryError = "Reference-clock geometry unavailable";
     element.replaceChildren();
-    return;
+    return 1;
   }
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
@@ -3191,4 +3212,5 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   element.dataset.source = "local-geometry";
   const targetWidth = screenWidth === undefined ? Math.ceil(finalX + 24) : Math.ceil(screenWidth);
   element.parentElement?.style.setProperty("--wave-width", `${targetWidth}px`);
+  return scale;
 }
