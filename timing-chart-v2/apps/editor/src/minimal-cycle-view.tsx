@@ -272,6 +272,7 @@ export function MinimalCycleView() {
   const selectedCycleRef = useRef(selectedCycle);
   selectedCycleRef.current = selectedCycle;
   const refreshPlayhead = useRef<() => void>(() => undefined);
+  const refreshRangeSelectionBand = useRef<() => void>(() => undefined);
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
   const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
@@ -481,11 +482,43 @@ export function MinimalCycleView() {
       playhead.dataset.playheadCycle = String(cycle);
       playhead.style.left = tick.style.left;
     };
+    const refreshRangeSelectionBandNow = () => {
+      const band = viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']");
+      if (!band) return;
+      const preview = rendererHost.dataset.rangePreview;
+      const [startText, endText] = (preview ? preview : `${timelineRangeRef.current.start}:${timelineRangeRef.current.end}`).split(":");
+      const start = Number(startText);
+      const end = Number(endText);
+      const startTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${start}']`);
+      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${end}']`);
+      if (!startTick || !endTick || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
+        band.hidden = true;
+        return;
+      }
+      const startX = Number.parseFloat(startTick.style.left) * currentZoom;
+      const endX = Number.parseFloat(endTick.style.left) * currentZoom;
+      const timeDomainLeft = timelineOffset();
+      if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) {
+        band.hidden = true;
+        return;
+      }
+      band.hidden = false;
+      band.dataset.rangeStart = String(start);
+      band.dataset.rangeEnd = String(end);
+      band.dataset.source = "ruler-local-geometry";
+      band.style.left = `${timeDomainLeft + startX}px`;
+      band.style.width = `${endX - startX}px`;
+      band.style.top = "34px";
+      band.style.height = `${Math.max(projection.totalHeight, viewportElement.clientHeight - 34)}px`;
+      band.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
+    };
+    refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
       const preview = rendererHost.dataset.rangePreview;
       let element = rulerElement.querySelector<HTMLElement>("[data-role='range-preview']");
       if (!preview) {
         element?.remove();
+        refreshRangeSelectionBandNow();
         return;
       }
       const [startText, endText] = preview.split(":");
@@ -508,6 +541,7 @@ export function MinimalCycleView() {
       element.dataset.rangeEnd = String(end);
       element.style.left = startTick.style.left;
       element.style.width = `${Math.max(1, endTick.offsetLeft - startTick.offsetLeft)}px`;
+      refreshRangeSelectionBandNow();
     };
 
     const publishState = () => {
@@ -1405,7 +1439,10 @@ export function MinimalCycleView() {
     };
   }, []);
 
-  useEffect(() => { refreshPlayhead.current(); }, [selectedCycle, snapshot.revision]);
+  useEffect(() => {
+    refreshPlayhead.current();
+    refreshRangeSelectionBand.current();
+  }, [selectedCycle, snapshot.revision, timelineRange, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
     const linked = new Set(selectedTransaction?.linkedSignals ?? []);
@@ -2020,6 +2057,7 @@ export function MinimalCycleView() {
           <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}>
             <div className="cycle-ruler-content" ref={ruler} />
           </div>
+          <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band" aria-hidden="true" hidden />
           <LegendView document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
