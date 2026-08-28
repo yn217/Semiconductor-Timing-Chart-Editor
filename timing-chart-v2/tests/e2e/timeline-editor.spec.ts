@@ -5,6 +5,7 @@ test("selects a cycle from Canvas geometry and the exclusive terminal boundary f
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const surface = host.locator("[data-role='timing-chart-surface']");
   const wave = host.locator("[data-role='stable-waveform-surface']");
   const owner = wave.locator("[data-signal-id='sig_cycle_request']");
   const cycleTick = page.getByTestId("cycle-ruler").locator("[data-cycle='5']");
@@ -39,7 +40,6 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
   expect(cycle0).not.toBeNull();
   expect(terminal).not.toBeNull();
 
-  const surface = host.locator("[data-role='timing-chart-surface']");
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await host.getAttribute("data-history-depth"),
@@ -86,6 +86,7 @@ test("drag-selects a half-open Canvas range with preview-only movement and Escap
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const surface = host.locator("[data-role='timing-chart-surface']");
   const wave = host.locator("[data-role='stable-waveform-surface']");
   const owner = wave.locator("[data-signal-id='sig_cycle_request']");
   const waveBox = await wave.boundingBox();
@@ -100,6 +101,7 @@ test("drag-selects a half-open Canvas range with preview-only movement and Escap
   const before = await host.getAttribute("data-canonical-revision");
   const historyBefore = await page.getByTestId("history-status").textContent();
   const dirtyBefore = await page.getByTestId("dirty-status").textContent();
+  const countersBefore = await surface.getAttribute("data-render-counters");
   await page.mouse.move(startBox!.x, y);
   await page.mouse.down();
   await page.mouse.move(endBox!.x, y);
@@ -107,6 +109,7 @@ test("drag-selects a half-open Canvas range with preview-only movement and Escap
   await expect(host).toHaveAttribute("data-canonical-revision", before!);
   await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
   await expect(page.getByTestId("dirty-status")).toHaveText(dirtyBefore!);
+  await expect(surface).toHaveAttribute("data-render-counters", countersBefore!);
   await page.mouse.up();
   await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("8");
@@ -167,6 +170,8 @@ test("deletes a half-open range and preserves the active value at the join", asy
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeCounters = await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");
   await page.getByRole("button", { name: "Delete range" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const editor = page.getByTestId("signal-editor");
@@ -178,6 +183,18 @@ test("deletes a half-open range and preserves the active value at the join", asy
   // caused (see ruler-terminal-boundary.spec.ts).
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='22']")).toHaveCount(1);
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='23']")).toHaveCount(0);
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  const afterCounters = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  const initialCounters = JSON.parse(beforeCounters ?? "null") as Record<string, number>;
+  expect(afterCounters.waveDromRenders).toBeGreaterThan(initialCounters.waveDromRenders);
+  expect(afterCounters.localGeometryBuilds).toBeGreaterThan(initialCounters.localGeometryBuilds);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await page.getByTestId("editor-undo").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 2));
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await page.getByTestId("editor-redo").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 3));
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
