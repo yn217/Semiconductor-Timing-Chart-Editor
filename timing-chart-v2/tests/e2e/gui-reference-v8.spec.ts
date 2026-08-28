@@ -60,6 +60,9 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
   await expect(page.locator('.column-headings [aria-label="Role"]')).toHaveText("Role");
   await expect(page.locator('.column-headings [aria-label="Signal / Annotation"]')).toHaveText("Signal / Annotation");
+  const inputGroupHeader = page.locator('[data-role="left-group-header"][data-group-name="Input"]');
+  await expect(inputGroupHeader.locator('[data-role="tree-collapse"]')).toBeVisible();
+  await expect(inputGroupHeader.locator('[data-role="tree-group-more"]')).toBeVisible();
   for (const groupName of ["Zoom", "Display"]) {
     await expect(page.locator(`.ribbon-major-group[data-major-group="${groupName}"]`)).toHaveJSProperty("scrollWidth", await page.locator(`.ribbon-major-group[data-major-group="${groupName}"]`).evaluate((element) => element.clientWidth));
   }
