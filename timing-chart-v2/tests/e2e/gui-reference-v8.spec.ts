@@ -58,6 +58,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.locator(".tree-add-button")).toHaveAttribute("aria-label", "Add signal or group");
   expect((await page.locator(".tree-add-button").boundingBox())?.width ?? 0).toBeGreaterThanOrEqual(60);
   await expect(page.locator(".column-headings")).toContainText("Time Scale: Cycle");
+  await expect(page.locator('.column-headings [aria-label="Role"]')).toHaveText("Role");
+  await expect(page.locator('.column-headings [aria-label="Signal / Annotation"]')).toHaveText("Signal / Annotation");
   await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", "0");
   expect((await page.locator("[data-role='tree-signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
   expect((await page.locator("[data-role='signal-role'][data-presentation='input']").first().boundingBox())?.width).toBe(28);
