@@ -787,6 +787,10 @@ export function MinimalCycleView() {
       return cycle === undefined ? false : applyCanvasCycleSelection(cycle, event.shiftKey);
     };
     const onRulerSelect = (event: MouseEvent) => {
+      if (suppressRulerClick) {
+        suppressRulerClick = false;
+        return;
+      }
       const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
       if (!tick) return;
       const cycle = Number(tick.dataset.cycle);
@@ -803,8 +807,9 @@ export function MinimalCycleView() {
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
-    let rangeDrag: { readonly start: number; readonly anchor: number; readonly startClientX: number; moved: boolean } | undefined;
+    let rangeDrag: { readonly start: number; readonly anchor: number; readonly startClientX: number; readonly surface: "ruler" | "waveform"; moved: boolean } | undefined;
     let suppressCanvasClick = false;
+    let suppressRulerClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       if (!waveLayer) return undefined;
@@ -825,6 +830,20 @@ export function MinimalCycleView() {
       }
       return nearest?.cycle;
     };
+    const cycleBoundaryAtRulerX = (clientX: number): number | undefined => {
+      const ticks = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")];
+      let nearest: { cycle: number; distance: number } | undefined;
+      for (const tick of ticks) {
+        const cycle = Number(tick.dataset.cycle);
+        const distance = Math.abs(tick.getBoundingClientRect().left - clientX);
+        if (Number.isInteger(cycle) && (!nearest || distance < nearest.distance)) nearest = { cycle, distance };
+      }
+      return nearest?.cycle;
+    };
+    // The ruler ticks are placed from the same LocalGeometryMap as the
+    // waveform. Their screen rectangles therefore provide the shared
+    // interaction-space boundary resolver for both drag surfaces.
+    const cycleBoundaryAtPointerX = (clientX: number): number | undefined => cycleBoundaryAtRulerX(clientX) ?? cycleBoundaryAtX(clientX);
     const rangeFromBoundaries = (first: number, second: number, cycleCount: number) => {
       const start = Math.min(first, second);
       const endBoundary = Math.max(first, second);
@@ -832,16 +851,19 @@ export function MinimalCycleView() {
     };
     const onRangePointerDown = (event: PointerEvent) => {
       if (rendererHost.dataset.arrowPick) return;
-      if (event.button !== 0 || !(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return;
-      const cycle = cycleBoundaryAtX(event.clientX);
+      const target = event.target instanceof Element ? event.target : undefined;
+      const onWaveform = Boolean(target?.closest("[data-role='stable-waveform-surface']"));
+      const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
+      if (event.button !== 0 || (!onWaveform && !onRuler)) return;
+      const cycle = cycleBoundaryAtPointerX(event.clientX);
       if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
-      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, startClientX: event.clientX, moved: false };
+      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false };
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
       event.preventDefault();
     };
     const onRangePointerMove = (event: PointerEvent) => {
       if (!rangeDrag) return;
-      const cycle = cycleBoundaryAtX(event.clientX);
+      const cycle = cycleBoundaryAtPointerX(event.clientX);
       if (cycle === undefined) return;
       if (!rangeDrag.moved && Math.abs(event.clientX - rangeDrag.startClientX) < 4) return;
       rangeDrag.moved = true;
@@ -852,14 +874,16 @@ export function MinimalCycleView() {
     };
     const onRangePointerUp = (event: PointerEvent) => {
       if (!rangeDrag) return;
-      const cycle = cycleBoundaryAtX(event.clientX) ?? rangeDrag.start;
+      const cycle = cycleBoundaryAtPointerX(event.clientX) ?? rangeDrag.start;
       if (!rangeDrag.moved) {
+        const dragSurface = rangeDrag.surface;
         rangeDrag = undefined;
         delete rendererHost.dataset.rangeDrag;
         delete rendererHost.dataset.rangePreview;
         refreshRangePreview();
         suppressCanvasClick = true;
-        const clickCycle = cycleBoundaryAtX(event.clientX);
+        suppressRulerClick = true;
+        const clickCycle = dragSurface === "ruler" ? cycle : cycleBoundaryAtX(event.clientX);
         if (clickCycle !== undefined) applyCanvasCycleSelection(clickCycle, event.shiftKey);
         requestAnimationFrame(() => { suppressCanvasClick = false; });
         event.preventDefault();
@@ -874,6 +898,7 @@ export function MinimalCycleView() {
       refreshRangePreview();
       rangeDrag = undefined;
       suppressCanvasClick = true;
+      suppressRulerClick = true;
       requestAnimationFrame(() => { suppressCanvasClick = false; });
       event.preventDefault();
     };
@@ -1098,6 +1123,10 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("drop", onDrop);
     rendererHost.addEventListener("dragend", onDragEnd);
     rulerElement.addEventListener("click", onRulerSelect);
+    rulerElement.addEventListener("pointerdown", onRangePointerDown);
+    rulerElement.addEventListener("pointermove", onRangePointerMove);
+    rulerElement.addEventListener("pointerup", onRangePointerUp);
+    rulerElement.addEventListener("pointercancel", onRangePointerCancel);
     rendererHost.addEventListener("pointerdown", onAnnotationPointerDown);
     rendererHost.addEventListener("pointermove", onAnnotationPointerMove);
     rendererHost.addEventListener("pointerup", onAnnotationPointerUp);
@@ -1121,6 +1150,10 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("drop", onDrop);
       rendererHost.removeEventListener("dragend", onDragEnd);
       rulerElement.removeEventListener("click", onRulerSelect);
+      rulerElement.removeEventListener("pointerdown", onRangePointerDown);
+      rulerElement.removeEventListener("pointermove", onRangePointerMove);
+      rulerElement.removeEventListener("pointerup", onRangePointerUp);
+      rulerElement.removeEventListener("pointercancel", onRangePointerCancel);
       rendererHost.removeEventListener("pointerdown", onAnnotationPointerDown);
       rendererHost.removeEventListener("pointermove", onAnnotationPointerMove);
       rendererHost.removeEventListener("pointerup", onAnnotationPointerUp);

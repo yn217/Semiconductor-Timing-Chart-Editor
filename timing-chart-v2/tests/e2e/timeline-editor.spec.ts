@@ -137,6 +137,122 @@ test("drag-selects a half-open Canvas range with preview-only movement and Escap
   await expect(page.getByLabel("Timeline range end")).toHaveValue("10");
 });
 
+test("drag-selects a geometry-backed half-open range directly on the cycle ruler", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const ruler = page.getByTestId("cycle-ruler");
+  const start = await ruler.locator("[data-cycle='2']").boundingBox();
+  const end = await ruler.locator("[data-cycle='6']").boundingBox();
+  const reverseStart = await ruler.locator("[data-cycle='6']").boundingBox();
+  const reverseEnd = await ruler.locator("[data-cycle='2']").boundingBox();
+  const terminal = await ruler.locator("[data-cycle='24']").boundingBox();
+  expect(start).not.toBeNull();
+  expect(end).not.toBeNull();
+  expect(reverseStart).not.toBeNull();
+  expect(reverseEnd).not.toBeNull();
+  expect(terminal).not.toBeNull();
+  const y = start!.y + start!.height / 2;
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    counters: await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
+  };
+  await page.mouse.move(start!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(end!.x, y);
+  await expect(host).toHaveAttribute("data-range-drag", "active");
+  await expect(ruler.locator("[data-role='range-preview']")).toBeVisible();
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+  expect(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
+  await expect(ruler.locator("[data-role='range-preview']")).toHaveCount(0);
+
+  await page.mouse.move(reverseStart!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(reverseEnd!.x, y);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
+
+  await page.mouse.move(start!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(terminal!.x, y);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
+
+  await page.mouse.move(start!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(end!.x, y);
+  await page.keyboard.press("Escape");
+  await expect(host).not.toHaveAttribute("data-range-drag", "active");
+  await expect(ruler.locator("[data-role='range-preview']")).toHaveCount(0);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
+
+  await page.mouse.move(start!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(end!.x, y);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
+});
+
+test("ruler range drag cancels without mutation and remains semantic after scroll and zoom", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  const ruler = page.getByTestId("cycle-ruler");
+  const viewport = page.getByTestId("cycle-viewport");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const tick2 = await ruler.locator("[data-cycle='2']").boundingBox();
+  const tick6 = await ruler.locator("[data-cycle='6']").boundingBox();
+  expect(tick2).not.toBeNull();
+  expect(tick6).not.toBeNull();
+  const y = tick2!.y + tick2!.height / 2;
+  await page.mouse.move(tick2!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(tick6!.x, y);
+  await expect(ruler.locator("[data-role='range-preview']")).toBeVisible();
+  await ruler.dispatchEvent("pointercancel", { pointerId: 1, button: 0, clientX: tick6!.x, clientY: y });
+  await expect(ruler.locator("[data-role='range-preview']")).toHaveCount(0);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("4");
+
+  await viewport.evaluate((element) => { element.scrollLeft = Math.min(180, element.scrollWidth); element.dispatchEvent(new Event("scroll")); });
+  const scrolledStart = await ruler.locator("[data-cycle='5']").boundingBox();
+  const scrolledEnd = await ruler.locator("[data-cycle='9']").boundingBox();
+  expect(scrolledStart).not.toBeNull();
+  expect(scrolledEnd).not.toBeNull();
+  await page.mouse.move(scrolledStart!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(scrolledEnd!.x, y);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("5");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("9");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const zoomStart = await ruler.locator("[data-cycle='8']").boundingBox();
+  const zoomEnd = await ruler.locator("[data-cycle='12']").boundingBox();
+  expect(zoomStart).not.toBeNull();
+  expect(zoomEnd).not.toBeNull();
+  await page.mouse.move(zoomStart!.x, y);
+  await page.mouse.down();
+  await page.mouse.move(zoomEnd!.x, y);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("8");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("12");
+});
+
 test("inserts cycles with full semantic ripple and one Undo entry", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
