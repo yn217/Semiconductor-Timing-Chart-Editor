@@ -85,10 +85,25 @@ function compareRegion(reference: PNG, dut: PNG, region: { x: number; y: number;
   return { ...region, changedPixels, comparedPixels, diffPercent: comparedPixels === 0 ? 0 : changedPixels / comparedPixels };
 }
 
+function blendPng(reference: PNG, dut: PNG): PNG {
+  expect(dut.width).toBe(reference.width);
+  expect(dut.height).toBe(reference.height);
+  const overlay = new PNG({ width: reference.width, height: reference.height });
+  for (let index = 0; index < reference.data.length; index += 4) {
+    overlay.data[index] = Math.round((reference.data[index] + dut.data[index]) / 2);
+    overlay.data[index + 1] = Math.round((reference.data[index + 1] + dut.data[index + 1]) / 2);
+    overlay.data[index + 2] = Math.round((reference.data[index + 2] + dut.data[index + 2]) / 2);
+    overlay.data[index + 3] = 255;
+  }
+  return overlay;
+}
+
 test("generates V1 reference vs V2 production visual evidence at the locked viewport", async ({ page }) => {
   await mkdir(outputRoot, { recursive: true });
   await page.setViewportSize(viewport);
   await page.goto("/?visual-reference");
+  await page.addStyleTag({ content: "*, *::before, *::after { animation: none !important; transition: none !important; }" });
+  await page.evaluate(() => { window.scrollTo(0, 0); document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")?.scrollTo(0, 0); });
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='10']")).toHaveCount(1);
   await expect(page.locator(".inspector-shell > .inspector")).toContainText("Clock");
@@ -133,8 +148,10 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
 
   const reference = PNG.sync.read(await readFile(resolve(outputRoot, "reference.png")));
   const dut = PNG.sync.read(await readFile(resolve(outputRoot, "dut.png")));
-  const comparison = comparePng(reference, dut, { left: target.center.x, top: target.center.y + 36, right: target.inspector.x, bottom: target.bottom.y });
+  const mask = { left: 0, top: 0, right: 0, bottom: 0 } as const;
+  const comparison = comparePng(reference, dut, mask);
   await writeFile(resolve(outputRoot, "diff.png"), PNG.sync.write(comparison.diff));
+  await writeFile(resolve(outputRoot, "overlay-50.png"), PNG.sync.write(blendPng(reference, dut)));
   const regionDiff = Object.fromEntries(Object.entries(visualRegions).map(([name, region]) => [name, compareRegion(reference, dut, region)]));
   await writeFile(resolve(outputRoot, "region-diff.json"), `${JSON.stringify({ viewport, source: "golden-home-cycle-1672x941.png", threshold: 24, regions: regionDiff }, null, 2)}\n`);
   const report = {
@@ -144,13 +161,16 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     metrics,
     geometryPass: Object.values(metrics.differences).every((values) => Object.values(values as Record<string, number>).every((value) => value <= 2)),
     ribbonNoHorizontalScroll: metrics.ribbonOverflow.scrollWidth <= metrics.ribbonOverflow.clientWidth + 1,
-    visualDiff: { ...comparison, diff: undefined, threshold: 0.05, pass: comparison.diffPercent <= 0.05, waveformViewportMasked: true },
-    acceptance: "diagnostic-gap-report",
-    artifacts: ["reference.png", "dut.png", "diff.png", "region-diff.json", "layout-metrics.json"],
+    visualDiff: { ...comparison, diff: undefined, threshold: 0.05, pass: comparison.diffPercent <= 0.05, pixelDeltaThreshold: 24, mask },
+    acceptance: "FAIL",
+    artifacts: ["reference.png", "dut.png", "diff.png", "overlay-50.png", "region-diff.json", "layout-metrics.json"],
   };
+  report.acceptance = report.geometryPass && report.visualDiff.pass ? "PASS" : "FAIL";
   await writeFile(resolve(outputRoot, "layout-metrics.json"), `${JSON.stringify(report, null, 2)}\n`);
 
   expect(metrics.viewport).toMatchObject({ ...viewport, devicePixelRatio: 1 });
+  expect(report.geometryPass).toBe(true);
+  expect(report.visualDiff.pass).toBe(true);
   expect(metrics.ribbonOverflow.scrollWidth).toBeLessThanOrEqual(metrics.ribbonOverflow.clientWidth + 1);
   await expect(page.getByTestId("ribbon")).toBeVisible();
   await expect(page.getByTestId("bottom-editor")).toBeVisible();
