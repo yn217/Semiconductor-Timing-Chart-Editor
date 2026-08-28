@@ -287,7 +287,7 @@ export function MinimalCycleView() {
     if (!root) return;
     const query = treeFilter.trim().toLocaleLowerCase();
     let matches = 0;
-    for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row'], [data-role='frozen-row'], [data-role='timing-row']")) {
+    for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row']")) {
       const text = [row.dataset.name, row.dataset.fullPath, row.dataset.instancePath, row.dataset.signalRole, row.dataset.groupName].filter(Boolean).join(" ").toLocaleLowerCase();
       const collapsed = row.dataset.role === "left-row" && row.dataset.groupId !== undefined && collapsedGroupIds.has(row.dataset.groupId as GroupId) && row.dataset.groupStart !== "true";
       const visible = (query.length === 0 || text.includes(query)) && !collapsed;

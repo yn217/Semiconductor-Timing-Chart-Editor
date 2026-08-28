@@ -443,6 +443,9 @@ test("filters the Signal/Group tree by display name, path, role, or group withou
   await expect(host).toHaveAttribute("data-tree-filter-matches", "1");
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_ready']")).toBeVisible();
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeHidden();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toBeVisible();
+  await expect(host.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']")).toBeVisible();
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request']")).toBeVisible();
   await filter.fill("output");
   await expect(host).toHaveAttribute("data-tree-filter-matches", "3");
   await expect(host.locator("[data-role='left-row'][data-signal-role='output']")).toHaveCount(3);
