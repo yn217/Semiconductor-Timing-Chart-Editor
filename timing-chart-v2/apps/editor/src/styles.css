@@ -342,7 +342,7 @@ body { min-width: 1100px; }
 .editor-shell .surface-host [data-role="stable-waveform-surface"],
 .editor-shell .surface-host [data-role="annotation-overlay-surface"],
 .editor-shell .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(-35px); }
-.editor-shell .surface-host [data-role="left-row"] { grid-template-columns: 42px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
+.editor-shell .surface-host [data-role="left-row"] { grid-template-columns: 34px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
 .editor-shell .left-column-heading { align-items: flex-start; padding-top: 9px; }
 .editor-shell .left-column-heading > label { position: absolute; top: 37px; right: 0; left: 0; z-index: 21; display: block; height: 35px; padding: 4px 7px; border-top: 1px solid #d6dde6; background: #fbfcfe; }
 .editor-shell .left-column-heading > label input { height: 27px; padding-left: 7px; }
@@ -360,8 +360,8 @@ body { min-width: 1100px; }
 .editor-shell .surface-host [data-role="tree-signal-role"] { height: 20px; width: 28px; min-width: 28px; justify-self: start; padding: 0; border-radius: 4px; }
 .editor-shell .surface-host [data-role="signal-role"] { justify-self: center; }
 .editor-shell .surface-host [data-role="tree-signal-role"][data-presentation="internal"],
-.editor-shell .surface-host [data-role="signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; }
-.editor-shell .surface-host [data-role="tree-signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; }
+.editor-shell .surface-host [data-role="signal-role"][data-presentation="internal"] { width: 34px; min-width: 34px; padding-inline: 2px; }
+.editor-shell .surface-host [data-role="tree-signal-role"][data-presentation="internal"] { width: 34px; min-width: 34px; padding-inline: 2px; }
 .editor-shell .surface-host [data-role="tree-signal-role"][data-presentation="comment"],
 .editor-shell .surface-host [data-role="signal-role"][data-presentation="comment"] { min-width: 24px; width: 24px; }
 .editor-shell .surface-host [data-role="tree-signal-role"][data-presentation="input"],
@@ -549,15 +549,25 @@ body { min-width: 1100px; }
 .surface-host [data-role="tree-signal-role"][data-presentation="output"],
 .surface-host [data-role="signal-role"][data-presentation="output"] { background: #e3f1ff; color: #1b5b96; }
 .surface-host [data-role="tree-signal-role"][data-presentation="internal"],
-.surface-host [data-role="signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; border: 1px solid #aab6c4; background: #fff; color: #536274; }
+.surface-host [data-role="signal-role"][data-presentation="internal"] { width: 34px; min-width: 34px; padding-inline: 2px; border: 1px solid #aab6c4; background: #fff; color: #536274; }
 .surface-host [data-role="tree-signal-role"][data-presentation="comment"],
 .surface-host [data-role="signal-role"][data-presentation="comment"] { width: 24px; min-width: 24px; border: 1px solid #aa72e6; background: #fff; color: #8c47d3; }
 .surface-host [data-role="tree-signal-role"] .comment-icon,
 .surface-host [data-role="signal-role"] .comment-icon { width: 15px; height: 15px; flex: 0 0 15px; }
 .surface-host [data-role="tree-signal-name"],
 .surface-host [data-role="frozen-signal-name"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-shell .ribbon-tool { overflow: hidden; }
+.editor-shell .ribbon-tool > svg { flex: 0 0 19px; width: 19px; height: 19px; }
+.editor-shell .ribbon-tool > span { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 100%; min-width: 0; min-height: 20px; max-height: 2.2em; overflow: hidden; line-height: 1.05; text-align: center; white-space: normal; overflow-wrap: normal; word-break: normal; }
+.editor-shell .home-timeline-group > .ribbon-tool { flex: 0 0 43px; min-width: 43px; }
+.editor-shell .home-view-group .home-zoom-controls { align-items: center; gap: 2px; min-width: 0; }
+.editor-shell .home-view-group .home-zoom-controls > .ribbon-tool { flex: 0 0 39px; min-width: 39px; }
+.editor-shell .home-display-subgroup { overflow: visible; }
 @media (min-width: 1101px) and (max-width: 1300px) {
   .ribbon { zoom: .8; width: 125%; }
+}
+@media (min-width: 1301px) and (max-width: 1500px) {
+  .ribbon { zoom: .9; width: 111.111%; }
 }
 @media (max-width: 1100px) {
   body { min-width: 0; }
