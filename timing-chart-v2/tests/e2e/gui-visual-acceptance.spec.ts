@@ -162,6 +162,9 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
   const reference = PNG.sync.read(await readFile(resolve(outputRoot, "reference.png")));
   const dut = PNG.sync.read(await readFile(resolve(outputRoot, "dut.png")));
   const mask = { left: 0, top: 0, right: 0, bottom: 0 } as const;
+  const waveformTraceOriginX = 265 + 61 + 148;
+  const maskHasArea = mask.right > mask.left && mask.bottom > mask.top;
+  const maskContractPass = !maskHasArea || (mask.left >= waveformTraceOriginX && mask.right <= viewport.width && mask.top >= 0 && mask.bottom <= viewport.height);
   const comparison = comparePng(reference, dut, mask);
   await writeFile(resolve(outputRoot, "diff.png"), PNG.sync.write(comparison.diff));
   const overlay = blendPng(reference, dut);
@@ -190,6 +193,7 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     target,
     metrics,
     geometryPass: Object.values(metrics.differences).every((values) => Object.values(values as Record<string, number>).every((value) => value <= 2)),
+    maskContractPass,
     ribbonNoHorizontalScroll: metrics.ribbonOverflow.scrollWidth <= metrics.ribbonOverflow.clientWidth + 1,
     visualDiff: { ...comparison, diff: undefined, threshold: 0.05, pass: comparison.diffPercent <= 0.05, pixelDeltaThreshold: 24, mask },
     acceptance: "FAIL",
@@ -200,6 +204,7 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
 
   expect(metrics.viewport).toMatchObject({ ...viewport, devicePixelRatio: 1 });
   expect(report.geometryPass).toBe(true);
+  expect(report.maskContractPass).toBe(true);
   expect(report.visualDiff.pass).toBe(true);
   expect(metrics.ribbonOverflow.scrollWidth).toBeLessThanOrEqual(metrics.ribbonOverflow.clientWidth + 1);
   await expect(page.getByTestId("ribbon")).toBeVisible();
