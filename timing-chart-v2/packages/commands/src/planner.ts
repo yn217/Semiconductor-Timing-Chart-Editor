@@ -656,7 +656,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const settings = command.edgeCounter;
       if (!Number.isInteger(settings.startNumber) || !Number.isInteger(settings.labelEvery) || settings.labelEvery < 1 || !Number.isFinite(settings.offset.x) || !Number.isFinite(settings.offset.y)) return fail("invalid", "INVALID_EDGE_COUNTER", "$.edgeCounter", "Edge Number settings are invalid.");
       if (JSON.stringify(signal.edgeCounter) === JSON.stringify(settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
-      const changeSet: ChangeSet = { rowPresentation: [signal.id] };
+      const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
     }
     case "spacer.create": {

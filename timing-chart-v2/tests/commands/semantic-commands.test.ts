@@ -378,7 +378,7 @@ describe("command execution and atomic history", () => {
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.changeSet).toEqual({ rowPresentation: ["sig_clk"] });
+      expect(result.changeSet).toEqual({ rowPresentation: ["sig_clk"], edgeCounter: ["sig_clk"] });
       expect(result.changeSet.waveSemantics).toBeUndefined();
       expect(result.changeSet.geometryLocal).toBeUndefined();
     }

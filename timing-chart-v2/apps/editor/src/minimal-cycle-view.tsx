@@ -615,7 +615,7 @@ export function MinimalCycleView() {
       // Row presentation (for example a signal rename or role/style edit) does
       // not change annotation anchor coordinates. Re-resolve overlays only for
       // actual screen-Y/order changes or an explicit annotation dependency.
-      const refreshOverlaysNow = refreshRuler || changed.rowOrder !== undefined || changed.geometryScreenY !== undefined || (changed.annotationPosition?.length ?? 0) > 0 || (changed.annotationStyle?.length ?? 0) > 0 || (changed.addedSignals?.length ?? 0) > 0 || (changed.removedSignals?.length ?? 0) > 0;
+      const refreshOverlaysNow = refreshRuler || changed.rowOrder !== undefined || changed.geometryScreenY !== undefined || changed.edgeCounter !== undefined || (changed.annotationPosition?.length ?? 0) > 0 || (changed.annotationStyle?.length ?? 0) > 0 || (changed.addedSignals?.length ?? 0) > 0 || (changed.removedSignals?.length ?? 0) > 0;
       renderer.update(projection);
       setSnapshot(result.snapshot);
       setValidationDiagnostics([]);

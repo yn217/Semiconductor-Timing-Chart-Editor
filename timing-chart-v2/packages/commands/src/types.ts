@@ -96,6 +96,7 @@ export interface ChangeSet {
   readonly fullDocumentReplace?: boolean;
   readonly rowOrder?: readonly RowId[];
   readonly rowPresentation?: readonly RowId[];
+  readonly edgeCounter?: readonly SignalId[];
   readonly addedSignals?: readonly SignalId[];
   readonly removedSignals?: readonly SignalId[];
   readonly addedGroups?: readonly GroupId[];

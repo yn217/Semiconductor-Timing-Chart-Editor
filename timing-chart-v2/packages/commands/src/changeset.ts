@@ -1,7 +1,7 @@
 import type { ChangeSet } from "./types.js";
 
 const ARRAY_KEYS = [
-  "rowOrder", "rowPresentation", "addedSignals", "removedSignals", "addedGroups", "removedGroups",
+  "rowOrder", "rowPresentation", "edgeCounter", "addedSignals", "removedSignals", "addedGroups", "removedGroups",
   "waveSemantics", "geometryLocal", "geometryScreenY", "annotationPosition", "annotationStyle",
   "bookmarkPosition", "timeGroupSemantics", "transactionSemantics",
 ] as const;
