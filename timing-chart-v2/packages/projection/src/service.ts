@@ -1,14 +1,18 @@
 import type { SignalId } from "@timing-chart-v2/schema";
 import { calculateRowLayout } from "./row-layout.js";
 import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry } from "./types.js";
+import type { RowLayoutResult } from "./row-layout.js";
 
 const defaultTransform = { scrollX: 0, scrollY: 0, zoom: 1 } as const;
 
 export class DefaultProjectionService implements ProjectionService {
   #layout: ReturnType<typeof calculateRowLayout> | undefined;
   #projectionBuilds = 0;
+  #viewportOnlyBuilds = 0;
   #rowLayoutBuilds = 0;
   #lastMountedRange: readonly [number, number] = [0, 0];
+  #rowIndexById = new Map<RowLayoutEntry["rowId"], number>();
+  #groupHeaderPrefixHeights: number[] = [];
 
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
@@ -16,9 +20,16 @@ export class DefaultProjectionService implements ProjectionService {
     if (!this.#layout || invalidatesLayout) {
       this.#layout = calculateRowLayout(document);
       this.#rowLayoutBuilds += 1;
+      this.#rowIndexById = new Map(this.#layout.navigationRows.map((row, index) => [row.rowId, index]));
+      this.#groupHeaderPrefixHeights = [0];
+      for (const header of this.#layout.groupHeaders) this.#groupHeaderPrefixHeights.push(this.#groupHeaderPrefixHeights.at(-1)! + header.height);
     }
     const layout = this.#layout;
     this.#projectionBuilds += 1;
+    if (request.previous && request.snapshot.revision === request.previous.revision && Object.keys(request.changeSet).length === 0) {
+      this.#viewportOnlyBuilds += 1;
+      return this.#projectViewportOnly(request, layout);
+    }
     const visibleRowIds = layout.visibleRows.map((row) => row.rowId);
     const pinned = new Set(request.viewport.pinnedRowIds);
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
@@ -62,8 +73,68 @@ export class DefaultProjectionService implements ProjectionService {
   }
 
   diagnostics() {
-    return Object.freeze({ projectionBuilds: this.#projectionBuilds, rowLayoutBuilds: this.#rowLayoutBuilds, lastMountedRange: this.#lastMountedRange });
+    return Object.freeze({ projectionBuilds: this.#projectionBuilds, viewportOnlyBuilds: this.#viewportOnlyBuilds, rowLayoutBuilds: this.#rowLayoutBuilds, lastMountedRange: this.#lastMountedRange });
   }
+
+  #projectViewportOnly(request: ProjectionRequest, layout: RowLayoutResult): RenderProjection {
+    const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
+    const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
+    const firstHeader = upperBound(layout.groupHeaders, request.viewport.viewportEndY, (header) => header.y);
+    const crossedHeaderHeight = this.#groupHeaderPrefixHeights[firstHeader] ?? 0;
+    const rangeEnd = end + crossedHeaderHeight;
+    const firstRow = lowerBound(layout.navigationRows, start, (row) => row.y + row.height);
+    const afterLastRow = upperBound(layout.navigationRows, rangeEnd, (row) => row.y);
+    const candidateIds = new Set<RowLayoutEntry["rowId"]>();
+    for (let index = firstRow; index < afterLastRow; index += 1) candidateIds.add(layout.navigationRows[index]!.rowId);
+    for (const rowId of request.viewport.pinnedRowIds) candidateIds.add(rowId);
+    for (const rowId of request.previous!.mountedRowIds) candidateIds.add(rowId);
+    const mountedRows = [...candidateIds]
+      .map((rowId) => this.#rowIndexById.get(rowId))
+      .filter((index): index is number => index !== undefined)
+      .sort((left, right) => left - right)
+      .map((index) => layout.navigationRows[index]!);
+    const mountedGroupHeaders = layout.groupHeaders
+      .slice(Math.max(0, lowerBound(layout.groupHeaders, start, (header) => header.y + header.height)), firstHeader + 1)
+      .filter((header) => intersects(header, start, end));
+    const mountedRowIds = mountedRows.map((row) => row.rowId);
+    this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
+    const mountedSignalIds = mountedRows.filter((row) => row.kind === "timing" && row.visible).map((row) => row.rowId as SignalId);
+    const timingRowIds = mountedRows.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
+    return {
+      ...request.previous!,
+      revision: request.snapshot.revision,
+      mountedRowIds,
+      leftRowIds: mountedRowIds,
+      frozenLabelRowIds: mountedRowIds,
+      timingRowIds,
+      mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
+      mountedSignalIds,
+      waveSignalIds: [],
+      transform: request.previous!.transform,
+    };
+  }
+}
+
+function lowerBound<T>(items: readonly T[], target: number, value: (item: T) => number): number {
+  let low = 0;
+  let high = items.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (value(items[middle]!) < target) low = middle + 1;
+    else high = middle;
+  }
+  return low;
+}
+
+function upperBound<T>(items: readonly T[], target: number, value: (item: T) => number): number {
+  let low = 0;
+  let high = items.length;
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (value(items[middle]!) <= target) low = middle + 1;
+    else high = middle;
+  }
+  return low;
 }
 
 function intersects(row: Pick<RowLayoutEntry, "y" | "height">, start: number, end: number): boolean {
