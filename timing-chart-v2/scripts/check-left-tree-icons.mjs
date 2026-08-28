@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 const root = resolve(process.cwd());
 const renderer = await readFile(resolve(root, "packages/renderer/src/stable-surface.ts"), "utf8");
 const styles = await readFile(resolve(root, "apps/editor/src/styles.css"), "utf8");
-const sprite = await readFile(resolve(root, "../gui-mockup/icons.svg"), "utf8");
+const sprite = await readFile(resolve(root, "../timing-chart-v1/gui-mockup/icons.svg"), "utf8");
 const iconStart = renderer.indexOf("function createLeftTreeIcon");
 const iconEnd = renderer.indexOf("interface Layers", iconStart);
 const iconSource = iconStart >= 0 && iconEnd >= 0 ? renderer.slice(iconStart, iconEnd) : "";

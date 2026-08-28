@@ -121,7 +121,7 @@ try {
   await (await jsonChooser).setFiles({ name: 'issue65-imported.tcd.json', mimeType: 'application/json', buffer: Buffer.from(importedText) });
   await page.waitForTimeout(45);
   assert.equal(await page.evaluate(() => window.TimingChartProductionController.model.document.document.title), 'Issue65 imported through UI');
-  const sampleDir = 'samples/golden-protocol/timing_chart_sample_pack/samples';
+  const sampleDir = '../timing-chart-v2/samples/golden-protocol/timing_chart_sample_pack/samples';
   const matrixFiles = ['01_apb_register_access.tcd.json', '02_ahb_lite_pipelined_transfer.tcd.json', '03_axi4_full_write_burst.tcd.json', '08_async_fifo_cdc.tcd.json'];
   const matrixResults = [];
   for (const file of matrixFiles) {

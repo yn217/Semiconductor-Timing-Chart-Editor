@@ -3,13 +3,13 @@
 半導体チップ仕様書向けのタイミングチャート作成ツール。
 
 ## Source of truth
-- `docs/PRODUCT_SPEC.md`
-- `docs/DATA_FORMAT.md`
-- `docs/WAVEDROM_COMPATIBILITY.md` — WaveDrom signal geometry is normative
-- `docs/WAVEDROM_CONFORMANCE.md` — exhaustive WaveDrom reference-vs-DUT conformance matrix
-- `docs/GUI_SPEC.md`
-- `docs/GUI_VISUAL_CONTRACT.md` — Golden GUI layout is normative
-- `docs/IMPLEMENTATION_PLAN.md`
+- `timing-chart-v2/docs/PRODUCT_SPEC.md`
+- `timing-chart-v2/docs/DATA_FORMAT.md`
+- `timing-chart-v2/docs/WAVEDROM_COMPATIBILITY.md` — WaveDrom signal geometry is normative
+- `timing-chart-v2/docs/WAVEDROM_CONFORMANCE.md` — exhaustive WaveDrom reference-vs-DUT conformance matrix
+- `timing-chart-v2/docs/GUI_SPEC.md`
+- `timing-chart-v2/docs/GUI_VISUAL_CONTRACT.md` — Golden GUI layout is normative
+- `timing-chart-v2/docs/IMPLEMENTATION_PLAN.md`
 
 ## Critical visual rules
 1. Cycle waveform traces use WaveDrom/default-skin geometry; custom lookalike digital paths are not accepted.

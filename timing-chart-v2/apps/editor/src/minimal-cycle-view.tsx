@@ -1758,7 +1758,7 @@ export function MinimalCycleView() {
   </main>;
 }
 
-const iconSprite = new URL("../../../../gui-mockup/icons.svg", import.meta.url).href;
+const iconSprite = new URL("../../../../timing-chart-v1/gui-mockup/icons.svg", import.meta.url).href;
 
 function RibbonIcon({ name }: { readonly name: string }) {
   return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;

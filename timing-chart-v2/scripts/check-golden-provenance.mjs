@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 import { computeSourceFingerprint, isSourcePath } from "./lib/source-fingerprint.mjs";
 
 const root = resolve(process.cwd());
-const outputRoot = resolve(root, "../artifacts/gui-visual-acceptance");
+const outputRoot = resolve(root, "artifacts/gui-visual-acceptance");
 const metricsPath = resolve(outputRoot, "layout-metrics.json");
 const regionPath = resolve(outputRoot, "region-diff.json");
 const repositoryRoot = resolve(root, "..");

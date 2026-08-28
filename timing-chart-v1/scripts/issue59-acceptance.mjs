@@ -44,7 +44,7 @@ const snapResult = await page.evaluate(() => {
 });
 assert.equal(snapResult.on.snapped, true); assert.equal(snapResult.off.snapped, false); assert.ok(snapResult.off.phase > 0 && snapResult.off.phase < 1, 'Snap OFF did not preserve free phase');
 
-const matrix = JSON.parse(await fs.readFile(path.join(root, 'samples/golden-protocol/timing_chart_sample_pack/samples/03_axi4_full_write_burst.tcd.json'), 'utf8'));
+const matrix = JSON.parse(await fs.readFile(path.join(root, '..', 'timing-chart-v2/samples/golden-protocol/timing_chart_sample_pack/samples/03_axi4_full_write_burst.tcd.json'), 'utf8'));
 const sourceSignals = matrix.cycleView?.signals || matrix.signals || [];
 const largeSignals = sourceSignals.map(signal => structuredClone(signal));
 const seed = largeSignals.find(signal => signal.type !== 'clock' && signal.type !== 'commentRow') || largeSignals[0];

@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const root = process.cwd();
+const root = path.resolve(process.cwd(), '..', 'timing-chart-v2');
 const dirs = ['samples/golden-protocol', 'samples/golden-feature-coverage'];
 const files = dirs.flatMap(dir => {
   const base = path.join(root, dir);

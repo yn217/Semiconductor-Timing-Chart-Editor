@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 
-const generatedPrefixes = ["artifacts/gui-visual-acceptance/", "test-results/", "playwright-report/"];
+const generatedPrefixes = ["timing-chart-v1/artifacts/", "timing-chart-v2/artifacts/", "test-results/", "playwright-report/", "timing-chart-v2/test-results/", "timing-chart-v2/playwright-report/"];
 
 export function isSourcePath(path) {
   return !generatedPrefixes.some((prefix) => path === prefix.slice(0, -1) || path.startsWith(prefix));

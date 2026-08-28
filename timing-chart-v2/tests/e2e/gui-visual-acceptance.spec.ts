@@ -8,9 +8,9 @@ import { PNG } from "pngjs";
 const viewport = { width: 1672, height: 941 } as const;
 const appRoot = process.cwd();
 const repositoryRoot = resolve(appRoot, "..");
-const outputRoot = resolve(repositoryRoot, "artifacts", "gui-visual-acceptance");
+const outputRoot = resolve(appRoot, "artifacts", "gui-visual-acceptance");
 const cropRoot = resolve(outputRoot, "critical-icon-crops");
-const referencePath = resolve(repositoryRoot, "references", "v2-gui-reference-v8", "golden-home-cycle-1672x941.png");
+const referencePath = resolve(appRoot, "references", "v2-gui-reference-v8", "golden-home-cycle-1672x941.png");
 const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repositoryRoot, encoding: "utf8" }).trim();
 const goldenSha256 = createHash("sha256").update(await readFile(referencePath)).digest("hex").toUpperCase();
 const sourceFingerprint = JSON.parse(execFileSync("node", [resolve(appRoot, "scripts/lib/source-fingerprint.mjs"), repositoryRoot], { cwd: repositoryRoot, encoding: "utf8" })).sourceFingerprint;
@@ -186,7 +186,7 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     provenance,
     capture: { browser: "chromium", viewport: [viewport.width, viewport.height], dpr: 1 },
     viewport,
-    source: { reference: "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png", dut: "V2 visual-reference /?visual-reference" },
+    source: { reference: "timing-chart-v2/references/v2-gui-reference-v8/golden-home-cycle-1672x941.png", dut: "V2 visual-reference /?visual-reference" },
     target,
     metrics,
     geometryPass: Object.values(metrics.differences).every((values) => Object.values(values as Record<string, number>).every((value) => value <= 2)),

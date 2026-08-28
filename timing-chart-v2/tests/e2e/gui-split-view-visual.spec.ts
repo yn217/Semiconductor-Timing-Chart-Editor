@@ -27,8 +27,8 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   await expect(surface).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toBeVisible();
-  await mkdir(resolve(process.cwd(), "..", "artifacts", "gui-split-view"), { recursive: true });
-  await page.screenshot({ path: resolve(process.cwd(), "..", "artifacts", "gui-split-view", "split-1672x941.png"), animations: "disabled" });
+  await mkdir(resolve(process.cwd(), "artifacts", "gui-split-view"), { recursive: true });
+  await page.screenshot({ path: resolve(process.cwd(), "artifacts", "gui-split-view", "split-1672x941.png"), animations: "disabled" });
 
   await expect(surface).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(surface).toHaveAttribute("data-history-depth", before.history!);

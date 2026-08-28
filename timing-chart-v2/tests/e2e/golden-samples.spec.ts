@@ -11,7 +11,7 @@ type GoldenSample = {
   readonly coverage: readonly string[];
 };
 
-const repoRoot = resolve(import.meta.dirname, "../../..");
+const repoRoot = resolve(import.meta.dirname, "../..");
 const manifests = [
   resolve(repoRoot, "samples/golden-protocol/timing_chart_sample_pack/manifest.json"),
   resolve(repoRoot, "samples/golden-feature-coverage/timing_chart_feature_coverage_pack/manifest.json"),
