@@ -110,7 +110,7 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   const revision = await host.getAttribute("data-canonical-revision");
   const history = await page.getByTestId("history-status").textContent();
   const counters = await surface.getAttribute("data-render-counters");
-  const control = host.locator("[data-role='left-row'][data-group-id='grp_cycle_control']");
+  const initialCounters = JSON.parse(counters!);
   const controlHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']");
   await expect(host.locator("[data-role='left-group-header']")).toHaveCount(2);
   await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(2);
@@ -120,16 +120,20 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   await expect(controlHeader).toBeVisible();
   await controlHeader.locator("[data-role='tree-collapse']").click();
   await expect(host).toHaveAttribute("data-collapsed-groups", "grp_cycle_control");
-  await expect(control.first()).toBeVisible();
-  await expect(host.locator("[data-role='left-row'][data-group-id='grp_cycle_control'][data-row-id='sig_cycle_request']")).toHaveAttribute("hidden", "");
-  await expect(host.locator("[data-role='frozen-row'][data-group-id='grp_cycle_control'][data-row-id='sig_cycle_request']")).not.toHaveAttribute("hidden");
-  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control'][data-row-id='sig_cycle_request']")).not.toHaveAttribute("hidden");
-  await expect(host.locator("[data-role='wave-owner'][data-group-id='grp_cycle_control'][data-signal-id='sig_cycle_request']")).not.toHaveAttribute("hidden");
+  await expect(controlHeader.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "false");
+  await expect(controlHeader.locator("[data-role='tree-collapse'] svg path")).toHaveAttribute("d", "M9 6l6 6-6 6");
+  for (const selector of ["left-row", "frozen-row", "timing-row"]) {
+    await expect(host.locator("[data-role='" + selector + "'][data-group-id='grp_cycle_control']")).toHaveCount(0);
+  }
+  await expect(host.locator("[data-role='wave-owner'][data-group-id='grp_cycle_control']")).toHaveCount(0);
+  await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload']")).toBeVisible();
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
-  await expect(surface).toHaveAttribute("data-render-counters", counters!);
+  await expect.poll(async () => JSON.parse((await surface.getAttribute("data-render-counters"))!).waveDromRenders).toBe(initialCounters.waveDromRenders);
+  await expect.poll(async () => JSON.parse((await surface.getAttribute("data-render-counters"))!).localGeometryBuilds).toBe(initialCounters.localGeometryBuilds);
   await controlHeader.locator("[data-role='tree-collapse']").click();
   await expect(host).toHaveAttribute("data-collapsed-groups", "");
+  await expect(controlHeader.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "true");
   await expect(host.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toBeVisible();
 });
 

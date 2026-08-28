@@ -250,7 +250,9 @@ export function MinimalCycleView() {
   const [treeAddMenuOpen, setTreeAddMenuOpen] = useState(false);
   const [treeMoreMenuOpen, setTreeMoreMenuOpen] = useState(false);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
-  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "annotation" } | undefined>();
+  const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
+  const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
+  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" } | undefined>();
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const [renameError, setRenameError] = useState("");
@@ -293,11 +295,10 @@ export function MinimalCycleView() {
     let matches = 0;
     for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row']")) {
       const text = [row.dataset.name, row.dataset.fullPath, row.dataset.instancePath, row.dataset.signalRole, row.dataset.groupName].filter(Boolean).join(" ").toLocaleLowerCase();
-      const collapsed = row.dataset.role === "left-row" && row.dataset.groupId !== undefined && collapsedGroupIds.has(row.dataset.groupId as GroupId) && row.dataset.groupStart !== "true";
-      const visible = (query.length === 0 || text.includes(query)) && !collapsed;
+      const visible = query.length === 0 || text.includes(query);
       row.hidden = !visible;
       row.dataset.filteredOut = String(!visible);
-      row.dataset.groupCollapsed = String(collapsed);
+      row.dataset.groupCollapsed = "false";
       if (visible && row.dataset.kind === "timing" && row.dataset.role === "left-row") matches += 1;
     }
     root.dataset.treeFilter = treeFilter;
@@ -310,6 +311,17 @@ export function MinimalCycleView() {
   }, [snapshot.revision, collapsedGroupIds]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
+  const setCollapsedGroups = (next: ReadonlySet<GroupId>) => {
+    const stable = new Set(next);
+    collapsedGroupIdsRef.current = stable;
+    setCollapsedGroupIds(stable);
+    applyCollapsedGroupsRef.current(stable);
+  };
+  const toggleCollapsedGroup = (id: GroupId) => {
+    const next = new Set(collapsedGroupIdsRef.current);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    setCollapsedGroups(next);
+  };
 
   useEffect(() => {
     const registry = commandRegistry.current;
@@ -427,7 +439,7 @@ export function MinimalCycleView() {
     renderer.mount(rendererHost);
     const initialSnapshot = session.getSnapshot();
     let window: VirtualizationWindow = viewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
-    let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window });
+    let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
     renderer.update(projection);
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
@@ -605,7 +617,7 @@ export function MinimalCycleView() {
         return;
       }
       delete rendererHost.dataset.editorIdle;
-      projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection });
+      projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       snapIndex = undefined;
       const changed = result.changeSet;
       const referenceSignalId = result.snapshot.document.timeline.referenceClock;
@@ -639,6 +651,15 @@ export function MinimalCycleView() {
         rendererHost.dataset.editorIdle = "true";
       });
     };
+    applyCollapsedGroupsRef.current = (ids) => {
+      projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
+      snapIndex = undefined;
+      renderer.update(projection);
+      refreshPlayhead.current();
+      refreshGrid(session.getSnapshot().document);
+      refreshOverlays(session.getSnapshot().document);
+      publishState();
+    };
     execute.current = (command) => { const result = session.execute(command); applyResult(result); return result; };
     executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result); return result; };
     undo.current = () => applyResult(session.undo());
@@ -651,7 +672,7 @@ export function MinimalCycleView() {
       referenceGeometry = undefined;
       rulerInitialized = false;
       window = viewportWindow(viewportElement, document.timeline.referenceClock);
-      projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window });
+      projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       rulerElement.replaceChildren();
       setSnapshot(session.getSnapshot());
@@ -707,7 +728,7 @@ export function MinimalCycleView() {
         const next = viewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         window = next;
-        projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection });
+        projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
         snapIndex = undefined;
         renderer.update(projection);
         rendererHost.dataset.viewportStartY = String(window.viewportStartY);
@@ -738,12 +759,43 @@ export function MinimalCycleView() {
       rendererHost.dataset.arrowPick = "from";
     };
     const onSelect = (event: MouseEvent) => {
+      const signalMore = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-more'][data-tree-signal-id]") : null;
+      if (signalMore?.dataset.treeSignalId) {
+        event.preventDefault();
+        event.stopPropagation();
+        const signalId = signalMore.dataset.treeSignalId as SignalId;
+        selectedSignalRef.current = signalId;
+        selectedSignalIdsRef.current = new Set([signalId]);
+        setSelectedId(signalId);
+        setSelectedSignalIds(new Set([signalId]));
+        setSelectedGroupId(undefined);
+        setSelectedAnnotationId(undefined);
+        setSelectedTransactionId(undefined);
+        setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
+        return;
+      }
+      const groupMore = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-group-more'][data-group-id]") : null;
+      if (groupMore?.dataset.groupId) {
+        event.preventDefault();
+        event.stopPropagation();
+        const groupId = groupMore.dataset.groupId as GroupId;
+        selectedGroupRef.current = groupId;
+        setSelectedGroupId(groupId);
+        setSelectedId(undefined);
+        selectedSignalRef.current = undefined;
+        selectedSignalIdsRef.current = new Set();
+        setSelectedSignalIds(new Set());
+        setSelectedAnnotationId(undefined);
+        setSelectedTransactionId(undefined);
+        setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });
+        return;
+      }
       const collapseOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-collapse'][data-group-id]") : null;
       if (collapseOwner?.dataset.groupId) {
         event.preventDefault();
         event.stopPropagation();
         const groupId = collapseOwner.dataset.groupId as GroupId;
-        setCollapsedGroupIds((current) => { const next = new Set(current); if (next.has(groupId)) next.delete(groupId); else next.add(groupId); return next; });
+        toggleCollapsedGroup(groupId);
         return;
       }
       const visibilityOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-visibility'][data-tree-signal-id]") : null;
@@ -1190,10 +1242,10 @@ export function MinimalCycleView() {
       commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_nudge"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: withAddedOffset(anchor, movement.x, movement.y) });
     };
     const onContextMenu = (event: MouseEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id]")) return;
+      if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")) return;
       event.preventDefault();
       onSelect(event);
-      setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : "signal" });
+      setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
     };
     const onCanvasClick = (event: MouseEvent) => { if (suppressCanvasClick) { suppressCanvasClick = false; return; } if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
@@ -1220,6 +1272,7 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("contextmenu", onContextMenu);
     rendererHost.ownerDocument.addEventListener("keydown", onAnnotationKeyDown);
     return () => {
+      applyCollapsedGroupsRef.current = () => undefined;
       refreshPlayhead.current = () => undefined;
       navigateToCycle.current = () => undefined;
       cancelAnimationFrame(frame);
@@ -1690,24 +1743,30 @@ export function MinimalCycleView() {
     }
   };
   const addTreeEntity = (kind: "signal" | "clock" | "bus" | "state" | "group" | "commentRow") => {
-    const targetGroup = snapshot.document.signalGroups.at(-1);
+    const selectedSignalGroup = selectedId === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.rows.includes(selectedId));
+    const targetGroup = selectedGroup ?? selectedSignalGroup ?? snapshot.document.signalGroups.at(-1);
     if (kind === "group") {
       const id = groupId(nextEntityId("group", snapshot.document));
-      commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index: snapshot.document.signalGroups.length });
+      const selectedGroupIndex = selectedGroup === undefined ? -1 : snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id);
+      const selectedSignalGroupIndex = selectedSignalGroup === undefined ? -1 : snapshot.document.signalGroups.findIndex((group) => group.id === selectedSignalGroup.id);
+      const index = selectedGroupIndex >= 0 ? selectedGroupIndex + 1 : selectedSignalGroupIndex >= 0 ? selectedSignalGroupIndex + 1 : snapshot.document.signalGroups.length;
+      commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index });
       return;
     }
     if (!targetGroup) return;
+    const selectedRowIndex = selectedId === undefined ? -1 : targetGroup.rows.indexOf(selectedId);
+    const index = selectedRowIndex >= 0 ? selectedRowIndex + 1 : targetGroup.rows.length;
     const id = signalId(nextEntityId(kind === "commentRow" ? "commentRow" : "signal", snapshot.document));
     if (kind === "commentRow") {
       const name = `Comment ${snapshot.document.signals.length + 1}`;
-      commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_comment"), type: "commentRow.create", commentRow: { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" }, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+      commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_comment"), type: "commentRow.create", commentRow: { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" }, targetGroupId: targetGroup.id, index });
       return;
     }
     const name = `${kind === "clock" ? "CLOCK" : "SIGNAL"}_${snapshot.document.signals.length + 1}`;
     const signal = kind === "clock"
       ? { id, name, type: "clock" as const, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0 as 0 | 1, polarity: "positive" as const }, edgeCounter: { show: false, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const, labelEvery: 1, position: "above" as const, offset: { x: 0, y: -6 } } }
       : valueSignal(id, name, "internal", [{ start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "state" ? "state" : "binary" });
-    commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+    commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
   };
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Problems", "JSON"]
@@ -1862,7 +1921,7 @@ export function MinimalCycleView() {
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
          <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
-        <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}<button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button>{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroupIds(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{"Time Scale: Cycle    Reference: clk"}</span></div>
+        <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." /><button type="button" aria-label="Clear signal tree filter" onClick={() => setTreeFilter("")}>×</button></label><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}<button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button>{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{"Time Scale: Cycle    Reference: clk"}</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
@@ -1882,9 +1941,9 @@ export function MinimalCycleView() {
         </nav>
         <div className="bottom-content">{bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}</div>
       </section>}
-      {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => setCollapsedGroupIds((current) => { const next = new Set(current); if (next.has(selectedGroup.id)) next.delete(selectedGroup.id); else next.add(selectedGroup.id); return next; })} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} /></aside>}
+      {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} /></aside>}
     </div>
-    {contextMenu && <div className="context-menu" role="menu" aria-label="Signal context menu" data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+    {contextMenu && <div className="context-menu" role="menu" aria-label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : "Signal context menu"} data-context-target={contextMenu.target} data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
       <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Copy</button>
       <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Cut</button>
       <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>

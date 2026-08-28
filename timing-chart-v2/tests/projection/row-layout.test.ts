@@ -51,6 +51,16 @@ describe("RowLayout and projection invariants", () => {
     expect(result.navigationRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
     expect(result.totalHeight).toBe(115);
   });
+  it("derives collapsed groups as compact layout without changing canonical row IDs", () => {
+    const document = layoutFixture();
+    const expanded = calculateRowLayout(document);
+    const collapsed = calculateRowLayout(document, new Set(["grp_main" as GroupId]));
+    expect(collapsed.canonicalRowIds).toEqual(expanded.canonicalRowIds);
+    expect(collapsed.navigationRows).toEqual([]);
+    expect(collapsed.visibleRows).toEqual([]);
+    expect(collapsed.groupHeaders[0]).toMatchObject({ groupId: "grp_main", collapsed: true, y: 2, height: 32 });
+    expect(collapsed.totalHeight).toBe(37);
+  });
   it("derives absolute Y from canonical spacing without persisting it", () => {
     const result = calculateRowLayout(layoutFixture());
     expect(result.canonicalRowIds).toEqual(["sig_clk", "spacer_gap", "sig_data"]);

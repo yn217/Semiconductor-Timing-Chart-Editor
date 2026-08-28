@@ -28,6 +28,7 @@ export interface GroupHeaderLayoutEntry {
   readonly groupId: GroupId;
   readonly groupName: string;
   readonly groupStyle?: SignalGroupStyle;
+  readonly collapsed: boolean;
   readonly y: number;
   readonly height: number;
 }
@@ -48,6 +49,7 @@ export interface RenderProjection {
   readonly waveSignalIds: readonly SignalId[];
   readonly totalHeight: number;
   readonly transform: ViewTransform;
+  readonly collapsedGroupIds: readonly GroupId[];
 }
 
 export interface VirtualizationWindow {
@@ -63,6 +65,7 @@ export interface ProjectionRequest {
   readonly changeSet: ChangeSet;
   readonly viewport: VirtualizationWindow;
   readonly previous?: RenderProjection;
+  readonly collapsedGroupIds?: readonly GroupId[];
 }
 
 export interface ProjectionService {

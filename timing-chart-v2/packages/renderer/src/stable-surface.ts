@@ -5,6 +5,7 @@ function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("class", className);
+  svg.setAttribute("data-icon", name);
   svg.setAttribute("aria-hidden", "true");
   const append = (tag: "path" | "circle") => {
     const element = document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -455,7 +456,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }
-    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.groupId !== previousGroupId}`;
+    const signature = `${row.kind}\u0000${row.name}\u0000${row.commentTitle ?? ""}\u0000${row.commentBody ?? ""}\u0000${row.groupId}\u0000${row.role ?? ""}\u0000${row.fullPath ?? ""}\u0000${JSON.stringify(row.groupStyle ?? {})}\u0000${JSON.stringify(row.displayStyle ?? {})}\u0000${row.displayAlign ?? ""}\u0000${row.displayOverflow ?? ""}\u0000${row.visible}\u0000${row.groupId !== previousGroupId}`;
     if (shell.dataset.shellSignature !== signature) { populateShell(shell, row, surface, row.groupId !== previousGroupId); shell.dataset.shellSignature = signature; }
     if (surface === "left" && row.kind === "timing") {
       const visibility = shell.querySelector<HTMLElement>("[data-role='tree-visibility']");
@@ -507,7 +508,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     visibility.dataset.role = "tree-visibility";
     visibility.dataset.treeSignalId = row.rowId;
     visibility.setAttribute("aria-label", `Toggle visibility of ${row.name}`);
-    visibility.append(createLeftTreeIcon(document, "eye", "surface-icon eye-icon"));
+    visibility.append(createLeftTreeIcon(document, row.visible ? "eye" : "eye-off", "surface-icon eye-icon"));
     const more = document.createElement("button");
     more.type = "button";
     more.dataset.role = "tree-more";
@@ -575,8 +576,10 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
   collapse.type = "button";
   collapse.dataset.role = "tree-collapse";
   collapse.dataset.groupId = header.groupId;
-  collapse.setAttribute("aria-label", `Collapse ${header.groupName} group`);
-  collapse.append(createLeftTreeIcon(document, "chevron-down", "surface-icon chevron-icon"));
+  collapse.setAttribute("aria-label", `${header.collapsed ? "Expand" : "Collapse"} ${header.groupName} group`);
+  collapse.setAttribute("aria-expanded", String(!header.collapsed));
+  collapse.dataset.collapsed = String(header.collapsed);
+  collapse.append(createLeftTreeIcon(document, header.collapsed ? "chevron-right" : "chevron-down", "surface-icon chevron-icon"));
   branch.append(collapse, document.createTextNode(` ${header.groupName}`));
   const more = document.createElement("button");
   more.type = "button";
@@ -616,7 +619,16 @@ function assertCrossSurfaceInvariant(projection: RenderProjection): void {
   const expected = projection.mountedRowIds.join("\u0000");
   const mounted = new Set(projection.mountedRowIds);
   const timingIsMounted = projection.timingRowIds.every((rowId) => mounted.has(rowId));
-  if (projection.leftRowIds.join("\u0000") !== expected || projection.frozenLabelRowIds.join("\u0000") !== expected || !timingIsMounted) {
+  const orderedSubset = (ids: readonly string[]) => {
+    let previous = -1;
+    for (const id of ids) {
+      const index = projection.mountedRowIds.indexOf(id as RenderProjection["mountedRowIds"][number]);
+      if (index < 0 || index <= previous) return false;
+      previous = index;
+    }
+    return true;
+  };
+  if (projection.leftRowIds.join("\u0000") !== expected || !orderedSubset(projection.frozenLabelRowIds) || !orderedSubset(projection.timingRowIds) || !timingIsMounted) {
     throw new Error("Cross-surface row ID invariant failed.");
   }
 }

@@ -1,4 +1,4 @@
-import type { SignalId } from "@timing-chart-v2/schema";
+import type { GroupId, SignalId } from "@timing-chart-v2/schema";
 import { calculateRowLayout } from "./row-layout.js";
 import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry } from "./types.js";
 import type { RowLayoutResult } from "./row-layout.js";
@@ -16,12 +16,16 @@ export class DefaultProjectionService implements ProjectionService {
   #lastMountedRange: readonly [number, number] = [0, 0];
   #rowIndexById = new Map<RowLayoutEntry["rowId"], number>();
   #groupHeaderPrefixHeights: number[] = [];
+  #collapsedGroupKey = "";
 
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
+    const collapsedGroupIds = [...new Set(request.collapsedGroupIds ?? [])].sort() as GroupId[];
+    const collapsedGroupKey = collapsedGroupIds.join("\u0000");
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
-    if (!this.#layout || invalidatesLayout) {
-      this.#layout = calculateRowLayout(document);
+    if (!this.#layout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
+      this.#layout = calculateRowLayout(document, new Set(collapsedGroupIds));
+      this.#collapsedGroupKey = collapsedGroupKey;
       this.#rowLayoutBuilds += 1;
       this.#rowIndexById = new Map(this.#layout.navigationRows.map((row, index) => [row.rowId, index]));
       this.#groupHeaderPrefixHeights = [0];
@@ -29,7 +33,7 @@ export class DefaultProjectionService implements ProjectionService {
     }
     const layout = this.#layout;
     this.#projectionBuilds += 1;
-    if (request.previous && request.snapshot.revision === request.previous.revision && Object.keys(request.changeSet).length === 0) {
+    if (request.previous && request.snapshot.revision === request.previous.revision && Object.keys(request.changeSet).length === 0 && request.previous.collapsedGroupIds.join("\u0000") === collapsedGroupKey) {
       this.#viewportOnlyBuilds += 1;
       return this.#projectViewportOnly(request, layout);
     }
@@ -63,7 +67,7 @@ export class DefaultProjectionService implements ProjectionService {
       visibleRowIds,
       mountedRowIds,
       leftRowIds: mountedRowIds,
-      frozenLabelRowIds: mountedRowIds,
+      frozenLabelRowIds: mountedRowsOrdered.map((row) => row.rowId),
       timingRowIds,
       rowLayout: layout.navigationRows,
       groupHeaders: layout.groupHeaders,
@@ -73,6 +77,7 @@ export class DefaultProjectionService implements ProjectionService {
       waveSignalIds: [...new Set(requestedWaves)],
       totalHeight: layout.totalHeight,
       transform: request.previous?.transform ?? defaultTransform,
+      collapsedGroupIds,
     };
   }
 
@@ -125,12 +130,13 @@ export class DefaultProjectionService implements ProjectionService {
       revision: request.snapshot.revision,
       mountedRowIds,
       leftRowIds: mountedRowIds,
-      frozenLabelRowIds: mountedRowIds,
+      frozenLabelRowIds: mountedRows.map((row) => row.rowId),
       timingRowIds,
       mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
       mountedSignalIds,
       waveSignalIds: [],
       transform: request.previous!.transform,
+      collapsedGroupIds: request.previous!.collapsedGroupIds,
     };
   }
 }

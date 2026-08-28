@@ -1,4 +1,4 @@
-import type { CanonicalDocument, RowId, Signal, SpacerRow } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, GroupId, RowId, Signal, SpacerRow } from "@timing-chart-v2/schema";
 import type { GroupHeaderLayoutEntry, RowLayoutEntry } from "./types.js";
 
 export interface RowLayoutResult {
@@ -11,7 +11,7 @@ export interface RowLayoutResult {
   readonly totalHeight: number;
 }
 
-export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult {
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set()): RowLayoutResult {
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const spacers = new Map<string, SpacerRow>();
   for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacers.set(spacer.id, spacer);
@@ -29,8 +29,13 @@ export function calculateRowLayout(document: CanonicalDocument): RowLayoutResult
     if (groupRows.length === 0) continue;
     y += group.spacingBefore ?? 0;
     const headerRowId = `${group.id}:header` as RowLayoutEntry["rowId"];
-    groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), y, height: 32 });
+    const collapsed = collapsedGroupIds.has(group.id);
+    groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), collapsed, y, height: 32 });
     y += 32;
+    if (collapsed) {
+      y += group.spacingAfter ?? 0;
+      continue;
+    }
     let visibleInGroup = 0;
     for (const rowId of groupRows) {
       const signal = signals.get(rowId);
