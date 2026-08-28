@@ -1,0 +1,17 @@
+{
+  "testedCommit": "5a1a591d45ea99fb383c97c1277a3b6b67d03071",
+  "viewport": [1672, 941],
+  "source": "golden-home-cycle-1672x941.png",
+  "method": "locked viewport image boundary inspection plus production DOM layout evidence",
+  "groups": {
+    "File": { "golden": { "x": 0, "width": 216, "height": 101 }, "dut": { "x": 0, "width": 216, "height": 101 }, "delta": { "x": 0, "width": 0, "height": 0 } },
+    "Edit": { "golden": { "x": 216, "width": 324, "height": 101 }, "dut": { "x": 216, "width": 324, "height": 101 }, "delta": { "x": 0, "width": 0, "height": 0 } },
+    "Layout": { "golden": { "x": 540, "width": 333, "height": 101 }, "dut": { "x": 540, "width": 333, "height": 101 }, "delta": { "x": 0, "width": 0, "height": 0 } },
+    "Time": { "golden": { "x": 873, "width": 184, "height": 101 }, "dut": { "x": 873, "width": 225, "height": 101 }, "delta": { "x": 0, "width": 41, "height": 0 } },
+    "Zoom": { "golden": { "x": 1057, "width": 220, "height": 101 }, "dut": { "x": 1098, "width": 206, "height": 101 }, "delta": { "x": 41, "width": -14, "height": 0 } },
+    "Display": { "golden": { "x": 1277, "width": 229, "height": 101 }, "dut": { "x": 1304, "width": 282, "height": 101 }, "delta": { "x": 27, "width": 53, "height": 0 } },
+    "Options": { "golden": { "x": 1506, "width": 166, "height": 101 }, "dut": { "x": 1586, "width": 86, "height": 101 }, "delta": { "x": 80, "width": -80, "height": 0 } }
+  },
+  "baselineDiff": { "ribbonPercent": 0.11472699127497889, "overallPercent": 0.131841444254051 },
+  "currentDiff": { "ribbonPercent": 0.127533070641526, "overallPercent": 0.1332708764472286 }
+}
