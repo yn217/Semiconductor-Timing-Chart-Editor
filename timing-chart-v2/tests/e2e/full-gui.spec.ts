@@ -408,12 +408,14 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await hierarchy.getByRole("button", { name: "Close hierarchy" }).click();
   await page.getByTestId("bulk-register-open").click();
-  await page.getByLabel("Bulk signal definitions").fill("dut.core.status binary\ndut.core.payload bus");
+  await page.getByLabel("Bulk signal definitions").fill("dut.core.status binary\ndut.core.payload[7:0] bus");
+  await page.getByTestId("bulk-register-preview-button").click();
+  await expect(page.getByTestId("bulk-register-preview")).toContainText("width 8");
   await page.getByTestId("bulk-register-apply").click();
   await expect(host).toHaveAttribute("data-history-depth", "1");
   await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.status']")).toHaveCount(1);
-  await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload']")).toHaveCount(1);
+  await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload[7:0]']")).toHaveCount(1);
 
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -424,7 +426,7 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.status']")).toHaveCount(1);
-  await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload']")).toHaveCount(1);
+  await expect(host.locator("[data-role='left-tree-rows'] [data-full-path='dut.core.payload[7:0]']")).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 

@@ -294,6 +294,9 @@ body { min-width: 1100px; }
 .legend-position-editor label { margin: 0; }
 .editor-legend { cursor: grab; }
 .editor-legend:active { cursor: grabbing; }
+.bulk-preview { margin-top: 8px; padding: 7px 9px; border: 1px solid #b9c5d3; border-radius: 3px; background: #f7f9fb; font-size: 11px; }
+.bulk-preview.invalid { border-color: #d98b87; background: #fff5f4; color: #8f211b; }
+.bulk-preview ul { max-height: 92px; overflow: auto; margin: 5px 0 0; padding-left: 18px; }
 
 /* v8 approved visual contract.  The normal editor keeps its responsive V2
    layout; the reference mode is the deterministic Chromium acceptance mode. */

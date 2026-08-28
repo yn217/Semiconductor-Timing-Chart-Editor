@@ -16,6 +16,55 @@ const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
 const spacerId = (value: string) => value as SpacerId;
 
+type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
+
+function parseBulkSignalDefinitions(text: string, document: Readonly<CanonicalDocument>): { readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] } {
+  const definitions: BulkSignalDefinition[] = [];
+  const errors: string[] = [];
+  const seen = new Set<string>();
+  const existing = new Set(document.signals.map((signal) => [...signal.source.instancePath, signal.source.signalName].join(".")));
+  for (const [index, sourceLine] of text.split(/\r?\n/).entries()) {
+    const lineNumber = index + 1;
+    const line = sourceLine.trim();
+    if (!line) continue;
+    const fields = line.split(/\s+/);
+    if (fields.length !== 2) {
+      errors.push(`Line ${lineNumber}: expected '<instance.path.signal> <binary|bus|state|clock>'.`);
+      continue;
+    }
+    const [path, rawKind] = fields;
+    const kind = rawKind?.toLowerCase();
+    if (kind !== "binary" && kind !== "bus" && kind !== "state" && kind !== "clock") {
+      errors.push(`Line ${lineNumber}: unsupported signal type '${rawKind}'.`);
+      continue;
+    }
+    const parts = path?.split(".").filter(Boolean) ?? [];
+    const rawName = parts.pop();
+    if (!rawName || parts.length === 0 || !/^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\d+:\d+\])?$/.test(rawName)) {
+      errors.push(`Line ${lineNumber}: invalid signal path '${path}'.`);
+      continue;
+    }
+    const range = /\[(\d+):(\d+)\]$/.exec(rawName);
+    const width = range ? Math.abs(Number(range[1]) - Number(range[2])) + 1 : undefined;
+    if (kind === "bus" && width === undefined) {
+      errors.push(`Line ${lineNumber}: bus signal '${path}' must include a bit range such as [31:0].`);
+      continue;
+    }
+    if (kind !== "bus" && width !== undefined) {
+      errors.push(`Line ${lineNumber}: only bus signals may include a bit range.`);
+      continue;
+    }
+    const canonicalPath = [...parts, rawName].join(".");
+    if (seen.has(canonicalPath) || existing.has(canonicalPath)) {
+      errors.push(`Line ${lineNumber}: duplicate signal path '${canonicalPath}'.`);
+      continue;
+    }
+    seen.add(canonicalPath);
+    definitions.push({ path: canonicalPath, kind, signalName: rawName, instancePath: parts, ...(width === undefined ? {} : { width }) });
+  }
+  return { definitions, errors };
+}
+
 const clock: ClockSignal = {
   id: signalId("sig_cycle_clock"), name: "CLOCK", type: "clock", role: "input",
   source: { instancePath: ["dut"], signalName: "clock" }, display: { name: "CLOCK" },
@@ -190,6 +239,7 @@ export function MinimalCycleView() {
   const [bulkRegistrationText, setBulkRegistrationText] = useState("dut.status binary\ndut.data[7:0] bus\n");
   const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
   const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
+  const [bulkRegistrationPreview, setBulkRegistrationPreview] = useState<{ readonly sourceText: string; readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] }>();
   const [treeFilter, setTreeFilter] = useState("");
   const [treeAddMenuOpen, setTreeAddMenuOpen] = useState(false);
   const [treeMoreMenuOpen, setTreeMoreMenuOpen] = useState(false);
@@ -1573,22 +1623,33 @@ export function MinimalCycleView() {
   const registerBulkSignals = () => {
     const targetGroupId = bulkRegistrationGroupId ?? snapshot.document.signalGroups.at(-1)?.id;
     if (!targetGroupId) return;
-    const rows = bulkRegistrationText.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
+    if (!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText) {
+      setBulkRegistrationStatus("Preview the definitions before applying.");
+      return;
+    }
+    if (bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0) {
+      setBulkRegistrationStatus("Fix preview errors before applying.");
+      return;
+    }
     const signals: Signal[] = [];
-    for (const [index, row] of rows.entries()) {
-      const [path, kind = "binary"] = row.split(/\s+/);
-      if (!path) continue;
-      const parts = path.split(".").filter(Boolean);
-      const signalName = parts.pop();
-      if (!signalName) continue;
-      const type = kind.toLowerCase() === "bus" ? "bus" : kind.toLowerCase() === "state" ? "state" : "binary";
+    for (const [index, definition] of bulkRegistrationPreview.definitions.entries()) {
       const id = signalId(`${nextEntityId("signal", snapshot.document)}_bulk_${index}`);
-      signals.push(valueSignal(id, signalName, "internal", [{ start: 0, value: type === "state" ? "IDLE" : type === "bus" ? "00" : 0 }], type === "bus" ? { type, width: 8, displayFormat: "hex" } : { type }));
-      signals[signals.length - 1] = { ...signals[signals.length - 1]!, source: { ...signals[signals.length - 1]!.source, instancePath: parts } };
+      if (definition.kind === "clock") {
+        signals.push({ id, name: definition.signalName, type: "clock", role: "internal", source: { instancePath: definition.instancePath, signalName: definition.signalName }, display: { name: definition.signalName }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
+      } else {
+        const type = definition.kind;
+        const signal = valueSignal(id, definition.signalName, "internal", [{ start: 0, value: type === "state" ? "IDLE" : type === "bus" ? "0" : 0 }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
+        signals.push({ ...signal, source: { ...signal.source, instancePath: definition.instancePath } });
+      }
     }
     const result = commandRegistry.current.execute<SemanticCommand, ReturnType<CommandHistorySession["execute"]>>("semantic.execute", { id: nextCommandId("bulk_register_signals"), type: "signal.bulkCreate", signals, targetGroupId, index: snapshot.document.signalGroups.find((group) => group.id === targetGroupId)?.rows.length ?? 0 });
-    if (result.ok) { setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); setBulkRegistrationVisible(false); }
+    if (result.ok) { setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); setBulkRegistrationPreview(undefined); setBulkRegistrationVisible(false); }
     else setBulkRegistrationStatus(result.problems.map((item) => item.message).join(" "));
+  };
+  const previewBulkSignals = () => {
+    const preview = parseBulkSignalDefinitions(bulkRegistrationText, snapshot.document);
+    setBulkRegistrationPreview({ sourceText: bulkRegistrationText, ...preview });
+    setBulkRegistrationStatus(preview.errors.length === 0 ? `Preview ready: ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : preview.errors.join(" "));
   };
   const createSignalGroup = () => {
     const id = groupId(nextEntityId("group", snapshot.document));
@@ -1802,7 +1863,7 @@ export function MinimalCycleView() {
     </form></div>}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onClose={() => setPropertiesVisible(false)} />}
-    {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => setBulkRegistrationVisible(false)}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => setBulkRegistrationText(event.target.value)} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label><footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals}>Register Signals</button></footer></section></div>}
+    {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }}>×</button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} onClose={() => setExportVisible(false)} />}
     {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); setSaveAsVisible(false); }} onClose={() => setSaveAsVisible(false)} />}
     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then((text) => openDocument.current(text)); event.currentTarget.value = ""; }} />
