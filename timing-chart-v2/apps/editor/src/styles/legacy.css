@@ -249,9 +249,11 @@ body { min-width: 1100px; }
 /* The approved V8 reference opens on the Clock context.  Its compact Bottom
    surface keeps the dense Clock toolbar at the top; the same capabilities
    remain available in Inspector and in the normal (non-reference) editor. */
-.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar,
 .editor-shell .signal-editor:has(.clock-editor) .group-drop-targets,
 .editor-shell .signal-editor:has(.clock-editor) .signal-properties { display: none; }
+.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar { display: flex; }
+.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar .editor-tab,
+.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar .editor-selection { display: none; }
 .editor-shell .signal-editor:has(.clock-editor) .clock-editor .event-toolbar { border-top: 0; }
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator h2 { display: none; }
 .editor-shell .signal-editor:has(.clock-editor) .clock-generator { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 10px; padding: 10px 12px 14px; }
