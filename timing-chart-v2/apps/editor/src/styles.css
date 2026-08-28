@@ -374,6 +374,8 @@ body { min-width: 1100px; }
 .editor-shell[data-visual-reference="true"] .status-bar .status-detail-hidden { display: none; }
 .editor-shell[data-visual-reference="true"] .status-bar [data-testid="zoom-status-bar"] { margin-left: auto; }
 .editor-shell[data-visual-reference="true"] .app-titlebar { position: relative; z-index: 25; }
+.editor-shell[data-visual-reference="true"] .app-titlebar { gap: 6px; padding-inline: 10px; }
+.editor-shell[data-visual-reference="true"] .app-titlebar .appmark { width: 18px; height: 18px; font-size: 14px; }
 .editor-shell[data-visual-reference="true"] .app-titlebar .save-state,
 .editor-shell[data-visual-reference="true"] .app-titlebar .view-title,
 .editor-shell[data-visual-reference="true"] .app-titlebar .window-controls { display: none; }
