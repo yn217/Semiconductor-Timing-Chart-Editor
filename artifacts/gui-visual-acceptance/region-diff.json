@@ -47,18 +47,18 @@
       "y": 167,
       "width": 61,
       "height": 509,
-      "changedPixels": 9419,
+      "changedPixels": 9228,
       "comparedPixels": 31049,
-      "diffPercent": 0.30335920641566555
+      "diffPercent": 0.29720763953750523
     },
     "Signal": {
       "x": 326,
       "y": 167,
       "width": 148,
       "height": 509,
-      "changedPixels": 10226,
+      "changedPixels": 10112,
       "comparedPixels": 75332,
-      "diffPercent": 0.1357457654117772
+      "diffPercent": 0.1342324642914034
     },
     "Ruler": {
       "x": 474,
@@ -74,9 +74,9 @@
       "y": 203,
       "width": 901,
       "height": 473,
-      "changedPixels": 59652,
+      "changedPixels": 61411,
       "comparedPixels": 426173,
-      "diffPercent": 0.13997132619851563
+      "diffPercent": 0.14409875801611083
     },
     "Inspector": {
       "x": 1375,
