@@ -938,7 +938,7 @@ export function MinimalCycleView() {
       return true;
     };
     const selectCanvasCycle = (event: MouseEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest("[data-role='stable-waveform-surface']")) return false;
+      if (!isTimeDomainPointerTarget(event)) return false;
       const cycle = cycleBoundaryAtX(event.clientX);
       return cycle === undefined ? false : applyCanvasCycleSelection(cycle, event.shiftKey);
     };
@@ -1000,6 +1000,40 @@ export function MinimalCycleView() {
     // waveform. Their screen rectangles therefore provide the shared
     // interaction-space boundary resolver for both drag surfaces.
     const cycleBoundaryAtPointerX = (clientX: number): number | undefined => cycleBoundaryAtRulerX(clientX) ?? cycleBoundaryAtX(clientX);
+    const timeDomainExclusions = [
+      "[data-role='left-tree-rows']",
+      "[data-role='frozen-label-rows']",
+      "[data-role='annotation-owner']",
+      "[data-role='annotation-body']",
+      "[data-role='annotation-label']",
+      "[data-role='annotation-handle']",
+      "[data-testid='transaction-lanes']",
+      "[data-transaction-id]",
+      ".transaction-lane",
+      "[data-testid='editor-legend']",
+      "[role='menu']",
+      "button",
+      "input",
+      "select",
+      "textarea",
+      "[contenteditable='true']",
+      "[role='separator']",
+      "[draggable='true']",
+    ].join(", ");
+    const isTimeDomainPointerTarget = (event: MouseEvent | PointerEvent): boolean => {
+      const target = event.target instanceof Element ? event.target : undefined;
+      if (!target || target.closest(timeDomainExclusions)) return false;
+      const viewportBounds = viewportElement.getBoundingClientRect();
+      const timeDomainLeft = viewportBounds.left + timelineOffset();
+      const insideViewport = event.clientX >= timeDomainLeft
+        && event.clientX <= viewportBounds.right
+        && event.clientY >= viewportBounds.top
+        && event.clientY <= viewportBounds.bottom;
+      if (!insideViewport) return false;
+      // The viewport is the interaction contract; the renderer/ruler layers
+      // are implementation details and must not be enumerated as hit areas.
+      return target === viewportElement || viewportElement.contains(target);
+    };
     const rangeFromBoundaries = (first: number, second: number, cycleCount: number) => {
       const start = Math.min(first, second);
       const endBoundary = Math.max(first, second);
@@ -1007,10 +1041,10 @@ export function MinimalCycleView() {
     };
     const onRangePointerDown = (event: PointerEvent) => {
       if (rendererHost.dataset.arrowPick) return;
+      if (rangeDrag) return;
       const target = event.target instanceof Element ? event.target : undefined;
-      const onWaveform = Boolean(target?.closest("[data-role='stable-waveform-surface']"));
       const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
-      if (event.button !== 0 || (!onWaveform && !onRuler)) return;
+      if (event.button !== 0 || !isTimeDomainPointerTarget(event)) return;
       const cycle = cycleBoundaryAtPointerX(event.clientX);
       if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
       rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false };
@@ -1272,6 +1306,13 @@ export function MinimalCycleView() {
       setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
     };
     const onCanvasClick = (event: MouseEvent) => { if (suppressCanvasClick) { suppressCanvasClick = false; return; } if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
+    const onViewportClick = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target : undefined;
+      if (target && (rendererHost.contains(target) || target.closest("[data-testid='cycle-ruler']"))) return;
+      if (suppressCanvasClick) { suppressCanvasClick = false; return; }
+      if (rendererHost.dataset.arrowPick) onSelect(event);
+      else selectCanvasCycle(event);
+    };
     viewportElement.addEventListener("scroll", onScroll, { passive: true });
     viewportElement.addEventListener("keydown", onViewportKeyDown);
     rendererHost.addEventListener("click", onCanvasClick);
@@ -1284,6 +1325,11 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("dragover", onDragOver);
     rendererHost.addEventListener("drop", onDrop);
     rendererHost.addEventListener("dragend", onDragEnd);
+    viewportElement.addEventListener("click", onViewportClick);
+    viewportElement.addEventListener("pointerdown", onRangePointerDown);
+    viewportElement.addEventListener("pointermove", onRangePointerMove);
+    viewportElement.addEventListener("pointerup", onRangePointerUp);
+    viewportElement.addEventListener("pointercancel", onRangePointerCancel);
     // Listen on the clipped viewport so direct synthetic events and bubbled
     // events from the translated content share the same interaction surface.
     rulerViewportElement.addEventListener("click", onRulerSelect);
@@ -1314,6 +1360,11 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("dragover", onDragOver);
       rendererHost.removeEventListener("drop", onDrop);
       rendererHost.removeEventListener("dragend", onDragEnd);
+      viewportElement.removeEventListener("click", onViewportClick);
+      viewportElement.removeEventListener("pointerdown", onRangePointerDown);
+      viewportElement.removeEventListener("pointermove", onRangePointerMove);
+      viewportElement.removeEventListener("pointerup", onRangePointerUp);
+      viewportElement.removeEventListener("pointercancel", onRangePointerCancel);
       rulerViewportElement.removeEventListener("click", onRulerSelect);
       rulerViewportElement.removeEventListener("pointerdown", onRangePointerDown);
       rulerViewportElement.removeEventListener("pointermove", onRangePointerMove);
