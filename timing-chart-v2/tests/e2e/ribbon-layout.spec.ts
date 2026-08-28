@@ -19,7 +19,14 @@ for (const width of [1672, 1365]) {
         ].filter(Boolean);
       });
       const ribbon = document.querySelector<HTMLElement>("[data-testid='ribbon']")!;
-      return { issues, ribbonOverflow: ribbon.scrollWidth > ribbon.clientWidth };
+      const siblingOverlaps = [...document.querySelectorAll<HTMLElement>("[data-testid='ribbon'] .timeline-toolbar button")].flatMap((button, index, buttons) => {
+        const box = button.getBoundingClientRect();
+        return buttons.slice(index + 1).some((other) => {
+          const otherBox = other.getBoundingClientRect();
+          return box.left < otherBox.right && box.right > otherBox.left && box.top < otherBox.bottom && box.bottom > otherBox.top;
+        }) ? [button.textContent?.trim() || "timeline button"] : [];
+      });
+      return { issues: [...issues, ...siblingOverlaps.map((label) => `timeline-overlap:${label}`)], ribbonOverflow: ribbon.scrollWidth > ribbon.clientWidth };
     });
     expect(result.issues).toEqual([]);
     expect(result.ribbonOverflow).toBe(false);

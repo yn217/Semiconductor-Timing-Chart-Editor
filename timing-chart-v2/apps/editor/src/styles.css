@@ -560,6 +560,14 @@ body { min-width: 1100px; }
 .editor-shell .ribbon-tool > svg { flex: 0 0 19px; width: 19px; height: 19px; }
 .editor-shell .ribbon-tool > span { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 100%; min-width: 0; min-height: 20px; max-height: 2.2em; overflow: hidden; line-height: 1.05; text-align: center; white-space: normal; overflow-wrap: normal; word-break: normal; }
 .editor-shell .home-timeline-group > .ribbon-tool { flex: 0 0 43px; min-width: 43px; }
+.editor-shell .home-timeline-group { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2px; overflow: hidden; }
+.editor-shell .home-timeline-group > .timeline-toolbar { flex: 1 0 100%; display: flex; align-items: center; gap: 3px; width: 100%; height: 28px; min-height: 28px; max-height: 28px; padding: 0; overflow: hidden; }
+.editor-shell .home-timeline-group > .timeline-toolbar > label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px; min-width: 0; font-size: 8px; }
+.editor-shell .home-timeline-group > .timeline-toolbar > label input { width: 31px; min-width: 0; height: 22px; padding: 1px 3px; }
+.editor-shell .home-timeline-group > .timeline-toolbar .timeline-actions { display: flex; flex: 1 1 auto; min-width: 0; gap: 2px; overflow: hidden; }
+.editor-shell .home-timeline-group > .timeline-toolbar .timeline-actions button { flex: 1 1 0; min-width: 0; overflow: hidden; padding: 2px 3px; text-overflow: ellipsis; white-space: nowrap; }
+.editor-shell .home-timeline-group > .timeline-toolbar .timeline-objects { display: none; }
+.editor-shell .home-timeline-group > .ribbon-tool { height: 48px; }
 .editor-shell .home-view-group .home-zoom-controls { align-items: center; gap: 2px; min-width: 0; }
 .editor-shell .home-view-group .home-zoom-controls > .ribbon-tool { flex: 0 0 39px; min-width: 39px; }
 .editor-shell .home-display-subgroup { overflow: visible; }
