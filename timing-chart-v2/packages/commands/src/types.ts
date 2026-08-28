@@ -1,6 +1,7 @@
 import type { CanonicalSnapshot, ValidationProblem } from "@timing-chart-v2/core";
 import type {
   CanonicalDocument,
+  Layout,
   AnnotationId,
   Annotation,
   Bookmark,
@@ -31,6 +32,7 @@ export type SignalValue = string | number;
 export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "document.replace"; document: CanonicalDocument }>
   | Readonly<{ id: CommandId; type: "document.updateMetadata"; title: string; header: CanonicalDocument["document"]["header"]; footer: CanonicalDocument["document"]["footer"] }>
+  | Readonly<{ id: CommandId; type: "document.updateLayout"; layout: Layout }>
   | Readonly<{ id: CommandId; type: "legend.update"; legend: CanonicalDocument["legend"] }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.bulkCreate"; signals: readonly Signal[]; targetGroupId: GroupId; index: number }>

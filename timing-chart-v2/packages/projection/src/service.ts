@@ -12,7 +12,7 @@ export class DefaultProjectionService implements ProjectionService {
 
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
-    const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
+    const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
     if (!this.#layout || invalidatesLayout) {
       this.#layout = calculateRowLayout(document);
       this.#rowLayoutBuilds += 1;

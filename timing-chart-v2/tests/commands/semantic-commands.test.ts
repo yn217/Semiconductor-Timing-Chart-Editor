@@ -39,6 +39,25 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.document).toEqual(source.document);
   });
 
+  it("updates global row layout with targeted screen-Y invalidation and exact Undo", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const layout = { ...source.layout, rowHeight: 36, signalSpacing: 8 };
+    const result = session.execute({ id: commandId("cmd_layout"), type: "document.updateLayout", layout });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.changeSet).toMatchObject({ geometryScreenY: ["sig_clk", "sig_data"], minimapOverview: true });
+      expect(result.changeSet.waveSemantics).toBeUndefined();
+      expect(result.changeSet.geometryLocal).toBeUndefined();
+    }
+    expect(session.getSnapshot().document.layout).toEqual(layout);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.layout).toEqual(source.layout);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.layout).toEqual(layout);
+  });
+
   it("updates Legend presentation without touching waveform domains", () => {
     const source = canonicalFixture();
     const session = new CommandHistorySession(source);

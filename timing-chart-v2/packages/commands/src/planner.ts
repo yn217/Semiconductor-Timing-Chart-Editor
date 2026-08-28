@@ -4,6 +4,7 @@ import type {
   CanonicalDocument,
   CommandId,
   CommentRow,
+  Layout,
   RowId,
   Signal,
   SignalGroup,
@@ -416,6 +417,17 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextDocument = { ...document, document: { ...document.document, title: command.title, header: command.header, footer: command.footer } };
       if (JSON.stringify(document.document) === JSON.stringify(nextDocument.document)) return fail("no-op", "NO_OP", "$.document", "Document metadata is unchanged.");
       return { ok: true, document: nextDocument, changeSet: {}, inverseChangeSet: {} };
+    }
+    case "document.updateLayout": {
+      const layout = command.layout;
+      if (!Number.isFinite(layout.roleColumnWidth) || layout.roleColumnWidth < 16 || !Number.isFinite(layout.signalNameWidth) || layout.signalNameWidth < 40 || !Number.isFinite(layout.rowHeight) || layout.rowHeight < 12 || !Number.isFinite(layout.signalSpacing) || layout.signalSpacing < 0) return fail("invalid", "INVALID_LAYOUT", "$.layout", "Layout dimensions must be finite and within the supported range.");
+      if (layout.signalNameAlign !== "left" && layout.signalNameAlign !== "center" && layout.signalNameAlign !== "right") return fail("invalid", "INVALID_LAYOUT", "$.layout.signalNameAlign", "Signal name alignment is invalid.");
+      if (layout.overflow !== "expand" && layout.overflow !== "ellipsis" && layout.overflow !== "wrap") return fail("invalid", "INVALID_LAYOUT", "$.layout.overflow", "Signal overflow mode is invalid.");
+      if (JSON.stringify(document.layout) === JSON.stringify(layout)) return fail("no-op", "NO_OP", "$.layout", "Layout is unchanged.");
+      const nextDocument = { ...document, layout };
+      const timingRows = orderedVisibleTimingRows(document);
+      const changeSet: ChangeSet = { geometryScreenY: timingRows, annotationPosition: annotationsForSignals(document, timingRows), minimapOverview: true };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
     case "legend.update": {
       if (JSON.stringify(document.legend) === JSON.stringify(command.legend)) return fail("no-op", "NO_OP", "$.legend", "Legend is unchanged.");
