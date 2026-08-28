@@ -3,6 +3,7 @@ import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, DefaultProjecti
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { CanonicalDocument, GroupId, RowId, SignalId, SpacerId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
+import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 const spacerId = "spacer_gap" as SpacerId;
 
@@ -166,5 +167,29 @@ describe("RowLayout and projection invariants", () => {
     expect(scrolled.rowLayout).toBe(first.rowLayout);
     expect(scrolled.canonicalRowIds).toBe(first.canonicalRowIds);
     expect(service.diagnostics()).toMatchObject({ projectionBuilds: 2, viewportOnlyBuilds: 1, fullVisibleRowScans: 3, viewportRowsVisited: 1, viewportBinarySearchSteps: expect.any(Number), rowLayoutBuilds: 1 });
+  });
+
+  it.each([1000, 5000, 10000])("keeps pure-scroll projection work viewport-bounded for %i rows", (signalCount) => {
+    const document = generatePerformanceDocument({ signalCount, cycleCount: 100 });
+    const service = new DefaultProjectionService();
+    const first = service.project({
+      snapshot: { revision: 0, document } as CanonicalSnapshot,
+      changeSet: { fullDocumentReplace: true },
+      viewport: { viewportStartY: 0, viewportEndY: 500, overscanBefore: 48, overscanAfter: 48, pinnedRowIds: ["sig_perf_0" as RowId] },
+    });
+    const before = service.diagnostics();
+    const start = Math.max(0, first.totalHeight - 500);
+    const last = service.project({
+      snapshot: { revision: 0, document } as CanonicalSnapshot,
+      changeSet: {},
+      viewport: { viewportStartY: start, viewportEndY: first.totalHeight, overscanBefore: 48, overscanAfter: 48, pinnedRowIds: ["sig_perf_0" as RowId] },
+      previous: first,
+    });
+    const after = service.diagnostics();
+    expect(last.rowLayout).toBe(first.rowLayout);
+    expect(after.fullVisibleRowScans).toBe(before.fullVisibleRowScans);
+    expect(after.rowLayoutBuilds).toBe(before.rowLayoutBuilds);
+    expect(after.viewportRowsVisited).toBeLessThan(100);
+    expect(after.viewportBinarySearchSteps).toBeLessThan(100);
   });
 });

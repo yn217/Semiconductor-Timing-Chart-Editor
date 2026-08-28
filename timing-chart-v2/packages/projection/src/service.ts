@@ -38,7 +38,7 @@ export class DefaultProjectionService implements ProjectionService {
     const pinned = new Set(request.viewport.pinnedRowIds);
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
-    const crossedHeaderHeight = layout.groupHeaders.filter((header) => header.y <= end).reduce((height, header) => height + header.height, 0);
+    const crossedHeaderHeight = (this.#groupHeaderPrefixHeights[upperBound(layout.groupHeaders, end, (header) => header.y)] ?? 0);
     const mountedRows = layout.navigationRows.filter((row) => pinned.has(row.rowId) || intersects(row, start, end + crossedHeaderHeight));
     const previousMounted = request.changeSet.rowOrder === undefined ? new Set<RowLayoutEntry["rowId"]>() : new Set(request.previous?.mountedRowIds ?? []);
     const stableMountedRows = layout.navigationRows.filter((row) => previousMounted.has(row.rowId));
@@ -84,7 +84,8 @@ export class DefaultProjectionService implements ProjectionService {
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
     const firstHeader = upperBound(layout.groupHeaders, request.viewport.viewportEndY, (header) => header.y, () => { this.#viewportBinarySearchSteps += 1; });
-    const crossedHeaderHeight = this.#groupHeaderPrefixHeights[firstHeader] ?? 0;
+    const firstIntersectingHeader = lowerBound(layout.groupHeaders, start, (header) => header.y + header.height, () => { this.#viewportBinarySearchSteps += 1; });
+    const crossedHeaderHeight = (this.#groupHeaderPrefixHeights[firstHeader] ?? 0) - (this.#groupHeaderPrefixHeights[firstIntersectingHeader] ?? 0);
     const rangeEnd = end + crossedHeaderHeight;
     const firstRow = lowerBound(layout.navigationRows, start, (row) => row.y + row.height, () => { this.#viewportBinarySearchSteps += 1; });
     const afterLastRow = upperBound(layout.navigationRows, rangeEnd, (row) => row.y, () => { this.#viewportBinarySearchSteps += 1; });
