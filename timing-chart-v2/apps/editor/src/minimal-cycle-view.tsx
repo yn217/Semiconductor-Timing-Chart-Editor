@@ -390,8 +390,9 @@ export function MinimalCycleView() {
     const rendererHost = host.current;
     const viewportElement = viewport.current;
     const rulerElement = ruler.current;
+    const rulerViewportElement = rulerElement?.parentElement;
     const gridElement = gridLayer.current;
-    if (!rendererHost || !viewportElement || !rulerElement || !gridElement) return;
+    if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
     let session = new CommandHistorySession(initialDocument);
     const adapter = new ProductionWaveDromAdapter();
@@ -456,6 +457,7 @@ export function MinimalCycleView() {
       const fitWidth = Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth);
       screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, fitWidth, rulerInitialized ? screenGeometryScale : undefined);
       rulerInitialized = true;
+      syncPresentationScale();
     };
     const refreshGrid = (document: CanonicalDocument) => {
       renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
@@ -513,15 +515,34 @@ export function MinimalCycleView() {
       rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnostics(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, waveAdapter: adapter.metrics() });
     };
     let currentZoom = 1;
+    function syncPresentationScale() {
+      // The measured screen-geometry scale is shared by the ruler, overlays,
+      // and snap projection. WaveDrom text consumes the same derived value to
+      // undo only the non-uniform viewport stretch applied to the SVG root.
+      const presentationScale = Math.max(0.0001, currentZoom * screenGeometryScale);
+      viewportElement!.style.setProperty("--presentation-x-scale", String(presentationScale));
+      rendererHost!.style.setProperty("--presentation-x-scale", String(presentationScale));
+      rulerViewportElement!.style.setProperty("--presentation-x-scale", String(presentationScale));
+    }
+    function syncRulerContent() {
+      // The outer ruler is a sticky/clipped viewport. Its content follows the
+      // actual horizontal scroll while the viewport remains at the domain
+      // boundary next to the frozen columns.
+      rulerElement!.style.transform = `translateX(${-viewportElement!.scrollLeft}px) scaleX(${currentZoom})`;
+      rulerElement!.dataset.scrollLeft = String(viewportElement!.scrollLeft);
+    }
     const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-frozen-width")) || 210);
     const applyZoom = (next: number) => {
       currentZoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
-      const scalable = [rulerElement, gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
+      const scalable = [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
       for (const element of scalable) {
         element.style.transformOrigin = "0 0";
         element.style.scale = `${currentZoom} 1`;
       }
+      rulerElement.style.transformOrigin = "0 0";
+      syncRulerContent();
       viewportElement.style.setProperty("--zoom-x", String(currentZoom));
+      syncPresentationScale();
       const baseWidth = Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth);
       const width = timelineOffset() + baseWidth * currentZoom;
       rendererHost.style.width = `${width}px`;
@@ -723,8 +744,10 @@ export function MinimalCycleView() {
 
     let frame = 0;
     const onScroll = () => {
+      syncRulerContent();
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
+        syncRulerContent();
         const next = viewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         window = next;
@@ -1260,11 +1283,13 @@ export function MinimalCycleView() {
     rendererHost.addEventListener("dragover", onDragOver);
     rendererHost.addEventListener("drop", onDrop);
     rendererHost.addEventListener("dragend", onDragEnd);
-    rulerElement.addEventListener("click", onRulerSelect);
-    rulerElement.addEventListener("pointerdown", onRangePointerDown);
-    rulerElement.addEventListener("pointermove", onRangePointerMove);
-    rulerElement.addEventListener("pointerup", onRangePointerUp);
-    rulerElement.addEventListener("pointercancel", onRangePointerCancel);
+    // Listen on the clipped viewport so direct synthetic events and bubbled
+    // events from the translated content share the same interaction surface.
+    rulerViewportElement.addEventListener("click", onRulerSelect);
+    rulerViewportElement.addEventListener("pointerdown", onRangePointerDown);
+    rulerViewportElement.addEventListener("pointermove", onRangePointerMove);
+    rulerViewportElement.addEventListener("pointerup", onRangePointerUp);
+    rulerViewportElement.addEventListener("pointercancel", onRangePointerCancel);
     rendererHost.addEventListener("pointerdown", onAnnotationPointerDown);
     rendererHost.addEventListener("pointermove", onAnnotationPointerMove);
     rendererHost.addEventListener("pointerup", onAnnotationPointerUp);
@@ -1288,11 +1313,11 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("dragover", onDragOver);
       rendererHost.removeEventListener("drop", onDrop);
       rendererHost.removeEventListener("dragend", onDragEnd);
-      rulerElement.removeEventListener("click", onRulerSelect);
-      rulerElement.removeEventListener("pointerdown", onRangePointerDown);
-      rulerElement.removeEventListener("pointermove", onRangePointerMove);
-      rulerElement.removeEventListener("pointerup", onRangePointerUp);
-      rulerElement.removeEventListener("pointercancel", onRangePointerCancel);
+      rulerViewportElement.removeEventListener("click", onRulerSelect);
+      rulerViewportElement.removeEventListener("pointerdown", onRangePointerDown);
+      rulerViewportElement.removeEventListener("pointermove", onRangePointerMove);
+      rulerViewportElement.removeEventListener("pointerup", onRangePointerUp);
+      rulerViewportElement.removeEventListener("pointercancel", onRangePointerCancel);
       rendererHost.removeEventListener("pointerdown", onAnnotationPointerDown);
       rendererHost.removeEventListener("pointermove", onAnnotationPointerMove);
       rendererHost.removeEventListener("pointerup", onAnnotationPointerUp);
@@ -1925,7 +1950,9 @@ export function MinimalCycleView() {
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
-          <div className="cycle-ruler" ref={ruler} data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled} />
+          <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}>
+            <div className="cycle-ruler-content" ref={ruler} />
+          </div>
           <LegendView document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
@@ -3229,6 +3256,7 @@ function viewportWindow(viewport: HTMLElement, referenceClock?: SignalId): Virtu
 function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number): number {
   if (!geometry || !referenceSignalId) {
     element.dataset.geometryError = "Reference-clock geometry unavailable";
+    element.parentElement?.setAttribute("data-geometry-error", "Reference-clock geometry unavailable");
     element.replaceChildren();
     return 1;
   }
@@ -3257,7 +3285,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     const marker = element.ownerDocument.createElement("span");
     marker.className = "timeline-marker";
     marker.dataset.bookmarkId = bookmark.id;
-    marker.style.left = `${point.x}px`;
+    marker.style.left = `${point.x * scale}px`;
     marker.textContent = `◆ ${bookmark.name}`;
     overlays.push(marker);
   }
@@ -3270,13 +3298,16 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";
     gap.dataset.timeGroupId = group.id;
-    gap.style.left = `${point.x}px`;
+    gap.style.left = `${point.x * scale}px`;
     gap.textContent = group.presentation?.foldLabel ?? group.name;
     overlays.push(gap);
   }
   element.replaceChildren(...ticks, ...overlays);
   element.dataset.source = "local-geometry";
+  element.parentElement?.setAttribute("data-source", "local-geometry");
   const targetWidth = forcedScale === undefined && screenWidth !== undefined ? Math.ceil(screenWidth) : Math.ceil((finalX + 24) * scale);
-  element.parentElement?.style.setProperty("--wave-width", `${targetWidth}px`);
+  element.style.width = `${targetWidth}px`;
+  const widthOwner = element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
+  widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);
   return scale;
 }

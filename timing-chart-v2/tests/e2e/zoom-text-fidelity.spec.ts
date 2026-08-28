@@ -76,3 +76,117 @@ test("Zoom does not trigger WaveDrom rerender, LocalGeometry rebuild, Canonical,
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
 });
+
+test("uses measured WaveDrom screen scale for text while keeping geometry aligned", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const text = host.locator("[data-role='stable-waveform-surface'] svg text").filter({ hasText: "A5" }).first();
+  const evidence = await text.evaluate((element) => {
+    const owner = element.closest<HTMLElement>("[data-role='stable-waveform-surface']")?.closest<HTMLElement>("[data-testid='cycle-surface']");
+    const presentationScale = Number.parseFloat(getComputedStyle(owner ?? element).getPropertyValue("--presentation-x-scale"));
+    const scale = getComputedStyle(element).scale.split(/\s+/).map(Number)[0];
+    return { presentationScale, textScale: scale, textRect: element.getBoundingClientRect().toJSON() };
+  });
+  expect(evidence.presentationScale).toBeGreaterThan(0);
+  expect(evidence.textScale).toBeCloseTo(1 / evidence.presentationScale, 3);
+  expect(evidence.textRect.width).toBeGreaterThan(0);
+  expect(evidence.textRect.height).toBeGreaterThan(0);
+});
+
+test("keeps the cycle ruler sticky and clipped to the time domain during vertical and horizontal scroll", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const viewport = page.getByTestId("cycle-viewport");
+  const ruler = page.getByTestId("cycle-ruler");
+  const frozen = host.locator("[data-role='frozen-label-rows']");
+  const before = await page.evaluate(() => ({
+    canonical: document.querySelector<HTMLElement>("[data-testid='cycle-surface']")?.dataset.canonicalRevision,
+    history: document.querySelector<HTMLElement>("[data-testid='cycle-surface']")?.dataset.historyDepth,
+    dirty: document.querySelector<HTMLElement>("[data-testid='dirty-status']")?.textContent,
+  }));
+  const initial = await page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
+    const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']")!;
+    const tick = ruler.querySelector<HTMLElement>("[data-cycle='3']")!;
+    return { viewport: viewport.getBoundingClientRect().toJSON(), ruler: ruler.getBoundingClientRect().toJSON(), tick: tick.getBoundingClientRect().toJSON(), maxLeft: viewport.scrollWidth - viewport.clientWidth, maxTop: viewport.scrollHeight - viewport.clientHeight };
+  });
+  expect(initial.maxTop).toBeGreaterThan(0);
+  expect(initial.maxLeft).toBeGreaterThan(0);
+  const scroll = await viewport.evaluate((element) => {
+    element.scrollLeft = Math.min(120, element.scrollWidth - element.clientWidth);
+    element.scrollTop = Math.min(120, element.scrollHeight - element.clientHeight);
+    element.dispatchEvent(new Event("scroll"));
+    return { left: element.scrollLeft, top: element.scrollTop };
+  });
+  await page.waitForTimeout(100);
+  const after = await page.evaluate(() => {
+    const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
+    const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']")!;
+    const frozen = document.querySelector<HTMLElement>("[data-role='frozen-label-rows']")!;
+    const tick = ruler.querySelector<HTMLElement>("[data-cycle='3']")!;
+    const rulerRect = ruler.getBoundingClientRect();
+    const tickRect = tick.getBoundingClientRect();
+    return {
+      viewport: viewport.getBoundingClientRect().toJSON(),
+      ruler: rulerRect.toJSON(),
+      frozen: frozen.getBoundingClientRect().toJSON(),
+      tick: tickRect.toJSON(),
+      tickVisibleWidth: Math.max(0, Math.min(tickRect.right, rulerRect.right) - Math.max(tickRect.left, rulerRect.left)),
+    };
+  });
+  expect(Math.abs(after.ruler.y - after.viewport.y)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.ruler.left - after.frozen.right)).toBeLessThanOrEqual(1);
+  expect(Math.abs((after.tick.x - initial.tick.x) + scroll.left)).toBeLessThanOrEqual(1);
+  expect(after.tickVisibleWidth).toBeGreaterThan(0);
+  expect(Math.abs(after.ruler.width - initial.ruler.width)).toBeLessThanOrEqual(1);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.canonical);
+  expect(await host.getAttribute("data-history-depth")).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+  await expect(frozen).toBeVisible();
+});
+
+test("keeps ruler clipping and frozen-column ownership through scroll positions and zoom presets", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const viewport = page.getByTestId("cycle-viewport");
+  const ruler = page.getByTestId("cycle-ruler");
+  const frozen = host.locator("[data-role='frozen-label-rows']");
+  for (const zoom of ["50", "100", "150", "200"]) {
+    await page.getByLabel("Zoom preset").selectOption(zoom);
+    for (const fraction of [0, 0.5, 1]) {
+      await viewport.evaluate((element, position) => {
+        const maxLeft = Math.max(0, element.scrollWidth - element.clientWidth);
+        const maxTop = Math.max(0, element.scrollHeight - element.clientHeight);
+        element.scrollLeft = Math.round(maxLeft * position);
+        element.scrollTop = Math.round(maxTop * position);
+        element.dispatchEvent(new Event("scroll"));
+        return { left: element.scrollLeft, top: element.scrollTop };
+      }, fraction);
+      await page.waitForTimeout(50);
+      const geometry = await page.evaluate(() => {
+        const viewport = document.querySelector<HTMLElement>("[data-testid='cycle-viewport']")!;
+        const ruler = document.querySelector<HTMLElement>("[data-testid='cycle-ruler']")!;
+        const frozen = document.querySelector<HTMLElement>("[data-role='frozen-label-rows']")!;
+        const content = ruler.querySelector<HTMLElement>(".cycle-ruler-content")!;
+        const ticks = ["0", "10", "24"].map((cycle) => ruler.querySelector<HTMLElement>(`[data-cycle='${cycle}']`)!.getBoundingClientRect().toJSON());
+        return {
+          viewport: viewport.getBoundingClientRect().toJSON(),
+          ruler: ruler.getBoundingClientRect().toJSON(),
+          frozen: frozen.getBoundingClientRect().toJSON(),
+          ticks,
+          contentOverflow: getComputedStyle(ruler).overflow,
+          contentTransform: getComputedStyle(content).transform,
+        };
+      });
+      expect(Math.abs(geometry.ruler.y - geometry.viewport.y), `zoom=${zoom} fraction=${fraction}`).toBeLessThanOrEqual(1);
+      expect(Math.abs(geometry.ruler.left - geometry.frozen.right), `zoom=${zoom} fraction=${fraction}`).toBeLessThanOrEqual(1);
+      expect(geometry.contentOverflow).toBe("hidden");
+      const visibleTicks = geometry.ticks.filter((tick) => Math.min(tick.right, geometry.ruler.right) - Math.max(tick.left, geometry.ruler.left) > 0);
+      expect(visibleTicks.length, `zoom=${zoom} fraction=${fraction}`).toBeGreaterThan(0);
+    }
+  }
+});
