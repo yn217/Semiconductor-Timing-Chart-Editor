@@ -176,6 +176,33 @@ test("Snap OFF changes annotation endpoint interaction to free geometry", async 
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
+test("Snap toggle and zoom preserve the derived candidate service without mutation", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    counters: await surface.getAttribute("data-render-counters"),
+    sessionCounters: await host.getAttribute("data-session-counters"),
+  };
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("snap-toggle").uncheck();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
+  await page.getByTestId("snap-toggle").check();
+  await expect(page.getByTestId("snap-status")).toHaveText("Snap: On");
+  await expect(page.getByTestId("zoom-status")).toHaveText("125%");
+
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  expect(await surface.getAttribute("data-render-counters")).toBe(before.counters);
+  expect(await host.getAttribute("data-session-counters")).toBe(before.sessionCounters);
+});
+
 test("preserves canonical source-cycle anchors through an Axis Break snap", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
