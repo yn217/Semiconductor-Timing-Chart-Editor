@@ -11,7 +11,8 @@ export interface RowLayoutResult {
   readonly totalHeight: number;
 }
 
-export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set()): RowLayoutResult {
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean } = {}): RowLayoutResult {
+  const includeHidden = options.includeHidden ?? true;
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const spacers = new Map<string, SpacerRow>();
   for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacers.set(spacer.id, spacer);
@@ -24,7 +25,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   for (const group of document.signalGroups) {
     const groupRows = group.rows.filter((rowId) => {
       const signal = signals.get(rowId);
-      return signal !== undefined || spacers.has(rowId);
+      return (signal !== undefined && (includeHidden || signal.display.visible !== false)) || spacers.has(rowId);
     });
     if (groupRows.length === 0) continue;
     y += group.spacingBefore ?? 0;

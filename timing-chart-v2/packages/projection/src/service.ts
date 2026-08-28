@@ -1,12 +1,13 @@
 import type { GroupId, SignalId } from "@timing-chart-v2/schema";
 import { calculateRowLayout } from "./row-layout.js";
-import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry } from "./types.js";
+import type { ProjectionRequest, ProjectionService, RenderProjection, RowLayoutEntry, VirtualizationWindow } from "./types.js";
 import type { RowLayoutResult } from "./row-layout.js";
 
 const defaultTransform = { scrollX: 0, scrollY: 0, zoom: 1 } as const;
 
 export class DefaultProjectionService implements ProjectionService {
   #layout: ReturnType<typeof calculateRowLayout> | undefined;
+  #navigationLayout: ReturnType<typeof calculateRowLayout> | undefined;
   #projectionBuilds = 0;
   #viewportOnlyBuilds = 0;
   #fullVisibleRowScans = 0;
@@ -15,7 +16,9 @@ export class DefaultProjectionService implements ProjectionService {
   #rowLayoutBuilds = 0;
   #lastMountedRange: readonly [number, number] = [0, 0];
   #rowIndexById = new Map<RowLayoutEntry["rowId"], number>();
+  #navigationRowIndexById = new Map<RowLayoutEntry["rowId"], number>();
   #groupHeaderPrefixHeights: number[] = [];
+  #navigationGroupHeaderPrefixHeights: number[] = [];
   #collapsedGroupKey = "";
 
   project(request: ProjectionRequest): RenderProjection {
@@ -23,15 +26,20 @@ export class DefaultProjectionService implements ProjectionService {
     const collapsedGroupIds = [...new Set(request.collapsedGroupIds ?? [])].sort() as GroupId[];
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
-    if (!this.#layout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
-      this.#layout = calculateRowLayout(document, new Set(collapsedGroupIds));
+    if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
+      this.#layout = calculateRowLayout(document, new Set(), { includeHidden: false });
+      this.#navigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds));
       this.#collapsedGroupKey = collapsedGroupKey;
       this.#rowLayoutBuilds += 1;
       this.#rowIndexById = new Map(this.#layout.navigationRows.map((row, index) => [row.rowId, index]));
+      this.#navigationRowIndexById = new Map(this.#navigationLayout.navigationRows.map((row, index) => [row.rowId, index]));
       this.#groupHeaderPrefixHeights = [0];
       for (const header of this.#layout.groupHeaders) this.#groupHeaderPrefixHeights.push(this.#groupHeaderPrefixHeights.at(-1)! + header.height);
+      this.#navigationGroupHeaderPrefixHeights = [0];
+      for (const header of this.#navigationLayout.groupHeaders) this.#navigationGroupHeaderPrefixHeights.push(this.#navigationGroupHeaderPrefixHeights.at(-1)! + header.height);
     }
     const layout = this.#layout;
+    const navigationLayout = this.#navigationLayout;
     this.#projectionBuilds += 1;
     if (request.previous && request.snapshot.revision === request.previous.revision && Object.keys(request.changeSet).length === 0 && request.previous.collapsedGroupIds.join("\u0000") === collapsedGroupKey) {
       this.#viewportOnlyBuilds += 1;
@@ -39,19 +47,14 @@ export class DefaultProjectionService implements ProjectionService {
     }
     this.#fullVisibleRowScans += layout.visibleRows.length;
     const visibleRowIds = layout.visibleRows.map((row) => row.rowId);
+    const viewportStart = request.viewport.viewportStartY - request.viewport.overscanBefore;
+    const viewportEnd = request.viewport.viewportEndY + request.viewport.overscanAfter;
     const pinned = new Set(request.viewport.pinnedRowIds);
-    const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
-    const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
-    const crossedHeaderHeight = (this.#groupHeaderPrefixHeights[upperBound(layout.groupHeaders, end, (header) => header.y)] ?? 0);
-    const mountedRows = layout.navigationRows.filter((row) => pinned.has(row.rowId) || intersects(row, start, end + crossedHeaderHeight));
-    const previousMounted = request.changeSet.rowOrder === undefined ? new Set<RowLayoutEntry["rowId"]>() : new Set(request.previous?.mountedRowIds ?? []);
-    const stableMountedRows = layout.navigationRows.filter((row) => previousMounted.has(row.rowId));
-    const rowsToMount = request.changeSet.rowOrder === undefined ? mountedRows : [...stableMountedRows, ...mountedRows];
-    const mountedById = new Map(rowsToMount.map((row) => [row.rowId, row]));
-    if (request.changeSet.rowOrder === undefined) for (const row of stableMountedRows) mountedById.set(row.rowId, row);
-    const mountedRowsOrdered = layout.navigationRows.filter((row) => mountedById.has(row.rowId));
-    const mountedGroupHeaders = layout.groupHeaders.filter((row) => intersects(row, start, end));
-    const mountedRowIds = mountedRowsOrdered.map((row) => row.rowId);
+    const mountedRowsOrdered = mountRows(layout, request.viewport, pinned, request.changeSet.rowOrder === undefined ? [] : (request.previous?.mountedRowIds ?? []), this.#rowIndexById, this.#groupHeaderPrefixHeights);
+    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, pinned, request.changeSet.rowOrder === undefined ? [] : (request.previous?.leftRowIds ?? []), this.#navigationRowIndexById, this.#navigationGroupHeaderPrefixHeights);
+    const mountedGroupHeaders = layout.groupHeaders.filter((row) => intersects(row, viewportStart, viewportEnd));
+    const mountedLeftGroupHeaders = navigationLayout.groupHeaders.filter((row) => intersects(row, viewportStart, viewportEnd));
+    const mountedRowIds = mergeIds(mountedRowsOrdered.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
     this.#lastMountedRange = [mountedRowsOrdered[0]?.y ?? 0, mountedRowsOrdered.at(-1) ? mountedRowsOrdered.at(-1)!.y + mountedRowsOrdered.at(-1)!.height : 0];
     const mountedSignalIds = mountedRowsOrdered
       .filter((row) => row.kind === "timing" && row.visible)
@@ -66,16 +69,20 @@ export class DefaultProjectionService implements ProjectionService {
       canonicalRowIds: layout.canonicalRowIds,
       visibleRowIds,
       mountedRowIds,
-      leftRowIds: mountedRowIds,
+      leftRowIds: mountedNavigationRows.map((row) => row.rowId),
       frozenLabelRowIds: mountedRowsOrdered.map((row) => row.rowId),
       timingRowIds,
       rowLayout: layout.navigationRows,
+      navigationRowLayout: navigationLayout.navigationRows,
       groupHeaders: layout.groupHeaders,
+      leftGroupHeaders: navigationLayout.groupHeaders,
       mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
+      mountedLeftGroupHeaderIds: mountedLeftGroupHeaders.map((row) => row.rowId),
       canonicalSignalIds,
       mountedSignalIds,
       waveSignalIds: [...new Set(requestedWaves)],
       totalHeight: layout.totalHeight,
+      navigationTotalHeight: navigationLayout.totalHeight,
       transform: request.previous?.transform ?? defaultTransform,
       collapsedGroupIds,
     };
@@ -86,42 +93,14 @@ export class DefaultProjectionService implements ProjectionService {
   }
 
   #projectViewportOnly(request: ProjectionRequest, layout: RowLayoutResult): RenderProjection {
+    const navigationLayout = this.#navigationLayout!;
+    const mountedRows = mountRows(layout, request.viewport, new Set(request.viewport.pinnedRowIds), request.previous!.mountedRowIds, this.#rowIndexById, this.#groupHeaderPrefixHeights, () => { this.#viewportBinarySearchSteps += 1; }, (visited) => { this.#viewportRowsVisited += visited; });
+    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, new Set(request.viewport.pinnedRowIds), request.previous!.leftRowIds, this.#navigationRowIndexById, this.#navigationGroupHeaderPrefixHeights, () => { this.#viewportBinarySearchSteps += 1; });
     const start = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const end = request.viewport.viewportEndY + request.viewport.overscanAfter;
-    const firstHeader = upperBound(layout.groupHeaders, request.viewport.viewportEndY, (header) => header.y, () => { this.#viewportBinarySearchSteps += 1; });
-    const firstIntersectingHeader = lowerBound(layout.groupHeaders, start, (header) => header.y + header.height, () => { this.#viewportBinarySearchSteps += 1; });
-    const crossedHeaderHeight = (this.#groupHeaderPrefixHeights[firstHeader] ?? 0) - (this.#groupHeaderPrefixHeights[firstIntersectingHeader] ?? 0);
-    const rangeEnd = end + crossedHeaderHeight;
-    const firstRow = lowerBound(layout.navigationRows, start, (row) => row.y + row.height, () => { this.#viewportBinarySearchSteps += 1; });
-    const afterLastRow = upperBound(layout.navigationRows, rangeEnd, (row) => row.y, () => { this.#viewportBinarySearchSteps += 1; });
-    this.#viewportRowsVisited += Math.max(0, afterLastRow - firstRow);
-    const candidateIds = new Set<RowLayoutEntry["rowId"]>();
-    for (let index = firstRow; index < afterLastRow; index += 1) candidateIds.add(layout.navigationRows[index]!.rowId);
-    for (const rowId of request.viewport.pinnedRowIds) candidateIds.add(rowId);
-    // Retain only rows adjacent to the new viewport for one projection step.
-    // Keeping the complete previous mounted set would accumulate every row
-    // visited during a long scroll and defeat viewport virtualization.
-    const retentionStart = start - 32;
-    const retentionEnd = end + 32;
-    for (const rowId of request.previous!.mountedRowIds) {
-      const index = this.#rowIndexById.get(rowId);
-      const row = index === undefined ? undefined : layout.navigationRows[index];
-      if (row && intersects(row, retentionStart, retentionEnd)) candidateIds.add(rowId);
-    }
-    // Do not retain every previously mounted row across scroll updates. The
-    // previous projection is useful for preserving the derived transform and
-    // row layout, but unioning its mounted IDs makes the viewport grow without
-    // bound after repeated scrolling. Pinned rows are the only rows that must
-    // remain mounted outside the current viewport.
-    const mountedRows = [...candidateIds]
-      .map((rowId) => this.#rowIndexById.get(rowId))
-      .filter((index): index is number => index !== undefined)
-      .sort((left, right) => left - right)
-      .map((index) => layout.navigationRows[index]!);
-    const mountedGroupHeaders = layout.groupHeaders
-      .slice(Math.max(0, lowerBound(layout.groupHeaders, start, (header) => header.y + header.height, () => { this.#viewportBinarySearchSteps += 1; })), firstHeader + 1)
-      .filter((header) => intersects(header, start, end));
-    const mountedRowIds = mountedRows.map((row) => row.rowId);
+    const mountedGroupHeaders = layout.groupHeaders.filter((header) => intersects(header, start, end));
+    const mountedLeftGroupHeaders = navigationLayout.groupHeaders.filter((header) => intersects(header, start, end));
+    const mountedRowIds = mergeIds(mountedRows.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
     this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
     const mountedSignalIds = mountedRows.filter((row) => row.kind === "timing" && row.visible).map((row) => row.rowId as SignalId);
     const timingRowIds = mountedRows.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
@@ -129,16 +108,56 @@ export class DefaultProjectionService implements ProjectionService {
       ...request.previous!,
       revision: request.snapshot.revision,
       mountedRowIds,
-      leftRowIds: mountedRowIds,
+      leftRowIds: mountedNavigationRows.map((row) => row.rowId),
       frozenLabelRowIds: mountedRows.map((row) => row.rowId),
       timingRowIds,
       mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
+      mountedLeftGroupHeaderIds: mountedLeftGroupHeaders.map((row) => row.rowId),
       mountedSignalIds,
       waveSignalIds: [],
       transform: request.previous!.transform,
       collapsedGroupIds: request.previous!.collapsedGroupIds,
     };
   }
+}
+
+function mountRows(
+  layout: RowLayoutResult,
+  viewport: VirtualizationWindow,
+  pinned: ReadonlySet<RowLayoutEntry["rowId"]>,
+  previousIds: readonly RowLayoutEntry["rowId"][],
+  rowIndexById: ReadonlyMap<RowLayoutEntry["rowId"], number>,
+  groupHeaderPrefixHeights: readonly number[],
+  onStep?: () => void,
+  onVisited?: (count: number) => void,
+): readonly RowLayoutEntry[] {
+  const start = viewport.viewportStartY - viewport.overscanBefore;
+  const end = viewport.viewportEndY + viewport.overscanAfter;
+  const firstHeader = upperBound(layout.groupHeaders, viewport.viewportEndY, (header) => header.y, onStep);
+  const crossedHeaderHeight = groupHeaderPrefixHeights[firstHeader] ?? 0;
+  const rangeEnd = end + crossedHeaderHeight;
+  const firstRow = lowerBound(layout.navigationRows, start, (row) => row.y + row.height, onStep);
+  const afterLastRow = upperBound(layout.navigationRows, rangeEnd, (row) => row.y, onStep);
+  onVisited?.(Math.max(0, afterLastRow - firstRow));
+  const candidateIds = new Set<RowLayoutEntry["rowId"]>();
+  for (let index = firstRow; index < afterLastRow; index += 1) candidateIds.add(layout.navigationRows[index]!.rowId);
+  for (const rowId of pinned) candidateIds.add(rowId);
+  const retentionStart = start - 32;
+  const retentionEnd = end + 32;
+  for (const rowId of previousIds) {
+    const index = rowIndexById.get(rowId);
+    const row = index === undefined ? undefined : layout.navigationRows[index];
+    if (row && intersects(row, retentionStart, retentionEnd)) candidateIds.add(rowId);
+  }
+  return [...candidateIds]
+    .map((rowId) => rowIndexById.get(rowId))
+    .filter((index): index is number => index !== undefined)
+    .sort((left, right) => left - right)
+    .map((index) => layout.navigationRows[index]!);
+}
+
+function mergeIds<T extends string>(...lists: readonly (readonly T[])[]): readonly T[] {
+  return [...new Set(lists.flat())];
 }
 
 function lowerBound<T>(items: readonly T[], target: number, value: (item: T) => number, onStep?: () => void): number {

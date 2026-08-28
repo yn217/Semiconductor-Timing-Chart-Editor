@@ -58,13 +58,16 @@ test("hides and restores a selected signal without rebuilding its stable SVG", a
   await page.getByTestId("signal-visibility").click();
   await expect(page.getByTestId("signal-visibility")).toHaveText("Show signal");
   await expect(surface.locator("[data-role='left-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
-  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(1);
+  await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
   await expect(surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request'], [data-role='wave-owner'][data-signal-id='sig_cycle_request']")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const countersHidden = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersHidden.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersHidden.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
-  expect(countersHidden.rowPositionUpdates).toBe(countersBefore.rowPositionUpdates);
+  // Visibility removes the signal from the derived timing presentation, so
+  // affected rows compact and their screen positions are expected to update.
+  // The heavy WaveDrom/local geometry layers must still remain untouched.
+  expect(countersHidden.rowPositionUpdates).toBeGreaterThan(countersBefore.rowPositionUpdates);
 
   await page.getByTestId("signal-visibility").click();
   await expect(page.getByTestId("signal-visibility")).toHaveText("Hide signal");

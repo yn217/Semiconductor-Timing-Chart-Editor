@@ -783,7 +783,12 @@ export function MinimalCycleView() {
       rendererHost.dataset.arrowPick = "from";
     };
     const onSelect = (event: MouseEvent) => {
-      const signalMore = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-more'][data-tree-signal-id]") : null;
+      const closestFromEvent = <T extends Element>(selector: string): T | null => {
+        const target = event.target instanceof Element ? event.target.closest<T>(selector) : null;
+        if (target) return target;
+        return event.composedPath().find((item): item is T => item instanceof Element && item.matches(selector)) ?? null;
+      };
+      const signalMore = closestFromEvent<HTMLElement>("[data-role='tree-more'][data-tree-signal-id]");
       if (signalMore?.dataset.treeSignalId) {
         event.preventDefault();
         event.stopPropagation();
@@ -798,7 +803,7 @@ export function MinimalCycleView() {
         setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
         return;
       }
-      const groupMore = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-group-more'][data-group-id]") : null;
+      const groupMore = closestFromEvent<HTMLElement>("[data-role='tree-group-more'][data-group-id]");
       if (groupMore?.dataset.groupId) {
         event.preventDefault();
         event.stopPropagation();
@@ -814,7 +819,7 @@ export function MinimalCycleView() {
         setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });
         return;
       }
-      const collapseOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-collapse'][data-group-id]") : null;
+      const collapseOwner = closestFromEvent<HTMLElement>("[data-role='tree-collapse'][data-group-id]");
       if (collapseOwner?.dataset.groupId) {
         event.preventDefault();
         event.stopPropagation();
@@ -822,13 +827,15 @@ export function MinimalCycleView() {
         toggleCollapsedGroup(groupId);
         return;
       }
-      const visibilityOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-visibility'][data-tree-signal-id]") : null;
+      const visibilityOwner = closestFromEvent<HTMLElement>("[data-role='tree-visibility'][data-tree-signal-id]");
       if (visibilityOwner?.dataset.treeSignalId) {
         event.preventDefault();
         event.stopPropagation();
         const signalId = visibilityOwner.dataset.treeSignalId as SignalId;
         const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === signalId);
-        if (signal) commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_visibility"), type: "signal.setVisibility", signalId, visible: signal.display.visible === false });
+        if (signal) {
+          commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_visibility"), type: "signal.setVisibility", signalId, visible: signal.display.visible === false });
+        }
         return;
       }
       const groupOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-branch'][data-group-id]") : null;
@@ -1305,7 +1312,15 @@ export function MinimalCycleView() {
       onSelect(event);
       setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
     };
-    const onCanvasClick = (event: MouseEvent) => { if (suppressCanvasClick) { suppressCanvasClick = false; return; } if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event); };
+    const onCanvasClick = (event: MouseEvent) => {
+      if (suppressCanvasClick) { suppressCanvasClick = false; return; }
+      const target = event.target instanceof Element ? event.target : undefined;
+      // Renderer-owned command controls must win over the time-domain hit
+      // resolver, even when the browser reports an inner SVG path as target.
+      // Their actions are routed by onSelect into SemanticCommand.
+      if (target?.closest("[data-role='tree-visibility'], [data-role='tree-more'], [data-role='tree-collapse'], [data-role='tree-group-more']")) { onSelect(event); return; }
+      if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event);
+    };
     const onViewportClick = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target : undefined;
       if (target && (rendererHost.contains(target) || target.closest("[data-testid='cycle-ruler']"))) return;

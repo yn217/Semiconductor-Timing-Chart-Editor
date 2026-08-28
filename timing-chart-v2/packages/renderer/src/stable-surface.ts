@@ -124,14 +124,15 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     assertCrossSurfaceInvariant(projection);
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
     const rows = new Map(projection.rowLayout.map((row) => [row.rowId, row]));
+    const navigationRows = new Map(projection.navigationRowLayout.map((row) => [row.rowId, row]));
     const changedRows = new Set<string>();
     for (const row of projection.rowLayout) {
       if (this.#rowY.get(row.rowId) !== row.y) changedRows.add(row.rowId);
       this.#rowY.set(row.rowId, row.y);
     }
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
-    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, rows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
-    const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
+    const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
+    const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
     layers.root.style.height = `${projection.totalHeight}px`;
     layers.root.dataset.revision = String(projection.revision);
@@ -616,19 +617,11 @@ function place(element: HTMLElement, row: Pick<RowLayoutEntry, "y" | "height">):
 }
 
 function assertCrossSurfaceInvariant(projection: RenderProjection): void {
-  const expected = projection.mountedRowIds.join("\u0000");
-  const mounted = new Set(projection.mountedRowIds);
+  const mounted = new Set<string>(projection.mountedRowIds);
   const timingIsMounted = projection.timingRowIds.every((rowId) => mounted.has(rowId));
-  const orderedSubset = (ids: readonly string[]) => {
-    let previous = -1;
-    for (const id of ids) {
-      const index = projection.mountedRowIds.indexOf(id as RenderProjection["mountedRowIds"][number]);
-      if (index < 0 || index <= previous) return false;
-      previous = index;
-    }
-    return true;
-  };
-  if (projection.leftRowIds.join("\u0000") !== expected || !orderedSubset(projection.frozenLabelRowIds) || !orderedSubset(projection.timingRowIds) || !timingIsMounted) {
-    throw new Error("Cross-surface row ID invariant failed.");
+  const mountedSubset = (ids: readonly string[]) => ids.every((id) => mounted.has(id));
+  if (!mountedSubset(projection.leftRowIds) || !mountedSubset(projection.frozenLabelRowIds) || !mountedSubset(projection.timingRowIds) || !timingIsMounted) {
+    const missing = (ids: readonly string[]) => ids.filter((id) => !mounted.has(id)).join(",");
+    throw new Error(`Cross-surface row ID invariant failed (left=${missing(projection.leftRowIds)} frozen=${missing(projection.frozenLabelRowIds)} timing=${missing(projection.timingRowIds)}).`);
   }
 }

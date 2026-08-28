@@ -122,10 +122,10 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   await expect(host).toHaveAttribute("data-collapsed-groups", "grp_cycle_control");
   await expect(controlHeader.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "false");
   await expect(controlHeader.locator("[data-role='tree-collapse'] svg path")).toHaveAttribute("d", "M9 6l6 6-6 6");
-  for (const selector of ["left-row", "frozen-row", "timing-row"]) {
-    await expect(host.locator("[data-role='" + selector + "'][data-group-id='grp_cycle_control']")).toHaveCount(0);
-  }
-  await expect(host.locator("[data-role='wave-owner'][data-group-id='grp_cycle_control']")).toHaveCount(0);
+  await expect(host.locator("[data-role='left-row'][data-group-id='grp_cycle_control']")).toHaveCount(0);
+  await expect(host.locator("[data-role='frozen-row'][data-group-id='grp_cycle_control']")).toHaveCount(5);
+  await expect(host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']")).toHaveCount(5);
+  await expect(host.locator("[data-role='wave-owner'][data-group-id='grp_cycle_control']")).toHaveCount(5);
   await expect(host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload']")).toBeVisible();
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);

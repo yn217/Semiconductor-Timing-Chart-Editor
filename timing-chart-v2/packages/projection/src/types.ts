@@ -36,6 +36,8 @@ export interface GroupHeaderLayoutEntry {
 export interface RenderProjection {
   readonly revision: number;
   readonly canonicalRowIds: readonly RowId[];
+  /** Rows retained by the Left Tree projection, including hidden signals. */
+  readonly navigationRowLayout: readonly RowLayoutEntry[];
   readonly visibleRowIds: readonly RowId[];
   readonly mountedRowIds: readonly RowId[];
   readonly leftRowIds: readonly RowId[];
@@ -43,11 +45,14 @@ export interface RenderProjection {
   readonly timingRowIds: readonly RowId[];
   readonly rowLayout: readonly RowLayoutEntry[];
   readonly groupHeaders: readonly GroupHeaderLayoutEntry[];
+  readonly leftGroupHeaders: readonly GroupHeaderLayoutEntry[];
   readonly mountedGroupHeaderIds: readonly RowId[];
+  readonly mountedLeftGroupHeaderIds: readonly RowId[];
   readonly canonicalSignalIds: readonly SignalId[];
   readonly mountedSignalIds: readonly SignalId[];
   readonly waveSignalIds: readonly SignalId[];
   readonly totalHeight: number;
+  readonly navigationTotalHeight: number;
   readonly transform: ViewTransform;
   readonly collapsedGroupIds: readonly GroupId[];
 }

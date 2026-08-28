@@ -142,7 +142,7 @@ describe("RowLayout and projection invariants", () => {
       viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
     });
     expect(projection.leftRowIds).toContain("sig_clk");
-    expect(projection.frozenLabelRowIds).toContain("sig_clk");
+    expect(projection.frozenLabelRowIds).not.toContain("sig_clk");
     expect(projection.timingRowIds).not.toContain("sig_clk");
     expect(projection.mountedSignalIds).not.toContain("sig_clk");
     expect(projection.canonicalSignalIds).toContain("sig_clk");

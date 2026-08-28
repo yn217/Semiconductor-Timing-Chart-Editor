@@ -7,7 +7,7 @@ async function ready(page: import("@playwright/test").Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
-test("collapses every derived surface and restores stable rows without a canonical mutation", async ({ page }) => {
+test("collapses only Left Tree descendants and restores stable rows without a canonical mutation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
@@ -21,9 +21,10 @@ test("collapses every derived surface and restores stable rows without a canonic
     await header.locator("[data-role='tree-collapse']").click();
     await expect(header.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "false");
     await expect(header.locator("[data-role='tree-collapse'] svg path")).toHaveAttribute("d", "M9 6l6 6-6 6");
-    for (const role of ["left-row", "frozen-row", "timing-row", "wave-owner"]) {
-      await expect(host.locator("[data-role='" + role + "'][data-group-name='" + groupName + "']")).toHaveCount(0);
-    }
+    await expect(host.locator("[data-role='left-row'][data-group-name='" + groupName + "']")).toHaveCount(0);
+    await expect(host.locator("[data-role='frozen-row'][data-group-name='" + groupName + "']")).not.toHaveCount(0);
+    await expect(host.locator("[data-role='timing-row'][data-group-name='" + groupName + "']")).not.toHaveCount(0);
+    await expect(host.locator("[data-role='wave-owner'][data-group-id]")).not.toHaveCount(0);
     if (groupName !== "Output") await expect(host.locator("[data-role='left-group-header'][data-group-name='Internal Control']")).toBeVisible();
     await header.locator("[data-role='tree-collapse']").click();
     await expect(header.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "true");
@@ -45,7 +46,7 @@ test("visibility keeps the navigation row but removes and restores derived signa
   await expect(left).toBeVisible();
   await expect(left.locator("[data-role='tree-visibility']")).toHaveAttribute("aria-pressed", "false");
   await expect(left.locator("[data-role='tree-visibility'] svg")).toHaveAttribute("data-icon", "eye-off");
-  await expect(host.locator("[data-role='frozen-row'][data-row-id='" + id + "']")).toHaveCount(1);
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='" + id + "']")).toHaveCount(0);
   await expect(host.locator("[data-role='timing-row'][data-row-id='" + id + "']")).toHaveCount(0);
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='" + id + "']")).toHaveCount(0);
   await left.locator("[data-role='tree-visibility']").click();
