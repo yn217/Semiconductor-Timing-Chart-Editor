@@ -582,6 +582,36 @@ body { min-width: 1100px; }
 .editor-shell .home-view-group .home-zoom-controls { align-items: center; gap: 2px; min-width: 0; }
 .editor-shell .home-view-group .home-zoom-controls > .ribbon-tool { flex: 0 0 39px; min-width: 39px; }
 .editor-shell .home-display-subgroup { overflow: visible; }
+/* Golden v8 Home surface: seven stable desktop groups.  Secondary commands
+   stay in More/route surfaces; the visible strip owns only the compact
+   task-oriented command set. */
+.editor-shell .ribbon-major-group[data-major-group="File"] { width: 216px; }
+.editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 323px; }
+.editor-shell .ribbon-major-group[data-major-group="Time"] { width: 332px; }
+.editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 182px; }
+.editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 220px; }
+.editor-shell .ribbon-major-group[data-major-group="Display"] { width: 162px; }
+.editor-shell .ribbon-major-group[data-major-group="Options"] { width: 64px; }
+.editor-shell .home-edit-group,
+.editor-shell .home-timeline-group,
+.editor-shell .home-layout-group,
+.editor-shell .home-view-group,
+.editor-shell .home-display-group,
+.editor-shell .home-overflow-group { box-sizing: border-box; width: 100%; min-width: 0; }
+.editor-shell .home-edit-group,
+.editor-shell .home-timeline-group,
+.editor-shell .home-layout-group { display: flex; align-items: flex-start; gap: 2px; padding-inline: 5px; }
+.editor-shell .home-edit-group .ribbon-tool,
+.editor-shell .home-timeline-group .ribbon-tool { flex: 1 1 0; min-width: 0; }
+.editor-shell .home-layout-group .ribbon-tool { flex: 1 1 0; min-width: 0; }
+.editor-shell .home-view-group { padding-inline: 7px; }
+.editor-shell .home-zoom-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; width: 100%; }
+.editor-shell .home-zoom-controls .ribbon-tool { flex: none; min-width: 0; width: auto; }
+.editor-shell .home-display-group { padding: 7px; }
+.editor-shell .home-display-group .home-display-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 7px; width: 100%; }
+.editor-shell .home-display-group .home-toggle { min-width: 0; grid-template-columns: 13px minmax(0, 1fr); gap: 2px; font-size: 9px; }
+.editor-shell .home-overflow-group { display: flex; align-items: flex-start; justify-content: center; padding-inline: 5px; }
+.editor-shell .home-overflow-group .home-overflow-trigger { width: 100%; min-width: 0; }
 @media (min-width: 1101px) and (max-width: 1300px) {
   .ribbon { zoom: .8; width: 125%; }
 }
