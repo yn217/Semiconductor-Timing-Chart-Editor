@@ -2272,13 +2272,17 @@ function TransactionLanes({ document, zoom, selectedId, onSelect, onSnap, onComm
   const owner = useRef<HTMLElement>(null);
   const [cycleXs, setCycleXs] = useState<readonly number[]>([]);
   useEffect(() => {
+    setCycleXs([]);
     let frame = 0; let attempts = 0;
     const read = () => {
       const ruler = owner.current?.parentElement?.querySelector<HTMLElement>(".cycle-ruler");
       const values = Array.from(ruler?.querySelectorAll<HTMLElement>("[data-cycle]") ?? []).map((tick) => Number.parseFloat(tick.style.left));
-      if (values.length >= document.timeline.cycleCount) {
-        if (values.length === document.timeline.cycleCount && values.length > 1) values.push(values.at(-1)! + values.at(-1)! - values.at(-2)!);
-        setCycleXs(values);
+      // Transaction edges must use the complete LocalGeometry-derived ruler,
+      // including the exclusive terminal boundary. Never synthesize a final
+      // X from a presumed uniform pitch when the terminal geometry is not yet
+      // available (or when a folded axis makes the intervals non-uniform).
+      if (values.length >= document.timeline.cycleCount + 1 && values.slice(0, document.timeline.cycleCount + 1).every(Number.isFinite)) {
+        setCycleXs(values.slice(0, document.timeline.cycleCount + 1));
       }
       else if (attempts++ < 20) frame = requestAnimationFrame(read);
     };

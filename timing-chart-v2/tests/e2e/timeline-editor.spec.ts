@@ -137,6 +137,23 @@ test("drag-selects a half-open Canvas range with preview-only movement and Escap
   await expect(page.getByLabel("Timeline range end")).toHaveValue("10");
 });
 
+test("positions a transaction ending at cycleCount on the actual terminal ruler geometry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("New Transaction name").fill("Terminal transfer");
+  await page.getByLabel("New Transaction start").fill("20");
+  await page.getByLabel("New Transaction end").fill("24");
+  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const terminal = await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox();
+  const transactionBox = await transaction.boundingBox();
+  expect(terminal).not.toBeNull();
+  expect(transactionBox).not.toBeNull();
+  expect(Math.abs((transactionBox!.x + transactionBox!.width) - terminal!.x)).toBeLessThanOrEqual(1);
+});
+
 test("drag-selects a geometry-backed half-open range directly on the cycle ruler", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
