@@ -20,7 +20,7 @@
     "visual:acceptance": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",
     "harness:capture": "playwright test tests/e2e/gui-visual-acceptance.spec.ts",
     "harness:diff": "node scripts/check-golden-diff.mjs",
-    "harness:check": "npm run check:production-presentation && node scripts/check-golden-integrity.mjs",
+    "harness:check": "npm run check:production-presentation && node scripts/check-golden-integrity.mjs && node scripts/check-golden-provenance.mjs",
     "check:left-tree-icons": "node scripts/check-left-tree-icons.mjs",
     "harness:verify": "node scripts/run-harness-verify.mjs",
     "build": "npm run typecheck && npm --workspace @timing-chart-v2/editor run build",

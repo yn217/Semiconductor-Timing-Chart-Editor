@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { createHash } from "node:crypto";
+import { execFileSync } from "node:child_process";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { PNG } from "pngjs";
@@ -9,6 +11,8 @@ const repositoryRoot = resolve(appRoot, "..");
 const outputRoot = resolve(repositoryRoot, "artifacts", "gui-visual-acceptance");
 const cropRoot = resolve(outputRoot, "critical-icon-crops");
 const referencePath = resolve(repositoryRoot, "references", "v2-gui-reference-v8", "golden-home-cycle-1672x941.png");
+const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { cwd: repositoryRoot, encoding: "utf8" }).trim();
+const goldenSha256 = createHash("sha256").update(await readFile(referencePath)).digest("hex").toUpperCase();
 
 const target = {
   title: { x: 0, y: 0, width: 1672, height: 31 },
@@ -175,8 +179,12 @@ test("generates V1 reference vs V2 production visual evidence at the locked view
     await writeFile(resolve(cropRoot, `${name.toLowerCase()}-overlay-50.png`), PNG.sync.write(cropPng(overlay, region)));
   }
   const regionDiff = Object.fromEntries(Object.entries(visualRegions).map(([name, region]) => [name, compareRegion(reference, dut, region)]));
-  await writeFile(resolve(outputRoot, "region-diff.json"), `${JSON.stringify({ viewport, source: "golden-home-cycle-1672x941.png", threshold: 24, regions: regionDiff }, null, 2)}\n`);
+  await writeFile(resolve(outputRoot, "region-diff.json"), `${JSON.stringify({ gitHead, viewport, source: "golden-home-cycle-1672x941.png", threshold: 24, regions: regionDiff }, null, 2)}\n`);
   const report = {
+    gitHead,
+    generatedAt: new Date().toISOString(),
+    goldenSha256,
+    capture: { browser: "chromium", viewport: [viewport.width, viewport.height], dpr: 1 },
     viewport,
     source: { reference: "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png", dut: "V2 visual-reference /?visual-reference" },
     target,
