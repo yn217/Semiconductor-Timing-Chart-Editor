@@ -8,7 +8,7 @@ import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, SpacerRow, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -197,6 +197,7 @@ export function MinimalCycleView() {
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "annotation" } | undefined>();
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
+  const clipboardGroupRef = useRef<{ readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number } | undefined>(undefined);
   const clipboardAnnotationRef = useRef<Annotation | undefined>(undefined);
   const copySelectedSignalRef = useRef<() => void>(() => undefined);
   const cutSelectedSignalRef = useRef<() => void>(() => undefined);
@@ -1290,11 +1291,23 @@ export function MinimalCycleView() {
     })
     .filter((item): item is { readonly signal: Signal; readonly groupId: GroupId; readonly index: number } => item !== undefined);
   const copySelectedSignal = () => {
+    const selectedGroup = selectedGroupRef.current === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.id === selectedGroupRef.current);
+    if (selectedGroup) {
+      const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
+      clipboardGroupRef.current = { group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) };
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      clipboardAnnotationRef.current = undefined;
+      setClipboardAvailable(true);
+      setClipboardStatus(`Copied ${selectedGroup.name} group`);
+      return;
+    }
     const sources = selectedClipboardSignals();
     const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
     if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to copy"); return; }
     if (annotation !== undefined && sources.length === 0) {
       clipboardAnnotationRef.current = annotation;
+      clipboardGroupRef.current = undefined;
       clipboardSignalsRef.current = [];
       clipboardSignalRef.current = undefined;
       setClipboardAvailable(true);
@@ -1302,6 +1315,7 @@ export function MinimalCycleView() {
       return;
     }
     clipboardAnnotationRef.current = undefined;
+    clipboardGroupRef.current = undefined;
     clipboardSignalsRef.current = sources;
     clipboardSignalRef.current = sources[0]?.signal;
     setClipboardAvailable(true);
@@ -1314,6 +1328,7 @@ export function MinimalCycleView() {
     if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to cut"); return; }
     if (annotation !== undefined && sources.length === 0) {
       clipboardAnnotationRef.current = annotation;
+      clipboardGroupRef.current = undefined;
       clipboardSignalsRef.current = [];
       clipboardSignalRef.current = undefined;
       setClipboardAvailable(true);
@@ -1326,6 +1341,7 @@ export function MinimalCycleView() {
       return;
     }
     clipboardAnnotationRef.current = undefined;
+    clipboardGroupRef.current = undefined;
     clipboardSignalsRef.current = sources;
     clipboardSignalRef.current = sources[0]?.signal;
     setClipboardAvailable(true);
@@ -1351,7 +1367,7 @@ export function MinimalCycleView() {
       if (!targetGroup) continue;
       const id = signalId(nextEntityId(source.signal.type === "commentRow" ? "commentRow" : "signal", { ...document, signals: [...document.signals, ...created] }));
       const name = `${source.signal.display.name}_${operation}${input.length > 1 ? `_${created.length + 1}` : ""}`;
-      const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name }, source: { ...source.signal.source, signalName: name } };
+      const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
       created.push(signal);
       const index = targetGroup.rows.length + (insertedByGroup.get(targetGroup.id) ?? 0);
       insertedByGroup.set(targetGroup.id, (insertedByGroup.get(targetGroup.id) ?? 0) + 1);
@@ -1367,6 +1383,38 @@ export function MinimalCycleView() {
       setClipboardStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
     }
   };
+  const createCopiedGroup = (input: { readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number }, operation: "paste" | "duplicate") => {
+    const document = snapshot.document;
+    const newGroupId = groupId(nextEntityId("group", document));
+    const group: SignalGroup = { ...input.group, id: newGroupId, rows: [], ...(input.group.spacers === undefined ? {} : { spacers: [] }) };
+    const commands: SemanticCommand[] = [{ id: nextCommandId(`${operation}_group`), type: "group.create", group, index: Math.min(document.signalGroups.length, input.sourceIndex + 1) }];
+    const createdSignals: Signal[] = [];
+    const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((spacer) => [spacer.id, spacer]));
+    for (const rowId of input.group.rows) {
+      const source = input.rows.find((signal) => signal.id === rowId);
+      if (source) {
+        const id = signalId(nextEntityId(source.type === "commentRow" ? "commentRow" : "signal", { ...document, signals: [...document.signals, ...createdSignals] }));
+        const signal: Signal = { ...source, id };
+        createdSignals.push(signal);
+        commands.push({ id: nextCommandId(`${operation}_group_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: newGroupId, index: commands.length - 1 } as SemanticCommand);
+      } else {
+        const spacer = sourceSpacers.get(rowId);
+        if (!spacer) continue;
+        const id = spacerId(nextEntityId("spacer", { ...document, signals: [...document.signals, ...createdSignals] }));
+        commands.push({ id: nextCommandId(`${operation}_group_spacer`), type: "spacer.create", spacer: { ...spacer, id }, targetGroupId: newGroupId, index: commands.length - 1 });
+      }
+    }
+    const result = executeBatch.current(nextCommandId(`${operation}_group_batch`), commands);
+    if (result.ok) {
+      selectedGroupRef.current = newGroupId;
+      setSelectedGroupId(newGroupId);
+      selectedSignalRef.current = undefined;
+      setSelectedId(undefined);
+      selectedSignalIdsRef.current = new Set();
+      setSelectedSignalIds(new Set());
+      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
+    }
+  };
   const createCopiedAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
     const annotation = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
     const result = execute.current({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
@@ -1376,11 +1424,15 @@ export function MinimalCycleView() {
     }
   };
   const pasteSelectedEntity = () => {
-    if (clipboardAnnotationRef.current) createCopiedAnnotation(clipboardAnnotationRef.current, "paste");
+    if (clipboardGroupRef.current) createCopiedGroup(clipboardGroupRef.current, "paste");
+    else if (clipboardAnnotationRef.current) createCopiedAnnotation(clipboardAnnotationRef.current, "paste");
     else createCopiedSignals(clipboardSignalsRef.current, "paste");
   };
   const duplicateSelectedEntity = () => {
-    if (selectedAnnotation) createCopiedAnnotation(selectedAnnotation, "duplicate");
+    if (selectedGroup) {
+      const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
+      createCopiedGroup({ group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) }, "duplicate");
+    } else if (selectedAnnotation) createCopiedAnnotation(selectedAnnotation, "duplicate");
     else createCopiedSignals(selectedClipboardSignals(), "duplicate");
   };
   pasteSelectedSignalRef.current = pasteSelectedEntity;
@@ -1563,6 +1615,7 @@ export function MinimalCycleView() {
 
   const hasSelectedSignal = (selectedSignalIds.size > 0 && selectedSignal !== undefined) || selectedAnnotation !== undefined;
   const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined;
+  const hasSelectedClipboard = hasSelectedEntity;
   return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-visual-reference={String(visualReference)} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
@@ -1588,6 +1641,7 @@ export function MinimalCycleView() {
       clipboardStatus={clipboardStatus}
       clipboardAvailable={clipboardAvailable}
       hasSelectedSignal={hasSelectedSignal}
+      hasSelectedClipboard={hasSelectedClipboard}
       hasSelectedEntity={hasSelectedEntity}
       onCopy={copySelectedSignal}
       onCut={cutSelectedSignal}
@@ -1655,10 +1709,10 @@ export function MinimalCycleView() {
       {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => setCollapsedGroupIds((current) => { const next = new Set(current); if (next.has(selectedGroup.id)) next.delete(selectedGroup.id); else next.add(selectedGroup.id); return next; })} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} /></aside>}
     </div>
     {contextMenu && <div className="context-menu" role="menu" aria-label="Signal context menu" data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
-      <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Copy</button>
+      <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Copy</button>
       <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Cut</button>
       <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
-      <button type="button" role="menuitem" onClick={() => { duplicateSelectedEntity(); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Duplicate</button>
+      <button type="button" role="menuitem" onClick={() => { duplicateSelectedEntity(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Duplicate</button>
       <button type="button" role="menuitem" onClick={() => { moveSelection(-1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Up</button>
       <button type="button" role="menuitem" onClick={() => { moveSelection(1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Down</button>
       <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(true); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Show</button>
@@ -1780,9 +1834,9 @@ function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: {
   return <section className="ai-operation-panel" data-testid="ai-operation-panel"><div className="ai-query-row"><RibbonIcon name="i-ai" /><label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={buildPreview}>Preview</button></div><div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>{preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span><button type="button" onClick={applyPreview}>Apply Preview</button><button type="button" onClick={() => { setPreview(undefined); setStatus("Preview cancelled · no document mutation"); }}>Cancel</button></div>}<output role="status" data-testid="ai-status">{status}</output></section>;
 }
 
-function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, arrowPickStatus, selectedSignalId, problemsCount, viewMode, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties }: {
+function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, arrowPickStatus, selectedSignalId, problemsCount, viewMode, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly problemsCount: number; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly selectedTransactionId: TransactionId | undefined;
-  readonly clipboardStatus: string; readonly clipboardAvailable: boolean; readonly hasSelectedSignal: boolean; readonly hasSelectedEntity: boolean;
+  readonly clipboardStatus: string; readonly clipboardAvailable: boolean; readonly hasSelectedSignal: boolean; readonly hasSelectedClipboard: boolean; readonly hasSelectedEntity: boolean;
   readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onFitAll: () => void; readonly onSetZoom: (zoom: number) => void; readonly onNavigateBookmark: (cycle: number) => void;
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onSaveAs: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onSelectAll: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void; readonly onOpenTimeline: () => void; readonly onOpenProperties: () => void;
 }) {
@@ -1859,7 +1913,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
        <div className="ribbon-group history-group" aria-label="History"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span data-v1-label="元に戻す">Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span data-v1-label="やり直し">Redo</span></button><b>History</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Clipboard" aria-label="Clipboard commands">
-       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedSignal}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedSignal} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button>{!visualReference && <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button>}<small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
+       <div className="ribbon-group clipboard-group" aria-label="Clipboard"><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedSignal}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedClipboard} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button>{!visualReference && <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedClipboard}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button>}<small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b></div>
       </div>
       <div className="ribbon-major-group" data-major-group="Edit" aria-label="Edit commands">
        <div className="ribbon-group edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button>{visualReference ? <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedSignal}><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button> : <button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span data-v1-label="名前変更">Rename</span></button>}<b>Edit</b></div>
@@ -1899,7 +1953,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         {homeOverflowOpen && <div className="home-overflow-menu" role="menu" aria-label="More Home Commands">
           <strong>File</strong><button type="button" onClick={() => { onNew(); setHomeOverflowOpen(false); }}>New</button><button type="button" onClick={() => { onOpen(); setHomeOverflowOpen(false); }}>Open</button><button type="button" onClick={() => { onSave(); setHomeOverflowOpen(false); }}>Save</button><button type="button" onClick={() => { onSaveAs(); setHomeOverflowOpen(false); }}>Save As</button><button type="button" onClick={() => { onRecent(); setHomeOverflowOpen(false); }}>Recent</button>
           <strong>History</strong><button type="button" onClick={() => { onUndo(); setHomeOverflowOpen(false); }} disabled={!history.canUndo}>Undo</button><button type="button" onClick={() => { onRedo(); setHomeOverflowOpen(false); }} disabled={!history.canRedo}>Redo</button>
-          <strong>Clipboard</strong><button type="button" onClick={() => { onCopy(); setHomeOverflowOpen(false); }} disabled={!hasSelectedSignal}>Copy</button><button type="button" onClick={() => { onCut(); setHomeOverflowOpen(false); }} disabled={!hasSelectedSignal}>Cut</button><button type="button" onClick={() => { onPaste(); setHomeOverflowOpen(false); }} disabled={!clipboardAvailable}>Paste</button><button type="button" onClick={() => { onDuplicate(); setHomeOverflowOpen(false); }} disabled={!hasSelectedSignal}>Duplicate</button>
+          <strong>Clipboard</strong><button type="button" onClick={() => { onCopy(); setHomeOverflowOpen(false); }} disabled={!hasSelectedClipboard}>Copy</button><button type="button" onClick={() => { onCut(); setHomeOverflowOpen(false); }} disabled={!hasSelectedSignal}>Cut</button><button type="button" onClick={() => { onPaste(); setHomeOverflowOpen(false); }} disabled={!clipboardAvailable}>Paste</button><button type="button" onClick={() => { onDuplicate(); setHomeOverflowOpen(false); }} disabled={!hasSelectedClipboard}>Duplicate</button>
           <strong>Edit / Selection</strong><button type="button" onClick={() => { onDelete(); setHomeOverflowOpen(false); }}>Delete</button><button type="button" onClick={() => { onRename(); setHomeOverflowOpen(false); }} disabled={!hasSelectedEntity}>Rename</button><button type="button" onClick={() => { onClearSelection(); setHomeOverflowOpen(false); }}>Clear Selection</button><button type="button" onClick={() => { onSelectAll(); setHomeOverflowOpen(false); }} disabled={document.signals.every((signal) => signal.type === "commentRow")}>Select All</button>
           <strong>Visibility / Arrange</strong><button type="button" onClick={() => { onVisibility(true); setHomeOverflowOpen(false); }} disabled={!hasSelectedSignal}>Show</button><button type="button" onClick={() => { onVisibility(false); setHomeOverflowOpen(false); }} disabled={!hasSelectedSignal}>Hide</button><button type="button" onClick={() => { onMoveUp(); setHomeOverflowOpen(false); }} disabled={!hasSelectedEntity}>Move Up</button><button type="button" onClick={() => { onMoveDown(); setHomeOverflowOpen(false); }} disabled={!hasSelectedEntity}>Move Down</button>
            <strong>View</strong><button type="button" onClick={() => { onZoom(-0.25); setHomeOverflowOpen(false); }}>Zoom −</button><button type="button" onClick={() => { onZoom(0.25); setHomeOverflowOpen(false); }}>Zoom +</button><button type="button" onClick={() => { onSetZoom(0.5); setHomeOverflowOpen(false); }}>Zoom 50%</button><button type="button" onClick={() => { onSetZoom(1); setHomeOverflowOpen(false); }}>Zoom 100%</button><button type="button" onClick={() => { onSetZoom(1.5); setHomeOverflowOpen(false); }}>Zoom 150%</button><button type="button" onClick={() => { onSetZoom(2); setHomeOverflowOpen(false); }}>Zoom 200%</button><button type="button" onClick={() => { onFitSelection(); setHomeOverflowOpen(false); }}>Fit Selection</button><button type="button" onClick={() => { onFitAll(); setHomeOverflowOpen(false); }}>Fit All</button><button type="button" onClick={() => { onToggleGrid(); setHomeOverflowOpen(false); }}>Grid</button><button type="button" onClick={() => { onToggleSnap(); setHomeOverflowOpen(false); }}>Snap</button><button type="button" onClick={() => { onToggleRuler(); setHomeOverflowOpen(false); }}>Ruler</button><button type="button" onClick={() => { onToggleMinimap(); setHomeOverflowOpen(false); }}>MiniMap</button>
