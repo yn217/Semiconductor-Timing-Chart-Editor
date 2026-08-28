@@ -100,8 +100,8 @@ describe("pure Semantic Command planning", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const commentRow: CommentRow = { id: "comment_review" as SignalId, type: "commentRow", name: "Review", role: "internal", source: { instancePath: [], signalName: "review" }, display: { name: "Review" }, title: "Review", body: "Initial" };
     expect(session.execute({ id: commandId("cmd_comment_create"), type: "commentRow.create", commentRow, targetGroupId: "grp_main" as GroupId, index: 2 }).ok).toBe(true);
-    expect(session.execute({ id: commandId("cmd_comment_update"), type: "commentRow.update", signalId: commentRow.id, title: "Notes", body: "Updated body" }).ok).toBe(true);
-    expect(session.getSnapshot().document.signals.at(-1)).toMatchObject({ title: "Notes", body: "Updated body", display: { name: "Notes" } });
+    expect(session.execute({ id: commandId("cmd_comment_update"), type: "commentRow.update", signalId: commentRow.id, title: "Notes", body: "Updated body", spacingBefore: 3, spacingAfter: 5 }).ok).toBe(true);
+    expect(session.getSnapshot().document.signals.at(-1)).toMatchObject({ title: "Notes", body: "Updated body", spacingBefore: 3, spacingAfter: 5, display: { name: "Notes" } });
     expect(session.execute({ id: commandId("cmd_comment_delete"), type: "commentRow.delete", signalId: commentRow.id }).ok).toBe(true);
     expect(session.historyState().undoDepth).toBe(3);
     expect(session.undo().ok).toBe(true);

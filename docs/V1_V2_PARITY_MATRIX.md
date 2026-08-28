@@ -194,3 +194,13 @@ event. Unit coverage is in
 `timing-chart-v2/tests/projection/row-layout.test.ts`; browser coverage is in
 `timing-chart-v2/tests/e2e/spacer-row.spec.ts`. Full V1 visual parity remains
 open.
+
+Comment Row spacing parity is now part of the dedicated Bottom Context Editor.
+`spacingBefore` and `spacingAfter` remain transient until Apply and are
+committed together with title/body by `commentRow.update`; downstream screen-Y
+rows are invalidated through the existing derived RowLayout path, with no
+WaveDrom or Local Geometry rebuild. Unit coverage is in
+`timing-chart-v2/tests/commands/semantic-commands.test.ts`, and browser
+coverage including Save/Open is in
+`timing-chart-v2/tests/e2e/full-gui.spec.ts`. Full V1 visual parity remains
+open.

@@ -849,10 +849,12 @@ test("edits a Comment Row through the dedicated Bottom Context Editor", async ({
   const beforeRevision = Number(await host.getAttribute("data-canonical-revision"));
   await editor.getByLabel("Comment Row title").fill("Timing Note");
   await editor.getByLabel("Comment Row body").fill("Review boundary behavior at cycle 0.");
+  await editor.getByLabel("Comment Row spacing after").fill("10");
   await editor.getByTestId("apply-comment-row").click();
   await expect(host).toHaveAttribute("data-canonical-revision", String(beforeRevision + 1));
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(editor.getByLabel("Comment Row title")).toHaveValue("Timing Note");
+  await expect(editor.getByLabel("Comment Row spacing after")).toHaveValue("10");
   await expect(commentRow).toContainText("Timing Note");
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();

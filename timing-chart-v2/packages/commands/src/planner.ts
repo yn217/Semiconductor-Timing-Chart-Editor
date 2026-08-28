@@ -452,9 +452,13 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!row || row.type !== "commentRow") return fail("invalid", "COMMENT_ROW_NOT_FOUND", "$.signalId", `Comment Row '${command.signalId}' does not exist.`);
       const title = command.title.trim();
       if (!title) return fail("invalid", "INVALID_TITLE", "$.title", "Comment Row title cannot be empty.");
-      if (row.title === title && row.body === command.body) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
-      const next: CommentRow = { ...row, title, body: command.body, name: title, display: { ...row.display, name: title } };
-      const changeSet: ChangeSet = { rowPresentation: [row.id], minimapOverview: true };
+      if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_COMMENT_ROW_SPACING", "$.spacing", "Comment Row spacing must be finite and non-negative.");
+      const nextSpacingBefore = command.spacingBefore ?? row.spacingBefore;
+      const nextSpacingAfter = command.spacingAfter ?? row.spacingAfter;
+      if (row.title === title && row.body === command.body && row.spacingBefore === nextSpacingBefore && row.spacingAfter === nextSpacingAfter) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
+      const next: CommentRow = { ...row, title, body: command.body, name: title, display: { ...row.display, name: title }, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
+      const spacingChanged = row.spacingBefore !== nextSpacingBefore || row.spacingAfter !== nextSpacingAfter;
+      const changeSet: ChangeSet = { rowPresentation: [row.id], ...(spacingChanged ? { geometryScreenY: geometryRowsFrom(document, row.id) } : {}), minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
     }
     case "commentRow.delete":
