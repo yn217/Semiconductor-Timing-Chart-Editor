@@ -93,7 +93,21 @@ export class DefaultProjectionService implements ProjectionService {
     const candidateIds = new Set<RowLayoutEntry["rowId"]>();
     for (let index = firstRow; index < afterLastRow; index += 1) candidateIds.add(layout.navigationRows[index]!.rowId);
     for (const rowId of request.viewport.pinnedRowIds) candidateIds.add(rowId);
-    for (const rowId of request.previous!.mountedRowIds) candidateIds.add(rowId);
+    // Retain only rows adjacent to the new viewport for one projection step.
+    // Keeping the complete previous mounted set would accumulate every row
+    // visited during a long scroll and defeat viewport virtualization.
+    const retentionStart = start - 32;
+    const retentionEnd = end + 32;
+    for (const rowId of request.previous!.mountedRowIds) {
+      const index = this.#rowIndexById.get(rowId);
+      const row = index === undefined ? undefined : layout.navigationRows[index];
+      if (row && intersects(row, retentionStart, retentionEnd)) candidateIds.add(rowId);
+    }
+    // Do not retain every previously mounted row across scroll updates. The
+    // previous projection is useful for preserving the derived transform and
+    // row layout, but unioning its mounted IDs makes the viewport grow without
+    // bound after repeated scrolling. Pinned rows are the only rows that must
+    // remain mounted outside the current viewport.
     const mountedRows = [...candidateIds]
       .map((rowId) => this.#rowIndexById.get(rowId))
       .filter((index): index is number => index !== undefined)
