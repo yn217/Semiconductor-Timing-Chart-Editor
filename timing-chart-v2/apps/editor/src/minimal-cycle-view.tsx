@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
@@ -504,7 +504,7 @@ export function MinimalCycleView() {
       rendererHost.style.width = `${width}px`;
       rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
       rendererHost.dataset.zoom = String(currentZoom);
-      setZoom(currentZoom);
+      startTransition(() => setZoom(currentZoom));
     };
     changeZoom.current = (delta) => applyZoom(currentZoom + delta);
     setZoomAbsolute.current = (zoom) => applyZoom(zoom);
@@ -810,7 +810,6 @@ export function MinimalCycleView() {
       if (nextSelected.has(signal.id)) nextSelected.delete(signal.id); else nextSelected.add(signal.id);
       if (nextSelected.size === 0) nextSelected.add(signal.id);
       selectedSignalIdsRef.current = nextSelected;
-      setSelectedSignalIds(nextSelected);
       const primary = nextSelected.has(signal.id) ? signal.id : [...nextSelected][0];
       for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
         const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
@@ -818,13 +817,17 @@ export function MinimalCycleView() {
         row.dataset.selected = String(selected);
         row.setAttribute("aria-selected", String(selected));
       }
-      if (primary) { rendererHost.dataset.selectedSignalId = primary; setSelectedId(primary); selectedSignalRef.current = primary; }
-      setSelectedGroupId(undefined);
+      if (primary) { rendererHost.dataset.selectedSignalId = primary; selectedSignalRef.current = primary; }
       selectedAnnotationRef.current = undefined;
-      setSelectedAnnotationId(undefined);
       selectedTransactionRef.current = undefined;
-      setSelectedTransactionId(undefined);
       if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
+      startTransition(() => {
+        setSelectedSignalIds(nextSelected);
+        if (primary) setSelectedId(primary);
+        setSelectedGroupId(undefined);
+        setSelectedAnnotationId(undefined);
+        setSelectedTransactionId(undefined);
+      });
       publishState();
     };
     const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
@@ -1769,7 +1772,7 @@ export function MinimalCycleView() {
   return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth}>
     <header className="app-titlebar"><span className="appmark">∿</span><h1>{snapshot.document.document.title}</h1><span className="save-state">{history.dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span><span className="window-controls">—　□　×</span></header>
     <nav className="ribbon-tabs" aria-label="Ribbon tabs">
-      {([{ key: "File", label: "File" }, { key: "Home", label: "Home" }, { key: "Insert", label: "Insert" }, { key: "Timeline", label: "Edit", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "Annotation", compatibilityLabel: "Annotation", compatibilityOnly: true }, { key: "View", label: "View" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const).map((tab) => <button type="button" key={tab.key} aria-label={"compatibilityLabel" in tab ? tab.compatibilityLabel : tab.key} className={`${ribbonTab === tab.key ? "active" : ""}${"compatibilityOnly" in tab && tab.compatibilityOnly ? " compatibility-tab" : ""}`} onClick={() => setRibbonTab(tab.key)}>{tab.label}</button>)}
+      {([{ key: "File", label: "File" }, { key: "Home", label: "Home" }, { key: "Insert", label: "Insert" }, { key: "Timeline", label: "Edit", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "Annotation", compatibilityLabel: "Annotation", compatibilityOnly: true }, { key: "View", label: "View" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const).map((tab) => <button type="button" key={tab.key} aria-label={"compatibilityLabel" in tab ? tab.compatibilityLabel : tab.key} className={`${ribbonTab === tab.key ? "active" : ""}${"compatibilityOnly" in tab && tab.compatibilityOnly ? " compatibility-tab" : ""}`} onClick={() => startTransition(() => setRibbonTab(tab.key))}>{tab.label}</button>)}
       <div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => { setViewMode(mode); if (mode === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal"); if (mode === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction"); }}>{mode}</button>)}</div>
     </nav>
     <Ribbon
@@ -1830,8 +1833,8 @@ export function MinimalCycleView() {
       onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) openDocument.current(text); else setProblem("No recent document is available."); }}
       onProperties={() => setPropertiesVisible(true)}
       onExport={() => setExportVisible(true)}
-      onToggleInspector={() => setInspectorVisible((value) => !value)}
-      onToggleBottom={() => setBottomVisible((value) => !value)}
+      onToggleInspector={() => startTransition(() => setInspectorVisible((value) => !value))}
+      onToggleBottom={() => startTransition(() => setBottomVisible((value) => !value))}
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
       onOpenTimeline={() => setRibbonTab("Timeline")}
       onOpenProperties={() => setPropertiesVisible(true)}
