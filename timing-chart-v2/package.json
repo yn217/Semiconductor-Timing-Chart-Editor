@@ -12,6 +12,7 @@
   },
   "scripts": {
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:production-presentation": "node scripts/check-production-presentation-equivalence.mjs",
     "check:performance-architecture": "node scripts/check-performance-architecture.mjs",
     "typecheck": "tsc -b",
     "test": "vitest run",
