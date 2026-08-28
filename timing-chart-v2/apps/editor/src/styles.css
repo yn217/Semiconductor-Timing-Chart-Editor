@@ -342,7 +342,7 @@ body { min-width: 1100px; }
 .editor-shell .surface-host [data-role="stable-waveform-surface"],
 .editor-shell .surface-host [data-role="annotation-overlay-surface"],
 .editor-shell .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(-35px); }
-.editor-shell .surface-host [data-role="left-row"] { grid-template-columns: 28px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
+.editor-shell .surface-host [data-role="left-row"] { grid-template-columns: 42px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
 .editor-shell .left-column-heading { align-items: flex-start; padding-top: 9px; }
 .editor-shell .left-column-heading > label { position: absolute; top: 37px; right: 0; left: 0; z-index: 21; display: block; height: 35px; padding: 4px 7px; border-top: 1px solid #d6dde6; background: #fbfcfe; }
 .editor-shell .left-column-heading > label input { height: 27px; padding-left: 7px; }
@@ -526,6 +526,36 @@ body { min-width: 1100px; }
 .editor-shell .home-display-group { width: 174px; }
 .editor-shell .home-zoom-controls .ribbon-tool { min-width: 39px; }
 .editor-shell .home-display-group .home-toggle { min-width: 0; }
+.surface-host [data-role="tree-signal-role"],
+.surface-host [data-role="signal-role"] {
+  display: inline-grid;
+  flex: 0 0 auto;
+  width: 28px;
+  min-width: 28px;
+  height: 20px;
+  place-items: center;
+  overflow: hidden;
+  border: 0;
+  border-radius: 4px;
+  background: #e3f1ff;
+  color: #1b5b96;
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+.surface-host [data-role="tree-signal-role"][data-presentation="input"],
+.surface-host [data-role="signal-role"][data-presentation="input"] { background: #e4f6ec; color: #216843; }
+.surface-host [data-role="tree-signal-role"][data-presentation="output"],
+.surface-host [data-role="signal-role"][data-presentation="output"] { background: #e3f1ff; color: #1b5b96; }
+.surface-host [data-role="tree-signal-role"][data-presentation="internal"],
+.surface-host [data-role="signal-role"][data-presentation="internal"] { width: 42px; min-width: 42px; border: 1px solid #aab6c4; background: #fff; color: #536274; }
+.surface-host [data-role="tree-signal-role"][data-presentation="comment"],
+.surface-host [data-role="signal-role"][data-presentation="comment"] { width: 24px; min-width: 24px; border: 1px solid #aa72e6; background: #fff; color: #8c47d3; }
+.surface-host [data-role="tree-signal-role"] .comment-icon,
+.surface-host [data-role="signal-role"] .comment-icon { width: 15px; height: 15px; flex: 0 0 15px; }
+.surface-host [data-role="tree-signal-name"],
+.surface-host [data-role="frozen-signal-name"] { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (min-width: 1101px) and (max-width: 1300px) {
   .ribbon { zoom: .8; width: 125%; }
 }

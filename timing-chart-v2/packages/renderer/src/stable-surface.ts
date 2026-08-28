@@ -47,11 +47,24 @@ function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-
   } else if (name === "comment") {
     const path = append("path");
     path.setAttribute("d", "M4 4h16v12H9l-5 4z");
-    path.setAttribute("fill", "none");
+    path.setAttribute("fill", "#f1dcff");
     path.setAttribute("stroke", "currentColor");
     path.setAttribute("stroke-width", "1.6");
   }
   return svg;
+}
+
+function createRoleBadge(document: Document, kind: RowLayoutEntry["kind"], role: RowLayoutEntry["role"], className: string): HTMLSpanElement {
+  const badge = document.createElement("span");
+  badge.dataset.role = className === "tree-signal-role" ? "tree-signal-role" : "signal-role";
+  badge.dataset.presentation = kind === "comment" ? "comment" : role ?? "internal";
+  badge.className = className;
+  if (kind === "comment") {
+    badge.append(createLeftTreeIcon(document, "comment", "surface-icon comment-icon"));
+  } else {
+    badge.textContent = role === "input" ? "i" : role === "output" ? "o" : "wire";
+  }
+  return badge;
 }
 
 interface Layers {
@@ -476,11 +489,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     name.dataset.role = "tree-signal-name";
     name.textContent = row.name;
     name.title = row.fullPath ?? row.name;
-    const role = document.createElement("span");
-    role.dataset.role = "tree-signal-role";
-    role.textContent = row.kind === "comment" ? "" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
-    role.dataset.presentation = row.kind === "comment" ? "comment" : row.role ?? "internal";
-    if (row.kind === "comment") role.append(createLeftTreeIcon(document, "comment", "surface-icon comment-icon"));
+    const role = createRoleBadge(document, row.kind, row.role, "tree-signal-role");
     role.title = row.kind === "comment" ? "Comment Row" : row.role ?? "internal";
     const visibility = document.createElement("button");
     visibility.type = "button";
@@ -499,11 +508,7 @@ function populateShell(shell: HTMLElement, row: RowLayoutEntry, surface: string,
     shell.replaceChildren(role, name, visibility, more, branch);
     return;
   }
-  const role = document.createElement("span");
-  role.dataset.role = "signal-role";
-  role.textContent = row.kind === "comment" ? "" : row.role === "input" ? "i" : row.role === "output" ? "o" : "wire";
-  role.dataset.presentation = row.kind === "comment" ? "comment" : row.role ?? "internal";
-  if (row.kind === "comment") role.append(createLeftTreeIcon(document, "comment", "surface-icon comment-icon"));
+  const role = createRoleBadge(document, row.kind, row.role, "signal-role");
   const name = document.createElement("span");
   name.dataset.role = "frozen-signal-name";
   name.textContent = row.name;

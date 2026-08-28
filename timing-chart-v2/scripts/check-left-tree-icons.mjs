@@ -16,8 +16,9 @@ const forbidden = [
   ["CSS icon content", /tree-(?:collapse|group-more|more|visibility)[^\{]*::before[^\}]*content\s*:/],
 ];
 const violations = forbidden.filter(([, pattern]) => pattern.test(renderer) || pattern.test(styles)).map(([name]) => name);
+const sharedBadgeRenderer = (renderer.match(/function createRoleBadge\(/g) ?? []).length === 1 && (renderer.match(/createRoleBadge\(document/g) ?? []).length >= 2;
 const required = ["chevron-down", "chevron-right", "eye", "eye-off", "more", "comment"];
 const missing = required.filter((name) => !iconSource.includes(`name === \"${name}\"`) && !iconSource.includes(`name === \"${name}\"`));
-const report = { required, missing, duplicateSymbolIds: [...new Set(duplicateIds)], forbiddenViolations: violations, inlineGeometry: /createElementNS[\s\S]*append\("(?:path|circle)"\)/.test(iconSource) };
+const report = { required, missing, duplicateSymbolIds: [...new Set(duplicateIds)], forbiddenViolations: violations, inlineGeometry: /createElementNS[\s\S]*append\("(?:path|circle)"\)/.test(iconSource), sharedBadgeRenderer };
 console.log(JSON.stringify(report, null, 2));
-if (missing.length || report.duplicateSymbolIds.length || violations.length || !report.inlineGeometry) process.exitCode = 1;
+if (missing.length || report.duplicateSymbolIds.length || violations.length || !report.inlineGeometry || !sharedBadgeRenderer) process.exitCode = 1;
