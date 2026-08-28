@@ -1,7 +1,10 @@
 {
-  "gitHead": "d5e47b907729aa12f883d6b4a93197e84cdb084a",
-  "generatedAt": "2026-08-28T07:07:18.904Z",
-  "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6",
+  "provenance": {
+    "testedCommit": "61346173159118f0c652cdecdb034920e1277d5e",
+    "sourceFingerprint": "863193884d0cab03cb9a9925813b6922c3fab07c9ca50850ad6f9bb2ae62c61c",
+    "generatedAt": "2026-08-28T07:16:56.807Z",
+    "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
+  },
   "capture": {
     "browser": "chromium",
     "viewport": [
