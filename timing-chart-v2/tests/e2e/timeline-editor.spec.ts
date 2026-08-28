@@ -27,6 +27,72 @@ test("selects a cycle from Canvas geometry and the exclusive terminal boundary f
   await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
 });
 
+test("keeps ruler click suppression scoped to ruler-originated gestures", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const ruler = page.getByTestId("cycle-ruler");
+  const wave = host.locator("[data-role='stable-waveform-surface']");
+  const owner = wave.locator("[data-signal-id='sig_cycle_request']");
+  const ownerBox = await owner.boundingBox();
+  expect(ownerBox).not.toBeNull();
+  const cyclePoint = async (cycle: number) => {
+    const box = await ruler.locator(`[data-cycle='${cycle}']`).boundingBox();
+    expect(box).not.toBeNull();
+    return { x: box!.x + 1, y: box!.y + box!.height / 2 };
+  };
+  const state = async () => ({
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await host.getAttribute("data-history-depth"),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    counters: await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
+  });
+  const before = await state();
+  const waveY = ownerBox!.y + ownerBox!.height / 2;
+
+  const waveClick = await cyclePoint(4);
+  await page.mouse.click(waveClick.x, waveY);
+  await expect(host).toHaveAttribute("data-selected-cycle", "4");
+
+  // A genuine ruler click immediately after a waveform click must not be swallowed.
+  await ruler.locator("[data-cycle='9']").click();
+  await expect(host).toHaveAttribute("data-selected-cycle", "9");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("9");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("10");
+
+  const waveStart = await cyclePoint(2);
+  const waveEnd = await cyclePoint(6);
+  await page.mouse.move(waveStart.x, waveY);
+  await page.mouse.down();
+  await page.mouse.move(waveEnd.x, waveY);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
+
+  // A waveform range drag must also leave the next ruler click available.
+  await ruler.locator("[data-cycle='11']").click();
+  await expect(host).toHaveAttribute("data-selected-cycle", "11");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("11");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("12");
+
+  const rulerStart = await cyclePoint(3);
+  const rulerEnd = await cyclePoint(7);
+  await page.mouse.move(rulerStart.x, rulerStart.y);
+  await page.mouse.down();
+  await page.mouse.move(rulerEnd.x, rulerStart.y);
+  await page.mouse.up();
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("3");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("7");
+
+  // The post-drag synthetic click is consumed, while the next deliberate click works.
+  await ruler.locator("[data-cycle='10']").click();
+  await expect(host).toHaveAttribute("data-selected-cycle", "10");
+  await expect(page.getByLabel("Timeline range start")).toHaveValue("10");
+  await expect(page.getByLabel("Timeline range end")).toHaveValue("11");
+  expect(await state()).toEqual(before);
+});
+
 test("selects Cycle 0 and the terminal boundary from the rendered waveform", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

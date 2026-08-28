@@ -962,10 +962,11 @@ export function MinimalCycleView() {
         delete rendererHost.dataset.rangePreview;
         refreshRangePreview();
         suppressCanvasClick = true;
-        suppressRulerClick = true;
+        suppressRulerClick = dragSurface === "ruler";
         const clickCycle = dragSurface === "ruler" ? cycle : cycleBoundaryAtX(event.clientX);
         if (clickCycle !== undefined) applyCanvasCycleSelection(clickCycle, event.shiftKey);
         requestAnimationFrame(() => { suppressCanvasClick = false; });
+        if (suppressRulerClick) requestAnimationFrame(() => { suppressRulerClick = false; });
         event.preventDefault();
         return;
       }
@@ -973,13 +974,15 @@ export function MinimalCycleView() {
       setTimelineRange(next);
       setSelectedCycle(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
       rendererHost.dataset.selectedCycle = String(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
+      const dragSurface = rangeDrag.surface;
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
       refreshRangePreview();
       rangeDrag = undefined;
       suppressCanvasClick = true;
-      suppressRulerClick = true;
+      suppressRulerClick = dragSurface === "ruler";
       requestAnimationFrame(() => { suppressCanvasClick = false; });
+      if (suppressRulerClick) requestAnimationFrame(() => { suppressRulerClick = false; });
       event.preventDefault();
     };
     const onRangePointerCancel = () => {
