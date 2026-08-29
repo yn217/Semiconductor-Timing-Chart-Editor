@@ -416,6 +416,7 @@ export function MinimalCycleView() {
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
     let referenceGeometry: LocalGeometryMap | undefined;
+    let referenceSvg: SVGSVGElement | undefined;
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
     const provider: WaveformSurfaceProvider = {
       async mountWaveBatch(requests) {
@@ -445,11 +446,17 @@ export function MinimalCycleView() {
           try {
             const geometry = adapter.extractLocalGeometry(item.rendered);
             geometryMaps.set(item.request.signalId, geometry);
-            if (item.request.signalId === document.timeline.referenceClock) referenceGeometry = geometry;
+            if (item.request.signalId === document.timeline.referenceClock) {
+              referenceGeometry = geometry;
+              referenceSvg = item.rendered.svg as SVGSVGElement;
+            }
             return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
           } catch (error: unknown) {
             geometryMaps.delete(item.request.signalId);
-            if (item.request.signalId === document.timeline.referenceClock) referenceGeometry = undefined;
+            if (item.request.signalId === document.timeline.referenceClock) {
+              referenceGeometry = undefined;
+              referenceSvg = undefined;
+            }
             return { signalId: item.request.signalId, error };
           }
         });
@@ -462,7 +469,10 @@ export function MinimalCycleView() {
       disposeWave(id) {
         adapter.dispose(id);
         geometryMaps.delete(id);
-        if (id === session.getSnapshot().document.timeline.referenceClock) referenceGeometry = undefined;
+        if (id === session.getSnapshot().document.timeline.referenceClock) {
+          referenceGeometry = undefined;
+          referenceSvg = undefined;
+        }
       },
     };
     const renderer = new StableTimingChartRenderer(provider);
@@ -493,12 +503,12 @@ export function MinimalCycleView() {
     const rebuildRuler = (document: CanonicalDocument) => {
       rulerBuilds += 1;
       const fitWidth = Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth);
-      screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, fitWidth, rulerInitialized ? screenGeometryScale : undefined);
+      screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(referenceSvg, currentZoom));
       rulerInitialized = true;
       syncPresentationScale();
     };
     const refreshGrid = (document: CanonicalDocument) => {
-      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth));
+      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth), screenGeometryScale);
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -757,6 +767,7 @@ export function MinimalCycleView() {
       geometryMaps.clear();
       snapIndex = undefined;
       referenceGeometry = undefined;
+      referenceSvg = undefined;
       rulerInitialized = false;
       window = viewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
@@ -2813,13 +2824,13 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number): void {
+function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number, scaleOverride?: number): void {
   element.dataset.gridEnabled = String(visible);
   element.style.height = `${height}px`;
   if (!geometry || !referenceSignalId) return;
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const terminal = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
-  const scale = screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24);
+  const scale = scaleOverride ?? (screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24));
   const lines: HTMLElement[] = [];
   for (let displayCycle = 0; displayCycle <= mapping.displayCycleCount; displayCycle += 1) {
     const anchor = geometry.find({ signalId: referenceSignalId, cycle: displayCycle, point: "cycle-start" });
@@ -3461,7 +3472,16 @@ function viewportWindow(viewport: HTMLElement, referenceClock?: SignalId): Virtu
   };
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number): number {
+function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: number): number | undefined {
+  if (!svg || !Number.isFinite(currentZoom) || currentZoom <= 0) return undefined;
+  const viewBoxWidth = svg.viewBox.baseVal.width;
+  const matrix = svg.getScreenCTM();
+  if (!Number.isFinite(viewBoxWidth) || viewBoxWidth <= 0 || !matrix || !Number.isFinite(matrix.a) || matrix.a <= 0) return undefined;
+  const scale = matrix.a / currentZoom;
+  return Number.isFinite(scale) && scale > 0 ? scale : undefined;
+}
+
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number, actualScreenScale?: number): number {
   if (!geometry || !referenceSignalId) {
     element.dataset.geometryError = "Reference-clock geometry unavailable";
     element.parentElement?.setAttribute("data-geometry-error", "Reference-clock geometry unavailable");
@@ -3476,7 +3496,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
   const terminalPoint = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
-  const scale = forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
+  const scale = actualScreenScale ?? forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
   let finalX = 0;
   for (let display = 0; display <= mapping.displayCycleCount; display += 1) {
     const point = geometry.find({ signalId: referenceSignalId, cycle: display, point: "cycle-start" })?.point;
