@@ -407,7 +407,10 @@ export function MinimalCycleView() {
     const baseWidth = Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth);
     const width = leftPaneWidth + frozenPaneWidth + baseWidth * zoom;
     rendererHost.style.width = `${width}px`;
-    rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
+    const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']");
+    timingSurface?.style.setProperty("width", `${width}px`);
+    timingSurface?.style.setProperty("grid-template-columns", `${leftPaneWidth}px ${frozenPaneWidth}px var(--wave-width, 640px)`);
+    rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${leftPaneWidth}px`, "important");
   }, [frozenPaneWidth, inspectorWidth, leftPaneWidth, zoom]);
 
   useEffect(() => {

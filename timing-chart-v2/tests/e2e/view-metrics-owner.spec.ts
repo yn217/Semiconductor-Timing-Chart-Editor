@@ -6,7 +6,7 @@ async function readCounters(page: Page): Promise<Record<string, unknown>> {
   return JSON.parse((await page.getByTestId("cycle-surface").getAttribute("data-session-counters")) ?? "{}");
 }
 
-async function assertRulerGridAligned(page: Page, cycles: readonly number[]): Promise<void> {
+async function assertBoundaries(page: Page, cycles: readonly number[]): Promise<void> {
   const samples = await page.evaluate((requested) => {
     const ticks = [...document.querySelectorAll<HTMLElement>(".cycle-ruler .cycle-tick")];
     const grid = [...document.querySelectorAll<HTMLElement>("[data-role='geometry-grid-line']")];
@@ -64,5 +64,5 @@ test("long-lived ruler/grid callbacks read current pane metrics after resize", a
   expect(metrics.leftPaneWidth).toBe(Number(await shell.getAttribute("data-left-pane-width")));
   expect(metrics.frozenPaneWidth).toBe(Number(await shell.getAttribute("data-frozen-pane-width")));
   expect(metrics.inspectorWidth).toBe(Number(await shell.getAttribute("data-inspector-width")));
-  await assertRulerGridAligned(page, [0, 12, 25]);
+  await assertBoundaries(page, [0, 12, 25]);
 });
