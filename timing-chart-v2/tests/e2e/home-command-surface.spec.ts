@@ -167,6 +167,41 @@ test("Context Menu exposes shared commands", async ({ page }) => {
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("Command enablement stays aligned for annotation selection", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const tools = page.getByTestId("annotation-toolbar");
+  await tools.getByRole("button", { name: "Add annotation" }).click();
+  const annotation = host.locator("[data-role='annotation-owner'][data-annotation-id]").first();
+  await expect(annotation).toBeVisible();
+  await annotation.dispatchEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 320, clientY: 240 });
+  const menu = page.getByRole("menu", { name: "Annotation context menu" });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "Copy", exact: true })).toBeEnabled();
+  await expect(menu.getByRole("menuitem", { name: "Cut", exact: true })).toBeEnabled();
+  await expect(menu.getByRole("menuitem", { name: "Duplicate", exact: true })).toBeEnabled();
+  await expect(menu.getByRole("menuitem", { name: "Delete", exact: true })).toBeEnabled();
+  for (const label of ["Move Up", "Move Down", "Show", "Hide", "Rename"]) {
+    await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeDisabled();
+  }
+  await page.keyboard.press("Escape");
+  await expect(menu).toHaveCount(0);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  await expect(ribbon.getByRole("button", { name: "Copy", exact: true })).toBeEnabled();
+  await expect(ribbon.getByRole("button", { name: /Duplicate|複製/, exact: true })).toBeEnabled();
+  await expect(ribbon.getByRole("button", { name: "Delete", exact: true })).toBeEnabled();
+  await ribbon.getByRole("button", { name: "More", exact: true }).click();
+  const overflow = page.getByRole("menu", { name: "More Home Commands" });
+  await expect(overflow.getByRole("button", { name: "Copy", exact: true })).toBeEnabled();
+  await expect(overflow.getByRole("button", { name: "Duplicate", exact: true })).toBeEnabled();
+  await expect(overflow.getByRole("button", { name: "Show", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("button", { name: "Hide", exact: true })).toBeDisabled();
+  await expect(overflow.getByRole("button", { name: "Rename", exact: true })).toBeDisabled();
+});
+
 test("Rename uses the shared app-owned dialog with atomic Apply and view-only Cancel", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

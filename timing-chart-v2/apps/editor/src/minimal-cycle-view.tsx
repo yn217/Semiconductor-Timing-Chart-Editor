@@ -2036,7 +2036,7 @@ export function MinimalCycleView() {
   };
   pasteSelectedSignalRef.current = pasteSelectedEntity;
   const renameSelection = () => {
-    const current = selectedSignal?.display.name ?? selectedGroup?.name;
+    const current = selectedSignal?.display.name ?? selectedGroup?.name ?? selectedTransaction?.name;
     if (current === undefined) return;
     setRenameDraft(current);
     setRenameError("");
@@ -2280,9 +2280,9 @@ export function MinimalCycleView() {
     requestAnimationFrame(() => globalThis.document.querySelector<HTMLButtonElement>(`[data-bottom-tab="${next}"]`)?.focus());
   };
 
-  const hasSelectedSignal = (selectedSignalIds.size > 0 && selectedSignal !== undefined) || selectedAnnotation !== undefined;
-  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined;
-  const hasDeletableSelection = hasSelectedEntity || selectedTransaction !== undefined;
+  const hasSelectedSignal = selectedSignalIds.size > 0 && selectedSignal !== undefined;
+  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined;
+  const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
   const restorePendingFileFocus = () => {
     const origin = pendingFileOriginRef.current;
     pendingFileOriginRef.current = null;
@@ -2314,7 +2314,7 @@ export function MinimalCycleView() {
   };
   const requestNewDocument = () => requestFileAction({ kind: "new" });
   const requestOpenText = (text: string) => requestFileAction({ kind: "open", text });
-  const hasSelectedClipboard = hasSelectedEntity;
+  const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
   const applyWorkspacePreset = (preset: WorkspacePreset) => {
     setWorkspacePreset(preset);
     if (preset === "waveform") { setInspectorVisible(false); setBottomVisible(false); return; }
