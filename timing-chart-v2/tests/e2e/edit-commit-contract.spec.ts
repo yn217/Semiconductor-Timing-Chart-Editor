@@ -18,3 +18,33 @@ test("Inspector and Bottom expose the documented edit contract surfaces", async 
   await expect(page.getByTestId("follow-selection")).toBeVisible();
   await expect(page.getByTestId("bottom-pin")).toBeVisible();
 });
+
+test("Inspector Cancel restores signal and clock drafts without a canonical mutation", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const dirty = await page.getByTestId("dirty-status").textContent();
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const signalInspector = page.getByTestId("inspector");
+  const originalName = await signalInspector.getByLabel("Inspector signal name").inputValue();
+  await signalInspector.getByLabel("Inspector signal name").fill("TRANSIENT_CANCELLED");
+  await signalInspector.getByLabel("Inspector signal name").press("Escape");
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name")).toHaveValue(originalName);
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const clockInspector = page.getByTestId("inspector");
+  const originalPeriod = await clockInspector.getByLabel("Inspector clock period").inputValue();
+  await clockInspector.getByLabel("Inspector clock period").fill("99");
+  await expect(clockInspector.getByTestId("cancel-inspector-draft")).toBeVisible();
+  await clockInspector.getByTestId("cancel-inspector-draft").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector clock period")).toHaveValue(originalPeriod);
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
+});
