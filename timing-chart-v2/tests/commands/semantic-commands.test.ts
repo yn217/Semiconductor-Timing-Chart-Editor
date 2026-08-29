@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -124,6 +124,30 @@ describe("pure Semantic Command planning", () => {
     const plan = planCommand(document, { id: commandId("cmd_delete_linked"), type: "signal.delete", signalId: "sig_data" as SignalId });
     expect(plan.ok).toBe(true);
     if (plan.ok) expect(plan.document.transactions).toEqual([{ id: "txn_link", name: "Linked", start: 1, end: 3, linkedSignals: [] }]);
+  });
+
+  it("rejects deletion of a Signal referenced only by a Ghost Trace source", () => {
+    const sourceSignalId = "sig_data" as SignalId;
+    const ghost: Annotation = {
+      id: "ann_ghost_source_only" as AnnotationId,
+      type: "ghostTrace",
+      label: "Previous data",
+      visible: true,
+      sourceSignalId,
+      traceOffsetCycles: -1,
+      opacity: 0.5,
+      start: { signalId: "sig_clk" as SignalId, cycle: 1, point: "cycle-start" },
+      end: { signalId: "sig_clk" as SignalId, cycle: 4, point: "cycle-end" },
+    };
+    const source = { ...canonicalFixture(), annotations: [ghost] };
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const result = session.execute({ id: commandId("cmd_delete_ghost_source"), type: "signal.delete", signalId: sourceSignalId });
+
+    expect(result.ok).toBe(false);
+    expect(result.problems).toEqual(expect.arrayContaining([expect.objectContaining({ code: "SIGNAL_HAS_DEPENDENTS", path: "$.signalId" })]));
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
   });
 
   it("allows hiding the reference Clock without changing its semantic identity", () => {

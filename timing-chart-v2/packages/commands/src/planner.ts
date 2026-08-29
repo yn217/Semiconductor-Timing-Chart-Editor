@@ -68,7 +68,7 @@ function replaceSignal(document: CanonicalDocument, index: number, signal: Signa
 }
 
 function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): Annotation[] {
-  return document.annotations.filter((annotation) => [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId === signalId));
+  return document.annotations.filter((annotation) => annotation.sourceSignalId === signalId || [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId === signalId));
 }
 
 function moveSignal(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "signal.move" }>): CommandPlanResult {
