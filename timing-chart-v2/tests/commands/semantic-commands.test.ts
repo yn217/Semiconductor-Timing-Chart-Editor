@@ -228,12 +228,8 @@ describe("pure Semantic Command planning", () => {
       expect(spacing.changeSet.geometryLocal).toBeUndefined();
     }
     const retyped = planCommand(source, { id: commandId("cmd_retype"), type: "signal.updateProperties", signalId: "sig_data" as SignalId, name: "DATA", role: "internal", signalType: "binary" });
-    expect(retyped.ok).toBe(true);
-    if (retyped.ok) {
-      expect(retyped.document.signals[1]).toMatchObject({ type: "binary" });
-      expect(retyped.document.signals[1]).not.toHaveProperty("width");
-      expect(retyped.document.signals[1]).not.toHaveProperty("displayFormat");
-    }
+    expect(retyped.ok).toBe(false);
+    if (!retyped.ok) expect(retyped.problems.some((problem) => problem.code === "UNSUPPORTED_SIGNAL_VALUE")).toBe(true);
     const removed = planCommand(source, { id: commandId("cmd_remove_value"), type: "signal.removeValue", signalId: "sig_data" as SignalId, start: 4 });
     expect(removed.ok).toBe(true);
     if (removed.ok) expect((removed.document.signals[1] as Extract<Signal, { values: unknown }>).values).toHaveLength(1);

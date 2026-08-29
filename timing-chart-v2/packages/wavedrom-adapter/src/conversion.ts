@@ -1,4 +1,4 @@
-import type { ClockSignal, SignalValueChange, ValueSignal } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import {
   WAVEDROM_CLOCK_TOKENS,
   WAVEDROM_DATA_TOKEN,
@@ -7,8 +7,6 @@ import {
   type CanonicalSignalSource,
   type WaveJsonSignal,
 } from "./types.js";
-
-const stateTokens = new Set<string>(WAVEDROM_STATE_TOKENS);
 
 function validateSource(source: CanonicalSignalSource): void {
   if (!Number.isInteger(source.cycleCount) || source.cycleCount < 1) {
@@ -21,16 +19,10 @@ function validateSource(source: CanonicalSignalSource): void {
   }
 }
 
-function logicToken(value: string | number): string {
-  const normalized = String(value).toLowerCase();
-  if (stateTokens.has(normalized)) return normalized;
-  const aliases: Readonly<Record<string, string>> = {
-    low: "0", high: "1", false: "0", true: "1", undefined: "x",
-    "high-impedance": "z", "weak-low": "d", "weak-high": "u",
-  };
-  const token = aliases[normalized];
-  if (token) return token;
-  throw new WaveDromAdapterError("UNSUPPORTED_LOGIC_VALUE", `Value '${String(value)}' has no supported WaveDrom state token.`);
+function logicToken(type: ValueSignal["type"], value: string | number): string {
+  const token = waveDromLogicToken(type, value);
+  if (token !== undefined) return token;
+  throw new WaveDromAdapterError("UNSUPPORTED_LOGIC_VALUE", `Value '${String(value)}' has no supported WaveDrom state token for ${type}.`);
 }
 
 function assertChangePoints(changes: readonly SignalValueChange[], cycleCount: number): void {
@@ -56,14 +48,14 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
   assertChangePoints(signal.values, cycleCount);
   const wave = Array<string>(cycleCount).fill(".");
   const data: string[] = [];
-  const isData = signal.type === "bus" || signal.type === "state";
+  const isData = valueSignalWaveDomain(signal.type) === "data";
   if (signal.values[0]?.start !== 0) wave[0] = "x";
   for (const change of signal.values) {
     if (isData) {
       wave[change.start] = WAVEDROM_DATA_TOKEN;
       data.push(String(change.value));
     } else {
-      wave[change.start] = logicToken(change.value);
+      wave[change.start] = logicToken(signal.type, change.value);
     }
   }
   applyGaps(wave, gaps);

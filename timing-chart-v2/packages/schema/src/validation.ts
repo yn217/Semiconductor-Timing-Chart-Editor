@@ -2,6 +2,7 @@ import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import canonicalSchema from "./canonical-document.schema.json" with { type: "json" };
 import { isStableId } from "./stable-id.js";
 import type { Annotation, CanonicalDocument, DocumentProblem, SemanticAnchor, Signal, SignalValueChange } from "./types.js";
+import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 const validateSchema = ajv.compile<CanonicalDocument>(canonicalSchema);
@@ -97,6 +98,10 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
       const bits = requiredBits(change.value, signal.displayFormat);
       if (Number.isNaN(bits)) problems.push(problem("INVALID_BUS_LITERAL", `${changePath}.value`, "Bus value is neither a supported literal nor a symbolic identifier.", signal.id));
       else if (bits !== undefined && bits > signal.width) problems.push(problem("BUS_WIDTH_OVERFLOW", `${changePath}.value`, `Value requires ${bits} bits but signal width is ${signal.width}.`, signal.id));
+    }
+    if (signal.type !== "bus" && signal.type !== "state" && signal.type !== "clock" && signal.type !== "commentRow") {
+      const compatibility = valueSignalValueProblem(signal.type, change.value);
+      if (compatibility) problems.push(problem("UNSUPPORTED_SIGNAL_VALUE", `${changePath}.value`, compatibility, signal.id));
     }
   });
 }

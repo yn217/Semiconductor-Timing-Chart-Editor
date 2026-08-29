@@ -15,7 +15,7 @@ import type {
   Transaction,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { isStableId, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { isStableId, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import { mergeChangeSets } from "./changeset.js";
 
@@ -533,6 +533,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const signal = document.signals[index];
       if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_NOT_EDITABLE", "$.signalId", "Value changes require a non-clock timing signal.");
       if (!Number.isFinite(command.start) || command.start < 0 || command.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.start", "Change point is outside the timeline.");
+      const valueProblem = valueSignalValueProblem(signal.type, command.value);
+      if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       const existing = signal.values.find((change) => change.start === command.start);
       if (existing?.value === command.value && existing.comment === command.comment) return fail("no-op", "NO_OP", "$", "Signal value is unchanged.");
       const change = { start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
@@ -549,6 +551,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (values.length === 0) return fail("invalid", "EMPTY_VALUES", "$.values", "A value signal must retain at least one change point.");
       if (values.some((change) => !Number.isInteger(change.start) || change.start < 0 || change.start >= document.timeline.cycleCount)) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.values", "Every change point must be inside the timeline.");
       if (new Set(values.map((change) => change.start)).size !== values.length) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.values", "Change points must be unique.");
+      const valueProblem = valuesCompatibleForType(signal.type, values);
+      if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.values", valueProblem);
       if (JSON.stringify(signal.values) === JSON.stringify(values)) return fail("no-op", "NO_OP", "$.values", "Signal values are unchanged.");
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
@@ -562,6 +566,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const source = signal.values.find((change) => change.start === command.fromStart);
       if (!source) return fail("invalid", "CHANGE_NOT_FOUND", "$.fromStart", `No change starts at cycle ${command.fromStart}.`);
       if (command.start !== command.fromStart && signal.values.some((change) => change.start === command.start)) return fail("invalid", "DUPLICATE_CHANGE_POINT", "$.start", `A change already starts at cycle ${command.start}.`);
+      const valueProblem = valueSignalValueProblem(signal.type, command.value);
+      if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.value", valueProblem);
       if (source.start === command.start && source.value === command.value && source.comment === command.comment) return fail("no-op", "NO_OP", "$", "Value change is unchanged.");
       const replacement = { start: command.start, value: command.value, ...(command.comment === undefined ? {} : { comment: command.comment }) };
       const values = signal.values.map((change) => change === source ? replacement : change).sort((left, right) => left.start - right.start);
@@ -601,6 +607,10 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "This property command does not apply to Comment Rows.");
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Signal name cannot be empty.");
       const nextType = command.signalType ?? signal.type;
+      if (signal.type !== "clock") {
+        const valueProblem = valuesCompatibleForType(nextType as ValueSignal["type"], signal.values);
+        if (valueProblem) return fail("invalid", "UNSUPPORTED_SIGNAL_VALUE", "$.signalType", `Cannot convert ${signal.type} to ${nextType} without changing existing values: ${valueProblem}`);
+      }
       if (command.displayFormat !== undefined && nextType !== "bus") return fail("invalid", "DISPLAY_FORMAT_NOT_SUPPORTED", "$.displayFormat", "Display format applies only to bus signals.");
       if (command.width !== undefined && (nextType !== "bus" || !Number.isInteger(command.width) || command.width < 1)) return fail("invalid", "INVALID_SIGNAL_WIDTH", "$.width", "Width must be a positive integer and applies only to bus signals.");
       if (command.displayAlign !== undefined && !["left", "center", "right"].includes(command.displayAlign)) return fail("invalid", "INVALID_DISPLAY_ALIGN", "$.displayAlign", "Display alignment is invalid.");

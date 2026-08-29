@@ -9,7 +9,7 @@ import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, ParsedCanonicalDocument, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, SpacerRow, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
@@ -3354,8 +3354,8 @@ function EventRow({ signal, change, end, selected, onSelect, onCommand }: { read
 }
 
 function QuickValues({ signal, setValue }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void }) {
-  const values = signal.type === "binary" || signal.type === "logic" ? ["0", "1", "X", "Z"] : signal.type === "bus" ? ["Hex", "Binary", "Symbol", "X", "Z"] : ["IDLE", "ACTIVE", "X", "Z"];
-  return <div className="quick-values" role="group" aria-label="Quick values">{values.map((item) => <button type="button" key={item} onClick={() => setValue(item === "Hex" ? "00" : item === "Binary" ? "00000000" : item === "Symbol" ? "VALUE" : item)}>{item}</button>)}</div>;
+  const values = quickValueOptions(signal.type);
+  return <div className="quick-values" role="group" aria-label="Quick values">{values.map((item) => <button type="button" key={item} onClick={() => setValue(quickValueLiteral(signal.type, item))}>{item}</button>)}</div>;
 }
 
 function quickValue(signal: ValueSignal): string {
