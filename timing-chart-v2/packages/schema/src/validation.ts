@@ -1,8 +1,9 @@
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import canonicalSchema from "./canonical-document.schema.json" with { type: "json" };
 import { isStableId } from "./stable-id.js";
-import type { Annotation, CanonicalDocument, DocumentProblem, SemanticAnchor, Signal, SignalValueChange } from "./types.js";
+import type { Annotation, CanonicalDocument, DocumentProblem, SemanticAnchor, Signal, SignalValueChange, TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
+import { canonicalReferences } from "./reference-registry.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 const validateSchema = ajv.compile<CanonicalDocument>(canonicalSchema);
@@ -116,9 +117,8 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
   }
   if (anchor.signalId !== undefined) {
     const target = signals.get(anchor.signalId);
-    if (!target) problems.push(problem("MISSING_CROSS_REFERENCE", `${path}.signalId`, `Signal '${anchor.signalId}' does not exist.`, annotation.id));
-    else if (target.type === "commentRow") problems.push(problem("NON_TIMING_ANCHOR_TARGET", `${path}.signalId`, "Annotations cannot target a non-timing comment row.", annotation.id));
-    else {
+   if (target && target.type === "commentRow") problems.push(problem("NON_TIMING_ANCHOR_TARGET", `${path}.signalId`, "Annotations cannot target a non-timing comment row.", annotation.id));
+   else if (target) {
       const valueOnly = anchor.point === "value-start" || anchor.point === "value-center";
       if (valueOnly && target.type === "clock") problems.push(problem("INVALID_ANCHOR_POINT", `${path}.point`, `Point '${anchor.point}' requires a value signal.`, annotation.id));
       const edgeOnly = anchor.point === "rising-edge" || anchor.point === "falling-edge";
@@ -162,7 +162,7 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
 
   if (document.timeline.end !== document.timeline.cycleCount) problems.push(problem("TIMELINE_END_MISMATCH", "$.timeline.end", "Canonical timeline end must equal cycleCount."));
 
-  const signals = new Map(document.signals.map((signal) => [signal.id, signal]));
+  const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const spacerOwners = new Map<string, string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => [spacer.id, group.id] as const)));
   const spacers = new Set(spacerOwners.keys());
   const renderableRows = new Set<string>([...signals.keys(), ...spacers]);
@@ -181,8 +181,8 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
 
   if (document.timeline.referenceClock !== undefined) {
     const reference = signals.get(document.timeline.referenceClock);
-    if (!reference) problems.push(problem("MISSING_CROSS_REFERENCE", "$.timeline.referenceClock", `Reference clock '${document.timeline.referenceClock}' does not exist.`));
-    else if (reference.type !== "clock") problems.push(problem("INVALID_REFERENCE_CLOCK", "$.timeline.referenceClock", "Reference clock must target a clock signal.", reference.id));
+    if (reference && reference.type !== "clock") problems.push(problem("INVALID_REFERENCE_CLOCK", "$.timeline.referenceClock", "Reference clock must target a clock signal.", reference.id));
+
   }
 
   document.signals.forEach((signal, index) => {
@@ -205,14 +205,21 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
     }
     if (annotation.type === "ghostTrace") {
       if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));
-      else if (!signals.has(annotation.sourceSignalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, `Source Signal '${annotation.sourceSignalId}' does not exist.`, annotation.id));
+
       if (annotation.traceOffsetCycles !== undefined && !Number.isFinite(annotation.traceOffsetCycles)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].traceOffsetCycles`, "Ghost Trace cycle offset must be finite.", annotation.id));
     }
     if ((annotation.type === "timingRegion" || annotation.type === "ghostTrace") && annotation.opacity !== undefined && (!Number.isFinite(annotation.opacity) || annotation.opacity < 0 || annotation.opacity > 1)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].opacity`, "Overlay opacity must be between 0 and 1.", annotation.id));
   });
 
-  const timeGroups = new Map(document.timeGroups.map((group) => [group.id, group]));
+  const timeGroups = new Map<string, TimeGroup>(document.timeGroups.map((group) => [group.id, group]));
   const labelAnchors = new Map(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
+  for (const reference of canonicalReferences(document)) {
+    const targetExists = reference.targetType === "signal" ? signals.has(reference.targetId) : timeGroups.has(reference.targetId);
+    if (!targetExists) {
+      const targetLabel = reference.targetType === "signal" ? "Signal" : "Time Group";
+      problems.push(problem("MISSING_CROSS_REFERENCE", reference.path, targetLabel + " '" + reference.targetId + "' does not exist.", reference.ownerId));
+    }
+  }
   document.bookmarks.forEach((bookmark, index) => {
     if (!Number.isInteger(bookmark.start) || bookmark.start < 0 || bookmark.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.bookmarks[${index}].start`, "Bookmark must be an integer cycle within the source timeline.", bookmark.id));
   });
@@ -230,7 +237,7 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
   document.timeline.labelAnchors.forEach((anchor, index) => {
     if (!Number.isInteger(anchor.source) || anchor.source < 0 || anchor.source > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].source`, "Ruler label anchor source must be an integer cycle within the source timeline.", anchor.id));
     if (!Number.isInteger(anchor.display)) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].display`, "Ruler label anchor display value must be an integer cycle.", anchor.id));
-    if (anchor.ownerTimeGroupId && !timeGroups.has(anchor.ownerTimeGroupId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.timeline.labelAnchors[${index}].ownerTimeGroupId`, `Time Group '${anchor.ownerTimeGroupId}' does not exist.`, anchor.id));
+
     const prior = labelSources.get(anchor.source);
     if (prior !== undefined) problems.push(problem("DUPLICATE_LABEL_ANCHOR_SOURCE", `$.timeline.labelAnchors[${index}].source`, `Source ${anchor.source} is already owned by label anchor '${prior}'.`, anchor.id));
     else labelSources.set(anchor.source, anchor.id);
@@ -246,7 +253,7 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
       if (!Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be an integer-cycle half-open subrange of its transaction.", transaction.id));
     });
     transaction.linkedSignals?.forEach((signalId, signalIndex) => {
-      if (!signals.has(signalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals[${signalIndex}]`, `Signal '${signalId}' does not exist.`, transaction.id));
+
     });
   });
 

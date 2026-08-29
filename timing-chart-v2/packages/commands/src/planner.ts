@@ -15,7 +15,7 @@ import type {
   Transaction,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { isStableId, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { isStableId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import { mergeChangeSets } from "./changeset.js";
 
@@ -68,7 +68,10 @@ function replaceSignal(document: CanonicalDocument, index: number, signal: Signa
 }
 
 function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): Annotation[] {
-  return document.annotations.filter((annotation) => annotation.sourceSignalId === signalId || [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId === signalId));
+  const annotationIds = new Set(referencesToSignal(document, signalId)
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource")
+    .map((reference) => reference.ownerId));
+  return document.annotations.filter((annotation) => annotationIds.has(annotation.id));
 }
 
 function moveSignal(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "signal.move" }>): CommandPlanResult {
