@@ -57,7 +57,9 @@ function parsePrimaryStroke(path: string): Segment[] {
   return segments;
 }
 
-function transitionSegments(svg: SVGElement, brickId: string): readonly Segment[] {
+function transitionSegments(svg: SVGElement, brickId: string, cache: Map<string, readonly Segment[]>): readonly Segment[] {
+  const cached = cache.get(brickId);
+  if (cached) return cached;
   const brick = Array.from(svg.querySelectorAll<SVGGElement>("defs g[id]")).find((item) => item.id === brickId);
   if (!brick) throw new WaveDromAdapterError("MISSING_WAVEDROM_BRICK", `Rendered SVG does not contain brick '${brickId}'.`);
   const segments: Segment[] = [];
@@ -70,7 +72,9 @@ function transitionSegments(svg: SVGElement, brickId: string): readonly Segment[
       segments.push(segment);
     }
   }
-  return segments;
+  const result = Object.freeze(segments.slice());
+  cache.set(brickId, result);
+  return result;
 }
 
 function groupById<T extends Element>(svg: SVGElement, id: string): T {
@@ -205,6 +209,7 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   const clippedHalfBricks = Math.max(0, phaseHalfBricks);
   const uses = Array.from(draw.querySelectorAll<SVGUseElement>("use"));
   const rowY = boundaries[0]?.y ?? 0;
+  const transitionCache = new Map<string, readonly Segment[]>();
 
   for (let visibleIndex = 0; visibleIndex < uses.length; visibleIndex += 1) {
     const use = uses[visibleIndex];
@@ -220,6 +225,7 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   }
 
   const period = waveJson.period ?? 1;
+  let previousToken: string | undefined;
   for (let slot = 0; slot < waveJson.wave.length; slot += 1) {
     const token = waveJson.wave[slot];
     if (!token || token === "." || token === "|") continue;
@@ -231,7 +237,7 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     const use = uses[visibleIndex];
     let valueStart = boundary;
     if (slot > 0 && use) {
-      const segments = transitionSegments(svg, hrefOf(use));
+      const segments = transitionSegments(svg, hrefOf(use), transitionCache);
       const interval = segments.length === 0 ? undefined : { start: Math.min(...segments.map((item) => Math.min(item.start.x, item.end.x))), end: Math.max(...segments.map((item) => Math.max(item.start.x, item.end.x))) };
       const segment = segments[0];
       if (interval && segment) {
@@ -248,12 +254,12 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
           add(cycle, "transition-center", transformed, threshold);
         }
         valueStart = point(end.x, rowY);
-        const previous = [...waveJson.wave.slice(0, slot)].reverse().find((item) => item !== "." && item !== "|");
-        if (previous === "0" && token === "1") add(cycle, "rising-edge", center);
-        if (previous === "1" && token === "0") add(cycle, "falling-edge", center);
+        if (previousToken === "0" && token === "1") add(cycle, "rising-edge", center);
+        if (previousToken === "1" && token === "0") add(cycle, "falling-edge", center);
       }
     }
     add(cycle, "value-start", valueStart);
+    previousToken = token;
   }
   return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries());
 }
