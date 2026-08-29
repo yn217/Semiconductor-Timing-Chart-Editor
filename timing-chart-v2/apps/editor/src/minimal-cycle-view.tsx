@@ -286,6 +286,7 @@ export function MinimalCycleView() {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
+  const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" } | undefined>();
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
@@ -358,6 +359,22 @@ export function MinimalCycleView() {
     if (!root) return;
     root.dataset.collapsedGroups = [...collapsedGroupIds].join(",");
   }, [snapshot.revision, collapsedGroupIds]);
+  useEffect(() => {
+    const root = host.current;
+    const tree = root?.querySelector<HTMLElement>("[data-role='left-tree-rows']");
+    if (!tree) return;
+    const items = [...tree.querySelectorAll<HTMLElement>("[role='treeitem']")].filter((item) => !item.hidden && !item.closest("[hidden]"));
+    const preferred = items.find((item) => item.dataset.rowId === treeFocusRowIdRef.current)
+      ?? items.find((item) => item.getAttribute("aria-selected") === "true")
+      ?? items[0];
+    for (const item of tree.querySelectorAll<HTMLElement>("[role='treeitem']")) item.tabIndex = item === preferred ? 0 : -1;
+    if (preferred) {
+      const shouldRepairFocus = treeFocusRowIdRef.current !== undefined && !tree.contains(tree.ownerDocument.activeElement);
+      treeFocusRowIdRef.current = preferred.dataset.rowId;
+      if (shouldRepairFocus) preferred.focus({ preventScroll: true });
+    }
+    tree.dataset.focusRowId = preferred?.dataset.rowId ?? "";
+  }, [snapshot.revision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
   const setCollapsedGroups = (next: ReadonlySet<GroupId>) => {
@@ -917,6 +934,64 @@ export function MinimalCycleView() {
       setArrowPickStatus("from");
       rendererHost.dataset.arrowPick = "from";
     };
+    const leftTree = rendererHost.querySelector<HTMLElement>("[data-role='left-tree-rows']");
+    const treeItems = () => [...(leftTree?.querySelectorAll<HTMLElement>("[role='treeitem']") ?? [])].filter((item) => !item.hidden && !item.closest("[hidden]"));
+    const focusTreeItem = (item: HTMLElement | undefined) => {
+      if (!item || !leftTree) return;
+      treeFocusRowIdRef.current = item.dataset.rowId;
+      for (const candidate of leftTree.querySelectorAll<HTMLElement>("[role='treeitem']")) candidate.tabIndex = candidate === item ? 0 : -1;
+      item.focus({ preventScroll: true });
+      leftTree.dataset.focusRowId = item.dataset.rowId ?? "";
+    };
+    const focusTreeChild = (groupId: string) => focusTreeItem(treeItems().find((item) => item.dataset.groupId === groupId && item.dataset.groupHeader !== "true"));
+    const onTreeKeyDown = (event: KeyboardEvent) => {
+      if (!leftTree || !(event.target instanceof Element) || !leftTree.contains(event.target)) return;
+      const item = event.target.closest<HTMLElement>("[role='treeitem']");
+      const items = treeItems();
+      if (items.length === 0) return;
+      const active = item ?? items.find((candidate) => candidate.dataset.rowId === treeFocusRowIdRef.current) ?? items[0];
+      if (!active) return;
+      const index = items.indexOf(active);
+      const move = (next: HTMLElement | undefined) => { if (next) { event.preventDefault(); event.stopPropagation(); focusTreeItem(next); requestAnimationFrame(() => focusTreeItem(next)); } };
+      if (event.key === "ArrowDown") { move(items[Math.min(items.length - 1, index + 1)]); return; }
+      if (event.key === "ArrowUp") { move(items[Math.max(0, index - 1)]); return; }
+      if (event.key === "Home") { move(items[0]); return; }
+      if (event.key === "End") { move(items.at(-1)); return; }
+      if (event.key === "ArrowRight" && active.dataset.groupHeader === "true") {
+        if (active.getAttribute("aria-expanded") === "false") {
+          event.preventDefault();
+          event.stopPropagation();
+          active.querySelector<HTMLElement>("[data-role='tree-collapse']")?.click();
+          requestAnimationFrame(() => focusTreeChild(active.dataset.groupId ?? ""));
+        } else move(items.find((candidate) => candidate.dataset.groupId === active.dataset.groupId && candidate.dataset.groupHeader !== "true"));
+        return;
+      }
+      if (event.key === "ArrowLeft") {
+        if (active.dataset.groupHeader === "true" && active.getAttribute("aria-expanded") !== "false") {
+          event.preventDefault();
+          event.stopPropagation();
+          active.querySelector<HTMLElement>("[data-role='tree-collapse']")?.click();
+          requestAnimationFrame(() => focusTreeItem(active));
+        } else if (active.dataset.groupHeader !== "true") {
+          move(items.find((candidate) => candidate.dataset.groupId === active.dataset.groupId && candidate.dataset.groupHeader === "true"));
+        }
+        return;
+      }
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        event.stopPropagation();
+        const target = active.dataset.groupHeader === "true" ? active.querySelector<HTMLElement>("[data-role='tree-branch']") : active;
+        target?.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true, view: globalThis.window }));
+        return;
+      }
+      if (event.key === "ContextMenu" || (event.key === "F10" && event.shiftKey)) {
+        event.preventDefault();
+        event.stopPropagation();
+        const rect = active.getBoundingClientRect();
+        active.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, view: globalThis.window }));
+      }
+    };
+    leftTree?.addEventListener("keydown", onTreeKeyDown);
     const onSelect = (event: MouseEvent) => {
       const closestFromEvent = <T extends Element>(selector: string): T | null => {
         const target = event.target instanceof Element ? event.target.closest<T>(selector) : null;
@@ -984,6 +1059,8 @@ export function MinimalCycleView() {
         selectedAnnotationRef.current = undefined;
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
+        for (const treeItem of leftTree?.querySelectorAll<HTMLElement>("[role='treeitem']") ?? []) treeItem.setAttribute("aria-selected", String(treeItem.dataset.rowId === `${groupOwner.dataset.groupId}:header`));
+        focusTreeItem(groupOwner.closest<HTMLElement>("[role='treeitem']") ?? undefined);
         return;
       }
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
@@ -1044,6 +1121,7 @@ export function MinimalCycleView() {
         row.setAttribute("aria-selected", String(selected));
       }
       if (primary) { rendererHost.dataset.selectedSignalId = primary; selectedSignalRef.current = primary; }
+      focusTreeItem(target);
       selectedAnnotationRef.current = undefined;
       selectedTransactionRef.current = undefined;
       if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
@@ -1423,6 +1501,7 @@ export function MinimalCycleView() {
       const movement = event.key === "ArrowLeft" ? { x: -delta, y: 0 } : event.key === "ArrowRight" ? { x: delta, y: 0 } : event.key === "ArrowUp" ? { x: 0, y: -delta } : event.key === "ArrowDown" ? { x: 0, y: delta } : undefined;
       if (!owner?.dataset.annotationId || !movement) {
         if (event.key === "Escape") {
+          setContextMenu(undefined);
           clearAnnotationPreview();
           pendingArrow = undefined;
           setArrowPickStatus("idle");
@@ -1494,6 +1573,7 @@ export function MinimalCycleView() {
       refreshPlayhead.current = () => undefined;
       navigateToCycle.current = () => undefined;
       cancelAnimationFrame(frame);
+      leftTree?.removeEventListener("keydown", onTreeKeyDown);
       viewportElement.removeEventListener("scroll", onScroll);
       viewportElement.removeEventListener("keydown", onViewportKeyDown);
       rendererHost.removeEventListener("click", onCanvasClick);

@@ -133,6 +133,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const waves = element(host, "div", "stable-waveform-surface");
     const overlays = element(host, "div", "annotation-overlay-surface");
     const interactive = element(host, "div", "interactive-overlay-surface");
+    left.setAttribute("role", "tree");
+    left.setAttribute("aria-label", "Signals and Groups");
+    left.tabIndex = 0;
     for (const layer of [left, frozen, timing, waves, overlays, interactive]) root.append(layer);
     host.replaceChildren(root);
     this.#layers = { root, left, frozen, timing, waves, overlays, interactive };
@@ -571,6 +574,11 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     shell.dataset.name = row.name;
     shell.dataset.groupId = row.groupId;
     shell.dataset.groupName = row.groupName;
+    if (surface === "left") {
+      shell.setAttribute("role", "treeitem");
+      shell.tabIndex = -1;
+      shell.setAttribute("aria-level", "2");
+    }
     if (row.groupStyle?.showBackground && row.groupStyle.background) shell.style.setProperty("--group-background", row.groupStyle.background);
     else shell.style.removeProperty("--group-background");
     if (row.groupStyle?.opacity !== undefined) shell.style.opacity = String(row.groupStyle.opacity); else shell.style.removeProperty("opacity");
@@ -675,6 +683,13 @@ function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement
     shell.dataset.groupId = header.groupId;
     shell.dataset.groupName = header.groupName;
     shell.dataset.groupHeader = "true";
+    if (surface === "left") {
+      shell.setAttribute("role", "treeitem");
+      shell.tabIndex = -1;
+      shell.setAttribute("aria-level", "1");
+      shell.setAttribute("aria-expanded", String(!header.collapsed));
+      shell.setAttribute("aria-selected", "false");
+    }
     if (header.groupStyle?.showBackground && header.groupStyle.background) shell.style.setProperty("--group-background", header.groupStyle.background);
     else shell.style.removeProperty("--group-background");
     if (header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
@@ -685,11 +700,16 @@ function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement
     place(shell, header);
     ordered.push(shell);
   }
-  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader);
-  const currentHeaders = Array.from(layer.children).filter((child) => (child as HTMLElement).dataset.groupHeader);
-  if (ordered.length !== currentHeaders.length || ordered.some((shell, index) => currentHeaders[index] !== shell)) {
-    layer.replaceChildren(...currentRows, ...ordered);
-    moves += ordered.length;
+  const currentRows = Array.from(layer.children).filter((child) => !(child as HTMLElement).dataset.groupHeader) as HTMLElement[];
+  const combined = [...currentRows, ...ordered];
+  combined.sort((left, right) => {
+    const y = (item: HTMLElement) => Number.parseFloat(item.style.transform.match(/translateY\((-?[0-9.]+)px\)/)?.[1] ?? "0");
+    return y(left) - y(right);
+  });
+  const current = Array.from(layer.children);
+  if (combined.length !== current.length || combined.some((shell, index) => current[index] !== shell)) {
+    layer.replaceChildren(...combined);
+    moves += combined.length;
   }
   return { creates, destroys, moves };
 }
