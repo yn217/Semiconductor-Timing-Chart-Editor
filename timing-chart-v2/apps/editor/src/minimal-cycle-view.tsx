@@ -276,6 +276,9 @@ export function MinimalCycleView() {
   const [clipboardAvailable, setClipboardAvailable] = useState(false);
   const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState(() => visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
+  const [rangeSelectionActive, setRangeSelectionActive] = useState(false);
+  const rangeSelectionActiveRef = useRef(false);
+  rangeSelectionActiveRef.current = rangeSelectionActive;
   const [selectedCycle, setSelectedCycle] = useState(() => visualReference ? 0 : 2);
   const selectedCycleRef = useRef(selectedCycle);
   selectedCycleRef.current = selectedCycle;
@@ -380,11 +383,15 @@ export function MinimalCycleView() {
   useEffect(() => {
     const rulerElement = ruler.current;
     if (!rulerElement) return;
+    if (!rangeSelectionActive) {
+      for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected;
+      return;
+    }
     for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
       const cycle = Number(tick.dataset.cycle);
       tick.dataset.rangeSelected = String(cycle >= timelineRange.start && cycle < timelineRange.end);
     }
-  }, [timelineRange, snapshot.revision]);
+  }, [rangeSelectionActive, timelineRange, snapshot.revision]);
 
   useEffect(() => {
     const rendererHost = host.current;
@@ -513,8 +520,15 @@ export function MinimalCycleView() {
     };
     const refreshRangeSelectionBandNow = () => {
       const band = viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']");
+      const rulerBand = rulerElement.querySelector<HTMLElement>("[data-role='range-selection-ruler-band']");
       if (!band) return;
       const preview = rendererHost.dataset.rangePreview;
+      if (!rangeSelectionActiveRef.current && !preview) {
+        band.hidden = true;
+        if (rulerBand) rulerBand.hidden = true;
+        for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected;
+        return;
+      }
       const [startText, endText] = (preview ? preview : `${timelineRangeRef.current.start}:${timelineRangeRef.current.end}`).split(":");
       const start = Number(startText);
       const end = Number(endText);
@@ -540,36 +554,22 @@ export function MinimalCycleView() {
       band.style.top = "34px";
       band.style.height = `${Math.max(projection.totalHeight, viewportElement.clientHeight - 34)}px`;
       band.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
+      if (rulerBand) {
+        rulerBand.hidden = false;
+        rulerBand.dataset.rangeStart = String(start);
+        rulerBand.dataset.rangeEnd = String(end);
+        rulerBand.dataset.source = "ruler-local-geometry";
+        rulerBand.style.left = startTick.style.left;
+        rulerBand.style.width = `${Number.parseFloat(endTick.style.left) - Number.parseFloat(startTick.style.left)}px`;
+        rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
+      }
+      for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
+        const cycle = Number(tick.dataset.cycle);
+        tick.dataset.rangeSelected = String(cycle >= start && cycle < end);
+      }
     };
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
-      const preview = rendererHost.dataset.rangePreview;
-      let element = rulerElement.querySelector<HTMLElement>("[data-role='range-preview']");
-      if (!preview) {
-        element?.remove();
-        refreshRangeSelectionBandNow();
-        return;
-      }
-      const [startText, endText] = preview.split(":");
-      const start = Number(startText);
-      const end = Number(endText);
-      const startTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${start}']`);
-      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${end}']`);
-      if (!startTick || !endTick || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
-        element?.remove();
-        return;
-      }
-      if (!element) {
-        element = rulerElement.ownerDocument.createElement("span");
-        element.dataset.role = "range-preview";
-        element.dataset.testid = "range-preview";
-        element.setAttribute("aria-hidden", "true");
-        rulerElement.append(element);
-      }
-      element.dataset.rangeStart = String(start);
-      element.dataset.rangeEnd = String(end);
-      element.style.left = startTick.style.left;
-      element.style.width = `${Math.max(1, endTick.offsetLeft - startTick.offsetLeft)}px`;
       refreshRangeSelectionBandNow();
     };
 
@@ -753,6 +753,7 @@ export function MinimalCycleView() {
       const canonicalDocument = canonicalDocumentOf(document);
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
+      setRangeSelectionActive(false);
       geometryMaps.clear();
       snapIndex = undefined;
       referenceGeometry = undefined;
@@ -995,6 +996,7 @@ export function MinimalCycleView() {
     const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
       const cycleCount = session.getSnapshot().document.timeline.cycleCount;
       if (cycle < 0 || cycle > cycleCount) return false;
+      setRangeSelectionActive(true);
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
       if (shiftKey) {
@@ -1022,6 +1024,7 @@ export function MinimalCycleView() {
       if (!tick) return;
       const cycle = Number(tick.dataset.cycle);
       if (!Number.isInteger(cycle) || cycle > session.getSnapshot().document.timeline.cycleCount) return;
+      setRangeSelectionActive(true);
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
       if (cycle === session.getSnapshot().document.timeline.cycleCount) {
@@ -1152,6 +1155,7 @@ export function MinimalCycleView() {
         return;
       }
       const next = rangeFromBoundaries(rangeDrag.anchor, cycle, session.getSnapshot().document.timeline.cycleCount);
+      setRangeSelectionActive(true);
       setTimelineRange(next);
       setSelectedCycle(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
       rendererHost.dataset.selectedCycle = String(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
@@ -1472,7 +1476,7 @@ export function MinimalCycleView() {
   useEffect(() => {
     refreshPlayhead.current();
     refreshRangeSelectionBand.current();
-  }, [selectedCycle, snapshot.revision, timelineRange, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  }, [selectedCycle, snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
     const linked = new Set(selectedTransaction?.linkedSignals ?? []);
@@ -2047,7 +2051,7 @@ export function MinimalCycleView() {
       onMoveUp={() => moveSelection(-1)}
       onMoveDown={() => moveSelection(1)}
       onVisibility={setSelectionVisibility}
-      onRange={setTimelineRange}
+      onRange={(range) => { setRangeSelectionActive(true); setTimelineRange(range); }}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
       onCreateAnnotation={createSelectedAnnotation}
       onArrowPick={() => armArrowPick.current()}
@@ -3464,6 +3468,11 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     element.replaceChildren();
     return 1;
   }
+  const rangeBand = element.ownerDocument.createElement("div");
+  rangeBand.dataset.role = "range-selection-ruler-band";
+  rangeBand.dataset.testid = "range-preview";
+  rangeBand.setAttribute("aria-hidden", "true");
+  rangeBand.hidden = true;
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
   const terminalPoint = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
@@ -3506,7 +3515,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     gap.textContent = group.presentation?.foldLabel ?? group.name;
     overlays.push(gap);
   }
-  element.replaceChildren(...ticks, ...overlays);
+  element.replaceChildren(rangeBand, ...ticks, ...overlays);
   element.dataset.source = "local-geometry";
   element.parentElement?.setAttribute("data-source", "local-geometry");
   const targetWidth = forcedScale === undefined && screenWidth !== undefined ? Math.ceil(screenWidth) : Math.ceil((finalX + 24) * scale);

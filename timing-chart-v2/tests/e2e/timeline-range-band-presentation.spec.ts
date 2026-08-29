@@ -15,15 +15,23 @@ async function assertBand(page: Page, start: number, end: number): Promise<void>
   const startBox = await (await tick(page, start)).boundingBox();
   const endBox = await (await tick(page, end)).boundingBox();
   const band = page.getByTestId("range-selection-band");
+  const rulerBand = page.getByTestId("range-preview");
   await expect(band).toHaveAttribute("data-range-start", String(start));
   await expect(band).toHaveAttribute("data-range-end", String(end));
   const bandBox = await band.boundingBox();
+  const rulerBandBox = await rulerBand.boundingBox();
   expect(startBox).not.toBeNull();
   expect(endBox).not.toBeNull();
   expect(bandBox).not.toBeNull();
+  expect(rulerBandBox).not.toBeNull();
   expect(Math.abs(bandBox!.x - startBox!.x)).toBeLessThanOrEqual(1);
   expect(Math.abs((bandBox!.x + bandBox!.width) - endBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rulerBandBox!.x - startBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs((rulerBandBox!.x + rulerBandBox!.width) - endBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(rulerBandBox!.x - bandBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs((rulerBandBox!.x + rulerBandBox!.width) - (bandBox!.x + bandBox!.width))).toBeLessThanOrEqual(1);
   await expect(band).toHaveAttribute("data-source", "ruler-local-geometry");
+  await expect(rulerBand).toHaveAttribute("data-source", "ruler-local-geometry");
 }
 
 async function dragBetweenTicks(page: Page, start: number, end: number, y: number): Promise<void> {
@@ -36,6 +44,12 @@ async function dragBetweenTicks(page: Page, start: number, end: number, y: numbe
   await page.mouse.move(endBox!.x + 1, y);
   await page.mouse.up();
 }
+
+test("does not render a selection overlay before a range is selected", async ({ page }) => {
+  await ready(page);
+  await expect(page.getByTestId("range-selection-band")).toBeHidden();
+  await expect(page.getByTestId("range-preview")).toBeHidden();
+});
 
 test("renders one-cycle and dragged half-open selection bands without mutation", async ({ page }) => {
   await ready(page);

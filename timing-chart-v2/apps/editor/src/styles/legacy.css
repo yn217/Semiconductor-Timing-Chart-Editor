@@ -102,7 +102,9 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .cycle-ruler-content { position: relative; width: var(--wave-width, 640px); min-width: var(--wave-width, 640px); height: 34px; pointer-events: auto; }
 .cycle-ruler span { position: absolute; top: 0; height: 34px; padding: 9px 0 0 5px; border-left: 1px solid #9eacbd; color: #43516a; font: 10px/1 Consolas, monospace; }
 .cycle-ruler .cycle-tick { cursor: pointer; }
-.cycle-ruler .cycle-tick[data-range-selected="true"] { background: #cfe5fb; border-left-color: #2679bf; }
+.cycle-ruler .cycle-tick[data-range-selected="true"] { background: transparent; }
+.cycle-ruler [data-role="range-selection-ruler-band"] { position: absolute; z-index: 2; top: 2px; height: 30px; min-width: 0; border: 1px solid #2b79c9; border-radius: 2px; background: #8fc5f433; box-shadow: inset 0 0 0 1px #ffffff66; pointer-events: none; }
+.cycle-ruler [data-role="range-selection-ruler-band"][hidden] { display: none; }
 .cycle-ruler [data-role="range-preview"] { position: absolute; z-index: 2; top: 2px; height: 30px; border: 1px solid #2b79c9; border-radius: 2px; background: #8fc5f433; box-shadow: inset 0 0 0 1px #ffffff66; pointer-events: none; }
 .range-selection-band { position: absolute; z-index: 5; top: 34px; width: 0; min-width: 0; border-right: 1px solid #2b79c966; border-left: 1px solid #2b79c966; background: #8fc5f41f; pointer-events: none; }
 .range-selection-band[hidden] { display: none; }
