@@ -22,6 +22,16 @@ const LEFT_PANE_MAX_WIDTH = 420;
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 
+function parseSuppressedPeriods(text: string): readonly number[] {
+  const trimmed = text.trim();
+  if (trimmed.length === 0) return [];
+  const values = trimmed.split(/[\s,]+/).map((item) => Number(item));
+  if (values.some((value) => !Number.isInteger(value) || value < 0)) throw new Error("Suppressed periods must be non-negative integer slot numbers.");
+  const unique = [...new Set(values)].sort((left, right) => left - right);
+  if (unique.length !== values.length) throw new Error("Suppressed periods must not contain duplicates.");
+  return unique;
+}
+
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
 
 function isParsedCanonicalDocument(input: CanonicalDocument | ParsedCanonicalDocument): input is ParsedCanonicalDocument {
@@ -3170,6 +3180,8 @@ function CommentRowEditor({ signal, onCommand }: { readonly signal: CommentRow; 
 function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onDuplicate: () => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
+  const [suppressedPeriods, setSuppressedPeriods] = useState((signal.generator.suppressedPeriods ?? []).join(", "));
+  const [generatorError, setGeneratorError] = useState("");
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [preview, setPreview] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -3189,7 +3201,15 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
     </div>
     <form className="clock-generator" aria-label="Clock Generator" onSubmit={(event) => {
       event.preventDefault();
-      onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator });
+      try {
+        const parsedSuppressedPeriods = parseSuppressedPeriods(suppressedPeriods);
+        const { suppressedPeriods: _previousSuppressedPeriods, ...generatorWithoutSuppression } = generator;
+        const nextGenerator: ClockGenerator = parsedSuppressedPeriods.length === 0 ? generatorWithoutSuppression : { ...generatorWithoutSuppression, suppressedPeriods: parsedSuppressedPeriods };
+        setGeneratorError("");
+        onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator: nextGenerator });
+      } catch (error) {
+        setGeneratorError(error instanceof Error ? error.message : "Invalid suppressed periods.");
+      }
     }}>
       <h2>Clock Generator</h2>
       <label>Start<input aria-label="Clock start" type="number" min="0" step="1" value={generator.start} onChange={(event) => number("start", event.target.value)} /></label>
@@ -3198,6 +3218,8 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
       <label>Phase<input aria-label="Clock phase" type="number" step="0.5" value={generator.phase} onChange={(event) => number("phase", event.target.value)} /></label>
       <label>Initial<select aria-label="Clock initial" value={generator.initial} onChange={(event) => setGenerator({ ...generator, initial: Number(event.target.value) as 0 | 1 })}><option value="0">0</option><option value="1">1</option></select></label>
       <label>Polarity<select aria-label="Clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label>
+      <label>Suppressed periods<input aria-label="Clock suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
+      {generatorError && <output className="editor-problem" role="alert" data-testid="clock-generator-error">{generatorError}</output>}
       <button type="submit" data-testid="apply-clock-generator">Apply generator</button>
     </form>
     <form className="clock-edge-counter" aria-label="Clock Edge Counter" onSubmit={(event) => {

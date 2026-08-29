@@ -17,9 +17,10 @@ History entry, and ChangeSet.
 - Event insertion/replacement and removal while retaining schema validity.
 - Binary quick values `0 / 1 / X / Z`.
 - Bus quick values for Hex, Binary, Symbol, X, and Z entry.
-- Clock Generator form for start, integer period, half-cycle phase, initial
-  value, and polarity. Duty is shown read-only at 0.5 because the pinned
-  WaveDrom renderer does not support other duty geometry.
+- Clock Generator form for start, integer period, duty, half-cycle phase,
+  initial value, polarity, and suppressed period slots. Exact non-50% duty is
+  expanded through standard WaveDrom tokens when the integer period contains
+  the requested half-cycle boundaries; finer values are rejected atomically.
 - Undo/Redo and dirty/history/revision status in the editor composition.
 - Inline command rejection messages with no state mutation.
 

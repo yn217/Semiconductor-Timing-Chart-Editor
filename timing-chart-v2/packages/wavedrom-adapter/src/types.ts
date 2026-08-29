@@ -8,7 +8,7 @@ export const WAVEDROM_DATA_TOKEN = "=" as const;
 export const WAVEDROM_UNSUPPORTED_CAPABILITIES = [
   { capability: "data-color-tokens-2-through-9", reason: "Canonical Signal has no persisted WaveDrom color-token semantic." },
   { capability: "active-edge-clock-tokens-P-and-N", reason: "Canonical Clock has no active-edge-marker semantic." },
-  { capability: "non-50-percent-clock-duty", reason: "Pinned WaveDrom clock primitives cannot preserve arbitrary duty geometry." },
+  { capability: "sub-half-cycle-clock-duty", reason: "Pinned WaveDrom can preserve only duty values that land on exact half-cycle boundaries within an integer period; arbitrary finer duty geometry remains unsupported." },
   { capability: "fractional-per-signal-change-points", reason: "WaveDrom phase transforms a lane; it cannot place independent fractional changes exactly." },
   { capability: "sub-half-cycle-clock-phase", reason: "The pinned WaveDrom brick model cannot expose exact Geometry Map ownership below half-cycle phase increments." },
 ] as const;
@@ -25,6 +25,12 @@ export interface WaveJsonSignal {
   readonly data?: readonly string[];
   readonly period?: number;
   readonly phase?: number;
+  /** Adapter-owned metadata used to recover semantic clock edges from an expanded WaveDrom lane. */
+  readonly clock?: Readonly<{
+    readonly expanded: true;
+    readonly polarity: "positive" | "negative";
+    readonly initial: 0 | 1;
+  }>;
 }
 
 export interface RenderedWave {

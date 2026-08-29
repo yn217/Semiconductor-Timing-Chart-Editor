@@ -134,6 +134,14 @@ function geometryEntryKey(cycle: number, anchorPoint: AnchorPoint, threshold?: n
   return `${cycle}:${anchorPoint}:${threshold ?? ""}`;
 }
 
+function clockLevel(token: string, initial: 0 | 1): readonly [0 | 1, 0 | 1] {
+  if (token === "." || token === "|") return [initial, initial];
+  if (token === "p") return [1, 0];
+  if (token === "n") return [0, 1];
+  if (token === "0" || token === "1") return [Number(token) as 0 | 1, Number(token) as 0 | 1];
+  return [initial, initial];
+}
+
 export interface GeometryEntryAccumulator {
   add(cycle: number, anchorPoint: AnchorPoint, position: Point, threshold?: number): void;
   entries(): readonly LocalGeometryEntry[];
@@ -220,8 +228,41 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     const href = hrefOf(use);
     const translated = useTranslation(use);
     const origin = transformPoint(drawMatrix, translated);
-    if (href === "pclk" || href === "Pclk") add(cycle, "rising-edge", point(origin.x, rowY));
-    if (href === "nclk" || href === "Nclk") add(cycle, "falling-edge", point(origin.x, rowY));
+    if (!waveJson.clock?.expanded) {
+      if (href === "pclk" || href === "Pclk") add(cycle, "rising-edge", point(origin.x, rowY));
+      if (href === "nclk" || href === "Nclk") add(cycle, "falling-edge", point(origin.x, rowY));
+    }
+  }
+
+  if (waveJson.clock?.expanded) {
+    let previousLevel: 0 | 1 = waveJson.clock.initial;
+    for (let slot = 0; slot < waveJson.wave.length; slot += 1) {
+      const token = waveJson.wave[slot] ?? ".";
+      const [startLevel, endLevel] = clockLevel(token, previousLevel);
+      const boundary = boundaries[slot];
+      if (!boundary) continue;
+      if (startLevel !== previousLevel) add(slot, startLevel === 1 ? "rising-edge" : "falling-edge", boundary);
+      if (startLevel !== endLevel) {
+        const slotUses = uses
+          .map((use, index) => ({ use, index }))
+          .filter(({ index }) => Math.floor((index + clippedHalfBricks) / 2) === slot);
+        const targetHref = startLevel === 1 ? "pclk" : "nclk";
+        const edgeUse = slotUses.find(({ use }) => hrefOf(use) === targetHref);
+        if (edgeUse) {
+          const translated = useTranslation(edgeUse.use);
+          const edgePoint = transformPoint(drawMatrix, translated);
+          add(slot, startLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
+        }
+        const endHref = endLevel === 1 ? "pclk" : "nclk";
+        const endUse = slotUses.find(({ use }) => hrefOf(use) === endHref && use !== edgeUse?.use);
+        if (endUse) {
+          const translated = useTranslation(endUse.use);
+          const edgePoint = transformPoint(drawMatrix, translated);
+          add(slot, endLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
+        }
+      }
+      previousLevel = endLevel;
+    }
   }
 
   const period = waveJson.period ?? 1;
@@ -254,8 +295,10 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
           add(cycle, "transition-center", transformed, threshold);
         }
         valueStart = point(end.x, rowY);
-        if (previousToken === "0" && token === "1") add(cycle, "rising-edge", center);
-        if (previousToken === "1" && token === "0") add(cycle, "falling-edge", center);
+        if (!waveJson.clock?.expanded) {
+          if (previousToken === "0" && token === "1") add(cycle, "rising-edge", center);
+          if (previousToken === "1" && token === "0") add(cycle, "falling-edge", center);
+        }
       }
     }
     add(cycle, "value-start", valueStart);

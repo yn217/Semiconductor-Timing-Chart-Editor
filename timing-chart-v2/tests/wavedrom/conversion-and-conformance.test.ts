@@ -77,10 +77,16 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(toWaveJson({ signal: logicSignal([{ start: 0, value: 0 }, { start: 4, value: 1 }]), cycleCount: 7, gapCycles: [2] })).toEqual({ wave: "0.|.1.." });
   });
 
-  it("rejects unsupported conversion instead of approximating", () => {
+  it("expands exact half-cycle duty through standard WaveDrom clock/value tokens", () => {
     const base = canonicalFixture().signals[0] as ClockSignal;
-    const duty = { ...base, generator: { ...base.generator, duty: 0.25 } } as ClockSignal;
-    expect(() => toWaveJson({ signal: duty, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_DUTY" }));
+    const duty25 = { ...base, generator: { ...base.generator, period: 2, duty: 0.25 } } as ClockSignal;
+    const duty75 = { ...base, generator: { ...base.generator, period: 2, duty: 0.75 } } as ClockSignal;
+    const negative = { ...base, generator: { ...base.generator, period: 2, duty: 0.25, initial: 1 as const, polarity: "negative" as const } } as ClockSignal;
+    expect(toWaveJson({ signal: duty25, cycleCount: 8 })).toEqual({ wave: "p0p0p0p0", clock: { expanded: true, polarity: "positive", initial: 0 } });
+    expect(toWaveJson({ signal: duty75, cycleCount: 8 })).toEqual({ wave: "1p1p1p1p", clock: { expanded: true, polarity: "positive", initial: 0 } });
+    expect(toWaveJson({ signal: negative, cycleCount: 8 })).toEqual({ wave: "n1n1n1n1", clock: { expanded: true, polarity: "negative", initial: 1 } });
+    const unsupported = { ...base, generator: { ...base.generator, duty: 0.25 } } as ClockSignal;
+    expect(() => toWaveJson({ signal: unsupported, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_DUTY" }));
     const fractional = logicSignal([{ start: 0, value: 0 }, { start: 1.5, value: 1 }]);
     expect(() => toWaveJson({ signal: fractional, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CHANGE_POINT" }));
     expect(() => toWaveJson({ signal: logicSignal([{ start: 0, value: "maybe" }]), cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_LOGIC_VALUE" }));

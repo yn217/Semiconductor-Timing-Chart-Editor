@@ -13,8 +13,10 @@ period and WaveDrom phase are retained. Derived timeline gaps replace a
 continuation slot with `|`.
 
 The adapter rejects representations that pinned WaveDrom cannot preserve
-exactly. This includes non-50-percent clock duty, fractional per-signal change
-points, and clock starts/enables/gaps not aligned to the clock period. It never
+exactly. Non-50-percent clock duty is expanded only when the integer period
+contains exact half-cycle boundaries and the initial level is the inactive
+level; finer duty geometry, fractional per-signal change points, and clock
+starts/enables/gaps not aligned to the clock period remain rejected. It never
 draws an approximate custom trace.
 
 Production rendering calls only pinned `wavedrom@3.6.2` with its package

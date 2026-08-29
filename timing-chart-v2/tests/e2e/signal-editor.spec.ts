@@ -153,18 +153,79 @@ test("edits Clock Generator through one semantic history entry", async ({ page }
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds + 1);
 });
 
-test("Bottom Clock editor keeps Duty editable and applies it through the clock SemanticCommand", async ({ page }) => {
+test("Bottom Clock editor applies exact non-50% Duty through WaveDrom and preserves Undo/Redo", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const editor = page.getByTestId("signal-editor");
+  const clockOwner = surface.locator("[data-signal-id='sig_cycle_clock']");
+  const beforeUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  const beforeCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const duty = editor.getByLabel("Clock duty");
   await expect(duty).toBeEnabled();
   await duty.fill("0.25");
   await editor.getByTestId("apply-clock-generator").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(clockOwner).not.toHaveAttribute("data-wave-error");
+  await expect(clockOwner.locator("svg")).toHaveCount(1);
   await expect(duty).toHaveValue("0.25");
+  const afterUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  expect(afterUses).not.toEqual(beforeUses);
+  const afterCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterCounters.waveDromRenders).toBe(beforeCounters.waveDromRenders + 1);
+  expect(afterCounters.localGeometryBuilds).toBe(beforeCounters.localGeometryBuilds + 1);
+  await editor.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(clockOwner).not.toHaveAttribute("data-wave-error");
+  await editor.getByTestId("editor-redo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(clockOwner).not.toHaveAttribute("data-wave-error");
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await downloadPromise).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await expect(page.getByTestId("signal-editor").getByLabel("Clock duty")).toHaveValue("0.25");
+});
+
+test("Bottom Clock editor applies suppressed periods and preserves them through Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const editor = page.getByTestId("signal-editor");
+  const clockOwner = surface.locator("[data-signal-id='sig_cycle_clock']");
+  const beforeUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  await editor.getByLabel("Clock suppressed periods").fill("1, 1");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(page.getByTestId("clock-generator-error")).toContainText("must not contain duplicates");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await editor.getByLabel("Clock suppressed periods").fill("1, 3");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(clockOwner).not.toHaveAttribute("data-wave-error");
+  const afterUses = await clockOwner.locator("svg use").evaluateAll((uses) => uses.map((use) => use.getAttribute("xlink:href") ?? use.getAttribute("href")));
+  expect(afterUses).not.toEqual(beforeUses);
+  await editor.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await editor.getByTestId("editor-redo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await downloadPromise).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await expect(page.getByTestId("signal-editor").getByLabel("Clock suppressed periods")).toHaveValue("1, 3");
 });
 
 test("Bottom Clock editor exposes Edge Counter settings through its own semantic command", async ({ page }) => {
@@ -181,6 +242,7 @@ test("Bottom Clock editor exposes Edge Counter settings through its own semantic
   await editor.getByTestId("apply-clock-edge-counter").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(editor.getByLabel("Clock edge counter mode")).toHaveValue("falling");
+  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id]").first()).toBeVisible();
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBe(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);

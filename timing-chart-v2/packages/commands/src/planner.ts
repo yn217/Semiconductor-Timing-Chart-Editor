@@ -643,7 +643,16 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!signal || signal.type !== "clock") return fail("invalid", "SIGNAL_NOT_CLOCK", "$.signalId", "Clock Generator requires a clock signal.");
       const generator = command.generator;
       if (!Number.isInteger(generator.start) || generator.start < 0 || generator.start >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.generator.start", "Clock start is outside the timeline.");
-      if (!Number.isFinite(generator.period) || generator.period <= 0 || !Number.isFinite(generator.duty) || generator.duty <= 0 || generator.duty > 1 || !Number.isFinite(generator.phase)) return fail("invalid", "INVALID_CLOCK_GENERATOR", "$.generator", "Clock period, duty, and phase are invalid.");
+      if (!Number.isInteger(generator.period) || generator.period <= 0 || !Number.isFinite(generator.duty) || generator.duty <= 0 || generator.duty > 1 || !Number.isFinite(generator.phase) || !Number.isInteger(generator.phase * 2)) return fail("invalid", "INVALID_CLOCK_GENERATOR", "$.generator", "Clock period, duty, and phase are invalid.");
+      if (generator.start % generator.period !== 0) return fail("invalid", "UNALIGNED_CLOCK_START", "$.generator.start", "Clock start must align to the generator period.");
+      if ((signal.enable ?? []).some((change) => !Number.isInteger(change.start) || change.start % generator.period !== 0)) return fail("invalid", "UNALIGNED_CLOCK_ENABLE", "$.generator.period", "Clock enable changes must align to the generator period.");
+      if ((generator.suppressedPeriods ?? []).some((slot) => !Number.isInteger(slot) || slot < 0) || new Set(generator.suppressedPeriods ?? []).size !== (generator.suppressedPeriods ?? []).length) return fail("invalid", "INVALID_SUPPRESSED_PERIODS", "$.generator.suppressedPeriods", "Suppressed periods must be unique non-negative integer slot numbers.");
+      if (generator.duty !== 0.5) {
+        const totalHalfCycles = generator.period * 2;
+        const activeHalfCycles = Math.round(totalHalfCycles * generator.duty);
+        const representable = generator.period >= 2 && activeHalfCycles > 0 && activeHalfCycles < totalHalfCycles && Math.abs(activeHalfCycles / totalHalfCycles - generator.duty) <= 1e-9 && generator.initial === (generator.polarity === "positive" ? 0 : 1);
+        if (!representable) return fail("invalid", "UNSUPPORTED_CLOCK_DUTY", "$.generator.duty", "This WaveDrom-backed editor supports non-50% duty only at exact half-cycle boundaries with the inactive initial level.");
+      }
       if (JSON.stringify(signal.generator) === JSON.stringify(generator)) return fail("no-op", "NO_OP", "$", "Clock Generator is unchanged.");
       const affectedAnnotations = dependentAnnotations(document, signal.id).map((annotation) => annotation.id);
       const changeSet: ChangeSet = { waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
