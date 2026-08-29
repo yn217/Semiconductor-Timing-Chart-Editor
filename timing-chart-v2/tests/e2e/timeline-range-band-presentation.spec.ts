@@ -152,8 +152,11 @@ test("keeps range geometry fresh through Insert after, Undo, and Redo", async ({
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const timeline = page.getByTestId("timeline-editor");
+  const cycleCountBefore = Number(await page.locator(".editor-shell").getAttribute("data-cycle-count"));
   await timeline.getByRole("button", { name: "Insert after", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   let start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
   let end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
   await assertBand(page, start, end);
@@ -161,12 +164,16 @@ test("keeps range geometry fresh through Insert after, Undo, and Redo", async ({
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore));
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
   end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
   await assertBand(page, start, end);
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
   end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
   await assertBand(page, start, end);
