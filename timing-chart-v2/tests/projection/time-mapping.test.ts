@@ -70,6 +70,8 @@ describe("DisplayTimeMappingCache", () => {
     expect(metrics.sourceCyclesVisited).toBe(12);
     expect(metrics.foldRangesVisited).toBe(1);
     expect(metrics.buildDurationMs).toBeGreaterThanOrEqual(0);
+    expect(metrics.buildDurationMedianMs).toBe(metrics.buildDurationMs);
+    expect(metrics.buildDurationP95Ms).toBe(metrics.buildDurationMs);
   });
 
   it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {

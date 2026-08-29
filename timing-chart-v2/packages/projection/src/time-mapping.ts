@@ -64,6 +64,8 @@ export interface DisplayTimeMappingCacheMetrics {
   readonly sourceCyclesVisited: number;
   readonly foldRangesVisited: number;
   readonly buildDurationMs: number;
+  readonly buildDurationMedianMs: number;
+  readonly buildDurationP95Ms: number;
 }
 
 /** Owns the derived display-time mapping for one projection consumer. */
@@ -75,6 +77,7 @@ export class DisplayTimeMappingCache {
   private sourceCyclesVisited = 0;
   private foldRangesVisited = 0;
   private buildDurationMs = 0;
+  private buildDurationsMs: number[] = [];
 
   get(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
     const nextKey = displayTimeMappingKey(timeline, timeGroups);
@@ -88,18 +91,34 @@ export class DisplayTimeMappingCache {
     this.builds += 1;
     this.sourceCyclesVisited += timeline.cycleCount;
     this.foldRangesVisited += timeGroups.filter((group) => group.presentation?.collapsed).length;
-    this.buildDurationMs += Date.now() - started;
+    const durationMs = Date.now() - started;
+    this.buildDurationMs += durationMs;
+    this.buildDurationsMs.push(durationMs);
     return this.mapping;
   }
 
   metrics(): DisplayTimeMappingCacheMetrics {
-    return { builds: this.builds, hits: this.hits, sourceCyclesVisited: this.sourceCyclesVisited, foldRangesVisited: this.foldRangesVisited, buildDurationMs: this.buildDurationMs };
+    return {
+      builds: this.builds,
+      hits: this.hits,
+      sourceCyclesVisited: this.sourceCyclesVisited,
+      foldRangesVisited: this.foldRangesVisited,
+      buildDurationMs: this.buildDurationMs,
+      buildDurationMedianMs: percentile(this.buildDurationsMs, 0.5),
+      buildDurationP95Ms: percentile(this.buildDurationsMs, 0.95),
+    };
   }
 
   clear(): void {
     this.key = undefined;
     this.mapping = undefined;
   }
+}
+
+function percentile(samples: readonly number[], fraction: number): number {
+  if (samples.length === 0) return 0;
+  const ordered = [...samples].sort((left, right) => left - right);
+  return ordered[Math.min(ordered.length - 1, Math.ceil(ordered.length * fraction) - 1)]!;
 }
 
 function displayTimeMappingKey(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): string {
