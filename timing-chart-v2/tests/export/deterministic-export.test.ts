@@ -24,7 +24,7 @@ function foldedFixture(): CanonicalDocument {
   const { referenceClock: _referenceClock, ...timeline } = base.timeline;
   return {
     ...base,
-    timeline: { ...timeline, cycleCount: 20, labelAnchors: [{ id: "la_export" as never, source: 1000, display: 5 }] },
+    timeline: { ...timeline, cycleCount: 20, labelAnchors: [{ id: "la_export" as never, source: 15, display: 1000 }] },
     signals: [base.signals[0]!, { ...data, values: [{ start: 0, value: "00" }, { start: 4, value: "A5" }, { start: 10, value: "FF" }, { start: 16, value: "00" }] }],
     timeGroups: [{ id: "tg_export" as TimeGroupId, name: "Idle", start: 5, end: 15, presentation: { collapsed: true } }],
     annotations: [{ id: "ann_export" as AnnotationId, type: "marker", label: "Mid-fold", anchor: { signalId: data.id, cycle: 10, point: "cycle-start" } }],

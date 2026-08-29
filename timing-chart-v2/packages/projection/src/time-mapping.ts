@@ -30,7 +30,9 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     display += 1;
   }
 
-  const labelOverrides = new Map(timeline.labelAnchors.map((anchor) => [anchor.display, anchor.source]));
+  // LabelAnchor.source is a source-timeline boundary; its display value is
+  // the ruler label shown at the corresponding rendered boundary.
+  const labelOverrides = new Map(timeline.labelAnchors.map((anchor) => [anchor.source, anchor.display]));
   return {
     displayCycleCount: display,
     sourceToDisplay,
@@ -39,7 +41,10 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     // therefore absent from displayToSource. It must still retain the
     // canonical half-open timeline end label after a fold; never fall back to
     // the last visible source cycle (or an arbitrary display index).
-    labelFor: (displayCycle) => displayCycle === display ? timeline.cycleCount : labelOverrides.get(displayCycle) ?? displayToSource[displayCycle] ?? displayCycle,
+    labelFor: (displayCycle) => {
+      const sourceCycle = displayCycle === display ? timeline.cycleCount : displayToSource[displayCycle];
+      return labelOverrides.get(sourceCycle ?? -1) ?? sourceCycle ?? displayCycle;
+    },
   };
 }
 

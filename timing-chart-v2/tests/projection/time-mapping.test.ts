@@ -40,8 +40,8 @@ describe("buildDisplayTimeMapping", () => {
     expect(mapping.sourceToDisplay[25]).toBe(15);
   });
 
-  it("prefers an explicit labelAnchor over the natural source cycle for a display position", () => {
-    const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 1000, display: 5 }]), [collapsedGroup("g1", 5, 15)]);
+  it("uses source as the canonical anchor position and display as its ruler label", () => {
+    const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 15, display: 1000 }]), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.labelFor(5)).toBe(1000);
     expect(mapping.labelFor(4)).toBe(4);
   });
