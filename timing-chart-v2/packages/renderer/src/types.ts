@@ -56,7 +56,11 @@ export interface RendererDiagnostics {
   readonly rowsVisited: number;
   /** Full row-layout traversals; ordinary viewport updates must keep this at zero. */
   readonly fullRowScans: number;
+  readonly waveRendersBySignalCount: number;
+  readonly localGeometryBuildsBySignalCount: number;
 }
+
+export type RendererDiagnosticSummary = Omit<RendererDiagnostics, "waveRendersBySignal" | "localGeometryBuildsBySignal">;
 
 export interface OverlayAnchorPoint {
   readonly field: "anchor" | "start" | "end" | "from" | "to";
@@ -110,5 +114,6 @@ export interface TimingChartRenderer {
   updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void;
   counters(): Readonly<RenderCounters>;
   diagnostics(): Readonly<RendererDiagnostics>;
+  diagnosticSummary(): Readonly<RendererDiagnosticSummary>;
   dispose(): void;
 }

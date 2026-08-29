@@ -85,6 +85,17 @@ const counters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-
 const diagnostics = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, any>;
 const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, any>;
 
+test("heavy renderer diagnostics are pull-based and absent from hot-path DOM counters", async ({ page }) => {
+  await start(page);
+  const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
+  const published = await diagnostics(page);
+  expect(published.waveRendersBySignal).toBeUndefined();
+  expect(published.localGeometryBuildsBySignal).toBeUndefined();
+  const snapshot = await surface.evaluate((element) => (element as HTMLElement & { requestPerformanceSnapshot: () => Record<string, unknown> }).requestPerformanceSnapshot());
+  expect(Object.keys((snapshot.waveRendersBySignal ?? {}) as object)).not.toHaveLength(0);
+  expect(Object.keys((snapshot.localGeometryBuildsBySignal ?? {}) as object)).not.toHaveLength(0);
+});
+
 async function cdpMetrics(cdp: CDPSession) {
   const result = await cdp.send("Performance.getMetrics") as { metrics: { name: string; value: number }[] };
   return Object.fromEntries(result.metrics.map((metric) => [metric.name, metric.value]));

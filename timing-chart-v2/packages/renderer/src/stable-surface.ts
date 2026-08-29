@@ -1,5 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
 const WAVE_BATCH_LIMIT = 8;
 
@@ -113,7 +113,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -131,6 +131,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     for (const layer of [left, frozen, timing, waves, overlays, interactive]) root.append(layer);
     host.replaceChildren(root);
     this.#layers = { root, left, frozen, timing, waves, overlays, interactive };
+    Object.defineProperty(root, "requestPerformanceSnapshot", { configurable: true, value: () => this.diagnostics() });
     this.#publishCounters();
   }
 
@@ -220,6 +221,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   diagnostics(): Readonly<RendererDiagnostics> {
     return Object.freeze({ ...this.#diagnostics });
+  }
+
+  diagnosticSummary(): Readonly<RendererDiagnosticSummary> {
+    const { waveRendersBySignal: _waveRendersBySignal, localGeometryBuildsBySignal: _localGeometryBuildsBySignal, ...summary } = this.#diagnostics;
+    return Object.freeze(summary);
   }
 
   updateOverlays(primitives: readonly AnnotationOverlayPrimitive[]): void {
@@ -406,9 +412,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
           waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
           localGeometryBuilds: this.#counters.localGeometryBuilds + delta.localGeometryBuilds,
         };
+        const firstWaveRenderForSignal = this.#diagnostics.waveRendersBySignal[request.signalId] === undefined;
+        const firstGeometryBuildForSignal = this.#diagnostics.localGeometryBuildsBySignal[request.signalId] === undefined;
         const waveRendersBySignal = { ...this.#diagnostics.waveRendersBySignal, [request.signalId]: (this.#diagnostics.waveRendersBySignal[request.signalId] ?? 0) + delta.waveDromRenders };
         const localGeometryBuildsBySignal = { ...this.#diagnostics.localGeometryBuildsBySignal, [request.signalId]: (this.#diagnostics.localGeometryBuildsBySignal[request.signalId] ?? 0) + delta.localGeometryBuilds };
-        this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal, localGeometryBuildsBySignal };
+        this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal, localGeometryBuildsBySignal, waveRendersBySignalCount: this.#diagnostics.waveRendersBySignalCount + (firstWaveRenderForSignal ? 1 : 0), localGeometryBuildsBySignalCount: this.#diagnostics.localGeometryBuildsBySignalCount + (firstGeometryBuildForSignal ? 1 : 0) };
         request.owner.removeAttribute("data-wave-error");
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
@@ -425,7 +433,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #publishCounters(): void {
     if (!this.#layers) return;
     this.#layers.root.dataset.renderCounters = JSON.stringify(this.#counters);
-    this.#layers.root.dataset.performanceCounters = JSON.stringify(this.#diagnostics);
+    this.#layers.root.dataset.performanceCounters = JSON.stringify(this.diagnosticSummary());
   }
 }
 
