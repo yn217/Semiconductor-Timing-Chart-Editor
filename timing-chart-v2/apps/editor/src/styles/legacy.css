@@ -295,7 +295,7 @@ body { min-width: 1100px; }
 .ds-ribbon-group { display: flex; min-width: 0; align-items: stretch; gap: 5px; padding: 4px 6px 21px; position: relative; border-right: 1px solid #cfd8e4; }
 .ds-ribbon-group > b { position: absolute; right: 6px; bottom: 3px; left: 6px; color: #53677e; font-size: 10px; font-weight: 700; line-height: 14px; text-align: center; }
 .ds-icon-box { display: inline-flex; flex: 0 0 20px; width: 20px; height: 20px; align-items: center; justify-content: center; }
-.ds-icon-box > svg { width: 18px; height: 18px; }
+.ds-icon-box > svg { flex: 0 0 18px; width: 18px; height: 18px; }
 .ds-ribbon-button { display: inline-flex; min-width: 48px; min-height: 54px; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 4px 5px 3px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #263d58; cursor: pointer; line-height: 14px; }
 .ds-ribbon-button:hover, .ds-ribbon-button:focus-visible { border-color: #a8c8e6; background: #edf6ff; }
 .ds-ribbon-button:disabled { color: #8a98a8; cursor: not-allowed; }
@@ -738,15 +738,15 @@ body { min-width: 1100px; }
   overflow: hidden;
 }
 .editor-shell .insert-slot-group { flex: 0 1 auto; min-width: 0; }
-.editor-shell .insert-slot-group > .insert-subgroup { position: relative; display: grid; align-items: center; height: 101px; min-width: 0; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
-.editor-shell .insert-subgroup > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
+.editor-shell .insert-slot-group > .ds-ribbon-group { position: relative; display: grid; align-items: center; height: 101px; min-width: 0; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
+.editor-shell .insert-ribbon .ds-ribbon-group > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
 .editor-shell .insert-signals-group { width: 390px; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; }
 .editor-shell .insert-structure-group { width: 140px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
 .editor-shell .insert-annotation-group { width: 300px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
 .editor-shell .insert-more-group { width: 250px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
-.editor-shell .insert-ribbon .ribbon-tool { min-width: 0; width: 100%; padding-inline: 2px; font-size: 9px; }
-.editor-shell .insert-ribbon .ribbon-tool > span { max-width: 100%; }
-.editor-shell .insert-ribbon .ribbon-tool:disabled { opacity: .42; }
+.editor-shell .insert-ribbon .ds-ribbon-button { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
+.editor-shell .insert-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
+.editor-shell .insert-ribbon .ds-ribbon-button:disabled { opacity: .42; }
 .editor-shell .timeline-group { width: 760px; }
 .editor-shell .timeline-group .timeline-toolbar {
   display: grid;

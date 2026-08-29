@@ -2427,7 +2427,7 @@ function InsertSemanticIcon({ kind }: { readonly kind: InsertSemanticIconKind })
     pulse: ["M2 15h5l2-8 3 10 2-6 2 4h6"],
     text: ["M4 5h12M10 5v14M6 19h8", "M17 8h5M17 12h5M17 16h5"],
   };
-  return <svg aria-hidden="true" data-insert-icon={kind} viewBox="0 0 24 24" width="16" height="16" focusable="false" style={{ flex: "0 0 19px" }}>{paths[kind].map((path) => <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />)}</svg>;
+  return <svg aria-hidden="true" data-insert-icon={kind} viewBox="0 0 24 24" width="18" height="18" focusable="false">{paths[kind].map((path) => <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />)}</svg>;
 }
 
 function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly onClose: () => void }) {
@@ -2732,29 +2732,23 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     </>}
     {homeOverflowMenu}
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
-      <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><div className="insert-subgroup insert-signals-group" aria-label="Signals">
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
-        <button type="button" className="ribbon-tool" onClick={insertClockSignal}><InsertSemanticIcon kind="clock" /><span>Clock</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("bus")}><RibbonIcon name="i-grid" /><span>Bus</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("state")}><InsertSemanticIcon kind="state" /><span>State</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("event")}><InsertSemanticIcon kind="event" /><span>Event</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("pulse")}><InsertSemanticIcon kind="pulse" /><span>Pulse</span></button>
-        <b>Signals</b>
-      </div></div>
-      <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><div className="insert-subgroup insert-structure-group" aria-label="Structure">
-        <button type="button" className="ribbon-tool" onClick={insertGroup}><RibbonIcon name="i-group" /><span>Group</span></button>
-        <button type="button" className="ribbon-tool" onClick={insertSpacer}><RibbonIcon name="i-spacing" /><span>Spacer</span></button>
-        <b>Structure</b>
-      </div></div>
-      <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><div className="insert-subgroup insert-annotation-group" aria-label="Annotation">
-        <button type="button" className="ribbon-tool" onClick={insertCommentRow}><RibbonIcon name="i-comment" /><span>Comment</span></button>
-        {(["marker", "range", "text", "dependency"] as const).map((type) => <button type="button" className="ribbon-tool" key={type} disabled={!selectedSignalId} onClick={() => insertAnnotation(type)}>{type === "text" ? <InsertSemanticIcon kind="text" /> : <RibbonIcon name={type === "marker" ? "i-more" : type === "range" ? "i-select-fit" : "i-filter"} />}<span>{type[0]!.toUpperCase() + type.slice(1)}</span></button>)}
-        <b>Annotation</b>
-      </div></div>
-      <div className="ribbon-major-group insert-slot-group" data-major-group="More" aria-label="More Insert commands"><div className="insert-subgroup insert-more-group" aria-label="More">
-        {(["measurement", "highlight", "bracket", "verticalLine"] as const).map((type) => <button type="button" className="ribbon-tool" key={type} disabled={!selectedSignalId} onClick={() => insertAnnotation(type)}><RibbonIcon name={type === "measurement" ? "i-ruler" : type === "highlight" ? "i-grid" : type === "bracket" ? "i-gap" : "i-ruler"} /><span>{type === "verticalLine" ? "Vertical Line" : type[0]!.toUpperCase() + type.slice(1)}</span></button>)}
-        <b>More</b>
-      </div></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><DsRibbonGroup ariaLabel="Signals" className="insert-signals-group" label="Signals">
+        <DsRibbonButton icon={<RibbonIcon name="i-plus" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-grid" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="pulse" />} onClick={() => insertValueSignal("pulse")}>Pulse</DsRibbonButton>
+      </DsRibbonGroup></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><DsRibbonGroup ariaLabel="Structure" className="insert-structure-group" label="Structure"><DsRibbonButton icon={<RibbonIcon name="i-group" />} onClick={insertGroup}>Group</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-spacing" />} onClick={insertSpacer}>Spacer</DsRibbonButton></DsRibbonGroup></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><DsRibbonGroup ariaLabel="Annotation" className="insert-annotation-group" label="Annotation">
+        <DsRibbonButton icon={<RibbonIcon name="i-comment" />} onClick={insertCommentRow}>Comment</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-more" />} onClick={() => insertAnnotation("marker")}>Marker</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-select-fit" />} onClick={() => insertAnnotation("range")}>Range</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="text" />} onClick={() => insertAnnotation("text")}>Text</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-filter" />} onClick={() => insertAnnotation("dependency")}>Dependency</DsRibbonButton>
+      </DsRibbonGroup></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="More" aria-label="More Insert commands"><DsRibbonGroup ariaLabel="More" className="insert-more-group" label="More">
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-ruler" />} onClick={() => insertAnnotation("measurement")}>Measurement</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-grid" />} onClick={() => insertAnnotation("highlight")}>Highlight</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-gap" />} onClick={() => insertAnnotation("bracket")}>Bracket</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-ruler" />} onClick={() => insertAnnotation("verticalLine")}>Vertical Line</DsRibbonButton>
+      </DsRibbonGroup></div>
     </div>}
     {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></div>}
     {tab === "Annotation" && <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>}
