@@ -12,6 +12,7 @@ import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } 
 import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, ParsedCanonicalDocument, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, SpacerRow, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
+import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -246,6 +247,12 @@ export function MinimalCycleView() {
   const [bottomVisible, setBottomVisible] = useState(true);
   const [bottomHeight, setBottomHeight] = useState(240);
   const bottomResizeRef = useRef<{ readonly startY: number; readonly startHeight: number } | undefined>(undefined);
+  const viewMetricsOwnerRef = useRef<ViewMetricsOwner | null>(null);
+  if (viewMetricsOwnerRef.current === null) {
+    viewMetricsOwnerRef.current = new ViewMetricsOwner({ leftPaneWidth, frozenPaneWidth, inspectorWidth, viewportWidth: viewport.current?.clientWidth ?? 0, zoom });
+  }
+  viewMetricsOwnerRef.current.update({ leftPaneWidth, frozenPaneWidth, inspectorWidth, viewportWidth: viewport.current?.clientWidth ?? 0, zoom });
+  const viewMetricsOwner = viewMetricsOwnerRef.current!;
   const [propertiesVisible, setPropertiesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [saveAsVisible, setSaveAsVisible] = useState(false);
@@ -502,13 +509,17 @@ export function MinimalCycleView() {
     };
     const rebuildRuler = (document: CanonicalDocument) => {
       rulerBuilds += 1;
-      const fitWidth = Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth);
-      screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(referenceSvg, currentZoom));
+      viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
+      const metrics = viewMetricsOwner.snapshot();
+      const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
+      screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(referenceSvg, metrics.zoom));
       rulerInitialized = true;
       syncPresentationScale();
     };
     const refreshGrid = (document: CanonicalDocument) => {
-      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth), screenGeometryScale);
+      viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
+      const metrics = viewMetricsOwner.snapshot();
+      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale);
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -586,7 +597,9 @@ export function MinimalCycleView() {
     const publishState = () => {
       rendererHost.dataset.canonicalRevision = String(session.getSnapshot().revision);
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnostics(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, waveAdapter: adapter.metrics() });
+      const metrics = viewMetricsOwner.snapshot();
+      rendererHost.dataset.viewMetrics = JSON.stringify(metrics);
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnostics(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter: adapter.metrics() });
     };
     let currentZoom = 1;
     function syncPresentationScale() {
@@ -608,6 +621,8 @@ export function MinimalCycleView() {
     const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-frozen-width")) || 210);
     const applyZoom = (next: number) => {
       currentZoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
+      viewMetricsOwner.update({ zoom: currentZoom, viewportWidth: viewportElement.clientWidth });
+      const metrics = viewMetricsOwner.snapshot();
       const scalable = [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
       for (const element of scalable) {
         element.style.transformOrigin = "0 0";
@@ -617,7 +632,7 @@ export function MinimalCycleView() {
       syncRulerContent();
       viewportElement.style.setProperty("--zoom-x", String(currentZoom));
       syncPresentationScale();
-      const baseWidth = Math.max(160, globalThis.innerWidth - leftPaneWidth - inspectorWidth - frozenPaneWidth);
+      const baseWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
       const width = timelineOffset() + baseWidth * currentZoom;
       rendererHost.style.width = `${width}px`;
       rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
