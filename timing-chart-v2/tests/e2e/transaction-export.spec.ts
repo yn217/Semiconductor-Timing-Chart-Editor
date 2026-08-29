@@ -8,7 +8,7 @@ async function ready(page: Page) {
 
 async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill(name);
   await editor.getByLabel("New Transaction start").fill(String(start));
@@ -16,6 +16,12 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   await editor.getByRole("button", { name: "Create Transaction" }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   return editor;
+}
+
+async function linkSignal(inspector: import("@playwright/test").Locator, name: string) {
+  await inspector.getByTestId("open-linked-signal-picker").click();
+  await inspector.getByLabel("Search linked signals").fill(name);
+  await inspector.getByRole("option", { name: new RegExp(name) }).click();
 }
 
 test("creates, edits, links, saves and reopens one canonical Transaction", async ({ page }) => {
@@ -26,19 +32,19 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await inspector.getByLabel("Transaction name").blur();
   await inspector.getByLabel("Transaction lane").fill("lane_1");
   await inspector.getByRole("button", { name: "Apply Transaction" }).click();
-  await inspector.getByLabel("Link REQUEST").check();
+  await linkSignal(inspector, "REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
-  await expect(inspector.getByLabel("Link REQUEST")).not.toBeChecked();
+  await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
-  await expect(inspector.getByLabel("Link REQUEST")).toBeChecked();
+  await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(1);
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const path = await (await save).path();
   await inspector.getByLabel("Transaction name").fill("Temporary"); await inspector.getByLabel("Transaction name").blur();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
   await page.getByTestId("transaction-editor").getByRole("button", { name: /AXI Burst/ }).click();
   await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("AXI Burst");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -152,7 +158,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
   await ready(page);
   await createTransaction(page, "Linked Packet", 2, 6);
   const inspector = page.getByTestId("inspector");
-  await inspector.getByLabel("Link REQUEST").check();
+  await linkSignal(inspector, "REQUEST");
   const historyBeforeSelection = await page.getByTestId("history-status").textContent();
   const surface = page.getByTestId("cycle-surface");
   const before = {

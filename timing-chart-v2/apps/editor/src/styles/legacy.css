@@ -280,6 +280,18 @@ body { min-width: 1100px; }
 .inspector-resize-handle:hover::after, .inspector-resize-handle:focus-visible::after { background: #2678bc; opacity: 1; }
 .inspector-shell > .inspector { width: 100%; height: 100%; }
 .inspector { display: flex; flex-direction: column; min-height: 0; overflow: hidden; background: #fff; }
+.transaction-linked-signals { margin-top: 10px; padding-top: 8px; border-top: 1px solid #edf0f4; }
+.transaction-linked-list { display: grid; gap: 4px; max-height: 116px; overflow: auto; margin-bottom: 7px; }
+.transaction-linked-item { display: flex; min-width: 0; align-items: center; gap: 6px; padding: 3px 5px; border: 1px solid #d5deea; border-radius: 3px; background: #f7faff; color: #2d4158; font-size: 11px; }
+.transaction-linked-item > span { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-linked-item > button { flex: 0 0 auto; width: 22px; height: 22px; border: 0; background: transparent; color: #a52b2b; cursor: pointer; }
+.transaction-signal-picker { display: grid; gap: 6px; margin-top: 7px; padding: 7px; border: 1px solid #c8d4e2; border-radius: 4px; background: #fbfcfe; }
+.transaction-signal-picker > label { grid-template-columns: 1fr; gap: 3px; margin: 0; }
+.transaction-signal-picker [role="listbox"] { display: grid; max-height: 170px; overflow: auto; gap: 2px; }
+.transaction-signal-picker [role="option"] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; min-height: 30px; padding: 4px 5px; border: 1px solid transparent; background: white; color: #263d58; text-align: left; }
+.transaction-signal-picker [role="option"]:hover, .transaction-signal-picker [role="option"][aria-selected="true"] { border-color: #9fc4e5; background: #eaf4fd; }
+.transaction-signal-picker [role="option"] span, .transaction-signal-picker [role="option"] small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-signal-picker [role="option"] small { color: #61758a; font-size: 9px; }
 .inspector > header { position: sticky; top: 0; z-index: 2; flex: 0 0 var(--gui-panel-header-height); height: var(--gui-panel-header-height); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid #d0d7e1; background: #f8fafc; color: #263c58; font-size: 12px; font-weight: 650; }
 .inspector > header b { color: #126bc0; font-size: 11px; font-weight: 700; }
 .inspector > header button { border: 0; background: transparent; }.inspector > form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: auto; }.inspector section { padding: 9px 12px 10px; border-bottom: 1px solid #edf0f4; background: #fff; }
