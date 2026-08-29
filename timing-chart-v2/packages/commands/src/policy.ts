@@ -1,0 +1,42 @@
+/** Stable command-policy diagnostics emitted by the pure planner. */
+export const COMMAND_POLICY_CODES = [
+  "ANNOTATION_NOT_FOUND", "BOOKMARK_NOT_FOUND", "CHANGE_NOT_FOUND", "COMMENT_ROW_NOT_FOUND", "DISPLAY_FORMAT_NOT_SUPPORTED",
+  "DUPLICATE_CHANGE_POINT", "DUPLICATE_ID", "EMPTY_BOOKMARK_NAME", "EMPTY_DOCUMENT_TITLE", "EMPTY_TIME_GROUP_NAME", "EMPTY_VALUES",
+  "GROUP_CREATE_NOT_EMPTY", "GROUP_NOT_EMPTY", "GROUP_NOT_FOUND", "INDEX_OUT_OF_RANGE", "INVALID_CLOCK_GENERATOR", "INVALID_COMMAND_ID",
+  "INVALID_COMMENT_ROW_SPACING", "INVALID_DISPLAY_ALIGN", "INVALID_DISPLAY_OVERFLOW", "INVALID_EDGE_COUNTER", "INVALID_GROUP_SPACING",
+  "INVALID_GROUP_STYLE", "INVALID_LABEL", "INVALID_LANE", "INVALID_LAYOUT", "INVALID_NAME", "INVALID_REFERENCE_CLOCK",
+  "INVALID_SIGNAL_SPACING", "INVALID_SIGNAL_WIDTH", "INVALID_SPACER_HEIGHT", "INVALID_STABLE_ID", "INVALID_SUPPRESSED_PERIODS",
+  "INVALID_TIME_GROUP_RANGE", "INVALID_TIMELINE_DELETE", "INVALID_TIMELINE_DUPLICATE", "INVALID_TIMELINE_INSERT", "INVALID_TIMELINE_MOVE",
+  "INVALID_TITLE", "INVALID_TRANSACTION_PHASE", "LAST_CHANGE_REQUIRED", "MISSING_CROSS_REFERENCE", "NO_OP", "NON_CONTIGUOUS_RANGE_MOVE",
+  "NON_FINITE_OFFSET", "SIGNAL_HAS_DEPENDENTS", "SIGNAL_NOT_CLOCK", "SIGNAL_NOT_EDITABLE", "SIGNAL_NOT_FOUND", "SIGNAL_PROPERTIES_NOT_SUPPORTED",
+  "SPACER_NOT_FOUND", "SPACER_OWNER_MISMATCH", "TIME_GROUP_NOT_FOUND", "TIMELINE_OUT_OF_RANGE", "TRANSACTION_NOT_FOUND",
+  "UNALIGNED_CLOCK_ENABLE", "UNALIGNED_CLOCK_START", "UNSUPPORTED_CLOCK_DUTY", "UNSUPPORTED_SIGNAL_VALUE", "UNTYPED_CONSTRAINT_RIPPLE",
+] as const;
+
+export type CommandPolicyCode = typeof COMMAND_POLICY_CODES[number];
+
+export interface CommandPolicyDescriptor {
+  readonly code: CommandPolicyCode;
+  readonly layer: "command-policy";
+  readonly outcome: "reject" | "no-op";
+  readonly ruleVersion: 1;
+}
+
+const COMMAND_POLICY_DESCRIPTORS: readonly CommandPolicyDescriptor[] = COMMAND_POLICY_CODES.map((code) => ({
+  code,
+  layer: "command-policy",
+  outcome: code === "NO_OP" ? "no-op" : "reject",
+  ruleVersion: 1,
+}));
+
+export function commandPolicyCodes(): readonly CommandPolicyCode[] {
+  return COMMAND_POLICY_CODES;
+}
+
+export function commandPolicyDescriptors(): readonly CommandPolicyDescriptor[] {
+  return COMMAND_POLICY_DESCRIPTORS;
+}
+
+export function commandPolicyDescriptor(code: CommandPolicyCode): CommandPolicyDescriptor | undefined {
+  return COMMAND_POLICY_DESCRIPTORS.find((descriptor) => descriptor.code === code);
+}

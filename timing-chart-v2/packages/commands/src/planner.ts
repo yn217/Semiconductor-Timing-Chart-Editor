@@ -17,13 +17,14 @@ import type {
 } from "@timing-chart-v2/schema";
 import { isStableId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
+import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
 
 export type CommandPlanResult =
   | Readonly<{ ok: true; document: CanonicalDocument; changeSet: ChangeSet; inverseChangeSet: ChangeSet }>
   | Readonly<{ ok: false; reason: "invalid" | "no-op"; problems: readonly ValidationProblem[] }>;
 
-const fail = (reason: "invalid" | "no-op", code: string, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
+const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
 

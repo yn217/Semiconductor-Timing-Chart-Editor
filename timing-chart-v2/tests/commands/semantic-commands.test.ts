@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
+import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import type { Annotation, AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -13,6 +13,13 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("exposes an exhaustive, typed command-policy code inventory", () => {
+    expect(commandPolicyDescriptors()).toHaveLength(commandPolicyCodes().length);
+    expect(new Set(commandPolicyDescriptors().map((descriptor) => descriptor.code)).size).toBe(commandPolicyCodes().length);
+    expect(commandPolicyDescriptors().every((descriptor) => descriptor.layer === "command-policy" && descriptor.ruleVersion === 1)).toBe(true);
+    expect(commandPolicyDescriptors().find((descriptor) => descriptor.code === "NO_OP")?.outcome).toBe("no-op");
+  });
+
   it("replaces a validated JSON document as one canonical operation", () => {
     const source = canonicalFixture();
     const next = { ...source, document: { ...source.document, title: "JSON Edited" } };
