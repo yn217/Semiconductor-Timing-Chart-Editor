@@ -1672,6 +1672,24 @@ export function MinimalCycleView() {
     selectedTransactionRef.current = undefined;
     if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
   };
+  const deleteBottomSignal = () => {
+    if (!bottomSignal) return;
+    const result = execute.current({ id: nextCommandId("bottom_delete_signal"), type: "signal.delete", signalId: bottomSignal.id });
+    if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
+      selectedSignalRef.current = undefined;
+      setSelectedId(undefined);
+      selectedSignalIdsRef.current = new Set();
+      setSelectedSignalIds(new Set());
+    }
+  };
+  const deleteBottomAnnotation = () => {
+    if (!bottomAnnotation) return;
+    const result = execute.current({ id: nextCommandId("bottom_delete_annotation"), type: "annotation.delete", annotationId: bottomAnnotation.id });
+    if (result.ok && !bottomPinnedRef.current && selectedAnnotationRef.current === bottomAnnotation.id) {
+      selectedAnnotationRef.current = undefined;
+      setSelectedAnnotationId(undefined);
+    }
+  };
   const signalEditor = <SignalEditor
     key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     signal={bottomSignal}
@@ -1683,7 +1701,7 @@ export function MinimalCycleView() {
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onVisibility={(signalId, visible) => commandRegistry.current.execute("semantic.execute", { id: nextCommandId("bottom_signal_visibility"), type: "signal.setVisibility", signalId, visible })}
-    onDelete={() => commandRegistry.current.execute("selection.delete")}
+    onDelete={deleteBottomSignal}
     onDuplicate={(signalId) => {
       const source = snapshot.document.signals.find((item) => item.id === signalId);
       const group = source === undefined ? undefined : snapshot.document.signalGroups.find((candidate) => candidate.rows.includes(signalId));
@@ -1724,7 +1742,7 @@ export function MinimalCycleView() {
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
-    onDelete={() => commandRegistry.current.execute("selection.delete")}
+    onDelete={deleteBottomAnnotation}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
@@ -3350,7 +3368,7 @@ function AnnotationEditor({ annotation, annotations, document, history, problem,
       setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
     }
   };
-  return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
+  return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" data-bottom-target-id={annotation.id} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
       <span className="editor-selection">{annotation.label} · {annotation.type}</span>

@@ -46,13 +46,28 @@ test("pinned Annotation delete targets the pinned stable ID", async ({ page }) =
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
 });
 
+test("pinned Signal delete targets the pinned stable ID", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const bottom = page.getByTestId("bottom-editor");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await bottom.getByTestId("bottom-pin").click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
+  await bottom.getByTestId("signal-delete").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toHaveCount(0);
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+});
+
 test("pinned Transaction edits target the pinned stable ID", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.getByLabel("New Transaction name").fill("Pinned Transfer");
   await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(bottom).toContainText("Pinned Transfer");
@@ -60,7 +75,7 @@ test("pinned Transaction edits target the pinned stable ID", async ({ page }) =>
   await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
-  await bottom.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   await expect(bottom).toContainText("Editing: Pinned Transfer");
   await bottom.getByLabel("Transaction name").fill("Pinned Transfer Updated");
   await bottom.getByTestId("apply-transaction-properties").click();
