@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "2631c5b2258274490f0ba1601e6da78b15fe5971",
-    "sourceFingerprint": "cdb5eac874461345ec32b9e7c68caeb34bc452f0202aa6badc42912baa4cb211",
-    "generatedAt": "2026-08-29T04:07:21.167Z",
+    "testedCommit": "a63398e8e33c1fc03243ca382789701a93b45d04",
+    "sourceFingerprint": "e56ce0cf2b156539a0a68c8e0abd5fa9eca0e5d437138676d710a8650504e355",
+    "generatedAt": "2026-08-29T04:34:52.203Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "viewport": {
@@ -98,9 +98,9 @@
       "y": 676,
       "width": 1110,
       "height": 240,
-      "changedPixels": 31114,
+      "changedPixels": 31571,
       "comparedPixels": 266400,
-      "diffPercent": 0.11679429429429429
+      "diffPercent": 0.11850975975975976
     },
     "MiniMap": {
       "x": 1375,
