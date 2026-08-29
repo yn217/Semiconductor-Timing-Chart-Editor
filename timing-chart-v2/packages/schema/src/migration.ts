@@ -65,6 +65,13 @@ function roundCycle(value: unknown, fallback: number, warnings: MigrationWarning
   return rounded;
 }
 
+function roundHalfCycle(value: unknown, fallback: number, warnings: MigrationWarning[], path: string): number {
+  const raw = number(value, fallback);
+  const rounded = Math.round(raw * 2) / 2;
+  if (raw !== rounded) warnings.push({ code: "MIGRATION_SUB_HALF_CYCLE_ROUNDED", path, message: `Sub-half-cycle value ${raw} was rounded to ${rounded}; V2 geometry supports half-cycle clock phase.` });
+  return rounded;
+}
+
 function normalizeChanges(value: unknown, fallback: string | number, warnings: MigrationWarning[], basePath: string): SignalValueChange[] {
   const changes = list(value).map((entry, index) => {
     const source = record(entry);
@@ -135,15 +142,18 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
   if (type === "clock") {
     const generator = record(source.generator);
     const edgeCounter = record(source.edgeCounter);
+    const rawPeriod = number(generator.period, 1);
+    const normalizedPeriod = Math.max(1, Math.round(rawPeriod));
     common.generator = {
       start: roundCycle(generator.start, 0, warnings, `$.signals[${index}].generator.start`),
-      period: number(generator.period, 1),
+      period: normalizedPeriod,
       duty: number(generator.duty, 0.5),
-      phase: number(generator.phase, 0),
+      phase: roundHalfCycle(generator.phase, 0, warnings, `$.signals[${index}].generator.phase`),
       initial: generator.initial === 1 ? 1 : 0,
       polarity: generator.polarity === "negative" ? "negative" : "positive",
       ...(Array.isArray(generator.suppressedPeriods) ? { suppressedPeriods: [...generator.suppressedPeriods] } : {}),
     };
+    if (rawPeriod !== normalizedPeriod) warnings.push({ code: "MIGRATION_FRACTIONAL_CLOCK_PERIOD_ROUNDED", path: `$.signals[${index}].generator.period`, message: `Fractional clock period ${rawPeriod} was rounded to ${normalizedPeriod}; V2 WaveDrom geometry requires a positive integer period.` });
     const edgeOffset = record(edgeCounter.offset);
     common.edgeCounter = {
       show: bool(edgeCounter.show, false),

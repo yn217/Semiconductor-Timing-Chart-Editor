@@ -100,4 +100,21 @@ describe("migrateV1", () => {
     expect(warnings.some((warning) => warning.code === "MIGRATION_SUB_CYCLE_CHANGE_MERGED")).toBe(true);
     expect(validateCanonicalDocument(document)).toHaveLength(0);
   });
+
+  it("normalizes legacy fractional clock geometry to the V2 integer/half-cycle contract with explicit warnings", () => {
+    const source = v1Document({
+      signals: [{ id: "sig_clk", name: "CLK", type: "clock", role: "input", generator: { start: 0, period: 1.5, duty: 0.5, phase: 0.25, initial: 0, polarity: "positive" } }],
+    });
+    const { document, warnings } = migrateV1(source);
+    const clock = document.signals[0]!;
+    expect(clock.type).toBe("clock");
+    if (clock.type !== "clock") return;
+    expect(clock.generator.period).toBe(2);
+    expect(clock.generator.phase).toBe(0.5);
+    expect(warnings.map((warning) => warning.code)).toEqual(expect.arrayContaining([
+      "MIGRATION_FRACTIONAL_CLOCK_PERIOD_ROUNDED",
+      "MIGRATION_SUB_HALF_CYCLE_ROUNDED",
+    ]));
+    expect(validateCanonicalDocument(document)).toHaveLength(0);
+  });
 });

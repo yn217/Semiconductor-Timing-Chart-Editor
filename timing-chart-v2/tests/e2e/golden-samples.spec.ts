@@ -1,6 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
+import { assertGoldenSemanticContract, assertGoldenSvgContract } from "../golden/golden-contract.js";
 
 type GoldenSample = {
   readonly file: string;
@@ -44,6 +45,17 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await expect(host.locator("[data-role='timing-chart-surface']")).toBeVisible();
     await expect(host).toHaveAttribute("data-canonical-revision", "0");
+    const observedCounts = {
+      cycles: Number(await page.locator(".editor-shell").getAttribute("data-cycle-count")),
+      signals: Number(await page.locator(".editor-shell").getAttribute("data-signal-count")),
+      transactions: Number(await page.locator(".editor-shell").getAttribute("data-transaction-count")),
+    };
+    assertGoldenSemanticContract(meta, observedCounts);
+    if (meta.cycles !== undefined) await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(meta.cycles));
+    if (meta.signalCount !== undefined) await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", String(meta.signalCount));
+    if (meta.transactionCount !== undefined) await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", String(meta.transactionCount));
+    if (meta.signalCount !== undefined) await expect(page.getByTestId("signal-count-status")).toHaveText(`Signals: ${meta.signalCount}`);
+    expect(await host.locator("[data-role='left-row'][data-row-id]").count()).toBeGreaterThan(0);
     await page.screenshot({ path: `.tmp_gui_reference/golden-${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.png`, animations: "disabled" });
     const title = await page.locator(".app-titlebar h1").textContent();
     const counters = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, unknown>;
@@ -92,25 +104,16 @@ test("exports SVG for all 20 immutable Golden Samples without mutating Canonical
     const pending = page.waitForEvent("download", { timeout: 5_000 }).catch(() => undefined);
     await dialog.getByRole("button", { name: "Export SVG" }).click();
     const download = await pending;
-    if (!download) {
-      const status = await dialog.locator("output").textContent();
-      expect(status).toContain("WaveDrom");
-      evidence.push({ file: meta.file, title: meta.title, export: "adapter-limitation", status });
-      await dialog.getByRole("button", { name: "Close export" }).click();
-      expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
-      expect(await host.getAttribute("data-history-depth")).toBe(before.history);
-      expect(await host.getAttribute("data-session-counters")).toBe(before.session);
-      continue;
-    }
-    const outputPath = await download.path();
+    if (!download) throw new Error(`${meta.file}: required SVG export was not produced; status=${await dialog.locator("output").textContent()}`);
+    const outputPath = await download!.path();
     expect(outputPath).toBeTruthy();
     const svg = await readFile(outputPath!);
-    expect(svg.toString("utf8")).toContain(meta.title);
+    assertGoldenSvgContract(meta, svg.toString("utf8"));
     await dialog.getByRole("button", { name: "Close export" }).click();
     expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
     expect(await host.getAttribute("data-history-depth")).toBe(before.history);
     expect(await host.getAttribute("data-session-counters")).toBe(before.session);
-    evidence.push({ file: meta.file, title: meta.title, svgBytes: svg.length, canonicalRevision: before.revision, historyDepth: before.history });
+    evidence.push({ file: meta.file, title: meta.title, export: "svg", svgBytes: svg.length, canonicalRevision: before.revision, historyDepth: before.history });
   }
 
   await testInfo.attach("golden-sample-svg-export-evidence.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
