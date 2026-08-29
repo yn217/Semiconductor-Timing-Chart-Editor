@@ -24,6 +24,7 @@ test("Left Tree menus keep readable normal, hover, focus, and disabled states", 
   const treeMenu = page.getByRole("menu", { name: "More tree actions" });
   await expect(treeMenu).toBeVisible();
   const treeItem = treeMenu.getByRole("menuitem").first();
+  await treeItem.evaluate((element) => (element as HTMLElement).blur());
   const treeNormal = await state(treeItem);
   expect(treeNormal.color).toBe("rgb(38, 61, 88)");
   expect(treeNormal.background).toBe("rgba(0, 0, 0, 0)");
@@ -33,7 +34,10 @@ test("Left Tree menus keep readable normal, hover, focus, and disabled states", 
   expect(treeHover.background).toBe("rgb(232, 242, 253)");
   await treeItem.focus();
   expect((await state(treeItem)).outline).toBe("solid");
-  await page.getByRole("button", { name: "More tree actions" }).click();
+  await treeItem.press("ArrowDown");
+  await expect(treeMenu.getByRole("menuitem").nth(1)).toBeFocused();
+  await treeItem.press("Escape");
+  await expect(treeMenu).toBeHidden();
 
   const row = surface.locator("[data-role='frozen-row']").first();
   await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
@@ -41,6 +45,7 @@ test("Left Tree menus keep readable normal, hover, focus, and disabled states", 
   await expect(contextMenu).toBeVisible();
   await expect(contextMenu).toHaveAttribute("data-context-target", "signal");
   const contextItem = contextMenu.getByRole("menuitem", { name: "Copy", exact: true });
+  await contextItem.evaluate((element) => (element as HTMLElement).blur());
   const contextNormal = await state(contextItem);
   expect(contextNormal.color).toBe("rgb(38, 61, 88)");
   expect(contextNormal.background).toBe("rgba(0, 0, 0, 0)");
@@ -50,6 +55,13 @@ test("Left Tree menus keep readable normal, hover, focus, and disabled states", 
   expect(contextHover.background).toBe("rgb(232, 242, 253)");
   await contextItem.focus();
   expect((await state(contextItem)).outline).toBe("solid");
+  await contextItem.press("ArrowDown");
+  await expect(contextMenu.getByRole("menuitem").nth(1)).toBeFocused();
+  await contextItem.press("Escape");
+  await expect(contextMenu).toBeHidden();
+
+  await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
+  await expect(contextMenu).toBeVisible();
   const disabledItems = contextMenu.locator("button:disabled");
   await expect(disabledItems.first()).toBeVisible();
   const disabled = await state(disabledItems.first());

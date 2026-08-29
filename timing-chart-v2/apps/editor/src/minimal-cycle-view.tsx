@@ -295,6 +295,32 @@ export function MinimalCycleView() {
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" } | undefined>();
+  useEffect(() => {
+    const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
+    const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
+    menu?.querySelector<HTMLButtonElement>("[role='menuitem']:not(:disabled)")?.focus();
+    const onMenuKeyDown = (event: KeyboardEvent) => {
+      const target = event.target instanceof HTMLElement ? event.target : undefined;
+      const activeMenu = target?.closest<HTMLElement>("[role='menu']");
+      if (!activeMenu) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (activeMenu.classList.contains("context-menu")) setContextMenu(undefined);
+        else if (activeMenu.classList.contains("tree-add-menu")) setTreeAddMenuOpen(false);
+        else setTreeMoreMenuOpen(false);
+        return;
+      }
+      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+      const items = [...activeMenu.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
+      if (items.length === 0) return;
+      event.preventDefault();
+      const current = items.indexOf(document.activeElement as HTMLButtonElement);
+      const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
+      items[next]?.focus();
+    };
+    document.addEventListener("keydown", onMenuKeyDown);
+    return () => document.removeEventListener("keydown", onMenuKeyDown);
+  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const [renameError, setRenameError] = useState("");
