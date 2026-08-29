@@ -5,6 +5,7 @@ import {
   WAVEDROM_STATE_TOKENS,
   WAVEDROM_UNSUPPORTED_CAPABILITIES,
   WAVEDROM_VERSION,
+  assertSafeWaveDromMarkup,
   renderWaveJsonMarkup,
   toWaveJson,
   type WaveJsonSignal,
@@ -107,6 +108,16 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
   it("pins the production and test renderer to one WaveDrom version", () => {
     expect(WaveDrom.version).toBe(WAVEDROM_VERSION);
     expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
+  });
+
+  it("rejects executable SVG markup without stripping ordinary engineering text", () => {
+    expect(() => assertSafeWaveDromMarkup('<svg><text>DATA&lt;7:0&gt; &amp; \'clk\'</text><script>alert(1)</script></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(assertSafeWaveDromMarkup('<svg><text>DATA&lt;7:0&gt; &amp; \'clk\'</text></svg>')).toContain("DATA&lt;7:0&gt;");
+    expect(() => assertSafeWaveDromMarkup('<svg><a href="javascript:alert(1)">x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(() => assertSafeWaveDromMarkup('<svg><text onload="alert(1)">x</text></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    const rendered = renderWaveJsonMarkup({ wave: "=", data: ["<DATA&7:0>"] });
+    expect(rendered).not.toMatch(/<script|onerror\s*=/i);
+    expect(rendered).toContain("&lt;DATA&amp;7:0&gt;");
   });
 
   it("records an explicit reason for every intentionally unsupported capability", () => {

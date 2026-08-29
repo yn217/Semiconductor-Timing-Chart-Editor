@@ -21,10 +21,26 @@ if (WaveDrom.version !== WAVEDROM_VERSION) {
 export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0): string {
   try {
     const tree = WaveDrom.renderAny(renderIndex, { signal: [waveJson] }, WaveDrom.waveSkin);
-    return WaveDrom.onml.stringify(tree);
+    return assertSafeWaveDromMarkup(WaveDrom.onml.stringify(tree));
   } catch (error) {
+    if (error instanceof WaveDromAdapterError) throw error;
     throw new WaveDromAdapterError("WAVEDROM_RENDER_FAILED", "Pinned WaveDrom failed to render the generated WaveJSON.", { cause: error });
   }
+}
+
+/**
+ * The pinned renderer normally emits SVG-only markup, but this is the final
+ * trust boundary before imperative template parsing. Reject executable markup
+ * instead of silently stripping user-visible engineering text.
+ */
+export function assertSafeWaveDromMarkup(markup: string): string {
+  const executableElement = /<\s*(?:script|foreignObject|iframe|object|embed|img)\b/i;
+  const eventHandler = /<[^>]*\bon[a-z][\w:-]*\s*=/i;
+  const javascriptUrl = /(?:href|xlink:href)\s*=\s*["']\s*javascript:/i;
+  if (executableElement.test(markup) || eventHandler.test(markup) || javascriptUrl.test(markup)) {
+    throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced executable SVG markup.");
+  }
+  return markup;
 }
 
 interface ActiveOwner {
