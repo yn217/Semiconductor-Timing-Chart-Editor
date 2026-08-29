@@ -403,25 +403,46 @@ export function MinimalCycleView() {
     let referenceGeometry: LocalGeometryMap | undefined;
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
     const provider: WaveformSurfaceProvider = {
-      async mountWave(id, owner) {
+      async mountWaveBatch(requests) {
         const document = session.getSnapshot().document;
-        const signal = document.signals.find((candidate) => candidate.id === id);
-        if (!signal) throw new Error(`Signal '${id}' is missing.`);
         const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
-        const displaySignal = signal.type === "commentRow" ? signal
-          : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
-          : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
-        try {
-          const rendered = await adapter.renderWave(id, adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), owner);
-          const geometry = adapter.extractLocalGeometry(rendered);
-          geometryMaps.set(id, geometry);
-          if (id === document.timeline.referenceClock) referenceGeometry = geometry;
-          return { waveDromRenders: 1, localGeometryBuilds: 1 };
-        } catch (error) {
-          geometryMaps.delete(id);
-          if (id === document.timeline.referenceClock) referenceGeometry = undefined;
-          throw error;
-        }
+        const prepared = requests.map((request) => {
+          const signal = document.signals.find((candidate) => candidate.id === request.signalId);
+          if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
+          const displaySignal = signal.type === "commentRow" ? signal
+            : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
+            : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
+          return { request, waveJson: adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), error: undefined };
+        });
+
+        // WaveDrom materialization is a DOM write. Start every render before
+        // awaiting any of them so this phase completes all writes as one batch.
+        const renderResults = await Promise.all(prepared.map(async (item) => {
+          if (item.error || !item.waveJson) return { ...item, rendered: undefined };
+          try { return { ...item, rendered: await adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner) }; }
+          catch (error: unknown) { return { ...item, rendered: undefined, error }; }
+        }));
+
+        // Geometry extraction calls getScreenCTM(). Keep it in a separate
+        // phase, after every SVG write in this batch has completed.
+        return renderResults.map((item) => {
+          if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
+          try {
+            const geometry = adapter.extractLocalGeometry(item.rendered);
+            geometryMaps.set(item.request.signalId, geometry);
+            if (item.request.signalId === document.timeline.referenceClock) referenceGeometry = geometry;
+            return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
+          } catch (error: unknown) {
+            geometryMaps.delete(item.request.signalId);
+            if (item.request.signalId === document.timeline.referenceClock) referenceGeometry = undefined;
+            return { signalId: item.request.signalId, error };
+          }
+        });
+      },
+      async mountWave(id, owner) {
+        const item = (await this.mountWaveBatch?.([{ signalId: id, owner }]))?.[0];
+        if (!item?.result) throw item?.error instanceof Error ? item.error : new Error("Waveform batch did not produce a result.");
+        return item.result;
       },
       disposeWave(id) {
         adapter.dispose(id);

@@ -7,8 +7,21 @@ export interface WaveMountResult {
   readonly localGeometryBuilds: number;
 }
 
+export interface WaveMountRequest {
+  readonly signalId: WaveSignalId;
+  readonly owner: HTMLElement;
+}
+
+export interface WaveMountBatchItem {
+  readonly signalId: WaveSignalId;
+  readonly result?: WaveMountResult;
+  readonly error?: unknown;
+}
+
 export interface WaveformSurfaceProvider {
   mountWave(signalId: WaveSignalId, owner: HTMLElement): Promise<WaveMountResult>;
+  /** Optional two-phase hook: all requested mounts must complete before any geometry reads. */
+  mountWaveBatch?(requests: readonly WaveMountRequest[]): Promise<readonly WaveMountBatchItem[]>;
   disposeWave(signalId: WaveSignalId): void;
 }
 

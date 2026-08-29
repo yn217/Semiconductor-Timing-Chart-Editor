@@ -1,5 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
 function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-right" | "eye" | "eye-off" | "more" | "comment", className: string): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
@@ -93,6 +93,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #dirtyWaves = new Set<WaveSignalId>();
   readonly #waveVersions = new Map<WaveSignalId, number>();
   readonly #wavePending = new Set<WaveSignalId>();
+  readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number }>();
+  #waveBatchScheduled = false;
+  #waveBatchSequence = 0;
   readonly #rowY = new Map<string, number>();
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
@@ -290,6 +293,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#dirtyWaves.clear();
     this.#waveVersions.clear();
     this.#wavePending.clear();
+    this.#waveQueue.clear();
+    this.#waveBatchScheduled = false;
     this.#leftRows.clear();
     this.#frozenRows.clear();
     this.#timingRows.clear();
@@ -305,29 +310,67 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     if (this.#wavePending.has(signalId)) return;
     this.#wavePending.add(signalId);
     const version = this.#waveVersions.get(signalId) ?? 0;
-    const task = this.#provider.mountWave(signalId, owner).then((delta) => {
-      this.#counters = {
-        ...this.#counters,
-        waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
-        localGeometryBuilds: this.#counters.localGeometryBuilds + delta.localGeometryBuilds,
-      };
-      const waveRendersBySignal = { ...this.#diagnostics.waveRendersBySignal, [signalId]: (this.#diagnostics.waveRendersBySignal[signalId] ?? 0) + delta.waveDromRenders };
-      const localGeometryBuildsBySignal = { ...this.#diagnostics.localGeometryBuildsBySignal, [signalId]: (this.#diagnostics.localGeometryBuildsBySignal[signalId] ?? 0) + delta.localGeometryBuilds };
-      this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal, localGeometryBuildsBySignal };
-      owner.removeAttribute("data-wave-error");
-      if ((this.#waveVersions.get(signalId) ?? 0) === version) this.#dirtyWaves.delete(signalId);
-      this.#publishCounters();
-    }).catch((error: unknown) => {
-      owner.replaceChildren();
-      owner.dataset.waveError = error instanceof Error ? error.message : "Unknown waveform render failure";
-      this.#publishCounters();
+    this.#waveQueue.set(signalId, { owner, version });
+    this.#scheduleWaveBatch();
+  }
+
+  #scheduleWaveBatch(): void {
+    if (this.#waveBatchScheduled) return;
+    this.#waveBatchScheduled = true;
+    let task: Promise<void>;
+    task = Promise.resolve().then(() => this.#flushWaveBatch()).finally(() => {
+      this.#pending.delete(task);
+      this.#waveBatchScheduled = false;
+      if (this.#waveQueue.size > 0) this.#scheduleWaveBatch();
     });
     this.#pending.add(task);
-    void task.finally(() => {
-      this.#pending.delete(task);
-      this.#wavePending.delete(signalId);
-      if (owner.isConnected && this.#dirtyWaves.has(signalId) && (this.#waveVersions.get(signalId) ?? 0) !== version) this.#queueWave(signalId, owner);
-    });
+  }
+
+  async #flushWaveBatch(): Promise<void> {
+    const requests = [...this.#waveQueue.entries()].map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version }));
+    this.#waveQueue.clear();
+    if (requests.length === 0) return;
+    const batchId = String(++this.#waveBatchSequence);
+    for (const request of requests) {
+      request.owner.dataset.waveBatchId = batchId;
+      request.owner.dataset.waveBatchSize = String(requests.length);
+    }
+    let results: readonly WaveMountBatchItem[];
+    if (this.#provider.mountWaveBatch) {
+      try {
+        results = await this.#provider.mountWaveBatch(requests satisfies readonly WaveMountRequest[]);
+      } catch (error: unknown) {
+        results = requests.map(({ signalId }) => ({ signalId, error }));
+      }
+    } else {
+      results = await Promise.all(requests.map(async ({ signalId, owner }) => {
+        try { return { signalId, result: await this.#provider.mountWave(signalId, owner) }; }
+        catch (error: unknown) { return { signalId, error }; }
+      }));
+    }
+    const bySignal = new Map(results.map((item) => [item.signalId, item]));
+    for (const request of requests) {
+      const item = bySignal.get(request.signalId);
+      if (item?.result) {
+        const delta = item.result;
+        this.#counters = {
+          ...this.#counters,
+          waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
+          localGeometryBuilds: this.#counters.localGeometryBuilds + delta.localGeometryBuilds,
+        };
+        const waveRendersBySignal = { ...this.#diagnostics.waveRendersBySignal, [request.signalId]: (this.#diagnostics.waveRendersBySignal[request.signalId] ?? 0) + delta.waveDromRenders };
+        const localGeometryBuildsBySignal = { ...this.#diagnostics.localGeometryBuildsBySignal, [request.signalId]: (this.#diagnostics.localGeometryBuildsBySignal[request.signalId] ?? 0) + delta.localGeometryBuilds };
+        this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal, localGeometryBuildsBySignal };
+        request.owner.removeAttribute("data-wave-error");
+        if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
+      } else {
+        request.owner.replaceChildren();
+        request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
+      }
+      this.#wavePending.delete(request.signalId);
+      if (request.owner.isConnected && this.#dirtyWaves.has(request.signalId) && (this.#waveVersions.get(request.signalId) ?? 0) !== request.version) this.#queueWave(request.signalId, request.owner);
+    }
+    this.#publishCounters();
   }
 
   #publishCounters(): void {
