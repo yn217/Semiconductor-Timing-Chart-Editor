@@ -2465,43 +2465,8 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <div className="ribbon-major-group" data-major-group="File" aria-label="File commands">
        <div className="ribbon-group home-file-group" aria-label="File"><button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span data-v1-label="新規">New</span></button><button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span data-v1-label="開く">Open</span></button><button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span data-v1-label="保存">Save</span></button><button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span data-v1-label="名前を付けて保存">Save As</span></button><b>File</b></div>
       </div>
-       <div className="ribbon-major-group home-command-surface-group" data-major-group="Commands" aria-label="Home command surfaces">
-        <div className="ribbon-group home-command-subgroup home-history-group" aria-label="History">
-          <button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span data-v1-label="元に戻す">Undo</span></button>
-          <button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span data-v1-label="やり直し">Redo</span></button>
-          <b>History</b>
-        </div>
-        <div className="ribbon-group home-command-subgroup home-clipboard-group" aria-label="Clipboard">
-          <button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedClipboard}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button>
-          <button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedClipboard} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button>
-          <button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button>
-          <button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedClipboard}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button>
-          <small data-testid="clipboard-status">{clipboardStatus}</small><b>Clipboard</b>
-        </div>
-        <div className="ribbon-group home-command-subgroup home-edit-group" aria-label="Edit">
-          <button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button>
-          <b>Edit</b>
-        </div>
-        <div className="ribbon-group home-command-subgroup home-selection-group" aria-label="Selection">
-          <button type="button" className="ribbon-tool" onClick={onClearSelection}><RibbonIcon name="i-clear" /><span>Clear</span></button>
-          <button type="button" className="ribbon-tool" title="Select all timing signals" onClick={onSelectAll} disabled={document.signals.every((signal) => signal.type === "commentRow")}><RibbonIcon name="i-select-all" /><span>Select<br />All</span></button>
-          <b>Selection</b>
-        </div>
-        <div className="ribbon-group home-command-subgroup home-visibility-group" aria-label="Visibility">
-          <button type="button" className="ribbon-tool" onClick={() => onVisibility(true)} disabled={!hasSelectedSignal}><RibbonIcon name="i-eye" /><span>Show</span></button>
-          <button type="button" className="ribbon-tool" onClick={() => onVisibility(false)} disabled={!hasSelectedSignal}><RibbonIcon name="i-eye-off" /><span>Hide</span></button>
-          <b>Visibility</b>
-        </div>
-        <div className="ribbon-group home-command-subgroup home-arrange-group" aria-label="Arrange">
-          <button type="button" className="ribbon-tool" onClick={onMoveUp} disabled={!hasSelectedEntity}><RibbonIcon name="i-up" /><span>Move<br />Up</span></button>
-          <button type="button" className="ribbon-tool" onClick={onMoveDown} disabled={!hasSelectedEntity}><RibbonIcon name="i-down" /><span>Move<br />Down</span></button>
-          <b>Arrange</b>
-        </div>
-        <div className="ribbon-group home-command-subgroup home-properties-group" aria-label="Properties">
-          <button type="button" className="ribbon-tool" onClick={onRename} disabled={!hasSelectedEntity}><RibbonIcon name="i-edit" /><span>Rename</span></button>
-          <button type="button" className="ribbon-tool" onClick={onProperties}><RibbonIcon name="i-properties" /><span>Properties</span></button>
-          <b>Properties</b>
-        </div>
+       <div className="ribbon-major-group" data-major-group="Edit" aria-label="Edit commands">
+        <div className="ribbon-group home-edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span data-v1-label="元に戻す">Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span data-v1-label="やり直し">Redo</span></button><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedClipboard}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedClipboard} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button><button type="button" className="ribbon-tool" onClick={onDelete}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button><button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedClipboard}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">複製</span></button><small data-testid="clipboard-status">{clipboardStatus}</small><b>Edit</b></div>
        </div>
       <div className="ribbon-major-group" data-major-group="Time" aria-label="Time commands">
        <div className="ribbon-group home-timeline-group" aria-label="Timeline"><button type="button" className="ribbon-tool" aria-label="Move selected row up" onClick={onMoveUp} disabled={!hasSelectedEntity}><RibbonIcon name="i-up" /><span>Up</span></button><button type="button" className="ribbon-tool" aria-label="Move selected row down" onClick={onMoveDown} disabled={!hasSelectedEntity}><RibbonIcon name="i-down" /><span>Down</span></button><button type="button" className="ribbon-tool" aria-label="Insert one cycle" onClick={() => onCommand({ id: nextCommandId("timeline_insert_one"), type: "timeline.insert", at: range.start, count: 1 })}><RibbonIcon name="i-plus" /><span>Cycle<br />Insert</span></button><button type="button" className="ribbon-tool" aria-label="Delete one cycle" onClick={() => onCommand({ id: nextCommandId("timeline_delete_one"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + 1) })}><RibbonIcon name="i-delete" /><span>Cycle<br />Delete</span></button><button type="button" className="ribbon-tool" aria-label={`Insert ${compactCycleCount} cycles`} onClick={() => onCommand({ id: nextCommandId("timeline_insert_many"), type: "timeline.insert", at: range.start, count: compactCycleCount })}><RibbonIcon name="i-plus" /><span>N Cycle<br />Insert</span></button><button type="button" className="ribbon-tool" aria-label={`Delete ${compactCycleCount} cycles`} onClick={() => onCommand({ id: nextCommandId("timeline_delete_many"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + compactCycleCount) })}><RibbonIcon name="i-delete" /><span>N Cycle<br />Delete</span></button><b>Time</b></div>
