@@ -65,6 +65,7 @@ export interface RendererDiagnostics {
   readonly dirtyWaveSize: number;
   readonly waveVersionSize: number;
   readonly fullReplaceEpochResets: number;
+  readonly diagnosticMapPrunePasses: number;
 }
 
 export type RendererDiagnosticSummary = Omit<RendererDiagnostics, "waveRendersBySignal" | "localGeometryBuildsBySignal">;

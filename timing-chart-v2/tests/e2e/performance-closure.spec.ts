@@ -247,6 +247,7 @@ test("repeated Open A/B/A releases old owners and does not stack handlers", asyn
   }
   const final = await diagnostics(page); expect(final.cachedWaveOwners).toBeLessThan(60); expect(final.mountedRows).toBeLessThan(60);
   expect(final.rowYStaleCount).toBe(0); expect(final.rowYSize).toBeLessThan(100); expect(final.rowYPrunePasses).toBeGreaterThanOrEqual(3);
+  expect(final.waveRendersBySignalCount).toBeLessThan(60); expect(final.localGeometryBuildsBySignalCount).toBeLessThan(60); expect(final.diagnosticMapPrunePasses).toBeGreaterThanOrEqual(3);
   await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_perf_1']").click(); const inspector = page.getByTestId("inspector"); const name = inspector.getByLabel("Inspector signal name"); await name.fill("RENAMED_ONCE"); await inspector.getByTestId("apply-inspector-signal").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await testInfo.attach("phase13-open-leak.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
