@@ -72,6 +72,8 @@ describe("DisplayTimeMappingCache", () => {
     expect(metrics.buildDurationMs).toBeGreaterThanOrEqual(0);
     expect(metrics.buildDurationMedianMs).toBe(metrics.buildDurationMs);
     expect(metrics.buildDurationP95Ms).toBe(metrics.buildDurationMs);
+    expect(metrics.valueRemapPasses).toBe(0);
+    expect(metrics.identityFastPathHits).toBe(0);
   });
 
   it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
@@ -85,6 +87,16 @@ describe("DisplayTimeMappingCache", () => {
     expect(cache.metrics().builds).toBe(2);
     expect(cache.metrics().hits).toBe(1);
     expect(cache.metrics().sourceCyclesVisited).toBe(24);
+  });
+
+  it("counts remap work separately from the identity fast path", () => {
+    const cache = new DisplayTimeMappingCache();
+    const identity = cache.get(timeline(4), []);
+    const folded = cache.get(timeline(4), [collapsedGroup("g1", 1, 2)]);
+    const values = [{ start: 0, value: 0 }, { start: 2, value: 1 }];
+    expect(cache.remapValueChanges(values, identity)).toBe(values);
+    cache.remapValueChanges(values, folded);
+    expect(cache.metrics()).toMatchObject({ valueRemapPasses: 1, identityFastPathHits: 1 });
   });
 
   it("records bounded scale evidence for 100k cycles and 1k folds", () => {

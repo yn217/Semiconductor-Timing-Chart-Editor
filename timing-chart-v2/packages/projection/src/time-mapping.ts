@@ -66,6 +66,8 @@ export interface DisplayTimeMappingCacheMetrics {
   readonly buildDurationMs: number;
   readonly buildDurationMedianMs: number;
   readonly buildDurationP95Ms: number;
+  readonly valueRemapPasses: number;
+  readonly identityFastPathHits: number;
 }
 
 /** Owns the derived display-time mapping for one projection consumer. */
@@ -78,6 +80,8 @@ export class DisplayTimeMappingCache {
   private foldRangesVisited = 0;
   private buildDurationMs = 0;
   private buildDurationsMs: number[] = [];
+  private valueRemapPasses = 0;
+  private identityFastPathHits = 0;
 
   get(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
     const nextKey = displayTimeMappingKey(timeline, timeGroups);
@@ -106,7 +110,15 @@ export class DisplayTimeMappingCache {
       buildDurationMs: this.buildDurationMs,
       buildDurationMedianMs: percentile(this.buildDurationsMs, 0.5),
       buildDurationP95Ms: percentile(this.buildDurationsMs, 0.95),
+      valueRemapPasses: this.valueRemapPasses,
+      identityFastPathHits: this.identityFastPathHits,
     };
+  }
+
+  remapValueChanges(values: readonly SignalValueChange[], mapping: DisplayTimeMapping): readonly SignalValueChange[] {
+    if (mapping.isIdentity) this.identityFastPathHits += 1;
+    else this.valueRemapPasses += 1;
+    return remapValueChangesToDisplay(values, mapping);
   }
 
   clear(): void {
