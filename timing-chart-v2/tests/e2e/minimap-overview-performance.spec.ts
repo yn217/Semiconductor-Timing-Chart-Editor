@@ -27,6 +27,7 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   expect(Number(before.overviewBuilds)).toBeGreaterThan(0);
   expect(Number(before.signalLookups)).toBeGreaterThan(0);
   expect(before.overviewRows).toBeGreaterThan(0);
+  await expect(minimap.locator(".minimap-rows > span").first()).toBeVisible();
 
   await page.getByTestId("cycle-viewport").evaluate((element) => {
     element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight);

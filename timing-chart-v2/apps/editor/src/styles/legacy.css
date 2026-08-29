@@ -402,6 +402,7 @@ body { min-width: 1100px; }
 .editor-shell .inspector > .minimap .minimap-rows > span { position: absolute; top: calc(var(--minimap-row-index) * 8px); right: 0; left: 0; height: 4px; min-height: 4px; background: #dceafe; opacity: 1; }
 .editor-shell .inspector > .minimap .minimap-segment { background: #dceafe; }
 .editor-shell .inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"] { border-width: 2px; }
+.editor-shell .inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"][data-viewport-full="true"] { background: transparent; }
 .editor-shell .inspector > header { height: 35px; flex-basis: 35px; padding-inline: 10px; }
 .editor-shell .inspector section { padding: 7px 10px 8px; }
 .editor-shell .inspector h3 { margin-bottom: 5px; }
