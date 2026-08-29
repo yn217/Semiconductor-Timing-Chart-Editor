@@ -665,6 +665,76 @@ body { min-width: 1100px; }
 .editor-shell .home-display-group .home-toggle { min-width: 0; grid-template-columns: 13px minmax(0, 1fr); gap: 2px; font-size: 9px; }
 .editor-shell .home-overflow-group { display: flex; align-items: flex-start; justify-content: center; padding-inline: 5px; }
 .editor-shell .home-overflow-group .home-overflow-trigger { width: 100%; min-width: 0; }
+
+/* Insert and Timeline own their non-Home composition.  Each command remains
+   backed by the existing SemanticCommand callback; these rules only make the
+   command families legible and deterministic at desktop widths. */
+.editor-shell .insert-ribbon {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 101px;
+  overflow: hidden;
+}
+.editor-shell .insert-slot-group { flex: 0 1 auto; min-width: 0; }
+.editor-shell .insert-slot-group > .insert-subgroup { position: relative; display: grid; align-items: center; height: 101px; min-width: 0; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
+.editor-shell .insert-subgroup > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
+.editor-shell .insert-signals-group { width: 390px; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; }
+.editor-shell .insert-structure-group { width: 140px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+.editor-shell .insert-annotation-group { width: 300px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
+.editor-shell .insert-more-group { width: 250px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+.editor-shell .insert-ribbon .ribbon-tool { min-width: 0; width: 100%; padding-inline: 2px; font-size: 9px; }
+.editor-shell .insert-ribbon .ribbon-tool > span { max-width: 100%; }
+.editor-shell .insert-ribbon .ribbon-tool:disabled { opacity: .42; }
+.editor-shell .timeline-group { width: 760px; }
+.editor-shell .timeline-group .timeline-toolbar {
+  display: grid;
+  grid-template-columns: 108px 155px 220px 126px minmax(120px, 1fr);
+  align-items: stretch;
+  gap: 2px;
+  height: 92px;
+  padding: 3px;
+  overflow: hidden;
+}
+.editor-shell .timeline-subgroup {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+  padding: 3px 4px 16px;
+  border-right: 1px solid #d4dbe4;
+  overflow: hidden;
+}
+.editor-shell .timeline-subgroup > b {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  left: 0;
+  color: #637083;
+  font-size: 9px;
+  font-weight: 500;
+  text-align: center;
+}
+.editor-shell .timeline-subgroup > label { min-width: 0; flex-direction: column; gap: 2px; font-size: 8px; }
+.editor-shell .timeline-subgroup input { width: 42px; min-width: 0; height: 22px; padding: 1px 3px; }
+.editor-shell .timeline-subgroup > button { min-width: 0; flex: 1 1 auto; padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-shell .timeline-subgroup .timeline-objects { min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; overflow: auto; }
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group { min-width: 0; display: flex; gap: 2px; }
+.editor-shell .timeline-subgroup .timeline-objects button { min-width: 0; max-width: 100%; padding: 1px 3px; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group,
+.editor-shell .timeline-subgroup.timeline-fold-group { flex-direction: column; align-items: stretch; justify-content: center; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button { flex: 0 0 19px; min-width: 0; padding-inline: 1px; font-size: 8px; }
+.editor-shell .timeline-subgroup.timeline-fold-group { grid-column: 5; }
+.editor-shell .timeline-subgroup.timeline-fold-group > button { flex: 0 0 auto; }
+.editor-shell .timeline-group .timeline-subgroup button[data-v1-label] {
+  font-size: 9px;
+}
+.editor-shell .timeline-group .timeline-subgroup button[data-v1-label]::after {
+  content: none;
+}
+.editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects { flex-direction: row; }
 .editor-shell .view-slot-group { box-sizing: border-box; flex: 0 0 auto; }
 .editor-shell .view-slot-group[data-major-group="Show"] { width: 280px; }
 .editor-shell .view-slot-group[data-major-group="Panels"] { width: 250px; }

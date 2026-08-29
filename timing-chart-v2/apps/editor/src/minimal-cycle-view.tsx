@@ -2554,6 +2554,15 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     const commentRow: CommentRow = { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" };
     onCommand({ id: nextCommandId("insert_comment_row"), type: "commentRow.create", commentRow, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
   };
+  const insertSpacer = () => {
+    const targetGroup = document.signalGroups.find((group) => group.id === selectedGroupId) ?? document.signalGroups.at(-1);
+    if (!targetGroup) return;
+    onCommand({ id: nextCommandId("insert_spacer"), type: "spacer.create", spacer: { id: spacerId(nextEntityId("spacer", document)), height: 24 }, targetGroupId: targetGroup.id, index: targetGroup.rows.length });
+  };
+  const insertAnnotation = (type: AnnotationType) => {
+    if (!selectedSignalId) return;
+    onCreateAnnotation(createAnnotation(type, selectedSignalId, range, document));
+  };
   const addTransaction = () => {
     const id = nextEntityId("transaction", document) as TransactionId;
     onCommand({ id: nextCommandId("home_transaction_create"), type: "transaction.create", transaction: { id, name: `Transaction ${document.transactions.length + 1}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), laneId: "lane_0" } });
@@ -2607,16 +2616,30 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
        </div>
     </>}
     {homeOverflowMenu}
-    {tab === "Insert" && <div className="ribbon-group insert-group">
-      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
-      <button type="button" className="ribbon-tool" onClick={insertClockSignal}><RibbonIcon name="i-clock" /><span>Clock</span></button>
-      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("bus")}><RibbonIcon name="i-plus" /><span>Bus</span></button>
-      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("state")}><RibbonIcon name="i-plus" /><span>State</span></button>
-      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("event")}><RibbonIcon name="i-plus" /><span>Event</span></button>
-      <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("pulse")}><RibbonIcon name="i-plus" /><span>Pulse</span></button>
-      <button type="button" className="ribbon-tool" onClick={insertGroup}><RibbonIcon name="i-plus" /><span>Group</span></button>
-      <button type="button" className="ribbon-tool" onClick={insertCommentRow}><RibbonIcon name="i-comment" /><span>Comment Row</span></button>
-      <b>Insert</b>
+    {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
+      <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><div className="insert-subgroup insert-signals-group" aria-label="Signals">
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
+        <button type="button" className="ribbon-tool" onClick={insertClockSignal}><RibbonIcon name="i-clock" /><span>Clock</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("bus")}><RibbonIcon name="i-grid" /><span>Bus</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("state")}><RibbonIcon name="i-preview" /><span>State</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("event")}><RibbonIcon name="i-filter" /><span>Event</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("pulse")}><RibbonIcon name="i-cycle-add" /><span>Pulse</span></button>
+        <b>Signals</b>
+      </div></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><div className="insert-subgroup insert-structure-group" aria-label="Structure">
+        <button type="button" className="ribbon-tool" onClick={insertGroup}><RibbonIcon name="i-group" /><span>Group</span></button>
+        <button type="button" className="ribbon-tool" onClick={insertSpacer}><RibbonIcon name="i-spacing" /><span>Spacer</span></button>
+        <b>Structure</b>
+      </div></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><div className="insert-subgroup insert-annotation-group" aria-label="Annotation">
+        <button type="button" className="ribbon-tool" onClick={insertCommentRow}><RibbonIcon name="i-comment" /><span>Comment</span></button>
+        {(["marker", "range", "text", "dependency"] as const).map((type) => <button type="button" className="ribbon-tool" key={type} disabled={!selectedSignalId} onClick={() => insertAnnotation(type)}><RibbonIcon name={type === "marker" ? "i-more" : type === "range" ? "i-select-fit" : type === "dependency" ? "i-filter" : "i-preview"} /><span>{type[0]!.toUpperCase() + type.slice(1)}</span></button>)}
+        <b>Annotation</b>
+      </div></div>
+      <div className="ribbon-major-group insert-slot-group" data-major-group="More" aria-label="More Insert commands"><div className="insert-subgroup insert-more-group" aria-label="More">
+        {(["measurement", "highlight", "bracket", "verticalLine"] as const).map((type) => <button type="button" className="ribbon-tool" key={type} disabled={!selectedSignalId} onClick={() => insertAnnotation(type)}><RibbonIcon name={type === "measurement" ? "i-ruler" : type === "highlight" ? "i-grid" : type === "bracket" ? "i-gap" : "i-ruler"} /><span>{type === "verticalLine" ? "Vertical Line" : type[0]!.toUpperCase() + type.slice(1)}</span></button>)}
+        <b>More</b>
+      </div></div>
     </div>}
     {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></div>}
     {tab === "Annotation" && <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>}
@@ -3234,6 +3257,15 @@ function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookma
   const [bookmarkName, setBookmarkName] = useState("");
   const [bookmarkStart, setBookmarkStart] = useState(0);
   const [bookmarkComment, setBookmarkComment] = useState("");
+  const bookmarkListRef = useRef<HTMLDivElement>(null);
+  const navigateBookmark = (direction: -1 | 1) => {
+    const ordered = [...document.bookmarks].sort((left, right) => left.start - right.start);
+    if (ordered.length === 0) return;
+    const next = direction < 0
+      ? [...ordered].reverse().find((bookmark) => bookmark.start < range.start) ?? ordered.at(-1)
+      : ordered.find((bookmark) => bookmark.start >= range.end) ?? ordered[0];
+    if (next) onNavigateBookmark(next.start);
+  };
   const applyBookmark = () => {
     if (!editingBookmark) return;
     onCommand({ id: nextCommandId("bookmark_update"), type: "bookmark.update", bookmarkId: editingBookmark.id, name: bookmarkName, start: bookmarkStart, comment: bookmarkComment });
@@ -3249,23 +3281,40 @@ function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookma
     else onRange({ start: range.start, end: Math.min(document.timeline.cycleCount, Math.max(value, range.start + 1)) });
   };
   return <div className="timeline-toolbar" aria-label="Timeline Editor" data-testid="timeline-editor">
-    <strong>Timeline</strong>
-    <label>Start<input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
-    <label>End<input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
-    <label>Count<input aria-label="Timeline insert count" type="number" min="1" step="1" value={count} onChange={(event) => setCount(Math.max(1, Number(event.target.value)))} /></label>
-    <label>To<input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
-    <div className="timeline-actions">
-       <button type="button" data-v1-label="サイクル挿入" onClick={() => onCommand({ id: nextCommandId("timeline_before"), type: "timeline.insert", at: range.start, count })}>Insert before</button>
-       <button type="button" data-v1-label="後に挿入" onClick={() => onCommand({ id: nextCommandId("timeline_after"), type: "timeline.insert", at: range.end, count })}>Insert after</button>
-       <button type="button" data-v1-label="範囲削除" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}>Delete range</button>
-       <button type="button" data-v1-label="範囲複製" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}>Duplicate to</button>
-       <button type="button" data-v1-label="範囲移動" onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })}>Move to</button>
-       <button type="button" data-v1-label="ブックマーク" onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark", document) as BookmarkId, name: `Marker ${range.start}`, start: range.start } })}>Add marker</button>
-       <button type="button" data-v1-label="軸ブレーク" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}>Add gap</button>
+    <div className="timeline-subgroup timeline-range-group" data-timeline-group="Range" aria-label="Range commands">
+      <label>Start<input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
+      <label>End<input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
+      <b>Range</b>
     </div>
-    <div className="timeline-objects">
+    <div className="timeline-subgroup timeline-insert-group" data-timeline-group="Insert" aria-label="Insert timeline commands">
+      <label>Count<input aria-label="Timeline insert count" type="number" min="1" step="1" value={count} onChange={(event) => setCount(Math.max(1, Number(event.target.value)))} /></label>
+      <button type="button" data-v1-label="サイクル挿入" onClick={() => onCommand({ id: nextCommandId("timeline_before"), type: "timeline.insert", at: range.start, count })}>Insert before</button>
+      <button type="button" data-v1-label="後に挿入" onClick={() => onCommand({ id: nextCommandId("timeline_after"), type: "timeline.insert", at: range.end, count })}>Insert after</button>
+      <b>Insert</b>
+    </div>
+    <div className="timeline-subgroup timeline-range-edit-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
+      <button type="button" data-v1-label="範囲削除" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}>Delete range</button>
+      <label>To<input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
+      <button type="button" data-v1-label="範囲複製" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}>Duplicate to</button>
+      <button type="button" data-v1-label="範囲移動" onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })}>Move to</button>
+      <b>Range Edit</b>
+    </div>
+    <div className="timeline-subgroup timeline-bookmark-group" data-timeline-group="Bookmark" aria-label="Bookmark commands">
+      <button type="button" aria-label="Previous bookmark" onClick={() => navigateBookmark(-1)} disabled={document.bookmarks.length === 0}>Previous</button>
+      <button type="button" data-v1-label="ブックマーク" onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark", document) as BookmarkId, name: `Marker ${range.start}`, start: range.start } })}>Add marker</button>
+      <button type="button" aria-label="Next bookmark" onClick={() => navigateBookmark(1)} disabled={document.bookmarks.length === 0}>Next</button>
+      <button type="button" aria-label="List bookmarks" onClick={() => bookmarkListRef.current?.focus()}>List</button>
+      <div className="timeline-objects" ref={bookmarkListRef} tabIndex={-1}>
       {document.bookmarks.map((bookmark) => <span className="timeline-bookmark" key={bookmark.id} data-bookmark-id={bookmark.id}><button type="button" data-testid={`bookmark-jump-${bookmark.id}`} onClick={() => onNavigateBookmark(bookmark.start)} title={`Jump to cycle ${bookmark.start}`}>◆ {bookmark.name}</button><button type="button" data-testid={`bookmark-edit-${bookmark.id}`} aria-label={`Edit ${bookmark.name}`} onClick={() => { setEditingBookmarkId(bookmark.id); setBookmarkName(bookmark.name); setBookmarkStart(bookmark.start); setBookmarkComment(bookmark.comment ?? ""); }}>Edit</button><button type="button" aria-label={`Delete ${bookmark.name}`} onClick={() => onCommand({ id: nextCommandId("marker_delete"), type: "bookmark.delete", bookmarkId: bookmark.id })}>×</button></span>)}
-      {document.timeGroups.map((group) => <span className="timeline-time-group" key={group.id} data-time-group-id={group.id}><button type="button" data-testid={`time-group-edit-${group.id}`} onClick={() => { setEditingGroupId(group.id); setGroupName(group.name); setGroupStart(group.start); setGroupEnd(group.end); setGroupComment(group.comment ?? ""); setGroupFoldLabel(group.presentation?.foldLabel ?? ""); setGroupCollapsed(group.presentation?.collapsed ?? false); }} title={`Edit ${group.name}`}>// {group.name}</button><button type="button" aria-label={`Delete ${group.name}`} onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })}>×</button></span>)}
+      </div>
+      <b>Bookmark</b>
+    </div>
+    <div className="timeline-subgroup timeline-fold-group" data-timeline-group="Fold / Break" aria-label="Fold and break commands">
+      <button type="button" data-v1-label="軸ブレーク" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}>Axis Break</button>
+      <div className="timeline-objects timeline-time-groups">
+        {document.timeGroups.map((group) => <span className="timeline-time-group" key={group.id} data-time-group-id={group.id}><button type="button" data-testid={`time-group-edit-${group.id}`} onClick={() => { setEditingGroupId(group.id); setGroupName(group.name); setGroupStart(group.start); setGroupEnd(group.end); setGroupComment(group.comment ?? ""); setGroupFoldLabel(group.presentation?.foldLabel ?? ""); setGroupCollapsed(group.presentation?.collapsed ?? false); }} title={`Edit ${group.name}`}>// {group.name}</button><button type="button" aria-label={`Delete ${group.name}`} onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })}>×</button></span>)}
+      </div>
+      <b>Fold / Break</b>
     </div>
     {editingGroup && <form className="time-group-editor" aria-label="Time Group Editor" data-testid="time-group-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Time Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} /></label><label>Start<input aria-label="Time Group start" type="number" min="0" max={document.timeline.cycleCount - 1} value={groupStart} onChange={(event) => setGroupStart(Number(event.target.value))} /></label><label>End<input aria-label="Time Group end" type="number" min="1" max={document.timeline.cycleCount} value={groupEnd} onChange={(event) => setGroupEnd(Number(event.target.value))} /></label><label>Comment<input aria-label="Time Group comment" value={groupComment} onChange={(event) => setGroupComment(event.target.value)} /></label><label>Fold label<input aria-label="Time Group fold label" value={groupFoldLabel} onChange={(event) => setGroupFoldLabel(event.target.value)} /></label><label className="check-label"><input aria-label="Time Group collapsed" type="checkbox" checked={groupCollapsed} onChange={(event) => setGroupCollapsed(event.target.checked)} />Collapsed</label><button type="button" data-testid="apply-time-group" onClick={applyTimeGroup}>Apply</button><button type="button" onClick={() => setEditingGroupId(undefined)}>Cancel</button></form>}
     {editingBookmark && <form className="bookmark-editor" aria-label="Bookmark Editor" data-testid="bookmark-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Bookmark name" value={bookmarkName} onChange={(event) => setBookmarkName(event.target.value)} /></label><label>Cycle<input aria-label="Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={bookmarkStart} onChange={(event) => setBookmarkStart(Number(event.target.value))} /></label><label>Comment<input aria-label="Bookmark comment" value={bookmarkComment} onChange={(event) => setBookmarkComment(event.target.value)} /></label><button type="button" data-testid="apply-bookmark" onClick={applyBookmark}>Apply</button><button type="button" onClick={() => setEditingBookmarkId(undefined)}>Cancel</button></form>}
