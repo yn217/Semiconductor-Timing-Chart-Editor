@@ -1,0 +1,41 @@
+import { expect, test } from "@playwright/test";
+
+test("Bottom Clock edits update real waveform geometry and edge-counter overlays", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const editor = page.getByTestId("signal-editor");
+  const initialHistory = await page.getByTestId("history-status").textContent();
+  const initialHistoryCount = Number(initialHistory?.match(/History (\d+)/)?.[1]);
+  expect(Number.isFinite(initialHistoryCount)).toBe(true);
+  const clock = surface.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock']");
+  const beforeWave = await clock.locator("svg").innerHTML();
+  const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await editor.getByLabel("Clock duty").fill("0.25");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  expect(await clock.locator("svg").innerHTML()).not.toBe(beforeWave);
+  const afterDuty = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterDuty.waveDromRenders).toBe(before.waveDromRenders + 1);
+  expect(afterDuty.localGeometryBuilds).toBe(before.localGeometryBuilds + 1);
+
+  await editor.getByLabel("Clock edge counter show").check();
+  await editor.getByLabel("Clock edge counter mode").selectOption("rising");
+  await editor.getByTestId("apply-clock-edge-counter").click();
+  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':rising:']")).toHaveCount(12);
+  const beforeCounterOnly = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await editor.getByLabel("Clock edge counter mode").selectOption("falling");
+  await editor.getByTestId("apply-clock-edge-counter").click();
+  await expect(surface.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':falling:']")).toHaveCount(12);
+  const afterCounterOnly = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(afterCounterOnly.waveDromRenders).toBe(beforeCounterOnly.waveDromRenders);
+  expect(afterCounterOnly.localGeometryBuilds).toBe(beforeCounterOnly.localGeometryBuilds);
+
+  await editor.getByLabel("Clock suppressed periods").fill("1");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(clock).not.toHaveAttribute("data-wave-error");
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${initialHistoryCount + 4} / Redo 0`);
+  expect(await clock.locator("svg").innerHTML()).not.toBe(beforeWave);
+});
