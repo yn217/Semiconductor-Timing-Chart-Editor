@@ -657,6 +657,35 @@ body { min-width: 1100px; }
 .editor-shell .home-display-group .home-toggle { min-width: 0; grid-template-columns: 13px minmax(0, 1fr); gap: 2px; font-size: 9px; }
 .editor-shell .home-overflow-group { display: flex; align-items: flex-start; justify-content: center; padding-inline: 5px; }
 .editor-shell .home-overflow-group .home-overflow-trigger { width: 100%; min-width: 0; }
+.editor-shell .view-slot-group { box-sizing: border-box; flex: 0 0 auto; }
+.editor-shell .view-slot-group[data-major-group="Show"] { width: 280px; }
+.editor-shell .view-slot-group[data-major-group="Panels"] { width: 250px; }
+.editor-shell .view-slot-group[data-major-group="Guides"] { width: 150px; }
+.editor-shell .view-slot-group[data-major-group="Zoom"] { width: 320px; }
+.editor-shell .view-slot-group[data-major-group="Workspace"] { width: 285px; }
+.editor-shell .view-slot-group[data-major-group="Layout"] { width: 210px; }
+.editor-shell .view-slot-group > .ribbon-group { box-sizing: border-box; width: 100%; min-width: 0; }
+.editor-shell .view-show-group { width: 280px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: repeat(2, 28px); gap: 3px 5px; align-content: center; padding: 7px 8px 17px; }
+.editor-shell .view-panels-group { width: 250px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 52px 28px; gap: 3px 5px; align-content: center; padding: 7px 8px 17px; }
+.editor-shell .view-guides-group { width: 150px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
+.editor-shell .view-zoom-group { width: 320px; display: grid; grid-template-columns: 50px 45px 68px 50px 50px 50px; align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
+.editor-shell .view-workspace-group { width: 285px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 7px 8px 17px; }
+.editor-shell .view-layout-group { width: 210px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 7px 8px 17px; }
+.editor-shell .view-toggle { display: flex; min-width: 0; align-items: center; gap: 3px; overflow: hidden; color: #405269; font-size: 9px; line-height: 1.05; white-space: nowrap; text-overflow: ellipsis; }
+.editor-shell .view-toggle input { flex: 0 0 auto; margin: 0; }
+.editor-shell .view-mini-tool { min-width: 0; width: auto; height: 56px; padding: 3px 2px; gap: 3px; font-size: 8px; }
+.editor-shell .view-mini-tool svg { width: 18px; height: 18px; }
+.editor-shell .view-zoom-group output { min-width: 42px; color: #304b6b; font-size: 10px; text-align: center; }
+.editor-shell .view-zoom-group select { width: 62px; min-width: 0; height: 27px; padding: 0 2px; font-size: 9px; }
+.editor-shell[data-show-signal-names="false"] .surface-host [data-role="tree-signal-name"],
+.editor-shell[data-show-signal-names="false"] .surface-host [data-role="frozen-signal-name"] { visibility: hidden; }
+.editor-shell[data-show-roles="false"] .surface-host [data-role="tree-signal-role"],
+.editor-shell[data-show-roles="false"] .surface-host [data-role="signal-role"] { visibility: hidden; }
+.editor-shell[data-show-annotations="false"] .surface-host [data-role="annotation-overlay-surface"] { visibility: hidden; }
+.editor-shell[data-show-transactions="false"] .transaction-lanes { visibility: hidden; }
+.editor-shell[data-show-group-background="false"] .surface-host [data-role$="-row"]:not([data-selected="true"]):not([data-transaction-linked="true"]) { background-color: transparent !important; }
+.editor-shell[data-signal-tree-visible="false"] .surface-host [data-role="left-tree-rows"],
+.editor-shell[data-signal-tree-visible="false"] .column-headings .left-column-heading { visibility: hidden; }
 .editor-shell .home-edit-group > [data-testid="clipboard-status"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 @media (min-width: 1101px) and (max-width: 1300px) {
   .ribbon { zoom: .8; width: 125%; }
