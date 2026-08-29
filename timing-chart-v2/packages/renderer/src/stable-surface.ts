@@ -121,7 +121,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, diagnosticMapPrunePasses: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -477,8 +477,18 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   #publishCounters(): void {
     if (!this.#layers) return;
-    this.#layers.root.dataset.renderCounters = JSON.stringify(this.#counters);
-    this.#layers.root.dataset.performanceCounters = JSON.stringify(this.diagnosticSummary());
+    const started = globalThis.performance.now();
+    const renderCounters = JSON.stringify(this.#counters);
+    const performanceCounters = JSON.stringify(this.diagnosticSummary());
+    this.#layers.root.dataset.renderCounters = renderCounters;
+    this.#layers.root.dataset.performanceCounters = performanceCounters;
+    const encoder = new TextEncoder();
+    this.#diagnostics = {
+      ...this.#diagnostics,
+      diagnosticSerializationCount: this.#diagnostics.diagnosticSerializationCount + 1,
+      diagnosticSerializationBytes: this.#diagnostics.diagnosticSerializationBytes + encoder.encode(renderCounters).byteLength + encoder.encode(performanceCounters).byteLength,
+      diagnosticSerializationDurationMs: this.#diagnostics.diagnosticSerializationDurationMs + (globalThis.performance.now() - started),
+    };
   }
 }
 

@@ -135,6 +135,9 @@ test("heavy renderer diagnostics are pull-based and absent from hot-path DOM cou
   const published = await diagnostics(page);
   expect(published.waveRendersBySignal).toBeUndefined();
   expect(published.localGeometryBuildsBySignal).toBeUndefined();
+  expect(published.diagnosticSerializationCount).toBeGreaterThan(0);
+  expect(published.diagnosticSerializationBytes).toBeGreaterThan(0);
+  expect(published.diagnosticSerializationDurationMs).toBeGreaterThanOrEqual(0);
   const snapshot = await surface.evaluate((element) => (element as HTMLElement & { requestPerformanceSnapshot: () => Record<string, unknown> }).requestPerformanceSnapshot());
   expect(Object.keys((snapshot.waveRendersBySignal ?? {}) as object)).not.toHaveLength(0);
   expect(Object.keys((snapshot.localGeometryBuildsBySignal ?? {}) as object)).not.toHaveLength(0);

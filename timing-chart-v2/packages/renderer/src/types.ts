@@ -66,6 +66,12 @@ export interface RendererDiagnostics {
   readonly waveVersionSize: number;
   readonly fullReplaceEpochResets: number;
   readonly diagnosticMapPrunePasses: number;
+  /** Number of hot-path diagnostic payload serializations published to the DOM. */
+  readonly diagnosticSerializationCount: number;
+  /** Total UTF-8 bytes emitted for hot-path diagnostic payloads. */
+  readonly diagnosticSerializationBytes: number;
+  /** Cumulative time spent serializing hot-path diagnostic payloads. */
+  readonly diagnosticSerializationDurationMs: number;
 }
 
 export type RendererDiagnosticSummary = Omit<RendererDiagnostics, "waveRendersBySignal" | "localGeometryBuildsBySignal">;
