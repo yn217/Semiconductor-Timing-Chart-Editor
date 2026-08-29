@@ -27,7 +27,10 @@ export class DefaultProjectionService implements ProjectionService {
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
     if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
-      this.#layout = calculateRowLayout(document, new Set(), { includeHidden: false });
+      // Keep hidden timing rows in the navigation layout so Left Tree and the
+      // Frozen column can recover them; visibleRows remains the source for
+      // timing/waveform projection and excludes hidden rows.
+      this.#layout = calculateRowLayout(document, new Set(), { includeHidden: true });
       this.#navigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds));
       this.#collapsedGroupKey = collapsedGroupKey;
       this.#rowLayoutBuilds += 1;
