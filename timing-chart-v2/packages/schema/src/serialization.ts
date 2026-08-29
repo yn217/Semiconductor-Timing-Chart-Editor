@@ -52,7 +52,7 @@ export function normalizeDocument(input: unknown): ParseDocumentResult {
   if (!migrated) return { ok: false, kind: "validation", problems: [{ code: "MIGRATION_FAILED", path: "$", message: "Document migration could not be selected." }] };
   const problems = validateCanonicalDocument(migrated.document);
   if (problems.length > 0) return { ok: false, kind: "validation", sourceFormatVersion: version, problems };
-  return { ok: true, document: migrated.document, warnings: migrated.warnings };
+  return { ok: true, document: migrated.document, warnings: migrated.warnings, validated: true };
 }
 
 export function parseDocument(input: string | unknown): ParseDocumentResult {

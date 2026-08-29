@@ -288,6 +288,13 @@ export interface DocumentProblem {
 
 export interface MigrationWarning { readonly code: string; readonly path: string; readonly message: string }
 
+export type ParsedCanonicalDocument = Readonly<{
+  readonly ok: true;
+  readonly document: CanonicalDocument;
+  readonly warnings: readonly MigrationWarning[];
+  readonly validated: true;
+}>;
+
 export type ParseDocumentResult =
-  | Readonly<{ ok: true; document: CanonicalDocument; warnings: readonly MigrationWarning[] }>
+  | ParsedCanonicalDocument
   | Readonly<{ ok: false; kind: "syntax" | "unsupported-version" | "validation"; problems: readonly DocumentProblem[]; sourceFormatVersion?: number; raw?: unknown }>;

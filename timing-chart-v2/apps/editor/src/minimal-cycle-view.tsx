@@ -9,7 +9,7 @@ import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, SpacerRow, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, ParsedCanonicalDocument, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, SpacerRow, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -22,6 +22,14 @@ type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
+
+function isParsedCanonicalDocument(input: CanonicalDocument | ParsedCanonicalDocument): input is ParsedCanonicalDocument {
+  return "validated" in input && input.validated === true;
+}
+
+function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {
+  return isParsedCanonicalDocument(input) ? input.document : input;
+}
 
 function parseBulkSignalDefinitions(text: string, document: Readonly<CanonicalDocument>): { readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] } {
   const definitions: BulkSignalDefinition[] = [];
@@ -741,14 +749,15 @@ export function MinimalCycleView() {
     executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result); return result; };
     undo.current = () => applyResult(session.undo());
     redo.current = () => applyResult(session.redo());
-    const replaceDocument = (document: CanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
+    const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
+      const canonicalDocument = canonicalDocumentOf(document);
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
       geometryMaps.clear();
       snapIndex = undefined;
       referenceGeometry = undefined;
       rulerInitialized = false;
-      window = viewportWindow(viewportElement, document.timeline.referenceClock);
+      window = viewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       rulerElement.replaceChildren();
@@ -782,7 +791,7 @@ export function MinimalCycleView() {
         upsertDiagnostic((item) => item.code === "OPEN_FAILED", { code: "OPEN_FAILED", path: "$", message: parsed.problems.map((item) => item.message).join(" ") });
         return;
       }
-      replaceDocument(parsed.document, parsed.warnings);
+      replaceDocument(parsed, parsed.warnings);
     };
     newDocument.current = () => replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] });
     saveDocument.current = () => {

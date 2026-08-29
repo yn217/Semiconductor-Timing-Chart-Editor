@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DocumentSession } from "@timing-chart-v2/core";
+import { parseDocument } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("DocumentSession atomic Open/Save", () => {
@@ -12,6 +13,18 @@ describe("DocumentSession atomic Open/Save", () => {
     expect(after.document.signalGroups).toBe(before.document.signalGroups);
     expect(after.document.document).not.toBe(before.document.document);
     expect(Object.isFrozen(after.document.document)).toBe(true);
+  });
+
+  it("accepts a validated parse handoff without a second validation or deep clone", () => {
+    const parsed = parseDocument(JSON.stringify(canonicalFixture()));
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+
+    const session = new DocumentSession(parsed);
+    expect(session.metrics()).toEqual({ validationRuns: 0, commits: 0 });
+    expect(session.getSnapshot().document).toBe(parsed.document);
+    expect(Object.isFrozen(session.getSnapshot().document)).toBe(true);
+    expect(Object.isFrozen(session.getSnapshot().document.signals)).toBe(true);
   });
 
   it("replaces once on valid Open and returns a full-document render contract", () => {

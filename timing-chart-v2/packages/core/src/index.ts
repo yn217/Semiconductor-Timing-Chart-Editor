@@ -5,6 +5,7 @@ import {
   type CanonicalDocument,
   type DocumentProblem,
   type MigrationWarning,
+  type ParsedCanonicalDocument,
   type ParseDocumentResult,
 } from "@timing-chart-v2/schema";
 
@@ -80,6 +81,10 @@ function deepFreeze<T>(value: T): Readonly<T> {
   return value;
 }
 
+function isParsedCanonicalDocument(value: CanonicalDocument | ParsedCanonicalDocument): value is ParsedCanonicalDocument {
+  return "validated" in value && value.validated === true;
+}
+
 function failedOpen(result: Exclude<ParseDocumentResult, { ok: true }>): AtomicOpenResult {
   return {
     ok: false,
@@ -95,10 +100,16 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
   #validationRuns = 0;
   #commits = 0;
 
-  constructor(initial: CanonicalDocument) {
-    const problems = this.#validate(initial);
-    if (problems.length > 0) throw new Error(`Initial canonical document is invalid: ${problems.map((item) => item.code).join(", ")}`);
-    this.#snapshot = deepFreeze({ revision: 0, document: cloneValue(initial) }) as CanonicalSnapshot;
+  constructor(initial: CanonicalDocument | ParsedCanonicalDocument) {
+    const parsedHandoff = isParsedCanonicalDocument(initial);
+    const document = parsedHandoff ? initial.document : initial;
+    if (!parsedHandoff) {
+      const problems = this.#validate(document);
+      if (problems.length > 0) throw new Error(`Initial canonical document is invalid: ${problems.map((item) => item.code).join(", ")}`);
+    }
+    // A parser result is already a detached, validated document. Freeze that
+    // owned tree in place instead of validating and cloning it a second time.
+    this.#snapshot = deepFreeze({ revision: 0, document: parsedHandoff ? document : cloneValue(document) }) as CanonicalSnapshot;
   }
 
   getSnapshot(): CanonicalSnapshot {

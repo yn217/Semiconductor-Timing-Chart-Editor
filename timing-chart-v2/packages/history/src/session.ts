@@ -14,7 +14,7 @@ import {
   type CanonicalSnapshot,
   type CanonicalStore,
 } from "@timing-chart-v2/core";
-import { isStableId, type CanonicalDocument, type CommandId } from "@timing-chart-v2/schema";
+import { isStableId, type CanonicalDocument, type CommandId, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import type { HistoryController, HistoryEntry, HistoryMetrics, HistoryState, RecordedAction } from "./types.js";
 
 const noHistory = (operation: "Undo" | "Redo"): CommandResult => ({ ok: false, reason: "no-op", problems: [{ code: "NO_HISTORY", path: "$", message: `${operation} history is empty.` }] });
@@ -26,7 +26,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
   #cleanDocument: Readonly<CanonicalDocument>;
   #historyMetrics: HistoryMetrics = { commandAttempts: 0, committedActions: 0, undoOperations: 0, redoOperations: 0 };
 
-  constructor(initial: CanonicalDocument) {
+  constructor(initial: CanonicalDocument | ParsedCanonicalDocument) {
     this.#documents = new DocumentSession(initial);
     this.#cleanDocument = this.#documents.getSnapshot().document;
   }
