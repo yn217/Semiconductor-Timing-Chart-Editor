@@ -6,7 +6,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DeterministicExportService } from "@timing-chart-v2/export";
-import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, DisplayTimeMappingCache, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import { quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
@@ -493,19 +493,14 @@ export function MinimalCycleView() {
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
     let timeAxis: TimeAxisGeometry = { mode: "clockless" };
-    let mappingRevision = -1;
-    let cachedMapping: ReturnType<typeof buildDisplayTimeMapping> | undefined;
+    const mappingCache = new DisplayTimeMappingCache();
     const geometrySvgs = new Map<SignalId, SVGSVGElement>();
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
     const provider: WaveformSurfaceProvider = {
       async mountWaveBatch(requests) {
         const currentSnapshot = session.getSnapshot();
         const document = currentSnapshot.document;
-        if (cachedMapping === undefined || mappingRevision !== currentSnapshot.revision) {
-          cachedMapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
-          mappingRevision = currentSnapshot.revision;
-        }
-        const mapping = cachedMapping;
+        const mapping = mappingCache.get(document.timeline, document.timeGroups);
         const prepared = requests.map((request) => {
           const signal = document.signals.find((candidate) => candidate.id === request.signalId);
           if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
@@ -674,7 +669,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
       const metrics = viewMetricsOwner.snapshot();
       rendererHost.dataset.viewMetrics = JSON.stringify(metrics);
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter: adapter.metrics(), geometryExtraction: adapter.geometryMetrics() });
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, mappingCacheBuilds: mappingCache.metrics().builds, mappingCacheHits: mappingCache.metrics().hits, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter: adapter.metrics(), geometryExtraction: adapter.geometryMetrics() });
     };
     let currentZoom = 1;
     function syncPresentationScale() {
