@@ -29,7 +29,7 @@ async function start(page: Page) {
 
 const counters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
 const diagnostics = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, any>;
-const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, number>;
+const sessionCounters = async (page: Page) => JSON.parse(await page.getByTestId("cycle-surface").getAttribute("data-session-counters") ?? "null") as Record<string, any>;
 
 async function cdpMetrics(cdp: CDPSession) {
   const result = await cdp.send("Performance.getMetrics") as { metrics: { name: string; value: number }[] };
@@ -45,6 +45,12 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const browserBefore = await cdpMetrics(cdp);
   const renderBeforeSelection = await counters(page);
   const sessionBeforeSelection = await sessionCounters(page);
+  const geometryBeforeSelection = sessionBeforeSelection.geometryExtraction as { totalUsesVisited: number; totalGeometryEntriesEmitted: number; totalDuplicateKeyChecks: number; totalDuplicateKeyCollisions: number; totalTransitionBrickLookups: number; totalSkinPathParses: number; totalMatrixReads: number; totalDurationMs: number };
+  expect(geometryBeforeSelection.totalUsesVisited).toBeGreaterThan(0);
+  expect(geometryBeforeSelection.totalGeometryEntriesEmitted).toBeGreaterThan(0);
+  expect(geometryBeforeSelection.totalDuplicateKeyChecks).toBeGreaterThanOrEqual(geometryBeforeSelection.totalGeometryEntriesEmitted);
+  expect(geometryBeforeSelection.totalDuplicateKeyCollisions).toBeLessThanOrEqual(geometryBeforeSelection.totalDuplicateKeyChecks);
+  expect(geometryBeforeSelection.totalMatrixReads).toBeGreaterThanOrEqual(2);
   const samples: BrowserPerformanceSample[] = [];
   for (let trial = 0; trial < 10; trial += 1) {
     const index = trial % 5 + 1;
@@ -109,7 +115,7 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
   const sessionAfterView = await sessionCounters(page); expect(sessionAfterView.rowLayoutBuilds).toBe(sessionBeforeView.rowLayoutBuilds); expect(sessionAfterView.commits).toBe(sessionBeforeView.commits);
 
   const browserAfter = await cdpMetrics(cdp); const summary = summarizePerformance(samples); const pointerSummary = summarizePerformance(pointerSamples);
-  const evidence = { fixture: "perf_100x500", summary, pointerSummary, internal: { renderBeforeSelection, reorderBefore, reorderAfter, editBefore, editAfter, annotationBefore, annotationAfter, viewBefore, viewAfter, diagnostics: await diagnostics(page), session: await sessionCounters(page) }, browser: { before: browserBefore, after: browserAfter } };
+  const evidence = { fixture: "perf_100x500", summary, pointerSummary, geometryExtraction: geometryBeforeSelection, internal: { renderBeforeSelection, reorderBefore, reorderAfter, editBefore, editAfter, annotationBefore, annotationAfter, viewBefore, viewAfter, diagnostics: await diagnostics(page), session: await sessionCounters(page) }, browser: { before: browserBefore, after: browserAfter } };
   console.log(`[phase13-pr] ${JSON.stringify({ summary, pointerSummary, diagnostics: evidence.internal.diagnostics, browserDelta: { layoutCount: (browserAfter.LayoutCount ?? 0) - (browserBefore.LayoutCount ?? 0), layoutDuration: (browserAfter.LayoutDuration ?? 0) - (browserBefore.LayoutDuration ?? 0), recalcStyleCount: (browserAfter.RecalcStyleCount ?? 0) - (browserBefore.RecalcStyleCount ?? 0), recalcStyleDuration: (browserAfter.RecalcStyleDuration ?? 0) - (browserBefore.RecalcStyleDuration ?? 0), scriptDuration: (browserAfter.ScriptDuration ?? 0) - (browserBefore.ScriptDuration ?? 0), taskDuration: (browserAfter.TaskDuration ?? 0) - (browserBefore.TaskDuration ?? 0), jsHeapUsedSize: browserAfter.JSHeapUsedSize ?? 0 } })}`);
   await testInfo.attach("phase13-pr-performance.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
   expect(summary.trials).toBe(10); expect(summary.p95Ms).toBeGreaterThanOrEqual(summary.medianMs); expect(summary.maxDomNodes).toBeGreaterThan(0); expect(pointerSummary.trials).toBe(10); expect(pointerSummary.p95Ms).toBeGreaterThanOrEqual(pointerSummary.medianMs);
@@ -118,6 +124,11 @@ test("PR guard: 100x500 selection/reorder/edit/annotation/view hard invariants w
 test("1000x1000 virtualization mounts viewport-scale rows and avoids duplicate bindings", async ({ page }, testInfo) => {
   await start(page);
   await openFixture(page, { signalCount: 1000, cycleCount: 1000 });
+  const geometry = (await sessionCounters(page)).geometryExtraction as { totalUsesVisited: number; totalGeometryEntriesEmitted: number; totalDuplicateKeyChecks: number; totalDuplicateKeyCollisions: number; totalDurationMs: number };
+  expect(geometry.totalUsesVisited).toBeGreaterThan(0);
+  expect(geometry.totalGeometryEntriesEmitted).toBeGreaterThan(0);
+  expect(geometry.totalDuplicateKeyCollisions).toBeLessThanOrEqual(geometry.totalDuplicateKeyChecks);
+  console.log(`[geometry-1000] ${JSON.stringify(geometry)}`);
   let diagnostic = await diagnostics(page);
   expect(diagnostic.mountedRows).toBeLessThan(60); expect(diagnostic.mountedWaveOwners).toBeLessThan(60);
   expect(await page.getByTestId("cycle-surface").locator("[data-row-id]").count()).toBeLessThan(180);

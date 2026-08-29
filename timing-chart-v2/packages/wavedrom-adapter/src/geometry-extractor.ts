@@ -1,6 +1,6 @@
 import { ImmutableLocalGeometryMap, type LocalGeometryEntry, type Point } from "@timing-chart-v2/geometry";
 import type { AnchorPoint } from "@timing-chart-v2/schema";
-import { WaveDromAdapterError, type RenderedWave } from "./types.js";
+import { WaveDromAdapterError, type GeometryExtractionMetrics, type RenderedWave } from "./types.js";
 
 interface MatrixLike { readonly a: number; readonly b: number; readonly c: number; readonly d: number; readonly e: number; readonly f: number }
 interface Segment { readonly start: Point; readonly end: Point; readonly control1?: Point; readonly control2?: Point }
@@ -57,15 +57,17 @@ function parsePrimaryStroke(path: string): Segment[] {
   return segments;
 }
 
-function transitionSegments(svg: SVGElement, brickId: string, cache: Map<string, readonly Segment[]>): readonly Segment[] {
+function transitionSegments(svg: SVGElement, brickId: string, cache: Map<string, readonly Segment[]>, metrics?: { transitionBrickLookups: number; skinPathParses: number }): readonly Segment[] {
   const cached = cache.get(brickId);
   if (cached) return cached;
+  if (metrics) metrics.transitionBrickLookups += 1;
   const brick = Array.from(svg.querySelectorAll<SVGGElement>("defs g[id]")).find((item) => item.id === brickId);
   if (!brick) throw new WaveDromAdapterError("MISSING_WAVEDROM_BRICK", `Rendered SVG does not contain brick '${brickId}'.`);
   const segments: Segment[] = [];
   for (const path of Array.from(brick.querySelectorAll<SVGPathElement>("path.s1"))) {
     const d = path.getAttribute("d");
     if (!d) continue;
+    if (metrics) metrics.skinPathParses += 1;
     for (const segment of parsePrimaryStroke(d)) {
       const ys = [segment.start.y, segment.control1?.y, segment.control2?.y, segment.end.y].filter((value): value is number => value !== undefined);
       if (Math.max(...ys) === Math.min(...ys)) continue;
@@ -145,6 +147,7 @@ function clockLevel(token: string, initial: 0 | 1): readonly [0 | 1, 0 | 1] {
 export interface GeometryEntryAccumulator {
   add(cycle: number, anchorPoint: AnchorPoint, position: Point, threshold?: number): void;
   entries(): readonly LocalGeometryEntry[];
+  metrics(): Pick<GeometryExtractionMetrics, "geometryEntriesEmitted" | "duplicateKeyChecks" | "duplicateKeyCollisions">;
 }
 
 /**
@@ -156,14 +159,21 @@ export interface GeometryEntryAccumulator {
 export function createGeometryEntryAccumulator(): GeometryEntryAccumulator {
   const entries: LocalGeometryEntry[] = [];
   const seen = new Set<string>();
+  let duplicateKeyChecks = 0;
+  let duplicateKeyCollisions = 0;
   return {
     add: (cycle, anchorPoint, position, threshold) => {
+      duplicateKeyChecks += 1;
       const key = geometryEntryKey(cycle, anchorPoint, threshold);
-      if (seen.has(key)) return;
+      if (seen.has(key)) {
+        duplicateKeyCollisions += 1;
+        return;
+      }
       seen.add(key);
       entries.push({ cycle, point: anchorPoint, ...(threshold === undefined ? {} : { threshold }), position });
     },
     entries: () => entries,
+    metrics: () => ({ geometryEntriesEmitted: entries.length, duplicateKeyChecks, duplicateKeyCollisions }),
   };
 }
 
@@ -179,7 +189,8 @@ function interpolateSegment(segment: Segment, fraction: number): Point {
   return point(segment.start.x + (segment.end.x - segment.start.x) * clamped, segment.start.y + (segment.end.y - segment.start.y) * clamped);
 }
 
-export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeometryMap {
+export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readonly [K in keyof GeometryExtractionMetrics]: GeometryExtractionMetrics[K] }): ImmutableLocalGeometryMap {
+  const startedAt = globalThis.performance?.now() ?? Date.now();
   const { svg, renderIndex, waveJson } = rendered;
   const lanes = groupById<SVGGElement>(svg, `lanes_${renderIndex}`);
   const draw = groupById<SVGGElement>(svg, `wavelane_draw_0_${renderIndex}`);
@@ -216,6 +227,10 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   if (!Number.isInteger(phaseHalfBricks)) throw new WaveDromAdapterError("UNSUPPORTED_GEOMETRY_PHASE", "Geometry extraction requires half-cycle-aligned WaveDrom phase.");
   const clippedHalfBricks = Math.max(0, phaseHalfBricks);
   const uses = Array.from(draw.querySelectorAll<SVGUseElement>("use"));
+  if (metrics) {
+    metrics.usesVisited += uses.length;
+    metrics.matrixReads += 2;
+  }
   const usesByClockSlot = waveJson.clock?.expanded
     ? uses.reduce((index, use, visibleIndex) => {
       const slot = Math.floor((visibleIndex + clippedHalfBricks) / 2);
@@ -285,7 +300,7 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     const use = uses[visibleIndex];
     let valueStart = boundary;
     if (slot > 0 && use) {
-      const segments = transitionSegments(svg, hrefOf(use), transitionCache);
+      const segments = transitionSegments(svg, hrefOf(use), transitionCache, metrics);
       const interval = segments.length === 0 ? undefined : { start: Math.min(...segments.map((item) => Math.min(item.start.x, item.end.x))), end: Math.max(...segments.map((item) => Math.max(item.start.x, item.end.x))) };
       const segment = segments[0];
       if (interval && segment) {
@@ -310,6 +325,14 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     }
     add(cycle, "value-start", valueStart);
     previousToken = token;
+  }
+  if (metrics) {
+    const accumulatorMetrics = accumulator.metrics();
+    metrics.geometryEntriesEmitted = accumulatorMetrics.geometryEntriesEmitted;
+    metrics.duplicateKeyChecks = accumulatorMetrics.duplicateKeyChecks;
+    metrics.duplicateKeyCollisions = accumulatorMetrics.duplicateKeyCollisions;
+    metrics.signalId = rendered.signalId;
+    metrics.durationMs = (globalThis.performance?.now() ?? Date.now()) - startedAt;
   }
   return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries());
 }

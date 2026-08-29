@@ -633,7 +633,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
       const metrics = viewMetricsOwner.snapshot();
       rendererHost.dataset.viewMetrics = JSON.stringify(metrics);
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnostics(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter: adapter.metrics() });
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnostics(), rulerBuilds, edgeCounterResolvePasses, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter: adapter.metrics(), geometryExtraction: adapter.geometryMetrics() });
     };
     let currentZoom = 1;
     function syncPresentationScale() {

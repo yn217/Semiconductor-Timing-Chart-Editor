@@ -7,6 +7,7 @@ import {
   WAVEDROM_VERSION,
   WaveDromAdapterError,
   type CanonicalSignalSource,
+  type GeometryExtractionMetrics,
   type RenderedWave,
   type WaveDromAdapter,
   type WaveDromAdapterMetrics,
@@ -49,6 +50,15 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   #disposals = 0;
   #geometryBuilds = 0;
   #geometryMatrixReads = 0;
+  #lastGeometryMetrics: GeometryExtractionMetrics | undefined;
+  #geometryDurationMs = 0;
+  #geometryUsesVisited = 0;
+  #geometryEntriesEmitted = 0;
+  #duplicateKeyChecks = 0;
+  #duplicateKeyCollisions = 0;
+  #transitionBrickLookups = 0;
+  #skinPathParses = 0;
+  #matrixReads = 0;
 
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal {
     return toWaveJson(source);
@@ -98,10 +108,24 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
   }
 
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap {
-    const geometry = extractLocalGeometry(rendered);
+    const extractionMetrics = { signalId: rendered.signalId, usesVisited: 0, geometryEntriesEmitted: 0, duplicateKeyChecks: 0, duplicateKeyCollisions: 0, transitionBrickLookups: 0, skinPathParses: 0, matrixReads: 0, durationMs: 0 };
+    const geometry = extractLocalGeometry(rendered, extractionMetrics);
     this.#geometryBuilds += 1;
     this.#geometryMatrixReads += 2;
+    this.#lastGeometryMetrics = Object.freeze({ ...extractionMetrics });
+    this.#geometryDurationMs += extractionMetrics.durationMs;
+    this.#geometryUsesVisited += extractionMetrics.usesVisited;
+    this.#geometryEntriesEmitted += extractionMetrics.geometryEntriesEmitted;
+    this.#duplicateKeyChecks += extractionMetrics.duplicateKeyChecks;
+    this.#duplicateKeyCollisions += extractionMetrics.duplicateKeyCollisions;
+    this.#transitionBrickLookups += extractionMetrics.transitionBrickLookups;
+    this.#skinPathParses += extractionMetrics.skinPathParses;
+    this.#matrixReads += extractionMetrics.matrixReads;
     return geometry;
+  }
+
+  geometryMetrics() {
+    return Object.freeze({ last: this.#lastGeometryMetrics, totalDurationMs: this.#geometryDurationMs, totalUsesVisited: this.#geometryUsesVisited, totalGeometryEntriesEmitted: this.#geometryEntriesEmitted, totalDuplicateKeyChecks: this.#duplicateKeyChecks, totalDuplicateKeyCollisions: this.#duplicateKeyCollisions, totalTransitionBrickLookups: this.#transitionBrickLookups, totalSkinPathParses: this.#skinPathParses, totalMatrixReads: this.#matrixReads });
   }
 
   dispose(signalId: SignalId): void {

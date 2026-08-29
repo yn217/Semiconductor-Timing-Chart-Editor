@@ -14,6 +14,7 @@ describe("Local Geometry entry accumulation", () => {
     }
 
     expect(accumulator.entries()).toHaveLength(count);
+    expect(accumulator.metrics()).toEqual({ geometryEntriesEmitted: count, duplicateKeyChecks: count * 2, duplicateKeyCollisions: count });
     expect(accumulator.entries()[0]).toEqual({ cycle: 0, point: "cycle-start", position: { x: 0, y: 1 } });
     expect(accumulator.entries()[count - 1]).toEqual({ cycle: count - 1, point: "cycle-start", position: { x: count - 1, y: 1 } });
   });
@@ -24,6 +25,8 @@ describe("Local Geometry entry accumulation", () => {
     accumulator.add(3, "transition-center", { x: 30, y: 40 }, 0.3);
     accumulator.add(3, "transition-center", { x: 50, y: 60 }, 0.7);
     accumulator.add(3, "transition-center", { x: 99, y: 99 }, 0.3);
+
+    expect(accumulator.metrics()).toEqual({ geometryEntriesEmitted: 3, duplicateKeyChecks: 4, duplicateKeyCollisions: 1 });
 
     expect(accumulator.entries()).toEqual([
       { cycle: 3, point: "transition-center", position: { x: 10, y: 20 } },

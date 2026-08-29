@@ -41,6 +41,18 @@ export interface RenderedWave {
   readonly waveJson: WaveJsonSignal;
 }
 
+export interface GeometryExtractionMetrics {
+  readonly signalId: SignalId;
+  readonly usesVisited: number;
+  readonly geometryEntriesEmitted: number;
+  readonly duplicateKeyChecks: number;
+  readonly duplicateKeyCollisions: number;
+  readonly transitionBrickLookups: number;
+  readonly skinPathParses: number;
+  readonly matrixReads: number;
+  readonly durationMs: number;
+}
+
 export interface WaveDromAdapterMetrics {
   readonly renderCalls: number;
   readonly renderCallsBySignal: Readonly<Record<string, number>>;
@@ -58,6 +70,17 @@ export interface WaveDromAdapter {
   toWaveJson(source: CanonicalSignalSource): WaveJsonSignal;
   renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element): Promise<RenderedWave>;
   extractLocalGeometry(rendered: RenderedWave): LocalGeometryMap;
+  geometryMetrics(): Readonly<{
+    readonly last: GeometryExtractionMetrics | undefined;
+    readonly totalDurationMs: number;
+    readonly totalUsesVisited: number;
+    readonly totalGeometryEntriesEmitted: number;
+    readonly totalDuplicateKeyChecks: number;
+    readonly totalDuplicateKeyCollisions: number;
+    readonly totalTransitionBrickLookups: number;
+    readonly totalSkinPathParses: number;
+    readonly totalMatrixReads: number;
+  }>;
   dispose(signalId: SignalId): void;
   metrics(): WaveDromAdapterMetrics;
 }
