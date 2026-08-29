@@ -2,6 +2,7 @@ import type { SignalValueChange, Timeline, TimeGroup } from "@timing-chart-v2/sc
 
 export interface DisplayTimeMapping {
   readonly displayCycleCount: number;
+  readonly isIdentity: boolean;
   readonly sourceToDisplay: readonly (number | undefined)[];
   readonly displayToSource: readonly number[];
   readonly labelFor: (displayCycle: number) => number;
@@ -9,7 +10,7 @@ export interface DisplayTimeMapping {
 
 const identityMapping = (cycleCount: number): DisplayTimeMapping => {
   const displayToSource = Array.from({ length: cycleCount }, (_, index) => index);
-  return { displayCycleCount: cycleCount, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => displayCycle };
+  return { displayCycleCount: cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => displayCycle };
 };
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
@@ -43,6 +44,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
   const labelOverrides = new Map(timeline.labelAnchors.map((anchor) => [anchor.source, anchor.display]));
   return {
     displayCycleCount: display,
+    isIdentity: false,
     sourceToDisplay,
     displayToSource,
     // The exclusive terminal boundary is not a rendered cycle slot and is
@@ -104,6 +106,7 @@ function displayTimeMappingKey(timeline: Pick<Timeline, "cycleCount" | "labelAnc
 }
 
 export function remapValueChangesToDisplay(values: readonly SignalValueChange[], mapping: DisplayTimeMapping): readonly SignalValueChange[] {
+  if (mapping.isIdentity) return values;
   const result: SignalValueChange[] = [];
   let lastValue: SignalValueChange["value"] | undefined;
   let cursor = 0;

@@ -83,7 +83,8 @@ describe("remapValueChangesToDisplay", () => {
   it("passes value changes through unchanged for the identity mapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     const values = [{ start: 0, value: 0 }, { start: 3, value: 1 }, { start: 7, value: 0 }];
-    expect(remapValueChangesToDisplay(values, mapping)).toEqual(values);
+    expect(mapping.isIdentity).toBe(true);
+    expect(remapValueChangesToDisplay(values, mapping)).toBe(values);
   });
 
   it("resamples value changes so a change hidden inside a collapsed range appears at the display boundary", () => {
