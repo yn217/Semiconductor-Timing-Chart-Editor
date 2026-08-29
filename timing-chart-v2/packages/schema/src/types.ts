@@ -284,6 +284,10 @@ export interface DocumentProblem {
   readonly path: string;
   readonly message: string;
   readonly entityId?: string;
+  readonly offset?: number;
+  readonly line?: number;
+  readonly column?: number;
+  readonly detail?: string;
 }
 
 export interface MigrationWarning { readonly code: string; readonly path: string; readonly message: string }

@@ -8,7 +8,7 @@ import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/histo
 import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { parseDocument, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import { quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
@@ -2906,7 +2906,12 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
   const selected = selectedSignal ?? selectedGroup ?? selectedAnnotation ?? selectedTransaction;
   useEffect(() => { setDraft(scope === "selected" ? JSON.stringify(selected ?? {}, null, 2) : text); }, [scope, selected, text]);
   const parseDraft = (): unknown => {
-    try { return JSON.parse(draft); } catch { setStatus("Invalid JSON"); return undefined; }
+    try { return JSON.parse(draft); } catch (error) {
+      const diagnostic = scanJsonSyntax(draft);
+      const detail = error instanceof Error ? error.message : "Invalid JSON.";
+      setStatus(diagnostic ? `Invalid JSON · line ${diagnostic.line}, column ${diagnostic.column} · ${diagnostic.message}` : `Invalid JSON · ${detail}`);
+      return undefined;
+    }
   };
   const format = () => {
     const value = parseDraft();

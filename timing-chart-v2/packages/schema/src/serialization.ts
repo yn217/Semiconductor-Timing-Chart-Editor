@@ -1,5 +1,6 @@
 import { migrateV1 } from "./migration.js";
 import { validateCanonicalDocument } from "./validation.js";
+import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult } from "./types.js";
 
 function cloneUnknown(value: unknown): unknown {
@@ -20,13 +21,9 @@ function sortObjectKeys(value: unknown): unknown {
 
 function syntaxProblem(error: unknown, source: string): DocumentProblem {
   const message = error instanceof Error ? error.message : "Invalid JSON.";
-  const match = /position\s+(\d+)/i.exec(message);
-  if (!match?.[1]) return { code: "JSON_SYNTAX", path: "$", message };
-  const position = Number(match[1]);
-  const prefix = source.slice(0, position);
-  const line = prefix.split("\n").length;
-  const column = position - prefix.lastIndexOf("\n");
-  return { code: "JSON_SYNTAX", path: `$@${line}:${column}`, message };
+  const diagnostic = scanJsonSyntax(source);
+  if (!diagnostic) return { code: "JSON_SYNTAX", path: "$", message, detail: message };
+  return { code: diagnostic.code, path: `$@${diagnostic.line}:${diagnostic.column}`, message: diagnostic.message, detail: message, offset: diagnostic.offset, line: diagnostic.line, column: diagnostic.column };
 }
 
 export function migrateDocument(input: unknown): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {
