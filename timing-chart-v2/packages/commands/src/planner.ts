@@ -492,16 +492,18 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "signal.delete": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       if (index < 0) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
-      if (document.timeline.referenceClock === command.signalId) return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalId", "Reference clock cannot be deleted.");
       if (dependentAnnotations(document, command.signalId).length > 0) return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalId", "Signal has annotation dependents.");
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", "Signal does not exist.");
       const groups = document.signalGroups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== command.signalId) }));
       const linkedTransactions = document.transactions.filter((transaction) => transaction.linkedSignals?.includes(command.signalId));
       const transactions = document.transactions.map((transaction) => transaction.linkedSignals?.includes(command.signalId) ? { ...transaction, linkedSignals: transaction.linkedSignals.filter((id) => id !== command.signalId) } : transaction);
-      const changeSet: ChangeSet = { removedSignals: [command.signalId], rowOrder: [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true };
-      const inverseChangeSet: ChangeSet = { addedSignals: [command.signalId], rowOrder: [command.signalId], waveSemantics: signal.type === "commentRow" ? [] : [command.signalId], geometryLocal: signal.type === "commentRow" ? [] : [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true };
-      return { ok: true, document: { ...document, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions }, changeSet, inverseChangeSet };
+      const referenceDeleted = document.timeline.referenceClock === command.signalId;
+      const nextTimeline = referenceDeleted ? (() => { const { referenceClock: _removed, ...timeline } = document.timeline; return timeline; })() : document.timeline;
+      const nextDocument = { ...document, timeline: nextTimeline, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions };
+      const changeSet: ChangeSet = { removedSignals: [command.signalId], rowOrder: [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
+      const inverseChangeSet: ChangeSet = { addedSignals: [command.signalId], rowOrder: [command.signalId], waveSemantics: signal.type === "commentRow" ? [] : [command.signalId], geometryLocal: signal.type === "commentRow" ? [] : [command.signalId], transactionSemantics: linkedTransactions.map((transaction) => transaction.id), minimapOverview: true, ...(referenceDeleted ? { timelineSemantics: true, geometryScreenX: true } : {}) };
+      return { ok: true, document: nextDocument, changeSet, inverseChangeSet };
     }
     case "signal.rename": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
@@ -518,7 +520,6 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
-      if (!command.visible && document.timeline.referenceClock === signal.id) return fail("invalid", "HIDDEN_REFERENCE_CLOCK", "$.signalId", "Reference clock cannot be hidden.");
       const visible = signal.display.visible !== false;
       if (visible === command.visible) return fail("no-op", "NO_OP", "$", "Signal visibility is unchanged.");
       const nextDocument = replaceSignal(document, index, { ...signal, display: { ...signal.display, visible: command.visible } });
@@ -964,6 +965,19 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "timeline.setReferenceClock": {
+      const referenceClock = command.referenceClock;
+      if (referenceClock !== undefined) {
+        const signal = document.signals.find((item) => item.id === referenceClock);
+        if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.referenceClock", `Reference clock '${referenceClock}' does not exist.`);
+        if (signal.type !== "clock") return fail("invalid", "INVALID_REFERENCE_CLOCK", "$.referenceClock", "Reference clock must target a clock signal.");
+      }
+      if (document.timeline.referenceClock === referenceClock) return fail("no-op", "NO_OP", "$", "Reference clock is unchanged.");
+      const nextTimeline = referenceClock === undefined ? (() => { const { referenceClock: _removed, ...timeline } = document.timeline; return timeline; })() : { ...document.timeline, referenceClock };
+      const next = { ...document, timeline: nextTimeline };
+      const changeSet = timelineChangeSet(document, next);
+      return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }
     case "timeline.insert": {
       if (!Number.isInteger(command.at) || command.at < 0 || command.at > document.timeline.cycleCount || !Number.isInteger(command.count) || command.count < 1) return fail("invalid", "INVALID_TIMELINE_INSERT", "$", "Insert requires an integer boundary and positive integer count.");

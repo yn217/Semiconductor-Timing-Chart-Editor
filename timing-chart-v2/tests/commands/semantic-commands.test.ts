@@ -125,6 +125,47 @@ describe("pure Semantic Command planning", () => {
     expect(plan.ok).toBe(true);
     if (plan.ok) expect(plan.document.transactions).toEqual([{ id: "txn_link", name: "Linked", start: 1, end: 3, linkedSignals: [] }]);
   });
+
+  it("allows hiding the reference Clock without changing its semantic identity", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const result = session.execute({ id: commandId("cmd_hide_reference"), type: "signal.setVisibility", signalId: "sig_clk" as SignalId, visible: false });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe("sig_clk");
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_clk")?.display.visible).toBe(false);
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_clk")?.display.visible).not.toBe(false);
+  });
+
+  it("deletes the current reference Clock into clockless mode as one atomic operation", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const result = session.execute({ id: commandId("cmd_delete_reference"), type: "signal.delete", signalId: "sig_clk" as SignalId });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.changeSet).toMatchObject({ timelineSemantics: true, geometryScreenX: true, removedSignals: ["sig_clk"] });
+    expect(session.getSnapshot().document.timeline).not.toHaveProperty("referenceClock");
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe("sig_clk");
+    expect(session.getSnapshot().document.signals.some((signal) => signal.id === "sig_clk")).toBe(true);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBeUndefined();
+    expect(session.getSnapshot().document.signals.some((signal) => signal.id === "sig_clk")).toBe(false);
+  });
+
+  it("switches or clears the optional reference Clock through a semantic command", () => {
+    const source = canonicalFixture();
+    const second = { ...source.signals[0]!, id: "sig_clk_b" as SignalId, name: "CLK_B", source: { ...source.signals[0]!.source, signalName: "CLK_B" }, display: { name: "CLK_B" } };
+    const document = { ...source, signals: [...source.signals, second], signalGroups: [{ ...source.signalGroups[0]!, rows: [...source.signalGroups[0]!.rows, second.id] }] };
+    const session = new CommandHistorySession(document);
+    expect(session.execute({ id: commandId("cmd_switch_reference"), type: "timeline.setReferenceClock", referenceClock: second.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe(second.id);
+    expect(session.execute({ id: commandId("cmd_clear_reference"), type: "timeline.setReferenceClock" }).ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBeUndefined();
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.referenceClock).toBe(second.id);
+  });
   it("plans one-signal edits without mutating the source", () => {
     const source = canonicalFixture();
     const before = JSON.stringify(source);

@@ -1,11 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, SemanticSnapCandidateService } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService } from "@timing-chart-v2/geometry";
 import type { SignalId, TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const signalId = "sig_snap" as SignalId;
 
 describe("Screen Geometry and snapping", () => {
+  it("resolves a deterministic actual-signal axis owner without a Clock", () => {
+    const document = { ...canonicalFixture(), timeline: { ...canonicalFixture().timeline, referenceClock: undefined }, signals: canonicalFixture().signals.filter((signal) => signal.type !== "clock") };
+    const signal = document.signals[0]!;
+    const map = new ImmutableLocalGeometryMap(signal.id, [{ cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } }]);
+    expect(resolveTimeAxisGeometry(document, new Map([[signal.id, map]]))).toMatchObject({ mode: "clockless", ownerSignalId: signal.id, geometry: map });
+  });
   it("applies scroll and zoom only at the Screen Geometry boundary", () => {
     const projector = new DefaultScreenGeometryProjector();
     const point = projector.toScreen({ signalId, anchor: { signalId, cycle: 2, point: "rising-edge" }, point: { x: 120, y: 35 } }, { scrollX: 20, scrollY: 5, zoom: 1.5 });

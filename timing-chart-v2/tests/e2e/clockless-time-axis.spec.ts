@@ -1,0 +1,94 @@
+import { expect, test, type Page } from "@playwright/test";
+
+const base = (id: string, title: string, signals: readonly unknown[], rows: readonly string[], referenceClock?: string) => ({
+  formatVersion: 2,
+  document: { id, title, header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "V2", text: "" } },
+  timeline: { start: 0, end: 8, cycleCount: 8, timeBase: "cycle", ...(referenceClock === undefined ? {} : { referenceClock, edge: "rising" }), ...(referenceClock === undefined ? { edge: "rising" } : {}), labelAnchors: [] },
+  signalGroups: [{ id: "grp_main", name: "Main", rows }],
+  signals,
+  bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+  legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
+  layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
+  checkSettings: {},
+});
+
+const data = { id: "sig_data", name: "DATA", type: "binary", role: "internal", source: { instancePath: [], signalName: "data" }, display: { name: "DATA" }, values: [{ start: 0, value: 0 }, { start: 4, value: 1 }] };
+const clock = (id: string, name: string) => ({ id, name, type: "clock", role: "input", source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "rising", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
+
+async function openJson(page: Page, document: unknown): Promise<void> {
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "fixture.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+}
+
+test("renders a clockless axis and preserves it through Save/Open and SVG export", async ({ page }) => {
+  await page.goto("/");
+  const document = base("clockless", "Clockless Timing", [data], [data.id]);
+  await openJson(page, document);
+  const host = page.getByTestId("cycle-surface");
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
+  await expect(page.locator(".column-headings")).toContainText("Axis: Time");
+  await expect(page.locator(".column-headings")).not.toContainText("Reference: clk");
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle]")) .toHaveCount(9);
+  await page.getByTestId("home-grid-toggle").check();
+  await expect(page.locator("[data-role='geometry-grid-line']").first()).toBeVisible();
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_data'] svg")).toHaveCount(1);
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_clk']")).toHaveCount(0);
+
+  const save = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='8']")).toHaveCount(1);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByLabel("Export format").selectOption("svg");
+  const exportDownload = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export SVG", exact: true }).click();
+  expect(await (await exportDownload).path()).toBeTruthy();
+});
+
+test("hides the reference Clock without losing the axis, then deletes and restores it exactly", async ({ page }) => {
+  await page.goto("/");
+  const clkA = clock("sig_clk_a", "CLK_A");
+  const document = base("clocked", "Clocked Timing", [clkA, data], [clkA.id, data.id], clkA.id);
+  await openJson(page, document);
+  const host = page.getByTestId("cycle-surface");
+  const ruler = page.getByTestId("cycle-ruler");
+  const initialCount = await ruler.locator("[data-cycle]").count();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_clk_a']").click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByTestId("signal-visibility").click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_clk_a']")).toHaveCount(0);
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · CLK_A");
+  await expect(ruler.locator("[data-cycle]")).toHaveCount(initialCount);
+  await editor.getByTestId("signal-visibility").click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_clk_a']")).toHaveCount(1);
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_clk_a']").click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Delete", exact: true }).click();
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_clk_a']")).toHaveCount(0);
+  await expect(ruler.locator("[data-cycle]")) .toHaveCount(initialCount);
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_clk_a']")).toHaveCount(1);
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · CLK_A");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
+});
+
+test("chooses an explicit reference Clock without fabricating one", async ({ page }) => {
+  await page.goto("/");
+  const clkA = clock("sig_clk_a", "CLK_A");
+  const clkB = clock("sig_clk_b", "CLK_B");
+  await openJson(page, base("select-reference", "Select Reference", [clkA, clkB, data], [clkA.id, clkB.id, data.id]));
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_clk_b']").click();
+  await page.getByTestId("set-reference-clock").click();
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · CLK_B");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});

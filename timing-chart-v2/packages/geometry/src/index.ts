@@ -14,6 +14,34 @@ export interface LocalGeometryMap {
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined;
 }
 
+/**
+ * The single derived owner used by every time-axis consumer.  A clock is an
+ * optional semantic reference, not a prerequisite for a usable horizontal
+ * axis.  In clockless mode the owner is selected from an actually rendered
+ * timing signal's Local Geometry; no canonical or visible synthetic signal is
+ * introduced.
+ */
+export interface TimeAxisGeometry {
+  readonly mode: "reference-clock" | "clockless";
+  readonly ownerSignalId?: SignalId;
+  readonly geometry?: LocalGeometryMap;
+}
+
+export function resolveTimeAxisGeometry(document: Pick<CanonicalDocument, "signals" | "timeline">, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>): TimeAxisGeometry {
+  const referenceClock = document.timeline.referenceClock;
+  if (referenceClock !== undefined) {
+    const referenceGeometry = geometryMaps.get(referenceClock);
+    if (referenceGeometry) return Object.freeze({ mode: "reference-clock", ownerSignalId: referenceClock, geometry: referenceGeometry });
+  }
+  const timingSignals = document.signals.filter((signal) => signal.type !== "commentRow");
+  const owner = timingSignals.find((signal) => signal.display.visible !== false && geometryMaps.has(signal.id))
+    ?? timingSignals.find((signal) => geometryMaps.has(signal.id));
+  const geometry = owner === undefined ? undefined : geometryMaps.get(owner.id);
+  return geometry === undefined || owner === undefined
+    ? Object.freeze({ mode: "clockless" })
+    : Object.freeze({ mode: "clockless", ownerSignalId: owner.id, geometry });
+}
+
 export interface LocalGeometryEntry {
   readonly cycle: number;
   readonly point: AnchorPoint;
@@ -121,6 +149,8 @@ export interface SemanticSnapGeometryInput {
   readonly document: Pick<CanonicalDocument, "signals" | "timeline" | "bookmarks" | "annotations">;
   readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
   readonly rowY: ReadonlyMap<SignalId, number>;
+  /** Derived TimeAxis owner used for anchors without an explicit signal. */
+  readonly axisOwnerSignalId?: SignalId;
   /** Number of cycles in the rendered geometry (may be smaller than source time after a fold). */
   readonly renderedCycleCount?: number;
   /** Map a rendered/display cycle to its canonical source cycle. */
@@ -140,7 +170,7 @@ export class SemanticSnapCandidateService {
     const sourceCycleForRenderedCycle = input.sourceCycleForRenderedCycle ?? ((cycle: number) => cycle);
     const renderedCycleForSourceCycle = input.renderedCycleForSourceCycle ?? ((cycle: number) => cycle);
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
-      const signalId = anchor.signalId ?? input.document.timeline.referenceClock;
+      const signalId = anchor.signalId ?? input.axisOwnerSignalId ?? input.document.timeline.referenceClock;
       if (!signalId) return undefined;
       if (!input.rowY.has(signalId)) return undefined;
       const renderedCycle = anchor.cycle === input.document.timeline.cycleCount ? renderedCycleCount : renderedCycleForSourceCycle(anchor.cycle);

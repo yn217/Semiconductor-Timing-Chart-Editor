@@ -3,7 +3,7 @@ import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
-import { DefaultScreenGeometryProjector, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
@@ -439,8 +439,8 @@ export function MinimalCycleView() {
     const adapter = new ProductionWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
-    let referenceGeometry: LocalGeometryMap | undefined;
-    let referenceSvg: SVGSVGElement | undefined;
+    let timeAxis: TimeAxisGeometry = { mode: "clockless" };
+    const geometrySvgs = new Map<SignalId, SVGSVGElement>();
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
     const provider: WaveformSurfaceProvider = {
       async mountWaveBatch(requests) {
@@ -470,17 +470,11 @@ export function MinimalCycleView() {
           try {
             const geometry = adapter.extractLocalGeometry(item.rendered);
             geometryMaps.set(item.request.signalId, geometry);
-            if (item.request.signalId === document.timeline.referenceClock) {
-              referenceGeometry = geometry;
-              referenceSvg = item.rendered.svg as SVGSVGElement;
-            }
+            geometrySvgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
             return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
           } catch (error: unknown) {
             geometryMaps.delete(item.request.signalId);
-            if (item.request.signalId === document.timeline.referenceClock) {
-              referenceGeometry = undefined;
-              referenceSvg = undefined;
-            }
+            geometrySvgs.delete(item.request.signalId);
             return { signalId: item.request.signalId, error };
           }
         });
@@ -493,10 +487,7 @@ export function MinimalCycleView() {
       disposeWave(id) {
         adapter.dispose(id);
         geometryMaps.delete(id);
-        if (id === session.getSnapshot().document.timeline.referenceClock) {
-          referenceGeometry = undefined;
-          referenceSvg = undefined;
-        }
+        geometrySvgs.delete(id);
       },
     };
     const renderer = new StableTimingChartRenderer(provider);
@@ -529,14 +520,16 @@ export function MinimalCycleView() {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
       const metrics = viewMetricsOwner.snapshot();
       const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
-      screenGeometryScale = buildRuler(rulerElement, referenceGeometry, document, document.timeline.referenceClock, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(referenceSvg, metrics.zoom));
+      timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
+      screenGeometryScale = buildRuler(rulerElement, timeAxis.geometry, document, timeAxis.ownerSignalId, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom), timeAxis.mode);
       rulerInitialized = true;
       syncPresentationScale();
     };
     const refreshGrid = (document: CanonicalDocument) => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
       const metrics = viewMetricsOwner.snapshot();
-      renderGeometryGrid(gridElement, referenceGeometry, document, document.timeline.referenceClock, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale);
+      timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
+      renderGeometryGrid(gridElement, timeAxis.geometry, document, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode);
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -696,13 +689,13 @@ export function MinimalCycleView() {
     };
     snapTransactionCycle.current = (clientX) => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-      const referenceId = session.getSnapshot().document.timeline.referenceClock;
-      const referenceRow = referenceId ? projection.rowLayout.find((row) => row.rowId === referenceId) : undefined;
-      if (!waveLayer || !referenceRow) return undefined;
+      const axisOwner = timeAxis.ownerSignalId;
+      const axisRow = projection.rowLayout.find((row) => row.kind === "timing");
+      if (!waveLayer || !axisOwner || !axisRow) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
       if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
       const localPointer = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });
-       const snap = currentSnapIndex().nearest({ x: localPointer.x, y: referenceRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+       const snap = currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
       publishState();
       return snap?.anchor.cycle;
     };
@@ -798,8 +791,8 @@ export function MinimalCycleView() {
       setRangeSelectionActive(false);
       geometryMaps.clear();
       snapIndex = undefined;
-      referenceGeometry = undefined;
-      referenceSvg = undefined;
+      timeAxis = { mode: "clockless" };
+      geometrySvgs.clear();
       rulerInitialized = false;
       window = viewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
@@ -2127,7 +2120,7 @@ export function MinimalCycleView() {
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
          <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
-        <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." />{treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => setTreeFilter("")}>×</button>}</label><span className="left-column-actions"><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button><button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button></span>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{"Time Scale: Cycle    Reference: clk"}</span></div>
+        <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." />{treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => setTreeFilter("")}>×</button>}</label><span className="left-column-actions"><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}>＋</button><button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}>•••</button></span>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
@@ -2186,7 +2179,7 @@ export function MinimalCycleView() {
       <span data-testid="signal-count-status">Signals: {snapshot.document.signals.length}</span><span data-testid="annotation-count-status">Annotations: {snapshot.document.annotations.length}</span><span data-testid="range-status">{visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
       <span className={visualReference ? "status-detail-hidden" : undefined} data-testid="revision-status">Canonical revision {snapshot.revision}</span>
       <span className={visualReference ? "status-detail-hidden" : undefined} data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
-      <span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+      <span data-testid="time-axis-status">Time Axis: {snapshot.document.timeline.referenceClock ? `Clock · ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}</span><span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
     </footer>
   </main>;
 }
@@ -2667,6 +2660,7 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal 
       <label>Type<select aria-label="Inspector signal type" value="clock" disabled><option value="clock">Clock</option></select></label>
       <label>Role<select aria-label="Inspector signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
       <label className="checkline">Show in waveform<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} /></label>
+      <button type="button" data-testid="set-reference-clock" onClick={() => onCommand({ id: nextCommandId("set_reference_clock"), type: "timeline.setReferenceClock", referenceClock: signal.id })} disabled={document.timeline.referenceClock === signal.id}>Use as Reference Clock</button>
       <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
       <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
       <button type="submit" data-testid="apply-inspector-clock-properties">Apply Properties</button>
@@ -2860,16 +2854,17 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number, scaleOverride?: number): void {
+function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): void {
   element.dataset.gridEnabled = String(visible);
+  element.dataset.axisMode = axisMode;
   element.style.height = `${height}px`;
-  if (!geometry || !referenceSignalId) return;
+  if (!geometry || !axisOwnerSignalId) return;
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
-  const terminal = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
+  const terminal = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
   const scale = scaleOverride ?? (screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24));
   const lines: HTMLElement[] = [];
   for (let displayCycle = 0; displayCycle <= mapping.displayCycleCount; displayCycle += 1) {
-    const anchor = geometry.find({ signalId: referenceSignalId, cycle: displayCycle, point: "cycle-start" });
+    const anchor = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" });
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");
     line.dataset.role = "geometry-grid-line";
@@ -3370,7 +3365,8 @@ const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
 function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups), xScale = 1): Point | undefined {
   if (!anchor) return undefined;
-  const signalId = anchor.signalId ?? document.timeline.referenceClock;
+  const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
+  const signalId = anchor.signalId ?? axisOwnerSignalId;
   if (!signalId) return undefined;
   const renderedCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay[anchor.cycle];
   if (renderedCycle === undefined) return undefined;
@@ -3379,9 +3375,8 @@ function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: Canoni
   const row = anchor.signalId ? projection.rowLayout.find((item) => item.rowId === anchor.signalId) : undefined;
   if (anchor.signalId && !row) return undefined;
   const rowY = row?.y ?? 0;
-  const referenceClock = document.timeline.referenceClock;
-  const sharedBoundary = anchor.point === "cycle-start" && referenceClock !== undefined
-    ? maps.get(referenceClock)?.find({ ...anchor, signalId: referenceClock, cycle: renderedCycle })?.point
+  const sharedBoundary = anchor.point === "cycle-start" && axisOwnerSignalId !== undefined
+    ? maps.get(axisOwnerSignalId)?.find({ ...anchor, signalId: axisOwnerSignalId, cycle: renderedCycle })?.point
     : undefined;
   return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }
@@ -3468,19 +3463,21 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
 
 function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
-  const referenceMap = document.timeline.referenceClock === undefined ? undefined : maps.get(document.timeline.referenceClock);
+  const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
+  const referenceMap = axisOwnerSignalId === undefined ? undefined : maps.get(axisOwnerSignalId);
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
     signalId: map.signalId,
     find: (anchor: SemanticAnchor) => {
       const local = map.find(anchor);
       if (!local) return undefined;
-      const sharedBoundary = anchor.point === "cycle-start" ? referenceMap?.find({ ...anchor, ...(document.timeline.referenceClock === undefined ? {} : { signalId: document.timeline.referenceClock }) })?.point : undefined;
+      const sharedBoundary = anchor.point === "cycle-start" ? referenceMap?.find({ ...anchor, ...(axisOwnerSignalId === undefined ? {} : { signalId: axisOwnerSignalId }) })?.point : undefined;
       return { ...local, point: { ...local.point, x: (sharedBoundary?.x ?? local.point.x) * xScale } };
     },
   }]));
   return service.build({
     document,
     geometryMaps: screenMaps,
+    ...(axisOwnerSignalId === undefined ? {} : { axisOwnerSignalId }),
     rowY: new Map(projection.rowLayout.flatMap((row) => document.signals.some((signal) => signal.id === row.rowId) ? [[row.rowId as SignalId, row.y] as const] : [])),
     renderedCycleCount: mapping.displayCycleCount,
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
@@ -3529,13 +3526,16 @@ function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: nu
   return Number.isFinite(scale) && scale > 0 ? scale : undefined;
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, referenceSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number, actualScreenScale?: number): number {
-  if (!geometry || !referenceSignalId) {
-    element.dataset.geometryError = "Reference-clock geometry unavailable";
-    element.parentElement?.setAttribute("data-geometry-error", "Reference-clock geometry unavailable");
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
+  element.dataset.axisMode = axisMode;
+  if (!geometry || !axisOwnerSignalId) {
+    element.dataset.geometryError = "Time-axis geometry unavailable";
+    element.parentElement?.setAttribute("data-geometry-error", "Time-axis geometry unavailable");
     element.replaceChildren();
     return 1;
   }
+  delete element.dataset.geometryError;
+  element.parentElement?.removeAttribute("data-geometry-error");
   const rangeBand = element.ownerDocument.createElement("div");
   rangeBand.dataset.role = "range-selection-ruler-band";
   rangeBand.dataset.testid = "range-preview";
@@ -3543,11 +3543,11 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   rangeBand.hidden = true;
   const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
-  const terminalPoint = geometry.find({ signalId: referenceSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
+  const terminalPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
   const scale = actualScreenScale ?? forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
   let finalX = 0;
   for (let display = 0; display <= mapping.displayCycleCount; display += 1) {
-    const point = geometry.find({ signalId: referenceSignalId, cycle: display, point: "cycle-start" })?.point;
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
     tick.dataset.cycle = String(mapping.labelFor(display));
@@ -3561,7 +3561,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   for (const bookmark of document.bookmarks) {
     const displayCycle = mapping.sourceToDisplay[bookmark.start];
     if (displayCycle === undefined) continue;
-    const point = geometry.find({ signalId: referenceSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
     if (!point) continue;
     const marker = element.ownerDocument.createElement("span");
     marker.className = "timeline-marker";
@@ -3574,7 +3574,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     const anchorDisplay = (group.end < document.timeline.cycleCount ? mapping.sourceToDisplay[group.end] : undefined)
       ?? (group.start > 0 ? mapping.sourceToDisplay[group.start - 1] : undefined);
     if (anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: referenceSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
+    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
     if (!point) continue;
     const gap = element.ownerDocument.createElement("span");
     gap.className = "timeline-gap";

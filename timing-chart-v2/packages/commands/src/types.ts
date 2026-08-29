@@ -83,6 +83,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>
   | Readonly<{ id: CommandId; type: "transaction.linkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "transaction.unlinkSignal"; transactionId: TransactionId; signalId: SignalId }>
+  | Readonly<{ id: CommandId; type: "timeline.setReferenceClock"; referenceClock?: SignalId }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
   | Readonly<{ id: CommandId; type: "annotation.create"; annotation: Annotation }>
   | Readonly<{ id: CommandId; type: "annotation.delete"; annotationId: AnnotationId }>

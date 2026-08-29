@@ -178,7 +178,6 @@ export function validateCanonicalDocument(input: unknown): readonly DocumentProb
     const reference = signals.get(document.timeline.referenceClock);
     if (!reference) problems.push(problem("MISSING_CROSS_REFERENCE", "$.timeline.referenceClock", `Reference clock '${document.timeline.referenceClock}' does not exist.`));
     else if (reference.type !== "clock") problems.push(problem("INVALID_REFERENCE_CLOCK", "$.timeline.referenceClock", "Reference clock must target a clock signal.", reference.id));
-    else if (reference.display.visible === false) problems.push(problem("HIDDEN_REFERENCE_CLOCK", "$.timeline.referenceClock", "Reference clock must remain visible so ruler geometry is defined.", reference.id));
   }
 
   document.signals.forEach((signal, index) => {
