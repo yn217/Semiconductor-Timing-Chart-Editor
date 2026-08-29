@@ -769,6 +769,7 @@ export function MinimalCycleView() {
     void renderer.whenIdle().then(() => {
       if (!rendererHost.isConnected) return;
       rebuildRuler(session.getSnapshot().document);
+      refreshRangeSelectionBand.current();
       refreshPlayhead.current();
       refreshGrid(session.getSnapshot().document);
       applyZoom(currentZoom);
@@ -827,7 +828,10 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        if (refreshRuler) rebuildRuler(result.snapshot.document);
+        if (refreshRuler) {
+          rebuildRuler(result.snapshot.document);
+          refreshRangeSelectionBand.current();
+        }
         refreshPlayhead.current();
         if (refreshGridNow) refreshGrid(result.snapshot.document);
         applyZoom(currentZoom);

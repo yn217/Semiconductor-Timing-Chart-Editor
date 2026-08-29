@@ -127,3 +127,19 @@ test("keeps range band edges aligned after horizontal scroll and 50/100/150/200%
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("keeps the selected range overlay aligned after Cycle Insert", async ({ page }) => {
+  await ready(page);
+  await (await tick(page, 3)).click();
+  await (await tick(page, 5)).click({ modifiers: ["Shift"] });
+  await assertBand(page, 3, 6);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByTestId("timeline-editor").getByRole("button", { name: "Insert before", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+
+  const start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
+  const end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
+  expect(end).toBeGreaterThan(start);
+  await assertBand(page, start, end);
+});
