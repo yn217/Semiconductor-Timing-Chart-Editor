@@ -126,8 +126,33 @@ function hrefOf(element: SVGUseElement): string {
   return href.slice(1);
 }
 
-function add(entries: LocalGeometryEntry[], cycle: number, anchorPoint: AnchorPoint, position: Point, threshold?: number): void {
-  if (!entries.some((entry) => entry.cycle === cycle && entry.point === anchorPoint && entry.threshold === threshold)) entries.push({ cycle, point: anchorPoint, ...(threshold === undefined ? {} : { threshold }), position });
+function geometryEntryKey(cycle: number, anchorPoint: AnchorPoint, threshold?: number): string {
+  return `${cycle}:${anchorPoint}:${threshold ?? ""}`;
+}
+
+export interface GeometryEntryAccumulator {
+  add(cycle: number, anchorPoint: AnchorPoint, position: Point, threshold?: number): void;
+  entries(): readonly LocalGeometryEntry[];
+}
+
+/**
+ * Collect geometry entries by their semantic identity.  A Set keeps duplicate
+ * detection independent of the number of anchors already collected while the
+ * array preserves the extractor's existing first-write ordering/position
+ * semantics.
+ */
+export function createGeometryEntryAccumulator(): GeometryEntryAccumulator {
+  const entries: LocalGeometryEntry[] = [];
+  const seen = new Set<string>();
+  return {
+    add: (cycle, anchorPoint, position, threshold) => {
+      const key = geometryEntryKey(cycle, anchorPoint, threshold);
+      if (seen.has(key)) return;
+      seen.add(key);
+      entries.push({ cycle, point: anchorPoint, ...(threshold === undefined ? {} : { threshold }), position });
+    },
+    entries: () => entries,
+  };
 }
 
 function interpolateSegment(segment: Segment, fraction: number): Point {
@@ -155,16 +180,17 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   if (gridLines.length < 2) throw new WaveDromAdapterError("MISSING_CYCLE_GRID", "WaveDrom SVG does not expose at least one complete cycle.");
 
   const boundaries = gridLines.map((line) => transformPoint(laneMatrix, point(line.x, (line.y1 + line.y2) / 2)));
-  const entries: LocalGeometryEntry[] = [];
+  const accumulator = createGeometryEntryAccumulator();
+  const add = accumulator.add;
   for (let cycle = 0; cycle < boundaries.length - 1; cycle += 1) {
     const start = boundaries[cycle];
     const end = boundaries[cycle + 1];
     if (!start || !end) continue;
-    add(entries, cycle, "cycle-start", start);
-    add(entries, cycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
-    add(entries, cycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
-    add(entries, cycle, "row-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
-    add(entries, cycle, "cycle-end", end);
+    add(cycle, "cycle-start", start);
+    add(cycle, "cycle-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(cycle, "value-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(cycle, "row-center", point((start.x + end.x) / 2, (start.y + end.y) / 2));
+    add(cycle, "cycle-end", end);
   }
   // The terminal timeline boundary (cycle == cycleCount, i.e. the half-open range's exclusive end)
   // has no per-cycle slot of its own - it's only ever the "cycle-end" of the last cycle. Store it as
@@ -172,7 +198,7 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   // or TimeGroup ending exactly at cycleCount) can resolve it directly instead of extrapolating.
   const terminalCycle = boundaries.length - 1;
   const terminalBoundary = boundaries[terminalCycle];
-  if (terminalBoundary) add(entries, terminalCycle, "cycle-start", terminalBoundary);
+  if (terminalBoundary) add(terminalCycle, "cycle-start", terminalBoundary);
 
   const phaseHalfBricks = (waveJson.phase ?? 0) * 2;
   if (!Number.isInteger(phaseHalfBricks)) throw new WaveDromAdapterError("UNSUPPORTED_GEOMETRY_PHASE", "Geometry extraction requires half-cycle-aligned WaveDrom phase.");
@@ -189,8 +215,8 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
     const href = hrefOf(use);
     const translated = useTranslation(use);
     const origin = transformPoint(drawMatrix, translated);
-    if (href === "pclk" || href === "Pclk") add(entries, cycle, "rising-edge", point(origin.x, rowY));
-    if (href === "nclk" || href === "Nclk") add(entries, cycle, "falling-edge", point(origin.x, rowY));
+    if (href === "pclk" || href === "Pclk") add(cycle, "rising-edge", point(origin.x, rowY));
+    if (href === "nclk" || href === "Nclk") add(cycle, "falling-edge", point(origin.x, rowY));
   }
 
   const period = waveJson.period ?? 1;
@@ -213,21 +239,21 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
         const start = transformPoint(drawMatrix, point(translated.x + interval.start, translated.y));
         const end = transformPoint(drawMatrix, point(translated.x + interval.end, translated.y));
         const center = point((start.x + end.x) / 2, rowY);
-        add(entries, cycle, "transition-start", point(start.x, rowY));
-        add(entries, cycle, "transition-center", center);
-        add(entries, cycle, "transition-end", point(end.x, rowY));
+        add(cycle, "transition-start", point(start.x, rowY));
+        add(cycle, "transition-center", center);
+        add(cycle, "transition-end", point(end.x, rowY));
         for (const threshold of [0.3, 0.7]) {
           const thresholdPoint = interpolateSegment(segment, threshold);
           const transformed = transformPoint(drawMatrix, point(translated.x + thresholdPoint.x, translated.y + thresholdPoint.y));
-          add(entries, cycle, "transition-center", transformed, threshold);
+          add(cycle, "transition-center", transformed, threshold);
         }
         valueStart = point(end.x, rowY);
         const previous = [...waveJson.wave.slice(0, slot)].reverse().find((item) => item !== "." && item !== "|");
-        if (previous === "0" && token === "1") add(entries, cycle, "rising-edge", center);
-        if (previous === "1" && token === "0") add(entries, cycle, "falling-edge", center);
+        if (previous === "0" && token === "1") add(cycle, "rising-edge", center);
+        if (previous === "1" && token === "0") add(cycle, "falling-edge", center);
       }
     }
-    add(entries, cycle, "value-start", valueStart);
+    add(cycle, "value-start", valueStart);
   }
-  return new ImmutableLocalGeometryMap(rendered.signalId, entries);
+  return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries());
 }
