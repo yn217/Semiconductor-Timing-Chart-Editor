@@ -144,6 +144,23 @@ test("keeps the selected range overlay aligned after Cycle Insert", async ({ pag
   await assertBand(page, start, end);
 });
 
+test("keeps range geometry aligned when inserting before the first selected cycle", async ({ page }) => {
+  await ready(page);
+  await (await tick(page, 0)).click();
+  await (await tick(page, 1)).click({ modifiers: ["Shift"] });
+  await assertBand(page, 0, 2);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const cycleCountBefore = Number(await page.locator(".editor-shell").getAttribute("data-cycle-count"));
+  await page.getByTestId("timeline-editor").getByRole("button", { name: "Insert before", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await assertBand(page, 0, 2);
+  await expect(await tick(page, 0)).toHaveCount(1);
+});
+
 test("keeps range geometry fresh through Insert after, Undo, and Redo", async ({ page }) => {
   await ready(page);
   await (await tick(page, 8)).click();
