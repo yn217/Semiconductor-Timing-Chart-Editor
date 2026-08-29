@@ -25,4 +25,10 @@ describe("deterministic JSON syntax diagnostics", () => {
     expect(result).toMatchObject({ ok: false, kind: "syntax" });
     if (!result.ok) expect(result.problems[0]).toMatchObject({ code: "JSON_SYNTAX", line: diagnostic?.line, column: diagnostic?.column, offset: diagnostic?.offset });
   });
+
+  it("rejects non-JSON Unicode whitespace deterministically", () => {
+    const source = `{"formatVersion":\u00a02}`;
+    expect(scanJsonSyntax(source)).toMatchObject({ code: "JSON_SYNTAX", line: 1, column: 18 });
+    expect(parseDocument(source)).toMatchObject({ ok: false, kind: "syntax" });
+  });
 });

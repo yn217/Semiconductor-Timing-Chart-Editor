@@ -29,7 +29,12 @@ class JsonSyntaxScanner {
     if (!this.failure && this.index < this.source.length) this.fail(this.index, "Only one JSON value is allowed.");
     return this.failure;
   }
-  private skipWhitespace(): void { while (/\s/.test(this.source[this.index] ?? "")) this.index += 1; }
+  private skipWhitespace(): void {
+    while (this.isJsonWhitespace(this.source[this.index])) this.index += 1;
+  }
+  private isJsonWhitespace(character: string | undefined): boolean {
+    return character === " " || character === "\t" || character === "\r" || character === "\n";
+  }
   private value(): void {
     if (this.failure) return;
     const character = this.source[this.index];
