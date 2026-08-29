@@ -19,6 +19,7 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace slots", async ({ pag
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Zoom In" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Fit All" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection" })).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByLabel("Fit commands")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Workspace preset")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Labels and structure")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();

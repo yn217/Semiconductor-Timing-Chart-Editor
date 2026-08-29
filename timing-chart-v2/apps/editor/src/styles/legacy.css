@@ -811,7 +811,9 @@ body { min-width: 1100px; }
 .editor-shell .view-display-subgroup > span { overflow: hidden; color: #637083; font-size: 8px; font-weight: 700; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .editor-shell .view-panels-group { width: 250px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 52px 28px; gap: 3px 5px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-guides-group { width: 150px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
-.editor-shell .view-zoom-group { width: 320px; display: grid; grid-template-columns: 50px 45px 68px 50px 50px 50px; align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
+.editor-shell .view-zoom-group { width: 320px; display: grid; grid-template-columns: 50px 68px 45px 50px minmax(0, 1fr); align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
+.editor-shell .view-zoom-fit-actions { display: flex; min-width: 0; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
+.editor-shell .view-zoom-fit-actions .view-mini-tool { flex: 1 1 0; }
 .editor-shell .view-workspace-group { width: 495px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, .8fr); align-items: center; gap: 8px; padding: 7px 8px 17px; }
 .editor-shell .view-workspace-settings, .editor-shell .view-workspace-actions { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 7px; }
 .editor-shell .view-workspace-settings > label { display: flex; min-width: 0; flex-direction: column; gap: 2px; color: #405269; font-size: 8px; white-space: nowrap; }
@@ -842,7 +844,7 @@ body { min-width: 1100px; }
   .editor-shell .view-show-group { width: 100%; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
   .editor-shell .view-panels-group { width: 100%; }
   .editor-shell .view-guides-group { width: 100%; }
-  .editor-shell .view-zoom-group { width: 100%; grid-template-columns: 44px 0 58px 44px 48px 58px; }
+  .editor-shell .view-zoom-group { width: 100%; grid-template-columns: 44px 58px 0 44px minmax(0, 1fr); }
   .editor-shell .view-workspace-group { width: 100%; gap: 4px; }
 }
 @media (min-width: 1101px) and (max-width: 1300px) {
