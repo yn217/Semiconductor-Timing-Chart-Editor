@@ -106,10 +106,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #waveBatchScheduled = false;
   #waveBatchSequence = 0;
   readonly #rowY = new Map<string, number>();
+  #rowLayoutSource: readonly RowLayoutEntry[] | undefined;
+  #rowIndex = new Map<string, RowLayoutEntry>();
+  #navigationRowLayoutSource: readonly RowLayoutEntry[] | undefined;
+  #navigationRowIndex = new Map<string, RowLayoutEntry>();
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -135,13 +139,17 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     if (!layers) throw new Error("Timing chart renderer must be mounted before update.");
     assertCrossSurfaceInvariant(projection);
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
-    const rows = new Map(projection.rowLayout.map((row) => [row.rowId, row]));
-    const navigationRows = new Map(projection.navigationRowLayout.map((row) => [row.rowId, row]));
+    const rows = this.#indexedRows(projection.rowLayout, false);
+    const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
     const changedRows = new Set<string>();
-    for (const row of projection.rowLayout) {
+    const visitedRowIds = new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]);
+    for (const rowId of visitedRowIds) {
+      const row = rows.get(rowId) ?? navigationRows.get(rowId);
+      if (!row) continue;
       if (this.#rowY.get(row.rowId) !== row.y) changedRows.add(row.rowId);
       this.#rowY.set(row.rowId, row.y);
     }
+    this.#diagnostics = { ...this.#diagnostics, rowsVisited: visitedRowIds.size };
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
     const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
     const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
@@ -311,6 +319,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#overlaySignatures.clear();
     this.#edgeCounterOwners.clear();
     this.#rowY.clear();
+    this.#rowLayoutSource = undefined;
+    this.#rowIndex.clear();
+    this.#navigationRowLayoutSource = undefined;
+    this.#navigationRowIndex.clear();
     this.#layers?.root.remove();
     this.#layers = undefined;
   }
@@ -321,6 +333,23 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const version = this.#waveVersions.get(signalId) ?? 0;
     this.#waveQueue.set(signalId, { owner, version });
     this.#scheduleWaveBatch();
+  }
+
+  #indexedRows(source: readonly RowLayoutEntry[], navigation: boolean): ReadonlyMap<string, RowLayoutEntry> {
+    if (navigation) {
+      if (this.#navigationRowLayoutSource !== source) {
+        this.#navigationRowLayoutSource = source;
+        this.#navigationRowIndex = new Map(source.map((row) => [row.rowId, row]));
+        this.#diagnostics = { ...this.#diagnostics, fullRowScans: this.#diagnostics.fullRowScans + 1 };
+      }
+      return this.#navigationRowIndex;
+    }
+    if (this.#rowLayoutSource !== source) {
+      this.#rowLayoutSource = source;
+      this.#rowIndex = new Map(source.map((row) => [row.rowId, row]));
+      this.#diagnostics = { ...this.#diagnostics, fullRowScans: this.#diagnostics.fullRowScans + 1 };
+    }
+    return this.#rowIndex;
   }
 
   #scheduleWaveBatch(): void {

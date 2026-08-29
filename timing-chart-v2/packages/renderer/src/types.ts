@@ -52,6 +52,10 @@ export interface RendererDiagnostics {
   readonly waveBatchFrameYields: number;
   readonly waveBatchMaxSize: number;
   readonly waveBatchPending: number;
+  /** Number of row entries inspected during the latest renderer update. */
+  readonly rowsVisited: number;
+  /** Full row-layout traversals; ordinary viewport updates must keep this at zero. */
+  readonly fullRowScans: number;
 }
 
 export interface OverlayAnchorPoint {

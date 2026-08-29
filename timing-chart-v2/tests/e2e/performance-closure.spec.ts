@@ -203,9 +203,11 @@ test("viewport-only projection remains bounded at 1k, 5k, and 10k rows", async (
     await openFixture(page, { signalCount, cycleCount: 100 });
     const viewport = page.getByTestId("cycle-viewport");
     const before = await sessionCounters(page);
+    const rendererBefore = await diagnostics(page);
     await viewport.evaluate((element) => { element.scrollTop = Math.max(1, element.scrollHeight - element.clientHeight) / 2; element.dispatchEvent(new Event("scroll")); });
     await page.waitForTimeout(250);
     const after = await sessionCounters(page);
+    const renderer = await diagnostics(page);
     const rowLayoutBefore = before.rowLayoutBuilds;
     const rowLayoutAfter = after.rowLayoutBuilds;
     const visited = after.viewportRowsVisited - before.viewportRowsVisited;
@@ -215,6 +217,8 @@ test("viewport-only projection remains bounded at 1k, 5k, and 10k rows", async (
     expect(visited).toBeGreaterThan(0);
     expect(visited).toBeLessThan(200);
     expect(binarySteps).toBeGreaterThan(0);
+    expect(renderer.fullRowScans - rendererBefore.fullRowScans).toBe(0);
+    expect(renderer.rowsVisited).toBeLessThan(200);
     measurements.push({ signalCount, mountedRows: after.lastMountedRange, viewportRowsVisited: visited, viewportBinarySearchSteps: binarySteps, fullVisibleRowScansDelta: after.fullVisibleRowScans - before.fullVisibleRowScans, rowLayoutBuildsDelta: rowLayoutAfter - rowLayoutBefore });
   }
   await testInfo.attach("phase14-viewport-scale-browser.json", { body: Buffer.from(JSON.stringify(measurements, null, 2)), contentType: "application/json" });
