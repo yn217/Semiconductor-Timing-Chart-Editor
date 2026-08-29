@@ -6,11 +6,13 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 const signalId = "sig_snap" as SignalId;
 
 describe("Screen Geometry and snapping", () => {
-  it("resolves a deterministic actual-signal axis owner without a Clock", () => {
-    const document = { ...canonicalFixture(), timeline: { ...canonicalFixture().timeline, referenceClock: undefined }, signals: canonicalFixture().signals.filter((signal) => signal.type !== "clock") };
-    const signal = document.signals[0]!;
-    const map = new ImmutableLocalGeometryMap(signal.id, [{ cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } }]);
-    expect(resolveTimeAxisGeometry(document, new Map([[signal.id, map]]))).toMatchObject({ mode: "clockless", ownerSignalId: signal.id, geometry: map });
+  it("resolves the first actually rendered axis owner without a Clock", () => {
+    const source = canonicalFixture();
+    const hiddenFirst = { ...source.signals[0]!, display: { ...source.signals[0]!.display, visible: false } };
+    const owner = source.signals[1]!;
+    const document = { ...source, timeline: { ...source.timeline, referenceClock: undefined }, signals: [hiddenFirst, owner] };
+    const map = new ImmutableLocalGeometryMap(owner.id, [{ cycle: 0, point: "cycle-start", position: { x: 0, y: 0 } }]);
+    expect(resolveTimeAxisGeometry(document, new Map([[owner.id, map]]))).toMatchObject({ mode: "clockless", ownerSignalId: owner.id, geometry: map });
   });
   it("applies scroll and zoom only at the Screen Geometry boundary", () => {
     const projector = new DefaultScreenGeometryProjector();
