@@ -319,6 +319,17 @@ export function MinimalCycleView() {
   const bottomAnnotation = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.annotationId === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === pinnedBottomSelection.annotationId)) : selectedAnnotation;
   const bottomTransaction = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.transactionId === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === pinnedBottomSelection.transactionId)) : selectedTransaction;
   useEffect(() => {
+    if (!bottomPinned || !pinnedBottomSelection) return;
+    const targetExists = (pinnedBottomSelection.signalId === undefined || snapshot.document.signals.some((item) => item.id === pinnedBottomSelection.signalId))
+      && (pinnedBottomSelection.groupId === undefined || snapshot.document.signalGroups.some((item) => item.id === pinnedBottomSelection.groupId))
+      && (pinnedBottomSelection.annotationId === undefined || snapshot.document.annotations.some((item) => item.id === pinnedBottomSelection.annotationId))
+      && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId));
+    if (!targetExists) {
+      setBottomPinned(false);
+      setPinnedBottomSelection(undefined);
+    }
+  }, [bottomPinned, pinnedBottomSelection, snapshot.revision]);
+  useEffect(() => {
     const root = host.current;
     if (!root) return;
     const query = treeFilter.trim().toLocaleLowerCase();
@@ -788,6 +799,8 @@ export function MinimalCycleView() {
       const canonicalDocument = canonicalDocumentOf(document);
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
+      setBottomPinned(false);
+      setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
       geometryMaps.clear();
       snapIndex = undefined;
@@ -1551,8 +1564,13 @@ export function MinimalCycleView() {
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
-    onVisibility={(_signalId, visible) => commandRegistry.current.execute("selection.visibility", { visible })}
-    onDuplicate={() => { if (bottomSignal) createCopiedSignals(selectedClipboardSignals(), "duplicate"); }}
+    onVisibility={(signalId, visible) => commandRegistry.current.execute("semantic.execute", { id: nextCommandId("bottom_signal_visibility"), type: "signal.setVisibility", signalId, visible })}
+    onDelete={(signalId) => commandRegistry.current.execute("semantic.execute", { id: nextCommandId("bottom_signal_delete"), type: "signal.delete", signalId })}
+    onDuplicate={(signalId) => {
+      const source = snapshot.document.signals.find((item) => item.id === signalId);
+      const group = source === undefined ? undefined : snapshot.document.signalGroups.find((candidate) => candidate.rows.includes(signalId));
+      if (source && group) createCopiedSignals([{ signal: source, groupId: group.id, index: group.rows.indexOf(signalId) }], "duplicate", "source-group");
+    }}
     onDropToGroup={(kind, id, targetGroupId) => {
       const document = snapshot.document;
       const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
@@ -1587,7 +1605,7 @@ export function MinimalCycleView() {
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
-    onDelete={() => commandRegistry.current.execute("selection.delete")}
+    onDelete={() => { if (bottomAnnotation) commandRegistry.current.execute("semantic.execute", { id: nextCommandId("bottom_annotation_delete"), type: "annotation.delete", annotationId: bottomAnnotation.id }); }}
   /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
     selectedTransactionRef.current = id;
@@ -1748,10 +1766,10 @@ export function MinimalCycleView() {
     }
   };
   cutSelectedSignalRef.current = cutSelectedSignal;
-  const createCopiedSignals = (input: readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[], operation: "paste" | "duplicate") => {
+  const createCopiedSignals = (input: readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
     if (input.length === 0) { setClipboardStatus("No signal clipboard available"); return; }
     const document = snapshot.document;
-    const selectedGroup = document.signalGroups.find((group) => selectedId !== undefined && group.rows.includes(selectedId));
+    const selectedGroup = placement === "current-selection" ? document.signalGroups.find((group) => selectedId !== undefined && group.rows.includes(selectedId)) : undefined;
     const commands: SemanticCommand[] = [];
     const created: Signal[] = [];
     const insertedByGroup = new Map<GroupId, number>();
@@ -2788,7 +2806,17 @@ function TransactionEditor({ transaction, document, history, onSelect, onCommand
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
   const [laneId, setLaneId] = useState("lane_0");
-  return <section className="transaction-editor" data-testid="transaction-editor"><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header><form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; onCommand({ id: nextCommandId("transaction_create"), type: "transaction.create", transaction: { id, name: name.trim() || "Transaction", start, end, laneId } }); onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /></label><button type="submit">Create Transaction</button></form><div className="transaction-list">{document.transactions.map((item) => <button type="button" key={item.id} data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}><b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span></button>)}</div></section>;
+  const [editName, setEditName] = useState(transaction?.name ?? "");
+  const [editStart, setEditStart] = useState(transaction?.start ?? 0);
+  const [editEnd, setEditEnd] = useState(transaction?.end ?? 1);
+  const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "lane_0");
+  useEffect(() => {
+    setEditName(transaction?.name ?? "");
+    setEditStart(transaction?.start ?? 0);
+    setEditEnd(transaction?.end ?? 1);
+    setEditLaneId(transaction?.laneId ?? "lane_0");
+  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId]);
+  return <section className="transaction-editor" data-testid="transaction-editor"><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button></header>{transaction ? <form onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("bottom_transaction_update"), type: "transaction.update", transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(transaction.phases === undefined ? {} : { phases: transaction.phases }) }); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /></label><button type="submit" data-testid="apply-transaction-properties">Apply Transaction</button></form> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; onCommand({ id: nextCommandId("transaction_create"), type: "transaction.create", transaction: { id, name: name.trim() || "Transaction", start, end, laneId } }); onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /></label><button type="submit">Create Transaction</button></form>}<div className="transaction-list">{document.transactions.map((item) => <button type="button" key={item.id} data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}><b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span></button>)}</div></section>;
 }
 
 function SaveAsDialog({ defaultName, onSave, onClose }: { readonly defaultName: string; readonly onSave: (name: string) => void; readonly onClose: () => void }) {
@@ -3100,11 +3128,12 @@ interface SignalEditorProps {
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onVisibility: (signalId: SignalId, visible: boolean) => void;
-  readonly onDuplicate: () => void;
+  readonly onDelete: (signalId: SignalId) => void;
+  readonly onDuplicate: (signalId: SignalId) => void;
   readonly onDropToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
 }
 
-function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDuplicate, onDropToGroup }: SignalEditorProps) {
+function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup }: SignalEditorProps) {
   const [name, setName] = useState(signal?.display.name ?? "");
   const [role, setRole] = useState<SignalRole>(signal?.role ?? "internal");
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal?.type === "clock" || signal?.type === "commentRow" ? "binary" : signal?.type ?? "binary");
@@ -3116,7 +3145,7 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
       <span className="editor-selection">{signal ? `${signal.display.name} · ${signal.type}` : "Select a signal to edit"}</span>
       <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
-      {signal && <button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button>}
+      {signal && <><button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button><button type="button" className="danger" onClick={() => onDelete(signal.id)} data-testid="signal-delete">Delete signal</button></>}
     </div>
     <div className="group-drop-targets" role="list" aria-label="Signal groups">
       <span>Drop into group</span>
@@ -3173,7 +3202,7 @@ function CommentRowEditor({ signal, onCommand }: { readonly signal: CommentRow; 
   </form>;
 }
 
-function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onDuplicate: () => void }) {
+function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onDuplicate: (signalId: SignalId) => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const [suppressedPeriods, setSuppressedPeriods] = useState((signal.generator.suppressedPeriods ?? []).join(", "));
@@ -3187,7 +3216,7 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
       <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="clock-presets"><RibbonIcon name="i-settings" /><span>Presets</span></button>
-      <button type="button" className="bottom-action" onClick={onDuplicate} data-testid="clock-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
+      <button type="button" className="bottom-action" onClick={() => onDuplicate(signal.id)} data-testid="clock-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
       <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="clock-import"><RibbonIcon name="i-import" /><span>Import...</span></button>
       <button type="button" className="bottom-action" onClick={exportSettings} data-testid="clock-export"><RibbonIcon name="i-export" /><span>Export...</span></button>
       <button type="button" className="bottom-action" onClick={() => setPreview((current) => !current)} aria-pressed={preview} data-testid="clock-preview"><RibbonIcon name="i-preview" /><span>Preview</span></button>
