@@ -1,2 +1,71 @@
-/* Ribbon ownership boundary. Existing rules remain in legacy.css until the
-   serial RIBBON-RECOVER tasks migrate them without cascade changes. */
+/* Non-Home Ribbon design-system primitives. Home continues to use its frozen
+   legacy selectors; only the explicit ds-* namespace is owned here. */
+.ds-ribbon-group {
+  display: flex;
+  position: relative;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--ds-ribbon-group-gap);
+  min-height: var(--ds-ribbon-button-height);
+  padding: var(--ds-space-xs) var(--ds-ribbon-group-padding-inline) var(--ds-ribbon-group-caption-height);
+  border-right: var(--ds-border-width) solid #d4dbe4;
+  box-sizing: border-box;
+}
+
+.ds-ribbon-group__caption {
+  position: absolute;
+  right: 0;
+  bottom: var(--ds-space-xs);
+  left: 0;
+  color: #637083;
+  font: 500 var(--ds-font-size-caption) / 1 var(--ds-font-family);
+  text-align: center;
+}
+
+.ds-ribbon-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--ds-space-xs);
+  min-width: var(--ds-ribbon-button-min-width);
+  height: var(--ds-ribbon-button-height);
+  padding: var(--ds-space-xs);
+  border: 0;
+  border-radius: var(--ds-radius-md);
+  background: transparent;
+  color: #25384f;
+  font: 400 var(--ds-font-size-label) / 1.05 var(--ds-font-family);
+  text-align: center;
+  white-space: normal;
+}
+
+.ds-ribbon-button__icon,
+.ds-icon-box {
+  display: inline-flex;
+  flex: 0 0 var(--ds-icon-box-size);
+  align-items: center;
+  justify-content: center;
+  width: var(--ds-icon-box-size);
+  height: var(--ds-icon-box-size);
+}
+
+.ds-ribbon-button__label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--ds-font-size-label);
+  line-height: 1.05;
+  text-align: center;
+}
+
+.ds-ribbon-toggle,
+.ds-ribbon-dropdown,
+.ds-ribbon-number-input,
+.ds-toolbar-button {
+  min-height: var(--ds-control-height);
+  border-radius: var(--ds-radius-sm);
+  font: 400 var(--ds-font-size) / 1.1 var(--ds-font-family);
+}

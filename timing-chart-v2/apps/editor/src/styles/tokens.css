@@ -1,4 +1,27 @@
 /* Shared tokens. Region selectors must not be added here. */
 :root {
+  /* Non-Home design-system tokens. Legacy Home keeps its existing token
+     namespace and composition while these values provide stable inputs for
+     migrated surfaces. */
+  --ds-font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif;
+  --ds-font-size: 11px;
+  --ds-font-size-caption: 10px;
+  --ds-font-size-label: 11px;
+  --ds-space-xs: 4px;
+  --ds-space-sm: 6px;
+  --ds-space-md: 10px;
+  --ds-space-lg: 14px;
+  --ds-control-height: 26px;
+  --ds-icon-box-size: 20px;
+  --ds-ribbon-button-height: 66px;
+  --ds-ribbon-button-min-width: 48px;
+  --ds-ribbon-group-gap: 6px;
+  --ds-ribbon-group-padding-inline: 8px;
+  --ds-ribbon-group-caption-height: 14px;
+  --ds-border-width: 1px;
+  --ds-radius-sm: 3px;
+  --ds-radius-md: 4px;
+  --ds-panel-header-height: 34px;
+  --ds-tab-height: 30px;
   --gui-token-wire-badge-width: 34px;
 }
