@@ -96,3 +96,45 @@ test("Bottom editors cancel transient drafts and preserve canonical counters", a
   await expect(page.getByTestId("history-status")).toHaveText(afterCreate.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(afterCreate.dirty!);
 });
+
+test("Signal and Group rename use the same explicit Enter/Escape draft contract", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const signalName = page.getByTestId("inspector").getByLabel("Inspector signal name");
+  const originalSignalName = await signalName.inputValue();
+  const beforeSignal = await host.getAttribute("data-canonical-revision");
+  await signalName.fill("TRANSIENT_SIGNAL_NAME");
+  await signalName.press("Escape");
+  await expect(signalName).toHaveValue(originalSignalName);
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeSignal!);
+
+  await signalName.fill("   ");
+  await signalName.press("Enter");
+  await expect(page.getByRole("alert").filter({ hasText: "Name is required" })).toBeVisible();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeSignal!);
+  await expect(signalName).toHaveValue("   ");
+
+  await signalName.fill("RENAMED_SIGNAL");
+  await signalName.press("Enter");
+  await expect(host).not.toHaveAttribute("data-canonical-revision", beforeSignal!);
+  await expect(page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("RENAMED_SIGNAL");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText(originalSignalName);
+
+  await page.locator("[data-role='empty-group'][data-group-id='grp_cycle_scratch']").click();
+  const groupName = page.getByTestId("inspector").getByLabel("Inspector group name");
+  const originalGroupName = await groupName.inputValue();
+  const beforeGroup = await host.getAttribute("data-canonical-revision");
+  await groupName.fill("RENAMED_GROUP");
+  await groupName.press("Enter");
+  await expect(host).not.toHaveAttribute("data-canonical-revision", beforeGroup!);
+  await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toHaveValue("RENAMED_GROUP");
+  await groupName.fill("TRANSIENT_GROUP_NAME");
+  await groupName.press("Escape");
+  await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toHaveValue("RENAMED_GROUP");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toHaveValue(originalGroupName);
+});
