@@ -58,3 +58,20 @@ test("View zoom uses a shared view-only route and does not move Home presentatio
   expect(await surface.getAttribute("data-canonical-revision")).toBe(beforeRevision);
   expect(await surface.getAttribute("data-history-depth")).toBe(beforeHistory);
 });
+
+test("View groups compress without horizontal overflow at 1280px", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await page.goto("/");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  await expect(ribbon.locator("[data-major-group]")).toHaveCount(6);
+  const metrics = await ribbon.evaluate((node) => {
+    const root = node.getBoundingClientRect();
+    const groups = [...node.querySelectorAll<HTMLElement>("[data-major-group]")].map((group) => group.getBoundingClientRect());
+    return { scrollWidth: node.scrollWidth, clientWidth: node.clientWidth, right: Math.max(...groups.map((group) => group.right)), viewportRight: root.right };
+  });
+  expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth);
+  expect(metrics.right).toBeLessThanOrEqual(metrics.viewportRight + 1);
+  await expect(ribbon.getByLabel("Zoom preset")).toBeVisible();
+  await expect(ribbon.getByLabel("Workspace preset")).toBeVisible();
+});

@@ -784,6 +784,7 @@ body { min-width: 1100px; }
 .editor-shell .view-mini-tool svg { width: 18px; height: 18px; }
 .editor-shell .view-zoom-group output { min-width: 42px; color: #304b6b; font-size: 10px; text-align: center; }
 .editor-shell .view-zoom-group select { width: 62px; min-width: 0; height: 27px; padding: 0 2px; font-size: 9px; }
+.editor-shell .view-zoom-group .view-zoom-status { min-width: 0; }
 .editor-shell[data-show-signal-names="false"] .surface-host [data-role="tree-signal-name"],
 .editor-shell[data-show-signal-names="false"] .surface-host [data-role="frozen-signal-name"] { visibility: hidden; }
 .editor-shell[data-show-roles="false"] .surface-host [data-role="tree-signal-role"],
@@ -794,6 +795,19 @@ body { min-width: 1100px; }
 .editor-shell[data-signal-tree-visible="false"] .surface-host [data-role="left-tree-rows"],
 .editor-shell[data-signal-tree-visible="false"] .column-headings .left-column-heading { visibility: hidden; }
 .editor-shell .home-edit-group > [data-testid="clipboard-status"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+@media (max-width: 1300px) {
+  .editor-shell .view-slot-group[data-major-group="Show"] { width: 235px; }
+  .editor-shell .view-slot-group[data-major-group="Panels"] { width: 205px; }
+  .editor-shell .view-slot-group[data-major-group="Guides"] { width: 125px; }
+  .editor-shell .view-slot-group[data-major-group="Zoom"] { width: 275px; }
+  .editor-shell .view-slot-group[data-major-group="Workspace"] { width: 220px; }
+  .editor-shell .view-slot-group[data-major-group="Layout"] { width: 160px; }
+  .editor-shell .view-show-group { width: 100%; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .editor-shell .view-panels-group { width: 100%; }
+  .editor-shell .view-guides-group { width: 100%; }
+  .editor-shell .view-zoom-group { width: 100%; grid-template-columns: 44px 0 58px 44px 48px 58px; }
+  .editor-shell .view-workspace-group, .editor-shell .view-layout-group { width: 100%; gap: 4px; }
+}
 @media (min-width: 1101px) and (max-width: 1300px) {
   .ribbon { zoom: .8; width: 125%; }
 }
