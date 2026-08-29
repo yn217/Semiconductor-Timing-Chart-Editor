@@ -20,6 +20,8 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Fit All" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Workspace preset")).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByLabel("Labels and structure")).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();
 
   const before = {
     revision: await surface.getAttribute("data-canonical-revision"),
