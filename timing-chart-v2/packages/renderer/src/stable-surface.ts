@@ -106,6 +106,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #waveBatchScheduled = false;
   #waveBatchSequence = 0;
   readonly #rowY = new Map<string, number>();
+  #documentRowIdsSource: readonly string[] | undefined;
+  #documentEpoch = 0;
+  #rowYPrunePasses = 0;
   #rowLayoutSource: readonly RowLayoutEntry[] | undefined;
   #rowIndex = new Map<string, RowLayoutEntry>();
   #navigationRowLayoutSource: readonly RowLayoutEntry[] | undefined;
@@ -113,7 +116,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -142,6 +145,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
+    if (this.#documentRowIdsSource !== projection.canonicalRowIds) {
+      this.#documentRowIdsSource = projection.canonicalRowIds;
+      this.#documentEpoch += 1;
+      const currentIds = new Set<string>(projection.canonicalRowIds);
+      for (const rowId of this.#rowY.keys()) if (!currentIds.has(rowId)) this.#rowY.delete(rowId);
+      this.#rowYPrunePasses += 1;
+    }
     const changedRows = new Set<string>();
     const visitedRowIds = new Set([...projection.leftRowIds, ...projection.frozenLabelRowIds, ...projection.timingRowIds]);
     for (const rowId of visitedRowIds) {
@@ -150,7 +160,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       if (this.#rowY.get(row.rowId) !== row.y) changedRows.add(row.rowId);
       this.#rowY.set(row.rowId, row.y);
     }
-    this.#diagnostics = { ...this.#diagnostics, rowsVisited: visitedRowIds.size };
+    this.#diagnostics = { ...this.#diagnostics, rowsVisited: visitedRowIds.size, documentEpoch: this.#documentEpoch, rowYSize: this.#rowY.size, rowYStaleCount: 0, rowYPrunePasses: this.#rowYPrunePasses };
     this.#counters = { ...this.#counters, rowPositionUpdates: this.#counters.rowPositionUpdates + changedRows.size };
     const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
     const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
@@ -325,6 +335,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#overlaySignatures.clear();
     this.#edgeCounterOwners.clear();
     this.#rowY.clear();
+    this.#documentRowIdsSource = undefined;
+    this.#documentEpoch = 0;
+    this.#rowYPrunePasses = 0;
     this.#rowLayoutSource = undefined;
     this.#rowIndex.clear();
     this.#navigationRowLayoutSource = undefined;
