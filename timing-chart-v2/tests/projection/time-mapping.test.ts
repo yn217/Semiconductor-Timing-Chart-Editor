@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDisplayTimeMapping, remapValueChangesToDisplay } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, DisplayTimeMappingCache, remapValueChangesToDisplay } from "@timing-chart-v2/projection";
 import type { TimeGroup, TimeGroupId, Timeline } from "@timing-chart-v2/schema";
 
 function timeline(cycleCount: number, labelAnchors: Timeline["labelAnchors"] = []): Pick<Timeline, "cycleCount" | "labelAnchors"> {
@@ -54,6 +54,28 @@ describe("buildDisplayTimeMapping", () => {
     const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 15, display: 1000 }]), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.labelFor(5)).toBe(1000);
     expect(mapping.labelFor(4)).toBe(4);
+  });
+});
+
+describe("DisplayTimeMappingCache", () => {
+  it("reuses a mapping when mapping-relevant timeline and fold state are unchanged", () => {
+    const cache = new DisplayTimeMappingCache();
+    const first = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
+    const second = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
+
+    expect(second).toBe(first);
+    expect(cache.metrics()).toEqual({ builds: 1, hits: 1 });
+  });
+
+  it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
+    const cache = new DisplayTimeMappingCache();
+    const first = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Initial" }]);
+    const renamed = cache.get(timeline(12), [{ ...collapsedGroup("g1", 4, 8), name: "Renamed" }]);
+    const moved = cache.get(timeline(12), [{ ...collapsedGroup("g1", 5, 8), name: "Renamed" }]);
+
+    expect(renamed).toBe(first);
+    expect(moved).not.toBe(first);
+    expect(cache.metrics()).toEqual({ builds: 2, hits: 1 });
   });
 });
 

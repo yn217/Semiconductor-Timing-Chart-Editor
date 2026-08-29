@@ -56,6 +56,53 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
   };
 }
 
+export interface DisplayTimeMappingCacheMetrics {
+  readonly builds: number;
+  readonly hits: number;
+}
+
+/** Owns the derived display-time mapping for one projection consumer. */
+export class DisplayTimeMappingCache {
+  private key: string | undefined;
+  private mapping: DisplayTimeMapping | undefined;
+  private builds = 0;
+  private hits = 0;
+
+  get(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
+    const nextKey = displayTimeMappingKey(timeline, timeGroups);
+    if (this.mapping !== undefined && this.key === nextKey) {
+      this.hits += 1;
+      return this.mapping;
+    }
+    this.key = nextKey;
+    this.mapping = buildDisplayTimeMapping(timeline, timeGroups);
+    this.builds += 1;
+    return this.mapping;
+  }
+
+  metrics(): DisplayTimeMappingCacheMetrics {
+    return { builds: this.builds, hits: this.hits };
+  }
+
+  clear(): void {
+    this.key = undefined;
+    this.mapping = undefined;
+  }
+}
+
+function displayTimeMappingKey(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): string {
+  const anchors = timeline.labelAnchors
+    .map((anchor) => `${anchor.source}:${anchor.display}`)
+    .sort()
+    .join(",");
+  const collapsedGroups = timeGroups
+    .filter((group) => group.presentation?.collapsed)
+    .map((group) => `${group.start}:${group.end}:${group.id}`)
+    .sort()
+    .join(",");
+  return `${timeline.cycleCount}|${anchors}|${collapsedGroups}`;
+}
+
 export function remapValueChangesToDisplay(values: readonly SignalValueChange[], mapping: DisplayTimeMapping): readonly SignalValueChange[] {
   const result: SignalValueChange[] = [];
   let lastValue: SignalValueChange["value"] | undefined;
