@@ -143,3 +143,31 @@ test("keeps the selected range overlay aligned after Cycle Insert", async ({ pag
   expect(end).toBeGreaterThan(start);
   await assertBand(page, start, end);
 });
+
+test("keeps range geometry fresh through Insert after, Undo, and Redo", async ({ page }) => {
+  await ready(page);
+  await (await tick(page, 8)).click();
+  await (await tick(page, 10)).click({ modifiers: ["Shift"] });
+  await assertBand(page, 8, 11);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const timeline = page.getByTestId("timeline-editor");
+  await timeline.getByRole("button", { name: "Insert after", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  let start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
+  let end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
+  await assertBand(page, start, end);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
+  end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
+  await assertBand(page, start, end);
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
+  end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
+  await assertBand(page, start, end);
+});
