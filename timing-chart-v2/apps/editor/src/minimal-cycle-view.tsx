@@ -2416,6 +2416,19 @@ function RibbonIcon({ name }: { readonly name: string }) {
   return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
 }
 
+type InsertSemanticIconKind = "clock" | "state" | "event" | "pulse" | "text";
+
+function InsertSemanticIcon({ kind }: { readonly kind: InsertSemanticIconKind }) {
+  const paths: Record<InsertSemanticIconKind, readonly string[]> = {
+    clock: ["M2 7h4v10h4V7h4v10h4V7h4"],
+    state: ["M2 7h6v10H2z", "M8 7h6v10H8z", "M14 7h8v10h-8z"],
+    event: ["M12 3v18", "m12 7 5 5-5 5-5-5z"],
+    pulse: ["M2 15h5l2-8 3 10 2-6 2 4h6"],
+    text: ["M4 5h12M10 5v14M6 19h8", "M17 8h5M17 12h5M17 16h5"],
+  };
+  return <svg aria-hidden="true" data-insert-icon={kind} viewBox="0 0 24 24" width="16" height="16" focusable="false" style={{ flex: "0 0 19px" }}>{paths[kind].map((path) => <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />)}</svg>;
+}
+
 function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly onClose: () => void }) {
   const [view, setView] = useState<HardwareHierarchyView>("group");
   const [scope, setScope] = useState<string>("all");
@@ -2720,11 +2733,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
       <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><div className="insert-subgroup insert-signals-group" aria-label="Signals">
         <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("binary")}><RibbonIcon name="i-plus" /><span>Signal</span></button>
-        <button type="button" className="ribbon-tool" onClick={insertClockSignal}><RibbonIcon name="i-clock" /><span>Clock</span></button>
+        <button type="button" className="ribbon-tool" onClick={insertClockSignal}><InsertSemanticIcon kind="clock" /><span>Clock</span></button>
         <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("bus")}><RibbonIcon name="i-grid" /><span>Bus</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("state")}><RibbonIcon name="i-preview" /><span>State</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("event")}><RibbonIcon name="i-filter" /><span>Event</span></button>
-        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("pulse")}><RibbonIcon name="i-cycle-add" /><span>Pulse</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("state")}><InsertSemanticIcon kind="state" /><span>State</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("event")}><InsertSemanticIcon kind="event" /><span>Event</span></button>
+        <button type="button" className="ribbon-tool" onClick={() => insertValueSignal("pulse")}><InsertSemanticIcon kind="pulse" /><span>Pulse</span></button>
         <b>Signals</b>
       </div></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><div className="insert-subgroup insert-structure-group" aria-label="Structure">
@@ -2734,7 +2747,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       </div></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><div className="insert-subgroup insert-annotation-group" aria-label="Annotation">
         <button type="button" className="ribbon-tool" onClick={insertCommentRow}><RibbonIcon name="i-comment" /><span>Comment</span></button>
-        {(["marker", "range", "text", "dependency"] as const).map((type) => <button type="button" className="ribbon-tool" key={type} disabled={!selectedSignalId} onClick={() => insertAnnotation(type)}><RibbonIcon name={type === "marker" ? "i-more" : type === "range" ? "i-select-fit" : type === "dependency" ? "i-filter" : "i-preview"} /><span>{type[0]!.toUpperCase() + type.slice(1)}</span></button>)}
+        {(["marker", "range", "text", "dependency"] as const).map((type) => <button type="button" className="ribbon-tool" key={type} disabled={!selectedSignalId} onClick={() => insertAnnotation(type)}>{type === "text" ? <InsertSemanticIcon kind="text" /> : <RibbonIcon name={type === "marker" ? "i-more" : type === "range" ? "i-select-fit" : "i-filter"} />}<span>{type[0]!.toUpperCase() + type.slice(1)}</span></button>)}
         <b>Annotation</b>
       </div></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="More" aria-label="More Insert commands"><div className="insert-subgroup insert-more-group" aria-label="More">
