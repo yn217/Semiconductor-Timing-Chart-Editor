@@ -4,6 +4,9 @@ import {
   canonicalRuleDescriptor,
   canonicalRuleDescriptors,
   canonicalValidationCodes,
+  schemaRuleDescriptor,
+  schemaRuleDescriptors,
+  SCHEMA_RULE_KEYWORDS,
   validateCanonicalDocument,
 } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -15,6 +18,13 @@ describe("canonical validation problem-code contract", () => {
     expect(canonicalRuleDescriptors()).toHaveLength(CANONICAL_PROBLEM_CODES.length);
     expect(new Set(canonicalRuleDescriptors().map((descriptor) => descriptor.code)).size).toBe(CANONICAL_PROBLEM_CODES.length);
     expect(canonicalRuleDescriptors().every((descriptor) => descriptor.owner === "canonical-validator" && descriptor.layer === "canonical-invariant" && descriptor.severity === "error" && descriptor.pathPattern.length > 0 && descriptor.fixability === "none" && descriptor.ruleVersion === 1)).toBe(true);
+  });
+
+  it("exports the schema structural keyword inventory separately", () => {
+    expect(schemaRuleDescriptors()).toHaveLength(SCHEMA_RULE_KEYWORDS.length);
+    expect(new Set(schemaRuleDescriptors().map((descriptor) => descriptor.keyword)).size).toBe(SCHEMA_RULE_KEYWORDS.length);
+    expect(schemaRuleDescriptors().every((descriptor) => descriptor.layer === "schema-structural" && descriptor.owner === "schema-ajv" && descriptor.severity === "error" && descriptor.ruleVersion === 1)).toBe(true);
+    expect(schemaRuleDescriptor("required")).toMatchObject({ code: "SCHEMA_REQUIRED" });
   });
 
   it.each([

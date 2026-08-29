@@ -291,8 +291,21 @@ export const CANONICAL_PROBLEM_CODES = [
 ] as const;
 
 export type CanonicalProblemCode = typeof CANONICAL_PROBLEM_CODES[number];
-export type SchemaProblemCode = `SCHEMA_${string}`;
+export const SCHEMA_RULE_KEYWORDS = [
+  "additionalProperties", "allOf", "anyOf", "const", "enum", "items", "maximum", "minimum", "minLength", "pattern", "properties", "required", "type", "uniqueItems",
+] as const;
+export type SchemaRuleKeyword = typeof SCHEMA_RULE_KEYWORDS[number];
+export type SchemaProblemCode = `SCHEMA_${Uppercase<SchemaRuleKeyword>}`;
 export type CanonicalValidationCode = CanonicalProblemCode | SchemaProblemCode;
+
+export interface SchemaRuleDescriptor {
+  readonly code: SchemaProblemCode;
+  readonly keyword: SchemaRuleKeyword;
+  readonly layer: "schema-structural";
+  readonly owner: "schema-ajv";
+  readonly severity: "error";
+  readonly ruleVersion: 1;
+}
 
 export interface CanonicalRuleDescriptor {
   readonly code: CanonicalProblemCode;

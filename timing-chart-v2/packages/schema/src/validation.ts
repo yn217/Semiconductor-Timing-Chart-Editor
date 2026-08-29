@@ -1,7 +1,7 @@
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import canonicalSchema from "./canonical-document.schema.json" with { type: "json" };
 import { isStableId } from "./stable-id.js";
-import { CANONICAL_PROBLEM_CODES, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
+import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SchemaRuleDescriptor, type SchemaRuleKeyword, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { canonicalReferences } from "./reference-registry.js";
 
@@ -14,10 +14,27 @@ function problem(code: CanonicalProblemCode, path: string, message: string, enti
 
 function schemaProblem(error: ErrorObject): CanonicalDocumentProblem {
   const suffix = error.keyword === "required" ? `/${String(error.params.missingProperty)}` : "";
-  const code: CanonicalProblemCode | SchemaProblemCode = error.keyword === "pattern" ? "INVALID_STABLE_ID" : `SCHEMA_${error.keyword.toUpperCase()}`;
+  const code: CanonicalProblemCode | SchemaProblemCode = error.keyword === "pattern" ? "INVALID_STABLE_ID" : `SCHEMA_${error.keyword.toUpperCase()}` as SchemaProblemCode;
   return code === "INVALID_STABLE_ID"
     ? problem(code, `$${error.instancePath}${suffix}`, error.message ?? "Schema validation failed.")
     : { code, path: `$${error.instancePath}${suffix}`, message: error.message ?? "Schema validation failed." };
+}
+
+const SCHEMA_RULE_DESCRIPTORS: readonly SchemaRuleDescriptor[] = SCHEMA_RULE_KEYWORDS.map((keyword) => ({
+  code: `SCHEMA_${keyword.toUpperCase()}` as SchemaProblemCode,
+  keyword: keyword as SchemaRuleKeyword,
+  layer: "schema-structural",
+  owner: "schema-ajv",
+  severity: "error",
+  ruleVersion: 1,
+}));
+
+export function schemaRuleDescriptors(): readonly SchemaRuleDescriptor[] {
+  return SCHEMA_RULE_DESCRIPTORS;
+}
+
+export function schemaRuleDescriptor(keyword: SchemaRuleKeyword): SchemaRuleDescriptor | undefined {
+  return SCHEMA_RULE_DESCRIPTORS.find((descriptor) => descriptor.keyword === keyword);
 }
 
 const canonicalRule = (code: CanonicalProblemCode, title: string, pathPattern: string, entityContext: CanonicalRuleDescriptor["entityContext"] = "required"): CanonicalRuleDescriptor => ({
