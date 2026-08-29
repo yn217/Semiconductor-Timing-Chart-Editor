@@ -3849,8 +3849,9 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
 }
 
 function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService(), xScale = 1, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): ImmutableSnapIndex {
-  const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
-  const referenceMap = axisOwnerSignalId === undefined ? undefined : maps.get(axisOwnerSignalId);
+  const timeAxis = resolveTimeAxisGeometry(document, maps);
+  const axisOwnerSignalId = timeAxis.ownerSignalId;
+  const referenceMap = timeAxis.geometry;
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
     signalId: map.signalId,
     find: (anchor: SemanticAnchor) => {
