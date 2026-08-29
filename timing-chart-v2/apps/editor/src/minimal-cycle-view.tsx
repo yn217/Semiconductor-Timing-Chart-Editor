@@ -718,8 +718,12 @@ export function MinimalCycleView() {
     snapTransactionCycle.current = (clientX) => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       const axisOwner = timeAxis.ownerSignalId;
-      const axisRow = projection.rowLayout.find((row) => row.kind === "timing");
-      if (!waveLayer || !axisOwner || !axisRow) return undefined;
+      const axisRow = axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner);
+      // The boundary resolver is independent of a rendered owner row. This
+      // keeps clockless transactions usable while a virtualized wave is being
+      // mounted (or when no geometry owner is currently available).
+      if (!waveLayer || !axisOwner || !axisRow) return cycleBoundaryAtPointerX(clientX);
+      rendererHost.dataset.transactionSnapAxisRowId = axisRow.rowId;
       const bounds = waveLayer.getBoundingClientRect();
       if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
       const localPointer = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });

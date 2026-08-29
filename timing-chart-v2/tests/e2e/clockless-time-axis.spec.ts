@@ -92,3 +92,31 @@ test("chooses an explicit reference Clock without fabricating one", async ({ pag
   await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · CLK_B");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
+
+test("snaps a clockless transaction against the actual non-first TimeAxis owner row", async ({ page }) => {
+  await page.goto("/");
+  const hiddenFirst = { ...data, id: "sig_hidden_first", display: { ...data.display, name: "HIDDEN_FIRST", visible: false }, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+  const owner = { ...data, id: "sig_axis_owner", display: { ...data.display, name: "AXIS_OWNER" }, values: [{ start: 0, value: 0 }, { start: 3, value: 1 }] };
+  await openJson(page, base("clockless-owner-row", "Clockless Owner Row", [hiddenFirst, owner], [hiddenFirst.id, owner.id]));
+  const host = page.getByTestId("cycle-surface");
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const editor = page.getByTestId("transaction-editor");
+  await editor.getByLabel("New Transaction name").fill("Owner snap");
+  await editor.getByLabel("New Transaction start").fill("0");
+  await editor.getByLabel("New Transaction end").fill("1");
+  await editor.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const body = transaction.locator("span");
+  const target = await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").boundingBox();
+  const before = await body.boundingBox();
+  expect(target).not.toBeNull();
+  expect(before).not.toBeNull();
+  await page.mouse.move(before!.x + before!.width / 2, before!.y + before!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(target!.x, before!.y + before!.height / 2);
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-transaction-snap-axis-row-id", owner.id);
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("3");
+  await expect(transaction).toHaveAttribute("style", /left/);
+});
