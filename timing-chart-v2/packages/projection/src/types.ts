@@ -34,6 +34,7 @@ export interface GroupHeaderLayoutEntry {
 }
 
 export interface RenderProjection {
+  readonly documentEpoch: number;
   readonly revision: number;
   readonly canonicalRowIds: readonly RowId[];
   /** Rows retained by the Left Tree projection, including hidden signals. */

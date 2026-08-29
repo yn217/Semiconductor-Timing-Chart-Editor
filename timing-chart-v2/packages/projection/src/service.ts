@@ -20,9 +20,11 @@ export class DefaultProjectionService implements ProjectionService {
   #groupHeaderPrefixHeights: number[] = [];
   #navigationGroupHeaderPrefixHeights: number[] = [];
   #collapsedGroupKey = "";
+  #documentEpoch = 0;
 
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
+    if (request.changeSet.fullDocumentReplace) this.#documentEpoch += 1;
     const collapsedGroupIds = [...new Set(request.collapsedGroupIds ?? [])].sort() as GroupId[];
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
@@ -66,9 +68,10 @@ export class DefaultProjectionService implements ProjectionService {
     const frozenLabelRowIds = mountedRowsOrdered.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
     const canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
     const requestedWaves = request.changeSet.fullDocumentReplace
-      ? canonicalSignalIds
+      ? mountedSignalIds
       : (request.changeSet.waveSemantics ?? []);
     return {
+      documentEpoch: this.#documentEpoch,
       revision: request.snapshot.revision,
       canonicalRowIds: layout.canonicalRowIds,
       visibleRowIds,

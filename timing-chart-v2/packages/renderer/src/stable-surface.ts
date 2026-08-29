@@ -109,6 +109,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #documentRowIdsSource: readonly string[] | undefined;
   #documentEpoch = 0;
   #rowYPrunePasses = 0;
+  #fullReplaceEpochResets = 0;
   #rowLayoutSource: readonly RowLayoutEntry[] | undefined;
   #rowIndex = new Map<string, RowLayoutEntry>();
   #navigationRowLayoutSource: readonly RowLayoutEntry[] | undefined;
@@ -116,7 +117,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -171,6 +172,18 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     layers.root.dataset.visibleRowIds = projection.visibleRowIds.join(",");
 
     const canonical = new Set(projection.canonicalSignalIds);
+    if (projection.documentEpoch !== this.#documentEpoch) {
+      this.#documentEpoch = projection.documentEpoch;
+      this.#fullReplaceEpochResets += 1;
+      this.#dirtyWaves.clear();
+      this.#waveVersions.clear();
+      for (const [signalId, owner] of this.#waveOwners) {
+        owner.remove();
+        this.#provider.disposeWave(signalId);
+        this.#waveOwners.delete(signalId);
+        this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
+      }
+    }
     for (const signalId of projection.waveSignalIds) {
       this.#dirtyWaves.add(signalId);
       this.#waveVersions.set(signalId, (this.#waveVersions.get(signalId) ?? 0) + 1);
@@ -221,7 +234,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       owner.remove(); this.#provider.disposeWave(signalId); this.#waveOwners.delete(signalId); this.#dirtyWaves.delete(signalId); this.#waveVersions.delete(signalId); this.#wavePending.delete(signalId);
       this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
     }
-    this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit };
+    this.#diagnostics = { ...this.#diagnostics, mountedWaveOwners: [...this.#waveOwners.values()].filter((owner) => owner.isConnected).length, cachedWaveOwners: this.#waveOwners.size, waveOwnerCacheLimit, dirtyWaveSize: this.#dirtyWaves.size, waveVersionSize: this.#waveVersions.size, fullReplaceEpochResets: this.#fullReplaceEpochResets };
     this.#publishCounters();
   }
 
