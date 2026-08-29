@@ -40,6 +40,16 @@ describe("buildDisplayTimeMapping", () => {
     expect(mapping.sourceToDisplay[25]).toBe(15);
   });
 
+  it("merges overlapping collapsed ranges while preserving the half-open mapping", () => {
+    const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 4, 10), collapsedGroup("g2", 8, 14)]);
+    expect(mapping.displayCycleCount).toBe(10);
+    expect(mapping.sourceToDisplay[3]).toBe(3);
+    expect(mapping.sourceToDisplay[4]).toBeUndefined();
+    expect(mapping.sourceToDisplay[13]).toBeUndefined();
+    expect(mapping.sourceToDisplay[14]).toBe(4);
+    expect(mapping.displayToSource[4]).toBe(14);
+  });
+
   it("uses source as the canonical anchor position and display as its ruler label", () => {
     const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 15, display: 1000 }]), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.labelFor(5)).toBe(1000);

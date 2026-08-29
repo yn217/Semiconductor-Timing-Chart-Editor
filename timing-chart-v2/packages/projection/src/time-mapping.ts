@@ -13,17 +13,25 @@ const identityMapping = (cycleCount: number): DisplayTimeMapping => {
 };
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
-  const collapsedRanges = timeGroups
+  const collapsedRanges: [number, number][] = [];
+  for (const group of timeGroups
     .filter((group) => group.presentation?.collapsed)
     .map((group) => [group.start, group.end] as const)
-    .sort((left, right) => left[0] - right[0]);
+    .sort((left, right) => left[0] - right[0])) {
+    const previous = collapsedRanges[collapsedRanges.length - 1];
+    if (previous && group[0] <= previous[1]) previous[1] = Math.max(previous[1], group[1]);
+    else collapsedRanges.push([group[0], group[1]]);
+  }
   if (collapsedRanges.length === 0) return identityMapping(timeline.cycleCount);
 
   const sourceToDisplay: (number | undefined)[] = [];
   const displayToSource: number[] = [];
   let display = 0;
+  let collapsedRangeIndex = 0;
   for (let source = 0; source < timeline.cycleCount; source += 1) {
-    const insideCollapsedRange = collapsedRanges.some(([start, end]) => source >= start && source < end);
+    while (collapsedRangeIndex < collapsedRanges.length && source >= collapsedRanges[collapsedRangeIndex]![1]) collapsedRangeIndex += 1;
+    const currentRange = collapsedRanges[collapsedRangeIndex];
+    const insideCollapsedRange = currentRange !== undefined && source >= currentRange[0] && source < currentRange[1];
     if (insideCollapsedRange) { sourceToDisplay[source] = undefined; continue; }
     sourceToDisplay[source] = display;
     displayToSource[display] = source;
