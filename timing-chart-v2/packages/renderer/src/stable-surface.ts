@@ -109,6 +109,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #waveBatchSequence = 0;
   readonly #rowY = new Map<string, number>();
   #documentRowIdsSource: readonly string[] | undefined;
+  #visibleRowIdsSource: readonly string[] | undefined;
   #documentEpoch = 0;
   #rowYPrunePasses = 0;
   #fullReplaceEpochResets = 0;
@@ -152,7 +153,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#diagnostics = { ...this.#diagnostics, projectionUpdates: this.#diagnostics.projectionUpdates + 1, mountedRows: projection.mountedRowIds.length };
     const rows = this.#indexedRows(projection.rowLayout, false);
     const navigationRows = this.#indexedRows(projection.navigationRowLayout, true);
-    if (this.#documentRowIdsSource !== projection.canonicalRowIds) {
+    const documentRowIdsChanged = this.#documentRowIdsSource !== projection.canonicalRowIds;
+    if (documentRowIdsChanged) {
       this.#documentRowIdsSource = projection.canonicalRowIds;
       const currentIds = new Set<string>(projection.canonicalRowIds);
       for (const rowId of this.#rowY.keys()) if (!currentIds.has(rowId)) this.#rowY.delete(rowId);
@@ -173,8 +175,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
     layers.root.style.height = `${projection.totalHeight}px`;
     layers.root.dataset.revision = String(projection.revision);
-    layers.root.dataset.canonicalRowIds = projection.canonicalRowIds.join(",");
-    layers.root.dataset.visibleRowIds = projection.visibleRowIds.join(",");
+    if (documentRowIdsChanged) {
+      layers.root.dataset.canonicalRowIds = projection.canonicalRowIds.join(",");
+    }
+    if (this.#visibleRowIdsSource !== projection.visibleRowIds) {
+      this.#visibleRowIdsSource = projection.visibleRowIds;
+      layers.root.dataset.visibleRowIds = projection.visibleRowIds.join(",");
+    }
 
     const canonical = new Set(projection.canonicalSignalIds);
     if (projection.documentEpoch !== this.#documentEpoch) {
@@ -360,6 +367,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#edgeCounterOwners.clear();
     this.#rowY.clear();
     this.#documentRowIdsSource = undefined;
+    this.#visibleRowIdsSource = undefined;
     this.#documentEpoch = 0;
     this.#rowYPrunePasses = 0;
     this.#rowLayoutSource = undefined;
