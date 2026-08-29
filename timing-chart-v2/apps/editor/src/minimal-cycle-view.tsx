@@ -533,6 +533,9 @@ export function MinimalCycleView() {
         adapter.dispose(id);
         geometryMaps.delete(id);
         geometrySvgs.delete(id);
+        // Snap candidates contain the disposed wave's local geometry.  The
+        // next query must rebuild against the currently mounted set.
+        snapIndex = undefined;
       },
     };
     const renderer = new StableTimingChartRenderer(provider);
@@ -904,8 +907,12 @@ export function MinimalCycleView() {
         syncRulerContent();
         const next = viewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
+        const previousMountedSignals = projection.mountedSignalIds;
         window = next;
         projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        const mountedSignalsChanged = previousMountedSignals.length !== projection.mountedSignalIds.length
+          || previousMountedSignals.some((signalId, index) => signalId !== projection.mountedSignalIds[index]);
+        if (mountedSignalsChanged) snapIndex = undefined;
         renderer.update(projection);
         rendererHost.dataset.viewportStartY = String(window.viewportStartY);
         publishState();

@@ -58,6 +58,36 @@ test("SnapIndex cache survives a non-geometric Signal rename", async ({ page }) 
   expect((await sessionCounters(page)).snapIndexBuilds).toBe(beforeRename);
 });
 
+test("retargets the SnapIndex after a vertical viewport jump", async ({ page }) => {
+  await start(page);
+  await openFixture(page, { signalCount: 1000, cycleCount: 32 });
+  const host = page.getByTestId("cycle-surface");
+  const viewport = page.getByTestId("cycle-viewport");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByRole("button", { name: "Pick arrow endpoints", exact: true }).click();
+  const firstWave = host.locator("[data-role='stable-waveform-surface'] [data-signal-id] svg").first();
+  const firstBox = await firstWave.boundingBox();
+  expect(firstBox).not.toBeNull();
+  await page.mouse.click(firstBox!.x + firstBox!.width / 2, firstBox!.y + firstBox!.height / 2);
+  const builtBeforeJump = (await sessionCounters(page)).snapIndexBuilds;
+  expect(builtBeforeJump).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = element.scrollHeight - element.clientHeight;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await page.waitForTimeout(300);
+  const afterJump = await sessionCounters(page);
+  expect(afterJump.snapIndexBuilds).toBe(builtBeforeJump);
+  expect(afterJump.viewportRowsVisited).toBeGreaterThan(0);
+
+  const secondWave = host.locator("[data-role='stable-waveform-surface'] [data-signal-id] svg").last();
+  const secondBox = await secondWave.boundingBox();
+  expect(secondBox).not.toBeNull();
+  await page.mouse.click(secondBox!.x + secondBox!.width / 2, secondBox!.y + secondBox!.height / 2);
+  expect((await sessionCounters(page)).snapIndexBuilds).toBe(builtBeforeJump + 1);
+});
+
 async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
   const document = generatePerformanceDocument(spec);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: `${document.document.id}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
