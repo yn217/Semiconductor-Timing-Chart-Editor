@@ -526,9 +526,10 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         .filter((reference) => reference.kind === "transaction.linkedSignal")
         .map((reference) => reference.ownerId));
       const linkedTransactions = document.transactions.filter((transaction) => linkedTransactionIds.has(transaction.id));
-      const transactions = document.transactions.map((transaction) => linkedTransactionIds.has(transaction.id)
-        ? { ...transaction, linkedSignals: transaction.linkedSignals?.filter((id) => id !== command.signalId) }
-        : transaction);
+      const transactions = document.transactions.map((transaction) => {
+        if (!linkedTransactionIds.has(transaction.id) || transaction.linkedSignals === undefined) return transaction;
+        return { ...transaction, linkedSignals: transaction.linkedSignals.filter((id) => id !== command.signalId) };
+      });
       const referenceDeleted = document.timeline.referenceClock === command.signalId;
       const nextTimeline = referenceDeleted ? (() => { const { referenceClock: _removed, ...timeline } = document.timeline; return timeline; })() : document.timeline;
       const nextDocument = { ...document, timeline: nextTimeline, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions };
