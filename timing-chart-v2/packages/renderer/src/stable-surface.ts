@@ -103,6 +103,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #waveVersions = new Map<WaveSignalId, number>();
   readonly #wavePending = new Set<WaveSignalId>();
   readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number }>();
+  readonly #waveRendersBySignal = new Map<WaveSignalId, number>();
+  readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
   #waveBatchSequence = 0;
   readonly #rowY = new Map<string, number>();
@@ -181,7 +183,9 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#dirtyWaves.clear();
       this.#waveVersions.clear();
       this.#diagnosticMapPrunePasses += 1;
-      this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
+      this.#waveRendersBySignal.clear();
+      this.#localGeometryBuildsBySignal.clear();
+      this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
         this.#provider.disposeWave(signalId);
@@ -248,7 +252,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   diagnostics(): Readonly<RendererDiagnostics> {
-    return Object.freeze({ ...this.#diagnostics });
+    return Object.freeze({ ...this.#diagnostics, waveRendersBySignal: Object.fromEntries(this.#waveRendersBySignal), localGeometryBuildsBySignal: Object.fromEntries(this.#localGeometryBuildsBySignal) });
   }
 
   diagnosticSummary(): Readonly<RendererDiagnosticSummary> {
@@ -345,6 +349,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#waveVersions.clear();
     this.#wavePending.clear();
     this.#waveQueue.clear();
+    this.#waveRendersBySignal.clear();
+    this.#localGeometryBuildsBySignal.clear();
     this.#waveBatchScheduled = false;
     this.#leftRows.clear();
     this.#frozenRows.clear();
@@ -443,11 +449,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
           waveDromRenders: this.#counters.waveDromRenders + delta.waveDromRenders,
           localGeometryBuilds: this.#counters.localGeometryBuilds + delta.localGeometryBuilds,
         };
-        const firstWaveRenderForSignal = this.#diagnostics.waveRendersBySignal[request.signalId] === undefined;
-        const firstGeometryBuildForSignal = this.#diagnostics.localGeometryBuildsBySignal[request.signalId] === undefined;
-        const waveRendersBySignal = { ...this.#diagnostics.waveRendersBySignal, [request.signalId]: (this.#diagnostics.waveRendersBySignal[request.signalId] ?? 0) + delta.waveDromRenders };
-        const localGeometryBuildsBySignal = { ...this.#diagnostics.localGeometryBuildsBySignal, [request.signalId]: (this.#diagnostics.localGeometryBuildsBySignal[request.signalId] ?? 0) + delta.localGeometryBuilds };
-        this.#diagnostics = { ...this.#diagnostics, waveRendersBySignal, localGeometryBuildsBySignal, waveRendersBySignalCount: this.#diagnostics.waveRendersBySignalCount + (firstWaveRenderForSignal ? 1 : 0), localGeometryBuildsBySignalCount: this.#diagnostics.localGeometryBuildsBySignalCount + (firstGeometryBuildForSignal ? 1 : 0) };
+        const firstWaveRenderForSignal = !this.#waveRendersBySignal.has(request.signalId);
+        const firstGeometryBuildForSignal = !this.#localGeometryBuildsBySignal.has(request.signalId);
+        this.#waveRendersBySignal.set(request.signalId, (this.#waveRendersBySignal.get(request.signalId) ?? 0) + delta.waveDromRenders);
+        this.#localGeometryBuildsBySignal.set(request.signalId, (this.#localGeometryBuildsBySignal.get(request.signalId) ?? 0) + delta.localGeometryBuilds);
+        this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: this.#diagnostics.waveRendersBySignalCount + (firstWaveRenderForSignal ? 1 : 0), localGeometryBuildsBySignalCount: this.#diagnostics.localGeometryBuildsBySignalCount + (firstGeometryBuildForSignal ? 1 : 0) };
         request.owner.removeAttribute("data-wave-error");
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
