@@ -12,8 +12,12 @@ async function tick(page: Page, cycle: number): Promise<Locator> {
 }
 
 async function assertBand(page: Page, start: number, end: number): Promise<void> {
-  const startBox = await (await tick(page, start)).boundingBox();
-  const endBox = await (await tick(page, end)).boundingBox();
+  const startTick = await tick(page, start);
+  const endTick = await tick(page, end);
+  await expect(startTick).toHaveAttribute("data-source-cycle", String(start));
+  await expect(endTick).toHaveAttribute("data-source-cycle", String(end));
+  const startBox = await startTick.boundingBox();
+  const endBox = await endTick.boundingBox();
   const band = page.getByTestId("range-selection-band");
   const rulerBand = page.getByTestId("range-preview");
   await expect(band).toHaveAttribute("data-range-start", String(start));

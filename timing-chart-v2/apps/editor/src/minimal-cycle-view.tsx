@@ -651,8 +651,12 @@ export function MinimalCycleView() {
       const [startText, endText] = (preview ? preview : `${timelineRangeRef.current.start}:${timelineRangeRef.current.end}`).split(":");
       const start = Number(startText);
       const end = Number(endText);
-      const startTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${start}']`);
-      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${end}']`);
+      const currentDocument = session.getSnapshot().document;
+      const mapping = mappingCache.get(currentDocument.timeline, currentDocument.timeGroups);
+      const startDisplay = displayBoundaryForSource(mapping, start, currentDocument.timeline.cycleCount);
+      const endDisplay = displayBoundaryForSource(mapping, end, currentDocument.timeline.cycleCount);
+      const startTick = rulerElement.querySelector<HTMLElement>(`[data-display-cycle='${startDisplay}']`);
+      const endTick = rulerElement.querySelector<HTMLElement>(`[data-display-cycle='${endDisplay}']`);
       if (!startTick || !endTick || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
         band.hidden = true;
         return;
@@ -1237,7 +1241,7 @@ export function MinimalCycleView() {
       }
       const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
       if (!tick) return;
-      const cycle = Number(tick.dataset.cycle);
+      const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
       if (!Number.isInteger(cycle) || cycle > session.getSnapshot().document.timeline.cycleCount) return;
       setRangeSelectionActive(true);
       setSelectedCycle(cycle);
@@ -1279,7 +1283,7 @@ export function MinimalCycleView() {
       const ticks = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")];
       let nearest: { cycle: number; distance: number } | undefined;
       for (const tick of ticks) {
-        const cycle = Number(tick.dataset.cycle);
+        const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
         const distance = Math.abs(tick.getBoundingClientRect().left - clientX);
         if (Number.isInteger(cycle) && (!nearest || distance < nearest.distance)) nearest = { cycle, distance };
       }
@@ -4000,6 +4004,20 @@ function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: nu
   return Number.isFinite(scale) && scale > 0 ? scale : undefined;
 }
 
+function displayBoundaryForSource(mapping: DisplayTimeMapping, sourceCycle: number, sourceCycleCount: number): number | undefined {
+  if (!Number.isInteger(sourceCycle) || sourceCycle < 0 || sourceCycle > sourceCycleCount) return undefined;
+  if (sourceCycle === sourceCycleCount) return mapping.displayCycleCount;
+  const direct = mapping.sourceToDisplay[sourceCycle];
+  if (direct !== undefined) return direct;
+  // A folded source cycle has no rendered slot. Resolve the boundary to the
+  // next visible display boundary owned by the same shared mapping.
+  for (let source = sourceCycle + 1; source < sourceCycleCount; source += 1) {
+    const display = mapping.sourceToDisplay[source];
+    if (display !== undefined) return display;
+  }
+  return mapping.displayCycleCount;
+}
+
 function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
@@ -4024,6 +4042,8 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
     tick.dataset.cycle = String(mapping.labelFor(display));
+    tick.dataset.displayCycle = String(display);
+    tick.dataset.sourceCycle = String(display === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[display]);
     tick.className = "cycle-tick";
     tick.style.left = `${point.x * scale}px`;
     tick.textContent = String(mapping.labelFor(display));
