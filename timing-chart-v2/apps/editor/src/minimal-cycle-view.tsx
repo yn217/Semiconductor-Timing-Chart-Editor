@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
@@ -6,7 +6,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DeterministicExportService } from "@timing-chart-v2/export";
-import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, hardwareHierarchyScopes, remapValueChangesToDisplay, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { Annotation, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockGenerator, ClockSignal, CommandId, CommentRow, DocumentProblem, EdgeCounterSettings, GroupId, LegendEntry, ParsedCanonicalDocument, SemanticAnchor, Signal, SignalGroup, SignalId, SignalRole, SpacerId, SpacerRow, TimeGroupId, Transaction, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
@@ -2831,9 +2831,18 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
   element.replaceChildren(...lines);
 }
 
+const MiniMapOverviewRows = memo(function MiniMapOverviewRows({ overview }: { readonly overview: MiniMapOverview }) {
+  return <>{overview.rows.map((row) => <span key={row.rowId} data-row-id={row.rowId} style={{ "--minimap-row-index": row.rowIndex } as React.CSSProperties}>{row.segments.map((segment, index) => <i key={`${row.rowId}-${index}`} className={`minimap-segment minimap-segment-${segment.tone}`} style={{ left: `${Math.max(0, Math.min(100, segment.start / overview.cycleCount * 100))}%`, width: `${Math.max(0.5, Math.min(100, (segment.end - segment.start) / overview.cycleCount * 100))}%` }} />)}</span>)}</>;
+});
+
 function MiniMap({ document, viewport }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null> }) {
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
   const dragging = useRef(false);
+  const overviewBuilds = useRef(0);
+  const overview = useMemo(() => {
+    overviewBuilds.current += 1;
+    return buildMiniMapOverview(document);
+  }, [document]);
   const sync = () => {
     const element = viewport.current;
     if (!element) return;
@@ -2870,17 +2879,9 @@ function MiniMap({ document, viewport }: { readonly document: Readonly<Canonical
     sync();
   };
   const documentRef = useRef<HTMLDivElement>(null);
-  const rows = document.signalGroups.flatMap((group) => group.rows);
-  const cycleCount = Math.max(1, document.timeline.cycleCount);
-  const segmentStyle = (start: number, end: number) => ({ left: `${Math.max(0, Math.min(100, start / cycleCount * 100))}%`, width: `${Math.max(0.5, Math.min(100, (end - start) / cycleCount * 100))}%` });
-  const previewSegments = (signal: Signal | undefined) => {
-    if (!signal || signal.type === "commentRow") return [{ start: 0, end: cycleCount, tone: "comment" as const }];
-    if (signal.type === "clock") return [{ start: 0, end: cycleCount, tone: "clock" as const }];
-    return signal.values.map((change, index) => ({ start: change.start, end: signal.values[index + 1]?.start ?? cycleCount, tone: String(change.value).toLowerCase() === "0" ? "low" as const : "high" as const }));
-  };
   const indicatorWidth = Math.min(1 - metrics.left, Math.max(0.04, metrics.width));
   const indicatorHeight = Math.min(1 - metrics.top, Math.max(0.04, metrics.ratio));
-  return <div ref={documentRef} className="minimap" data-testid="minimap" aria-label="MiniMap" data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows">{rows.map((rowId, rowIndex) => <span key={rowId} data-row-id={rowId} style={{ "--minimap-row-index": rowIndex } as React.CSSProperties}>{previewSegments(document.signals.find((signal) => signal.id === rowId)).map((segment, index) => <i key={`${rowId}-${index}`} className={`minimap-segment minimap-segment-${segment.tone}`} style={segmentStyle(segment.start, segment.end)} />)}</span>)}<i data-testid="minimap-viewport" style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as React.CSSProperties} /></div></div></div>;
+  return <div ref={documentRef} className="minimap" data-testid="minimap" aria-label="MiniMap" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview.signalLookups)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows"><MiniMapOverviewRows overview={overview} /><i data-testid="minimap-viewport" style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as React.CSSProperties} /></div></div></div>;
 }
 
 function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
