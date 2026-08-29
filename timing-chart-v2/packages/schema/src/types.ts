@@ -297,10 +297,13 @@ export type CanonicalValidationCode = CanonicalProblemCode | SchemaProblemCode;
 export interface CanonicalRuleDescriptor {
   readonly code: CanonicalProblemCode;
   readonly owner: "canonical-validator";
+  readonly layer: "canonical-invariant";
   readonly severity: "error";
   readonly title: string;
   readonly pathPattern: string;
   readonly entityContext: "optional" | "required";
+  readonly fixability: "none";
+  readonly ruleVersion: 1;
 }
 
 export interface CanonicalDocumentProblem {

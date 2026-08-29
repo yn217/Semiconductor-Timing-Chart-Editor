@@ -20,12 +20,45 @@ function schemaProblem(error: ErrorObject): CanonicalDocumentProblem {
     : { code, path: `$${error.instancePath}${suffix}`, message: error.message ?? "Schema validation failed." };
 }
 
+const canonicalRule = (code: CanonicalProblemCode, title: string, pathPattern: string, entityContext: CanonicalRuleDescriptor["entityContext"] = "required"): CanonicalRuleDescriptor => ({
+  code, owner: "canonical-validator", layer: "canonical-invariant", severity: "error", title, pathPattern, entityContext, fixability: "none", ruleVersion: 1,
+});
+
+// Keep this inventory exhaustive: every canonical problem code has one stable
+// descriptor so Problems, Quick Fix, AI review, and CI can identify the same
+// invariant without parsing human-readable messages.
 const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
-  { code: "MISSING_CROSS_REFERENCE", owner: "canonical-validator", severity: "error", title: "Referenced canonical entity must exist", pathPattern: "$.timeline.referenceClock | $.annotations[*] | $.transactions[*] | $.timeGroups[*]", entityContext: "required" },
-  { code: "INVALID_STABLE_ID", owner: "canonical-validator", severity: "error", title: "Entity identifiers must be stable IDs", pathPattern: "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id", entityContext: "required" },
-  { code: "BUS_WIDTH_OVERFLOW", owner: "canonical-validator", severity: "error", title: "Bus values must fit the declared width", pathPattern: "$.signals[*].values[*].value", entityContext: "required" },
-  { code: "TIMELINE_OUT_OF_RANGE", owner: "canonical-validator", severity: "error", title: "Cycle coordinates must remain within the timeline", pathPattern: "$.signals[*] | $.annotations[*] | $.bookmarks[*] | $.transactions[*]", entityContext: "required" },
-  { code: "DUPLICATE_ID", owner: "canonical-validator", severity: "error", title: "Canonical entity identifiers must be unique", pathPattern: "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id", entityContext: "required" },
+  canonicalRule("ANCHOR_SIGNAL_REQUIRED", "Anchor requires a timing signal", "$.annotations[*].anchor.signalId"),
+  canonicalRule("BUS_WIDTH_OVERFLOW", "Bus values must fit the declared width", "$.signals[*].values[*].value"),
+  canonicalRule("CHANGE_POINTS_NOT_STRICTLY_SORTED", "Change points must be strictly increasing", "$.signals[*].values[*].start", "required"),
+  canonicalRule("DUPLICATE_ID", "Canonical entity identifiers must be unique", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
+  canonicalRule("DUPLICATE_LABEL_ANCHOR_SOURCE", "Label anchor sources must be unique", "$.timeline.labelAnchors[*].source"),
+  canonicalRule("DUPLICATE_ROW_MEMBERSHIP", "Renderable rows must belong to one group", "$.signalGroups[*].rows[*]"),
+  canonicalRule("INVALID_ANCHOR_POINT", "Anchor point must match signal semantics", "$.annotations[*].anchor.point"),
+  canonicalRule("INVALID_ANCHOR_THRESHOLD", "Anchor threshold must be a fraction", "$.annotations[*].anchor.threshold"),
+  canonicalRule("INVALID_ANCHOR_THRESHOLD_POINT", "Threshold anchor requires a transition point", "$.annotations[*].anchor.point"),
+  canonicalRule("INVALID_ANNOTATION_STYLE", "Annotation style values must be valid", "$.annotations[*].opacity | $.annotations[*].traceOffsetCycles"),
+  canonicalRule("INVALID_BUS_LITERAL", "Bus value must use a supported literal", "$.signals[*].values[*].value"),
+  canonicalRule("INVALID_LEGEND_ENTRY", "Legend entries must have valid labels, order, and roles", "$.legend.items[*]"),
+  canonicalRule("INVALID_REFERENCE_CLOCK", "Reference clock must target a clock signal", "$.timeline.referenceClock"),
+  canonicalRule("INVALID_STABLE_ID", "Entity identifiers must be stable IDs", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
+  canonicalRule("INVALID_TIME_GROUP_RANGE", "Time Group must use a valid half-open range", "$.timeGroups[*]"),
+  canonicalRule("INVALID_TRANSACTION_PHASE", "Transaction phases must fit their parent range", "$.transactions[*].phases[*]"),
+  canonicalRule("LABEL_ANCHOR_BOUNDARY_MISMATCH", "Resume label anchor must match group boundary", "$.timeline.labelAnchors[*].source"),
+  canonicalRule("LABEL_ANCHOR_OWNER_MISMATCH", "Label anchor owner must reciprocate", "$.timeline.labelAnchors[*].ownerTimeGroupId"),
+  canonicalRule("MISSING_ANNOTATION_ANCHOR", "Annotation must provide its required anchor", "$.annotations[*]"),
+  canonicalRule("MISSING_CROSS_REFERENCE", "Referenced canonical entity must exist", "$.timeline.referenceClock | $.annotations[*] | $.transactions[*] | $.timeGroups[*]"),
+  canonicalRule("NON_FINITE_NUMBER", "Canonical numbers must be finite", "$", "optional"),
+  canonicalRule("NON_PERSISTENT_FIELD", "Derived or transient fields cannot be persisted", "$", "optional"),
+  canonicalRule("NON_TIMING_ANCHOR_TARGET", "Annotations must target timing signals", "$.annotations[*].anchor.signalId"),
+  canonicalRule("ORPHAN_ROW", "Renderable rows must belong to a group", "$.signalGroups[*].rows[*]"),
+  canonicalRule("SPACER_OWNER_MISMATCH", "Spacer owner must match its containing group", "$.signalGroups[*].rows[*]"),
+  canonicalRule("TIME_GROUP_RESUME_BOUNDARY_MISMATCH", "Time Group resume anchor must match its end", "$.timeGroups[*].presentation.resumeLabelAnchorId"),
+  canonicalRule("TIME_GROUP_RESUME_OWNER_MISMATCH", "Resume anchor owner must reciprocate", "$.timeGroups[*].presentation.resumeLabelAnchorId"),
+  canonicalRule("TIMELINE_END_MISMATCH", "Timeline end must equal cycle count", "$.timeline.end"),
+  canonicalRule("TIMELINE_OUT_OF_RANGE", "Cycle coordinates must remain within the timeline", "$.signals[*] | $.annotations[*] | $.bookmarks[*] | $.transactions[*]"),
+  canonicalRule("UNKNOWN_ROW", "Group rows must reference canonical renderable objects", "$.signalGroups[*].rows[*]"),
+  canonicalRule("UNSUPPORTED_SIGNAL_VALUE", "Signal value must match its type contract", "$.signals[*].values[*].value"),
 ];
 
 export function canonicalValidationCodes(): readonly CanonicalProblemCode[] {

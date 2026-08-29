@@ -12,7 +12,9 @@ describe("canonical validation problem-code contract", () => {
   it("exports one typed inventory and descriptors for representative canonical faults", () => {
     expect(canonicalValidationCodes()).toEqual(CANONICAL_PROBLEM_CODES);
     expect(canonicalRuleDescriptors().every((descriptor) => canonicalValidationCodes().includes(descriptor.code))).toBe(true);
-    expect(canonicalRuleDescriptors().every((descriptor) => descriptor.owner === "canonical-validator" && descriptor.severity === "error" && descriptor.pathPattern.length > 0)).toBe(true);
+    expect(canonicalRuleDescriptors()).toHaveLength(CANONICAL_PROBLEM_CODES.length);
+    expect(new Set(canonicalRuleDescriptors().map((descriptor) => descriptor.code)).size).toBe(CANONICAL_PROBLEM_CODES.length);
+    expect(canonicalRuleDescriptors().every((descriptor) => descriptor.owner === "canonical-validator" && descriptor.layer === "canonical-invariant" && descriptor.severity === "error" && descriptor.pathPattern.length > 0 && descriptor.fixability === "none" && descriptor.ruleVersion === 1)).toBe(true);
   });
 
   it.each([
