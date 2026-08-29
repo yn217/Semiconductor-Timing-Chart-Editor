@@ -171,3 +171,17 @@ test("keeps range geometry fresh through Insert after, Undo, and Redo", async ({
   end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
   await assertBand(page, start, end);
 });
+
+test("keeps range geometry aligned through the Home Cycle Insert command", async ({ page }) => {
+  await ready(page);
+  await (await tick(page, 4)).click();
+  await (await tick(page, 7)).click({ modifiers: ["Shift"] });
+  await assertBand(page, 4, 8);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Insert one cycle", exact: true }).click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  const start = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-start"));
+  const end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
+  await assertBand(page, start, end);
+});
