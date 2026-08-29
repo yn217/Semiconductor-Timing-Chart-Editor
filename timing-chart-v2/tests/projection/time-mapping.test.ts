@@ -64,7 +64,12 @@ describe("DisplayTimeMappingCache", () => {
     const second = cache.get(timeline(12), [collapsedGroup("g1", 4, 8)]);
 
     expect(second).toBe(first);
-    expect(cache.metrics()).toEqual({ builds: 1, hits: 1 });
+    const metrics = cache.metrics();
+    expect(metrics.builds).toBe(1);
+    expect(metrics.hits).toBe(1);
+    expect(metrics.sourceCyclesVisited).toBe(12);
+    expect(metrics.foldRangesVisited).toBe(1);
+    expect(metrics.buildDurationMs).toBeGreaterThanOrEqual(0);
   });
 
   it("ignores unrelated TimeGroup fields while invalidating on fold geometry", () => {
@@ -75,7 +80,9 @@ describe("DisplayTimeMappingCache", () => {
 
     expect(renamed).toBe(first);
     expect(moved).not.toBe(first);
-    expect(cache.metrics()).toEqual({ builds: 2, hits: 1 });
+    expect(cache.metrics().builds).toBe(2);
+    expect(cache.metrics().hits).toBe(1);
+    expect(cache.metrics().sourceCyclesVisited).toBe(24);
   });
 });
 

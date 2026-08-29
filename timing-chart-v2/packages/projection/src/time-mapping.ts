@@ -61,6 +61,9 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
 export interface DisplayTimeMappingCacheMetrics {
   readonly builds: number;
   readonly hits: number;
+  readonly sourceCyclesVisited: number;
+  readonly foldRangesVisited: number;
+  readonly buildDurationMs: number;
 }
 
 /** Owns the derived display-time mapping for one projection consumer. */
@@ -69,6 +72,9 @@ export class DisplayTimeMappingCache {
   private mapping: DisplayTimeMapping | undefined;
   private builds = 0;
   private hits = 0;
+  private sourceCyclesVisited = 0;
+  private foldRangesVisited = 0;
+  private buildDurationMs = 0;
 
   get(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
     const nextKey = displayTimeMappingKey(timeline, timeGroups);
@@ -77,13 +83,17 @@ export class DisplayTimeMappingCache {
       return this.mapping;
     }
     this.key = nextKey;
+    const started = Date.now();
     this.mapping = buildDisplayTimeMapping(timeline, timeGroups);
     this.builds += 1;
+    this.sourceCyclesVisited += timeline.cycleCount;
+    this.foldRangesVisited += timeGroups.filter((group) => group.presentation?.collapsed).length;
+    this.buildDurationMs += Date.now() - started;
     return this.mapping;
   }
 
   metrics(): DisplayTimeMappingCacheMetrics {
-    return { builds: this.builds, hits: this.hits };
+    return { builds: this.builds, hits: this.hits, sourceCyclesVisited: this.sourceCyclesVisited, foldRangesVisited: this.foldRangesVisited, buildDurationMs: this.buildDurationMs };
   }
 
   clear(): void {
