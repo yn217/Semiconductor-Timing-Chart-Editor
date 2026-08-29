@@ -209,3 +209,19 @@ test("keeps range geometry aligned when inserting at the interior boundary of a 
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await assertBand(page, 5, 9);
 });
+
+test("keeps range geometry aligned when inserting after the terminal selected cycle", async ({ page }) => {
+  await ready(page);
+  await (await tick(page, 23)).click();
+  await assertBand(page, 23, 24);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const host = page.getByTestId("cycle-surface");
+  const cycleCountBefore = Number(await page.locator(".editor-shell").getAttribute("data-cycle-count"));
+  await page.getByTestId("timeline-editor").getByRole("button", { name: "Insert after", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await assertBand(page, 23, 24);
+  await expect(await tick(page, 25)).toHaveCount(1);
+});
