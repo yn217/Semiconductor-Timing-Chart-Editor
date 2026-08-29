@@ -22,6 +22,9 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace slots", async ({ pag
   await expect(page.getByTestId("ribbon").getByLabel("Fit commands")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Workspace preset")).toBeVisible();
   await expect(page.getByTestId("ribbon").locator(".ds-ribbon-select")).toHaveCount(3);
+  const zoomGroup = page.getByTestId("ribbon").getByLabel("Zoom commands");
+  await expect(zoomGroup.locator(".ds-ribbon-select")).toHaveCount(1);
+  await expect(zoomGroup.getByTestId("zoom-status")).toHaveClass(/visually-hidden/);
   await expect(page.getByTestId("ribbon").getByLabel("Labels and structure")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();
 
