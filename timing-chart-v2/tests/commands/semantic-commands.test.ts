@@ -296,6 +296,21 @@ describe("command execution and atomic history", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
   });
 
+  it("keeps Event data values and Pulse logic values type-safe on atomic edits", () => {
+    const source = canonicalFixture();
+    const event: Signal = { id: "sig_event" as SignalId, name: "EVENT", type: "event", role: "internal", source: { instancePath: [], signalName: "EVENT" }, display: { name: "EVENT" }, values: [{ start: 0, value: "NONE" }] };
+    const pulse: Signal = { id: "sig_pulse" as SignalId, name: "PULSE", type: "pulse", role: "internal", source: { instancePath: [], signalName: "PULSE" }, display: { name: "PULSE" }, values: [{ start: 0, value: 0 }] };
+    const document = { ...source, signals: [...source.signals, event, pulse], signalGroups: source.signalGroups.map((group, index) => index === 0 ? { ...group, rows: [...group.rows, event.id, pulse.id] } : group) };
+    const session = new CommandHistorySession(document);
+    const before = session.getSnapshot();
+    const invalidEvent = session.execute({ id: commandId("cmd_event_empty"), type: "signal.updateValue", signalId: event.id, start: 1, value: "" });
+    expect(invalidEvent).toMatchObject({ ok: false, reason: "invalid" });
+    const invalidPulse = session.execute({ id: commandId("cmd_pulse_invalid"), type: "signal.updateValue", signalId: pulse.id, start: 1, value: "2" });
+    expect(invalidPulse).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
   it("commits a valid batch once and rejects a failing batch as a whole", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const beforeMetrics = session.metrics();

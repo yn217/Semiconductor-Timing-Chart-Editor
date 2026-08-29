@@ -213,3 +213,12 @@ WaveDrom or Local Geometry rebuild. Unit coverage is in
 coverage including Save/Open is in
 `timing-chart-v2/tests/e2e/full-gui.spec.ts`. Full V1 visual parity remains
 open.
+
+Event and Pulse lifecycle parity is now covered in the production Insert Ribbon
+and Tree Add surfaces. Each type is created as a stable canonical ValueSignal,
+edited through the shared Signal Event Table and SemanticCommand path, rendered
+through the existing WaveDrom adapter, and verified through Undo/Redo, Save/Open
+and SVG/PNG/PDF export in `timing-chart-v2/tests/e2e/event-pulse-lifecycle.spec.ts`.
+The compatibility policy explicitly distinguishes Event data-domain markers,
+Pulse logic tokens, X/Z states and weak-drive logic tokens; full V1 visual parity
+remains open.
