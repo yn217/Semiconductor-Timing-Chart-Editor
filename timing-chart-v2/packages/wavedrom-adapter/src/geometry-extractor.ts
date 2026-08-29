@@ -216,6 +216,15 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
   if (!Number.isInteger(phaseHalfBricks)) throw new WaveDromAdapterError("UNSUPPORTED_GEOMETRY_PHASE", "Geometry extraction requires half-cycle-aligned WaveDrom phase.");
   const clippedHalfBricks = Math.max(0, phaseHalfBricks);
   const uses = Array.from(draw.querySelectorAll<SVGUseElement>("use"));
+  const usesByClockSlot = waveJson.clock?.expanded
+    ? uses.reduce((index, use, visibleIndex) => {
+      const slot = Math.floor((visibleIndex + clippedHalfBricks) / 2);
+      const slotUses = index.get(slot);
+      if (slotUses) slotUses.push(use);
+      else index.set(slot, [use]);
+      return index;
+    }, new Map<number, SVGUseElement[]>())
+    : undefined;
   const rowY = boundaries[0]?.y ?? 0;
   const transitionCache = new Map<string, readonly Segment[]>();
 
@@ -243,20 +252,18 @@ export function extractLocalGeometry(rendered: RenderedWave): ImmutableLocalGeom
       if (!boundary) continue;
       if (startLevel !== previousLevel) add(slot, startLevel === 1 ? "rising-edge" : "falling-edge", boundary);
       if (startLevel !== endLevel) {
-        const slotUses = uses
-          .map((use, index) => ({ use, index }))
-          .filter(({ index }) => Math.floor((index + clippedHalfBricks) / 2) === slot);
+        const slotUses = usesByClockSlot?.get(slot) ?? [];
         const targetHref = startLevel === 1 ? "pclk" : "nclk";
-        const edgeUse = slotUses.find(({ use }) => hrefOf(use) === targetHref);
+        const edgeUse = slotUses.find((use) => hrefOf(use) === targetHref);
         if (edgeUse) {
-          const translated = useTranslation(edgeUse.use);
+          const translated = useTranslation(edgeUse);
           const edgePoint = transformPoint(drawMatrix, translated);
           add(slot, startLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
         }
         const endHref = endLevel === 1 ? "pclk" : "nclk";
-        const endUse = slotUses.find(({ use }) => hrefOf(use) === endHref && use !== edgeUse?.use);
+        const endUse = slotUses.find((use) => hrefOf(use) === endHref && use !== edgeUse);
         if (endUse) {
-          const translated = useTranslation(endUse.use);
+          const translated = useTranslation(endUse);
           const edgePoint = transformPoint(drawMatrix, translated);
           add(slot, endLevel === 1 ? "rising-edge" : "falling-edge", point(edgePoint.x, rowY));
         }

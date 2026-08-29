@@ -63,6 +63,7 @@ export class DefaultProjectionService implements ProjectionService {
       .filter((row) => row.kind === "timing" && row.visible)
       .map((row) => row.rowId as SignalId);
     const timingRowIds = mountedRowsOrdered.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
+    const frozenLabelRowIds = mountedRowsOrdered.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
     const canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
     const requestedWaves = request.changeSet.fullDocumentReplace
       ? canonicalSignalIds
@@ -73,7 +74,7 @@ export class DefaultProjectionService implements ProjectionService {
       visibleRowIds,
       mountedRowIds,
       leftRowIds: mountedNavigationRows.map((row) => row.rowId),
-      frozenLabelRowIds: mountedRowsOrdered.map((row) => row.rowId),
+      frozenLabelRowIds,
       timingRowIds,
       rowLayout: layout.navigationRows,
       navigationRowLayout: navigationLayout.navigationRows,
@@ -107,12 +108,13 @@ export class DefaultProjectionService implements ProjectionService {
     this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
     const mountedSignalIds = mountedRows.filter((row) => row.kind === "timing" && row.visible).map((row) => row.rowId as SignalId);
     const timingRowIds = mountedRows.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
+    const frozenLabelRowIds = mountedRows.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
     return {
       ...request.previous!,
       revision: request.snapshot.revision,
       mountedRowIds,
       leftRowIds: mountedNavigationRows.map((row) => row.rowId),
-      frozenLabelRowIds: mountedRows.map((row) => row.rowId),
+      frozenLabelRowIds,
       timingRowIds,
       mountedGroupHeaderIds: mountedGroupHeaders.map((row) => row.rowId),
       mountedLeftGroupHeaderIds: mountedLeftGroupHeaders.map((row) => row.rowId),
