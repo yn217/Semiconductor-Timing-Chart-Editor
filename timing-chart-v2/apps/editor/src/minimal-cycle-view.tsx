@@ -6,7 +6,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { DeterministicExportService } from "@timing-chart-v2/export";
-import { buildDisplayTimeMapping, buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, DisplayTimeMappingCache, hardwareHierarchyScopes, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, DisplayTimeMappingCache, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { parseDocument, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import { quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
@@ -583,7 +583,7 @@ export function MinimalCycleView() {
     const currentSnapIndex = () => {
       if (!snapIndex) {
         const snapDocument = session.getSnapshot().document;
-        snapIndex = buildSnapIndex(snapDocument, projection, geometryMaps, snapService, screenGeometryScale, mappingCache.get(snapDocument.timeline, snapDocument.timeGroups));
+        snapIndex = buildSnapIndex(snapDocument, projection, geometryMaps, mappingCache.get(snapDocument.timeline, snapDocument.timeGroups), snapService, screenGeometryScale);
         publishState();
       }
       return snapIndex;
@@ -598,7 +598,7 @@ export function MinimalCycleView() {
     let screenGeometryScale = 1;
     let rulerInitialized = false;
     const refreshOverlays = (document: CanonicalDocument) => {
-      renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, screenGeometryScale, mappingCache.get(document.timeline, document.timeGroups)));
+      renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale));
       edgeCounterResolvePasses += 1;
       renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timelineRangeRef.current, selectedCycleRef.current, screenGeometryScale));
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
@@ -609,7 +609,7 @@ export function MinimalCycleView() {
       const metrics = viewMetricsOwner.snapshot();
       const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
       timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-      screenGeometryScale = buildRuler(rulerElement, timeAxis.geometry, document, timeAxis.ownerSignalId, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom), timeAxis.mode, mappingCache.get(document.timeline, document.timeGroups));
+      screenGeometryScale = buildRuler(rulerElement, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom), timeAxis.mode);
       rulerInitialized = true;
       syncPresentationScale();
     };
@@ -617,7 +617,7 @@ export function MinimalCycleView() {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
       const metrics = viewMetricsOwner.snapshot();
       timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-      renderGeometryGrid(gridElement, timeAxis.geometry, document, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode, mappingCache.get(document.timeline, document.timeGroups));
+      renderGeometryGrid(gridElement, timeAxis.geometry, document, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode);
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -3280,7 +3280,7 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): void {
+function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, mapping: DisplayTimeMapping, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): void {
   element.dataset.gridEnabled = String(visible);
   element.dataset.axisMode = axisMode;
   element.style.height = `${height}px`;
@@ -3818,7 +3818,7 @@ function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" 
 
 const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
-function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups), xScale = 1): Point | undefined {
+function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): Point | undefined {
   if (!anchor) return undefined;
   const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
   const signalId = anchor.signalId ?? axisOwnerSignalId;
@@ -3836,7 +3836,7 @@ function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: Canoni
   return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }
 
-function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, xScale = 1, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): AnnotationOverlayPrimitive[] {
+function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);
@@ -3915,7 +3915,7 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
   });
 }
 
-function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService(), xScale = 1, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): ImmutableSnapIndex {
+function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
   const timeAxis = resolveTimeAxisGeometry(document, maps);
   const axisOwnerSignalId = timeAxis.ownerSignalId;
   const referenceMap = timeAxis.geometry;
@@ -3980,7 +3980,7 @@ function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: nu
   return Number.isFinite(scale) && scale > 0 ? scale : undefined;
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): number {
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
