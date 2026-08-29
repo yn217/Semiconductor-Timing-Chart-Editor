@@ -489,6 +489,7 @@ export function MinimalCycleView() {
     if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
     let session = new CommandHistorySession(initialDocument);
+    let documentEpoch = 0;
     const adapter = new ProductionWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
@@ -805,6 +806,10 @@ export function MinimalCycleView() {
       delete rendererHost.dataset.editorIdle;
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
+      if (changed.fullDocumentReplace === true) {
+        documentEpoch += 1;
+        clearAnnotationPreview();
+      }
       const snapDependenciesChanged = changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined || changed.waveSemantics !== undefined || changed.geometryLocal !== undefined || changed.geometryScreenX === true || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.bookmarkPosition !== undefined || changed.timeGroupSemantics !== undefined || changed.timelineSemantics === true;
       if (snapDependenciesChanged) snapIndex = undefined;
       const referenceSignalId = result.snapshot.document.timeline.referenceClock;
@@ -856,6 +861,8 @@ export function MinimalCycleView() {
     redo.current = () => applyResult(session.redo());
     const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
       const canonicalDocument = canonicalDocumentOf(document);
+      documentEpoch += 1;
+      clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
       setBottomPinned(false);
@@ -1410,7 +1417,7 @@ export function MinimalCycleView() {
       clearDropState();
     };
     const onDragEnd = () => { dragged = undefined; clearDropState(); };
-    let annotationDrag: { readonly annotationId: AnnotationId; readonly field?: typeof annotationFields[number]; readonly label: boolean; readonly startX: number; readonly startY: number; readonly owner: HTMLElement; readonly snapIndex?: ImmutableSnapIndex } | undefined;
+    let annotationDrag: { readonly annotationId: AnnotationId; readonly field?: typeof annotationFields[number]; readonly label: boolean; readonly startX: number; readonly startY: number; readonly owner: HTMLElement; readonly epoch: number } | undefined;
     const clearAnnotationPreview = () => {
       if (annotationDrag) annotationDrag.owner.style.translate = "";
       annotationDrag = undefined;
@@ -1427,11 +1434,12 @@ export function MinimalCycleView() {
       const field = fieldElement?.dataset.annotationField as typeof annotationFields[number] | undefined;
       annotationDrag = {
         annotationId: owner.dataset.annotationId as AnnotationId,
-        ...(field ? { field, snapIndex: currentSnapIndex() } : {}),
+        ...(field ? { field } : {}),
         label,
         startX: event.clientX,
         startY: event.clientY,
         owner,
+        epoch: documentEpoch,
       };
       publishState();
       owner.setPointerCapture(event.pointerId);
@@ -1439,6 +1447,7 @@ export function MinimalCycleView() {
     };
     const onAnnotationPointerMove = (event: PointerEvent) => {
       if (!annotationDrag) return;
+      if (annotationDrag.epoch !== documentEpoch) { clearAnnotationPreview(); return; }
       const screenDx = Math.round(event.clientX - annotationDrag.startX);
       const dx = Math.round(screenGeometry.fromScreen({ x: screenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - annotationDrag.startY);
@@ -1450,7 +1459,7 @@ export function MinimalCycleView() {
        const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale);
       if (!annotation || !anchor || !point) return;
        const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
-      const snap = snapEnabledRef.current ? annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
+      const snap = snapEnabledRef.current ? currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       publishState();
       if (!snap) {
         renderer.updateSnapGuide();
@@ -1468,6 +1477,7 @@ export function MinimalCycleView() {
     const onAnnotationPointerUp = (event: PointerEvent) => {
       const drag = annotationDrag;
       if (!drag) return;
+      if (drag.epoch !== documentEpoch) { clearAnnotationPreview(); return; }
        const rawScreenDx = event.clientX - drag.startX;
        const dx = Math.round(screenGeometry.fromScreen({ x: rawScreenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - drag.startY);
@@ -1490,7 +1500,7 @@ export function MinimalCycleView() {
        const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, mappingCache.get(snapshot.document.timeline, snapshot.document.timeGroups), screenGeometryScale);
       if (!field || !anchor || !point) return;
        const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + dy };
-      const snap = snapEnabledRef.current ? drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
+      const snap = snapEnabledRef.current ? currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       publishState();
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {

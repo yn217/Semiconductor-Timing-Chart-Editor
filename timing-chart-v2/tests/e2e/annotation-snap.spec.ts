@@ -215,7 +215,7 @@ test("preserves canonical source-cycle anchors through an Axis Break snap", asyn
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByLabel("Timeline range start").fill("2");
   await page.getByLabel("Timeline range end").fill("4");
-  await page.getByRole("button", { name: "Add gap" }).click();
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   const handle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
   const fromBox = await handle.boundingBox();
   const cycle0 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='0']").evaluate((element) => (element as HTMLElement).style.left));
