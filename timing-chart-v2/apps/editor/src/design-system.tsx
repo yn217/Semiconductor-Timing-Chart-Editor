@@ -1,0 +1,19 @@
+import type { ChangeEvent, ReactNode } from "react";
+
+type ClassName = string | undefined;
+
+export function DsIconBox({ children }: { readonly children: ReactNode }) {
+  return <span className="ds-icon-box" aria-hidden="true">{children}</span>;
+}
+
+export function DsRibbonButton({ ariaLabel, children, className, disabled, icon, onClick }: { readonly ariaLabel?: string; readonly children: ReactNode; readonly className?: ClassName; readonly disabled?: boolean; readonly icon: ReactNode; readonly onClick: () => void }) {
+  return <button type="button" className={`ds-ribbon-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} disabled={disabled} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
+}
+
+export function DsRibbonToggle({ checked, className, dataTestId, label, onChange }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
+  return <label className={`ds-ribbon-toggle${className ? ` ${className}` : ""}`}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
+}
+
+export function DsRibbonGroup({ ariaLabel, children, className, label }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly label: string }) {
+  return <div className={`ds-ribbon-group${className ? ` ${className}` : ""}`} aria-label={ariaLabel}>{children}<b>{label}</b></div>;
+}

@@ -292,6 +292,21 @@ body { min-width: 1100px; }
 .transaction-signal-picker [role="option"]:hover, .transaction-signal-picker [role="option"][aria-selected="true"] { border-color: #9fc4e5; background: #eaf4fd; }
 .transaction-signal-picker [role="option"] span, .transaction-signal-picker [role="option"] small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-signal-picker [role="option"] small { color: #61758a; font-size: 9px; }
+.ds-ribbon-group { display: flex; min-width: 0; align-items: stretch; gap: 5px; padding: 4px 6px 21px; position: relative; border-right: 1px solid #cfd8e4; }
+.ds-ribbon-group > b { position: absolute; right: 6px; bottom: 3px; left: 6px; color: #53677e; font-size: 10px; font-weight: 700; line-height: 14px; text-align: center; }
+.ds-icon-box { display: inline-flex; flex: 0 0 20px; width: 20px; height: 20px; align-items: center; justify-content: center; }
+.ds-icon-box > svg { width: 18px; height: 18px; }
+.ds-ribbon-button { display: inline-flex; min-width: 48px; min-height: 54px; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 4px 5px 3px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #263d58; cursor: pointer; line-height: 14px; }
+.ds-ribbon-button:hover, .ds-ribbon-button:focus-visible { border-color: #a8c8e6; background: #edf6ff; }
+.ds-ribbon-button:disabled { color: #8a98a8; cursor: not-allowed; }
+.ds-ribbon-label { display: flex; min-height: 28px; flex-direction: column; align-items: center; justify-content: flex-start; white-space: nowrap; font-size: 10px; font-weight: 650; }
+.ds-ribbon-toggle { display: flex; min-width: 56px; flex: 0 1 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 5px 4px 3px; color: #344b65; font-size: 10px; line-height: 13px; text-align: center; }
+.ds-ribbon-toggle input { flex: 0 0 auto; margin: 0; }
+.ds-ribbon-toggle span { white-space: nowrap; }
+.view-zoom-group .ds-ribbon-button { min-width: 50px; }
+.view-zoom-group > select { align-self: flex-start; width: 48px; height: 24px; margin-top: 27px; }
+.view-workspace-group > label { display: grid; min-width: 84px; gap: 3px; color: #51657b; font-size: 10px; }
+.view-workspace-group > label > select { height: 24px; min-width: 0; }
 .inspector > header { position: sticky; top: 0; z-index: 2; flex: 0 0 var(--gui-panel-header-height); height: var(--gui-panel-header-height); display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-bottom: 1px solid #d0d7e1; background: #f8fafc; color: #263c58; font-size: 12px; font-weight: 650; }
 .inspector > header b { color: #126bc0; font-size: 11px; font-weight: 700; }
 .inspector > header button { border: 0; background: transparent; }.inspector > form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: auto; }.inspector section { padding: 9px 12px 10px; border-bottom: 1px solid #edf0f4; background: #fff; }
