@@ -78,4 +78,24 @@ describe("Screen Geometry and snapping", () => {
     expect(index.nearest({ x: 20, y: 0 }, 1, ["cycle-boundary"])).toMatchObject({ anchor: { cycle: 4, point: "cycle-start" } });
     expect(index.entries().some((candidate) => candidate.anchor.cycle === 2 || candidate.anchor.cycle === 3)).toBe(false);
   });
+
+  it("builds only against the currently projected viewport rows", () => {
+    const source = canonicalFixture();
+    const stale = source.signals[0]!;
+    const current = source.signals[1]!;
+    const staleMap = new ImmutableLocalGeometryMap(stale.id, [{ cycle: 0, point: "row-center", position: { x: 10, y: 0 } }]);
+    const currentMap = new ImmutableLocalGeometryMap(current.id, [{ cycle: 0, point: "row-center", position: { x: 110, y: 0 } }]);
+    const service = new SemanticSnapCandidateService();
+    const index = service.build({
+      document: source,
+      geometryMaps: new Map([[stale.id, staleMap], [current.id, currentMap]]),
+      rowY: new Map([[current.id, 240]]),
+      renderedCycleCount: 0,
+    });
+
+    expect(index.entries()).not.toHaveLength(0);
+    expect(new Set(index.entries().map((candidate) => candidate.ownerId))).toEqual(new Set([current.id]));
+    expect(index.entries().every((candidate) => candidate.point.y >= 240)).toBe(true);
+    expect(service.metrics().candidateCount).toBe(index.entries().length);
+  });
 });

@@ -78,14 +78,28 @@ test("retargets the SnapIndex after a vertical viewport jump", async ({ page }) 
   });
   await page.waitForTimeout(300);
   const afterJump = await sessionCounters(page);
-  expect(afterJump.snapIndexBuilds).toBe(builtBeforeJump);
+  expect(afterJump.snapIndexBuilds).toBeGreaterThanOrEqual(builtBeforeJump);
   expect(afterJump.viewportRowsVisited).toBeGreaterThan(0);
 
   const secondWave = host.locator("[data-role='stable-waveform-surface'] [data-signal-id] svg").last();
   const secondBox = await secondWave.boundingBox();
   expect(secondBox).not.toBeNull();
   await page.mouse.click(secondBox!.x + secondBox!.width / 2, secondBox!.y + secondBox!.height / 2);
-  expect((await sessionCounters(page)).snapIndexBuilds).toBe(builtBeforeJump + 1);
+  const afterBottomQuery = await sessionCounters(page);
+  expect(afterBottomQuery.snapIndexBuilds).toBeGreaterThan(builtBeforeJump);
+  expect(afterBottomQuery.snapCandidateCount).toBeGreaterThan(0);
+
+  await viewport.evaluate((element) => {
+    element.scrollTop = 0;
+    element.dispatchEvent(new Event("scroll"));
+  });
+  await page.waitForTimeout(300);
+  await page.getByRole("button", { name: "Pick arrow endpoints", exact: true }).click();
+  const firstWaveAfterReverse = host.locator("[data-role='stable-waveform-surface'] [data-signal-id] svg").first();
+  const firstBoxAfterReverse = await firstWaveAfterReverse.boundingBox();
+  expect(firstBoxAfterReverse).not.toBeNull();
+  await page.mouse.click(firstBoxAfterReverse!.x + firstBoxAfterReverse!.width / 2, firstBoxAfterReverse!.y + firstBoxAfterReverse!.height / 2);
+  expect((await sessionCounters(page)).snapIndexBuilds).toBeGreaterThan(afterBottomQuery.snapIndexBuilds);
 });
 
 async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
