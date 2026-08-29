@@ -697,7 +697,11 @@ export function MinimalCycleView() {
       rendererHost.dataset.historyDepth = String(session.historyState().undoDepth);
       const metrics = viewMetricsOwner.snapshot();
       rendererHost.dataset.viewMetrics = JSON.stringify(metrics);
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), mappingCacheBuilds: mappingCache.metrics().builds, mappingCacheHits: mappingCache.metrics().hits, snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter: adapter.metrics(), geometryExtraction: adapter.geometryMetrics() });
+      const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics();
+      const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics();
+      // Keep the hot-path DOM snapshot scalar-only. Per-signal maps remain
+      // available through the renderer/adapter pull diagnostics APIs.
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction });
     };
     let currentZoom = 1;
     function syncPresentationScale() {
