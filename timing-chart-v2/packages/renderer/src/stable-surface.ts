@@ -1,6 +1,15 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
+const WAVE_BATCH_LIMIT = 8;
+
+function nextBrowserFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
+    else globalThis.setTimeout(resolve, 0);
+  });
+}
+
 function createLeftTreeIcon(document: Document, name: "chevron-down" | "chevron-right" | "eye" | "eye-off" | "more" | "comment", className: string): SVGSVGElement {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
@@ -100,7 +109,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -318,7 +327,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     if (this.#waveBatchScheduled) return;
     this.#waveBatchScheduled = true;
     let task: Promise<void>;
-    task = Promise.resolve().then(() => this.#flushWaveBatch()).finally(() => {
+    task = nextBrowserFrame().then(() => {
+      this.#diagnostics = { ...this.#diagnostics, waveBatchFrameYields: this.#diagnostics.waveBatchFrameYields + 1 };
+      return this.#flushWaveBatch();
+    }).finally(() => {
       this.#pending.delete(task);
       this.#waveBatchScheduled = false;
       if (this.#waveQueue.size > 0) this.#scheduleWaveBatch();
@@ -327,10 +339,17 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   async #flushWaveBatch(): Promise<void> {
-    const requests = [...this.#waveQueue.entries()].map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version }));
-    this.#waveQueue.clear();
+    const requests = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version }));
+    for (const request of requests) this.#waveQueue.delete(request.signalId);
     if (requests.length === 0) return;
     const batchId = String(++this.#waveBatchSequence);
+    this.#diagnostics = {
+      ...this.#diagnostics,
+      waveBatchCount: this.#diagnostics.waveBatchCount + 1,
+      waveBatchMaxSize: Math.max(this.#diagnostics.waveBatchMaxSize, requests.length),
+      waveBatchPending: this.#waveQueue.size,
+    };
+    this.#publishCounters();
     for (const request of requests) {
       request.owner.dataset.waveBatchId = batchId;
       request.owner.dataset.waveBatchSize = String(requests.length);
@@ -370,6 +389,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#wavePending.delete(request.signalId);
       if (request.owner.isConnected && this.#dirtyWaves.has(request.signalId) && (this.#waveVersions.get(request.signalId) ?? 0) !== request.version) this.#queueWave(request.signalId, request.owner);
     }
+    this.#diagnostics = { ...this.#diagnostics, waveBatchPending: this.#waveQueue.size };
     this.#publishCounters();
   }
 

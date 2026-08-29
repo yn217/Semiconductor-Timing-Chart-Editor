@@ -48,6 +48,10 @@ export interface RendererDiagnostics {
   readonly localGeometryBuildsBySignal: Readonly<Record<string, number>>;
   readonly annotationResolvePasses: number;
   readonly resolvedAnnotations: number;
+  readonly waveBatchCount: number;
+  readonly waveBatchFrameYields: number;
+  readonly waveBatchMaxSize: number;
+  readonly waveBatchPending: number;
 }
 
 export interface OverlayAnchorPoint {
