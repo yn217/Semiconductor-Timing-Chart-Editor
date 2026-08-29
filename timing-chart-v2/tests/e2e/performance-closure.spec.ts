@@ -4,6 +4,36 @@ import { generatePerformanceDocument, summarizePerformance, type BrowserPerforma
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
 
+test("View-only operations keep canonical validation and render counters unchanged", async ({ page }) => {
+  await start(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const before = {
+    session: JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>,
+    render: JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as Record<string, any>,
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
+  await page.getByTestId("bottom-tabs").getByRole("button", { name: "Problems", exact: true }).click();
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = 80; element.dispatchEvent(new Event("scroll")); });
+  await page.waitForTimeout(250);
+  const afterSession = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
+  const afterRender = JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as Record<string, any>;
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+  expect(afterSession.validationRuns).toBe(before.session.validationRuns);
+  expect(afterSession.commits).toBe(before.session.commits);
+  expect(afterSession.snapIndexBuilds).toBe(before.session.snapIndexBuilds);
+  expect(afterRender.waveDromRenders).toBe(before.render.waveDromRenders);
+  expect(afterRender.localGeometryBuilds).toBe(before.render.localGeometryBuilds);
+});
+
 test("SnapIndex cache survives a non-geometric Signal rename", async ({ page }) => {
   await start(page);
   const host = page.getByTestId("cycle-surface");
