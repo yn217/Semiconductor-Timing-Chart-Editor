@@ -98,6 +98,8 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(() => toWaveJson({ signal: badStart, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_START" }));
     const badEnableValue = { ...base, enable: [{ start: 0, value: "maybe" }] } as ClockSignal;
     expect(() => toWaveJson({ signal: badEnableValue, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNSUPPORTED_CLOCK_ENABLE" }));
+    const sparseEnable = { ...base, generator: { ...base.generator, period: 2, phase: 0, duty: 0.5 }, enable: [{ start: 0, value: 1 }, { start: 4, value: 0 }, { start: 8, value: 1 }] } as ClockSignal;
+    expect(toWaveJson({ signal: sparseEnable, cycleCount: 12 })).toEqual({ wave: "p.0.p.", period: 2 });
     const badEnableAlign = { ...base, generator: { ...base.generator, period: 2 }, enable: [{ start: 1, value: 1 }] } as ClockSignal;
     expect(() => toWaveJson({ signal: badEnableAlign, cycleCount: 8 })).toThrowError(expect.objectContaining({ code: "UNALIGNED_CLOCK_ENABLE" }));
   });

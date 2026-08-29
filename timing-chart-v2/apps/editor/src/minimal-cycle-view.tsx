@@ -451,12 +451,19 @@ export function MinimalCycleView() {
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
     let timeAxis: TimeAxisGeometry = { mode: "clockless" };
+    let mappingRevision = -1;
+    let cachedMapping: ReturnType<typeof buildDisplayTimeMapping> | undefined;
     const geometrySvgs = new Map<SignalId, SVGSVGElement>();
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
     const provider: WaveformSurfaceProvider = {
       async mountWaveBatch(requests) {
-        const document = session.getSnapshot().document;
-        const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+        const currentSnapshot = session.getSnapshot();
+        const document = currentSnapshot.document;
+        if (cachedMapping === undefined || mappingRevision !== currentSnapshot.revision) {
+          cachedMapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+          mappingRevision = currentSnapshot.revision;
+        }
+        const mapping = cachedMapping;
         const prepared = requests.map((request) => {
           const signal = document.signals.find((candidate) => candidate.id === request.signalId);
           if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };

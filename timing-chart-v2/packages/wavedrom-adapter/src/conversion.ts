@@ -64,11 +64,15 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
 
 function enabledAt(changes: readonly SignalValueChange[] | undefined, cycle: number): boolean {
   if (!changes || changes.length === 0) return true;
-  let value: string | number = 1;
-  for (const change of changes) {
-    if (change.start > cycle) break;
-    value = change.value;
+  let low = 0;
+  let high = changes.length - 1;
+  let activeIndex = -1;
+  while (low <= high) {
+    const middle = low + Math.floor((high - low) / 2);
+    if (changes[middle]!.start <= cycle) { activeIndex = middle; low = middle + 1; }
+    else high = middle - 1;
   }
+  const value: string | number = activeIndex < 0 ? 1 : changes[activeIndex]!.value;
   const normalized = String(value).toLowerCase();
   if (["1", "true", "high"].includes(normalized)) return true;
   if (["0", "false", "low"].includes(normalized)) return false;
