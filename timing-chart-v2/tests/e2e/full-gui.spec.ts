@@ -261,6 +261,30 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   expect(exportedText).toContain("Fig. 2 · R3 · Internal review");
 });
 
+test("Document Properties keeps Header and Legend edits in one Apply/Cancel transaction", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  let properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Document title").fill("Cancelled Properties");
+  await properties.getByLabel("Legend show").check();
+  await properties.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(page.locator(".app-titlebar h1")).not.toHaveText("Cancelled Properties");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Document title").fill("Applied Properties");
+  await properties.getByLabel("Legend show").check();
+  await properties.getByLabel("Legend label legend_input").fill("Inputs");
+  await properties.getByTestId("apply-document-properties").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("editor-legend")).toBeVisible();
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Applied Properties");
+});
+
 test("Save As downloads the canonical document with a requested filename without mutation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
@@ -298,7 +322,7 @@ test("edits and displays the Legend through the canonical presentation command",
   await properties.getByLabel("Legend used roles only").uncheck();
   await properties.getByLabel("Legend position X").fill("36");
   await properties.getByLabel("Legend position Y").fill("48");
-  await properties.getByTestId("apply-legend").click();
+  await properties.getByTestId("apply-document-properties").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const legend = page.getByTestId("editor-legend");
   await expect(legend).toBeVisible();
@@ -317,14 +341,15 @@ test("Legend position supports drag and keyboard nudge through legend.update", a
   await properties.getByLabel("Legend show").check();
   await properties.getByLabel("Legend position X").fill("40");
   await properties.getByLabel("Legend position Y").fill("50");
-  await properties.getByTestId("apply-legend").click();
+  await properties.getByTestId("apply-document-properties").click();
   const legend = page.getByTestId("editor-legend");
   await expect(legend).toHaveAttribute("data-legend-position-x", "40");
   await expect(legend).toHaveAttribute("data-legend-position-y", "50");
   await legend.focus();
   await page.keyboard.press("ArrowRight");
-  await page.keyboard.press("Shift+ArrowDown");
   await expect(legend).toHaveAttribute("data-legend-position-x", "41");
+  await legend.focus();
+  await page.keyboard.press("Shift+ArrowDown");
   await expect(legend).toHaveAttribute("data-legend-position-y", "60");
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
 });
@@ -341,8 +366,8 @@ test("Legend editor exposes stable-ID label, visibility and ordering controls", 
   await input.getByLabel("Legend label legend_input").fill("Inputs");
   await input.getByLabel("Legend visibility legend_input").uncheck();
   await editor.locator("[data-legend-entry-id='legend_output']").getByRole("button", { name: "Move legend_output up" }).click();
-  await properties.getByTestId("apply-legend").click();
-  await expect(properties.getByTestId("legend-status")).toHaveText("Legend applied");
+  await properties.getByTestId("apply-document-properties").click();
+  await expect(properties.getByTestId("legend-status")).toHaveText("Properties applied");
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-legend-editor-1280x720.png", fullPage: true });
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("editor-legend").locator("[data-legend-id='legend_input']")).toHaveCount(0);
@@ -361,8 +386,8 @@ test("edits Legend entry labels, visibility and order, then preserves them throu
     { id: "legend_input", role: "input", label: "Inputs", visible: false, order: 1 },
     { id: "legend_internal", role: "internal", label: "Core", visible: true, order: 2 },
   ], null, 2));
-  await properties.getByTestId("apply-legend").click();
-  await expect(properties.getByTestId("legend-status")).toHaveText("Legend applied");
+  await properties.getByTestId("apply-document-properties").click();
+  await expect(properties.getByTestId("legend-status")).toHaveText("Properties applied");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const legend = page.getByTestId("editor-legend");
   await expect(legend.locator("[data-legend-id='legend_output']")).toHaveText(/Outputs/);
