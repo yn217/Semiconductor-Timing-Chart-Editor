@@ -1,4 +1,4 @@
-import { migrateV1 } from "./migration.js";
+import { migrateThroughRegistry } from "./migration.js";
 import { validateCanonicalDocument } from "./validation.js";
 import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult } from "./types.js";
@@ -28,10 +28,9 @@ function syntaxProblem(error: unknown, source: string): DocumentProblem {
 
 export function migrateDocument(input: unknown): { document: CanonicalDocument; warnings: readonly MigrationWarning[] } | undefined {
   if (input === null || typeof input !== "object" || Array.isArray(input)) return undefined;
-  const version = (input as { formatVersion?: unknown }).formatVersion;
-  if (version === 1) return migrateV1(input);
-  if (version === 2) return { document: cloneUnknown(input) as CanonicalDocument, warnings: [] };
-  return undefined;
+  const migrated = migrateThroughRegistry(input, 2);
+  if (!migrated) return undefined;
+  return { document: cloneUnknown(migrated.value) as CanonicalDocument, warnings: migrated.warnings };
 }
 
 export function normalizeDocument(input: unknown): ParseDocumentResult {

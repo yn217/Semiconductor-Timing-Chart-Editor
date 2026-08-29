@@ -426,3 +426,62 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     },
   };
 }
+
+export interface MigrationStep {
+  readonly fromVersion: number;
+  readonly toVersion: number;
+  /** A lossy step must surface its policy through warnings or explicit rejection. */
+  readonly lossy: boolean;
+  readonly warningPolicy: "warn" | "reject";
+  readonly migrate: (input: unknown) => { value: unknown; warnings: MigrationWarning[] };
+}
+
+export interface MigrationChainResult {
+  readonly value: unknown;
+  readonly warnings: readonly MigrationWarning[];
+  readonly appliedSteps: readonly string[];
+}
+
+/** The authoritative version transition table for persisted documents. */
+export const MIGRATION_REGISTRY: readonly MigrationStep[] = [
+  {
+    fromVersion: 1,
+    toVersion: 2,
+    lossy: true,
+    warningPolicy: "warn",
+    migrate: (input) => {
+      const result = migrateV1(input);
+      return { value: result.document, warnings: result.warnings };
+    },
+  },
+];
+
+export function migrateThroughRegistry(
+  input: unknown,
+  targetVersion: number,
+  registry: readonly MigrationStep[] = MIGRATION_REGISTRY,
+): MigrationChainResult | undefined {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) return undefined;
+  let current: unknown = input;
+  let version = (input as { formatVersion?: unknown }).formatVersion;
+  if (!Number.isInteger(version)) return undefined;
+  if (version === targetVersion) return { value: current, warnings: [], appliedSteps: [] };
+
+  const warnings: MigrationWarning[] = [];
+  const appliedSteps: string[] = [];
+  const seenVersions = new Set<number>();
+  while (version !== targetVersion) {
+    if (seenVersions.has(version as number)) return undefined;
+    seenVersions.add(version as number);
+    const step = registry.find((candidate) => candidate.fromVersion === version);
+    if (!step || step.toVersion === step.fromVersion) return undefined;
+    const result = step.migrate(current);
+    if (step.lossy && step.warningPolicy === "reject") return undefined;
+    if (step.lossy && step.warningPolicy === "warn" && result.warnings.length === 0) return undefined;
+    current = result.value;
+    warnings.push(...result.warnings);
+    appliedSteps.push(`${step.fromVersion}->${step.toVersion}`);
+    version = step.toVersion;
+  }
+  return { value: current, warnings, appliedSteps };
+}

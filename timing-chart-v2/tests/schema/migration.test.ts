@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { migrateV1 } from "../../packages/schema/src/migration.js";
+import { migrateThroughRegistry, migrateV1, type MigrationStep } from "../../packages/schema/src/migration.js";
 import { validateCanonicalDocument } from "../../packages/schema/src/validation.js";
 
 function v1Document(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -13,6 +13,18 @@ function v1Document(overrides: Record<string, unknown> = {}): Record<string, unk
 }
 
 describe("migrateV1", () => {
+  it("applies registered migrations sequentially and records lossy-step warnings", () => {
+    const order: string[] = [];
+    const registry: MigrationStep[] = [
+      { fromVersion: 1, toVersion: 2, lossy: false, warningPolicy: "warn", migrate: (input) => { order.push("1->2"); return { value: { ...(input as object), formatVersion: 2 }, warnings: [] }; } },
+      { fromVersion: 2, toVersion: 3, lossy: true, warningPolicy: "warn", migrate: (input) => { order.push("2->3"); return { value: { ...(input as object), formatVersion: 3 }, warnings: [{ code: "MIGRATION_TEST_LOSSY", path: "$.test", message: "Synthetic lossy migration." }] }; } },
+    ];
+    const result = migrateThroughRegistry({ formatVersion: 1, payload: "fixture" }, 3, registry);
+    expect(result).toMatchObject({ appliedSteps: ["1->2", "2->3"], value: { formatVersion: 3 } });
+    expect(order).toEqual(["1->2", "2->3"]);
+    expect(result?.warnings).toHaveLength(1);
+  });
+
   it("preserves the value-center anchor point instead of losslessly-incorrectly remapping it to transition-center", () => {
     const source = v1Document({
       signals: [
