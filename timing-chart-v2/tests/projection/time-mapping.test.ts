@@ -84,6 +84,19 @@ describe("DisplayTimeMappingCache", () => {
     expect(cache.metrics().hits).toBe(1);
     expect(cache.metrics().sourceCyclesVisited).toBe(24);
   });
+
+  it("records bounded scale evidence for 100k cycles and 1k folds", () => {
+    const cache = new DisplayTimeMappingCache();
+    const folds = Array.from({ length: 1000 }, (_, index) => collapsedGroup(`fold-${index}`, index * 100, index * 100 + 1));
+    const mapping = cache.get(timeline(100_000), folds);
+    const metrics = cache.metrics();
+
+    expect(mapping.displayCycleCount).toBe(99_000);
+    expect(metrics.builds).toBe(1);
+    expect(metrics.sourceCyclesVisited).toBe(100_000);
+    expect(metrics.foldRangesVisited).toBe(1_000);
+    expect(Number.isFinite(metrics.buildDurationMs)).toBe(true);
+  });
 });
 
 describe("remapValueChangesToDisplay", () => {
