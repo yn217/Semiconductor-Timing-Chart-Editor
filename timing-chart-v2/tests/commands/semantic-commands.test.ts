@@ -145,7 +145,7 @@ describe("pure Semantic Command planning", () => {
     const result = session.execute({ id: commandId("cmd_delete_ghost_source"), type: "signal.delete", signalId: sourceSignalId });
 
     expect(result.ok).toBe(false);
-    expect(result.problems).toEqual(expect.arrayContaining([expect.objectContaining({ code: "SIGNAL_HAS_DEPENDENTS", path: "$.signalId" })]));
+    expect(result.problems).toEqual(expect.arrayContaining([expect.objectContaining({ code: "SIGNAL_HAS_DEPENDENTS", path: "$.signalId", message: "Signal has annotation dependents: ann_ghost_source_only." })]));
     expect(session.getSnapshot()).toBe(before);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
   });

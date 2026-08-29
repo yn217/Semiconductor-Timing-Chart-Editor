@@ -514,7 +514,11 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "signal.delete": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       if (index < 0) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
-      if (dependentAnnotations(document, command.signalId).length > 0) return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalId", "Signal has annotation dependents.");
+      const annotationDependents = dependentAnnotations(document, command.signalId);
+      if (annotationDependents.length > 0) {
+        const dependentIds = annotationDependents.map((annotation) => annotation.id).join(", ");
+        return fail("invalid", "SIGNAL_HAS_DEPENDENTS", "$.signalId", `Signal has annotation dependents: ${dependentIds}.`);
+      }
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", "Signal does not exist.");
       const groups = document.signalGroups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== command.signalId) }));
