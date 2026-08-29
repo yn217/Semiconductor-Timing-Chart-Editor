@@ -38,3 +38,9 @@ The prepared packages are also retained under `references/` and unpacked for loc
 - `samples/golden-feature-coverage/` — 11-20
 
 Run `node scripts/validate-samples.mjs` to validate the 20 semantic `.tcd.json` fixtures and the feature coverage matrix.
+
+## Non-Golden showcase samples
+
+These are intentionally outside the immutable 20-sample Golden set so they can evolve with the product without changing Golden manifests, thresholds, masks, or Issue #17 expectations.
+
+- `samples/showcase/21_large_feature_showcase.tcd.json` — **128 cycles / 48 signals**. One large Canonical v2 document for broad manual feature inspection and later integration/regression use. It covers four clocks, reset sequencing, input/output/internal roles, binary/bus/state/logic/event/pulse/commentRow signals, group bands and spacers, clock suppression/gating, edge counters, AXI-like traffic, pipeline latency, Async FIFO/CDC Gray pointers, all 12 annotation types, bookmarks, collapsed time groups/ruler label anchors, transactions/phases, legend, constraints, deep source paths, MiniMap/scroll/filter/Inspector use, and Save/Open/export starting-state coverage. Clockless mode remains a separate dedicated sample because this showcase intentionally exercises multi-clock/reference-clock behavior.
