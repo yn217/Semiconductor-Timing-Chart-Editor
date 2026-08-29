@@ -393,6 +393,13 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(42);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.signalGroups[0]?.spacers?.[0]?.height).toBe(18);
+    const moved = session.execute({ id: commandId("cmd_spacer_move"), type: "spacer.move", spacerId, targetGroupId: "grp_main" as GroupId, index: 0 });
+    expect(moved.ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual([spacerId, "sig_clk", "sig_data"]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signalGroups[0]?.rows).toEqual(["sig_clk", spacerId, "sig_data"]);
+    const rejectedMove = session.execute({ id: commandId("cmd_spacer_move_invalid"), type: "spacer.move", spacerId, targetGroupId: "grp_missing" as GroupId, index: 0 });
+    expect(rejectedMove).toMatchObject({ ok: false, reason: "invalid" });
     expect(session.execute({ id: commandId("cmd_spacer_delete"), type: "spacer.delete", spacerId }).ok).toBe(true);
     expect(session.getSnapshot().document.signalGroups[0]).toMatchObject({ rows: ["sig_clk", "sig_data"] });
     expect(session.getSnapshot().document.signalGroups[0]).not.toHaveProperty("spacers");

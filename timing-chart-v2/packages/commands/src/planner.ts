@@ -99,6 +99,25 @@ function moveSignal(document: CanonicalDocument, command: Extract<SemanticComman
   return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
 }
 
+function moveSpacer(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "spacer.move" }>): CommandPlanResult {
+  const sourceGroupIndex = document.signalGroups.findIndex((group) => group.rows.includes(command.spacerId));
+  const targetGroupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
+  const sourceGroup = document.signalGroups[sourceGroupIndex];
+  const targetGroup = document.signalGroups[targetGroupIndex];
+  if (!sourceGroup || !targetGroup) return fail("invalid", "GROUP_NOT_FOUND", "$.targetGroupId", "Spacer owner or target group does not exist.");
+  if (sourceGroup.id !== targetGroup.id || !sourceGroup.spacers?.some((spacer) => spacer.id === command.spacerId)) return fail("invalid", "SPACER_OWNER_MISMATCH", "$.targetGroupId", "A Spacer can only move within its owning group.");
+  const remaining = sourceGroup.rows.filter((row) => row !== command.spacerId);
+  if (!Number.isInteger(command.index) || command.index < 0 || command.index > remaining.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Spacer move index is outside the post-removal rows.");
+  remaining.splice(command.index, 0, command.spacerId);
+  if (remaining.every((row, index) => row === sourceGroup.rows[index])) return fail("no-op", "NO_OP", "$", "Spacer is already at the requested position.");
+  const groups = [...document.signalGroups]; groups[sourceGroupIndex] = { ...sourceGroup, rows: remaining };
+  const nextDocument = { ...document, signalGroups: groups };
+  const changedRows = changedPositions(orderedRows(document), orderedRows(nextDocument));
+  const changedTimingRows = changedPositions(orderedVisibleTimingRows(document), orderedVisibleTimingRows(nextDocument));
+  const changeSet: ChangeSet = { rowOrder: changedRows, geometryScreenY: changedTimingRows, annotationPosition: annotationsForSignals(document, changedTimingRows), minimapOverview: true };
+  return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+}
+
 function mapInsertPoint(value: number, at: number, count: number): number {
   return value >= at ? value + count : value;
 }
@@ -695,6 +714,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { rowOrder: [command.spacer.id], geometryScreenY: affectedTimingRows, annotationPosition: annotationsForSignals(document, affectedTimingRows), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+    case "spacer.move": return moveSpacer(document, command);
     case "spacer.update": {
       const groupIndex = document.signalGroups.findIndex((group) => group.spacers?.some((spacer) => spacer.id === command.spacerId));
       const group = document.signalGroups[groupIndex];

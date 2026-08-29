@@ -54,6 +54,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.updateClockGenerator"; signalId: SignalId; generator: ClockGenerator }>
   | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
   | Readonly<{ id: CommandId; type: "spacer.create"; spacer: SpacerRow; targetGroupId: GroupId; index: number }>
+  | Readonly<{ id: CommandId; type: "spacer.move"; spacerId: SpacerId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "spacer.update"; spacerId: SpacerId; height: number }>
   | Readonly<{ id: CommandId; type: "spacer.delete"; spacerId: SpacerId }>
   | Readonly<{ id: CommandId; type: "group.create"; group: SignalGroup; index: number }>

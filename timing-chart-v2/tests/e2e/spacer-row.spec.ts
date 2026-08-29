@@ -16,17 +16,22 @@ test("adds and edits a Spacer Row from the Group Inspector with Save/Open and Un
   const spacerId = await spacer.getAttribute("data-spacer-id");
   expect(spacerId).toMatch(/^spacer_/);
   expect(await host.locator(`[data-role='timing-row'][data-row-id='${spacerId}']`).getAttribute("data-kind")).toBe("spacer");
+  const rowOrderBeforeMove = await host.locator("[data-role='timing-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
+  await page.getByTestId("spacer-reorder").getByRole("button", { name: `Move spacer ${spacerId} up` }).click();
+  const rowOrderAfterMove = await host.locator("[data-role='timing-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
+  expect(rowOrderAfterMove.indexOf(spacerId)).toBe(rowOrderBeforeMove.indexOf(spacerId) - 1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await spacer.getByLabel(`Spacer height ${spacerId}`).fill("48");
   await spacer.getByRole("button", { name: "Apply Height" }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(spacer.getByLabel(`Spacer height ${spacerId}`)).toHaveValue("48");
   const afterCounters = JSON.parse((await surface.getAttribute("data-render-counters"))!);
   expect(afterCounters.waveDromRenders).toBe(beforeCounters.waveDromRenders);
   expect(afterCounters.localGeometryBuilds).toBe(beforeCounters.localGeometryBuilds);
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 1");
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   const download = page.waitForEvent("download");
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
   const savedPath = await (await download).path();
@@ -36,4 +41,14 @@ test("adds and edits a Spacer Row from the Group Inspector with Save/Open and Un
   await host.getByLabel("Select Control group").click();
   const reopened = page.getByTestId("inspector-spacers").locator("form[data-spacer-id]").last();
   await expect(reopened.getByLabel(`Spacer height ${spacerId}`)).toHaveValue("48");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const exportDialogPromise = page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true });
+  await exportDialogPromise.click();
+  const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  for (const format of ["svg", "png", "pdf"] as const) {
+    await exportDialog.getByLabel("Export format").selectOption(format);
+    const download = page.waitForEvent("download");
+    await exportDialog.getByRole("button", { name: `Export ${format.toUpperCase()}`, exact: true }).click();
+    expect(await (await download).path()).toBeTruthy();
+  }
 });
