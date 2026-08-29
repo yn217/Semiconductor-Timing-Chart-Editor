@@ -51,9 +51,11 @@ describe("DocumentSession atomic Open/Save", () => {
 
   it("saves deterministically and reopens without semantic change", () => {
     const session = new DocumentSession(canonicalFixture());
+    const beforeMetrics = session.metrics();
     const first = session.save();
     expect(first.ok).toBe(true);
     if (!first.ok) return;
+    expect(session.metrics()).toEqual(beforeMetrics);
     expect(session.open(first.text).ok).toBe(true);
     const second = session.save();
     expect(second).toEqual(first);

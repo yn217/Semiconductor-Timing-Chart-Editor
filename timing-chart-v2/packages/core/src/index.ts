@@ -1,6 +1,6 @@
 import {
   parseDocument,
-  serializeCanonicalDocument,
+  serializeValidatedCanonicalDocument,
   validateCanonicalDocument,
   type CanonicalDocument,
   type DocumentProblem,
@@ -145,9 +145,10 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
   }
 
   save(): SaveResult {
-    const problems = validateCanonicalDocument(this.#snapshot.document);
-    if (problems.length > 0) return { ok: false, problems };
-    return { ok: true, text: serializeCanonicalDocument(this.#snapshot.document) };
+    // The snapshot is owned by this session and can only be established by
+    // validated construction, validated Open, or validated commit. Keep the
+    // trust boundary explicit and avoid validating it a second time here.
+    return { ok: true, text: serializeValidatedCanonicalDocument(this.#snapshot.document) };
   }
 }
 

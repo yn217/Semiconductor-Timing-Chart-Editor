@@ -66,6 +66,15 @@ export function parseDocument(input: string | unknown): ParseDocumentResult {
   return normalizeDocument(parsed);
 }
 
+/**
+ * Serialize a document that has already crossed the canonical validation
+ * boundary. Callers must not use this for arbitrary input; the public
+ * serializeCanonicalDocument() below remains the validating entry point.
+ */
+export function serializeValidatedCanonicalDocument(document: CanonicalDocument, indent = 2): string {
+  return `${JSON.stringify(sortObjectKeys(document), null, indent)}\n`;
+}
+
 export function serializeCanonicalDocument(document: CanonicalDocument, indent = 2): string {
   const problems = validateCanonicalDocument(document);
   if (problems.length > 0) {
@@ -73,5 +82,5 @@ export function serializeCanonicalDocument(document: CanonicalDocument, indent =
     Object.assign(error, { name: "CanonicalSerializationError", problems });
     throw error;
   }
-  return `${JSON.stringify(sortObjectKeys(document), null, indent)}\n`;
+  return serializeValidatedCanonicalDocument(document, indent);
 }
