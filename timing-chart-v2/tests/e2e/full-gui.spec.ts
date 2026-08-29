@@ -23,12 +23,12 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   const workspace = await page.locator(".desktop-workspace").boundingBox();
   const bottom = await page.getByTestId("bottom-editor").boundingBox();
   const inspector = await page.getByTestId("inspector").boundingBox();
-  expect(ribbon).toMatchObject({ y: 70, height: 147 });
-  expect(workspace).toMatchObject({ y: 217 });
-  expect(bottom).toMatchObject({ x: 330, height: 270 });
-  expect(inspector).toMatchObject({ x: 1372, width: 300 });
+  expect(ribbon).toMatchObject({ y: 65, height: 102 });
+  expect(workspace).toMatchObject({ y: 167 });
+  expect(bottom).toMatchObject({ x: 265, height: 240 });
+  expect(inspector).toMatchObject({ x: 1375, width: 297 });
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(0);
-  await expect(page.locator(".ribbon-group")).toHaveCount(12);
+  await expect(page.locator(".ribbon-group")).toHaveCount(7);
 });
 
 test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ page }) => {
@@ -41,12 +41,12 @@ test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ pag
     height: element.getBoundingClientRect().height,
     groupWidths: [...element.querySelectorAll<HTMLElement>(".ribbon-group")].map((group) => Math.round(group.getBoundingClientRect().width)),
   }));
-  expect(metrics.height).toBe(147);
+  expect(metrics.height).toBe(102);
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-  expect(metrics.groupWidths.length).toBe(12);
-  await expect(page.locator(".app-titlebar")).toHaveCSS("height", "32px");
-  await expect(page.locator(".ribbon-tabs")).toHaveCSS("height", "38px");
-  await expect(page.locator(".status-bar")).toHaveCSS("height", "27px");
+  expect(metrics.groupWidths.length).toBe(7);
+  await expect(page.locator(".app-titlebar")).toHaveCSS("height", "31px");
+  await expect(page.locator(".ribbon-tabs")).toHaveCSS("height", "34px");
+  await expect(page.locator(".status-bar")).toHaveCSS("height", "25px");
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-shell-dut-1672x941.png", animations: "disabled" });
 });
 
