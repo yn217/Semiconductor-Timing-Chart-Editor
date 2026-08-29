@@ -2,19 +2,19 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
-test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async ({ page }) => {
+test("View exposes stable Show/Panels/Guides/Zoom/Workspace slots", async ({ page }) => {
   await page.goto("/");
   const shell = page.locator(".editor-shell");
   const surface = page.locator("[data-role='timing-chart-surface']");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
 
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(6);
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(5);
   await expect(page.locator(".ribbon-major-group").first()).toHaveAttribute("data-major-group", "Show");
   await expect(page.locator(".ribbon-major-group").nth(1)).toHaveAttribute("data-major-group", "Panels");
   await expect(page.locator(".ribbon-major-group").nth(2)).toHaveAttribute("data-major-group", "Guides");
   await expect(page.locator(".ribbon-major-group").nth(3)).toHaveAttribute("data-major-group", "Zoom");
   await expect(page.locator(".ribbon-major-group").nth(4)).toHaveAttribute("data-major-group", "Workspace");
-  await expect(page.locator(".ribbon-major-group").nth(5)).toHaveAttribute("data-major-group", "Layout");
+  await expect(page.getByTestId("ribbon").getByLabel("Workspace layout actions")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Zoom Out" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Zoom In" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Fit All" })).toBeVisible();
@@ -67,7 +67,7 @@ test("View groups compress without horizontal overflow at 1280px", async ({ page
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
-  await expect(ribbon.locator("[data-major-group]")).toHaveCount(6);
+  await expect(ribbon.locator("[data-major-group]")).toHaveCount(5);
   const metrics = await ribbon.evaluate((node) => {
     const root = node.getBoundingClientRect();
     const groups = [...node.querySelectorAll<HTMLElement>("[data-major-group]")].map((group) => group.getBoundingClientRect());
