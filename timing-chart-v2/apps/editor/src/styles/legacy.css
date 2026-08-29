@@ -360,6 +360,9 @@ body { min-width: 1100px; }
 .editor-shell .left-column-heading { align-items: flex-start; padding-top: 9px; }
 .editor-shell .left-column-heading > label { position: absolute; top: 37px; right: 0; left: 0; z-index: 21; display: block; height: 35px; padding: 4px 7px; border-top: 1px solid #d6dde6; background: #fbfcfe; }
 .editor-shell .left-column-heading > label input { height: 27px; padding-left: 7px; }
+.editor-shell .left-column-heading > .tree-filter-controls { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: center; gap: 4px; }
+.editor-shell .left-column-heading > .tree-filter-controls select { width: 64px; min-width: 0; height: 27px; padding: 0 2px; border: 1px solid #bdc9d6; border-radius: 3px; background: white; color: #24364a; font: 10px/1.2 var(--gui-font-family); }
+.editor-shell .left-column-heading > .tree-filter-controls input { min-width: 0; }
 .editor-shell .left-column-actions > .tree-add-button { flex-basis: 63px; width: 63px; font-size: 0; }
 .editor-shell .left-column-actions > .tree-add-button::after { content: "+ Add"; font-size: 11px; }
 .editor-shell .surface-host [data-role="frozen-row"] { grid-template-columns: 61px 148px; padding: 0; }
