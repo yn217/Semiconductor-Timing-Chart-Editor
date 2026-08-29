@@ -192,3 +192,20 @@ test("keeps range geometry aligned through the Home Cycle Insert command", async
   const end = Number(await page.getByTestId("range-selection-band").getAttribute("data-range-end"));
   await assertBand(page, start, end);
 });
+
+test("keeps range geometry aligned when inserting at the interior boundary of a selected range", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end").fill("9");
+  await page.getByLabel("Timeline range start").fill("5");
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [5, 9)");
+  await assertBand(page, 5, 9);
+
+  const host = page.getByTestId("cycle-surface");
+  const cycleCountBefore = Number(await page.locator(".editor-shell").getAttribute("data-cycle-count"));
+  await page.getByTestId("timeline-editor").getByRole("button", { name: "Insert before", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(cycleCountBefore + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await assertBand(page, 5, 9);
+});
