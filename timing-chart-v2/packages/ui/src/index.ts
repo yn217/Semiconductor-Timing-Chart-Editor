@@ -7,6 +7,59 @@ export interface UiServices {
 
 export type UiCommandHandler<Payload = unknown, Result = unknown> = (payload: Payload) => Result;
 
+export type CommandSurface = "ribbon" | "context-menu" | "keyboard" | "tree" | "inspector" | "bottom";
+
+export interface CommandSurfaceContract {
+  readonly logicalCommand: string;
+  readonly canonicalCommand: string;
+  readonly surfaces: Readonly<Record<CommandSurface, boolean>>;
+  readonly precondition: string;
+  readonly historyUnit: "one-operation" | "view-only";
+}
+
+/**
+ * Production command-surface contract. This is deliberately declarative: each
+ * surface remains free to present the operation differently, but supported
+ * entry points must name the same semantic command and history policy.
+ */
+export const COMMAND_SURFACE_CONTRACTS: readonly CommandSurfaceContract[] = [
+  {
+    logicalCommand: "Rename",
+    canonicalCommand: "signal.rename | group.rename | annotation.updateProperties",
+    surfaces: { ribbon: true, "context-menu": true, keyboard: true, tree: true, inspector: true, bottom: true },
+    precondition: "one selected renameable entity",
+    historyUnit: "one-operation",
+  },
+  {
+    logicalCommand: "Delete",
+    canonicalCommand: "selection.delete",
+    surfaces: { ribbon: true, "context-menu": true, keyboard: true, tree: true, inspector: true, bottom: true },
+    precondition: "one or more deletable selected entities",
+    historyUnit: "one-operation",
+  },
+  {
+    logicalCommand: "Visibility",
+    canonicalCommand: "signal.setVisibility",
+    surfaces: { ribbon: true, "context-menu": true, keyboard: false, tree: true, inspector: true, bottom: true },
+    precondition: "one selected Signal",
+    historyUnit: "one-operation",
+  },
+  {
+    logicalCommand: "Reorder",
+    canonicalCommand: "signal.move | group.move",
+    surfaces: { ribbon: true, "context-menu": true, keyboard: false, tree: true, inspector: false, bottom: false },
+    precondition: "selected row and valid sibling target",
+    historyUnit: "one-operation",
+  },
+  {
+    logicalCommand: "Undo/Redo",
+    canonicalCommand: "history.undo | history.redo",
+    surfaces: { ribbon: true, "context-menu": false, keyboard: true, tree: false, inspector: true, bottom: true },
+    precondition: "corresponding history stack is non-empty",
+    historyUnit: "one-operation",
+  },
+] as const;
+
 /** One routing surface shared by Ribbon, keyboard, context menus and inspectors. */
 export class UiCommandRegistry {
   readonly #handlers = new Map<string, UiCommandHandler>();

@@ -9,12 +9,12 @@ test("Inspector and Bottom expose the documented edit contract surfaces", async 
   await expect(inspector.getByLabel("Inspector signal name")).toBeVisible();
   await expect(inspector.getByTestId("apply-inspector-signal")).toBeVisible();
   await expect(inspector.getByLabel("Inspector signal visible")).toBeVisible();
-  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toBeVisible();
-  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "Annotation", exact: true })).toBeVisible();
-  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "Problems", exact: true })).toBeVisible();
-  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "JSON", exact: true })).toBeVisible();
+  await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
+  await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Annotation", exact: true })).toBeVisible();
+  await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Problems", exact: true })).toBeVisible();
+  await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "JSON", exact: true })).toBeVisible();
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toBeVisible();
+  await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
   await expect(page.getByTestId("follow-selection")).toBeVisible();
   await expect(page.getByTestId("bottom-pin")).toBeVisible();
 });
@@ -70,7 +70,7 @@ test("Bottom editors cancel transient drafts and preserve canonical counters", a
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.getByTestId("bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   const transactions = page.getByTestId("transaction-editor");
   await transactions.getByLabel("New Transaction name").fill("Cancel Transaction");
   await transactions.getByRole("button", { name: "Create Transaction", exact: true }).click();
