@@ -555,7 +555,8 @@ export function MinimalCycleView() {
     let snapIndex: ImmutableSnapIndex | undefined;
     const currentSnapIndex = () => {
       if (!snapIndex) {
-        snapIndex = buildSnapIndex(session.getSnapshot().document, projection, geometryMaps, snapService, screenGeometryScale);
+        const snapDocument = session.getSnapshot().document;
+        snapIndex = buildSnapIndex(snapDocument, projection, geometryMaps, snapService, screenGeometryScale, mappingCache.get(snapDocument.timeline, snapDocument.timeGroups));
         publishState();
       }
       return snapIndex;
@@ -570,7 +571,7 @@ export function MinimalCycleView() {
     let screenGeometryScale = 1;
     let rulerInitialized = false;
     const refreshOverlays = (document: CanonicalDocument) => {
-      renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, screenGeometryScale));
+      renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, screenGeometryScale, mappingCache.get(document.timeline, document.timeGroups)));
       edgeCounterResolvePasses += 1;
       renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, timelineRangeRef.current, selectedCycleRef.current, screenGeometryScale));
       for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationRef.current);
@@ -581,7 +582,7 @@ export function MinimalCycleView() {
       const metrics = viewMetricsOwner.snapshot();
       const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
       timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-      screenGeometryScale = buildRuler(rulerElement, timeAxis.geometry, document, timeAxis.ownerSignalId, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom), timeAxis.mode);
+      screenGeometryScale = buildRuler(rulerElement, timeAxis.geometry, document, timeAxis.ownerSignalId, fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom), timeAxis.mode, mappingCache.get(document.timeline, document.timeGroups));
       rulerInitialized = true;
       syncPresentationScale();
     };
@@ -589,7 +590,7 @@ export function MinimalCycleView() {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
       const metrics = viewMetricsOwner.snapshot();
       timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-      renderGeometryGrid(gridElement, timeAxis.geometry, document, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode);
+      renderGeometryGrid(gridElement, timeAxis.geometry, document, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode, mappingCache.get(document.timeline, document.timeGroups));
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -1442,7 +1443,7 @@ export function MinimalCycleView() {
       const document = session.getSnapshot().document;
       const annotation = document.annotations.find((item) => item.id === annotationDrag?.annotationId);
       const anchor = annotation?.[annotationDrag.field];
-       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, buildDisplayTimeMapping(document.timeline, document.timeGroups), screenGeometryScale);
+       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale);
       if (!annotation || !anchor || !point) return;
        const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
       const snap = snapEnabledRef.current ? annotationDrag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
@@ -1482,7 +1483,7 @@ export function MinimalCycleView() {
       }
       const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
       const anchor = field ? annotation[field] : undefined;
-       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, buildDisplayTimeMapping(snapshot.document.timeline, snapshot.document.timeGroups), screenGeometryScale);
+       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, mappingCache.get(snapshot.document.timeline, snapshot.document.timeGroups), screenGeometryScale);
       if (!field || !anchor || !point) return;
        const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + dy };
       const snap = snapEnabledRef.current ? drag.snapIndex?.nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
@@ -3209,12 +3210,11 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
-function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): void {
+function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): void {
   element.dataset.gridEnabled = String(visible);
   element.dataset.axisMode = axisMode;
   element.style.height = `${height}px`;
   if (!geometry || !axisOwnerSignalId) return;
-  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const terminal = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
   const scale = scaleOverride ?? (screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24));
   const lines: HTMLElement[] = [];
@@ -3766,8 +3766,7 @@ function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: Canoni
   return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
 }
 
-function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, xScale = 1): AnnotationOverlayPrimitive[] {
-  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, xScale = 1, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): AnnotationOverlayPrimitive[] {
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);
@@ -3846,8 +3845,7 @@ function projectEdgeCounters(document: CanonicalDocument, projection: RenderProj
   });
 }
 
-function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService(), xScale = 1): ImmutableSnapIndex {
-  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
+function buildSnapIndex(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, service = new SemanticSnapCandidateService(), xScale = 1, mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): ImmutableSnapIndex {
   const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
   const referenceMap = axisOwnerSignalId === undefined ? undefined : maps.get(axisOwnerSignalId);
   const screenMaps = new Map<SignalId, LocalGeometryMap>([...maps.entries()].map(([id, map]) => [id, {
@@ -3911,7 +3909,7 @@ function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: nu
   return Number.isFinite(scale) && scale > 0 ? scale : undefined;
 }
 
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
+function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups)): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -3926,7 +3924,6 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   rangeBand.dataset.testid = "range-preview";
   rangeBand.setAttribute("aria-hidden", "true");
   rangeBand.hidden = true;
-  const mapping = buildDisplayTimeMapping(document.timeline, document.timeGroups);
   const ticks: HTMLElement[] = [];
   const terminalPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
   const scale = actualScreenScale ?? forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
