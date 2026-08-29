@@ -350,6 +350,7 @@ export function MinimalCycleView() {
       registry.register("selection.delete", () => {
         const annotationId = selectedAnnotationRef.current;
         const signalId = selectedSignalRef.current;
+        const groupId = selectedGroupRef.current;
         const transactionId = selectedTransactionRef.current;
         if (transactionId) {
           const result = execute.current({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
@@ -364,6 +365,9 @@ export function MinimalCycleView() {
         } else if (signalId) {
           const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
           if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
+        } else if (groupId) {
+          const result = execute.current({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId });
+          if (result.ok) { selectedGroupRef.current = undefined; setSelectedGroupId(undefined); }
         }
       }),
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {

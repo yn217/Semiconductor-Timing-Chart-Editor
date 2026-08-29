@@ -27,7 +27,6 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
       const signal = signals.get(rowId);
       return (signal !== undefined && (includeHidden || signal.display.visible !== false)) || spacers.has(rowId);
     });
-    if (groupRows.length === 0) continue;
     y += group.spacingBefore ?? 0;
     const headerRowId = `${group.id}:header` as RowLayoutEntry["rowId"];
     const collapsed = collapsedGroupIds.has(group.id);

@@ -51,6 +51,21 @@ describe("RowLayout and projection invariants", () => {
     expect(result.navigationRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
     expect(result.totalHeight).toBe(115);
   });
+  it("retains empty groups as first-class group headers", () => {
+    const document = canonicalFixture();
+    document.signalGroups = [
+      { ...document.signalGroups[0]!, rows: [] },
+      { id: "grp_empty_tail" as GroupId, name: "Empty Tail", rows: [] },
+    ];
+    const result = calculateRowLayout(document);
+    expect(result.navigationRows).toEqual([]);
+    expect(result.visibleRows).toEqual([]);
+    expect(result.groupHeaders.map((header) => ({ id: header.groupId, name: header.groupName, y: header.y }))).toEqual([
+      { id: "grp_main", name: "Main", y: 0 },
+      { id: "grp_empty_tail", name: "Empty Tail", y: 32 },
+    ]);
+    expect(result.totalHeight).toBe(64);
+  });
   it("derives collapsed groups as compact layout without changing canonical row IDs", () => {
     const document = layoutFixture();
     const expanded = calculateRowLayout(document);
