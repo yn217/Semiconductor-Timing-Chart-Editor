@@ -13,7 +13,7 @@ test("surfaces a WaveDrom render failure in the Problems panel and status bar, a
   await expect(page.locator(".status-bar")).toContainText("WaveDrom: Error");
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(0);
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'] > svg")).toHaveCount(1);
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("WAVE_RENDER_ERROR");
   await expect(page.getByTestId("problems-panel")).toContainText("phase aligned to a half cycle");
 
@@ -23,7 +23,7 @@ test("surfaces a WaveDrom render failure in the Problems panel and status bar, a
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.locator(".status-bar")).toContainText("WaveDrom: Ready");
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(1);
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("No validation problems");
 });
 
@@ -32,7 +32,7 @@ test("surfaces an Open failure in the Problems panel", async ({ page }) => {
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "bad.tcd", mimeType: "application/json", buffer: Buffer.from("{ not json") });
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("OPEN_FAILED");
 });
 
@@ -48,7 +48,7 @@ test("surfaces a V1->V2 migration warning after opening a legacy document", asyn
   };
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "v1.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(v1Doc)) });
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("MIGRATED_V1_TO_V2");
 
   // opening a fresh document afterward clears the stale migration warning.
@@ -84,13 +84,16 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   await row.getByLabel("Start 3").fill("0");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("editor-problem")).toBeVisible();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
-  await expect(page.getByTestId("problems-panel")).toContainText("COMMAND_REJECTED");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("DUPLICATE_CHANGE_POINT");
+  await expect(page.getByTestId("problems-panel")).toContainText("signal.replaceValue");
+  await expect(page.getByTestId("problems-panel")).toContainText("$.start");
+  await expect(page.getByTestId("problems-panel")).toContainText("cycle");
 
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Signal" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Signal" }).click();
   await row.getByLabel("Start 3").fill("4");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
-  await expect(page.getByTestId("problems-panel")).not.toContainText("COMMAND_REJECTED");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  await expect(page.getByTestId("problems-panel")).not.toContainText("DUPLICATE_CHANGE_POINT");
 });

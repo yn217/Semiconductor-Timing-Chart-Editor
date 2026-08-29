@@ -797,10 +797,23 @@ export function MinimalCycleView() {
       if (failed.length > 0) setProblem(failed[0]!.message);
     };
 
-    const applyResult = (result: ReturnType<CommandHistorySession["execute"]>) => {
+    const clearCommandDiagnostics = () => {
+      setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("command-rejection:")));
+    };
+
+    const applyResult = (result: ReturnType<CommandHistorySession["execute"]>, operation = "command") => {
       if (!result.ok) {
-        setProblem(result.reason === "no-op" ? "" : result.problems.map((item) => item.message).join(" "));
-        upsertDiagnostic((item) => item.code === "COMMAND_REJECTED", result.reason === "no-op" ? undefined : { code: "COMMAND_REJECTED", path: "$", message: result.problems.map((item) => item.message).join(" ") });
+        const context = `${operation} rejected (${result.reason})`;
+        const diagnostics = result.problems.map((item) => ({
+          ...item,
+          message: `[${context}] ${item.message}`,
+          detail: `command-rejection:${operation}:${result.reason}${item.detail ? `;${item.detail}` : ""}`,
+        }));
+        setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
+        setRuntimeDiagnostics((current) => [
+          ...current.filter((item) => !item.detail?.startsWith("command-rejection:")),
+          ...diagnostics,
+        ]);
         return;
       }
       delete rendererHost.dataset.editorIdle;
@@ -829,7 +842,7 @@ export function MinimalCycleView() {
       });
       setHistory(session.historyState());
       setProblem("");
-      upsertDiagnostic((item) => item.code === "COMMAND_REJECTED", undefined);
+      clearCommandDiagnostics();
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
@@ -855,10 +868,10 @@ export function MinimalCycleView() {
       refreshOverlays(session.getSnapshot().document);
       publishState();
     };
-    execute.current = (command) => { const result = session.execute(command); applyResult(result); return result; };
-    executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result); return result; };
-    undo.current = () => applyResult(session.undo());
-    redo.current = () => applyResult(session.redo());
+    execute.current = (command) => { const result = session.execute(command); applyResult(result, command.type); return result; };
+    executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result, `batch:${id}`); return result; };
+    undo.current = () => applyResult(session.undo(), "history.undo");
+    redo.current = () => applyResult(session.redo(), "history.redo");
     const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
       const canonicalDocument = canonicalDocumentOf(document);
       documentEpoch += 1;

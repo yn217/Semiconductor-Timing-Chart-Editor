@@ -306,12 +306,12 @@ describe("command execution and atomic history", () => {
     const before = session.getSnapshot();
     const metrics = session.metrics();
     const noOp = session.execute({ id: commandId("cmd_noop"), type: "signal.rename", signalId: "sig_data" as SignalId, name: "DATA" });
-    expect(noOp).toMatchObject({ ok: false, reason: "no-op" });
+    expect(noOp).toMatchObject({ ok: false, reason: "no-op", problems: [{ code: "NO_OP", path: "$", message: "Signal already has this name." }] });
     expect(session.getSnapshot()).toBe(before);
     expect(session.metrics()).toEqual(metrics);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
     const invalid = session.execute({ id: commandId("cmd_bad"), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 2, value: "1FF" });
-    expect(invalid).toMatchObject({ ok: false, reason: "invalid" });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "BUS_WIDTH_OVERFLOW", path: "$.signals[1].values[1].value", message: "Value requires 9 bits but signal width is 8." }] });
     expect(session.getSnapshot()).toBe(before);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 1, dirty: false });
     const invalidId = session.execute({ id: commandId("1 invalid"), type: "signal.rename", signalId: "sig_data" as SignalId, name: "RENAMED" });
