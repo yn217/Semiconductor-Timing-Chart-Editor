@@ -14,6 +14,10 @@ export function DsRibbonToggleButton({ ariaLabel, checked, children, className, 
   return <button type="button" className={`ds-ribbon-button ds-ribbon-toggle-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-testid={dataTestId} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
 }
 
+export function DsRibbonSelect({ ariaLabel, children, className, onChange, value }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly onChange: (event: ChangeEvent<HTMLSelectElement>) => void; readonly value: string }) {
+  return <select className={`ds-ribbon-select${className ? ` ${className}` : ""}`} aria-label={ariaLabel} value={value} onChange={onChange}>{children}</select>;
+}
+
 export function DsRibbonToggle({ checked, className, dataTestId, label, onChange }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
   return <label className={`ds-ribbon-toggle${className ? ` ${className}` : ""}`}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
 }
