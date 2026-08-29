@@ -10,6 +10,10 @@ export function DsRibbonButton({ ariaLabel, children, className, disabled, icon,
   return <button type="button" className={`ds-ribbon-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} disabled={disabled} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
 }
 
+export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void }) {
+  return <button type="button" className={`ds-ribbon-button ds-ribbon-toggle-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-testid={dataTestId} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
+}
+
 export function DsRibbonToggle({ checked, className, dataTestId, label, onChange }: { readonly checked: boolean; readonly className?: ClassName; readonly dataTestId?: string; readonly label: string; readonly onChange: (event: ChangeEvent<HTMLInputElement>) => void }) {
   return <label className={`ds-ribbon-toggle${className ? ` ${className}` : ""}`}><input data-testid={dataTestId} type="checkbox" checked={checked} onChange={onChange} /><span>{label}</span></label>;
 }
