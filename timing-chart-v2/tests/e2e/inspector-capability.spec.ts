@@ -1,5 +1,25 @@
 import { expect, test } from "@playwright/test";
 
+test("Inspector header has no inert overflow control", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const inspector = page.getByTestId("inspector");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+
+  await expect(inspector.locator("header button, header [role='button']")).toHaveCount(0);
+  await expect(inspector.getByRole("button", { name: /overflow/i })).toHaveCount(0);
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch']").click();
+  await expect(inspector.locator("header button, header [role='button']")).toHaveCount(0);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
+
 test("Signal Inspector exposes parity fields and applies one transient draft command", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
