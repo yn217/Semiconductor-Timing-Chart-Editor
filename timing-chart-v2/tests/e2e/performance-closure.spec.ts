@@ -4,6 +4,30 @@ import { generatePerformanceDocument, summarizePerformance, type BrowserPerforma
 test.describe.configure({ mode: "serial" });
 test.setTimeout(120_000);
 
+test("SnapIndex cache survives a non-geometric Signal rename", async ({ page }) => {
+  await start(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("arrow");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const handle = host.locator("[data-role='annotation-owner']").last().locator("[data-role='annotation-handle'][data-annotation-field='from']");
+  const box = await handle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + 2, box!.y + 2);
+  await page.mouse.down();
+  const beforeRename = (await sessionCounters(page)).snapIndexBuilds;
+  await page.mouse.up();
+  expect((await sessionCounters(page)).snapIndexBuilds).toBe(beforeRename);
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector signal name").fill("REQUEST_RENAMED");
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  expect((await sessionCounters(page)).snapIndexBuilds).toBe(beforeRename);
+});
+
 async function openFixture(page: Page, spec: PerformanceFixtureSpec) {
   const document = generatePerformanceDocument(spec);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: `${document.document.id}.tcd`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });

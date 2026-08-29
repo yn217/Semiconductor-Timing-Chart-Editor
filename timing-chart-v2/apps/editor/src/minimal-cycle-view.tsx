@@ -495,10 +495,12 @@ export function MinimalCycleView() {
             const geometry = adapter.extractLocalGeometry(item.rendered);
             geometryMaps.set(item.request.signalId, geometry);
             geometrySvgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
+            snapIndex = undefined;
             return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
           } catch (error: unknown) {
             geometryMaps.delete(item.request.signalId);
             geometrySvgs.delete(item.request.signalId);
+            snapIndex = undefined;
             return { signalId: item.request.signalId, error };
           }
         });
@@ -762,8 +764,9 @@ export function MinimalCycleView() {
       }
       delete rendererHost.dataset.editorIdle;
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-      snapIndex = undefined;
       const changed = result.changeSet;
+      const snapDependenciesChanged = changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined || changed.waveSemantics !== undefined || changed.geometryLocal !== undefined || changed.geometryScreenX === true || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.bookmarkPosition !== undefined || changed.timeGroupSemantics !== undefined || changed.timelineSemantics === true;
+      if (snapDependenciesChanged) snapIndex = undefined;
       const referenceSignalId = result.snapshot.document.timeline.referenceClock;
       const referenceWaveChanged = referenceSignalId !== undefined && (changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.waveSemantics?.includes(referenceSignalId) === true || changed.geometryLocal?.includes(referenceSignalId) === true);
       const refreshRuler = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.bookmarkPosition !== undefined || referenceWaveChanged;
@@ -880,7 +883,6 @@ export function MinimalCycleView() {
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         window = next;
         projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-        snapIndex = undefined;
         renderer.update(projection);
         rendererHost.dataset.viewportStartY = String(window.viewportStartY);
         publishState();
