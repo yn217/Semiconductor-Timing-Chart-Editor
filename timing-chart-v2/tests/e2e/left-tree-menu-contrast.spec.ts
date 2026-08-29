@@ -39,13 +39,17 @@ test("Left Tree menus keep readable normal, hover, focus, and disabled states", 
   await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
   const contextMenu = page.getByTestId("signal-context-menu");
   await expect(contextMenu).toBeVisible();
+  await expect(contextMenu).toHaveAttribute("data-context-target", "signal");
   const contextItem = contextMenu.getByRole("menuitem", { name: "Copy", exact: true });
   const contextNormal = await state(contextItem);
   expect(contextNormal.color).toBe("rgb(38, 61, 88)");
+  expect(contextNormal.background).toBe("rgba(0, 0, 0, 0)");
   await contextItem.hover();
   const contextHover = await state(contextItem);
   expect(contextHover.color).toBe("rgb(22, 59, 97)");
   expect(contextHover.background).toBe("rgb(232, 242, 253)");
+  await contextItem.focus();
+  expect((await state(contextItem)).outline).toBe("solid");
   const disabledItems = contextMenu.locator("button:disabled");
   await expect(disabledItems.first()).toBeVisible();
   const disabled = await state(disabledItems.first());
