@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "40581fff982484e7eb568947f5bd5187da4c9287",
-    "sourceFingerprint": "9af0cc86ea0c6ae83476b30162a0d77eb8545121191506c1a01b253757027bc5",
-    "generatedAt": "2026-08-29T03:45:21.571Z",
+    "testedCommit": "103e3936c45fd407fefa3467f10174070a1e0796",
+    "sourceFingerprint": "e63b105a3afcabd59d64dce636d027ef0279c35d0e8b4dde565948f4b726692d",
+    "generatedAt": "2026-08-29T03:54:57.258Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "viewport": {
@@ -89,9 +89,9 @@
       "y": 167,
       "width": 297,
       "height": 749,
-      "changedPixels": 52325,
+      "changedPixels": 43279,
       "comparedPixels": 222453,
-      "diffPercent": 0.2352182258724315
+      "diffPercent": 0.19455345623569922
     },
     "Bottom": {
       "x": 265,
@@ -107,9 +107,9 @@
       "y": 801,
       "width": 297,
       "height": 115,
-      "changedPixels": 14714,
+      "changedPixels": 5668,
       "comparedPixels": 34155,
-      "diffPercent": 0.43080076123554384
+      "diffPercent": 0.16594934855804422
     },
     "Status Bar": {
       "x": 0,
