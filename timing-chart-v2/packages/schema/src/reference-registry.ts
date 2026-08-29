@@ -79,6 +79,14 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
   return references;
 }
 
+export function referencesTo(document: CanonicalDocument, targetType: CanonicalReferenceTarget, targetId: string): readonly CanonicalReference[] {
+  return canonicalReferences(document).filter((reference) => reference.targetType === targetType && reference.targetId === targetId);
+}
+
 export function referencesToSignal(document: CanonicalDocument, signalId: string): readonly CanonicalReference[] {
-  return canonicalReferences(document).filter((reference) => reference.targetType === "signal" && reference.targetId === signalId);
+  return referencesTo(document, "signal", signalId);
+}
+
+export function referencesToTimeGroup(document: CanonicalDocument, timeGroupId: string): readonly CanonicalReference[] {
+  return referencesTo(document, "time-group", timeGroupId);
 }

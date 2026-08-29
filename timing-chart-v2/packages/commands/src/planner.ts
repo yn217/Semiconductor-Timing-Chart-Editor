@@ -522,8 +522,13 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const signal = document.signals[index];
       if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", "Signal does not exist.");
       const groups = document.signalGroups.map((group) => ({ ...group, rows: group.rows.filter((row) => row !== command.signalId) }));
-      const linkedTransactions = document.transactions.filter((transaction) => transaction.linkedSignals?.includes(command.signalId));
-      const transactions = document.transactions.map((transaction) => transaction.linkedSignals?.includes(command.signalId) ? { ...transaction, linkedSignals: transaction.linkedSignals.filter((id) => id !== command.signalId) } : transaction);
+      const linkedTransactionIds = new Set(referencesToSignal(document, command.signalId)
+        .filter((reference) => reference.kind === "transaction.linkedSignal")
+        .map((reference) => reference.ownerId));
+      const linkedTransactions = document.transactions.filter((transaction) => linkedTransactionIds.has(transaction.id));
+      const transactions = document.transactions.map((transaction) => linkedTransactionIds.has(transaction.id)
+        ? { ...transaction, linkedSignals: transaction.linkedSignals?.filter((id) => id !== command.signalId) }
+        : transaction);
       const referenceDeleted = document.timeline.referenceClock === command.signalId;
       const nextTimeline = referenceDeleted ? (() => { const { referenceClock: _removed, ...timeline } = document.timeline; return timeline; })() : document.timeline;
       const nextDocument = { ...document, timeline: nextTimeline, signals: document.signals.filter((item) => item.id !== command.signalId), signalGroups: groups, transactions };

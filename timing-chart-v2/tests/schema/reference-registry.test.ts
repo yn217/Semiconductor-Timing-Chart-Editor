@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canonicalReferences, referencesToSignal, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { canonicalReferences, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { AnnotationId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -43,6 +43,7 @@ describe("canonical stable-ID reference registry", () => {
       "annotation.ghostTraceSource",
       "transaction.linkedSignal",
     ]);
+    expect(referencesToTimeGroup(document, groupId).map((reference) => reference.kind)).toEqual(["labelAnchor.ownerTimeGroup"]);
   });
 
   it("gives validation one authoritative missing-reference path", () => {
