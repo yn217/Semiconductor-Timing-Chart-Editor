@@ -70,6 +70,28 @@ describe("deterministic document export", () => {
     expect(renderExportSvg(scene)).toContain('<g data-layer="legend" transform="translate(36 48)"');
   });
 
+  it("exports Group Band presentation and derived per-object spacing", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      layout: { ...base.layout, signalSpacing: 6 },
+      signalGroups: base.signalGroups.map((group, index) => index === 0
+        ? { ...group, spacingBefore: 5, spacingAfter: 7, style: { showBackground: true, background: "#123456", opacity: 0.4, extend: "label" as const, border: "#ff0000", showHeader: true } }
+        : group),
+      signals: base.signals.map((signal, index) => index === 1 ? { ...signal, spacingBefore: 3, spacingAfter: 4 } : signal),
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const first = scene.waveforms.find((wave) => wave.signalId === document.signalGroups[0]!.rows[0]);
+    const second = scene.waveforms.find((wave) => wave.signalId === document.signalGroups[0]!.rows[1]);
+    expect(second!.y).toBeGreaterThan(first!.y! + base.layout.rowHeight);
+    expect(scene.groupBands[0]).toMatchObject({ x: 0, width: 220, fill: "#123456", fillOpacity: 0.4, stroke: "#ff0000", scope: "label", showHeader: true });
+    const svg = renderExportSvg(scene);
+    expect(svg).toContain('data-layer="group-bands"');
+    expect(svg).toContain('data-scope="label"');
+    expect(svg).toContain('fill="#123456"');
+    expect(svg).toContain('stroke="#ff0000"');
+  });
+
   it("supports selected-range SVG and deterministic PDF bytes", async () => {
     const document = scaleFixture(3);
     const service = new DeterministicExportService();

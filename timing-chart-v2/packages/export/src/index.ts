@@ -1,5 +1,5 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
-import { buildDisplayTimeMapping, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { Annotation, CanonicalDocument, Signal, SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -23,7 +23,7 @@ export interface ExportLabel { readonly text: string; readonly x: number; readon
 export interface ExportPoint { readonly x: number; readonly y: number }
 export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly tracePoints?: readonly ExportPoint[] }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
-export interface ExportGroupBand { readonly id: string; readonly name: string; readonly y: number; readonly height: number }
+export interface ExportGroupBand { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly fill: string; readonly fillOpacity: number; readonly stroke: string; readonly scope: "label" | "waveform" | "both"; readonly showHeader: boolean }
 export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
 export interface ExportEdgeCounter { readonly id: string; readonly signalId: SignalId; readonly kind: "rising" | "falling"; readonly cycle: number; readonly x: number; readonly y: number; readonly label: string }
 export interface ExportRulerTick { readonly cycle: number; readonly text: string }
@@ -183,7 +183,12 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   });
   const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / mapping.displayCycleCount;
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
-  const rowY = new Map(signals.map((signal, index) => [signal.id, waveTop + index * rowHeight + rowHeight / 2]));
+  const rowLayout = calculateRowLayout(document, new Set(), { includeHidden: false });
+  const rowEntries = new Map(rowLayout.navigationRows.map((entry) => [entry.rowId, entry]));
+  const rowY = new Map(signals.map((signal, index) => {
+    const entry = rowEntries.get(signal.id);
+    return [signal.id, waveTop + (entry?.y ?? index * rowHeight) + (entry?.height ?? rowHeight) / 2] as const;
+  }));
   const waveforms = renderedWaves.map(({ signal, waveJson, svgMarkup, width: sourceWidth, height: sourceHeight }): ExportWave => ({ signalId: signal.id, name: signal.display.name, role: signal.role, y: rowY.get(signal.id)!, svgMarkup, sourceWidth, sourceHeight, cropX: range.start * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(waveJson) }));
   const edgeCounters: ExportEdgeCounter[] = [];
   for (const { signal } of renderedWaves) {
@@ -216,8 +221,35 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     if (signal.type !== "commentRow") continue;
     labels.push({ text: signal.body || signal.title || signal.display.name, x: LABEL_WIDTH, y: rowY.get(signal.id)!, kind: "comment" });
   }
+  const contentWidth = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
   const groupBands: ExportGroupBand[] = [];
-  document.signalGroups.forEach((group) => { const ys = group.rows.map((id) => rowY.get(id as SignalId)).filter((y): y is number => y !== undefined); const first = ys[0]; if (first !== undefined) { labels.push({ text: group.name, x: 12, y: first - rowHeight / 2 - 4, kind: "group" }); groupBands.push({ id: group.id, name: group.name, y: first - rowHeight / 2, height: Math.max(rowHeight, (ys.at(-1)! - first) + rowHeight) }); } });
+  document.signalGroups.forEach((group) => {
+    const entries = group.rows.map((id) => rowEntries.get(id)).filter((entry): entry is NonNullable<typeof entry> => entry !== undefined && entry.kind !== "spacer");
+    const first = entries[0];
+    const last = entries.at(-1);
+    if (!first || !last) return;
+    const style = group.style;
+    const scope = style?.extend ?? "both";
+    const showHeader = style?.showHeader !== false;
+    const showBackground = style?.showBackground !== false;
+    if (showHeader) labels.push({ text: group.name, x: 12, y: waveTop + first.y - 4, kind: "group" });
+    if (!showBackground) return;
+    const x = scope === "label" ? 0 : scope === "waveform" ? LABEL_WIDTH : 0;
+    const width = scope === "label" ? LABEL_WIDTH : scope === "waveform" ? contentWidth - LABEL_WIDTH : contentWidth;
+    groupBands.push({
+      id: group.id,
+      name: group.name,
+      x,
+      y: waveTop + first.y,
+      width,
+      height: Math.max(rowHeight, last.y + last.height - first.y),
+      fill: style?.background ?? "#f8fafc",
+      fillOpacity: style?.opacity ?? 0.22,
+      stroke: style?.border ?? "#d8e0e9",
+      scope,
+      showHeader,
+    });
+  });
   const axisBreaks: ExportAxisBreak[] = settings.foldPolicy === "expand" ? [] : document.timeGroups
     .filter((group) => group.presentation?.collapsed)
     .map((group): ExportAxisBreak => ({
@@ -259,8 +291,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     })() : undefined;
     return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.start?.threshold === undefined ? {} : { threshold1: annotation.start.threshold }), ...(annotation.end?.threshold === undefined ? {} : { threshold2: annotation.end.threshold }), ...(tracePoints === undefined ? {} : { tracePoints }) };
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
-  const contentWidth = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
-  const contentHeight = waveTop + signals.length * rowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
+  const contentHeight = waveTop + rowLayout.totalHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show
     ? document.legend.items?.length
       ? [...document.legend.items].filter((entry) => entry.visible).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map((entry) => entry.label)
@@ -286,7 +317,7 @@ export function renderExportSvg(scene: ExportScene): string {
   out.push(`</g><g data-layer="transactions" font-family="Segoe UI,Arial,sans-serif" font-size="11">`);
   for (const item of scene.transactions) out.push(`<g data-transaction-id="${xml(item.id)}"><rect x="${item.x}" y="${item.y}" width="${item.width}" height="20" rx="4" fill="#dbeafe" stroke="#2563eb"/><text x="${item.x + 6}" y="${item.y + 14}">${xml(item.name)}</text></g>`);
   out.push(`</g><g data-layer="group-bands">`);
-  for (const band of scene.groupBands) out.push(`<rect data-group-id="${xml(band.id)}" x="0" y="${band.y}" width="${scene.width}" height="${band.height}" fill="#f8fafc" fill-opacity="0.22" stroke="#d8e0e9"/>`);
+  for (const band of scene.groupBands) out.push(`<rect data-group-id="${xml(band.id)}" data-scope="${band.scope}" x="${band.x}" y="${band.y}" width="${band.width}" height="${band.height}" fill="${xml(band.fill)}" fill-opacity="${band.fillOpacity}" stroke="${xml(band.stroke)}"/>`);
   out.push(`</g><g data-layer="axis-breaks" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#52677d" stroke="#52677d">`);
   for (const item of scene.axisBreaks) {
     out.push(`<g data-axis-break-id="${xml(item.id)}" data-source-start="${item.sourceStart}" data-source-end="${item.sourceEnd}"><path d="M${item.x - 4} 22 l4 8 l4 -8 M${item.x - 4} ${scene.height - 30} l4 8 l4 -8" fill="none" stroke-width="1.5"/><text x="${item.x + 8}" y="38" fill="#52677d" stroke="none">${xml(item.name)}</text></g>`);

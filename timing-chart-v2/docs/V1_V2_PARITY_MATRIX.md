@@ -222,3 +222,13 @@ and SVG/PNG/PDF export in `timing-chart-v2/tests/e2e/event-pulse-lifecycle.spec.
 The compatibility policy explicitly distinguishes Event data-domain markers,
 Pulse logic tokens, X/Z states and weak-drive logic tokens; full V1 visual parity
 remains open.
+
+Group Band presentation is now owned by the Group Inspector and shared
+ExportScene. Show Background, Background, Opacity, Scope (label/waveform/both),
+Border enable/color and Header remain transient until one
+`group.updateProperties` Apply. Export band bounds derive from RowLayout group
+membership, including per-Group/per-Signal spacing and Spacer rows, and SVG,
+PNG and PDF share the same scoped fill, opacity and stroke semantics. Unit
+coverage is in `timing-chart-v2/tests/export/deterministic-export.test.ts`;
+browser coverage is in `timing-chart-v2/tests/e2e/group-band.spec.ts`.
+Full V1 visual parity remains open.
