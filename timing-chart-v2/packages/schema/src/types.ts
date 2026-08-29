@@ -279,6 +279,41 @@ export interface CanonicalDocument {
   readonly checkSettings: CheckSettings;
 }
 
+export const CANONICAL_PROBLEM_CODES = [
+  "ANCHOR_SIGNAL_REQUIRED", "BUS_WIDTH_OVERFLOW", "CHANGE_POINTS_NOT_STRICTLY_SORTED", "DUPLICATE_ID",
+  "DUPLICATE_LABEL_ANCHOR_SOURCE", "DUPLICATE_ROW_MEMBERSHIP", "INVALID_ANCHOR_POINT", "INVALID_ANCHOR_THRESHOLD",
+  "INVALID_ANCHOR_THRESHOLD_POINT", "INVALID_ANNOTATION_STYLE", "INVALID_BUS_LITERAL", "INVALID_LEGEND_ENTRY",
+  "INVALID_REFERENCE_CLOCK", "INVALID_STABLE_ID", "INVALID_TIME_GROUP_RANGE", "INVALID_TRANSACTION_PHASE",
+  "LABEL_ANCHOR_BOUNDARY_MISMATCH", "LABEL_ANCHOR_OWNER_MISMATCH", "MISSING_ANNOTATION_ANCHOR", "MISSING_CROSS_REFERENCE",
+  "NON_FINITE_NUMBER", "NON_PERSISTENT_FIELD", "NON_TIMING_ANCHOR_TARGET", "ORPHAN_ROW", "SPACER_OWNER_MISMATCH",
+  "TIME_GROUP_RESUME_BOUNDARY_MISMATCH", "TIME_GROUP_RESUME_OWNER_MISMATCH", "TIMELINE_END_MISMATCH", "TIMELINE_OUT_OF_RANGE",
+  "UNKNOWN_ROW", "UNSUPPORTED_SIGNAL_VALUE",
+] as const;
+
+export type CanonicalProblemCode = typeof CANONICAL_PROBLEM_CODES[number];
+export type SchemaProblemCode = `SCHEMA_${string}`;
+export type CanonicalValidationCode = CanonicalProblemCode | SchemaProblemCode;
+
+export interface CanonicalRuleDescriptor {
+  readonly code: CanonicalProblemCode;
+  readonly owner: "canonical-validator";
+  readonly severity: "error";
+  readonly title: string;
+  readonly pathPattern: string;
+  readonly entityContext: "optional" | "required";
+}
+
+export interface CanonicalDocumentProblem {
+  readonly code: CanonicalValidationCode;
+  readonly path: string;
+  readonly message: string;
+  readonly entityId?: string;
+  readonly offset?: number;
+  readonly line?: number;
+  readonly column?: number;
+  readonly detail?: string;
+}
+
 export interface DocumentProblem {
   readonly code: string;
   readonly path: string;

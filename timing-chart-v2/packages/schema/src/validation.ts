@@ -1,21 +1,43 @@
 import { Ajv2020, type ErrorObject } from "ajv/dist/2020.js";
 import canonicalSchema from "./canonical-document.schema.json" with { type: "json" };
 import { isStableId } from "./stable-id.js";
-import type { Annotation, CanonicalDocument, DocumentProblem, SemanticAnchor, Signal, SignalValueChange, TimeGroup } from "./types.js";
+import { CANONICAL_PROBLEM_CODES, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { canonicalReferences } from "./reference-registry.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 const validateSchema = ajv.compile<CanonicalDocument>(canonicalSchema);
 
-function problem(code: string, path: string, message: string, entityId?: string): DocumentProblem {
+function problem(code: CanonicalProblemCode, path: string, message: string, entityId?: string): CanonicalDocumentProblem {
   return entityId === undefined ? { code, path, message } : { code, path, message, entityId };
 }
 
-function schemaProblem(error: ErrorObject): DocumentProblem {
+function schemaProblem(error: ErrorObject): CanonicalDocumentProblem {
   const suffix = error.keyword === "required" ? `/${String(error.params.missingProperty)}` : "";
-  const code = error.keyword === "pattern" ? "INVALID_STABLE_ID" : `SCHEMA_${error.keyword.toUpperCase()}`;
-  return problem(code, `$${error.instancePath}${suffix}`, error.message ?? "Schema validation failed.");
+  const code: CanonicalProblemCode | SchemaProblemCode = error.keyword === "pattern" ? "INVALID_STABLE_ID" : `SCHEMA_${error.keyword.toUpperCase()}`;
+  return code === "INVALID_STABLE_ID"
+    ? problem(code, `$${error.instancePath}${suffix}`, error.message ?? "Schema validation failed.")
+    : { code, path: `$${error.instancePath}${suffix}`, message: error.message ?? "Schema validation failed." };
+}
+
+const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
+  { code: "MISSING_CROSS_REFERENCE", owner: "canonical-validator", severity: "error", title: "Referenced canonical entity must exist", pathPattern: "$.timeline.referenceClock | $.annotations[*] | $.transactions[*] | $.timeGroups[*]", entityContext: "required" },
+  { code: "INVALID_STABLE_ID", owner: "canonical-validator", severity: "error", title: "Entity identifiers must be stable IDs", pathPattern: "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id", entityContext: "required" },
+  { code: "BUS_WIDTH_OVERFLOW", owner: "canonical-validator", severity: "error", title: "Bus values must fit the declared width", pathPattern: "$.signals[*].values[*].value", entityContext: "required" },
+  { code: "TIMELINE_OUT_OF_RANGE", owner: "canonical-validator", severity: "error", title: "Cycle coordinates must remain within the timeline", pathPattern: "$.signals[*] | $.annotations[*] | $.bookmarks[*] | $.transactions[*]", entityContext: "required" },
+  { code: "DUPLICATE_ID", owner: "canonical-validator", severity: "error", title: "Canonical entity identifiers must be unique", pathPattern: "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id", entityContext: "required" },
+];
+
+export function canonicalValidationCodes(): readonly CanonicalProblemCode[] {
+  return CANONICAL_PROBLEM_CODES;
+}
+
+export function canonicalRuleDescriptors(): readonly CanonicalRuleDescriptor[] {
+  return RULE_DESCRIPTORS;
+}
+
+export function canonicalRuleDescriptor(code: CanonicalProblemCode): CanonicalRuleDescriptor | undefined {
+  return RULE_DESCRIPTORS.find((descriptor) => descriptor.code === code);
 }
 
 function walkNumbers(value: unknown, path: string, problems: DocumentProblem[]): void {
@@ -129,8 +151,8 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
   }
 }
 
-export function validateCanonicalDocument(input: unknown): readonly DocumentProblem[] {
-  const problems: DocumentProblem[] = [];
+export function validateCanonicalDocument(input: unknown): readonly CanonicalDocumentProblem[] {
+  const problems: CanonicalDocumentProblem[] = [];
   walkNumbers(input, "$", problems);
   findForbiddenState(input, "$", problems);
   if (!validateSchema(input)) problems.push(...(validateSchema.errors ?? []).map(schemaProblem));
