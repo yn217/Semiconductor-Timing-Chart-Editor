@@ -120,6 +120,7 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(() => assertSafeWaveDromMarkup('<svg><text>DATA&lt;7:0&gt; &amp; \'clk\'</text><script>alert(1)</script></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
     expect(assertSafeWaveDromMarkup('<svg><text>DATA&lt;7:0&gt; &amp; \'clk\'</text></svg>')).toContain("DATA&lt;7:0&gt;");
     expect(() => assertSafeWaveDromMarkup('<svg><a href="javascript:alert(1)">x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
+    expect(() => assertSafeWaveDromMarkup('<svg><a href="https://example.com/x.svg">x</a></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
     expect(() => assertSafeWaveDromMarkup('<svg><text onload="alert(1)">x</text></svg>')).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
     const rendered = renderWaveJsonMarkup({ wave: "=", data: ["<DATA&7:0>"] });
     expect(rendered).not.toMatch(/<script|onerror\s*=/i);

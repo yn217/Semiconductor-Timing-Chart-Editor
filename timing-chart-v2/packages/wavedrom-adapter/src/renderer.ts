@@ -36,8 +36,8 @@ export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0):
 export function assertSafeWaveDromMarkup(markup: string): string {
   const executableElement = /<\s*(?:script|foreignObject|iframe|object|embed|img)\b/i;
   const eventHandler = /<[^>]*\bon[a-z][\w:-]*\s*=/i;
-  const javascriptUrl = /(?:href|xlink:href)\s*=\s*["']\s*javascript:/i;
-  if (executableElement.test(markup) || eventHandler.test(markup) || javascriptUrl.test(markup)) {
+  const unsafeUrl = /(?:href|xlink:href)\s*=\s*["']\s*(?!#)[^"']+/i;
+  if (executableElement.test(markup) || eventHandler.test(markup) || unsafeUrl.test(markup)) {
     throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced executable SVG markup.");
   }
   return markup;
@@ -59,7 +59,7 @@ export function assertSafeWaveDromSvg(svg: Element): void {
       if (name.startsWith("on")) {
         throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an SVG event-handler attribute.");
       }
-      if ((name === "href" || name === "xlink:href") && (value.startsWith("javascript:") || value.startsWith("data:"))) {
+      if ((name === "href" || name === "xlink:href") && !value.startsWith("#")) {
         throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an unsafe SVG URL attribute.");
       }
     }
