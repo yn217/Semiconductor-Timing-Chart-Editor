@@ -10,7 +10,6 @@ import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
-import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
@@ -639,7 +638,7 @@ export function MinimalCycleView() {
     const sessionController = runtime.session;
     let session = sessionController.current();
     const documentEpoch = runtime.documentEpoch;
-    const adapter = new ProductionWaveDromAdapter();
+    const adapter = runtime.createWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionCoordinator = runtime.projection;
     let timeAxis: TimeAxisGeometry = { mode: "clockless" };

@@ -7,6 +7,7 @@ import { ProjectionCoordinator } from "./projection-coordinator.js";
 import { SelectionController } from "./selection-controller.js";
 import { RenderCoordinator } from "./render-coordinator.js";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
+import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 
 /** Composition boundary for the editor's long-lived application services. */
 export class EditorApplicationRuntime {
@@ -23,5 +24,9 @@ export class EditorApplicationRuntime {
 
   createRenderer(provider: WaveformSurfaceProvider): RenderCoordinator {
     return new RenderCoordinator(provider);
+  }
+
+  createWaveDromAdapter(): ProductionWaveDromAdapter {
+    return new ProductionWaveDromAdapter();
   }
 }
