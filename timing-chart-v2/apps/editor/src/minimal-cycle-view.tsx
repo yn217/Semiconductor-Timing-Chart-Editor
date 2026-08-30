@@ -553,12 +553,22 @@ export function MinimalCycleView() {
     const mappingCache = new DisplayTimeMappingCache();
     const geometrySvgs = new Map<SignalId, SVGSVGElement>();
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
+    // The progressive wave queue can flush many batches for one canonical
+    // snapshot. Keep the derived lookup scoped to that snapshot instead of
+    // rebuilding an O(totalSignals) Map for every batch.
+    let signalIndexDocument: CanonicalDocument | undefined;
+    let signalIndexRevision = -1;
+    let signalById = new Map<SignalId, CanonicalDocument["signals"][number]>();
     const provider: WaveformSurfaceProvider = {
       async mountWaveBatch(requests) {
         const currentSnapshot = session.getSnapshot();
         const document = currentSnapshot.document;
         const mapping = mappingCache.get(document.timeline, document.timeGroups);
-        const signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
+        if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
+          signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
+          signalIndexDocument = document;
+          signalIndexRevision = currentSnapshot.revision;
+        }
         const prepared = requests.map((request) => {
           const signal = signalById.get(request.signalId);
           if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
