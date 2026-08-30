@@ -89,6 +89,8 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   await expect(page.getByTestId("problems-panel")).toContainText("DUPLICATE_CHANGE_POINT");
   await expect(page.getByTestId("problems-panel")).toContainText("signal.replaceValue");
   await expect(page.getByTestId("problems-panel")).toContainText("Command ID");
+  await expect(page.getByTestId("problems-panel")).toContainText("Object Type");
+  await expect(page.getByTestId("problems-panel")).toContainText("sig_cycle_request");
   await expect(page.getByTestId("problems-panel")).toContainText("$.start");
   await expect(page.getByTestId("problems-panel")).toContainText("cycle");
 
