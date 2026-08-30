@@ -138,10 +138,10 @@ test("MiniMap viewport indicator follows live scroll, resize, pan and remount st
   expect(zoomed.rect.width).toBeLessThan(beforeZoom.rect.width);
   expectIndicatorInside(zoomed);
 
-  await page.getByTestId("minimap-toggle").uncheck();
+  await page.getByTestId("home-minimap-toggle").uncheck();
   await expect(minimap).toBeHidden();
   const currentScroll = await viewport.evaluate((element) => ({ top: element.scrollTop, left: element.scrollLeft }));
-  await page.getByTestId("minimap-toggle").check();
+  await page.getByTestId("home-minimap-toggle").check();
   await expect(page.getByTestId("minimap")).toBeVisible();
   await expect.poll(async () => metricError(await readMetrics(page))).toBeLessThan(0.002);
   const remounted = await readMetrics(page);
