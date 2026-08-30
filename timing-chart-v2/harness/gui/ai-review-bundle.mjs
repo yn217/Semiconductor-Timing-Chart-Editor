@@ -1,3 +1,5 @@
+import { browserHealthFindings, runMechanicalDiagnostics } from "./mechanical-diagnostics.mjs";
+
 /** Build a stable, serialisable bundle manifest for human/AI visual review. */
 export function createAiReviewBundle({ gitHead, scenario, viewport, dpr = 1, actions = [], images = {}, crops = [], diagnostics = { findings: [] }, expectedChange = [], stableRegions = [] }) {
   if (!gitHead || !scenario || !Array.isArray(viewport) || viewport.length !== 2) throw new Error("gitHead, scenario, and viewport [width,height] are required");
