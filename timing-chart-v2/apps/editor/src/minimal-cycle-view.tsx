@@ -17,6 +17,7 @@ import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
+import { DocumentEpoch } from "./runtime/document-epoch.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -632,7 +633,7 @@ export function MinimalCycleView() {
     if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
     let session = new CommandHistorySession(initialDocument);
-    let documentEpoch = 0;
+    const documentEpoch = new DocumentEpoch();
     const adapter = new ProductionWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionService = new DefaultProjectionService();
@@ -1046,7 +1047,7 @@ export function MinimalCycleView() {
       projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
       if (changed.fullDocumentReplace === true) {
-        documentEpoch += 1;
+        documentEpoch.advance();
         clearAnnotationPreview();
       }
       const snapDependenciesChanged = changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined || changed.waveSemantics !== undefined || changed.geometryLocal !== undefined || changed.geometryScreenX === true || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.bookmarkPosition !== undefined || changed.timeGroupSemantics !== undefined || changed.timelineSemantics === true;
@@ -1116,7 +1117,7 @@ export function MinimalCycleView() {
         setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
         return;
       }
-      documentEpoch += 1;
+      documentEpoch.advance();
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
       session = new CommandHistorySession(document);
@@ -1759,7 +1760,7 @@ export function MinimalCycleView() {
         startX: event.clientX,
         startY: event.clientY,
         owner,
-        epoch: documentEpoch,
+        epoch: documentEpoch.current(),
       };
       publishState();
       owner.setPointerCapture(event.pointerId);
@@ -1767,7 +1768,7 @@ export function MinimalCycleView() {
     };
     const onAnnotationPointerMove = (event: PointerEvent) => {
       if (!annotationDrag) return;
-      if (annotationDrag.epoch !== documentEpoch) { clearAnnotationPreview(); return; }
+      if (!documentEpoch.isCurrent(annotationDrag.epoch)) { clearAnnotationPreview(); return; }
       const screenDx = Math.round(event.clientX - annotationDrag.startX);
       const dx = Math.round(screenGeometry.fromScreen({ x: screenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - annotationDrag.startY);
@@ -1797,7 +1798,7 @@ export function MinimalCycleView() {
     const onAnnotationPointerUp = (event: PointerEvent) => {
       const drag = annotationDrag;
       if (!drag) return;
-      if (drag.epoch !== documentEpoch) { clearAnnotationPreview(); return; }
+      if (!documentEpoch.isCurrent(drag.epoch)) { clearAnnotationPreview(); return; }
        const rawScreenDx = event.clientX - drag.startX;
        const dx = Math.round(screenGeometry.fromScreen({ x: rawScreenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
       const dy = Math.round(event.clientY - drag.startY);
