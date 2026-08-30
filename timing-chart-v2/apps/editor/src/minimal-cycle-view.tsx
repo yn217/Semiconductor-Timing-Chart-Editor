@@ -23,6 +23,7 @@ import { RenderCoordinator } from "./runtime/render-coordinator.js";
 import { ProjectionCoordinator } from "./runtime/projection-coordinator.js";
 import { DisplayMappingCoordinator } from "./runtime/display-mapping-coordinator.js";
 import { GeometryRegistry } from "./runtime/geometry-registry.js";
+import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -4444,15 +4445,6 @@ function buildSnapIndex(document: CanonicalDocument, projection: RenderProjectio
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
     renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
   });
-}
-
-function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: number): number | undefined {
-  if (!svg || !Number.isFinite(currentZoom) || currentZoom <= 0) return undefined;
-  const viewBoxWidth = svg.viewBox.baseVal.width;
-  const matrix = svg.getScreenCTM();
-  if (!Number.isFinite(viewBoxWidth) || viewBoxWidth <= 0 || !matrix || !Number.isFinite(matrix.a) || matrix.a <= 0) return undefined;
-  const scale = matrix.a / currentZoom;
-  return Number.isFinite(scale) && scale > 0 ? scale : undefined;
 }
 
 function displayBoundaryForSource(mapping: DisplayTimeMapping, sourceCycle: number, sourceCycleCount: number): number | undefined {
