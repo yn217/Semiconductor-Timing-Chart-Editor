@@ -349,6 +349,7 @@ export function MinimalCycleView() {
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
   const clipboardGroupRef = useRef<{ readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number } | undefined>(undefined);
   const clipboardAnnotationRef = useRef<Annotation | undefined>(undefined);
+  const clipboardTransactionRef = useRef<Transaction | undefined>(undefined);
   const copySelectedSignalRef = useRef<() => void>(() => undefined);
   const cutSelectedSignalRef = useRef<() => void>(() => undefined);
   const pasteSelectedSignalRef = useRef<() => void>(() => undefined);
@@ -1962,23 +1963,37 @@ export function MinimalCycleView() {
       clipboardSignalsRef.current = [];
       clipboardSignalRef.current = undefined;
       clipboardAnnotationRef.current = undefined;
+      clipboardTransactionRef.current = undefined;
       setClipboardAvailable(true);
       setClipboardStatus(`Copied ${selectedGroup.name} group`);
       return;
     }
     const sources = selectedClipboardSignals();
     const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
-    if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to copy"); return; }
+    const transaction = selectedTransactionRef.current === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === selectedTransactionRef.current);
+    if (sources.length === 0 && annotation === undefined && transaction === undefined) { setClipboardStatus("Select a signal, Comment Row, Annotation, or Transaction to copy"); return; }
+    if (transaction !== undefined && sources.length === 0 && annotation === undefined) {
+      clipboardTransactionRef.current = transaction;
+      clipboardGroupRef.current = undefined;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      clipboardAnnotationRef.current = undefined;
+      setClipboardAvailable(true);
+      setClipboardStatus(`Copied ${transaction.name} transaction`);
+      return;
+    }
     if (annotation !== undefined && sources.length === 0) {
       clipboardAnnotationRef.current = annotation;
       clipboardGroupRef.current = undefined;
       clipboardSignalsRef.current = [];
       clipboardSignalRef.current = undefined;
+      clipboardTransactionRef.current = undefined;
       setClipboardAvailable(true);
       setClipboardStatus(`Copied ${annotation.label || annotation.type} annotation`);
       return;
     }
     clipboardAnnotationRef.current = undefined;
+    clipboardTransactionRef.current = undefined;
     clipboardGroupRef.current = undefined;
     clipboardSignalsRef.current = sources;
     clipboardSignalRef.current = sources[0]?.signal;
@@ -1994,6 +2009,7 @@ export function MinimalCycleView() {
       clipboardAnnotationRef.current = undefined;
       clipboardSignalsRef.current = [];
       clipboardSignalRef.current = undefined;
+      clipboardTransactionRef.current = undefined;
       setClipboardAvailable(true);
       const commands: SemanticCommand[] = [];
       for (const rowId of selectedGroup.rows) {
@@ -2014,12 +2030,29 @@ export function MinimalCycleView() {
     }
     const sources = selectedClipboardSignals();
     const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
-    if (sources.length === 0 && annotation === undefined) { setClipboardStatus("Select a signal, Comment Row, or Annotation to cut"); return; }
+    const transaction = selectedTransactionRef.current === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === selectedTransactionRef.current);
+    if (sources.length === 0 && annotation === undefined && transaction === undefined) { setClipboardStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
+    if (transaction !== undefined && sources.length === 0 && annotation === undefined) {
+      clipboardTransactionRef.current = transaction;
+      clipboardGroupRef.current = undefined;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      clipboardAnnotationRef.current = undefined;
+      setClipboardAvailable(true);
+      const result = execute.current({ id: nextCommandId("cut_transaction"), type: "transaction.delete", transactionId: transaction.id });
+      if (result.ok) {
+        selectedTransactionRef.current = undefined;
+        setSelectedTransactionId(undefined);
+        setClipboardStatus(`Cut ${transaction.name} transaction`);
+      }
+      return;
+    }
     if (annotation !== undefined && sources.length === 0) {
       clipboardAnnotationRef.current = annotation;
       clipboardGroupRef.current = undefined;
       clipboardSignalsRef.current = [];
       clipboardSignalRef.current = undefined;
+      clipboardTransactionRef.current = undefined;
       setClipboardAvailable(true);
       const result = execute.current({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: annotation.id });
       if (result.ok) {
@@ -2030,6 +2063,7 @@ export function MinimalCycleView() {
       return;
     }
     clipboardAnnotationRef.current = undefined;
+    clipboardTransactionRef.current = undefined;
     clipboardGroupRef.current = undefined;
     clipboardSignalsRef.current = sources;
     clipboardSignalRef.current = sources[0]?.signal;
@@ -2112,9 +2146,18 @@ export function MinimalCycleView() {
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`);
     }
   };
+  const createCopiedTransaction = (source: Transaction, operation: "paste" | "duplicate") => {
+    const transaction: Transaction = { ...source, id: nextEntityId("transaction", snapshot.document) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
+    const result = execute.current({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create", transaction });
+    if (result.ok) {
+      selectTransaction(transaction.id);
+      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${source.name} transaction`);
+    }
+  };
   const pasteSelectedEntity = () => {
     if (clipboardGroupRef.current) createCopiedGroup(clipboardGroupRef.current, "paste");
     else if (clipboardAnnotationRef.current) createCopiedAnnotation(clipboardAnnotationRef.current, "paste");
+    else if (clipboardTransactionRef.current) createCopiedTransaction(clipboardTransactionRef.current, "paste");
     else createCopiedSignals(clipboardSignalsRef.current, "paste");
   };
   const duplicateSelectedEntity = () => {
@@ -2122,6 +2165,7 @@ export function MinimalCycleView() {
       const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
       createCopiedGroup({ group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) }, "duplicate");
     } else if (selectedAnnotation) createCopiedAnnotation(selectedAnnotation, "duplicate");
+    else if (selectedTransaction) createCopiedTransaction(selectedTransaction, "duplicate");
     else createCopiedSignals(selectedClipboardSignals(), "duplicate");
   };
   pasteSelectedSignalRef.current = pasteSelectedEntity;

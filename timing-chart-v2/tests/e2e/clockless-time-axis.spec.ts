@@ -120,3 +120,39 @@ test("snaps a clockless transaction against the actual non-first TimeAxis owner 
   await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("3");
   await expect(transaction).toHaveAttribute("style", /left/);
 });
+
+test("Transaction clipboard preserves semantic fields and uses fresh IDs", async ({ page }) => {
+  await page.goto("/");
+  const transaction = {
+    id: "txn_original",
+    name: "Read burst",
+    source: "CPU",
+    destination: "RAM",
+    start: 1,
+    end: 5,
+    laneId: "lane_0",
+    phases: [{ name: "Address", start: 1, end: 2 }, { name: "Data", start: 2, end: 5 }],
+    linkedSignals: [data.id],
+    category: "memory",
+    style: { fill: "#abc123" },
+    metadata: { tag: "critical" },
+    links: { issue: "ISSUE-1" },
+  };
+  await openJson(page, { ...base("transaction-clipboard", "Transaction Clipboard", [data], [data.id]), transactions: [transaction] });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const lanes = page.getByTestId("transaction-lanes");
+  const original = lanes.locator("[data-transaction-id='txn_original']");
+  await original.click();
+  const edit = page.getByTestId("ribbon").locator(".home-edit-group");
+  const before = await page.getByTestId("history-status").textContent();
+  await edit.getByRole("button", { name: "Copy", exact: true }).click();
+  expect(await page.getByTestId("history-status").textContent()).toBe(before);
+  await edit.getByRole("button", { name: "複製", exact: true }).click();
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(2);
+  const copied = lanes.locator("[data-transaction-id]").filter({ hasText: "Read burst Copy" });
+  await expect(copied).toHaveCount(1);
+  await copied.click();
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("1");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("5");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction lane")).toHaveValue("lane_0");
+});
