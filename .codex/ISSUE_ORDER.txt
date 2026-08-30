@@ -5,8 +5,9 @@
 # Path: .codex/ISSUE_ORDER.txt
 #
 # Last reconciled by ChatGPT: 2026-08-31
-# GitHub Open Issue count at reconciliation: 110
-# Observed production HEAD from Codex report: 23d296fc821b723f3e3873ba082c0bb868802e5a
+# GitHub search-index Open count observed at reconciliation: 110
+# Direct Issue API confirms #241 and #291 are closed/completed in this sweep.
+# Observed production HEAD: ab0ece39d9cbf658a2e003e509b043f6c9ce8598
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -14,7 +15,6 @@
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
 # Every executable Issue number appears at most once.
-# This file is reconciled to contain every currently Open source Issue exactly once.
 # Closed Issues are removed during ChatGPT reconciliation; newly opened Issues are inserted by priority.
 #
 # Execution rules:
@@ -44,34 +44,35 @@
 # ChatGPT may reorder/add/remove Issue numbers by updating only codex-control.
 # A control-branch update must never be treated as main divergence.
 
-# ==== NEXT EXECUTABLE PRODUCTION AUDITS ====
-# These are intentionally ahead of broad/evidence-heavy closure items so Codex can find a concrete production gap or close an already-fixed bug quickly.
-241
+# ==== NEXT EXECUTABLE PRODUCTION / CLOSURE AUDITS ====
+# Prefer concrete closure gaps over broad evidence-only audits.
 196
-291
+300
 173
+311
 
 # ==== CACHED NEXT-ISSUE CONTEXT (fallback when local Issue read is unavailable) ====
-# Issue #241 — Bug: Add Group updates model/bottom editor but not Signals / Groups tree
-# Goal: Canonical signalGroups[], Left Signals/Groups tree groups, and Bottom drop-target groups must stay identical, including empty groups.
-# Acceptance snapshot: Add Group creates exactly one visible empty group in Left Tree and Bottom targets; rename/delete/Undo/Redo update all surfaces; Save/Reopen preserves empty groups; three consecutive creates produce three distinct groups; stable groupId is preserved.
-# Investigation focus: no rows.length>0 suppression, correct projection invalidation/subscription, no separate Bottom/Tree group truth.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/241
-#
 # Issue #196 — Transaction Bottom Editor must distinguish Create vs Edit
-# Goal: selecting Transaction A must edit A, not create Transaction B.
-# Acceptance snapshot: selected Transaction fields load into edit draft; Apply preserves stable ID and creates one History entry; Create mode creates exactly one new Transaction; Cancel/no-op is view-only; Undo/Redo exact; lane/Bottom/Inspector selection stays synchronized; real-browser create -> select -> edit -> undo -> redo.
+# Current audit: production dual-mode code is already present. Remaining closure gap is focused real-browser Bottom-editor evidence.
+# Required focused scenario: create A -> select A -> verify A fields -> edit name/start/end/lane in Bottom -> Apply -> same stable ID/no extra Transaction -> exactly one History entry -> Undo -> Redo; confirm Bottom/Inspector/lane selection synchronization.
 # Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/196
 #
-# Issue #291 — shared keyboard interaction contract (currently reopened/partial)
-# Goal: shared menu/tab/resizer/dialog/global-shortcut keyboard behavior, including focus restoration.
-# Acceptance snapshot: menus support focus entry, arrows/Home/End, activate, Escape+restore; Bottom tabs have tab semantics/navigation; all focusable separators resize from keyboard; modal focus entry/containment/Escape/restoration; text/IME protects global shortcuts; command enablement agrees with shared registry.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/291
+# Issue #300 — Cycle Insert / range-selection geometry correctness
+# Current post-closure review found a broader production gap: interaction geometry still depends on sampled Ruler DOM ticks for playhead/range/fit/navigation.
+# Required architecture: canonical source cycle/boundary -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometryMap -> local X -> screen X. Ruler ticks are presentation only.
+# Acceptance focus: arbitrary non-sampled long-timeline cycles, Fit Selection, Navigate to Cycle including terminal boundary, range band endpoints, LabelAnchor/rebased labels, Fold/Axis Break, and no re-materializing one DOM tick per cycle.
+# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/300
 #
 # Issue #173 — Transaction + Export shared-timeline architecture
 # Goal: Transaction View and export share canonical source-time/display geometry; export must not use viewport screenshot, fixed-pitch lookalike geometry, or a second semantic time axis.
 # Acceptance snapshot: transaction create/move/resize/link through Semantic Commands and one logical History entry; shared time mapping/Snap/timeline transforms; deterministic SVG/PNG/PDF from Canonical+Projection including offscreen objects; WaveDrom-derived waveform geometry; editor-only UI excluded; Save/Open/Undo/Redo and real-browser transaction/export acceptance.
 # Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/173
+#
+# Issue #311 — parity feature identity / implementation-status gate
+# Goal: prevent semantically different features from satisfying each other's parity evidence (known case: #98/#200 Signal Split vs #173 Cycle/Transaction Split).
+# Required model: stable feature identity plus explicit NOT_IMPLEMENTED/PARTIAL/ACCEPTANCE_ONLY/BLOCKED_EXTERNAL/COMPLETE-like status and typed evidence classes; checker must reject wrong-feature evidence and require production evidence before ACCEPTANCE_ONLY/COMPLETE.
+# Do not implement #200 inside #311; #311 fixes the audit/gate.
+# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/311
 
 # ==== CONTINUITY / BROAD HIGH-VALUE WORK ====
 219
@@ -193,3 +194,4 @@
 306
 
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
+# Closed in the latest implementation-audit sweep: #241, #291.
