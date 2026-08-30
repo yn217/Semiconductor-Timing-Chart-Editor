@@ -44,7 +44,7 @@ describe("SemanticCommand state machine foundation", () => {
       const nextRandom = random(seed);
       const createdIds: SignalId[] = [];
 
-      for (let step = 0; step < 12; step += 1) {
+      for (let step = 0; step < 128; step += 1) {
         const operation = nextRandom() % 4;
         let command: SemanticCommand;
         let createdId: SignalId | undefined;
