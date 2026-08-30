@@ -74,3 +74,8 @@ export function reversibleRegionCheck({ before, after, undo, redo, maxDelta = 0.
   const close = (left, right) => Math.abs(left - right) <= maxDelta;
   return { beforeUndo: close(before, undo), afterRedo: close(after, redo), maxDelta };
 }
+
+export function reversibleRegionReport({ regions, maxDelta = 0.05 }) {
+  const checks = Object.fromEntries(Object.entries(regions).map(([name, values]) => [name, reversibleRegionCheck({ ...values, maxDelta })]));
+  return { maxDelta, regions: checks, pass: Object.values(checks).every((check) => check.beforeUndo && check.afterRedo) };
+}

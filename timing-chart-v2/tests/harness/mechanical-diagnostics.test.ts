@@ -56,4 +56,10 @@ describe("mechanical visual diagnostics", async () => {
     expect(reversibleRegionCheck({ before: 0.01, after: 0.40, undo: 0.02, redo: 0.41 })).toMatchObject({ beforeUndo: true, afterRedo: true });
     expect(reversibleRegionCheck({ before: 0.01, after: 0.40, undo: 0.20, redo: 0.41 }).beforeUndo).toBe(false);
   });
+  it("summarizes reversibility for every declared region", async () => {
+    const { reversibleRegionReport } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    const report = reversibleRegionReport({ regions: { ribbon: { before: 0.01, after: 0.2, undo: 0.01, redo: 0.2 }, waveform: { before: 0.1, after: 0.3, undo: 0.11, redo: 0.29 } } });
+    expect(report.pass).toBe(true);
+    expect(Object.keys(report.regions)).toEqual(["ribbon", "waveform"]);
+  });
 });
