@@ -24,6 +24,7 @@ import { ProjectionCoordinator } from "./runtime/projection-coordinator.js";
 import { DisplayMappingCoordinator } from "./runtime/display-mapping-coordinator.js";
 import { GeometryRegistry } from "./runtime/geometry-registry.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
+import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -1591,11 +1592,6 @@ export function MinimalCycleView() {
       // The viewport is the interaction contract; the renderer/ruler layers
       // are implementation details and must not be enumerated as hit areas.
       return target === viewportElement || viewportElement.contains(target);
-    };
-    const rangeFromBoundaries = (first: number, second: number, cycleCount: number) => {
-      const start = Math.min(first, second);
-      const endBoundary = Math.max(first, second);
-      return { start: Math.max(0, Math.min(start, cycleCount - 1)), end: Math.max(1, Math.min(cycleCount, endBoundary > start ? endBoundary : start + 1)) };
     };
     const onRangePointerDown = (event: PointerEvent) => {
       if (rendererHost.dataset.arrowPick) return;
