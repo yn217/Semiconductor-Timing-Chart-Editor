@@ -1711,7 +1711,8 @@ export function MinimalCycleView() {
   }, [selectedTransactionId, snapshot.revision]);
 
   const createSelectedAnnotation = (annotation: Annotation) => {
-    commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
+    const result = execute.current({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
+    if (!result.ok) return;
     selectedAnnotationRef.current = annotation.id;
     setSelectedAnnotationId(annotation.id);
     setSelectedId(undefined);
@@ -3449,7 +3450,7 @@ function AnnotationList({ annotations, selectedId, onSelect }: { readonly annota
   </div>;
 }
 
-function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
   const [visible, setVisible] = useState(annotation.visible);
@@ -3467,7 +3468,11 @@ function AnnotationEditor({ annotation, annotations, document, history, problem,
       const parsed: unknown = JSON.parse(await file.text());
       const items = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "annotations" in parsed ? (parsed as { annotations: unknown }).annotations : undefined);
       if (!Array.isArray(items) || items.some((item) => item === null || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string")) throw new Error("Expected an annotation array with stable IDs.");
-      onCommand({ id: nextCommandId("annotation_import"), type: "document.replace", document: { ...document, annotations: items as Annotation[] } });
+      const result = onCommand({ id: nextCommandId("annotation_import"), type: "document.replace", document: { ...document, annotations: items as Annotation[] } });
+      if (!result.ok) {
+        setImportStatus(result.problems[0]?.message ?? "Annotation import was rejected.");
+        return;
+      }
       const first = items[0] as { id?: unknown } | undefined;
       if (typeof first?.id === "string") onSelect(first.id as AnnotationId);
       setImportStatus(`Imported ${items.length} annotation${items.length === 1 ? "" : "s"}`);
