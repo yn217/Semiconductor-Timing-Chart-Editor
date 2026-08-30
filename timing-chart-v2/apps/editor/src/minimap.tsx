@@ -5,6 +5,11 @@ import { buildMiniMapOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
 
+export function pointerRatio(client: number, start: number, size: number): number {
+  if (!Number.isFinite(size) || size <= 0) return 0;
+  return Math.max(0, Math.min(1, (client - start) / size));
+}
+
 export function MiniMap({ document, viewport }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null> }) {
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
   const dragging = useRef(false);
@@ -27,8 +32,8 @@ export function MiniMap({ document, viewport }: { readonly document: Readonly<Ca
     const minimap = documentRef.current;
     if (!element || !minimap) return;
     const bounds = minimap.getBoundingClientRect();
-    const verticalRatio = Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height));
-    const horizontalRatio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
+    const verticalRatio = pointerRatio(clientY, bounds.top, bounds.height);
+    const horizontalRatio = pointerRatio(clientX, bounds.left, bounds.width);
     element.scrollTop = verticalRatio * Math.max(0, element.scrollHeight - element.clientHeight);
     element.scrollLeft = horizontalRatio * Math.max(0, element.scrollWidth - element.clientWidth);
     sync();
