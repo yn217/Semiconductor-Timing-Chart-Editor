@@ -1358,7 +1358,7 @@ export function MinimalCycleView() {
         setSelectedId(undefined);
         applySelectionDecorations(new Set(), undefined);
         selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = new Set();
+        selectedSignalIdsRef.current = selectionController.clear();
         setSelectedSignalIds(new Set());
          setSelectedAnnotationId(undefined);
          setSelectedTransactionId(undefined);
@@ -1409,7 +1409,7 @@ export function MinimalCycleView() {
         setSelectedAnnotationId(id);
         setSelectedId(undefined);
         applySelectionDecorations(new Set(), undefined);
-        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
+        selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set());
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
@@ -2008,7 +2008,7 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = id;
     setSelectedAnnotationId(id);
     setSelectedId(undefined);
-    selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
+        selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set());
     setSelectedGroupId(undefined);
     setSelectedTransactionId(undefined);
     selectedTransactionRef.current = undefined;
@@ -2021,7 +2021,7 @@ export function MinimalCycleView() {
     if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
       selectedSignalRef.current = undefined;
       setSelectedId(undefined);
-      selectedSignalIdsRef.current = new Set();
+        selectedSignalIdsRef.current = selectionController.clear();
       setSelectedSignalIds(new Set());
     }
   };
