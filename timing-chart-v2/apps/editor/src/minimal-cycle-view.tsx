@@ -4091,8 +4091,9 @@ function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookma
   };
   return <div className="timeline-toolbar" aria-label="Timeline Editor" data-testid="timeline-editor">
     <div className="timeline-subgroup timeline-range-group" data-timeline-group="Range" aria-label="Range commands">
-      <label>Start<input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
-      <label>End<input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
+      <label>Start cycle<input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
+      <label>End cycle<input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
+      <output className="timeline-range-length" data-testid="timeline-selected-length">Length {Math.max(0, range.end - range.start)}</output>
       <b>Range</b>
     </div>
     <div className="timeline-subgroup timeline-insert-group" data-timeline-group="Insert" aria-label="Insert timeline commands">
@@ -4102,6 +4103,7 @@ function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookma
       <b>Insert</b>
     </div>
     <div className="timeline-subgroup timeline-range-edit-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
+      <label>From<output aria-label="Range edit from">{range.start}</output></label>
       <button type="button" data-v1-label="範囲削除" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}>Delete range</button>
       <label>To<input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
       <button type="button" data-v1-label="範囲複製" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}>Duplicate to</button>

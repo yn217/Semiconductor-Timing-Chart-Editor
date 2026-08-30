@@ -779,6 +779,8 @@ body { min-width: 1100px; }
   text-align: center;
 }
 .editor-shell .timeline-subgroup > label { min-width: 0; flex-direction: column; gap: 2px; font-size: 8px; }
+.editor-shell .timeline-subgroup > label > output { display: inline-flex; min-width: 42px; height: 22px; align-items: center; justify-content: center; border: 1px solid #b6c2d0; border-radius: 3px; background: #f5f7fa; color: #29425e; font-size: 10px; }
+.editor-shell .timeline-range-length { display: inline-flex; min-width: 52px; align-items: center; justify-content: center; color: #29425e; font-size: 8px; white-space: nowrap; }
 .editor-shell .timeline-subgroup input { width: 42px; min-width: 0; height: 22px; padding: 1px 3px; }
 .editor-shell .timeline-subgroup > button { min-width: 0; flex: 1 1 0; padding: 2px 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.05; text-align: center; }
 .editor-shell .timeline-subgroup .timeline-objects { min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; overflow: auto; }
