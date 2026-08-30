@@ -1097,10 +1097,10 @@ export function MinimalCycleView() {
       refreshOverlays(session.getSnapshot().document);
       publishState();
     };
-    execute.current = (command) => { const result = session.execute(command); applyResult(result, command.type, command); return result; };
-    executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result, `batch:${id}`, undefined, id); return result; };
-    undo.current = () => applyResult(session.undo(), "history.undo");
-    redo.current = () => applyResult(session.redo(), "history.redo");
+    execute.current = (command) => { const result = sessionController.execute(command); applyResult(result, command.type, command); return result; };
+    executeBatch.current = (id, commands) => { const result = sessionController.executeBatch(id, commands); applyResult(result, `batch:${id}`, undefined, id); return result; };
+    undo.current = () => applyResult(sessionController.undo(), "history.undo");
+    redo.current = () => applyResult(sessionController.redo(), "history.redo");
     const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
       const canonicalDocument = canonicalDocumentOf(document);
       const resourceProblems = validateDocumentResourceBudget(canonicalDocument);
