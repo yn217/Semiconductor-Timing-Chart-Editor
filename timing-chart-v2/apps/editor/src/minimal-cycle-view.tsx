@@ -296,6 +296,20 @@ export function MinimalCycleView() {
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" } | undefined>();
   useEffect(() => {
+    const onDialogKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      if (contextMenu || treeAddMenuOpen || treeMoreMenuOpen) return;
+      if (pendingFileAction) { event.preventDefault(); cancelPendingFileAction(); return; }
+      if (bulkRegistrationVisible) { event.preventDefault(); setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); return; }
+      if (hierarchyVisible) { event.preventDefault(); setHierarchyVisible(false); return; }
+      if (propertiesVisible) { event.preventDefault(); setPropertiesVisible(false); return; }
+      if (exportVisible) { event.preventDefault(); setExportVisible(false); return; }
+      if (saveAsVisible) { event.preventDefault(); setSaveAsVisible(false); }
+    };
+    document.addEventListener("keydown", onDialogKeyDown, true);
+    return () => document.removeEventListener("keydown", onDialogKeyDown, true);
+  }, [bulkRegistrationVisible, contextMenu, exportVisible, hierarchyVisible, pendingFileAction, propertiesVisible, saveAsVisible, treeAddMenuOpen, treeMoreMenuOpen]);
+  useEffect(() => {
     const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
     const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
     menu?.querySelector<HTMLButtonElement>("[role='menuitem']:not(:disabled)")?.focus();
