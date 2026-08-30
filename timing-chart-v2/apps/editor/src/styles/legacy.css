@@ -797,6 +797,9 @@ body { min-width: 1100px; }
 .editor-shell .timeline-subgroup .timeline-objects button { min-width: 0; max-width: 100%; padding: 1px 3px; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group,
 .editor-shell .timeline-subgroup.timeline-fold-group { flex-direction: column; align-items: stretch; justify-content: center; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 19px minmax(0, 1fr); align-content: stretch; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button { grid-row: 1; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects { grid-column: 1 / -1; grid-row: 2; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group,
 .editor-shell .timeline-subgroup.timeline-fold-group { pointer-events: none; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group > button,
