@@ -606,6 +606,12 @@ function element(owner: Document | HTMLElement, tag: "div", role: string): HTMLE
   return result;
 }
 
+function groupStyleAppliesToSurface(extend: "label" | "waveform" | "both" | undefined, surface: string): boolean {
+  const scope = extend ?? "both";
+  const isWaveform = surface === "timing";
+  return scope === "both" || (scope === "waveform" ? isWaveform : !isWaveform);
+}
+
 function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, rowIds: readonly string[], rows: ReadonlyMap<string, RowLayoutEntry>, surface: string): { creates: number; destroys: number; moves: number } {
   const active = new Set(rowIds);
   let creates = 0, destroys = 0, moves = 0;
@@ -631,10 +637,11 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
       shell.tabIndex = -1;
       shell.setAttribute("aria-level", "2");
     }
-    if (row.groupStyle?.showBackground && row.groupStyle.background) shell.style.setProperty("--group-background", row.groupStyle.background);
+    const groupStyleApplies = groupStyleAppliesToSurface(row.groupStyle?.extend, surface);
+    if (groupStyleApplies && row.groupStyle?.showBackground && row.groupStyle.background) shell.style.setProperty("--group-background", row.groupStyle.background);
     else shell.style.removeProperty("--group-background");
-    if (row.groupStyle?.opacity !== undefined) shell.style.opacity = String(row.groupStyle.opacity); else shell.style.removeProperty("opacity");
-    if (row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
+    if (groupStyleApplies && row.groupStyle?.opacity !== undefined) shell.style.opacity = String(row.groupStyle.opacity); else shell.style.removeProperty("opacity");
+    if (groupStyleApplies && row.groupStyle?.border) shell.style.setProperty("--group-border", row.groupStyle.border); else shell.style.removeProperty("--group-border");
     shell.dataset.groupStart = String(row.groupId !== previousGroupId);
     shell.dataset.instancePath = row.instancePath?.join(".") ?? "";
     shell.dataset.fullPath = row.fullPath ?? row.name;
@@ -742,9 +749,10 @@ function syncGroupHeaderLayer(layer: HTMLElement, cache: Map<string, HTMLElement
       shell.setAttribute("aria-expanded", String(!header.collapsed));
       shell.setAttribute("aria-selected", "false");
     }
-    if (header.groupStyle?.showBackground && header.groupStyle.background) shell.style.setProperty("--group-background", header.groupStyle.background);
+    const groupStyleApplies = groupStyleAppliesToSurface(header.groupStyle?.extend, surface);
+    if (groupStyleApplies && header.groupStyle?.showBackground && header.groupStyle.background) shell.style.setProperty("--group-background", header.groupStyle.background);
     else shell.style.removeProperty("--group-background");
-    if (header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
+    if (groupStyleApplies && header.groupStyle?.border) shell.style.setProperty("--group-border", header.groupStyle.border);
     else shell.style.removeProperty("--group-border");
     if (surface === "left") populateGroupHeader(shell, header);
     else if (surface === "frozen") shell.textContent = header.groupName;
