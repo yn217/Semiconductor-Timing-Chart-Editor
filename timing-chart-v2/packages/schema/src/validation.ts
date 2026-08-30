@@ -294,7 +294,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
 
   const timeGroups = new Map<string, TimeGroup>(document.timeGroups.map((group) => [group.id, group]));
   const labelAnchors = new Map(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
-  const groups = new Set(document.signalGroups.map((group) => group.id));
+  const groups = new Set<string>(document.signalGroups.map((group) => group.id));
   for (const reference of canonicalReferences(document)) {
     const targetExists = reference.targetType === "signal" ? signals.has(reference.targetId)
       : reference.targetType === "time-group" ? timeGroups.has(reference.targetId)
