@@ -5,9 +5,8 @@
 # Path: .codex/ISSUE_ORDER.txt
 #
 # Last reconciled by ChatGPT: 2026-08-31
-# GitHub search-index Open count observed during sweep: 110 (may lag direct close state).
-# Direct Issue API confirms #241, #291 and #302 are closed/completed in this sweep.
-# Observed production HEAD: ab0ece39d9cbf658a2e003e509b043f6c9ce8598
+# GitHub Open Issue count at reconciliation: 109
+# Observed production HEAD: 3d3b7724c3722bb4a8fe36416ecb605dc65b35c8
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -44,14 +43,40 @@
 # ChatGPT may reorder/add/remove Issue numbers by updating only codex-control.
 # A control-branch update must never be treated as main divergence.
 
-# ==== NEXT EXECUTABLE PRODUCTION / CLOSURE AUDITS ====
-# Prefer concrete closure gaps over broad evidence-only audits.
+# ==== OPERATIONAL BLOCKER — REDUCE MINIMALCYCLEVIEW HOT FILE FIRST ====
+# This is intentionally first because the ~405 KB monolith is causing Codex/LLM read/edit instability and increases blast radius for nearly every subsequent feature task.
+# Execute #258 as a sequence of small behavior-preserving extraction commits; do not rewrite the whole editor at once.
+258
+
+# ==== NEXT EXECUTABLE PRODUCTION / CLOSURE WORK ====
+# After #258 is materially decomposed/closed, prefer a small closure task, then correctness, then visual-test infrastructure.
 196
 300
+310
+307
+308
+309
 173
 311
 
-# ==== CACHED NEXT-ISSUE CONTEXT (fallback when local Issue read is unavailable) ====
+# ==== CACHED NEXT-ISSUE CONTEXT (fallback when live Issue read is unavailable) ====
+# Issue #258 — Decompose MinimalCycleView monolith into explicit UI/runtime owners without changing behavior
+# Current main: timing-chart-v2/apps/editor/src/minimal-cycle-view.tsx is about 405 KB and remains the main app-layer hot file.
+# Goal: reduce it to a composition/orchestration shell while preserving SemanticCommand/History/Canonical/Renderer contracts.
+# Required procedure, in order:
+#   Phase 0: baseline + OWNERSHIP.md + complexity guard.
+#   Phase 1: extract fixtures and low-risk leaf UI (CommentRowEditor, ClockGeneratorEditor, EventTable, Legend, AI panel, etc.).
+#   Phase 2: extract Bottom/Inspector/Signal Tree/Ribbon/major editor surfaces without changing semantics.
+#   Phase 3: extract diagnostics/result plumbing.
+#   Phase 4: extract viewport/timeline/ruler/grid/zoom/fit/navigation runtime; coordinate with #300/#279 and keep Ruler DOM presentation-only.
+#   Phase 5: extract range/annotation/transaction/tree/keyboard interaction lifecycle with explicit attach/detach/cancel ownership.
+#   Phase 6: extract New/Open/Save/document-epoch coordination using existing file-document helpers.
+#   Phase 7: leave MinimalCycleView primarily as typed composition.
+# Size ratchet guidance: current ~405 KB -> Phase 1-3 <300 KB -> Phase 4-6 <180 KB -> closure preferably <100 KB, unless remaining ownership is explicitly justified.
+# Per bounded extraction: focused test + git diff --check + OWNERSHIP.md update when owner changes + commit/push. Do not mix unrelated feature fixes.
+# Home DOM/CSS, Golden/reference/threshold/mask remain unchanged.
+# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/258
+#
 # Issue #196 — Transaction Bottom Editor must distinguish Create vs Edit
 # Current audit: production dual-mode code is already present. Remaining closure gap is focused real-browser Bottom-editor evidence.
 # Required focused scenario: create A -> select A -> verify A fields -> edit name/start/end/lane in Bottom -> Apply -> same stable ID/no extra Transaction -> exactly one History entry -> Undo -> Redo; confirm Bottom/Inspector/lane selection synchronization.
@@ -63,30 +88,24 @@
 # Acceptance focus: arbitrary non-sampled long-timeline cycles, Fit Selection, Navigate to Cycle including terminal boundary, range band endpoints, LabelAnchor/rebased labels, Fold/Axis Break, and no re-materializing one DOM tick per cycle.
 # Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/300
 #
+# Issue #310/#307/#308/#309 — Visual Scenario Harness
+# Order is dependency-driven: mechanical diagnostics -> Ribbon visual matrix -> Golden Sample visual matrix -> interaction before/after/undo scenarios.
+# Do not modify approved Golden/reference assets to make these pass.
+#
 # Issue #173 — Transaction + Export shared-timeline architecture
 # Goal: Transaction View and export share canonical source-time/display geometry; export must not use viewport screenshot, fixed-pitch lookalike geometry, or a second semantic time axis.
-# Acceptance snapshot: transaction create/move/resize/link through Semantic Commands and one logical History entry; shared time mapping/Snap/timeline transforms; deterministic SVG/PNG/PDF from Canonical+Projection including offscreen objects; WaveDrom-derived waveform geometry; editor-only UI excluded; Save/Open/Undo/Redo and real-browser transaction/export acceptance.
 # Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/173
 #
 # Issue #311 — parity feature identity / implementation-status gate
 # Goal: prevent semantically different features from satisfying each other's parity evidence (known case: #98/#200 Signal Split vs #173 Cycle/Transaction Split).
-# Required model: stable feature identity plus explicit NOT_IMPLEMENTED/PARTIAL/ACCEPTANCE_ONLY/BLOCKED_EXTERNAL/COMPLETE-like status and typed evidence classes; checker must reject wrong-feature evidence and require production evidence before ACCEPTANCE_ONLY/COMPLETE.
 # Do not implement #200 inside #311; #311 fixes the audit/gate.
 # Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/311
 
 # ==== CONTINUITY / BROAD HIGH-VALUE WORK ====
 219
 217
-258
 282
 228
-
-# ==== CURRENT REQUEST — VISUAL SCENARIO HARNESS / AI REVIEW ====
-# Build reusable diagnostics first, then apply them to Ribbon, Golden Samples and interaction scenarios.
-310
-307
-308
-309
 
 # ==== P0 / CORRECTNESS / RELIABILITY / PERFORMANCE ====
 247
@@ -193,4 +212,4 @@
 306
 
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
-# Closed in the latest implementation-audit sweep: #241, #291, #302.
+# Recently closed implementation-audit items: #241, #291, #302.
