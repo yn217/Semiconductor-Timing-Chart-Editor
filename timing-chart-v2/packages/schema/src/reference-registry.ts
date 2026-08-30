@@ -26,6 +26,8 @@ export interface CanonicalReference {
  */
 export function canonicalReferences(document: CanonicalDocument): readonly CanonicalReference[] {
   const references: CanonicalReference[] = [];
+  const signalIds = new Set(document.signals.map((signal) => signal.id));
+  const spacerIds = new Set(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => spacer.id)));
   if (document.timeline.referenceClock !== undefined) {
     references.push({
       kind: "timeline.referenceClock",
@@ -80,8 +82,8 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
   });
   document.signalGroups.forEach((group, groupIndex) => {
     group.rows.forEach((rowId, rowIndex) => {
-      const targetType = document.signals.some((signal) => signal.id === rowId) ? "signal"
-        : group.spacers?.some((spacer) => spacer.id === rowId) ? "spacer" : undefined;
+      const targetType = signalIds.has(rowId) ? "signal"
+        : spacerIds.has(rowId) ? "spacer" : undefined;
       if (targetType === undefined) return;
       references.push({
         kind: "signalGroup.row",
