@@ -169,7 +169,8 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const headerHeight = 38 + documentLayout.headerLines.length * 14;
   const mapping = buildDisplayTimeMapping(document.timeline, settings.foldPolicy === "expand" ? [] : document.timeGroups);
   const range = rangeFor(document, settings, mapping);
-  const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => document.signals.find((signal) => signal.id === id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
+  const signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
+  const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => signalById.get(id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
   const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
