@@ -629,6 +629,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     if (!shell) {
       shell = element(layer.ownerDocument, "div", `${surface}-row`);
       shell.dataset.rowId = rowId;
+      shell.dataset.role = `${surface}-row`;
       cache.set(rowId, shell);
       creates += 1;
     }
