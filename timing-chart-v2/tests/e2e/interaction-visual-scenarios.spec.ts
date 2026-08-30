@@ -89,3 +89,29 @@ test("captures Group collapse/expand visual bundles without canonical mutation",
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
 });
+
+test("captures Signal selection visual state without semantic mutation", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("signal-selection");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const row = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const beforeCounters = await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `SIGNAL-SELECTION-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-role='frozen-row'][data-row-id='sig_cycle_request']", target: "frozen-row:sig_cycle_request" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["frozen-row:sig_cycle_request"], stableRegions: ["ribbon", "ruler"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("before");
+  await row.click();
+  await expect(row).toHaveAttribute("aria-selected", "true");
+  await capture("selected");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+  expect(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(beforeCounters);
+});
