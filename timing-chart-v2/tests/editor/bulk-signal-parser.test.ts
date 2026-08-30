@@ -21,4 +21,13 @@ describe("parseBulkSignalDefinitions", () => {
       "Line 4: only bus signals may include a bit range.",
     ]);
   });
+
+  it("rejects invalid instance path segments before canonical creation", () => {
+    const result = parseBulkSignalDefinitions("dut.bad-name.signal binary\ndut.2core.signal binary", canonicalFixture());
+    expect(result.definitions).toEqual([]);
+    expect(result.errors).toEqual([
+      "Line 1: invalid signal path 'dut.bad-name.signal'.",
+      "Line 2: invalid signal path 'dut.2core.signal'.",
+    ]);
+  });
 });

@@ -24,7 +24,7 @@ export function parseBulkSignalDefinitions(text: string, document: Readonly<Cano
     if (kind !== "binary" && kind !== "bus" && kind !== "state" && kind !== "logic" && kind !== "event" && kind !== "pulse" && kind !== "clock") { errors.push(`Line ${lineNumber}: unsupported signal type '${rawKind}'.`); continue; }
     const parts = path?.split(".").filter(Boolean) ?? [];
     const rawName = parts.pop();
-    if (!rawName || parts.length === 0 || !/^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\d+:\d+\])?$/.test(rawName)) { errors.push(`Line ${lineNumber}: invalid signal path '${path}'.`); continue; }
+    if (!rawName || parts.length === 0 || !/^[A-Za-z_$][A-Za-z0-9_$]*(?:\[\d+:\d+\])?$/.test(rawName) || parts.some((part) => !/^[A-Za-z_$][A-Za-z0-9_$]*$/.test(part))) { errors.push(`Line ${lineNumber}: invalid signal path '${path}'.`); continue; }
     const range = /\[(\d+):(\d+)\]$/.exec(rawName);
     const width = range ? Math.abs(Number(range[1]) - Number(range[2])) + 1 : undefined;
     if (kind === "bus" && width === undefined) { errors.push(`Line ${lineNumber}: bus signal '${path}' must include a bit range such as [31:0].`); continue; }
