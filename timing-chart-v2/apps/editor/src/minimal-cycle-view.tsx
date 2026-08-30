@@ -22,6 +22,7 @@ import { EditorSessionController } from "./runtime/editor-session-controller.js"
 import { RenderCoordinator } from "./runtime/render-coordinator.js";
 import { ProjectionCoordinator } from "./runtime/projection-coordinator.js";
 import { DisplayMappingCoordinator } from "./runtime/display-mapping-coordinator.js";
+import { GeometryRegistry } from "./runtime/geometry-registry.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -644,8 +645,9 @@ export function MinimalCycleView() {
     const projectionCoordinator = new ProjectionCoordinator();
     let timeAxis: TimeAxisGeometry = { mode: "clockless" };
     const mappingCache = new DisplayMappingCoordinator();
-    const geometrySvgs = new Map<SignalId, SVGSVGElement>();
-    const geometryMaps = new Map<SignalId, LocalGeometryMap>();
+    const geometryRegistry = new GeometryRegistry();
+    const geometrySvgs = geometryRegistry.svgs;
+    const geometryMaps = geometryRegistry.maps;
     const openPhaseMarks: Record<string, number> = {};
     let openPhaseActive = false;
     let openRowShellPainted = false;
