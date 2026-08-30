@@ -20,7 +20,13 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await picker.getByLabel("Search linked signals").fill("DATA");
   const result = picker.getByRole("option", { name: /DATA/ });
   await expect(result).toHaveCount(1);
-  await result.press("Enter");
+  const results = picker.getByTestId("linked-signal-results");
+  await results.focus();
+  await results.press("ArrowDown");
+  await results.press("Home");
+  await results.press("End");
+  await expect(results).toHaveAttribute("aria-activedescendant", /linked-signal-option-/);
+  await results.press("Enter");
   await expect(linked.getByTestId("linked-signal-list")).toContainText("DATA");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
