@@ -1339,7 +1339,7 @@ export function MinimalCycleView() {
         event.stopPropagation();
         const signalId = signalMore.dataset.treeSignalId as SignalId;
         selectedSignalRef.current = signalId;
-        selectedSignalIdsRef.current = new Set([signalId]);
+        selectedSignalIdsRef.current = selectionController.replace(new Set([signalId]));
         setSelectedId(signalId);
         setSelectedSignalIds(new Set([signalId]));
          setSelectedGroupId(undefined);

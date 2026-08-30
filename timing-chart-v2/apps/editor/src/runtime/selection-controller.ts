@@ -19,6 +19,11 @@ export class SelectionController {
 
   current(): ReadonlySet<SignalId> { return new Set(this.selection); }
 
+  replace(selection: ReadonlySet<SignalId>): ReadonlySet<SignalId> {
+    this.selection = new Set(selection);
+    return new Set(this.selection);
+  }
+
   primarySignal(selection: ReadonlySet<SignalId>, preferred?: SignalId): SignalId | undefined {
     return preferred && selection.has(preferred) ? preferred : [...selection][0];
   }
