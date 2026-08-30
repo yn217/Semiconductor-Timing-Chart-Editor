@@ -246,7 +246,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
       height: Math.max(rowHeight, last.y + last.height - first.y),
       fill: style?.background ?? "#f8fafc",
       fillOpacity: style?.opacity ?? 0.22,
-      stroke: style?.border ?? "#d8e0e9",
+      stroke: style?.border ?? "none",
       scope,
       showHeader,
     });

@@ -92,6 +92,19 @@ describe("deterministic document export", () => {
     expect(svg).toContain('stroke="#ff0000"');
   });
 
+  it("omits the Group Band border when the canonical border is disabled", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      signalGroups: base.signalGroups.map((group, index) => index === 0
+        ? { ...group, style: { showBackground: true, background: "#123456", opacity: 0.4, extend: "both" as const, showHeader: true } }
+        : group),
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.groupBands[0]?.stroke).toBe("none");
+    expect(renderExportSvg(scene)).toContain('stroke="none"');
+  });
+
   it("supports selected-range SVG and deterministic PDF bytes", async () => {
     const document = scaleFixture(3);
     const service = new DeterministicExportService();
