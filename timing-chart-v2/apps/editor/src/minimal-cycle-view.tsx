@@ -991,6 +991,10 @@ export function MinimalCycleView() {
       timeAxis = { mode: "clockless" };
       geometrySvgs.clear();
       rulerInitialized = false;
+      // Open/New owns a deterministic viewport policy. Apply it before the
+      // first projection so the previous document cannot seed stale rows.
+      viewportElement.scrollLeft = 0;
+      viewportElement.scrollTop = 0;
       window = viewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
