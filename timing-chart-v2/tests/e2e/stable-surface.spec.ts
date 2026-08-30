@@ -8,10 +8,12 @@ test("reorders row shells without rerendering or moving heavy WaveDrom SVG owner
   const surface = host.locator("[data-role='timing-chart-surface']");
 
   const ids = async (role: string) => surface.locator(`[data-role='${role}'] > [data-role$='-row'][data-row-id]`).evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  const rowIdentity = async () => surface.evaluate((element) => (element as HTMLElement & { requestRowIdentitySnapshot: () => { canonicalRowIds: string[]; visibleRowIds: string[] } }).requestRowIdentitySnapshot());
   expect(await ids("left-tree-rows")).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
   expect(await ids("frozen-label-rows")).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
   expect(await ids("timing-semantic-rows")).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
-  await expect(surface).toHaveAttribute("data-canonical-row-ids", "sig_phase4_clock,sig_phase3_probe");
+  expect((await rowIdentity()).canonicalRowIds).toEqual(["sig_phase4_clock", "sig_phase3_probe"]);
+  await expect(surface).not.toHaveAttribute("data-canonical-row-ids");
 
   const clockSvg = await surface.locator("[data-role='wave-owner'][data-signal-id='sig_phase4_clock'] > svg").elementHandle();
   const probeSvg = await surface.locator("[data-role='wave-owner'][data-signal-id='sig_phase3_probe'] > svg").elementHandle();
@@ -36,7 +38,8 @@ test("reorders row shells without rerendering or moving heavy WaveDrom SVG owner
   expect(await ids("left-tree-rows")).toEqual(["sig_phase3_probe", "sig_phase4_clock"]);
   expect(await ids("frozen-label-rows")).toEqual(["sig_phase3_probe", "sig_phase4_clock"]);
   expect(await ids("timing-semantic-rows")).toEqual(["sig_phase3_probe", "sig_phase4_clock"]);
-  await expect(surface).toHaveAttribute("data-canonical-row-ids", "sig_phase3_probe,sig_phase4_clock");
+  expect((await rowIdentity()).canonicalRowIds).toEqual(["sig_phase3_probe", "sig_phase4_clock"]);
+  await expect(surface).not.toHaveAttribute("data-canonical-row-ids");
 
   const finalOwnerOrder = await surface.locator("[data-role='stable-waveform-surface'] > [data-signal-id]").evaluateAll((owners) => owners.map((owner) => (owner as HTMLElement).dataset.signalId));
   expect(finalOwnerOrder).toEqual(initialOwnerOrder);

@@ -86,6 +86,11 @@ export interface RendererDiagnostics {
   readonly diagnosticPublishDurationMs: number;
 }
 
+export interface RendererRowIdentitySnapshot {
+  readonly canonicalRowIds: readonly string[];
+  readonly visibleRowIds: readonly string[];
+}
+
 export type RendererDiagnosticSummary = Omit<RendererDiagnostics, "waveRendersBySignal" | "localGeometryBuildsBySignal">;
 
 export interface OverlayAnchorPoint {
@@ -139,6 +144,7 @@ export interface TimingChartRenderer {
   updateSnapGuide(guide?: SnapGuidePrimitive): void;
   updateEdgeCounters(primitives: readonly EdgeCounterOverlayPrimitive[]): void;
   counters(): Readonly<RenderCounters>;
+  rowIdentitySnapshot(): Readonly<RendererRowIdentitySnapshot>;
   diagnostics(): Readonly<RendererDiagnostics>;
   diagnosticSummary(): Readonly<RendererDiagnosticSummary>;
   dispose(): void;

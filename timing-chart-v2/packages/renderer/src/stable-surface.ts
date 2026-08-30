@@ -1,5 +1,5 @@
 import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@timing-chart-v2/projection";
-import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
+import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, RendererRowIdentitySnapshot, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
 const WAVE_BATCH_LIMIT = 8;
 const diagnosticEncoder = new TextEncoder();
@@ -146,6 +146,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     host.replaceChildren(root);
     this.#layers = { root, left, frozen, timing, waves, overlays, interactive };
     Object.defineProperty(root, "requestPerformanceSnapshot", { configurable: true, value: () => this.diagnostics() });
+    Object.defineProperty(root, "requestRowIdentitySnapshot", { configurable: true, value: () => this.rowIdentitySnapshot() });
     this.#publishCounters();
   }
 
@@ -178,12 +179,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
     layers.root.style.height = `${projection.totalHeight}px`;
     layers.root.dataset.revision = String(projection.revision);
-    if (documentRowIdsChanged) {
-      layers.root.dataset.canonicalRowIds = projection.canonicalRowIds.join(",");
-    }
     if (this.#visibleRowIdsSource !== projection.visibleRowIds) {
       this.#visibleRowIdsSource = projection.visibleRowIds;
-      layers.root.dataset.visibleRowIds = projection.visibleRowIds.join(",");
     }
 
     if (this.#canonicalSignalIdsSource !== projection.canonicalSignalIds) {
@@ -270,6 +267,13 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
 
   counters(): Readonly<RenderCounters> {
     return Object.freeze({ ...this.#counters });
+  }
+
+  rowIdentitySnapshot(): Readonly<RendererRowIdentitySnapshot> {
+    return Object.freeze({
+      canonicalRowIds: Object.freeze([...(this.#documentRowIdsSource ?? [])]),
+      visibleRowIds: Object.freeze([...(this.#visibleRowIdsSource ?? [])]),
+    });
   }
 
   diagnostics(): Readonly<RendererDiagnostics> {
