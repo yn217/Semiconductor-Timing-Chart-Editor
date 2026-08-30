@@ -1006,9 +1006,25 @@ export function MinimalCycleView() {
         localStorage.setItem("timing-chart-v2.recent", text);
         session.markClean();
         setHistory(session.historyState());
+        setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
         return text;
       } catch (error) {
-        setProblem(error instanceof Error ? error.message : "Save failed.");
+        const isSerializationFailure = error instanceof Error && (error.name.includes("Serialization") || error.name.includes("Canonical"));
+        const reason = error instanceof Error ? error.message : "Save failed.";
+        const diagnostic: DocumentProblem = {
+          code: "SAVE_FAILED",
+          path: "$.document",
+          message: `Save document failed: ${reason}`,
+          severity: "error",
+          operation: "document.save",
+          operationLabel: "Save document",
+          source: "save",
+          stage: isSerializationFailure ? "serialize" : "storage",
+          recommendation: isSerializationFailure ? "Fix the document validation or serialization error, then retry Save." : "Retry the download or choose Save As; recent-document history may not be updated.",
+          detail: `save-failure:${isSerializationFailure ? "serialize" : "storage"}`,
+        };
+        setProblem(diagnostic.message);
+        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("save-failure:")), diagnostic]);
         return undefined;
       }
     };

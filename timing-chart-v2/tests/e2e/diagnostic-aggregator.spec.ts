@@ -98,3 +98,24 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).not.toContainText("DUPLICATE_CHANGE_POINT");
 });
+
+test("surfaces recent-document storage stage when Save cannot persist", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.evaluate(() => {
+    const original = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key: string, value: string) {
+      if (key === "timing-chart-v2.recent") throw new DOMException("Quota exceeded", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByTestId("editor-problem")).toContainText("Save document failed");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems).toContainText("SAVE_FAILED");
+  await expect(problems).toContainText("storage");
+  await expect(problems).toContainText("Retry the download or choose Save As");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
