@@ -868,7 +868,7 @@ body { min-width: 1100px; }
   .editor-shell .view-show-group { width: 100%; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
   .editor-shell .view-panels-group { width: 100%; }
   .editor-shell .view-guides-group { width: 100%; }
-  .editor-shell .view-zoom-group { width: 100%; grid-template-columns: 44px 58px 0 44px minmax(0, 1fr); }
+  .editor-shell .view-zoom-group { width: 100%; grid-template-columns: 44px 58px 44px minmax(0, 1fr); }
   .editor-shell .view-workspace-group { width: 100%; gap: 4px; }
 }
 @media (min-width: 1101px) and (max-width: 1300px) {
