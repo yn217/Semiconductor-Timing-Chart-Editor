@@ -108,6 +108,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #waveBatchScheduled = false;
   #waveBatchSequence = 0;
   readonly #rowY = new Map<string, number>();
+  #canonicalSignalIdsSource: readonly WaveSignalId[] | undefined;
+  #canonicalSignalIdSet = new Set<WaveSignalId>();
   #documentRowIdsSource: readonly string[] | undefined;
   #visibleRowIdsSource: readonly string[] | undefined;
   #documentEpoch = 0;
@@ -183,7 +185,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       layers.root.dataset.visibleRowIds = projection.visibleRowIds.join(",");
     }
 
-    const canonical = new Set(projection.canonicalSignalIds);
+    if (this.#canonicalSignalIdsSource !== projection.canonicalSignalIds) {
+      this.#canonicalSignalIdsSource = projection.canonicalSignalIds;
+      this.#canonicalSignalIdSet = new Set(projection.canonicalSignalIds);
+    }
+    const canonical = this.#canonicalSignalIdSet;
     if (projection.documentEpoch !== this.#documentEpoch) {
       this.#documentEpoch = projection.documentEpoch;
       this.#fullReplaceEpochResets += 1;
@@ -366,6 +372,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     this.#overlaySignatures.clear();
     this.#edgeCounterOwners.clear();
     this.#rowY.clear();
+    this.#canonicalSignalIdsSource = undefined;
+    this.#canonicalSignalIdSet.clear();
     this.#documentRowIdsSource = undefined;
     this.#visibleRowIdsSource = undefined;
     this.#documentEpoch = 0;
