@@ -43,6 +43,29 @@ export function assertSafeWaveDromMarkup(markup: string): string {
   return markup;
 }
 
+/**
+ * Validate the materialized SVG as well as its serialized source. This keeps
+ * the trust boundary at the exact DOM node that is about to enter the editor.
+ */
+export function assertSafeWaveDromSvg(svg: Element): void {
+  const unsafeElements = new Set(["script", "foreignObject", "iframe", "object", "embed", "img"]);
+  for (const element of [svg, ...Array.from(svg.querySelectorAll("*"))]) {
+    if (unsafeElements.has(element.localName.toLowerCase())) {
+      throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an executable SVG element.");
+    }
+    for (const attribute of Array.from(element.attributes)) {
+      const name = attribute.name.toLowerCase();
+      const value = attribute.value.trim().toLowerCase();
+      if (name.startsWith("on")) {
+        throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an SVG event-handler attribute.");
+      }
+      if ((name === "href" || name === "xlink:href") && (value.startsWith("javascript:") || value.startsWith("data:"))) {
+        throw new WaveDromAdapterError("UNSAFE_WAVEDROM_SVG", "WaveDrom produced an unsafe SVG URL attribute.");
+      }
+    }
+  }
+}
+
 interface ActiveOwner {
   readonly mount: Element;
   readonly rendered: RenderedWave;
@@ -108,6 +131,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") {
       throw new WaveDromAdapterError("INVALID_WAVEDROM_SVG", "WaveDrom did not return an SVG root.");
     }
+    assertSafeWaveDromSvg(svg);
     svg.setAttribute("data-wave-owner", signalId);
     svg.setAttribute("data-wave-render-index", String(renderIndex));
     // WaveDrom's default SVG is sized from the row height. The browser's default
