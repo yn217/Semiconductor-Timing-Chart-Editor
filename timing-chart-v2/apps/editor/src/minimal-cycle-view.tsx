@@ -3559,6 +3559,15 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
     else if ((value as { id?: unknown }).id !== selected.id) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_ID_MISMATCH", "$.id", "Selected object ID cannot change.")); setStatus("Invalid selected object ID"); }
     else { const problems = validateCanonicalDocument(replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction)); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
   };
+  const copy = async () => {
+    if (!navigator.clipboard) { setStatus("Copy failed: Clipboard API unavailable"); return; }
+    try {
+      await navigator.clipboard.writeText(draft);
+      setStatus("Copied");
+    } catch (error) {
+      setStatus(`Copy failed: ${error instanceof Error ? error.message : "Clipboard permission denied"}`);
+    }
+  };
   const apply = () => {
     if (!advanced) return;
     const value = parseDraft();
@@ -3577,7 +3586,7 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
     setAdvanced(false);
     setStatus("Applied");
   };
-  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span><select aria-label="JSON scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(draft); setStatus("Copied"); }}>Copy</button>{advanced && <button type="button" data-testid="apply-advanced-json" onClick={apply}>Apply JSON</button>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => setDraft(event.target.value)} spellCheck={false} /> : <pre>{text}</pre>}</section>;
+  return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span><select aria-label="JSON scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && <button type="button" data-testid="apply-advanced-json" onClick={apply}>Apply JSON</button>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => setDraft(event.target.value)} spellCheck={false} /> : <pre>{text}</pre>}</section>;
 }
 
 function TransactionLanes({ document, revision, zoom, selectedId, onSelect, onSnap, onCommand }: { readonly document: CanonicalDocument; readonly revision: number; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
