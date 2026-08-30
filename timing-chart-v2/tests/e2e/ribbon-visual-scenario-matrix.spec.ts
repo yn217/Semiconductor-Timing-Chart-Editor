@@ -22,6 +22,8 @@ test("captures deterministic production Ribbon scenario manifests", async ({ pag
   expect(manifests).toHaveLength(tabs.length);
   expect(manifests.map((manifest) => manifest.scenario)).toEqual(tabs.map((tab) => `RIBBON-${tab.toUpperCase()}-DESKTOP`));
   expect(manifests.every((manifest) => manifest.testedCommit === gitHead && manifest.capture.viewport.join("x") === "1672x941")).toBe(true);
+  expect(manifests.every((manifest) => manifest.diagnostics.findings.every((finding) => finding.severity && finding.category && finding.target && finding.evidence))).toBe(true);
+  expect(manifests.flatMap((manifest) => manifest.diagnostics.findings.filter((finding) => ["CONSOLE_ERROR", "PAGE_ERROR", "RESOURCE_FAILURE"].includes(finding.category)))).toEqual([]);
 });
 
 test("covers compressed Ribbon layout and Home round-trip without semantic mutation", async ({ page }) => {
