@@ -51,3 +51,12 @@ export function collectDomMetrics(document, rules) {
     };
   }));
 }
+
+export function browserHealthFindings({ scenario, consoleErrors = [], pageErrors = [], failedResources = [], evidence = [] }) {
+  const finding = (category, target, actual) => ({ severity: "MAJOR", category, scenario, target, actual, evidence });
+  return [
+    ...consoleErrors.map((message) => finding("CONSOLE_ERROR", "browser console", { message })),
+    ...pageErrors.map((message) => finding("PAGE_ERROR", "page", { message })),
+    ...failedResources.map((url) => finding("RESOURCE_FAILURE", url, { url })),
+  ];
+}

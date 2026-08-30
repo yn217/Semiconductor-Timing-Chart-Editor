@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("mechanical visual diagnostics", async () => {
-  const { collectDomMetrics, runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+  const { browserHealthFindings, collectDomMetrics, runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
   it("emits stable findings for clipping, overlap, duplicate text, and icon alignment", () => {
     const result = runMechanicalDiagnostics({ scenario: "fixture", evidence: ["fixture.png"], elements: [
       { target: "clipped", text: "Long", clientWidth: 10, scrollWidth: 20, rect: { left: 0, right: 20, top: 0, bottom: 10 } },
@@ -31,5 +31,9 @@ describe("mechanical visual diagnostics", async () => {
       { target: "alignment-drift", alignmentGroup: "icons", alignX: 10 }, { target: "alignment-ok", alignmentGroup: "icons", alignX: 0 },
     ] });
     expect(result.findings.map((finding) => finding.category)).toEqual(expect.arrayContaining(["VIEWPORT_OVERFLOW", "BASELINE", "ALIGNMENT"]));
+  });
+  it("normalizes browser health errors into findings", async () => {
+    const { browserHealthFindings } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    expect(browserHealthFindings({ scenario: "health", consoleErrors: ["boom"], pageErrors: ["crash"], failedResources: ["/asset.js"], evidence: ["health.json"] }).map((finding) => finding.category)).toEqual(["CONSOLE_ERROR", "PAGE_ERROR", "RESOURCE_FAILURE"]);
   });
 });
