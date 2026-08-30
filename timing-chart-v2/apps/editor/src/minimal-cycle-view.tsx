@@ -16,6 +16,7 @@ import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
+import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
@@ -3823,13 +3824,7 @@ function MiniMap({ document, viewport }: { readonly document: Readonly<Canonical
   const sync = () => {
     const element = viewport.current;
     if (!element) return;
-    const scrollable = Math.max(1, element.scrollHeight);
-    const maxScrollTop = Math.max(1, scrollable - element.clientHeight);
-    const ratio = Math.min(1, element.clientHeight / scrollable);
-    const horizontalScrollable = Math.max(1, element.scrollWidth);
-    const maxScrollLeft = Math.max(1, horizontalScrollable - element.clientWidth);
-    const width = Math.min(1, element.clientWidth / horizontalScrollable);
-    setMetrics({ top: Math.min(1 - ratio, element.scrollTop / maxScrollTop), ratio, left: Math.min(1 - width, element.scrollLeft / maxScrollLeft), width });
+    setMetrics(calculateMiniMapViewportMetrics(element));
   };
   useEffect(() => {
     const element = viewport.current;
