@@ -30,6 +30,11 @@ export function runMechanicalDiagnostics({ scenario, elements, evidence = [] }) 
     const expected = members[0]?.alignX;
     for (const item of members) if (expected !== undefined && Math.abs(item.alignX - expected) > (item.maxDeltaPx ?? 2)) add("MAJOR", "ALIGNMENT", item.target, { alignX: item.alignX, expected, delta: Math.abs(item.alignX - expected) });
   }
+  for (const group of new Set(elements.flatMap((item) => item.iconGroup ? [item.iconGroup] : []))) {
+    const members = elements.filter((item) => item.iconGroup === group && item.iconRect);
+    const first = members[0]?.iconRect;
+    for (const item of members) if (first && (item.iconRect.right - item.iconRect.left !== first.right - first.left || item.iconRect.bottom - item.iconRect.top !== first.bottom - first.top)) add("MAJOR", "ICON_ALIGNMENT", item.target, { iconRect: item.iconRect, expected: first });
+  }
   return { scenario, findings };
 }
 

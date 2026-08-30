@@ -36,4 +36,13 @@ describe("mechanical visual diagnostics", async () => {
     const { browserHealthFindings } = await import("../../harness/gui/mechanical-diagnostics.mjs");
     expect(browserHealthFindings({ scenario: "health", consoleErrors: ["boom"], pageErrors: ["crash"], failedResources: ["/asset.js"], evidence: ["health.json"] }).map((finding) => finding.category)).toEqual(["CONSOLE_ERROR", "PAGE_ERROR", "RESOURCE_FAILURE"]);
   });
+  it("reports inconsistent icon dimensions within a declared class", async () => {
+    const { runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    const result = runMechanicalDiagnostics({ scenario: "icons", elements: [
+      { target: "a", iconGroup: "command", iconRect: { left: 0, right: 16, top: 0, bottom: 16 } },
+      { target: "b", iconGroup: "command", iconRect: { left: 0, right: 20, top: 0, bottom: 16 } },
+    ] });
+    expect(result.findings).toHaveLength(1);
+    expect(result.findings[0]?.category).toBe("ICON_ALIGNMENT");
+  });
 });
