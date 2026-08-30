@@ -156,3 +156,19 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("5");
   await expect(page.getByTestId("inspector").getByLabel("Transaction lane")).toHaveValue("lane_0");
 });
+
+test("standalone Spacer clipboard preserves height and creates a fresh ID", async ({ page }) => {
+  await page.goto("/");
+  const baseDocument = base("spacer-clipboard", "Spacer Clipboard", [data], ["spacer_original", data.id]);
+  await openJson(page, { ...baseDocument, signalGroups: [{ ...baseDocument.signalGroups[0], spacers: [{ id: "spacer_original", height: 44 }] }] });
+  const spacer = page.locator("[data-role='left-row'][data-row-id='spacer_original']");
+  await expect(spacer).toHaveCount(1);
+  await spacer.click();
+  const edit = page.getByTestId("ribbon").locator(".home-edit-group");
+  await edit.getByRole("button", { name: "Copy", exact: true }).click();
+  await edit.getByRole("button", { name: "複製", exact: true }).click();
+  await expect(page.locator("[data-role='left-row'][data-kind='spacer']")).toHaveCount(2);
+  const heights = await page.locator("[data-role='left-row'][data-kind='spacer']").evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
+  expect(heights.every((height) => Math.abs(height - 44) <= 1)).toBe(true);
+  expect(new Set(await page.locator("[data-role='left-row'][data-kind='spacer']").evaluateAll((rows) => rows.map((row) => row.dataset.rowId))).size).toBe(2);
+});

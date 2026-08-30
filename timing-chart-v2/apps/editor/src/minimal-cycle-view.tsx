@@ -217,6 +217,7 @@ export function MinimalCycleView() {
   const [selectedGroupId, setSelectedGroupId] = useState<GroupId | undefined>();
   const selectedGroupRef = useRef<GroupId | undefined>(undefined);
   selectedGroupRef.current = selectedGroupId;
+  const selectedSpacerRef = useRef<SpacerId | undefined>(undefined);
   const [selectedAnnotationId, setSelectedAnnotationId] = useState<AnnotationId | undefined>();
   const selectedAnnotationRef = useRef<AnnotationId | undefined>(undefined);
   selectedAnnotationRef.current = selectedAnnotationId;
@@ -350,6 +351,7 @@ export function MinimalCycleView() {
   const clipboardGroupRef = useRef<{ readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number } | undefined>(undefined);
   const clipboardAnnotationRef = useRef<Annotation | undefined>(undefined);
   const clipboardTransactionRef = useRef<Transaction | undefined>(undefined);
+  const clipboardSpacerRef = useRef<{ readonly spacer: SpacerRow; readonly groupId: GroupId; readonly index: number } | undefined>(undefined);
   const copySelectedSignalRef = useRef<() => void>(() => undefined);
   const cutSelectedSignalRef = useRef<() => void>(() => undefined);
   const pasteSelectedSignalRef = useRef<() => void>(() => undefined);
@@ -376,6 +378,7 @@ export function MinimalCycleView() {
     return snapshot.document.signals.find((signal) => signal.type !== "commentRow")?.id;
   })();
   const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
+  const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
   const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
   const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
   const bottomSignal = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.signalId === undefined ? undefined : snapshot.document.signals.find((item) => item.id === pinnedBottomSelection.signalId)) : selectedSignal;
@@ -463,6 +466,7 @@ export function MinimalCycleView() {
         const signalId = selectedSignalRef.current;
         const groupId = selectedGroupRef.current;
         const transactionId = selectedTransactionRef.current;
+        const spacerId = selectedSpacerRef.current;
         if (transactionId) {
           const result = execute.current({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
           if (result.ok) { selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined); }
@@ -476,6 +480,9 @@ export function MinimalCycleView() {
         } else if (signalId) {
           const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
           if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
+        } else if (spacerId) {
+          const result = execute.current({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
+          if (result.ok) selectedSpacerRef.current = undefined;
         } else if (groupId) {
           const result = execute.current({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId });
           if (result.ok) { selectedGroupRef.current = undefined; setSelectedGroupId(undefined); }
@@ -1197,6 +1204,7 @@ export function MinimalCycleView() {
       }
       const groupOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-branch'][data-group-id]") : null;
       if (groupOwner?.dataset.groupId) {
+        selectedSpacerRef.current = undefined;
         setSelectedGroupId(groupOwner.dataset.groupId as GroupId);
         selectedGroupRef.current = groupOwner.dataset.groupId as GroupId;
         setSelectedId(undefined);
@@ -1213,6 +1221,7 @@ export function MinimalCycleView() {
       }
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
       if (annotationOwner?.dataset.annotationId) {
+        selectedSpacerRef.current = undefined;
         const id = annotationOwner.dataset.annotationId as AnnotationId;
         selectedAnnotationRef.current = id;
         setSelectedAnnotationId(id);
@@ -1256,6 +1265,23 @@ export function MinimalCycleView() {
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-row-id]") : null;
       const id = target?.dataset.rowId;
       if (!id) return;
+      const spacerGroup = session.getSnapshot().document.signalGroups.find((group) => group.rows.includes(id as SpacerId) && group.spacers?.some((spacer) => spacer.id === id));
+      if (spacerGroup) {
+        selectedSpacerRef.current = id as SpacerId;
+        selectedGroupRef.current = spacerGroup.id;
+        setSelectedGroupId(spacerGroup.id);
+        setSelectedId(undefined);
+        selectedSignalRef.current = undefined;
+        selectedSignalIdsRef.current = new Set();
+        setSelectedSignalIds(new Set());
+        selectedAnnotationRef.current = undefined;
+        setSelectedAnnotationId(undefined);
+        selectedTransactionRef.current = undefined;
+        setSelectedTransactionId(undefined);
+        if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
+        focusTreeItem(target);
+        return;
+      }
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
       const nextSelected = event.ctrlKey || event.metaKey ? new Set(selectedSignalIdsRef.current) : new Set<SignalId>();
@@ -1268,6 +1294,7 @@ export function MinimalCycleView() {
       focusTreeItem(target);
       selectedAnnotationRef.current = undefined;
       selectedTransactionRef.current = undefined;
+      selectedSpacerRef.current = undefined;
       if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
       startTransition(() => {
         setSelectedSignalIds(nextSelected);
@@ -1872,6 +1899,7 @@ export function MinimalCycleView() {
     onCancel={() => setBottomResetToken((value) => value + 1)}
   /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
+    selectedSpacerRef.current = undefined;
     selectedTransactionRef.current = id;
     setSelectedTransactionId(id);
     selectedSignalRef.current = undefined; setSelectedId(undefined);
@@ -1924,6 +1952,7 @@ export function MinimalCycleView() {
   }
 
   const clearSelection = () => {
+    selectedSpacerRef.current = undefined;
     selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
     selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
     selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
@@ -1957,6 +1986,18 @@ export function MinimalCycleView() {
     .filter((item): item is { readonly signal: Signal; readonly groupId: GroupId; readonly index: number } => item !== undefined);
   const copySelectedSignal = () => {
     const selectedGroup = selectedGroupRef.current === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.id === selectedGroupRef.current);
+    const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
+    if (selectedSpacer && selectedGroup) {
+      clipboardSpacerRef.current = { spacer: selectedSpacer, groupId: selectedGroup.id, index: selectedGroup.rows.indexOf(selectedSpacer.id) };
+      clipboardGroupRef.current = undefined;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      clipboardAnnotationRef.current = undefined;
+      clipboardTransactionRef.current = undefined;
+      setClipboardAvailable(true);
+      setClipboardStatus(`Copied spacer ${selectedSpacer.id}`);
+      return;
+    }
     if (selectedGroup) {
       const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
       clipboardGroupRef.current = { group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) };
@@ -2003,6 +2044,22 @@ export function MinimalCycleView() {
   copySelectedSignalRef.current = copySelectedSignal;
   const cutSelectedSignal = () => {
     const selectedGroup = selectedGroupRef.current === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.id === selectedGroupRef.current);
+    const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
+    if (selectedSpacer && selectedGroup) {
+      clipboardSpacerRef.current = { spacer: selectedSpacer, groupId: selectedGroup.id, index: selectedGroup.rows.indexOf(selectedSpacer.id) };
+      clipboardGroupRef.current = undefined;
+      clipboardSignalsRef.current = [];
+      clipboardSignalRef.current = undefined;
+      clipboardAnnotationRef.current = undefined;
+      clipboardTransactionRef.current = undefined;
+      setClipboardAvailable(true);
+      const result = execute.current({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: selectedSpacer.id });
+      if (result.ok) {
+        selectedSpacerRef.current = undefined;
+        setClipboardStatus(`Cut spacer ${selectedSpacer.id}`);
+      }
+      return;
+    }
     if (selectedGroup) {
       const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
       clipboardGroupRef.current = { group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) };
@@ -2154,14 +2211,30 @@ export function MinimalCycleView() {
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${source.name} transaction`);
     }
   };
+  const createCopiedSpacer = (input: { readonly spacer: SpacerRow; readonly groupId: GroupId; readonly index: number }, operation: "paste" | "duplicate") => {
+    const targetGroup = snapshot.document.signalGroups.find((group) => group.id === input.groupId) ?? snapshot.document.signalGroups.at(-1);
+    if (!targetGroup) return;
+    const spacer = { ...input.spacer, id: spacerId(nextEntityId("spacer", snapshot.document)) };
+    const result = execute.current({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index: Math.min(input.index, targetGroup.rows.length) });
+    if (result.ok) {
+      selectedSpacerRef.current = spacer.id;
+      selectedGroupRef.current = targetGroup.id;
+      setSelectedGroupId(targetGroup.id);
+      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} spacer`);
+    }
+  };
   const pasteSelectedEntity = () => {
     if (clipboardGroupRef.current) createCopiedGroup(clipboardGroupRef.current, "paste");
     else if (clipboardAnnotationRef.current) createCopiedAnnotation(clipboardAnnotationRef.current, "paste");
     else if (clipboardTransactionRef.current) createCopiedTransaction(clipboardTransactionRef.current, "paste");
+    else if (clipboardSpacerRef.current) createCopiedSpacer(clipboardSpacerRef.current, "paste");
     else createCopiedSignals(clipboardSignalsRef.current, "paste");
   };
   const duplicateSelectedEntity = () => {
-    if (selectedGroup) {
+    const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
+    if (selectedSpacer && selectedGroup) {
+      createCopiedSpacer({ spacer: selectedSpacer, groupId: selectedGroup.id, index: selectedGroup.rows.indexOf(selectedSpacer.id) }, "duplicate");
+    } else if (selectedGroup) {
       const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
       createCopiedGroup({ group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) }, "duplicate");
     } else if (selectedAnnotation) createCopiedAnnotation(selectedAnnotation, "duplicate");
@@ -2415,7 +2488,7 @@ export function MinimalCycleView() {
   };
 
   const hasSelectedSignal = selectedSignalIds.size > 0 && selectedSignal !== undefined;
-  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined;
+  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selectedSpacer !== undefined;
   const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
   const restorePendingFileFocus = () => {
     const origin = pendingFileOriginRef.current;
