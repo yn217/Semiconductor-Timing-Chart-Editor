@@ -3579,7 +3579,14 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
       next = replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction);
     }
     const problems = validateCanonicalDocument(next);
-    if (problems.length > 0) { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and apply again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); return; }
+    const resourceProblems = problems.length === 0 ? validateDocumentResourceBudget(next) : [];
+    if (problems.length > 0 || resourceProblems.length > 0) {
+      const diagnostics = [...problems, ...resourceProblems].map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported document or resource limits, then apply again.", detail: `advanced-json:validate:${index}` }));
+      const problem = diagnostics[0]!;
+      onDiagnostic(diagnostics);
+      setStatus(`Invalid: ${problem.code} · ${problem.path}`);
+      return;
+    }
     onDiagnostic(undefined);
     const result = onCommand({ id: nextCommandId("json_replace"), type: "document.replace", document: next });
     if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
