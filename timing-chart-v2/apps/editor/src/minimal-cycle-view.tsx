@@ -809,6 +809,13 @@ export function MinimalCycleView() {
       rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction });
     };
     let currentZoom = 1;
+    const sourceBoundaryLocalX = (document: CanonicalDocument, cycle: number): number | undefined => {
+      const axis = resolveTimeAxisGeometry(document, geometryMaps);
+      if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
+      const mapping = mappingCache.get(document.timeline, document.timeGroups);
+      const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
+      return axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+    };
     function syncPresentationScale() {
       // The measured screen-geometry scale is shared by the ruler, overlays,
       // and snap projection. WaveDrom text consumes the same derived value to
@@ -857,20 +864,18 @@ export function MinimalCycleView() {
     setZoomAbsolute.current = (zoom) => applyZoom(zoom);
     fitSelection.current = () => {
       const selected = timelineRangeRef.current;
-      const startTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${selected.start}']`);
-      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${selected.end}']`);
-      const start = startTick?.offsetLeft ?? 0;
-      const end = endTick?.offsetLeft ?? start + 1;
+      const document = session.getSnapshot().document;
+      const start = sourceBoundaryLocalX(document, selected.start) ?? 0;
+      const end = sourceBoundaryLocalX(document, selected.end) ?? start + 1;
       const span = Math.max(1, end - start);
       const available = Math.max(160, viewportElement.clientWidth - timelineOffset() - 20);
       applyZoom(available / span);
       requestAnimationFrame(() => { viewportElement.scrollLeft = Math.max(0, Math.round(start * currentZoom - timelineOffset())); });
     };
     fitAll.current = () => {
-      const startTick = rulerElement.querySelector<HTMLElement>("[data-cycle='0']");
-      const endTick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${session.getSnapshot().document.timeline.cycleCount}']`);
-      const start = startTick?.offsetLeft ?? 0;
-      const end = endTick?.offsetLeft ?? start + 1;
+      const document = session.getSnapshot().document;
+      const start = sourceBoundaryLocalX(document, 0) ?? 0;
+      const end = sourceBoundaryLocalX(document, document.timeline.cycleCount) ?? start + 1;
       const span = Math.max(1, end - start);
       const available = Math.max(160, viewportElement.clientWidth - timelineOffset() - 20);
       applyZoom(available / span);
