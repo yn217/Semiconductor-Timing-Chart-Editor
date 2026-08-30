@@ -21,6 +21,8 @@ export class DefaultProjectionService implements ProjectionService {
   #navigationGroupHeaderPrefixHeights: number[] = [];
   #collapsedGroupKey = "";
   #documentEpoch = 0;
+  #canonicalSignalDocument: ProjectionRequest["snapshot"]["document"] | undefined;
+  #canonicalSignalIds: readonly SignalId[] = [];
 
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
@@ -63,7 +65,7 @@ export class DefaultProjectionService implements ProjectionService {
     this.#lastMountedRange = [mountedRowsOrdered[0]?.y ?? 0, mountedRowsOrdered.at(-1) ? mountedRowsOrdered.at(-1)!.y + mountedRowsOrdered.at(-1)!.height : 0];
     const mountedMetadata = classifyMountedRows(mountedRowsOrdered);
     const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = mountedMetadata;
-    const canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
+    const canonicalSignalIds = this.#canonicalSignalIdsFor(document);
     const requestedWaves = request.changeSet.fullDocumentReplace
       ? mountedSignalIds
       : (request.changeSet.waveSemantics ?? []);
@@ -94,6 +96,14 @@ export class DefaultProjectionService implements ProjectionService {
 
   diagnostics() {
     return Object.freeze({ projectionBuilds: this.#projectionBuilds, viewportOnlyBuilds: this.#viewportOnlyBuilds, fullVisibleRowScans: this.#fullVisibleRowScans, viewportRowsVisited: this.#viewportRowsVisited, viewportBinarySearchSteps: this.#viewportBinarySearchSteps, rowLayoutBuilds: this.#rowLayoutBuilds, lastMountedRange: this.#lastMountedRange });
+  }
+
+  #canonicalSignalIdsFor(document: ProjectionRequest["snapshot"]["document"]): readonly SignalId[] {
+    if (this.#canonicalSignalDocument !== document) {
+      this.#canonicalSignalDocument = document;
+      this.#canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
+    }
+    return this.#canonicalSignalIds;
   }
 
   #projectViewportOnly(request: ProjectionRequest, layout: RowLayoutResult): RenderProjection {
