@@ -3054,11 +3054,32 @@ function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: {
 
 type ReviewSeverity = "all" | "error" | "warning" | "info";
 
-function ReviewWorkflow({ diagnostics, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigate: (path: string) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
+type ReviewScope = "all" | "selection" | "group";
+
+function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): boolean {
+  if (ids.size === 0) return false;
+  const directIds = [item.objectId, item.entityId].filter((value): value is string => typeof value === "string");
+  return directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id));
+}
+
+function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly DocumentProblem[]; readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly onNavigate: (path: string) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
   const [severity, setSeverity] = useState<ReviewSeverity>("all");
+  const [scope, setScope] = useState<ReviewScope>("all");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const reviewDiagnostics = useMemo(() => diagnostics.map((item) => ({ ...item, severity: "error" as const })), [diagnostics]);
-  const visible = reviewDiagnostics.filter((item) => severity === "all" || item.severity === severity);
+  const scopedDiagnostics = useMemo(() => {
+    if (scope === "all") return diagnostics;
+    const ids = new Set<string>();
+    if (scope === "selection") {
+      if (selectedSignalId) ids.add(selectedSignalId);
+      if (selectedGroupId) ids.add(selectedGroupId);
+    } else if (selectedGroupId) {
+      ids.add(selectedGroupId);
+      const group = document.groups.find((candidate) => candidate.id === selectedGroupId);
+      for (const rowId of group?.rows ?? []) ids.add(rowId);
+    }
+    return diagnostics.filter((item) => diagnosticMatchesIds(item, ids));
+  }, [diagnostics, document.groups, scope, selectedGroupId, selectedSignalId]);
+  const visible = scopedDiagnostics.filter((item) => severity === "all" || (item.severity ?? "error") === severity);
   useEffect(() => {
     setCurrentIndex((index) => Math.min(index, Math.max(0, visible.length - 1)));
   }, [visible.length, severity]);
@@ -3068,12 +3089,15 @@ function ReviewWorkflow({ diagnostics, onNavigate, onShowProblems, onRefreshChec
     setCurrentIndex(nextIndex);
     onNavigate(visible[nextIndex]!.path);
   };
-  const errorCount = reviewDiagnostics.filter((item) => item.severity === "error").length;
+  const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
+  const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;
+  const infoCount = scopedDiagnostics.filter((item) => item.severity === "info").length;
   return <div className="review-workflow" data-testid="review-workflow">
     <label>Severity<select aria-label="Review severity" data-testid="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></select></label>
+    <label>Scope<select aria-label="Review scope" data-testid="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></select></label>
     <button type="button" data-testid="review-previous" onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</button>
     <button type="button" data-testid="review-next" onClick={() => navigate(1)} disabled={visible.length === 0}>Next</button>
-    <output data-testid="review-summary">{visible.length} of {reviewDiagnostics.length} · Errors {errorCount} · Warnings 0 · Info 0</output>
+    <output data-testid="review-summary">{visible.length} of {scopedDiagnostics.length} · Errors {errorCount} · Warnings {warningCount} · Info {infoCount}</output>
     <output data-testid="review-current-target">{visible[currentIndex]?.path ?? "No diagnostic selected"}</output>
     <button type="button" data-testid="review-refresh-checks" onClick={onRefreshChecks}>Refresh Checks</button>
     <button type="button" className="ribbon-tool" data-testid="review-open-problems" onClick={onShowProblems}><RibbonIcon name="i-filter" /><span>Problems</span></button>
@@ -3288,7 +3312,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <div className="ribbon-major-group view-slot-group view-zoom-slot" data-major-group="Zoom" aria-label="Zoom commands"><DsRibbonGroup ariaLabel="Zoom" className="view-zoom-group" label="Zoom"><DsRibbonButton className="view-mini-tool" ariaLabel="Zoom Out" icon={<RibbonIcon name="i-zoom-out" />} onClick={() => onZoom(-0.25)}><span>Zoom</span><span>Out</span></DsRibbonButton><DsRibbonSelect ariaLabel="Zoom preset" value={String(Math.round(zoom * 100))} onChange={(event) => onSetZoom(Number(event.target.value) / 100)}><option value="50">50%</option><option value="100">100%</option><option value="150">150%</option><option value="200">200%</option></DsRibbonSelect><output className="view-zoom-status visually-hidden" data-testid="zoom-status" aria-label="Current zoom">{Math.round(zoom * 100)}%</output><DsRibbonButton className="view-mini-tool" ariaLabel="Zoom In" icon={<RibbonIcon name="i-zoom-in" />} onClick={() => onZoom(0.25)}><span>Zoom</span><span>In</span></DsRibbonButton><div className="view-zoom-fit-actions" aria-label="Fit commands"><DsRibbonButton className="view-mini-tool" ariaLabel="Fit All" icon={<RibbonIcon name="i-fit" />} onClick={onFitAll}><span>Fit</span><span>All</span></DsRibbonButton><DsRibbonButton className="view-mini-tool" ariaLabel="Fit Selection" icon={<RibbonIcon name="i-fit" />} onClick={onFitSelection}><span>Fit</span><span>Selection</span></DsRibbonButton></div></DsRibbonGroup></div>
       <div className="ribbon-major-group view-slot-group" data-major-group="Workspace" aria-label="Workspace commands"><DsRibbonGroup ariaLabel="Workspace" className="view-workspace-group" label="Workspace"><div className="view-workspace-settings" aria-label="Workspace settings"><label>Workspace<DsRibbonSelect ariaLabel="Workspace preset" value={workspacePreset} onChange={(event) => onWorkspacePresetChange(event.target.value as WorkspacePreset)}><option value="edit">Edit</option><option value="waveform">Waveform Focus</option><option value="review">Review</option><option value="transaction">Transaction</option></DsRibbonSelect></label><label>Density<DsRibbonSelect ariaLabel="UI density" value={density} onChange={(event) => onDensityChange(event.target.value as DensityMode)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></DsRibbonSelect></label></div><div className="view-workspace-actions" aria-label="Workspace layout actions"><DsRibbonButton className="view-mini-tool" ariaLabel="Reset Layout" icon={<RibbonIcon name="i-settings" />} onClick={() => onWorkspacePresetChange("edit")}><span>Reset</span><span>Layout</span></DsRibbonButton><DsRibbonButton className="view-mini-tool" ariaLabel="Focus Waveform" icon={<RibbonIcon name="i-preview" />} onClick={() => onWorkspacePresetChange("waveform")}><span>Focus</span><span>Waveform</span></DsRibbonButton></div></DsRibbonGroup></div>
     </>}
-    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
+    {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <div className="ribbon-group ai-group"><AIOperationPanel document={document} revision={revision} selectedSignalId={selectedSignalId} onCommand={onCommand} /><b>AI</b></div>}
   </section>;
 }

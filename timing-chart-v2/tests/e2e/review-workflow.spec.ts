@@ -22,6 +22,12 @@ test("Review filters and navigates the shared Problems diagnostics without mutat
   await expect(review).toBeVisible();
   await expect(page.getByTestId("review-summary")).toHaveText("1 of 1 · Errors 1 · Warnings 0 · Info 0");
 
+  await page.getByTestId("review-scope-filter").selectOption("selection");
+  await expect(page.getByTestId("review-summary")).toHaveText("1 of 1 · Errors 1 · Warnings 0 · Info 0");
+  await page.getByTestId("review-scope-filter").selectOption("group");
+  await expect(page.getByTestId("review-summary")).toHaveText("0 of 0 · Errors 0 · Warnings 0 · Info 0");
+  await page.getByTestId("review-scope-filter").selectOption("all");
+
   await page.getByTestId("review-severity-filter").selectOption("warning");
   await expect(page.getByTestId("review-summary")).toHaveText("0 of 1 · Errors 1 · Warnings 0 · Info 0");
   await expect(page.getByTestId("review-next")).toBeDisabled();
