@@ -2102,10 +2102,16 @@ export function MinimalCycleView() {
     onDelete={deleteBottomTransaction}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
-  const navigateProblem = (problemOrPath: DocumentProblem | string) => {
-    const problem = typeof problemOrPath === "string" ? diagnostics.find((item) => item.path === problemOrPath) : problemOrPath;
-    const path = problem?.path ?? problemOrPath;
-    const target = resolveProblemTarget(path, snapshot.document, typeof problemOrPath === "string" ? problem : problemOrPath);
+  const navigateProblem = (path: string) => {
+    const problem = diagnostics.find((item) => item.path === path);
+    const target = resolveProblemTarget(path, snapshot.document, problem);
+    const targetSignal = target.kind === "signal" ? snapshot.document.signals.find((signal) => signal.id === target.id) : undefined;
+    const valueIndex = /^\$\.signals\[\d+\]\.values\[(\d+)\]/.exec(path)?.[1];
+    const semanticCycle = valueIndex !== undefined && targetSignal && targetSignal.type !== "clock" && targetSignal.type !== "commentRow"
+      ? targetSignal.values[Number(valueIndex)]?.start
+      : target.kind === "transaction" ? snapshot.document.transactions.find((item) => item.id === target.id)?.start
+      : target.kind === "annotation" ? Object.values(snapshot.document.annotations.find((item) => item.id === target.id) ?? {}).find((value) => value && typeof value === "object" && "cycle" in value && typeof (value as { cycle?: unknown }).cycle === "number")?.cycle as number | undefined
+      : undefined;
     const targetSignalId = target.kind === "signal" ? target.id as SignalId : undefined;
     setSelectedId(targetSignalId);
     selectedSignalRef.current = targetSignalId;
@@ -2117,6 +2123,12 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = target.kind === "annotation" ? target.id as AnnotationId : undefined;
     setSelectedTransactionId(target.kind === "transaction" ? target.id as TransactionId : undefined);
     selectedTransactionRef.current = target.kind === "transaction" ? target.id as TransactionId : undefined;
+    if (semanticCycle !== undefined) {
+      const cycle = Math.max(0, Math.min(snapshot.document.timeline.cycleCount, semanticCycle));
+      selectedCycleRef.current = cycle;
+      setSelectedCycle(cycle);
+      if (host.current) host.current.dataset.selectedCycle = String(cycle);
+    }
     applySelectionDecorations(targetSignalId ? new Set([targetSignalId]) : new Set(), targetSignalId);
     if (target.kind === "annotation" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
     if (target.kind === "transaction" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
@@ -3096,7 +3108,7 @@ function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): 
   return directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id));
 }
 
-function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly DocumentProblem[]; readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly onNavigate: (problem: DocumentProblem) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
+function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly DocumentProblem[]; readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly onNavigate: (path: string) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
   const [severity, setSeverity] = useState<ReviewSeverity>("all");
   const [scope, setScope] = useState<ReviewScope>("all");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -3121,7 +3133,7 @@ function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroup
     if (visible.length === 0) return;
     const nextIndex = (currentIndex + offset + visible.length) % visible.length;
     setCurrentIndex(nextIndex);
-    onNavigate(visible[nextIndex]!);
+    onNavigate(visible[nextIndex]!.path);
   };
   const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
   const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;
