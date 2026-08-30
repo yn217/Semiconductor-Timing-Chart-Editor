@@ -15,8 +15,9 @@
 # - Never merge/cherry-pick codex-control into main. This branch is control data only.
 # - Skip Closed issues.
 # - For the first Open issue, inspect current main before changing code.
-# - If its full Issue-level acceptance is already satisfied, close it and continue.
+# - If its full Issue-level acceptance is already satisfied, leave a concise implementation-audit note, close it, and continue.
 # - If PARTIAL/MISSING, implement one bounded production gap, focused-test, commit/push main.
+# - Post implementation/result evidence directly to the source Issue, not to #298.
 # - Stay on the same Issue until all Issue-level acceptance is satisfied, unless BLOCKED/META/EVIDENCE_ONLY.
 # - Open Issue does not imply missing implementation.
 # - Meta/umbrella/evidence-only/dependency-blocked issues may be deferred with a short reason and continue.
