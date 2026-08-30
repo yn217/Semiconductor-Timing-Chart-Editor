@@ -79,3 +79,9 @@ export function reversibleRegionReport({ regions, maxDelta = 0.05 }) {
   const checks = Object.fromEntries(Object.entries(regions).map(([name, values]) => [name, reversibleRegionCheck({ ...values, maxDelta })]));
   return { maxDelta, regions: checks, pass: Object.values(checks).every((check) => check.beforeUndo && check.afterRedo) };
 }
+
+export function reversiblePixelRegionReport({ before, after, undo, redo, width, regions, pixelDelta = 24, maxDelta = 0.05 }) {
+  const diff = (left, right, region) => { let changed = 0; let total = 0; for (let y = region.y; y < region.y + region.height; y += 1) for (let x = region.x; x < region.x + region.width; x += 1) { const i = (y * width + x) * 4; const delta = Math.abs(left[i] - right[i]) + Math.abs(left[i + 1] - right[i + 1]) + Math.abs(left[i + 2] - right[i + 2]); total += 1; if (delta > pixelDelta) changed += 1; } return total === 0 ? 0 : changed / total; };
+  const checks = Object.fromEntries(Object.entries(regions).map(([name, region]) => { const beforeUndo = diff(before, undo, region); const afterRedo = diff(after, redo, region); return [name, { beforeUndo: beforeUndo <= maxDelta, afterRedo: afterRedo <= maxDelta, maxDelta, beforeUndoDiff: beforeUndo, afterRedoDiff: afterRedo }]; }));
+  return { maxDelta, regions: checks, pass: Object.values(checks).every((check) => check.beforeUndo && check.afterRedo) };
+}

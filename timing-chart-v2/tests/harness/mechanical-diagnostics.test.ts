@@ -62,4 +62,13 @@ describe("mechanical visual diagnostics", async () => {
     expect(report.pass).toBe(true);
     expect(Object.keys(report.regions)).toEqual(["ribbon", "waveform"]);
   });
+  it("computes reversible pixel diffs per region", async () => {
+    const { reversiblePixelRegionReport } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    const same = Uint8Array.from([0, 0, 0, 255, 0, 0, 0, 255]);
+    const changed = Uint8Array.from([255, 0, 0, 255, 0, 0, 0, 255]);
+    const report = reversiblePixelRegionReport({ before: same, after: changed, undo: same, redo: changed, width: 2, regions: { all: { x: 0, y: 0, width: 2, height: 1 } } });
+    expect(report.pass).toBe(true);
+    expect(report.regions.all?.beforeUndo).toBe(true);
+    expect(report.regions.all?.afterRedo).toBe(true);
+  });
 });
