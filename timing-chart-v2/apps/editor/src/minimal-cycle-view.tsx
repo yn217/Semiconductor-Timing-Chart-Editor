@@ -722,9 +722,9 @@ export function MinimalCycleView() {
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
-      const tick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${cycle}']`);
+      const playheadX = sourceBoundaryLocalX(session.getSnapshot().document, cycle);
       let playhead = rulerElement.querySelector<HTMLElement>("[data-role='playhead']");
-      if (!tick) {
+      if (playheadX === undefined) {
         playhead?.remove();
         return;
       }
@@ -736,7 +736,7 @@ export function MinimalCycleView() {
         rulerElement.append(playhead);
       }
       playhead.dataset.playheadCycle = String(cycle);
-      playhead.style.left = tick.style.left;
+      playhead.style.left = `${playheadX}px`;
     };
     const refreshRangeSelectionBandNow = () => {
       const band = viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']");
@@ -811,7 +811,8 @@ export function MinimalCycleView() {
       if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
       const mapping = mappingCache.get(document.timeline, document.timeGroups);
       const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
-      return axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
+      const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
+      return point === undefined ? undefined : point.x * screenGeometryScale;
     }
     function syncPresentationScale() {
       // The measured screen-geometry scale is shared by the ruler, overlays,
@@ -881,14 +882,14 @@ export function MinimalCycleView() {
     navigateToCycle.current = (cycle) => {
       const document = session.getSnapshot().document;
       if (!Number.isInteger(cycle) || cycle < 0 || cycle > document.timeline.cycleCount) return;
-      const tick = rulerElement.querySelector<HTMLElement>(`[data-cycle='${cycle}']`);
-      if (!tick) return;
+      const cycleX = sourceBoundaryLocalX(document, cycle);
+      if (cycleX === undefined) return;
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
       if (cycle === document.timeline.cycleCount) setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
       else setTimelineRange({ start: cycle, end: cycle + 1 });
       requestAnimationFrame(() => {
-        const target = Math.max(0, Math.round(tick.offsetLeft * currentZoom - Math.max(0, viewportElement.clientWidth * 0.35)));
+        const target = Math.max(0, Math.round(cycleX * currentZoom - Math.max(0, viewportElement.clientWidth * 0.35)));
         viewportElement.scrollLeft = target;
       });
       publishState();
