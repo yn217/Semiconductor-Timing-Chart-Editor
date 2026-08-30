@@ -167,6 +167,42 @@ test("Context Menu exposes shared commands", async ({ page }) => {
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+  test(`clamps the non-Home context menu at every viewport corner (${viewport.width}x${viewport.height})`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await ready(page);
+    const row = page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+    const corners = [[1, 1], [viewport.width - 1, 1], [1, viewport.height - 1], [viewport.width - 1, viewport.height - 1]] as const;
+    const before = await Promise.all([
+      page.getByTestId("revision-status").textContent(),
+      page.getByTestId("history-status").textContent(),
+      page.getByTestId("dirty-status").textContent(),
+    ]);
+    for (const [x, y] of corners) {
+      await row.evaluate((element, point) => element.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: point.x, clientY: point.y })), { x, y });
+      const menu = page.getByTestId("signal-context-menu");
+      await expect(menu).toBeVisible();
+      const bounds = await menu.evaluate((element) => {
+        const rect = element.getBoundingClientRect();
+        return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, viewportWidth: window.innerWidth, viewportHeight: window.innerHeight, positioned: element.dataset.positioned };
+      });
+      expect(bounds.positioned).toBe("true");
+      expect(bounds.left, JSON.stringify(bounds)).toBeGreaterThanOrEqual(8);
+      expect(bounds.top).toBeGreaterThanOrEqual(8);
+      expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth - 8);
+      expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight - 8);
+      await page.keyboard.press("Escape");
+      await expect(menu).toBeHidden();
+    }
+    const after = await Promise.all([
+      page.getByTestId("revision-status").textContent(),
+      page.getByTestId("history-status").textContent(),
+      page.getByTestId("dirty-status").textContent(),
+    ]);
+    expect(after).toEqual(before);
+  });
+}
+
 test("Command enablement stays aligned for annotation selection", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

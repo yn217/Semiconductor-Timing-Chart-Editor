@@ -1,5 +1,5 @@
 import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
@@ -21,10 +21,60 @@ const groupId = (value: string) => value as GroupId;
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
 const LEFT_PANE_MAX_WIDTH = 420;
+const CONTEXT_MENU_VIEWPORT_MARGIN = 8;
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 type PendingFileAction = Readonly<{ kind: "new" | "open"; text?: string }>;
+
+type ContextMenuAnchor = Readonly<{ x: number; y: number }>;
+
+function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "signal" | "group" | "annotation" }) {
+  const menuRef = useRef<HTMLDivElement>(null);
+  const position = (reveal = true) => {
+    const menu = menuRef.current;
+    if (!menu) return;
+    const viewport = globalThis.visualViewport;
+    const viewportLeft = viewport?.offsetLeft ?? 0;
+    const viewportTop = viewport?.offsetTop ?? 0;
+    const viewportRight = viewportLeft + (viewport?.width ?? globalThis.innerWidth);
+    const viewportBottom = viewportTop + (viewport?.height ?? globalThis.innerHeight);
+    const rect = menu.getBoundingClientRect();
+    const preferredRight = anchor.x + rect.width;
+    const preferredBottom = anchor.y + rect.height;
+    const flipX = preferredRight > viewportRight - CONTEXT_MENU_VIEWPORT_MARGIN && anchor.x - rect.width >= viewportLeft + CONTEXT_MENU_VIEWPORT_MARGIN;
+    const flipY = preferredBottom > viewportBottom - CONTEXT_MENU_VIEWPORT_MARGIN && anchor.y - rect.height >= viewportTop + CONTEXT_MENU_VIEWPORT_MARGIN;
+    const preferredX = flipX ? anchor.x - rect.width : anchor.x;
+    const preferredY = flipY ? anchor.y - rect.height : anchor.y;
+    const x = Math.max(viewportLeft + CONTEXT_MENU_VIEWPORT_MARGIN, Math.min(preferredX, viewportRight - rect.width - CONTEXT_MENU_VIEWPORT_MARGIN));
+    const y = Math.max(viewportTop + CONTEXT_MENU_VIEWPORT_MARGIN, Math.min(preferredY, viewportBottom - rect.height - CONTEXT_MENU_VIEWPORT_MARGIN));
+    menu.style.left = `${x}px`;
+    menu.style.top = `${y}px`;
+    menu.dataset.positioned = "true";
+    menu.dataset.flippedX = String(flipX);
+    menu.dataset.flippedY = String(flipY);
+    if (reveal) menu.style.visibility = "visible";
+  };
+  useLayoutEffect(() => {
+    position(false);
+    const frame = requestAnimationFrame(() => position(true));
+    return () => cancelAnimationFrame(frame);
+  }, [anchor.x, anchor.y]);
+  useEffect(() => {
+    const onViewportChange = () => position();
+    globalThis.addEventListener("resize", onViewportChange);
+    globalThis.addEventListener("scroll", onViewportChange, true);
+    globalThis.visualViewport?.addEventListener("resize", onViewportChange);
+    globalThis.visualViewport?.addEventListener("scroll", onViewportChange);
+    return () => {
+      globalThis.removeEventListener("resize", onViewportChange);
+      globalThis.removeEventListener("scroll", onViewportChange, true);
+      globalThis.visualViewport?.removeEventListener("resize", onViewportChange);
+      globalThis.visualViewport?.removeEventListener("scroll", onViewportChange);
+    };
+  }, [anchor.x, anchor.y]);
+  return createPortal(<div ref={menuRef} className="context-menu" role="menu" aria-label={label} data-context-target={target} data-testid="signal-context-menu" style={{ left: anchor.x, top: anchor.y, visibility: "hidden" }}>{children}</div>, document.body);
+}
 
 function parseSuppressedPeriods(text: string): readonly number[] {
   const trimmed = text.trim();
@@ -2767,7 +2817,7 @@ export function MinimalCycleView() {
       </section>}
        {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => setInspectorResetToken((value) => value + 1)} /></aside>}
     </div>
-    {contextMenu && <div className="context-menu" role="menu" aria-label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : "Signal context menu"} data-context-target={contextMenu.target} data-testid="signal-context-menu" style={{ left: contextMenu.x, top: contextMenu.y }}>
+    {contextMenu && <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : "Signal context menu"}>
       <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Copy</button>
       <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Cut</button>
       <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
@@ -2778,7 +2828,7 @@ export function MinimalCycleView() {
       <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(false); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Hide</button>
       <button type="button" role="menuitem" onClick={() => { renameSelection(); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Rename</button>
       <button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }} disabled={!hasDeletableSelection}>Delete</button>
-    </div>}
+    </ContextMenuSurface>}
     {renameDialogOpen && <div className="modal-backdrop" data-testid="rename-dialog-backdrop"><form role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); applyRename(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setRenameDialogOpen(false); } }}>
       <header><h2 id="rename-dialog-title">Rename</h2><button type="button" aria-label="Close rename dialog" onClick={() => setRenameDialogOpen(false)}><EditorIcon name="close" /></button></header>
       <label>New name<input autoFocus aria-label="New name" value={renameDraft} onChange={(event) => { setRenameDraft(event.target.value); setRenameError(""); }} /></label>
