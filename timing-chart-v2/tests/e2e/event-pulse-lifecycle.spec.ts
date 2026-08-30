@@ -64,3 +64,23 @@ test("creates, edits, undoes, persists and exports Event and Pulse signals", asy
   await exportDialog("png");
   await exportDialog("pdf");
 });
+
+test("creates Event and Pulse directly from the Left Tree add menu", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_payload'] [data-role='tree-branch']").click();
+  const add = page.getByRole("button", { name: "Add signal or group" });
+  await add.click();
+  await page.getByRole("menu", { name: "Add signal or group" }).getByRole("menuitem", { name: "Event", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host.locator("[data-role='left-row'][data-name^='EVENT_']")).toHaveCount(1);
+
+  await add.click();
+  await page.getByRole("menu", { name: "Add signal or group" }).getByRole("menuitem", { name: "Pulse", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(host.locator("[data-role='left-row'][data-name^='PULSE_']")).toHaveCount(1);
+  await expect(host.locator("[data-role='timing-row'][data-name^='EVENT_']")).toHaveCount(1);
+  await expect(host.locator("[data-role='timing-row'][data-name^='PULSE_']")).toHaveCount(1);
+  await expect(host).toHaveAttribute("data-canonical-revision", "2");
+});
