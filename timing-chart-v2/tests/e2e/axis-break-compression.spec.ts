@@ -13,7 +13,7 @@ test("a collapsed TimeGroup genuinely compresses the axis instead of overlaying 
   const historyBefore = await page.getByTestId("history-status").textContent();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await page.getByRole("button", { name: "Add gap" }).click(); // collapses the default Timeline range [2, 4)
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click(); // collapses the default Timeline range [2, 4)
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   // the waveform itself is physically narrower — WaveDrom rendered fewer cycles, not the same
