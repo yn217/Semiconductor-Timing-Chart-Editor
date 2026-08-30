@@ -1,10 +1,14 @@
-import { parseDocument, serializeCanonicalDocument, type CanonicalDocument, type DocumentProblem } from "@timing-chart-v2/schema";
+import { parseDocument, serializeCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 
 export const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
 
 /** Pure Open boundary: parsing/migration stays independent of the editor shell. */
 export function parseOpenDocument(text: string): ReturnType<typeof parseDocument> {
   return parseDocument(text);
+}
+
+export function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {
+  return "validated" in input && input.validated === true ? input.document : input;
 }
 
 /** Pure Save boundary: serialization stays independent of the editor shell. */

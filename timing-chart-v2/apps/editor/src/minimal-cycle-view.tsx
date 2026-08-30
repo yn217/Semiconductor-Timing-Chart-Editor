@@ -29,7 +29,7 @@ import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
-import { createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
+import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -43,14 +43,6 @@ type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 type PendingFileAction = Readonly<{ kind: "new" | "open"; text?: string }>;
 
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "logic" | "event" | "pulse" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
-
-function isParsedCanonicalDocument(input: CanonicalDocument | ParsedCanonicalDocument): input is ParsedCanonicalDocument {
-  return "validated" in input && input.validated === true;
-}
-
-function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {
-  return isParsedCanonicalDocument(input) ? input.document : input;
-}
 
 function parseBulkSignalDefinitions(text: string, document: Readonly<CanonicalDocument>): { readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] } {
   const definitions: BulkSignalDefinition[] = [];
