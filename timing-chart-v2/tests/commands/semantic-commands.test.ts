@@ -59,7 +59,7 @@ describe("pure Semantic Command planning", () => {
   it("updates global row layout with targeted screen-Y invalidation and exact Undo", () => {
     const source = canonicalFixture();
     const session = new CommandHistorySession(source);
-    const layout = { ...source.layout, rowHeight: 36, signalSpacing: 8 };
+    const layout = { ...source.layout, roleColumnWidth: 74, signalNameWidth: 224, signalNameAlign: "center" as const, overflow: "wrap" as const, rowHeight: 36, signalSpacing: 8 };
     const result = session.execute({ id: commandId("cmd_layout"), type: "document.updateLayout", layout });
     expect(result.ok).toBe(true);
     if (result.ok) {

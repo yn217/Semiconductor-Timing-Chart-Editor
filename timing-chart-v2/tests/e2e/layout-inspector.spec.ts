@@ -5,7 +5,6 @@ test("edits global row layout through one semantic operation and preserves it th
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Clear", exact: true }).click();
   const inspector = page.getByTestId("inspector-layout-editor");
   await expect(inspector).toBeVisible();
   const rows = host.locator("[data-role='wave-owner']");
@@ -16,6 +15,10 @@ test("edits global row layout through one semantic operation and preserves it th
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   await inspector.getByLabel("Inspector row height").fill("36");
   await inspector.getByLabel("Inspector signal spacing").fill("8");
+  await inspector.getByLabel("Inspector role column width").fill("74");
+  await inspector.getByLabel("Inspector signal name width").fill("224");
+  await inspector.getByLabel("Inspector signal name alignment").selectOption("center");
+  await inspector.getByLabel("Inspector signal name overflow").selectOption("wrap");
   await inspector.getByTestId("apply-inspector-layout").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
@@ -36,5 +39,21 @@ test("edits global row layout through one semantic operation and preserves it th
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector row height")).toHaveValue("36");
   await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal spacing")).toHaveValue("8");
+  await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector role column width")).toHaveValue("74");
+  await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name width")).toHaveValue("224");
+  await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name alignment")).toHaveValue("center");
+  await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name overflow")).toHaveValue("wrap");
   expect(await host.getAttribute("data-history-depth")).toBe("0");
+});
+
+test("cancels layout draft without a canonical mutation", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const inspector = page.getByTestId("inspector-layout-editor");
+  const revision = await host.getAttribute("data-canonical-revision");
+  await inspector.getByLabel("Inspector signal name width").fill("420");
+  await inspector.getByTestId("cancel-inspector-layout").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", revision!);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
