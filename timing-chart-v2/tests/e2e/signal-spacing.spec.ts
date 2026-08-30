@@ -40,6 +40,26 @@ test("edits individual signal spacing through Inspector with local row invalidat
   await expect(page.getByTestId("inspector-signal-properties").getByLabel("Inspector signal spacing after")).toHaveValue("12");
 });
 
+test("keeps invalid Group and Signal spacing drafts out of the canonical document", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const inspector = page.getByTestId("inspector");
+
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch']").click();
+  await inspector.getByLabel("Group spacing before").fill("-1");
+  await inspector.getByTestId("apply-group-properties").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await inspector.getByLabel("Inspector signal spacing after").fill("-2");
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+});
+
 test("edits Group and Signal spacing independently and together with exact persistence and export", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
