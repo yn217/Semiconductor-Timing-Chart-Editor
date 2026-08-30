@@ -57,9 +57,15 @@ function changedPositions<T extends string>(before: readonly T[], after: readonl
   return [...new Set([...before, ...after])].filter((id) => beforeIndex.get(id) !== afterIndex.get(id));
 }
 
-function annotationsForSignals(document: CanonicalDocument, signalIds: readonly SignalId[]) {
-  const affected = new Set(signalIds);
-  return document.annotations.filter((annotation) => [annotation.anchor, annotation.start, annotation.end, annotation.from, annotation.to].some((anchor) => anchor?.signalId && affected.has(anchor.signalId))).map((annotation) => annotation.id);
+function annotationsForSignals(document: CanonicalDocument, signalIds: SignalId | readonly SignalId[]) {
+  const affected = new Set(Array.isArray(signalIds) ? signalIds : [signalIds]);
+  const annotationIds = new Set<string>();
+  for (const signalId of affected) {
+    for (const reference of referencesToSignal(document, signalId)) {
+      if (reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource") annotationIds.add(reference.ownerId);
+    }
+  }
+  return document.annotations.filter((annotation) => annotationIds.has(annotation.id)).map((annotation) => annotation.id);
 }
 
 function replaceSignal(document: CanonicalDocument, index: number, signal: Signal): CanonicalDocument {
