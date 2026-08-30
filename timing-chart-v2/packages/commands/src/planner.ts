@@ -1048,6 +1048,13 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }
+    case "timeline.setReferenceEdge": {
+      if (command.edge !== "rising" && command.edge !== "falling") return fail("invalid", "INVALID_REFERENCE_EDGE", "$.edge", "Reference edge must be rising or falling.");
+      if (document.timeline.edge === command.edge) return fail("no-op", "NO_OP", "$.edge", "Reference edge is unchanged.");
+      const next = { ...document, timeline: { ...document.timeline, edge: command.edge } };
+      const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, annotationPosition: annotationsForSignals(document, timingSignalIds(document)), transactionSemantics: document.transactions.map((item) => item.id) };
+      return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
+    }
     case "timeline.insert": {
       if (!Number.isInteger(command.at) || command.at < 0 || command.at > document.timeline.cycleCount || !Number.isInteger(command.count) || command.count < 1) return fail("invalid", "INVALID_TIMELINE_INSERT", "$", "Insert requires an integer boundary and positive integer count.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline ripple is blocked while untyped constraints exist.");

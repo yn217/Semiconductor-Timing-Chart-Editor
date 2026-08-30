@@ -3548,6 +3548,7 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const [conversionTarget, setConversionTarget] = useState<"binary" | "bus" | "state">("binary");
   const [conversionConfirm, setConversionConfirm] = useState(false);
+  const [referenceEdge, setReferenceEdge] = useState<"rising" | "falling">(document.timeline.edge);
   const { state: sections, toggle } = useInspectorAccordion("clock-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true, generator: true, "edge-counter": true });
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const applyProperties = (event: React.FormEvent) => {
@@ -3568,6 +3569,7 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
       <label>Role<select aria-label="Inspector signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
       <label className="checkline">Show in waveform<input aria-label="Inspector signal visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} /></label>
       <button type="button" data-testid="set-reference-clock" onClick={() => onCommand({ id: nextCommandId("set_reference_clock"), type: "timeline.setReferenceClock", referenceClock: signal.id })} disabled={document.timeline.referenceClock === signal.id}>Use as Reference Clock</button>
+      <label>Reference Edge<select aria-label="Reference Edge" value={referenceEdge} onChange={(event) => setReferenceEdge(event.target.value as "rising" | "falling")}><option value="rising">Rising</option><option value="falling">Falling</option></select></label><button type="button" data-testid="apply-reference-edge" onClick={() => onCommand({ id: nextCommandId("set_reference_edge"), type: "timeline.setReferenceEdge", edge: referenceEdge })}>Apply Reference Edge</button>
       <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
       <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
       <button type="submit" data-testid="apply-inspector-clock-properties">Apply Properties</button>
