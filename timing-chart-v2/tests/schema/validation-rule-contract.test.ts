@@ -4,6 +4,7 @@ import {
   canonicalRuleDescriptor,
   canonicalRuleDescriptors,
   canonicalValidationCodes,
+  documentProblemRuleDescriptor,
   schemaRuleDescriptor,
   schemaRuleDescriptors,
   SCHEMA_RULE_KEYWORDS,
@@ -14,7 +15,7 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 describe("canonical validation problem-code contract", () => {
   it("exports one typed inventory and descriptors for representative canonical faults", () => {
     expect(canonicalValidationCodes()).toEqual(CANONICAL_PROBLEM_CODES);
-    expect(canonicalRuleDescriptors().every((descriptor) => canonicalValidationCodes().includes(descriptor.code))).toBe(true);
+    expect(canonicalRuleDescriptors().every((descriptor) => canonicalValidationCodes().includes(descriptor.code) && descriptor.category === "canonical")).toBe(true);
     expect(canonicalRuleDescriptors()).toHaveLength(CANONICAL_PROBLEM_CODES.length);
     expect(new Set(canonicalRuleDescriptors().map((descriptor) => descriptor.code)).size).toBe(CANONICAL_PROBLEM_CODES.length);
     expect(canonicalRuleDescriptors().every((descriptor) => descriptor.owner === "canonical-validator" && descriptor.layer === "canonical-invariant" && descriptor.severity === "error" && descriptor.pathPattern.length > 0 && descriptor.fixability === "none" && descriptor.ruleVersion === 1)).toBe(true);
@@ -23,7 +24,7 @@ describe("canonical validation problem-code contract", () => {
   it("exports the schema structural keyword inventory separately", () => {
     expect(schemaRuleDescriptors()).toHaveLength(SCHEMA_RULE_KEYWORDS.length);
     expect(new Set(schemaRuleDescriptors().map((descriptor) => descriptor.keyword)).size).toBe(SCHEMA_RULE_KEYWORDS.length);
-    expect(schemaRuleDescriptors().every((descriptor) => descriptor.layer === "schema-structural" && descriptor.owner === "schema-ajv" && descriptor.severity === "error" && descriptor.ruleVersion === 1)).toBe(true);
+    expect(schemaRuleDescriptors().every((descriptor) => descriptor.category === "schema" && descriptor.layer === "schema-structural" && descriptor.owner === "schema-ajv" && descriptor.severity === "error" && descriptor.ruleVersion === 1)).toBe(true);
     expect(schemaRuleDescriptor("required")).toMatchObject({ code: "SCHEMA_REQUIRED" });
   });
 
@@ -37,5 +38,11 @@ describe("canonical validation problem-code contract", () => {
     const problem = validateCanonicalDocument(document).find((item) => item.code === code);
     expect(problem).toMatchObject({ code, path, entityId });
     expect(canonicalRuleDescriptor(code as typeof CANONICAL_PROBLEM_CODES[number])).toBeDefined();
+  });
+
+  it("resolves problem codes to metadata without parsing messages", () => {
+    expect(documentProblemRuleDescriptor("DUPLICATE_ID")).toMatchObject({ category: "canonical", owner: "canonical-validator", layer: "canonical-invariant", severity: "error", fixability: "none" });
+    expect(documentProblemRuleDescriptor("SCHEMA_REQUIRED")).toMatchObject({ category: "schema", owner: "schema-ajv", layer: "schema-structural", severity: "error" });
+    expect(documentProblemRuleDescriptor("JSON_SYNTAX")).toBeUndefined();
   });
 });

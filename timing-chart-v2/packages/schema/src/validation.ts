@@ -23,6 +23,7 @@ function schemaProblem(error: ErrorObject): CanonicalDocumentProblem {
 const SCHEMA_RULE_DESCRIPTORS: readonly SchemaRuleDescriptor[] = SCHEMA_RULE_KEYWORDS.map((keyword) => ({
   code: `SCHEMA_${keyword.toUpperCase()}` as SchemaProblemCode,
   keyword: keyword as SchemaRuleKeyword,
+  category: "schema",
   layer: "schema-structural",
   owner: "schema-ajv",
   severity: "error",
@@ -38,7 +39,7 @@ export function schemaRuleDescriptor(keyword: SchemaRuleKeyword): SchemaRuleDesc
 }
 
 const canonicalRule = (code: CanonicalProblemCode, title: string, pathPattern: string, entityContext: CanonicalRuleDescriptor["entityContext"] = "required"): CanonicalRuleDescriptor => ({
-  code, owner: "canonical-validator", layer: "canonical-invariant", severity: "error", title, pathPattern, entityContext, fixability: "none", ruleVersion: 1,
+  code, category: "canonical", owner: "canonical-validator", layer: "canonical-invariant", severity: "error", title, pathPattern, entityContext, fixability: "none", ruleVersion: 1,
 });
 
 // Keep this inventory exhaustive: every canonical problem code has one stable
@@ -88,6 +89,14 @@ export function canonicalRuleDescriptors(): readonly CanonicalRuleDescriptor[] {
 
 export function canonicalRuleDescriptor(code: CanonicalProblemCode): CanonicalRuleDescriptor | undefined {
   return RULE_DESCRIPTORS.find((descriptor) => descriptor.code === code);
+}
+
+export type DocumentProblemRuleDescriptor = SchemaRuleDescriptor | CanonicalRuleDescriptor;
+
+/** Resolve structured rule metadata without depending on human-readable messages. */
+export function documentProblemRuleDescriptor(code: string): DocumentProblemRuleDescriptor | undefined {
+  return RULE_DESCRIPTORS.find((descriptor) => descriptor.code === code)
+    ?? SCHEMA_RULE_DESCRIPTORS.find((descriptor) => descriptor.code === code);
 }
 
 function walkNumbers(value: unknown, path: string, problems: DocumentProblem[]): void {

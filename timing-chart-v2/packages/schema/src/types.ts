@@ -301,6 +301,7 @@ export type CanonicalValidationCode = CanonicalProblemCode | SchemaProblemCode;
 export interface SchemaRuleDescriptor {
   readonly code: SchemaProblemCode;
   readonly keyword: SchemaRuleKeyword;
+  readonly category: "schema";
   readonly layer: "schema-structural";
   readonly owner: "schema-ajv";
   readonly severity: "error";
@@ -309,6 +310,7 @@ export interface SchemaRuleDescriptor {
 
 export interface CanonicalRuleDescriptor {
   readonly code: CanonicalProblemCode;
+  readonly category: "canonical";
   readonly owner: "canonical-validator";
   readonly layer: "canonical-invariant";
   readonly severity: "error";
