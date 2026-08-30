@@ -17,7 +17,7 @@ test("captures deterministic production Ribbon scenario manifests", async ({ pag
   for (const tab of tabs) {
     await page.locator(".ribbon-tabs").getByRole("button", { name: tab, exact: true }).click();
     await expect(page.locator("[data-testid='ribbon']")).toBeVisible();
-    manifests.push(await captureScenarioReview({ page, scenario: `RIBBON-${tab.toUpperCase()}-DESKTOP`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-testid='ribbon']", target: "Ribbon" }], actions: [`switch:${tab}`], outputPath: resolve(output, `${tab.toLowerCase()}.json`) }));
+    manifests.push(await captureScenarioReview({ page, scenario: `RIBBON-${tab.toUpperCase()}-DESKTOP`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-testid='ribbon']", target: "Ribbon" }, { selector: "[data-testid='ribbon'] .ribbon-group button", target: "Ribbon command", iconSelector: "svg", labelSelector: "span" }], actions: [`switch:${tab}`], outputPath: resolve(output, `${tab.toLowerCase()}.json`) }));
   }
   expect(manifests).toHaveLength(tabs.length);
   expect(manifests.map((manifest) => manifest.scenario)).toEqual(tabs.map((tab) => `RIBBON-${tab.toUpperCase()}-DESKTOP`));
