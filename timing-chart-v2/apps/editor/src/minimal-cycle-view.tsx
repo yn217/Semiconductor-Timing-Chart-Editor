@@ -549,8 +549,9 @@ export function MinimalCycleView() {
         const currentSnapshot = session.getSnapshot();
         const document = currentSnapshot.document;
         const mapping = mappingCache.get(document.timeline, document.timeGroups);
+        const signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
         const prepared = requests.map((request) => {
-          const signal = document.signals.find((candidate) => candidate.id === request.signalId);
+          const signal = signalById.get(request.signalId);
           if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
           const displaySignal = signal.type === "commentRow" ? signal
             : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
