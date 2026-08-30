@@ -21,3 +21,31 @@ test("Advanced JSON reports deterministic line and column for malformed input", 
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("Advanced JSON preserves every semantic validation problem", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  const json = page.getByTestId("json-panel");
+  const source = JSON.parse(await json.locator("pre").textContent() ?? "{}");
+  await json.getByTestId("json-advanced-toggle").click();
+  const valueSignalId = source.signals.find((signal: Record<string, unknown>) => Array.isArray(signal.values))?.id;
+  const invalidSignals = source.signals.map((signal: Record<string, unknown>) => signal.id === valueSignalId
+    ? { ...signal, values: [{ ...(signal.values as Array<Record<string, unknown>>)[0], start: -1 }] }
+    : signal);
+  await json.getByLabel("Advanced JSON").fill(JSON.stringify({
+    ...source,
+    timeline: { ...source.timeline, end: 0 },
+    signals: invalidSignals,
+  }, null, 2));
+  await json.getByRole("button", { name: "Validate", exact: true }).click();
+  await expect(json).toContainText("Invalid:");
+  await bottom.getByRole("tab", { name: "Problems", exact: true }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems.locator("tbody tr")).toHaveCount(2);
+  await expect(problems).toContainText("Validate Advanced JSON");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
