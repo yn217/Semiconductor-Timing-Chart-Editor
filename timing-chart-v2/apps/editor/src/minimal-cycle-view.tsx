@@ -369,6 +369,9 @@ export function MinimalCycleView() {
   const unsavedCancelRef = useRef<HTMLButtonElement>(null);
   const [hierarchyVisible, setHierarchyVisible] = useState(false);
   const [bulkRegistrationVisible, setBulkRegistrationVisible] = useState(false);
+  const renameDialogRef = useRef<HTMLFormElement>(null);
+  const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
+  const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const [bulkRegistrationText, setBulkRegistrationText] = useState("dut.status binary\ndut.data[7:0] bus\n");
   const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
   const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
@@ -443,6 +446,9 @@ export function MinimalCycleView() {
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
   const [renameError, setRenameError] = useState("");
+  useDialogFocusLoop(renameDialogRef, undefined, renameDialogOpen);
+  useDialogFocusLoop(bulkRegistrationDialogRef, undefined, bulkRegistrationVisible);
+  useDialogFocusLoop(unsavedFileDialogRef, pendingFileOriginRef, pendingFileAction !== undefined);
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
   const clipboardGroupRef = useRef<{ readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number } | undefined>(undefined);
@@ -2881,7 +2887,7 @@ export function MinimalCycleView() {
       <button type="button" role="menuitem" onClick={() => { renameSelection(); closeContextMenu(); }} disabled={!hasSelectedEntity}>Rename</button>
       <button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); closeContextMenu(); }} disabled={!hasDeletableSelection}>Delete</button>
     </ContextMenuSurface>}
-    {renameDialogOpen && <div className="modal-backdrop" data-testid="rename-dialog-backdrop"><form role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); applyRename(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setRenameDialogOpen(false); } }}>
+    {renameDialogOpen && <div className="modal-backdrop" data-testid="rename-dialog-backdrop"><form ref={renameDialogRef} role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); applyRename(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setRenameDialogOpen(false); } }}>
       <header><h2 id="rename-dialog-title">Rename</h2><button type="button" aria-label="Close rename dialog" onClick={() => setRenameDialogOpen(false)}><EditorIcon name="close" /></button></header>
       <label>New name<input autoFocus aria-label="New name" value={renameDraft} onChange={(event) => { setRenameDraft(event.target.value); setRenameError(""); }} /></label>
       {renameError && <p role="alert" className="dialog-error">{renameError}</p>}
@@ -2889,10 +2895,10 @@ export function MinimalCycleView() {
     </form></div>}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch.current(nextCommandId("document_properties"), commands)} onClose={() => setPropertiesVisible(false)} />}
-    {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
+    {bulkRegistrationVisible && <div className="modal-backdrop"><section ref={bulkRegistrationDialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); closeDialog(() => setSaveAsVisible(false)); }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
-     {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
+     {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
      <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else void file.text().then(requestOpenText).catch(() => setProblem("Open failed.")); } event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
       <span data-testid="tool-status">{arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}</span>
@@ -2928,9 +2934,11 @@ function InsertSemanticIcon({ kind }: { readonly kind: InsertSemanticIconKind })
 function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly onClose: () => void }) {
   const [view, setView] = useState<HardwareHierarchyView>("group");
   const [scope, setScope] = useState<string>("all");
+  const dialogRef = useRef<HTMLElement>(null);
+  useDialogFocusLoop(dialogRef);
   const scopes = hardwareHierarchyScopes(document);
   const entries = buildHardwareHierarchyEntries(document, view, scope === "all" ? undefined : scope);
-  return <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Hardware Hierarchy" className="hierarchy-browser" data-testid="hierarchy-browser">
+  return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Hardware Hierarchy" className="hierarchy-browser" data-testid="hierarchy-browser">
     <header><h2>Hardware Hierarchy</h2><button type="button" aria-label="Close hierarchy" onClick={onClose}><EditorIcon name="close" /></button></header>
     <p>Derived from canonical Signal source paths. Group placement does not change hardware identity.</p>
     <div className="hierarchy-toolbar" role="toolbar" aria-label="Hierarchy view controls">
@@ -2952,8 +2960,9 @@ function EditorIconButton({ label, icon, disabled, onClick }: { readonly label: 
   return <button type="button" data-icon-button={icon} aria-label={label} disabled={disabled} onClick={onClick}><EditorIcon name={icon} /></button>;
 }
 
-function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null>, restoreFocusRef?: RefObject<HTMLElement | null>) {
+function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null>, restoreFocusRef?: RefObject<HTMLElement | null>, enabled = true) {
   useEffect(() => {
+    if (!enabled) return undefined;
     const dialog = dialogRef.current;
     if (!dialog) return undefined;
     const previous = restoreFocusRef?.current ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
@@ -2974,10 +2983,12 @@ function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null
       if (previous?.isConnected) requestAnimationFrame(() => previous.focus());
       if (restoreFocusRef?.current === previous) restoreFocusRef.current = null;
     };
-  }, [dialogRef, restoreFocusRef]);
+  }, [dialogRef, restoreFocusRef, enabled]);
 }
 
 function DocumentProperties({ document, onApplyProperties, onClose }: { readonly document: CanonicalDocument; readonly onApplyProperties: (commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>; readonly onClose: () => void }) {
+  const dialogRef = useRef<HTMLFormElement>(null);
+  useDialogFocusLoop(dialogRef);
   const [title, setTitle] = useState(document.document.title);
   const [subtitle, setSubtitle] = useState(document.document.header.subtitle);
   const [description, setDescription] = useState(document.document.header.description);
@@ -3007,7 +3018,7 @@ function DocumentProperties({ document, onApplyProperties, onClose }: { readonly
   })();
   const updateLegendEntries = (next: readonly LegendEntry[]) => setLegendItemsText(JSON.stringify(next.map((entry, order) => ({ ...entry, order })), null, 2));
   const lines = (value: string) => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-  return <div className="modal-backdrop"><form className="document-properties" role="dialog" aria-modal="true" aria-label="Document Properties" onSubmit={(event) => {
+  return <div className="modal-backdrop"><form ref={dialogRef} className="document-properties" role="dialog" aria-modal="true" aria-label="Document Properties" onSubmit={(event) => {
     event.preventDefault();
     let parsed: unknown;
     try {

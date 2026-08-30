@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator } from "@playwright/test";
 
 async function expectCloseIcon(page: import("@playwright/test").Page, name: string) {
   const button = page.getByRole("button", { name, exact: true });
@@ -6,6 +6,17 @@ async function expectCloseIcon(page: import("@playwright/test").Page, name: stri
   await expect(button.locator("svg")).toHaveAttribute("viewBox", "0 0 24 24");
   await expect(button.locator("path")).toHaveCount(1);
   await expect(button).not.toContainText("×");
+}
+
+async function expectTabLoop(dialog: Locator) {
+  const focusable = dialog.locator("button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1']):not([aria-disabled='true'])");
+  const first = focusable.first();
+  const last = focusable.last();
+  await first.focus();
+  await first.press("Shift+Tab");
+  await expect(last).toBeFocused();
+  await last.press("Tab");
+  await expect(first).toBeFocused();
 }
 
 test("non-Home dialog close actions use the shared SVG close primitive", async ({ page }) => {
@@ -32,20 +43,26 @@ test("app-owned dialogs close with Escape without changing the document", async 
 
   await page.getByRole("button", { name: "More tree actions" }).click();
   await page.getByTestId("hierarchy-open").click();
-  await expect(page.getByRole("dialog", { name: "Hardware Hierarchy" })).toBeVisible();
+  const hierarchy = page.getByRole("dialog", { name: "Hardware Hierarchy" });
+  await expect(hierarchy).toBeVisible();
+  await expectTabLoop(hierarchy);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Hardware Hierarchy" })).toBeHidden();
 
   await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("bulk-register-open").click();
-  await expect(page.getByRole("dialog", { name: "Bulk Signal Registration" })).toBeVisible();
+  const bulk = page.getByRole("dialog", { name: "Bulk Signal Registration" });
+  await expect(bulk).toBeVisible();
+  await expectTabLoop(bulk);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Bulk Signal Registration" })).toBeHidden();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   const fileRibbon = page.getByTestId("ribbon");
   await fileRibbon.getByRole("button", { name: "Properties", exact: true }).click();
-  await expect(page.getByRole("dialog", { name: "Document Properties" })).toBeVisible();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await expect(properties).toBeVisible();
+  await expectTabLoop(properties);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Document Properties" })).toBeHidden();
 
