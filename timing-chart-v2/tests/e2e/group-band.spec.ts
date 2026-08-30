@@ -62,3 +62,16 @@ test("Group Band Inspector preserves scope/style, derived spacing, persistence a
     if (format === "pdf") expect(bytes.subarray(0, 5).toString("utf8")).toBe("%PDF-");
   }
 });
+
+test("keeps invalid Group Band opacity draft-only", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Group opacity").fill("1.5");
+  await inspector.getByTestId("apply-group-properties").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+});
