@@ -753,17 +753,14 @@ export function MinimalCycleView() {
       const start = Number(startText);
       const end = Number(endText);
       const currentDocument = session.getSnapshot().document;
-      const mapping = mappingCache.get(currentDocument.timeline, currentDocument.timeGroups);
-      const startDisplay = displayBoundaryForSource(mapping, start, currentDocument.timeline.cycleCount);
-      const endDisplay = displayBoundaryForSource(mapping, end, currentDocument.timeline.cycleCount);
-      const startTick = rulerElement.querySelector<HTMLElement>(`[data-display-cycle='${startDisplay}']`);
-      const endTick = rulerElement.querySelector<HTMLElement>(`[data-display-cycle='${endDisplay}']`);
-      if (!startTick || !endTick || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
+      const startLocalX = sourceBoundaryLocalX(currentDocument, start);
+      const endLocalX = sourceBoundaryLocalX(currentDocument, end);
+      if (startLocalX === undefined || endLocalX === undefined || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
         band.hidden = true;
         return;
       }
-      const startX = Number.parseFloat(startTick.style.left) * currentZoom;
-      const endX = Number.parseFloat(endTick.style.left) * currentZoom;
+      const startX = startLocalX * currentZoom;
+      const endX = endLocalX * currentZoom;
       const timeDomainLeft = timelineOffset();
       if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) {
         band.hidden = true;
@@ -783,8 +780,8 @@ export function MinimalCycleView() {
         rulerBand.dataset.rangeStart = String(start);
         rulerBand.dataset.rangeEnd = String(end);
         rulerBand.dataset.source = "ruler-local-geometry";
-        rulerBand.style.left = startTick.style.left;
-        rulerBand.style.width = `${Number.parseFloat(endTick.style.left) - Number.parseFloat(startTick.style.left)}px`;
+        rulerBand.style.left = `${startLocalX}px`;
+        rulerBand.style.width = `${endLocalX - startLocalX}px`;
         rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
       }
       for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
@@ -809,13 +806,13 @@ export function MinimalCycleView() {
       rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction });
     };
     let currentZoom = 1;
-    const sourceBoundaryLocalX = (document: CanonicalDocument, cycle: number): number | undefined => {
+    function sourceBoundaryLocalX(document: CanonicalDocument, cycle: number): number | undefined {
       const axis = resolveTimeAxisGeometry(document, geometryMaps);
       if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
       const mapping = mappingCache.get(document.timeline, document.timeGroups);
       const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
       return axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point.x;
-    };
+    }
     function syncPresentationScale() {
       // The measured screen-geometry scale is shared by the ruler, overlays,
       // and snap projection. WaveDrom text consumes the same derived value to
