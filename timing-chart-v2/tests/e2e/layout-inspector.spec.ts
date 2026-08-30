@@ -57,3 +57,27 @@ test("cancels layout draft without a canonical mutation", async ({ page }) => {
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("auto fits a long rendered signal label through one layout command", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const signalInspector = page.getByTestId("inspector");
+  await signalInspector.getByLabel("Inspector signal name", { exact: true }).fill("A_VERY_LONG_SIGNAL_NAME_FOR_LAYOUT_AUTOFIT");
+  await signalInspector.getByLabel("Inspector signal name", { exact: true }).press("Enter");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host.locator("[data-role='frozen-signal-name']").filter({ hasText: "A_VERY_LONG_SIGNAL_NAME_FOR_LAYOUT_AUTOFIT" })).toHaveCount(1);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "More", exact: true }).click();
+  await page.getByRole("menu", { name: "More Home Commands" }).getByRole("button", { name: "Clear Selection", exact: true }).click();
+  const layout = page.getByTestId("inspector-layout-editor");
+  const before = Number(await layout.getByLabel("Inspector signal name width").inputValue());
+  await layout.getByTestId("auto-fit-inspector-layout").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  const after = Number(await page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name width").inputValue());
+  expect(after).toBeGreaterThan(before);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
+  await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name width")).toHaveValue(String(before));
+});
