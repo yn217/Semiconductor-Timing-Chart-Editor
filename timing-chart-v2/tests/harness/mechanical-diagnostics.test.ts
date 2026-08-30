@@ -51,4 +51,9 @@ describe("mechanical visual diagnostics", async () => {
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ category: "LAYOUT_SHIFT", target: "ribbon", severity: "MAJOR" });
   });
+  it("checks visual reversibility as A~=C and B~=D", async () => {
+    const { reversibleRegionCheck } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    expect(reversibleRegionCheck({ before: 0.01, after: 0.40, undo: 0.02, redo: 0.41 })).toMatchObject({ beforeUndo: true, afterRedo: true });
+    expect(reversibleRegionCheck({ before: 0.01, after: 0.40, undo: 0.20, redo: 0.41 }).beforeUndo).toBe(false);
+  });
 });

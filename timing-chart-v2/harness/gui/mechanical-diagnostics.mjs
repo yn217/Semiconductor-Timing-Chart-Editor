@@ -69,3 +69,8 @@ export function browserHealthFindings({ scenario, consoleErrors = [], pageErrors
 export function unexpectedRegionFindings({ scenario, changedRegions, expectedChange = [], expectedStable = [], evidence = [] }) {
   return changedRegions.filter((region) => !expectedChange.includes(region) || expectedStable.includes(region)).map((region) => ({ severity: "MAJOR", category: "LAYOUT_SHIFT", scenario, target: region, actual: { changed: true }, evidence }));
 }
+
+export function reversibleRegionCheck({ before, after, undo, redo, maxDelta = 0.05 }) {
+  const close = (left, right) => Math.abs(left - right) <= maxDelta;
+  return { beforeUndo: close(before, undo), afterRedo: close(after, redo), maxDelta };
+}
