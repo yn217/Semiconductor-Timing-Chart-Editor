@@ -141,3 +141,32 @@ test("captures Zoom/Fit visual round-trip without semantic mutation", async ({ p
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
 });
+
+test("captures left pane resize visual before/after without semantic mutation", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("left-pane-resize");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `LEFT-PANE-RESIZE-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-testid='left-pane-resizer']", target: "left-pane-resizer" }, { selector: ".column-headings", target: "column-headings" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["left-pane-resizer", "column-headings"], stableRegions: ["ribbon", "ruler"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("before");
+  const resizer = page.getByTestId("left-pane-resizer");
+  const box = await resizer.boundingBox();
+  expect(box).toBeTruthy();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 70, box!.y + box!.height / 2);
+  await page.mouse.up();
+  await expect(resizer).not.toHaveAttribute("aria-valuenow", "265");
+  await capture("after");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+});
