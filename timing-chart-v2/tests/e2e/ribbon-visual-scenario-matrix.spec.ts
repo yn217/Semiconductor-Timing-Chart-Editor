@@ -23,3 +23,24 @@ test("captures deterministic production Ribbon scenario manifests", async ({ pag
   expect(manifests.map((manifest) => manifest.scenario)).toEqual(tabs.map((tab) => `RIBBON-${tab.toUpperCase()}-DESKTOP`));
   expect(manifests.every((manifest) => manifest.testedCommit === gitHead && manifest.capture.viewport.join("x") === "1672x941")).toBe(true);
 });
+
+test("covers compressed Ribbon layout and Home round-trip without semantic mutation", async ({ page }) => {
+  await page.setViewportSize({ width: 1365, height: 800 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const ribbon = page.getByTestId("ribbon");
+  const ribbonHeight = (await ribbon.boundingBox())!.height;
+  const workspaceY = (await page.locator(".desktop-workspace").boundingBox())!.y;
+  for (const tab of ["Insert", "View", "Review", "AI", "Home", "View", "Home"]) {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: tab, exact: true }).click();
+    await expect(page.locator(".ribbon-tabs").getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
+    expect((await ribbon.boundingBox())!.height).toBe(ribbonHeight);
+    expect((await page.locator(".desktop-workspace").boundingBox())!.y).toBe(workspaceY);
+    expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  }
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+  expect(await ribbon.evaluate((node) => node.scrollWidth <= node.clientWidth + 1)).toBe(true);
+});
