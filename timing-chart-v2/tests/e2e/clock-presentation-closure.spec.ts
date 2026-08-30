@@ -13,7 +13,12 @@ test("Bottom Clock edits update real waveform geometry and edge-counter overlays
   const clock = surface.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock']");
   const beforeWave = await clock.locator("svg").innerHTML();
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  await editor.getByLabel("Clock duty").fill("0.25");
+  const duty = editor.getByLabel("Clock duty");
+  await duty.fill("0.3");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(editor.getByTestId("clock-generator-error")).toContainText("UNSUPPORTED_CLOCK_DUTY");
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${initialHistoryCount} / Redo 0`);
+  await duty.fill("0.25");
   await editor.getByTestId("apply-clock-generator").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(await clock.locator("svg").innerHTML()).not.toBe(beforeWave);

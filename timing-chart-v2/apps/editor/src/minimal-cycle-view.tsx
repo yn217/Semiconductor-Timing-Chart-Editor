@@ -3754,7 +3754,7 @@ function CommentRowEditor({ signal, onCommand, onCancel }: { readonly signal: Co
   </form>;
 }
 
-function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => void; readonly onDuplicate: (signalId: SignalId) => void }) {
+function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const [suppressedPeriods, setSuppressedPeriods] = useState((signal.generator.suppressedPeriods ?? []).join(", "));
@@ -3782,8 +3782,9 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
         const parsedSuppressedPeriods = parseSuppressedPeriods(suppressedPeriods);
         const { suppressedPeriods: _previousSuppressedPeriods, ...generatorWithoutSuppression } = generator;
         const nextGenerator: ClockGenerator = parsedSuppressedPeriods.length === 0 ? generatorWithoutSuppression : { ...generatorWithoutSuppression, suppressedPeriods: parsedSuppressedPeriods };
-        setGeneratorError("");
-        onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator: nextGenerator });
+        const result = onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator: nextGenerator });
+        if (result.ok) setGeneratorError("");
+        else setGeneratorError(result.problems.map((problem) => `${problem.code}: ${problem.message}`).join(" ") || "Clock Generator update rejected.");
       } catch (error) {
         setGeneratorError(error instanceof Error ? error.message : "Invalid suppressed periods.");
       }
