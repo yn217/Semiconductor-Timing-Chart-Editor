@@ -12,6 +12,7 @@ import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, ty
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
+import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -746,7 +747,7 @@ export function MinimalCycleView() {
     };
     renderer.mount(rendererHost);
     const initialSnapshot = session.getSnapshot();
-    let window: VirtualizationWindow = viewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
+      let window: VirtualizationWindow = buildViewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
     let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
     renderer.update(projection);
     let rulerBuilds = 0;
@@ -1127,7 +1128,7 @@ export function MinimalCycleView() {
       // first projection so the previous document cannot seed stale rows.
       viewportElement.scrollLeft = 0;
       viewportElement.scrollTop = 0;
-      window = viewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
+        window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       markOpenPhase("canonical-replaced");
@@ -1218,7 +1219,7 @@ export function MinimalCycleView() {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
         syncRulerContent();
-        const next = viewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
+        const next = buildViewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         const previousMountedSignals = projection.mountedSignalIds;
         window = next;
@@ -4478,17 +4479,6 @@ function withSnapOffset(anchor: SemanticAnchor, desired: Point, snapped: Point):
   const residual = { x: Math.round(desired.x - snapped.x), y: Math.round(desired.y - snapped.y) };
   if (residual.x === 0 && residual.y === 0) return anchor;
   return { ...anchor, offset: { x: (anchor.offset?.x ?? 0) + residual.x, y: (anchor.offset?.y ?? 0) + residual.y } };
-}
-
-function viewportWindow(viewport: HTMLElement, referenceClock?: SignalId): VirtualizationWindow {
-  const bodyTop = Math.max(0, viewport.scrollTop - 34);
-  return {
-    viewportStartY: bodyTop,
-    viewportEndY: bodyTop + viewport.clientHeight,
-    overscanBefore: 48,
-    overscanAfter: 48,
-    pinnedRowIds: referenceClock ? [referenceClock] : [],
-  };
 }
 
 function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: number): number | undefined {
