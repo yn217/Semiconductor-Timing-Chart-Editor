@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 async function openJson(page: Page, document: unknown): Promise<void> {
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
@@ -39,4 +40,16 @@ test("Open renders adversarial user strings as inert production SVG content", as
   await expect(waveSvg.locator("[*|href^='javascript:'], [href^='javascript:']")).toHaveCount(0);
   expect(await page.evaluate(() => (globalThis as { __waveAttack?: boolean }).__waveAttack)).toBeUndefined();
   await expect(waveSvg).toBeAttached();
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  await page.getByLabel("Export format").selectOption("svg");
+  const download = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export SVG", exact: true }).click();
+  const exportPath = await (await download).path();
+  expect(exportPath).toBeTruthy();
+  const exported = await readFile(exportPath!, "utf8");
+  expect(exported).not.toMatch(/<\/?(?:script|foreignObject|iframe|object|embed|img)\b/i);
+  expect(exported).not.toMatch(/<[^>]*\bon[a-z][\w:-]*\s*=/i);
+  expect(exported).not.toMatch(/<[^>]*(?:href|xlink:href)\s*=\s*["']\s*(?:javascript|data):/i);
 });
