@@ -1,0 +1,20 @@
+import { describe, expect, it } from "vitest";
+
+describe("mechanical visual diagnostics", async () => {
+  const { runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+  it("emits stable findings for clipping, overlap, duplicate text, and icon alignment", () => {
+    const result = runMechanicalDiagnostics({ scenario: "fixture", evidence: ["fixture.png"], elements: [
+      { target: "clipped", text: "Long", clientWidth: 10, scrollWidth: 20, rect: { left: 0, right: 20, top: 0, bottom: 10 } },
+      { target: "overlap", text: "Same", rect: { left: 5, right: 15, top: 2, bottom: 12 }, iconRect: { left: 0, right: 2 }, buttonRect: { left: 10, right: 20 } },
+      { target: "duplicate", text: "Same", rect: { left: 30, right: 40, top: 2, bottom: 12 } },
+    ] });
+    expect(result.findings.map((finding) => finding.category)).toEqual(expect.arrayContaining(["TEXT_CLIPPING", "OVERLAP", "DUPLICATION", "ICON_ALIGNMENT"]));
+    expect(result.findings.every((finding) => finding.scenario === "fixture" && finding.evidence.length === 1)).toBe(true);
+  });
+  it("does not report allowed overlap or healthy controls", () => {
+    const result = runMechanicalDiagnostics({ scenario: "healthy", elements: [
+      { target: "icon", text: "OK", clientWidth: 20, scrollWidth: 20, rect: { left: 0, right: 10, top: 0, bottom: 10 }, allowOverlap: true, iconRect: { left: 4, right: 6 }, buttonRect: { left: 0, right: 10 } },
+    ] });
+    expect(result.findings).toEqual([]);
+  });
+});
