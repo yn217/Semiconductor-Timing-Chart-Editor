@@ -3942,6 +3942,12 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [preview, setPreview] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    setGenerator(signal.generator);
+    setEdgeCounter(signal.edgeCounter);
+    setSuppressedPeriods((signal.generator.suppressedPeriods ?? []).join(", "));
+    setGeneratorError("");
+  }, [signal.id, signal.generator, signal.edgeCounter]);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const exportSettings = () => { const blob = new Blob([JSON.stringify({ signalId: signal.id, name: signal.name, generator, edgeCounter }, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
   const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
