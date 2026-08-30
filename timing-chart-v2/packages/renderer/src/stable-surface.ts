@@ -2,6 +2,7 @@ import type { GroupHeaderLayoutEntry, RenderProjection, RowLayoutEntry } from "@
 import type { AnnotationOverlayPrimitive, EdgeCounterOverlayPrimitive, RenderCounters, RendererDiagnosticSummary, RendererDiagnostics, SnapGuidePrimitive, TimingChartRenderer, WaveformSurfaceProvider, WaveMountBatchItem, WaveMountRequest, WaveSignalId } from "./types.js";
 
 const WAVE_BATCH_LIMIT = 8;
+const diagnosticEncoder = new TextEncoder();
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -123,7 +124,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -493,16 +494,28 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   #publishCounters(): void {
     if (!this.#layers) return;
     const started = globalThis.performance.now();
+    const stringifyStarted = started;
     const renderCounters = JSON.stringify(this.#counters);
     const performanceCounters = JSON.stringify(this.diagnosticSummary());
+    const stringifyDuration = globalThis.performance.now() - stringifyStarted;
+    const encodingStarted = globalThis.performance.now();
+    const payloadBytes = diagnosticEncoder.encode(renderCounters).byteLength + diagnosticEncoder.encode(performanceCounters).byteLength;
+    const encodingDuration = globalThis.performance.now() - encodingStarted;
+    const publishStarted = globalThis.performance.now();
     this.#layers.root.dataset.renderCounters = renderCounters;
     this.#layers.root.dataset.performanceCounters = performanceCounters;
-    const encoder = new TextEncoder();
+    const publishDuration = globalThis.performance.now() - publishStarted;
     this.#diagnostics = {
       ...this.#diagnostics,
       diagnosticSerializationCount: this.#diagnostics.diagnosticSerializationCount + 1,
-      diagnosticSerializationBytes: this.#diagnostics.diagnosticSerializationBytes + encoder.encode(renderCounters).byteLength + encoder.encode(performanceCounters).byteLength,
+      diagnosticSerializationBytes: this.#diagnostics.diagnosticSerializationBytes + payloadBytes,
       diagnosticSerializationDurationMs: this.#diagnostics.diagnosticSerializationDurationMs + (globalThis.performance.now() - started),
+      diagnosticStringifyCount: this.#diagnostics.diagnosticStringifyCount + 2,
+      diagnosticStringifyDurationMs: this.#diagnostics.diagnosticStringifyDurationMs + stringifyDuration,
+      diagnosticEncodingCount: this.#diagnostics.diagnosticEncodingCount + 2,
+      diagnosticEncodingDurationMs: this.#diagnostics.diagnosticEncodingDurationMs + encodingDuration,
+      diagnosticPublishCount: this.#diagnostics.diagnosticPublishCount + 1,
+      diagnosticPublishDurationMs: this.#diagnostics.diagnosticPublishDurationMs + publishDuration,
     };
   }
 }

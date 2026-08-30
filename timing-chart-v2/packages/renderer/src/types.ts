@@ -72,6 +72,18 @@ export interface RendererDiagnostics {
   readonly diagnosticSerializationBytes: number;
   /** Cumulative time spent serializing hot-path diagnostic payloads. */
   readonly diagnosticSerializationDurationMs: number;
+  /** Number of diagnostic JSON stringify operations published to the DOM. */
+  readonly diagnosticStringifyCount: number;
+  /** Cumulative time spent JSON stringifying hot-path diagnostic payloads. */
+  readonly diagnosticStringifyDurationMs: number;
+  /** Number of UTF-8 encoding measurements performed for diagnostics. */
+  readonly diagnosticEncodingCount: number;
+  /** Cumulative time spent measuring diagnostic payload bytes. */
+  readonly diagnosticEncodingDurationMs: number;
+  /** Number of diagnostic dataset publication operations. */
+  readonly diagnosticPublishCount: number;
+  /** Cumulative time spent publishing diagnostic dataset attributes. */
+  readonly diagnosticPublishDurationMs: number;
 }
 
 export type RendererDiagnosticSummary = Omit<RendererDiagnostics, "waveRendersBySignal" | "localGeometryBuildsBySignal">;
