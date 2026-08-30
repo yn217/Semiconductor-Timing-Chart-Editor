@@ -5,7 +5,7 @@ import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
-import { buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, DisplayTimeMappingCache, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, buildMiniMapOverview, DisplayTimeMappingCache, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
@@ -20,6 +20,7 @@ import { preferredSnapKinds } from "./runtime/snap-policy.js";
 import { DocumentEpoch } from "./runtime/document-epoch.js";
 import { EditorSessionController } from "./runtime/editor-session-controller.js";
 import { RenderCoordinator } from "./runtime/render-coordinator.js";
+import { ProjectionCoordinator } from "./runtime/projection-coordinator.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -639,7 +640,7 @@ export function MinimalCycleView() {
     const documentEpoch = new DocumentEpoch();
     const adapter = new ProductionWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
-    const projectionService = new DefaultProjectionService();
+    const projectionCoordinator = new ProjectionCoordinator();
     let timeAxis: TimeAxisGeometry = { mode: "clockless" };
     const mappingCache = new DisplayTimeMappingCache();
     const geometrySvgs = new Map<SignalId, SVGSVGElement>();
@@ -757,7 +758,7 @@ export function MinimalCycleView() {
     renderCoordinator.mount(rendererHost);
     const initialSnapshot = sessionController.snapshot();
       let window: VirtualizationWindow = buildViewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
-    let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+    let projection: RenderProjection = projectionCoordinator.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
     renderer.update(projection);
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
@@ -872,7 +873,7 @@ export function MinimalCycleView() {
       const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics();
       // Keep the hot-path DOM snapshot scalar-only. Per-signal maps remain
       // available through the renderer/adapter pull diagnostics APIs.
-      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionService.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction });
+      rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction });
     };
     let currentZoom = 1;
     function syncPresentationScale() {
@@ -1048,7 +1049,7 @@ export function MinimalCycleView() {
         return;
       }
       delete rendererHost.dataset.editorIdle;
-      projection = projectionService.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
       if (changed.fullDocumentReplace === true) {
         documentEpoch.advance();
@@ -1091,7 +1092,7 @@ export function MinimalCycleView() {
       });
     };
     applyCollapsedGroupsRef.current = (ids) => {
-      projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
+      projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
       snapIndex = undefined;
       renderer.update(projection);
       refreshPlayhead.current();
@@ -1138,7 +1139,7 @@ export function MinimalCycleView() {
       viewportElement.scrollLeft = 0;
       viewportElement.scrollTop = 0;
         window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
-      projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       markOpenPhase("canonical-replaced");
       requestAnimationFrame(() => markOpenPhase("row-shell-painted"));
@@ -1232,7 +1233,7 @@ export function MinimalCycleView() {
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         const previousMountedSignals = projection.mountedSignalIds;
         window = next;
-        projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
         const mountedSignalsChanged = previousMountedSignals.length !== projection.mountedSignalIds.length
           || previousMountedSignals.some((signalId, index) => signalId !== projection.mountedSignalIds[index]);
         if (mountedSignalsChanged) snapIndex = undefined;
