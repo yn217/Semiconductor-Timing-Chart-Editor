@@ -1822,6 +1822,7 @@ export function MinimalCycleView() {
       // resolver, even when the browser reports an inner SVG path as target.
       // Their actions are routed by onSelect into SemanticCommand.
       if (target?.closest("[data-role='tree-visibility'], [data-role='tree-more'], [data-role='tree-collapse'], [data-role='tree-group-more']")) { onSelect(event); return; }
+      if (target?.closest("[data-row-id], [data-annotation-id], [data-transaction-id]")) { onSelect(event); return; }
       if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event);
     };
     const onViewportClick = (event: MouseEvent) => {
