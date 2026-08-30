@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calculateMiniMapViewportMetrics } from "../../apps/editor/src/runtime/minimap-viewport.js";
-import { pointerRatio } from "../../apps/editor/src/minimap.js";
+import { keyboardScrollDelta, pointerRatio } from "../../apps/editor/src/minimap.js";
 
 describe("MiniMap viewport projection", () => {
   it("normalizes vertical and horizontal scroll into bounded ratios", () => {
@@ -15,5 +15,11 @@ describe("MiniMap viewport projection", () => {
     expect(pointerRatio(10, 0, 0)).toBe(0);
     expect(pointerRatio(10, 0, Number.NaN)).toBe(0);
     expect(pointerRatio(25, 0, 100)).toBe(0.25);
+  });
+
+  it("maps keyboard navigation to bounded view-only scroll deltas", () => {
+    expect(keyboardScrollDelta("ArrowRight", 100)).toEqual({ x: 80, y: 0 });
+    expect(keyboardScrollDelta("ArrowUp", 100)).toEqual({ x: 0, y: -80 });
+    expect(keyboardScrollDelta("Enter", 100)).toBeUndefined();
   });
 });

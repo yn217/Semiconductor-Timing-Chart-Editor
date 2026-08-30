@@ -10,6 +10,16 @@ export function pointerRatio(client: number, start: number, size: number): numbe
   return Math.max(0, Math.min(1, (client - start) / size));
 }
 
+export function keyboardScrollDelta(key: string, viewportSize: number): { readonly x: number; readonly y: number } | undefined {
+  const step = Math.max(1, viewportSize * 0.8);
+  if (key === "ArrowLeft") return { x: -step, y: 0 };
+  if (key === "ArrowRight") return { x: step, y: 0 };
+  if (key === "ArrowUp") return { x: 0, y: -step };
+  if (key === "ArrowDown") return { x: 0, y: step };
+  return undefined;
+}
+
+
 export function MiniMap({ document, viewport }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null> }) {
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
   const dragging = useRef(false);
@@ -27,6 +37,24 @@ export function MiniMap({ document, viewport }: { readonly document: Readonly<Ca
     return () => { element.removeEventListener("scroll", sync); observer?.disconnect(); };
   }, [document]);
   const documentRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const minimap = documentRef.current;
+    const element = viewport.current;
+    if (!minimap || !element) return undefined;
+    minimap.tabIndex = 0;
+    minimap.setAttribute("role", "application");
+    minimap.setAttribute("aria-keyshortcuts", "ArrowUp ArrowDown ArrowLeft ArrowRight Home End");
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Home") { event.preventDefault(); element.scrollTo({ left: 0, top: 0 }); return; }
+      if (event.key === "End") { event.preventDefault(); element.scrollTo({ left: element.scrollWidth, top: element.scrollHeight }); return; }
+      const delta = keyboardScrollDelta(event.key, Math.min(element.clientWidth, element.clientHeight));
+      if (!delta) return;
+      event.preventDefault();
+      element.scrollBy({ left: delta.x, top: delta.y });
+    };
+    minimap.addEventListener("keydown", onKeyDown);
+    return () => minimap.removeEventListener("keydown", onKeyDown);
+  }, [viewport]);
   const pan = (clientX: number, clientY: number) => {
     const element = viewport.current;
     const minimap = documentRef.current;
