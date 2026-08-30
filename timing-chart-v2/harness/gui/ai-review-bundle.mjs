@@ -20,3 +20,9 @@ export function createAiReviewBundle({ gitHead, scenario, viewport, dpr = 1, act
     ],
   };
 }
+
+export async function writeAiReviewBundle(path, bundle, writeFile = (file, contents) => import("node:fs/promises").then(({ writeFile: save }) => save(file, contents))) {
+  if (!bundle?.testedCommit || !bundle?.scenario) throw new Error("A valid AI review bundle is required");
+  await writeFile(path, `${JSON.stringify(bundle, null, 2)}\n`);
+  return path;
+}
