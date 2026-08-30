@@ -17,16 +17,11 @@ import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
-import { DocumentEpoch } from "./runtime/document-epoch.js";
-import { EditorSessionController } from "./runtime/editor-session-controller.js";
 import { RenderCoordinator } from "./runtime/render-coordinator.js";
-import { ProjectionCoordinator } from "./runtime/projection-coordinator.js";
-import { DisplayMappingCoordinator } from "./runtime/display-mapping-coordinator.js";
-import { GeometryRegistry } from "./runtime/geometry-registry.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
-import { SelectionController } from "./runtime/selection-controller.js";
+import { EditorApplicationRuntime } from "./runtime/editor-application-runtime.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -641,15 +636,16 @@ export function MinimalCycleView() {
     const gridElement = gridLayer.current;
     if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
-    const sessionController = new EditorSessionController(initialDocument);
+    const runtime = new EditorApplicationRuntime(initialDocument);
+    const sessionController = runtime.session;
     let session = sessionController.current();
-    const documentEpoch = new DocumentEpoch();
+    const documentEpoch = runtime.documentEpoch;
     const adapter = new ProductionWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
-    const projectionCoordinator = new ProjectionCoordinator();
+    const projectionCoordinator = runtime.projection;
     let timeAxis: TimeAxisGeometry = { mode: "clockless" };
-    const mappingCache = new DisplayMappingCoordinator();
-    const geometryRegistry = new GeometryRegistry();
+    const mappingCache = runtime.displayMapping;
+    const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
     const openPhaseMarks: Record<string, number> = {};
@@ -1530,7 +1526,7 @@ export function MinimalCycleView() {
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
     const rangeDragController = new RangeDragController();
-    const selectionController = new SelectionController();
+    const selectionController = runtime.selection;
     let suppressCanvasClick = false;
     let suppressRulerClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
