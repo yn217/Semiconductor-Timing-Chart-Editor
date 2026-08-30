@@ -275,6 +275,30 @@ test("moves the whole Annotation by visual offsets and resets offsets independen
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
 });
 
+test("cancels an active Annotation drag when New replaces the document", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const owner = await createAnnotation(page, "dependency");
+  const body = owner.locator("[data-role='annotation-body']");
+  await body.dispatchEvent("pointerdown", { button: 0, clientX: 100, clientY: 100, pointerId: 19 });
+  await body.dispatchEvent("pointermove", { clientX: 130, clientY: 120, pointerId: 19 });
+  await expect(owner).toHaveCSS("translate", "30px 20px");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("unsaved-discard").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(0);
+
+  await host.locator("[data-role='timing-chart-surface']").dispatchEvent("pointerup", { clientX: 180, clientY: 140, pointerId: 19 });
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("keeps semantic alignment through reorder, zoom, and scroll without waveform regeneration", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
