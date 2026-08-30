@@ -27,7 +27,7 @@ import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
-import { parseOpenDocument } from "./file-document-controller.js";
+import { parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -1222,7 +1222,7 @@ export function MinimalCycleView() {
       };
       let text: string;
       try {
-        text = serializeCanonicalDocument(session.getSnapshot().document);
+        text = serializeSaveDocument(session.getSnapshot().document);
       } catch (error) {
         reportSaveFailure(error, "serialize");
         return undefined;
