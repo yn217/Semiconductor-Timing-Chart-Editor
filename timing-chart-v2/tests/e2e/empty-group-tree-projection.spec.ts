@@ -39,6 +39,7 @@ test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Red
   const initialGroupIds = await bottomGroups.evaluateAll((targets) => targets.map((target) => (target as HTMLElement).dataset.groupTarget).filter((id): id is string => Boolean(id)));
   expect((await allTreeGroupIds(page)).sort()).toEqual([...initialGroupIds].sort());
 
+  await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("create-group").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(bottomGroups).toHaveCount(initialGroupCount + 1);
@@ -52,6 +53,7 @@ test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Red
 
   const groupName = page.getByTestId("inspector").getByLabel("Inspector group name");
   await groupName.fill("Empty Review Group");
+  await groupName.press("Enter");
   await page.getByTestId("inspector").getByTestId("apply-group-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`)).toContainText("Empty Review Group");
@@ -87,6 +89,7 @@ test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Red
     mimeType: "application/json",
     buffer: await readFile(savedPath!),
   });
+  await page.getByTestId("unsaved-discard").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(bottomGroups).toHaveCount(initialGroupCount + 1);
   expect(await allTreeGroupIds(page)).toContain(groupId);
@@ -103,6 +106,7 @@ test("creates three distinct empty groups without omissions or duplicates", asyn
   const bottomGroups = page.locator("[data-group-target]");
   const initialGroupCount = await bottomGroups.count();
   for (let index = 0; index < 3; index += 1) {
+    await page.getByRole("button", { name: "Add signal or group" }).click();
     await page.getByTestId("create-group").click();
     await expect(host).toHaveAttribute("data-editor-idle", "true");
   }
