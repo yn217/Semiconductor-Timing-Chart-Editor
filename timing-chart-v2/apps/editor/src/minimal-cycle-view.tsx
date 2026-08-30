@@ -1494,7 +1494,7 @@ export function MinimalCycleView() {
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
-    let rangeDrag: { readonly start: number; readonly anchor: number; readonly startClientX: number; readonly surface: "ruler" | "waveform"; moved: boolean } | undefined;
+    let rangeDrag: { readonly start: number; readonly anchor: number; readonly selectedCycle: number; readonly startClientX: number; readonly surface: "ruler" | "waveform"; moved: boolean } | undefined;
     let suppressCanvasClick = false;
     let suppressRulerClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
@@ -1571,7 +1571,7 @@ export function MinimalCycleView() {
       if (event.button !== 0 || !isTimeDomainPointerTarget(event)) return;
       const cycle = cycleBoundaryAtPointerX(event.clientX);
       if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
-      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false };
+      rangeDrag = { start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, selectedCycle: selectedCycleRef.current, startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false };
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
       event.preventDefault();
     };
@@ -1581,9 +1581,14 @@ export function MinimalCycleView() {
       if (cycle === undefined) return;
       if (!rangeDrag.moved && Math.abs(event.clientX - rangeDrag.startClientX) < 4) return;
       rangeDrag.moved = true;
+      // The preview and playhead consume the same interaction cycle before
+      // any canonical/range state is committed on pointerup.
+      selectedCycleRef.current = cycle;
       rendererHost.dataset.rangePreview = `${Math.min(rangeDrag.anchor, cycle)}:${Math.max(rangeDrag.anchor, cycle)}`;
+      rendererHost.dataset.rangePreviewCycle = String(cycle);
       rendererHost.dataset.rangeDrag = "active";
       refreshRangePreview();
+      refreshPlayhead.current();
       event.preventDefault();
     };
     const onRangePointerUp = (event: PointerEvent) => {
@@ -1591,10 +1596,13 @@ export function MinimalCycleView() {
       const cycle = cycleBoundaryAtPointerX(event.clientX) ?? rangeDrag.start;
       if (!rangeDrag.moved) {
         const dragSurface = rangeDrag.surface;
+        selectedCycleRef.current = rangeDrag.selectedCycle;
         rangeDrag = undefined;
         delete rendererHost.dataset.rangeDrag;
         delete rendererHost.dataset.rangePreview;
+        delete rendererHost.dataset.rangePreviewCycle;
         refreshRangePreview();
+        refreshPlayhead.current();
         suppressCanvasClick = true;
         suppressRulerClick = dragSurface === "ruler";
         const clickCycle = dragSurface === "ruler" ? cycle : cycleBoundaryAtX(event.clientX);
@@ -1606,13 +1614,16 @@ export function MinimalCycleView() {
       }
       const next = rangeFromBoundaries(rangeDrag.anchor, cycle, session.getSnapshot().document.timeline.cycleCount);
       setRangeSelectionActive(true);
+      selectedCycleRef.current = Math.min(next.start, session.getSnapshot().document.timeline.cycleCount);
       setTimelineRange(next);
       setSelectedCycle(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
       rendererHost.dataset.selectedCycle = String(Math.min(next.start, session.getSnapshot().document.timeline.cycleCount));
       const dragSurface = rangeDrag.surface;
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
+      delete rendererHost.dataset.rangePreviewCycle;
       refreshRangePreview();
+      refreshPlayhead.current();
       rangeDrag = undefined;
       suppressCanvasClick = true;
       suppressRulerClick = dragSurface === "ruler";
@@ -1622,16 +1633,20 @@ export function MinimalCycleView() {
     };
     const onRangePointerCancel = () => {
       if (!rangeDrag) return;
+      selectedCycleRef.current = rangeDrag.selectedCycle;
       rangeDrag = undefined;
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
+      delete rendererHost.dataset.rangePreviewCycle;
       refreshRangePreview();
     };
     const onRangeKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape" || !rangeDrag) return;
+      selectedCycleRef.current = rangeDrag.selectedCycle;
       rangeDrag = undefined;
       delete rendererHost.dataset.rangeDrag;
       delete rendererHost.dataset.rangePreview;
+      delete rendererHost.dataset.rangePreviewCycle;
       refreshRangePreview();
     };
     const clearDropState = () => {

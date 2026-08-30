@@ -79,6 +79,31 @@ test("accepts range drag from waveform, semantic row, comment row, blank timing 
   expect(await viewState(page)).toEqual(normalBefore);
 });
 
+test("keeps the preview boundary and current-cycle playhead on one pointer snapshot", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  const wave = host.locator("[data-role='stable-waveform-surface']");
+  const waveBox = await wave.boundingBox();
+  expect(waveBox).not.toBeNull();
+  const start = await cyclePoint(page, 2);
+  const first = await cyclePoint(page, 6);
+  const second = await cyclePoint(page, 9);
+  const y = waveBox!.y + waveBox!.height / 2;
+  await page.mouse.move(start.x, y);
+  await page.mouse.down();
+  for (const point of [first, second]) {
+    await page.mouse.move(point.x, y);
+    await expect(host).toHaveAttribute("data-range-drag", "active");
+    const previewCycle = await host.getAttribute("data-range-preview-cycle");
+    expect(previewCycle).toMatch(/^(6|9)$/);
+    await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", previewCycle!);
+  }
+  await page.mouse.up();
+  await expect(host).not.toHaveAttribute("data-range-preview-cycle");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("keeps direct range interaction geometry-backed after scroll and zoom", async ({ page }) => {
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
