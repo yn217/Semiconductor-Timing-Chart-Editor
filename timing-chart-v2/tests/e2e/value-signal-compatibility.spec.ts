@@ -40,7 +40,7 @@ test("shared ValueSignal policy keeps Quick Values renderable through Save/Open"
   const eventRow = host.locator("[data-role='frozen-row'][data-row-id='sig_event']");
   await eventRow.click();
   const bottom = page.getByTestId("bottom-editor");
-  await bottom.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true }).click();
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
   await bottom.getByTestId("event-presets").click();
   await bottom.locator(".event-add").getByRole("group", { name: "Quick values" }).getByRole("button", { name: "RISE", exact: true }).click();
   await bottom.getByTestId("add-signal-event").click();
@@ -73,7 +73,7 @@ test("incompatible State to Binary conversion is rejected before canonical commi
   const beforeDirty = await page.getByTestId("dirty-status").textContent();
   await inspector.getByLabel("Inspector signal type").selectOption("binary");
   await inspector.getByTestId("apply-inspector-signal").click();
-  await bottom.locator(".bottom-tabs").getByRole("button", { name: "Problems", exact: true }).click();
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("Cannot convert state to binary");
   expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
   expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
