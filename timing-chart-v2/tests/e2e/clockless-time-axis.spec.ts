@@ -157,6 +157,19 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
   await expect(page.getByTestId("inspector").getByLabel("Transaction lane")).toHaveValue("lane_0");
 });
 
+test("Bottom Transaction editor deletes its displayed stable target", async ({ page }) => {
+  await page.goto("/");
+  const transaction = { id: "txn_delete", name: "Delete me", start: 1, end: 4, laneId: "lane_0" };
+  await openJson(page, { ...base("transaction-delete", "Transaction Delete", [data], [data.id]), transactions: [transaction] });
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  const editor = page.getByTestId("transaction-editor");
+  await editor.locator(".transaction-list").getByRole("button", { name: /Delete me/ }).click();
+  await expect(editor.getByTestId("delete-bottom-transaction")).toBeVisible();
+  await editor.getByTestId("delete-bottom-transaction").click();
+  await expect(page.locator("[data-transaction-id='txn_delete']")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
 test("standalone Spacer clipboard preserves height and creates a fresh ID", async ({ page }) => {
   await page.goto("/");
   const baseDocument = base("spacer-clipboard", "Spacer Clipboard", [data], ["spacer_original", data.id]);
