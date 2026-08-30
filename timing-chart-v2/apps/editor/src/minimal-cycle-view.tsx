@@ -27,7 +27,7 @@ import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
-import { parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
+import { createNewDocument, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -1208,7 +1208,7 @@ export function MinimalCycleView() {
       markOpenPhase("validate-done");
       replaceDocument(parsed, parsed.warnings);
     };
-    newDocument.current = () => { beginOpenMeasurement(); replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] }); };
+    newDocument.current = () => { beginOpenMeasurement(); replaceDocument(createNewDocument(cycleDocument, `document_${Date.now()}`)); };
     saveDocument.current = () => {
       const reportSaveFailure = (error: unknown, stage: "validate" | "serialize" | "storage") => {
         const candidate = error as { problems?: unknown };

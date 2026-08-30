@@ -9,3 +9,15 @@ export function parseOpenDocument(text: string): ReturnType<typeof parseDocument
 export function serializeSaveDocument(document: CanonicalDocument): string {
   return serializeCanonicalDocument(document);
 }
+
+/** Pure New boundary: retain the base signal/group layout and clear document-scoped content. */
+export function createNewDocument(base: CanonicalDocument, documentId: string): CanonicalDocument {
+  return {
+    ...base,
+    document: { ...base.document, id: documentId, title: "Untitled Timing Chart" },
+    annotations: [],
+    bookmarks: [],
+    timeGroups: [],
+    transactions: [],
+  };
+}
