@@ -3883,8 +3883,8 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(quickValue(signal));
   const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
-  const [preview, setPreview] = useState(false);
   const [presetsOpen, setPresetsOpen] = useState(false);
+  const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = signal.values.find((change) => change.start === selectedStart);
   const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
@@ -3911,10 +3911,17 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       try {
         const parsed: unknown = JSON.parse(String(reader.result));
         const values = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "values" in parsed ? (parsed as { values: unknown }).values : undefined);
-        if (!Array.isArray(values) || values.length === 0 || values.some((item) => !item || typeof item !== "object" || !Number.isInteger((item as { start?: unknown }).start) || !((item as { value?: unknown }).value === undefined || typeof (item as { value?: unknown }).value === "string" || typeof (item as { value?: unknown }).value === "number"))) return;
+        if (!Array.isArray(values) || values.length === 0 || values.some((item) => !item || typeof item !== "object" || !Number.isInteger((item as { start?: unknown }).start) || !((item as { value?: unknown }).value === undefined || typeof (item as { value?: unknown }).value === "string" || typeof (item as { value?: unknown }).value === "number"))) {
+          setImportStatus("Import rejected: expected a non-empty event values array.");
+          return;
+        }
         emitValue(values as ValueSignal["values"]);
-      } catch { /* Invalid files remain view-only and do not enter the command path. */ }
+        setImportStatus(`Imported ${values.length} event${values.length === 1 ? "" : "s"}`);
+      } catch {
+        setImportStatus("Import rejected: invalid JSON.");
+      }
     };
+    reader.onerror = () => setImportStatus("Import rejected: file could not be read.");
     reader.readAsText(file);
   };
   return <div className="event-editor">
@@ -3924,16 +3931,11 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       <button type="button" className="bottom-action" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
       <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="event-import-action"><RibbonIcon name="i-import" /><span>Import...</span></button>
       <button type="button" className="bottom-action" onClick={exportValues} data-testid="event-export-action"><RibbonIcon name="i-export" /><span>Export...</span></button>
-      <button type="button" className="bottom-action" onClick={() => setPreview((current) => !current)} aria-pressed={preview} data-testid="event-preview-action"><RibbonIcon name="i-preview" /><span>Preview</span></button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
-      <button type="button" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate-row">Duplicate</button>
       <button type="button" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
-      <button type="button" onClick={() => fileInput.current?.click()} data-testid="event-import">Import</button>
-      <button type="button" onClick={exportValues} data-testid="event-export">Export</button>
-      <button type="button" onClick={() => setPreview((current) => !current)} data-testid="event-preview">Preview Update</button>
       <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import signal events" onChange={(event) => { const file = event.target.files?.[0]; if (file) importValues(file); event.currentTarget.value = ""; }} />
       {presetsOpen && <div className="event-presets" role="group" aria-label="Event value presets"><QuickValues signal={signal} setValue={setValue} /></div>}
-      {preview && <output className="event-preview" data-testid="event-preview-status">Preview only · canonical data unchanged</output>}
+      <output data-testid="event-import-status">{importStatus}</output>
     </div>
     <div className="event-table" role="table" aria-label="Signal events">
       <div className="event-row event-columns" role="row"><span>Start</span><span>Value</span><span>End</span><span>Duration</span><span>Comment</span><span>Actions</span></div>

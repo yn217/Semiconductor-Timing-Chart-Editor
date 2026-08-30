@@ -79,3 +79,23 @@ test("incompatible State to Binary conversion is rejected before canonical commi
   expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(beforeDirty);
 });
+
+test("Event Table exposes one action route and visibly rejects invalid imports", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_event']").click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
+  const toolbar = bottom.getByTestId("signal-event-toolbar");
+  for (const testId of ["event-duplicate", "event-import-action", "event-export-action", "event-add-row", "event-delete-row"]) await expect(toolbar.getByTestId(testId)).toHaveCount(1);
+  await expect(toolbar.getByRole("button", { name: "Preview", exact: true })).toHaveCount(0);
+  await expect(toolbar.getByRole("button", { name: "Preview Update", exact: true })).toHaveCount(0);
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+  await bottom.getByLabel("Import signal events").setInputFiles({ name: "invalid.json", mimeType: "application/json", buffer: Buffer.from("not-json") });
+  await expect(bottom.getByTestId("event-import-status")).toHaveText("Import rejected: invalid JSON.");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
