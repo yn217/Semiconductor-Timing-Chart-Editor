@@ -49,3 +49,25 @@ test("Advanced JSON preserves every semantic validation problem", async ({ page 
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("Advanced JSON validates a selected object against the canonical document contract", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  const json = page.getByTestId("json-panel");
+  await json.getByTestId("json-advanced-toggle").click();
+  await json.getByLabel("JSON scope").selectOption("selected");
+  const editor = json.getByLabel("Advanced JSON");
+  const selected = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
+  (selected.values as Array<Record<string, unknown>>)[1] = { ...(selected.values as Array<Record<string, unknown>>)[1], start: -1 };
+  await editor.fill(JSON.stringify(selected, null, 2));
+  await json.getByRole("button", { name: "Validate", exact: true }).click();
+  await expect(json).toContainText("Invalid: SCHEMA_MINIMUM");
+  await bottom.getByRole("tab", { name: "Problems", exact: true }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("SCHEMA_MINIMUM");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});

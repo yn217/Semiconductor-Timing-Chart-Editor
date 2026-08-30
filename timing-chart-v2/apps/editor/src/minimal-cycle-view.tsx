@@ -3413,6 +3413,17 @@ function JsonPanel({ document }: { readonly document: CanonicalDocument }) {
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>Generated JSON</strong><span aria-label="JSON read-only status">Read only</span><button type="button" onClick={() => setStatus("Formatted")}>Format</button><button type="button" onClick={() => setStatus(validateCanonicalDocument(document).length === 0 ? "Valid" : "Invalid")}>Validate</button><button type="button" onClick={() => { void navigator.clipboard?.writeText(text); setStatus("Copied"); }}>Copy</button><select aria-label="JSON scope"><option>Selected Object</option><option>Whole Document</option></select><output>{status}</output></div><pre>{text}</pre></section>;
 }
 
+function replaceSelectedJsonObject(document: CanonicalDocument, value: object, selectedSignal: Signal | undefined, selectedGroup: SignalGroup | undefined, selectedAnnotation: Annotation | undefined, selectedTransaction: Transaction | undefined): CanonicalDocument {
+  if (selectedSignal) return { ...document, signals: document.signals.map((item) => item.id === selectedSignal.id ? value as Signal : item) };
+  if (selectedAnnotation) return { ...document, annotations: document.annotations.map((item) => item.id === selectedAnnotation.id ? value as Annotation : item) };
+  if (selectedGroup) return { ...document, signalGroups: document.signalGroups.map((item) => item.id === selectedGroup.id ? value as SignalGroup : item) };
+  return { ...document, transactions: document.transactions.map((item) => item.id === selectedTransaction?.id ? value as Transaction : item) };
+}
+
+function selectedJsonProblem(code: string, path: string, message: string): DocumentProblem {
+  return { code, path, message, severity: "error", operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation", stage: "validate", recommendation: "Correct the selected object and validate again.", detail: "advanced-json:validate:selected" };
+}
+
 function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onCommand, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => void; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
   const text = useMemo(() => serializeCanonicalDocument(document), [document]);
   const [advanced, setAdvanced] = useState(false);
@@ -3438,7 +3449,10 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
     const value = parseDraft();
     if (value === undefined) return;
     if (scope === "document") { const problems = validateCanonicalDocument(value as CanonicalDocument); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
-    else setStatus(selected && typeof value === "object" && value !== null && !Array.isArray(value) && (value as { id?: unknown }).id === selected.id ? "Valid" : "Invalid selected object");
+    else if (!selected) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_REQUIRED", "$", "Select an object before validating selected JSON.")); setStatus("No selected object"); }
+    else if (typeof value !== "object" || value === null || Array.isArray(value)) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_SHAPE", "$", "Selected JSON must be an object.")); setStatus("Invalid selected object"); }
+    else if ((value as { id?: unknown }).id !== selected.id) { onDiagnostic(selectedJsonProblem("SELECTED_OBJECT_ID_MISMATCH", "$.id", "Selected object ID cannot change.")); setStatus("Invalid selected object ID"); }
+    else { const problems = validateCanonicalDocument(replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction)); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
   };
   const apply = () => {
     if (!advanced) return;
@@ -3448,10 +3462,7 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
     if (scope === "selected") {
       if (!selected) { setStatus("No selected object"); return; }
       if ((value as { id?: unknown }).id !== selected.id) { setStatus("Selected object ID cannot change"); return; }
-      if (selectedSignal) next = { ...document, signals: document.signals.map((item) => item.id === selectedSignal.id ? value as Signal : item) };
-      else if (selectedAnnotation) next = { ...document, annotations: document.annotations.map((item) => item.id === selectedAnnotation.id ? value as Annotation : item) };
-      else if (selectedGroup) next = { ...document, signalGroups: document.signalGroups.map((item) => item.id === selectedGroup.id ? value as SignalGroup : item) };
-      else next = { ...document, transactions: document.transactions.map((item) => item.id === selectedTransaction?.id ? value as Transaction : item) };
+      next = replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction);
     }
     const problems = validateCanonicalDocument(next);
     if (problems.length > 0) { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and apply again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); return; }
