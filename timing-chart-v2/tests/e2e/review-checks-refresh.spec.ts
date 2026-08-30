@@ -20,3 +20,12 @@ test("Review Refresh Checks is view-only", async ({ page }) => {
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
   await expect(surface).toHaveAttribute("data-render-counters", before.counters!);
 });
+
+test("Problems exposes Clear Filter for filter clearing", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const problems = page.getByTestId("problems-panel");
+  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
+  await expect(problems.getByRole("button", { name: "Clear Filter", exact: true })).toBeVisible();
+  await expect(problems.getByRole("button", { name: "Refresh", exact: true })).toHaveCount(0);
+});
