@@ -100,6 +100,7 @@ export function mayRouteGlobalShortcut(event: Pick<KeyboardEvent, "isComposing" 
 }
 
 export type ProblemTarget = Readonly<{ kind: "signal" | "group" | "annotation" | "transaction" | "timeline"; id?: string }>;
+export type ProblemTargetHint = Readonly<{ readonly entityId?: string; readonly objectId?: string; readonly objectType?: string }>;
 
 /** Resolves canonical validation paths/IDs without persisting diagnostics as editor state. */
 export function resolveProblemTarget(path: string, document: {
@@ -107,7 +108,14 @@ export function resolveProblemTarget(path: string, document: {
   readonly signalGroups: readonly Readonly<{ id: string }>[];
   readonly annotations: readonly Readonly<{ id: string }>[];
   readonly transactions?: readonly Readonly<{ id: string }>[];
-}): ProblemTarget {
+}, hint: ProblemTargetHint = {}): ProblemTarget {
+  const stableId = hint.objectId ?? hint.entityId;
+  if (stableId) {
+    if (document.signals.some((item) => item.id === stableId)) return { kind: "signal", id: stableId };
+    if (document.signalGroups.some((item) => item.id === stableId)) return { kind: "group", id: stableId };
+    if (document.annotations.some((item) => item.id === stableId)) return { kind: "annotation", id: stableId };
+    if (document.transactions?.some((item) => item.id === stableId)) return { kind: "transaction", id: stableId };
+  }
   const match = /^\$\.(signals|signalGroups|annotations|transactions)\[(\d+)\]/.exec(path);
   if (!match) return { kind: "timeline" };
   const index = Number(match[2]);

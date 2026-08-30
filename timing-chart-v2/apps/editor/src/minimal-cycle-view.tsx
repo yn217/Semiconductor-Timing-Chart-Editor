@@ -2102,8 +2102,10 @@ export function MinimalCycleView() {
     onDelete={deleteBottomTransaction}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
-  const navigateProblem = (path: string) => {
-    const target = resolveProblemTarget(path, snapshot.document);
+  const navigateProblem = (problemOrPath: DocumentProblem | string) => {
+    const problem = typeof problemOrPath === "string" ? diagnostics.find((item) => item.path === problemOrPath) : problemOrPath;
+    const path = problem?.path ?? problemOrPath;
+    const target = resolveProblemTarget(path, snapshot.document, typeof problemOrPath === "string" ? problem : problemOrPath);
     const targetSignalId = target.kind === "signal" ? target.id as SignalId : undefined;
     setSelectedId(targetSignalId);
     selectedSignalRef.current = targetSignalId;
@@ -3094,7 +3096,7 @@ function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): 
   return directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id));
 }
 
-function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly DocumentProblem[]; readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly onNavigate: (path: string) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
+function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly DocumentProblem[]; readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly onNavigate: (problem: DocumentProblem) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
   const [severity, setSeverity] = useState<ReviewSeverity>("all");
   const [scope, setScope] = useState<ReviewScope>("all");
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -3119,7 +3121,7 @@ function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroup
     if (visible.length === 0) return;
     const nextIndex = (currentIndex + offset + visible.length) % visible.length;
     setCurrentIndex(nextIndex);
-    onNavigate(visible[nextIndex]!.path);
+    onNavigate(visible[nextIndex]!);
   };
   const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
   const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;

@@ -15,4 +15,11 @@ describe("UI interaction ownership", () => {
     });
     expect(target).toEqual({ kind: "annotation", id: "ann_a" });
   });
+
+  it("prefers a diagnostic stable entity over an array position", () => {
+    const target = resolveProblemTarget("$.signals[0].values[4].value", {
+      signals: [{ id: "sig_a" }, { id: "sig_b" }], signalGroups: [], annotations: [],
+    }, { entityId: "sig_b", objectType: "signal" });
+    expect(target).toEqual({ kind: "signal", id: "sig_b" });
+  });
 });
