@@ -17,6 +17,7 @@ import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
+import { parseSuppressedPeriods } from "./runtime/clock-input.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
@@ -40,16 +41,6 @@ type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 type PendingFileAction = Readonly<{ kind: "new" | "open"; text?: string }>;
-
-function parseSuppressedPeriods(text: string): readonly number[] {
-  const trimmed = text.trim();
-  if (trimmed.length === 0) return [];
-  const values = trimmed.split(/[\s,]+/).map((item) => Number(item));
-  if (values.some((value) => !Number.isInteger(value) || value < 0)) throw new Error("Suppressed periods must be non-negative integer slot numbers.");
-  const unique = [...new Set(values)].sort((left, right) => left - right);
-  if (unique.length !== values.length) throw new Error("Suppressed periods must not contain duplicates.");
-  return unique;
-}
 
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "logic" | "event" | "pulse" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
 
