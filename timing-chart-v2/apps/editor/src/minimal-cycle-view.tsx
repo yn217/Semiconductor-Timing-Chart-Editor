@@ -1404,13 +1404,14 @@ export function MinimalCycleView() {
       selectedTransactionRef.current = undefined;
       selectedSpacerRef.current = undefined;
       if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
-      startTransition(() => {
-        setSelectedSignalIds(nextSelected);
-        if (primary) setSelectedId(primary);
-        setSelectedGroupId(undefined);
-        setSelectedAnnotationId(undefined);
-        setSelectedTransactionId(undefined);
-      });
+      // Selection is view-only state. Commit it synchronously so the Inspector
+      // and Bottom surfaces cannot remain on the layout context while a
+      // concurrent WaveDrom/projection update is pending.
+      setSelectedSignalIds(nextSelected);
+      if (primary) setSelectedId(primary);
+      setSelectedGroupId(undefined);
+      setSelectedAnnotationId(undefined);
+      setSelectedTransactionId(undefined);
       publishState();
     };
     const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
