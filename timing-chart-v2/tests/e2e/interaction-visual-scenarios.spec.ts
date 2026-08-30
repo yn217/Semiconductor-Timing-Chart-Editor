@@ -198,3 +198,31 @@ test("captures timeline insert visual reversibility", async ({ page }, testInfo)
   await capture("after-redo");
   expect(await host.getAttribute("data-canonical-revision")).toBe(String(Number(revision) + 3));
 });
+
+test("captures Bottom Editor resize visual state without semantic mutation", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("bottom-resize");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `BOTTOM-RESIZE-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-testid='bottom-editor']", target: "bottom-editor" }, { selector: "[data-testid='bottom-resizer']", target: "bottom-resizer" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["bottom-editor", "bottom-resizer"], stableRegions: ["ribbon", "left-tree", "inspector-shell"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("before");
+  const resizer = page.getByTestId("bottom-resizer");
+  const box = await resizer.boundingBox();
+  expect(box).toBeTruthy();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y - 50);
+  await page.mouse.up();
+  await capture("after");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+});
