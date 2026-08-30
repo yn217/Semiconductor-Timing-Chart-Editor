@@ -2874,7 +2874,7 @@ function LegendView({ document, onCommand }: { readonly document: CanonicalDocum
   return <aside className={`editor-legend ${document.legend.orientation}`} data-testid="editor-legend" aria-label="Legend" tabIndex={0} data-legend-position-x={position.x} data-legend-position-y={position.y} style={{ left: `${position.x}px`, top: `${position.y}px` }} onKeyDown={nudge} onPointerDown={(event) => { if (event.button !== 0) return; dragRef.current = { offsetX: event.clientX - position.x, offsetY: event.clientY - position.y }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!dragRef.current) return; setPosition({ x: event.clientX - dragRef.current.offsetX, y: event.clientY - dragRef.current.offsetY }); }} onPointerUp={(event) => { if (!dragRef.current) return; const next = { x: event.clientX - dragRef.current.offsetX, y: event.clientY - dragRef.current.offsetY }; dragRef.current = undefined; setPosition(next); event.currentTarget.releasePointerCapture(event.pointerId); commitPosition(next); }} onPointerCancel={() => { dragRef.current = undefined; }}><strong>Legend</strong>{entries.map((entry) => <span key={entry.id} data-legend-id={entry.id} data-legend-role={entry.role}><i />{entry.label}</span>)}</aside>;
 }
 
-function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly onCommand: (command: SemanticCommand) => void }) {
+function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<{ readonly baseRevision: number; readonly command: SemanticCommand; readonly summary: string }>();
   const [status, setStatus] = useState("Ready");
@@ -2895,7 +2895,8 @@ function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: {
   const applyPreview = () => {
     if (!preview) { setStatus("Create a preview first."); return; }
     if (preview.baseRevision !== revision) { setPreview(undefined); setStatus(`Conflict · preview revision ${preview.baseRevision}, current revision ${revision}`); return; }
-    onCommand(preview.command);
+    const result = onCommand(preview.command);
+    if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
     setPreview(undefined);
     setStatus("Applied · one SemanticCommand");
   };
