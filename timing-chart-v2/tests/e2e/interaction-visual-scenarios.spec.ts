@@ -62,3 +62,30 @@ test("captures Annotation add/undo/redo visual bundles", async ({ page }, testIn
   await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(1);
   await capture("after-redo");
 });
+
+test("captures Group collapse/expand visual bundles without canonical mutation", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("group-collapse");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const group = host.locator("[data-role='left-group-header']").first();
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `GROUP-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-role='left-group-header']", target: "group:first" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["group:first"], stableRegions: ["ribbon", "ruler"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("expanded");
+  await group.locator("[data-role='tree-collapse']").click();
+  await expect(group.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "false");
+  await capture("collapsed");
+  await group.locator("[data-role='tree-collapse']").click();
+  await expect(group.locator("[data-role='tree-collapse']")).toHaveAttribute("aria-expanded", "true");
+  await capture("restored");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+});
