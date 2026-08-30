@@ -1076,32 +1076,33 @@ export function MinimalCycleView() {
     };
     newDocument.current = () => { beginOpenMeasurement(); replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] }); };
     saveDocument.current = () => {
-      try {
-        const text = serializeCanonicalDocument(session.getSnapshot().document);
-        localStorage.setItem("timing-chart-v2.recent", text);
-        session.markClean();
-        setHistory(session.historyState());
-        setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
-        return text;
-      } catch (error) {
-        const isSerializationFailure = error instanceof Error && (error.name.includes("Serialization") || error.name.includes("Canonical"));
+      const reportSaveFailure = (error: unknown, stage: "validate" | "serialize" | "storage") => {
+        const candidate = error as { problems?: unknown };
+        const problems = Array.isArray(candidate?.problems) ? candidate.problems.filter((item): item is DocumentProblem => item !== null && typeof item === "object" && typeof (item as { code?: unknown }).code === "string" && typeof (item as { path?: unknown }).path === "string" && typeof (item as { message?: unknown }).message === "string") : [];
         const reason = error instanceof Error ? error.message : "Save failed.";
-        const diagnostic: DocumentProblem = {
-          code: "SAVE_FAILED",
-          path: "$.document",
-          message: `Save document failed: ${reason}`,
-          severity: "error",
-          operation: "document.save",
-          operationLabel: "Save document",
-          source: "save",
-          stage: isSerializationFailure ? "serialize" : "storage",
-          recommendation: isSerializationFailure ? "Fix the document validation or serialization error, then retry Save." : "Retry the download or choose Save As; recent-document history may not be updated.",
-          detail: `save-failure:${isSerializationFailure ? "serialize" : "storage"}`,
-        };
-        setProblem(diagnostic.message);
-        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("save-failure:")), diagnostic]);
+        const diagnostics: readonly DocumentProblem[] = problems.length > 0
+          ? problems.map((item) => ({ ...item, severity: "error" as const, operation: "document.save", operationLabel: "Save document", source: "save" as const, stage, recommendation: "Fix the reported field and retry Save.", detail: `save-failure:${stage}:${item.code}` }))
+          : [{ code: stage === "storage" ? "SAVE_STORAGE_FAILED" : stage === "validate" ? "SAVE_VALIDATION_FAILED" : "SAVE_SERIALIZE_FAILED", path: "$.document", message: `Save document failed: ${reason}`, severity: "error" as const, operation: "document.save", operationLabel: "Save document", source: "save" as const, stage, recommendation: stage === "storage" ? "Retry Save or choose Save As; the document remains unchanged." : "Fix the reported document problem, then retry Save.", detail: `save-failure:${stage}` }];
+        setProblem(diagnostics.map((item) => item.message).join(" "));
+        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("save-failure:")), ...diagnostics]);
+      };
+      let text: string;
+      try {
+        text = serializeCanonicalDocument(session.getSnapshot().document);
+      } catch (error) {
+        reportSaveFailure(error, "serialize");
         return undefined;
       }
+      try {
+        localStorage.setItem("timing-chart-v2.recent", text);
+      } catch (error) {
+        reportSaveFailure(error, "storage");
+        return undefined;
+      }
+      session.markClean();
+      setHistory(session.historyState());
+      setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
+      return text;
     };
 
     let frame = 0;
