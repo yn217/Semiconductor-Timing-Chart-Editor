@@ -26,3 +26,17 @@ export async function writeAiReviewBundle(path, bundle, writeFile = (file, conte
   await writeFile(path, `${JSON.stringify(bundle, null, 2)}\n`);
   return path;
 }
+
+export async function captureScenarioReview({ page, scenario, gitHead, viewport, rules, actions = [], images = {}, crops = [], expectedChange = [], stableRegions = [], outputPath }) {
+  const consoleErrors = []; const pageErrors = []; const failedResources = [];
+  const onConsole = (message) => { if (message.type() === "error") consoleErrors.push(message.text()); };
+  const onPageError = (error) => pageErrors.push(String(error));
+  const onResponse = (response) => { if (response.status() >= 400) failedResources.push(response.url()); };
+  page.on("console", onConsole); page.on("pageerror", onPageError); page.on("response", onResponse);
+  const metrics = await page.evaluate((inputRules) => inputRules.flatMap((rule) => [...document.querySelectorAll(rule.selector)].map((node) => { const rect = node.getBoundingClientRect(); return { target: rule.target ?? rule.selector, text: node.textContent?.trim() ?? "", clientWidth: node.clientWidth, scrollWidth: node.scrollWidth, clientHeight: node.clientHeight, scrollHeight: node.scrollHeight, rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom } }; })), rules);
+  page.removeListener("console", onConsole); page.removeListener("pageerror", onPageError); page.removeListener("response", onResponse);
+  const diagnostics = { scenario, findings: runMechanicalDiagnostics({ scenario, elements: metrics, evidence: Object.values(images).filter(Boolean) }) .findings.concat(browserHealthFindings({ scenario, consoleErrors, pageErrors, failedResources, evidence: Object.values(images).filter(Boolean) })) };
+  const bundle = createAiReviewBundle({ gitHead, scenario, viewport, actions, images, crops, diagnostics, expectedChange, stableRegions });
+  if (outputPath) await writeAiReviewBundle(outputPath, bundle);
+  return bundle;
+}
