@@ -6,7 +6,7 @@ import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, DisplayTimeMappingCache, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
-import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
+import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
@@ -19,6 +19,7 @@ import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
 import { DocumentEpoch } from "./runtime/document-epoch.js";
 import { EditorSessionController } from "./runtime/editor-session-controller.js";
+import { RenderCoordinator } from "./runtime/render-coordinator.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -741,7 +742,8 @@ export function MinimalCycleView() {
         snapIndex = undefined;
       },
     };
-    const renderer = new StableTimingChartRenderer(provider);
+    const renderCoordinator = new RenderCoordinator(provider);
+    const renderer = renderCoordinator.renderer;
     const snapService = new SemanticSnapCandidateService();
     let snapIndex: ImmutableSnapIndex | undefined;
     const currentSnapIndex = () => {
@@ -752,7 +754,7 @@ export function MinimalCycleView() {
       }
       return snapIndex;
     };
-    renderer.mount(rendererHost);
+    renderCoordinator.mount(rendererHost);
     const initialSnapshot = sessionController.snapshot();
       let window: VirtualizationWindow = buildViewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
     let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
@@ -1971,7 +1973,7 @@ export function MinimalCycleView() {
       newDocument.current = () => undefined;
       saveDocument.current = () => undefined;
       snapTransactionCycle.current = () => undefined;
-      renderer.dispose();
+      renderCoordinator.dispose();
     };
   }, []);
 
