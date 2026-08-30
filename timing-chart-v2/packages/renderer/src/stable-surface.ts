@@ -190,7 +190,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#canonicalSignalIdSet = new Set(projection.canonicalSignalIds);
     }
     const canonical = this.#canonicalSignalIdSet;
-    if (projection.documentEpoch !== this.#documentEpoch) {
+    const documentReplaced = projection.documentEpoch !== this.#documentEpoch;
+    if (documentReplaced) {
       this.#documentEpoch = projection.documentEpoch;
       this.#fullReplaceEpochResets += 1;
       this.#dirtyWaves.clear();
@@ -206,9 +207,15 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#diagnostics = { ...this.#diagnostics, domNodeDestroys: this.#diagnostics.domNodeDestroys + 1, waveArtifactDisposals: this.#diagnostics.waveArtifactDisposals + 1 };
       }
     }
-    for (const signalId of projection.waveSignalIds) {
-      this.#dirtyWaves.add(signalId);
-      this.#waveVersions.set(signalId, (this.#waveVersions.get(signalId) ?? 0) + 1);
+    // A document replacement already clears the old owners and the isNew
+    // mounted-owner path below queues the visible Signals. Do not pre-register
+    // every offscreen canonical Signal; ordinary semantic invalidations still
+    // use the projection's explicit waveSignalIds set.
+    if (!documentReplaced) {
+      for (const signalId of projection.waveSignalIds) {
+        this.#dirtyWaves.add(signalId);
+        this.#waveVersions.set(signalId, (this.#waveVersions.get(signalId) ?? 0) + 1);
+      }
     }
     for (const [signalId, owner] of this.#waveOwners) {
       if (canonical.has(signalId)) continue;
