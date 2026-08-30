@@ -54,6 +54,27 @@ test("proves Signal visibility PNG reversibility by region", async ({ page }) =>
   expect(report.pass).toBe(true);
 });
 
+test("proves Annotation PNG reversibility by region", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(1);
+  const after = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  const undo = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  const redo = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  const report = reversiblePixelRegionReport({ before: before.data, after: after.data, undo: undo.data, redo: redo.data, width: before.width, regions: { full: { x: 0, y: 0, width: before.width, height: before.height } }, maxDelta: 0.01 });
+  expect(report.pass).toBe(true);
+});
+
 test("captures Annotation add/undo/redo visual bundles", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1672, height: 941 });
   await page.goto("/");
