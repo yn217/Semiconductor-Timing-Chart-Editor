@@ -1099,6 +1099,7 @@ export function MinimalCycleView() {
         selectedGroupRef.current = groupId;
         setSelectedGroupId(groupId);
         setSelectedId(undefined);
+        applySelectionDecorations(new Set(), undefined);
         selectedSignalRef.current = undefined;
         selectedSignalIdsRef.current = new Set();
         setSelectedSignalIds(new Set());
@@ -1131,6 +1132,7 @@ export function MinimalCycleView() {
         setSelectedGroupId(groupOwner.dataset.groupId as GroupId);
         selectedGroupRef.current = groupOwner.dataset.groupId as GroupId;
         setSelectedId(undefined);
+        applySelectionDecorations(new Set(), undefined);
         selectedSignalRef.current = undefined;
         selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedAnnotationId(undefined);
@@ -1147,6 +1149,7 @@ export function MinimalCycleView() {
         selectedAnnotationRef.current = id;
         setSelectedAnnotationId(id);
         setSelectedId(undefined);
+        applySelectionDecorations(new Set(), undefined);
         selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
@@ -1192,12 +1195,7 @@ export function MinimalCycleView() {
       if (nextSelected.size === 0) nextSelected.add(signal.id);
       selectedSignalIdsRef.current = nextSelected;
       const primary = nextSelected.has(signal.id) ? signal.id : [...nextSelected][0];
-      for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
-        const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
-        const selected = rowId !== undefined && nextSelected.has(rowId);
-        row.dataset.selected = String(selected);
-        row.setAttribute("aria-selected", String(selected));
-      }
+      applySelectionDecorations(nextSelected, primary);
       if (primary) { rendererHost.dataset.selectedSignalId = primary; selectedSignalRef.current = primary; }
       focusTreeItem(target);
       selectedAnnotationRef.current = undefined;
@@ -1716,6 +1714,7 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = annotation.id;
     setSelectedAnnotationId(annotation.id);
     setSelectedId(undefined);
+    applySelectionDecorations(new Set(), undefined);
     setSelectedTransactionId(undefined);
     selectedTransactionRef.current = undefined;
     if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
@@ -1728,6 +1727,7 @@ export function MinimalCycleView() {
     setSelectedGroupId(undefined);
     setSelectedTransactionId(undefined);
     selectedTransactionRef.current = undefined;
+    applySelectionDecorations(new Set(), undefined);
     if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
   };
   const deleteBottomSignal = () => {
@@ -1809,6 +1809,7 @@ export function MinimalCycleView() {
     selectedSignalRef.current = undefined; setSelectedId(undefined);
     selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
     selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
+    applySelectionDecorations(new Set(), undefined);
     if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
   };
   const transactionEditor = <TransactionEditor
@@ -1835,16 +1836,31 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = target.kind === "annotation" ? target.id as AnnotationId : undefined;
     setSelectedTransactionId(target.kind === "transaction" ? target.id as TransactionId : undefined);
     selectedTransactionRef.current = target.kind === "transaction" ? target.id as TransactionId : undefined;
+    applySelectionDecorations(targetSignalId ? new Set([targetSignalId]) : new Set(), targetSignalId);
     if (target.kind === "annotation" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
     if (target.kind === "transaction" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
     if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
+
+  function applySelectionDecorations(selected: ReadonlySet<SignalId>, primary: SignalId | undefined): void {
+    const rendererHost = host.current;
+    if (!rendererHost) return;
+    if (primary) rendererHost.dataset.selectedSignalId = primary;
+    else delete rendererHost.dataset.selectedSignalId;
+    for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
+      const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
+      const isSelected = rowId !== undefined && selected.has(rowId);
+      row.dataset.selected = String(isSelected);
+      row.setAttribute("aria-selected", String(isSelected));
+    }
+  }
 
   const clearSelection = () => {
     selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
     selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
     selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
     selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined);
+    applySelectionDecorations(new Set(), undefined);
   };
   const selectAllSignals = () => {
     const ids = snapshot.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
@@ -1860,12 +1876,7 @@ export function MinimalCycleView() {
     if (primary) {
       const rendererHost = host.current;
       if (rendererHost) {
-        rendererHost.dataset.selectedSignalId = primary;
-        for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
-          const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
-          row.dataset.selected = String(rowId !== undefined && selected.has(rowId));
-          row.setAttribute("aria-selected", String(rowId !== undefined && selected.has(rowId)));
-        }
+        applySelectionDecorations(selected, primary);
       }
     }
   };
