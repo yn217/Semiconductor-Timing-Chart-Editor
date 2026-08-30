@@ -226,3 +226,31 @@ test("captures Bottom Editor resize visual state without semantic mutation", asy
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
 });
+
+test("captures Inspector resize visual state without semantic mutation", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("inspector-resize");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const revision = await host.getAttribute("data-canonical-revision");
+  const history = await page.getByTestId("history-status").textContent();
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `INSPECTOR-RESIZE-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-testid='inspector']", target: "inspector" }, { selector: "[data-testid='inspector-resizer']", target: "inspector-resizer" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["inspector", "inspector-resizer"], stableRegions: ["ribbon", "left-tree", "bottom-editor"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("before");
+  const resizer = page.getByTestId("inspector-resizer");
+  const box = await resizer.boundingBox();
+  expect(box).toBeTruthy();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x - 50, box!.y + box!.height / 2);
+  await page.mouse.up();
+  await capture("after");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(history);
+});
