@@ -188,6 +188,17 @@ describe("deterministic document export", () => {
     expect(visibleRange.edgeCounters[0]?.label).toBe("10");
   });
 
+  it("uses effective duty and suppression when exporting clock edge counters", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      signals: [{ ...clock, generator: { ...clock.generator, period: 4, duty: 0.25, suppressedPeriods: [1] }, edgeCounter: { ...clock.edgeCounter, show: true, mode: "both" as const } }, base.signals[1]!],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.edgeCounters.map((edge) => edge.cycle)).toEqual([0, 1]);
+  });
+
   it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {
     const document = foldedFixture();
     const respected = buildExportScene(document, { format: "svg", scope: "document", foldPolicy: "respect" });

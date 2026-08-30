@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import type { Annotation, CanonicalDocument, Signal, SignalId } from "@timing-chart-v2/schema";
+import type { Annotation, CanonicalDocument, ClockSignal, Signal, SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -133,6 +133,15 @@ function waveTokenAt(wave: string, period: number, cycle: number): string {
   return wave[0] ?? "0";
 }
 
+function clockEnabledAt(changes: ClockSignal["enable"], cycle: number): boolean {
+  let value: string | number = 1;
+  for (const change of changes ?? []) {
+    if (change.start > cycle) break;
+    value = change.value;
+  }
+  return ["1", "true", "high"].includes(String(value).toLowerCase());
+}
+
 function traceYForWaveToken(token: string, row: number, height: number): number {
   const low = Math.max(1, Math.min(height - 1, 20));
   const high = Math.max(0, Math.min(height - 1, 0));
@@ -196,13 +205,16 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     if (signal.type !== "clock" || !signal.edgeCounter.show) continue;
     const period = signal.generator.period;
     const start = Math.max(0, signal.generator.start + signal.generator.phase);
-    const halfPeriod = period / 2;
+    const oppositeOffset = period * signal.generator.duty;
+    const suppressed = new Set(signal.generator.suppressedPeriods ?? []);
     const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
-    for (let cycle = start; cycle < mapping.displayCycleCount; cycle += period) {
+    for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
+      const slot = Math.round(cycle / period);
+      if (!clockEnabledAt(signal.enable, cycle) || suppressed.has(slot)) continue;
       const activeKind = signal.generator.polarity === "positive" ? "rising" : "falling";
       const oppositeKind = activeKind === "rising" ? "falling" : "rising";
       edges.push({ kind: activeKind, cycle });
-      if (cycle + halfPeriod < mapping.displayCycleCount) edges.push({ kind: oppositeKind, cycle: cycle + halfPeriod });
+      if (cycle + oppositeOffset < document.timeline.cycleCount) edges.push({ kind: oppositeKind, cycle: cycle + oppositeOffset });
     }
     const selected = edges.filter((edge) => signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === edge.kind);
     selected.sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind));
