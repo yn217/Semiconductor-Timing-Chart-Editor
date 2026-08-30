@@ -14,6 +14,7 @@ import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from 
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
+import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -899,23 +900,10 @@ export function MinimalCycleView() {
       return {};
     };
 
-    const applyResult = (result: ReturnType<CommandHistorySession["execute"]>, operation = "command", command?: SemanticCommand) => {
+    const applyResult = (result: ReturnType<CommandHistorySession["execute"]>, operation = "command", command?: SemanticCommand, batchId?: CommandId) => {
       if (!result.ok) {
-        const context = `${operation} rejected (${result.reason})`;
         const target = commandDiagnosticTarget(command);
-        const diagnostics = result.problems.map((item) => ({
-          ...item,
-          message: `[${context}] ${item.message}`,
-          severity: "error" as const,
-          operation,
-          operationLabel: operation,
-          source: "command" as const,
-          stage: "commit" as const,
-          ...(command === undefined ? {} : { commandId: command.id }),
-          ...target,
-          ...(result.reason === "stale" ? { recommendation: "Refresh the editor state and retry the operation." } : result.reason === "invalid" ? { recommendation: "Review the field and value shown in this diagnostic." } : {}),
-          detail: `command-rejection:${operation}:${result.reason}${item.detail ? `;${item.detail}` : ""}`,
-        }));
+        const diagnostics = buildCommandRejectionDiagnostics({ result, operation, commandId: command?.id ?? batchId, target });
         setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
         setRuntimeDiagnostics((current) => [
           ...current.filter((item) => !item.detail?.startsWith("command-rejection:")),
@@ -976,7 +964,7 @@ export function MinimalCycleView() {
       publishState();
     };
     execute.current = (command) => { const result = session.execute(command); applyResult(result, command.type, command); return result; };
-    executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result, `batch:${id}`); return result; };
+    executeBatch.current = (id, commands) => { const result = session.executeBatch(id, commands); applyResult(result, `batch:${id}`, undefined, id); return result; };
     undo.current = () => applyResult(session.undo(), "history.undo");
     redo.current = () => applyResult(session.redo(), "history.redo");
     const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
