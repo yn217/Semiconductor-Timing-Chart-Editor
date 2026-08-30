@@ -3,10 +3,12 @@ import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import {
   canonicalSchema,
+  DOCUMENT_RESOURCE_BUDGET,
   normalizeDocument,
   parseDocument,
   serializeCanonicalDocument,
   validateCanonicalDocument,
+  validateDocumentResourceBudget,
   type CanonicalDocument,
 } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
@@ -78,6 +80,15 @@ describe("canonical v2 schema and roundtrip", () => {
 });
 
 describe("semantic validation", () => {
+  it("enforces shared document resource budgets without truncation", () => {
+    const base = canonicalFixture();
+    expect(validateDocumentResourceBudget(base)).toEqual([]);
+    const tooManySignals = { ...base, signals: new Array(DOCUMENT_RESOURCE_BUDGET.signalCount + 1).fill(base.signals[0]) } as unknown as CanonicalDocument;
+    expect(validateDocumentResourceBudget(tooManySignals)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals", value: DOCUMENT_RESOURCE_BUDGET.signalCount + 1 })]));
+    const tooManyCycles = { ...base, timeline: { ...base.timeline, cycleCount: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1, end: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1 } } as CanonicalDocument;
+    expect(validateDocumentResourceBudget(tooManyCycles)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.timeline.cycleCount", value: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1 })]));
+  });
+
   it("accepts linked Timing Region/Ghost Trace and rejects a missing Ghost source", () => {
     const document = clone(canonicalFixture());
     const annotations = document.annotations as unknown as Array<Record<string, unknown>>;

@@ -7,3 +7,4 @@ export * from "./value-signal-compatibility.js";
 export * from "./json-syntax.js";
 export * from "./reference-registry.js";
 export * from "./clock-slots.js";
+export * from "./resource-budget.js";

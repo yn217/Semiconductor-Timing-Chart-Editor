@@ -8,7 +8,7 @@ import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/histo
 import { DeterministicExportService } from "@timing-chart-v2/export";
 import { buildHardwareHierarchyEntries, buildMiniMapOverview, DefaultProjectionService, DisplayTimeMappingCache, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { StableTimingChartRenderer, type AnnotationOverlayPrimitive, type EdgeCounterOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { parseDocument, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { parseDocument, scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
@@ -1027,6 +1027,22 @@ export function MinimalCycleView() {
     redo.current = () => applyResult(session.redo(), "history.redo");
     const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
       const canonicalDocument = canonicalDocumentOf(document);
+      const resourceProblems = validateDocumentResourceBudget(canonicalDocument);
+      if (resourceProblems.length > 0) {
+        const openProblems = resourceProblems.map((item) => ({
+          ...item,
+          severity: "error" as const,
+          operation: "document.open",
+          operationLabel: "Open document",
+          source: "open" as const,
+          stage: "validate" as const,
+          recommendation: "Reduce the document resource count, then retry Open.",
+          detail: `open-failure:${item.detail ?? item.code}`,
+        }));
+        setProblem(openProblems.map((item) => item.message).join(" "));
+        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
+        return;
+      }
       documentEpoch += 1;
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;

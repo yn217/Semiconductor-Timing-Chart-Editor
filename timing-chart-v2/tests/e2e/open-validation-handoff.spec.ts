@@ -1,5 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { readFile } from "node:fs/promises";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 test("hands a validated Open document to the new session without duplicate session validation", async ({ page }) => {
   await page.goto("/");
@@ -45,4 +46,26 @@ test("rejects an oversized Open file before reading and preserves document state
   await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
   await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
   await expect(page.getByText(/Open rejected before parsing: oversized\.tcd\.json/)).toBeVisible();
+});
+
+test("rejects an over-budget canonical resource before session replacement", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    title: await page.locator(".app-titlebar h1").textContent(),
+  };
+  const overBudget = JSON.parse(JSON.stringify(canonicalFixture())) as { timeline: { cycleCount: number; end: number } };
+  overBudget.timeline.cycleCount = 100_001;
+  overBudget.timeline.end = 100_001;
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "over-budget.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(overBudget)) });
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
+  await expect(page.getByText(/Document resource limit exceeded for cycles/)).toBeVisible();
 });
