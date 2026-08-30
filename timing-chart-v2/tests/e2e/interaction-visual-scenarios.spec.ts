@@ -33,3 +33,32 @@ test("captures Signal visibility before/after/undo/redo visual bundles", async (
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(0);
   await capture("after-redo");
 });
+
+test("captures Annotation add/undo/redo visual bundles", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("annotation-lifecycle");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `ANNOTATION-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-role='annotation-owner']", target: "annotation-owner" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["annotation-owner"], stableRegions: ["ribbon", "ruler"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("before");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(1);
+  await capture("after-add");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(0);
+  await capture("after-undo");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(1);
+  await capture("after-redo");
+});
