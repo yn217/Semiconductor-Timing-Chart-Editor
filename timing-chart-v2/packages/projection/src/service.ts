@@ -61,11 +61,8 @@ export class DefaultProjectionService implements ProjectionService {
     const mountedLeftGroupHeaders = navigationLayout.groupHeaders.filter((row) => intersects(row, viewportStart, viewportEnd));
     const mountedRowIds = mergeIds(mountedRowsOrdered.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
     this.#lastMountedRange = [mountedRowsOrdered[0]?.y ?? 0, mountedRowsOrdered.at(-1) ? mountedRowsOrdered.at(-1)!.y + mountedRowsOrdered.at(-1)!.height : 0];
-    const mountedSignalIds = mountedRowsOrdered
-      .filter((row) => row.kind === "timing" && row.visible)
-      .map((row) => row.rowId as SignalId);
-    const timingRowIds = mountedRowsOrdered.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
-    const frozenLabelRowIds = mountedRowsOrdered.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
+    const mountedMetadata = classifyMountedRows(mountedRowsOrdered);
+    const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = mountedMetadata;
     const canonicalSignalIds = document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
     const requestedWaves = request.changeSet.fullDocumentReplace
       ? mountedSignalIds
@@ -109,9 +106,7 @@ export class DefaultProjectionService implements ProjectionService {
     const mountedLeftGroupHeaders = navigationLayout.groupHeaders.filter((header) => intersects(header, start, end));
     const mountedRowIds = mergeIds(mountedRows.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
     this.#lastMountedRange = [mountedRows[0]?.y ?? 0, mountedRows.at(-1) ? mountedRows.at(-1)!.y + mountedRows.at(-1)!.height : 0];
-    const mountedSignalIds = mountedRows.filter((row) => row.kind === "timing" && row.visible).map((row) => row.rowId as SignalId);
-    const timingRowIds = mountedRows.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
-    const frozenLabelRowIds = mountedRows.filter((row) => row.kind !== "timing" || row.visible).map((row) => row.rowId);
+    const { mountedSignalIds, timingRowIds, frozenLabelRowIds } = classifyMountedRows(mountedRows);
     return {
       ...request.previous!,
       revision: request.snapshot.revision,
@@ -127,6 +122,20 @@ export class DefaultProjectionService implements ProjectionService {
       collapsedGroupIds: request.previous!.collapsedGroupIds,
     };
   }
+}
+
+function classifyMountedRows(rows: readonly RowLayoutEntry[]): { readonly mountedSignalIds: readonly SignalId[]; readonly timingRowIds: readonly RowLayoutEntry["rowId"][]; readonly frozenLabelRowIds: readonly RowLayoutEntry["rowId"][] } {
+  const mountedSignalIds: SignalId[] = [];
+  const timingRowIds: RowLayoutEntry["rowId"][] = [];
+  const frozenLabelRowIds: RowLayoutEntry["rowId"][] = [];
+  for (const row of rows) {
+    if (row.kind === "timing" && row.visible) mountedSignalIds.push(row.rowId as SignalId);
+    if (row.kind !== "timing" || row.visible) {
+      timingRowIds.push(row.rowId);
+      frozenLabelRowIds.push(row.rowId);
+    }
+  }
+  return { mountedSignalIds, timingRowIds, frozenLabelRowIds };
 }
 
 function mountRows(
