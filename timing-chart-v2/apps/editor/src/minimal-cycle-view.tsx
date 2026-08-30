@@ -14,6 +14,7 @@ import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
+import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -4441,11 +4442,6 @@ function preferredSnapKinds(type: AnnotationType): readonly SnapKind[] {
   if (type === "dependency" || type === "arrow") return ["clock-edge", "signal-transition", "bus-transition", "value-boundary", "cycle-boundary"];
   if (type === "verticalLine" || type === "marker") return ["cycle-boundary", "clock-edge"];
   return ["annotation", "marker", "value-boundary", "cycle-boundary", "cycle-center", "signal-row"];
-}
-
-/** Treat sub-half-pixel floating-point noise as exact screen-geometry alignment. */
-function normalizeSnapDistance(distance: number): number {
-  return Math.abs(distance) < 0.5 ? 0 : Math.round(distance * 100) / 100;
 }
 
 function withAddedOffset(anchor: SemanticAnchor, x: number, y: number): SemanticAnchor {
