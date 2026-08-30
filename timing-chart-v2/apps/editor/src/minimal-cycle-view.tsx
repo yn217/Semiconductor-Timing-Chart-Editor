@@ -17,6 +17,7 @@ import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
+import { ReviewWorkflow } from "./review-workflow.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -3096,58 +3097,6 @@ function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: {
     setStatus("Applied · one SemanticCommand");
   };
   return <section className="ai-operation-panel" data-testid="ai-operation-panel"><div className="ai-query-row"><RibbonIcon name="i-ai" /><label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={buildPreview}>Preview</button></div><div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>{preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span><button type="button" onClick={applyPreview}>Apply Preview</button><button type="button" onClick={() => { setPreview(undefined); setStatus("Preview cancelled · no document mutation"); }}>Cancel</button></div>}<output role="status" data-testid="ai-status">{status}</output></section>;
-}
-
-type ReviewSeverity = "all" | "error" | "warning" | "info";
-
-type ReviewScope = "all" | "selection" | "group";
-
-function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): boolean {
-  if (ids.size === 0) return false;
-  const directIds = [item.objectId, item.entityId].filter((value): value is string => typeof value === "string");
-  return directIds.some((id) => ids.has(id)) || [...ids].some((id) => item.path.includes(id));
-}
-
-function ReviewWorkflow({ diagnostics, document, selectedSignalId, selectedGroupId, onNavigate, onShowProblems, onRefreshChecks }: { readonly diagnostics: readonly DocumentProblem[]; readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly onNavigate: (path: string) => void; readonly onShowProblems: () => void; readonly onRefreshChecks: () => void }) {
-  const [severity, setSeverity] = useState<ReviewSeverity>("all");
-  const [scope, setScope] = useState<ReviewScope>("all");
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const scopedDiagnostics = useMemo(() => {
-    if (scope === "all") return diagnostics;
-    const ids = new Set<string>();
-    if (scope === "selection") {
-      if (selectedSignalId) ids.add(selectedSignalId);
-      if (selectedGroupId) ids.add(selectedGroupId);
-    } else if (selectedGroupId) {
-      ids.add(selectedGroupId);
-      const group = document.groups.find((candidate) => candidate.id === selectedGroupId);
-      for (const rowId of group?.rows ?? []) ids.add(rowId);
-    }
-    return diagnostics.filter((item) => diagnosticMatchesIds(item, ids));
-  }, [diagnostics, document.groups, scope, selectedGroupId, selectedSignalId]);
-  const visible = scopedDiagnostics.filter((item) => severity === "all" || (item.severity ?? "error") === severity);
-  useEffect(() => {
-    setCurrentIndex((index) => Math.min(index, Math.max(0, visible.length - 1)));
-  }, [visible.length, severity]);
-  const navigate = (offset: number) => {
-    if (visible.length === 0) return;
-    const nextIndex = (currentIndex + offset + visible.length) % visible.length;
-    setCurrentIndex(nextIndex);
-    onNavigate(visible[nextIndex]!.path);
-  };
-  const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
-  const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;
-  const infoCount = scopedDiagnostics.filter((item) => item.severity === "info").length;
-  return <div className="review-workflow" data-testid="review-workflow">
-    <label>Severity<select aria-label="Review severity" data-testid="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></select></label>
-    <label>Scope<select aria-label="Review scope" data-testid="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></select></label>
-    <button type="button" data-testid="review-previous" onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</button>
-    <button type="button" data-testid="review-next" onClick={() => navigate(1)} disabled={visible.length === 0}>Next</button>
-    <output data-testid="review-summary">{visible.length} of {scopedDiagnostics.length} · Errors {errorCount} · Warnings {warningCount} · Info {infoCount}</output>
-    <output data-testid="review-current-target">{visible[currentIndex]?.path ?? "No diagnostic selected"}</output>
-    <button type="button" data-testid="review-refresh-checks" onClick={onRefreshChecks}>Refresh Checks</button>
-    <button type="button" className="ribbon-tool" data-testid="review-open-problems" onClick={onShowProblems}><RibbonIcon name="i-filter" /><span>Problems</span></button>
-  </div>;
 }
 
 function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, arrowPickStatus, selectedSignalId, selectedGroupId, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, viewMode, density, workspacePreset, onDensityChange, onWorkspacePresetChange, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties }: {
