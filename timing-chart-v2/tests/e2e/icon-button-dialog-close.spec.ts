@@ -96,3 +96,20 @@ test("app-owned dialogs close with Escape without changing the document", async 
   await expect(page.getByTestId("revision-status")).toHaveText(revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
 });
+
+test("Home overflow uses the shared menu keyboard behavior and restores its invoker", async ({ page }) => {
+  await page.goto("/");
+  const ribbon = page.getByTestId("ribbon");
+  const trigger = ribbon.getByRole("button", { name: "More", exact: true });
+  await trigger.click();
+  const menu = page.getByRole("menu", { name: "More Home Commands" });
+  const items = menu.locator("button:not(:disabled)");
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press("End");
+  await expect(items.last()).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(items.first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(menu).toBeHidden();
+  await expect(trigger).toBeFocused();
+});

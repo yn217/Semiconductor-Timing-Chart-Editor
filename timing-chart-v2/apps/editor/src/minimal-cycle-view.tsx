@@ -395,7 +395,7 @@ export function MinimalCycleView() {
   useEffect(() => {
     const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
     const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
-    menu?.querySelector<HTMLButtonElement>("[role='menuitem']:not(:disabled)")?.focus();
+    menu?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     const onMenuKeyDown = (event: KeyboardEvent) => {
       const target = event.target instanceof HTMLElement ? event.target : undefined;
       const activeMenu = target?.closest<HTMLElement>("[role='menu']");
@@ -408,7 +408,7 @@ export function MinimalCycleView() {
         return;
       }
       if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-      const items = [...activeMenu.querySelectorAll<HTMLButtonElement>("[role='menuitem']:not(:disabled)")];
+      const items = [...activeMenu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
       if (items.length === 0) return;
       event.preventDefault();
       const current = items.indexOf(document.activeElement as HTMLButtonElement);
