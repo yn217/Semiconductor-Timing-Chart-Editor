@@ -23,6 +23,7 @@ export class DefaultProjectionService implements ProjectionService {
   #documentEpoch = 0;
   #canonicalSignalDocument: ProjectionRequest["snapshot"]["document"] | undefined;
   #canonicalSignalIds: readonly SignalId[] = [];
+  #visibleRowIds: readonly RowLayoutEntry["rowId"][] = [];
 
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
@@ -38,6 +39,7 @@ export class DefaultProjectionService implements ProjectionService {
       this.#navigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds));
       this.#collapsedGroupKey = collapsedGroupKey;
       this.#rowLayoutBuilds += 1;
+      this.#visibleRowIds = this.#layout.visibleRows.map((row) => row.rowId);
       this.#rowIndexById = new Map(this.#layout.navigationRows.map((row, index) => [row.rowId, index]));
       this.#navigationRowIndexById = new Map(this.#navigationLayout.navigationRows.map((row, index) => [row.rowId, index]));
       this.#groupHeaderPrefixHeights = [0];
@@ -53,7 +55,7 @@ export class DefaultProjectionService implements ProjectionService {
       return this.#projectViewportOnly(request, layout);
     }
     this.#fullVisibleRowScans += layout.visibleRows.length;
-    const visibleRowIds = layout.visibleRows.map((row) => row.rowId);
+    const visibleRowIds = this.#visibleRowIds;
     const viewportStart = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const viewportEnd = request.viewport.viewportEndY + request.viewport.overscanAfter;
     const pinned = new Set(request.viewport.pinnedRowIds);
