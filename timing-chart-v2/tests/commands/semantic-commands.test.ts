@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, ClockSignal, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -13,6 +13,16 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("validates suppressed clock slots relative to a delayed generator start", () => {
+    const source = canonicalFixture();
+    const clock = source.signals[0] as ClockSignal;
+    const document = { ...source, timeline: { ...source.timeline, end: 10, cycleCount: 10 }, signals: [{ ...clock, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [1] } }, ...source.signals.slice(1)] };
+    const valid = planCommand(document, { id: commandId("cmd_delayed_suppression_valid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [0, 2] } });
+    expect(valid.ok).toBe(true);
+    const invalid = planCommand(document, { id: commandId("cmd_delayed_suppression_invalid"), type: "signal.updateClockGenerator", signalId: clock.id, generator: { ...clock.generator, start: 4, period: 2, suppressedPeriods: [3] } });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "INVALID_SUPPRESSED_PERIODS" }] });
+  });
+
   it("exposes an exhaustive, typed command-policy code inventory", () => {
     expect(commandPolicyDescriptors()).toHaveLength(commandPolicyCodes().length);
     expect(new Set(commandPolicyDescriptors().map((descriptor) => descriptor.code)).size).toBe(commandPolicyCodes().length);

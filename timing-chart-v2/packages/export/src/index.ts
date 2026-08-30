@@ -209,7 +209,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const suppressed = new Set(signal.generator.suppressedPeriods ?? []);
     const edges: Array<{ kind: "rising" | "falling"; cycle: number }> = [];
     for (let cycle = start; cycle < document.timeline.cycleCount; cycle += period) {
-      const slot = Math.round(cycle / period);
+      const slot = Math.round((cycle - signal.generator.start) / period);
       if (!clockEnabledAt(signal.enable, cycle) || suppressed.has(slot)) continue;
       const activeKind = signal.generator.polarity === "positive" ? "rising" : "falling";
       const oppositeKind = activeKind === "rising" ? "falling" : "rising";

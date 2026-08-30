@@ -102,12 +102,13 @@ function expandedClockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: 
   const { generator } = signal;
   const pattern = expandedClockPattern(signal)[0]!;
   const staticToken = String(generator.initial);
-  const slotCount = Math.ceil(cycleCount / generator.period);
+  const timelineSlotCount = Math.ceil(cycleCount / generator.period);
   const wave: string[] = [];
   const enabled = createEnableReader(signal.enable);
-  for (let slot = 0; slot < slotCount; slot += 1) {
+  for (let slot = 0; slot < timelineSlotCount; slot += 1) {
     const cycle = slot * generator.period;
-    const active = cycle >= generator.start && enabled(cycle) && !(generator.suppressedPeriods ?? []).includes(slot);
+    const pulseSlot = cycle < generator.start ? -1 : Math.round((cycle - generator.start) / generator.period);
+    const active = cycle >= generator.start && enabled(cycle) && !(generator.suppressedPeriods ?? []).includes(pulseSlot);
     const slotWave = active ? pattern : staticToken.repeat(generator.period);
     wave.push(...slotWave.slice(0, Math.min(generator.period, cycleCount - wave.length)).split(""));
   }
@@ -151,7 +152,8 @@ function clockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: readonly
   let previous: string | undefined;
   for (let slot = 0; slot < slotCount; slot += 1) {
     const cycle = slot * generator.period;
-    const active = cycle >= generator.start && enabled(cycle) && !suppressed.has(slot);
+    const pulseSlot = cycle < generator.start ? -1 : Math.round((cycle - generator.start) / generator.period);
+    const active = cycle >= generator.start && enabled(cycle) && !suppressed.has(pulseSlot);
     const token = active ? clockToken : staticToken;
     wave.push(token === previous ? "." : token);
     previous = token;

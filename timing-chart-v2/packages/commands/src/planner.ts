@@ -15,7 +15,7 @@ import type {
   Transaction,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { isStableId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { clockSlotCount, isStableId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -691,7 +691,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (generator.start % generator.period !== 0) return fail("invalid", "UNALIGNED_CLOCK_START", "$.generator.start", "Clock start must align to the generator period.");
       if ((signal.enable ?? []).some((change) => !Number.isInteger(change.start) || change.start % generator.period !== 0)) return fail("invalid", "UNALIGNED_CLOCK_ENABLE", "$.generator.period", "Clock enable changes must align to the generator period.");
       const suppressedPeriods = generator.suppressedPeriods ?? [];
-      const periodSlots = Math.ceil(document.timeline.cycleCount / generator.period);
+      const periodSlots = clockSlotCount(generator, document.timeline.cycleCount);
       if (suppressedPeriods.some((slot) => !Number.isInteger(slot) || slot < 0 || slot >= periodSlots) || new Set(suppressedPeriods).size !== suppressedPeriods.length) return fail("invalid", "INVALID_SUPPRESSED_PERIODS", "$.generator.suppressedPeriods", `Suppressed periods must be unique integer slots within the ${periodSlots}-slot timeline.`);
       if (generator.duty !== 0.5) {
         const totalHalfCycles = generator.period * 2;

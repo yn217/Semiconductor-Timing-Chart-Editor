@@ -1,5 +1,20 @@
 import { expect, test } from "@playwright/test";
 
+test("Bottom Clock validates suppressed slots relative to delayed start", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByLabel("Clock start").fill("4");
+  await editor.getByLabel("Clock period").fill("2");
+  await editor.getByLabel("Clock suppressed periods").fill("0, 2");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
 test("Bottom Clock edits update real waveform geometry and edge-counter overlays", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
