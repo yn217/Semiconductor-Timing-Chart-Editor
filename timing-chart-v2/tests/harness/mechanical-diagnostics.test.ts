@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 describe("mechanical visual diagnostics", async () => {
-  const { runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+  const { collectDomMetrics, runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
   it("emits stable findings for clipping, overlap, duplicate text, and icon alignment", () => {
     const result = runMechanicalDiagnostics({ scenario: "fixture", evidence: ["fixture.png"], elements: [
       { target: "clipped", text: "Long", clientWidth: 10, scrollWidth: 20, rect: { left: 0, right: 20, top: 0, bottom: 10 } },
@@ -16,5 +16,11 @@ describe("mechanical visual diagnostics", async () => {
       { target: "icon", text: "OK", clientWidth: 20, scrollWidth: 20, rect: { left: 0, right: 10, top: 0, bottom: 10 }, allowOverlap: true, iconRect: { left: 4, right: 6 }, buttonRect: { left: 0, right: 10 } },
     ] });
     expect(result.findings).toEqual([]);
+  });
+  it("collects declarative metrics from a browser-like document", () => {
+    const node = { textContent: "Workspace", clientWidth: 10, scrollWidth: 20, clientHeight: 10, scrollHeight: 10, getBoundingClientRect: () => ({ left: 1, right: 21, top: 2, bottom: 12, width: 20, height: 10 }), querySelector: () => null };
+    const document = { querySelectorAll: () => [node] };
+    const metrics = collectDomMetrics(document, [{ selector: ".workspace", target: "Workspace" }]);
+    expect(metrics[0]).toMatchObject({ target: "Workspace", clientWidth: 10, scrollWidth: 20, rect: { left: 1, right: 21 } });
   });
 });

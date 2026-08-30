@@ -21,3 +21,22 @@ export function runMechanicalDiagnostics({ scenario, elements, evidence = [] }) 
   }
   return { scenario, findings };
 }
+
+/** Collect the minimal metrics needed by runMechanicalDiagnostics from a real document. */
+export function collectDomMetrics(document, rules) {
+  return rules.flatMap((rule) => [...document.querySelectorAll(rule.selector)].map((node, index) => {
+    const rect = node.getBoundingClientRect();
+    const icon = rule.iconSelector ? node.querySelector(rule.iconSelector)?.getBoundingClientRect() : undefined;
+    const button = rule.buttonSelector ? node.querySelector(rule.buttonSelector)?.getBoundingClientRect() : undefined;
+    return {
+      target: rule.target ?? `${rule.selector}[${index}]`, text: node.textContent?.trim() ?? "",
+      visible: typeof HTMLElement !== "undefined" && node instanceof HTMLElement ? getComputedStyle(node).visibility !== "hidden" && getComputedStyle(node).display !== "none" : true,
+      clientWidth: node.clientWidth, scrollWidth: node.scrollWidth, clientHeight: node.clientHeight, scrollHeight: node.scrollHeight,
+      width: rect.width, height: rect.height,
+      rect: { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom },
+      ...(icon ? { iconRect: { left: icon.left, right: icon.right, top: icon.top, bottom: icon.bottom } } : {}),
+      ...(button ? { buttonRect: { left: button.left, right: button.right, top: button.top, bottom: button.bottom } } : {}),
+      ...(rule.allowOverlap ? { allowOverlap: true } : {}), ...(rule.maxDeltaPx === undefined ? {} : { maxDeltaPx: rule.maxDeltaPx }),
+    };
+  }));
+}
