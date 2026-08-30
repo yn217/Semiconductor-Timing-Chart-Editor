@@ -26,6 +26,7 @@ import { GeometryRegistry } from "./runtime/geometry-registry.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
+import { SelectionController } from "./runtime/selection-controller.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -1465,11 +1466,9 @@ export function MinimalCycleView() {
       }
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
-      const nextSelected = event.ctrlKey || event.metaKey ? new Set(selectedSignalIdsRef.current) : new Set<SignalId>();
-      if (nextSelected.has(signal.id)) nextSelected.delete(signal.id); else nextSelected.add(signal.id);
-      if (nextSelected.size === 0) nextSelected.add(signal.id);
+      const nextSelected = selectionController.toggleSignal(selectedSignalIdsRef.current, signal.id, event.ctrlKey || event.metaKey);
       selectedSignalIdsRef.current = nextSelected;
-      const primary = nextSelected.has(signal.id) ? signal.id : [...nextSelected][0];
+      const primary = selectionController.primarySignal(nextSelected, signal.id);
       applySelectionDecorations(nextSelected, primary);
       if (primary) { rendererHost.dataset.selectedSignalId = primary; selectedSignalRef.current = primary; }
       focusTreeItem(target);
@@ -1531,6 +1530,7 @@ export function MinimalCycleView() {
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
     const rangeDragController = new RangeDragController();
+    const selectionController = new SelectionController();
     let suppressCanvasClick = false;
     let suppressRulerClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
