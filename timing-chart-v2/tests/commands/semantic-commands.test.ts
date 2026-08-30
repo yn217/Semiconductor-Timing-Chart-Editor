@@ -143,6 +143,22 @@ describe("pure Semantic Command planning", () => {
     if (plan.ok) expect(plan.document.transactions).toEqual([{ id: "txn_link", name: "Linked", start: 1, end: 3, linkedSignals: [] }]);
   });
 
+  it("converts a Clock to value signals while preserving identity and exact Undo", () => {
+    const source = canonicalFixture();
+    const clock = source.signals[0] as ClockSignal;
+    const session = new CommandHistorySession(source);
+    const result = session.execute({ id: commandId("cmd_convert_clock"), type: "signal.convertClock", signalId: clock.id, targetType: "bus" });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.signals[0]).toMatchObject({ id: clock.id, type: "bus", role: clock.role, source: clock.source, values: [{ start: 0, value: "00" }], width: 8, displayFormat: "hex" });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals[0]).toEqual(clock);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals[0]).toMatchObject({ id: clock.id, type: "bus", values: [{ start: 0, value: "00" }] });
+    const invalid = planCommand(source, { id: commandId("cmd_convert_non_clock"), type: "signal.convertClock", signalId: source.signals[1]!.id, targetType: "binary" });
+    expect(invalid).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "SIGNAL_NOT_CLOCK" }] });
+  });
+
   it("rejects deletion of a Signal referenced only by a Ghost Trace source", () => {
     const sourceSignalId = "sig_data" as SignalId;
     const ghost: Annotation = {

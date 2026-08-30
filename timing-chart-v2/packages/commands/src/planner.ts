@@ -681,6 +681,23 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.convertClock": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal) return fail("invalid", "SIGNAL_NOT_FOUND", "$.signalId", `Signal '${command.signalId}' does not exist.`);
+      if (signal.type !== "clock") return fail("invalid", "SIGNAL_NOT_CLOCK", "$.signalId", "Only Clock signals can use Clock conversion.");
+      const values: readonly SignalValueChange[] = [{ start: 0, value: command.targetType === "state" ? "IDLE" : command.targetType === "bus" ? "00" : 0 }];
+      const next: ValueSignal = command.targetType === "bus"
+        ? { id: signal.id, name: signal.name, role: signal.role, type: "bus", source: signal.source, display: { ...signal.display }, values, width: 8, displayFormat: "hex", ...(signal.spacingBefore === undefined ? {} : { spacingBefore: signal.spacingBefore }), ...(signal.spacingAfter === undefined ? {} : { spacingAfter: signal.spacingAfter }) }
+        : { id: signal.id, name: signal.name, role: signal.role, type: command.targetType, source: signal.source, display: { ...signal.display }, values, ...(signal.spacingBefore === undefined ? {} : { spacingBefore: signal.spacingBefore }), ...(signal.spacingAfter === undefined ? {} : { spacingAfter: signal.spacingAfter }) };
+      const affectedAnnotations = annotationsForSignals(document, signal.id);
+      const changeSet: ChangeSet = { rowPresentation: [signal.id], waveSemantics: [signal.id], geometryLocal: [signal.id], geometryScreenX: true, annotationPosition: affectedAnnotations, minimapOverview: true };
+      const nextTimeline = document.timeline.referenceClock === signal.id
+        ? (() => { const { referenceClock: _referenceClock, ...timeline } = document.timeline; return timeline; })()
+        : document.timeline;
+      const timelineChanged = document.timeline.referenceClock === signal.id;
+      return { ok: true, document: { ...replaceSignal(document, index, next), timeline: nextTimeline }, changeSet: { ...changeSet, ...(timelineChanged ? { timelineSemantics: true } : {}) }, inverseChangeSet: { ...changeSet, ...(timelineChanged ? { timelineSemantics: true } : {}) } };
+    }
     case "signal.updateClockGenerator": {
       const index = document.signals.findIndex((signal) => signal.id === command.signalId);
       const signal = document.signals[index];
