@@ -6,7 +6,7 @@ controllers are extracted incrementally.
 | Surface / responsibility | Current owner | Canonical mutation owner | Extraction status |
 | --- | --- | --- | --- |
 | Review scope, severity, navigation | `review-workflow.tsx` | parent `UiCommandRegistry` callback | extracted |
-| Problems presentation | `minimal-cycle-view.tsx` | parent `UiCommandRegistry` callback | pending extraction |
+| Problems presentation | `problems-panel.tsx` | parent `UiCommandRegistry` callback | extracted |
 | Viewport, timeline, ruler and grid lifecycle | `minimal-cycle-view.tsx` | parent `UiCommandRegistry` callback | pending extraction |
 | File open/save/export lifecycle | `minimal-cycle-view.tsx` | `CommandHistorySession` / SemanticCommand | pending extraction |
 | Canonical session and renderer bridge | `minimal-cycle-view.tsx` | `CommandHistorySession` | composition boundary |
