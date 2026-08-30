@@ -38,6 +38,11 @@ test("Bottom Clock edits update real waveform geometry and edge-counter overlays
   expect(afterCounterOnly.waveDromRenders).toBe(beforeCounterOnly.waveDromRenders);
   expect(afterCounterOnly.localGeometryBuilds).toBe(beforeCounterOnly.localGeometryBuilds);
 
+  const historyBeforeSuppressed = await page.getByTestId("history-status").textContent();
+  await editor.getByLabel("Clock suppressed periods").fill("99");
+  await editor.getByTestId("apply-clock-generator").click();
+  await expect(editor.getByTestId("clock-generator-error")).toContainText("INVALID_SUPPRESSED_PERIODS");
+  await expect(page.getByTestId("history-status")).toHaveText(historyBeforeSuppressed!);
   await editor.getByLabel("Clock suppressed periods").fill("1");
   await editor.getByTestId("apply-clock-generator").click();
   await expect(clock).not.toHaveAttribute("data-wave-error");

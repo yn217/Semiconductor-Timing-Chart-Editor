@@ -690,7 +690,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isInteger(generator.period) || generator.period <= 0 || !Number.isFinite(generator.duty) || generator.duty <= 0 || generator.duty > 1 || !Number.isFinite(generator.phase) || !Number.isInteger(generator.phase * 2)) return fail("invalid", "INVALID_CLOCK_GENERATOR", "$.generator", "Clock period, duty, and phase are invalid.");
       if (generator.start % generator.period !== 0) return fail("invalid", "UNALIGNED_CLOCK_START", "$.generator.start", "Clock start must align to the generator period.");
       if ((signal.enable ?? []).some((change) => !Number.isInteger(change.start) || change.start % generator.period !== 0)) return fail("invalid", "UNALIGNED_CLOCK_ENABLE", "$.generator.period", "Clock enable changes must align to the generator period.");
-      if ((generator.suppressedPeriods ?? []).some((slot) => !Number.isInteger(slot) || slot < 0) || new Set(generator.suppressedPeriods ?? []).size !== (generator.suppressedPeriods ?? []).length) return fail("invalid", "INVALID_SUPPRESSED_PERIODS", "$.generator.suppressedPeriods", "Suppressed periods must be unique non-negative integer slot numbers.");
+      const suppressedPeriods = generator.suppressedPeriods ?? [];
+      const periodSlots = Math.ceil(document.timeline.cycleCount / generator.period);
+      if (suppressedPeriods.some((slot) => !Number.isInteger(slot) || slot < 0 || slot >= periodSlots) || new Set(suppressedPeriods).size !== suppressedPeriods.length) return fail("invalid", "INVALID_SUPPRESSED_PERIODS", "$.generator.suppressedPeriods", `Suppressed periods must be unique integer slots within the ${periodSlots}-slot timeline.`);
       if (generator.duty !== 0.5) {
         const totalHalfCycles = generator.period * 2;
         const activeHalfCycles = Math.round(totalHalfCycles * generator.duty);
