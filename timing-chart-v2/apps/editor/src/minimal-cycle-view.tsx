@@ -311,6 +311,7 @@ export function MinimalCycleView() {
   const [exportVisible, setExportVisible] = useState(false);
   const [saveAsVisible, setSaveAsVisible] = useState(false);
   const dialogOriginRef = useRef<HTMLElement | null>(null);
+  const dialogOriginLabelRef = useRef<string | null>(null);
   const closeDialog = (close: () => void) => close();
   const [pendingFileAction, setPendingFileAction] = useState<PendingFileAction | undefined>();
   const pendingFileOriginRef = useRef<HTMLElement | null>(null);
@@ -354,11 +355,29 @@ export function MinimalCycleView() {
   useEffect(() => {
     const captureDialogOrigin = (event: MouseEvent) => {
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-testid='bulk-register-open'], [data-testid='hierarchy-open']") : null;
-      if (target) dialogOriginRef.current = target;
+      if (target) {
+        dialogOriginLabelRef.current = target.dataset.testid === "bulk-register-open" ? "Add signal or group" : "More tree actions";
+        dialogOriginRef.current = menuOriginRef.current ?? document.querySelector<HTMLElement>(`button[aria-label='${dialogOriginLabelRef.current}']`) ?? target;
+      }
     };
     document.addEventListener("click", captureDialogOrigin, true);
     return () => document.removeEventListener("click", captureDialogOrigin, true);
   }, []);
+  useLayoutEffect(() => {
+    if (propertiesVisible || exportVisible || saveAsVisible || hierarchyVisible || bulkRegistrationVisible) return undefined;
+    const frame = requestAnimationFrame(() => {
+      const label = dialogOriginLabelRef.current;
+      const origin = dialogOriginRef.current?.isConnected
+        ? dialogOriginRef.current
+        : label === null ? null : label === "Properties"
+          ? [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label) ?? null
+          : document.querySelector<HTMLElement>(`button[aria-label='${label}']`);
+      dialogOriginRef.current = null;
+      dialogOriginLabelRef.current = null;
+      if (origin?.isConnected) origin.focus({ preventScroll: true });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [bulkRegistrationVisible, exportVisible, hierarchyVisible, propertiesVisible, saveAsVisible]);
   useEffect(() => {
     const onDialogKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -2797,15 +2816,15 @@ export function MinimalCycleView() {
        onNew={requestNewDocument}
        onOpen={() => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }}
       onSave={() => { const text = saveDocument.current(); if (text) downloadText(text, `${snapshot.document.document.title || "timing-chart"}.tcd.json`); }}
-      onSaveAs={() => { dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }}
+      onSaveAs={() => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }}
       onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) openDocument.current(text); else setProblem("No recent document is available."); }}
-      onProperties={() => { dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
-      onExport={() => { dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); }}
+      onProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
+      onExport={() => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); }}
       onToggleInspector={() => startTransition(() => setInspectorVisible((value) => !value))}
       onToggleBottom={() => startTransition(() => setBottomVisible((value) => !value))}
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
       onOpenTimeline={() => setRibbonTab("Timeline")}
-      onOpenProperties={() => { dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
+      onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>

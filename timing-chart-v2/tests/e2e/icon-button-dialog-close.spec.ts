@@ -25,11 +25,13 @@ test("non-Home dialog close actions use the shared SVG close primitive", async (
   await page.getByTestId("hierarchy-open").click();
   await expectCloseIcon(page, "Close hierarchy");
   await page.getByRole("button", { name: "Close hierarchy", exact: true }).click();
+  await expect(page.getByRole("button", { name: "More tree actions", exact: true })).toBeFocused();
 
   await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("bulk-register-open").click();
   await expectCloseIcon(page, "Close bulk registration");
   await page.getByRole("button", { name: "Close bulk registration", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Add signal or group", exact: true })).toBeFocused();
 
   await page.getByRole("button", { name: "Save As", exact: true }).first().click();
   await expectCloseIcon(page, "Close Save As");
@@ -48,6 +50,7 @@ test("app-owned dialogs close with Escape without changing the document", async 
   await expectTabLoop(hierarchy);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Hardware Hierarchy" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "More tree actions", exact: true })).toBeFocused();
 
   await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("bulk-register-open").click();
@@ -56,6 +59,7 @@ test("app-owned dialogs close with Escape without changing the document", async 
   await expectTabLoop(bulk);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Bulk Signal Registration" })).toBeHidden();
+  await expect(page.getByRole("button", { name: "Add signal or group", exact: true })).toBeFocused();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   const fileRibbon = page.getByTestId("ribbon");
@@ -65,6 +69,7 @@ test("app-owned dialogs close with Escape without changing the document", async 
   await expectTabLoop(properties);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Document Properties" })).toBeHidden();
+  await expect(fileRibbon.getByRole("button", { name: "Properties", exact: true })).toBeFocused();
 
   const saveAsTrigger = fileRibbon.getByRole("button", { name: "Save As", exact: true });
   await saveAsTrigger.click();
