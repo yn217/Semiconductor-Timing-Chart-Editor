@@ -43,18 +43,31 @@ test("app-owned dialogs close with Escape without changing the document", async 
   await expect(page.getByRole("dialog", { name: "Bulk Signal Registration" })).toBeHidden();
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
-  await page.getByRole("button", { name: "Properties", exact: true }).first().click();
+  const fileRibbon = page.getByTestId("ribbon");
+  await fileRibbon.getByRole("button", { name: "Properties", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Document Properties" })).toBeVisible();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Document Properties" })).toBeHidden();
 
-  await page.getByRole("button", { name: "Save As", exact: true }).first().click();
+  const saveAsTrigger = fileRibbon.getByRole("button", { name: "Save As", exact: true });
+  await saveAsTrigger.click();
   await expect(page.getByRole("dialog", { name: "Save As" })).toBeVisible();
+  await page.getByRole("button", { name: "Close Save As", exact: true }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Save", exact: true }).last()).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Close Save As", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Save As" })).toBeHidden();
 
-  await page.getByRole("button", { name: "Export", exact: true }).first().click();
+  const exportTrigger = fileRibbon.getByRole("button", { name: "Export", exact: true });
+  await exportTrigger.click();
   await expect(page.getByRole("dialog", { name: "Export Timing Chart" })).toBeVisible();
+  await page.getByRole("button", { name: "Close export", exact: true }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("button", { name: "Export SVG", exact: true })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Close export", exact: true })).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Export Timing Chart" })).toBeHidden();
 
