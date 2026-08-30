@@ -71,3 +71,24 @@ test("Advanced JSON validates a selected object against the canonical document c
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("Advanced JSON keeps the draft open when Apply rejects a selected-object ID change", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  const json = page.getByTestId("json-panel");
+  await json.getByTestId("json-advanced-toggle").click();
+  await json.getByLabel("JSON scope").selectOption("selected");
+  const editor = json.getByLabel("Advanced JSON");
+  const selected = JSON.parse(await editor.inputValue()) as Record<string, unknown>;
+  selected.id = "sig_replaced";
+  await editor.fill(JSON.stringify(selected, null, 2));
+  await json.getByTestId("apply-advanced-json").click();
+  await expect(json.getByTestId("json-advanced-toggle")).toHaveAttribute("aria-pressed", "true");
+  await expect(json).toContainText("Selected object ID cannot change");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});

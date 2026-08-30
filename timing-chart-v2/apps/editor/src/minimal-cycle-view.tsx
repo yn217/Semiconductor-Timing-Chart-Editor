@@ -3424,7 +3424,7 @@ function selectedJsonProblem(code: string, path: string, message: string): Docum
   return { code, path, message, severity: "error", operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation", stage: "validate", recommendation: "Correct the selected object and validate again.", detail: "advanced-json:validate:selected" };
 }
 
-function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onCommand, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => void; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
+function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onCommand, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
   const text = useMemo(() => serializeCanonicalDocument(document), [document]);
   const [advanced, setAdvanced] = useState(false);
   const [scope, setScope] = useState<"selected" | "document">("document");
@@ -3467,7 +3467,8 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
     const problems = validateCanonicalDocument(next);
     if (problems.length > 0) { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and apply again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); return; }
     onDiagnostic(undefined);
-    onCommand({ id: nextCommandId("json_replace"), type: "document.replace", document: next });
+    const result = onCommand({ id: nextCommandId("json_replace"), type: "document.replace", document: next });
+    if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
     setAdvanced(false);
     setStatus("Applied");
   };
