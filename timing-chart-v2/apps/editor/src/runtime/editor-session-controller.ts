@@ -13,6 +13,10 @@ export class EditorSessionController {
     return this.session;
   }
 
+  snapshot(): ReturnType<CommandHistorySession["getSnapshot"]> {
+    return this.session.getSnapshot();
+  }
+
   replace(document: CanonicalDocument): CommandHistorySession {
     this.session = new CommandHistorySession(document);
     return this.session;

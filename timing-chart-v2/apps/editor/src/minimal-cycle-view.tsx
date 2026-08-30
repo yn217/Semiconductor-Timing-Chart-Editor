@@ -681,7 +681,7 @@ export function MinimalCycleView() {
     let signalById = new Map<SignalId, CanonicalDocument["signals"][number]>();
     const provider: WaveformSurfaceProvider = {
       async mountWaveBatch(requests) {
-        const currentSnapshot = session.getSnapshot();
+        const currentSnapshot = sessionController.snapshot();
         const document = currentSnapshot.document;
         const mapping = mappingCache.get(document.timeline, document.timeGroups);
         if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
@@ -746,14 +746,14 @@ export function MinimalCycleView() {
     let snapIndex: ImmutableSnapIndex | undefined;
     const currentSnapIndex = () => {
       if (!snapIndex) {
-        const snapDocument = session.getSnapshot().document;
+      const snapDocument = sessionController.snapshot().document;
         snapIndex = buildSnapIndex(snapDocument, projection, geometryMaps, mappingCache.get(snapDocument.timeline, snapDocument.timeGroups), snapService, screenGeometryScale);
         publishState();
       }
       return snapIndex;
     };
     renderer.mount(rendererHost);
-    const initialSnapshot = session.getSnapshot();
+    const initialSnapshot = sessionController.snapshot();
       let window: VirtualizationWindow = buildViewportWindow(viewportElement, initialSnapshot.document.timeline.referenceClock);
     let projection: RenderProjection = projectionService.project({ snapshot: initialSnapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
     renderer.update(projection);
