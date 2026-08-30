@@ -16,6 +16,7 @@ import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
+import { preferredSnapKinds } from "./runtime/snap-policy.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -4437,12 +4438,6 @@ function buildSnapIndex(document: CanonicalDocument, projection: RenderProjectio
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
     renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
   });
-}
-
-function preferredSnapKinds(type: AnnotationType): readonly SnapKind[] {
-  if (type === "dependency" || type === "arrow") return ["clock-edge", "signal-transition", "bus-transition", "value-boundary", "cycle-boundary"];
-  if (type === "verticalLine" || type === "marker") return ["cycle-boundary", "clock-edge"];
-  return ["annotation", "marker", "value-boundary", "cycle-boundary", "cycle-center", "signal-row"];
 }
 
 function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: number): number | undefined {
