@@ -572,10 +572,10 @@ export function MinimalCycleView() {
         } else if (selectedSignalIdsRef.current.size > 1) {
           const commands = [...selectedSignalIdsRef.current].map((id) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete" as const, signalId: id }));
           const result = executeBatch.current(nextCommandId("route_delete_selection"), commands);
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set()); }
         } else if (signalId) {
           const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set()); }
         } else if (spacerId) {
           const result = execute.current({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
           if (result.ok) selectedSpacerRef.current = undefined;
