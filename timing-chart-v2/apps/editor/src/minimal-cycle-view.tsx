@@ -28,6 +28,7 @@ import { ExportDialog } from "./export-dialog.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
 import { parseOpenDocument } from "./file-document-controller.js";
+import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -3829,10 +3830,6 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
   }
   element.replaceChildren(...lines);
 }
-
-const MiniMapOverviewRows = memo(function MiniMapOverviewRows({ overview }: { readonly overview: MiniMapOverview }) {
-  return <>{overview.rows.map((row) => <span key={row.rowId} data-row-id={row.rowId} style={{ "--minimap-row-index": row.rowIndex } as React.CSSProperties}>{row.segments.map((segment, index) => <i key={`${row.rowId}-${index}`} className={`minimap-segment minimap-segment-${segment.tone}`} style={{ left: `${Math.max(0, Math.min(100, segment.start / overview.cycleCount * 100))}%`, width: `${Math.max(0.5, Math.min(100, (segment.end - segment.start) / overview.cycleCount * 100))}%` }} />)}</span>)}</>;
-});
 
 function MiniMap({ document, viewport }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null> }) {
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
