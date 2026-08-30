@@ -3881,6 +3881,8 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal?.type === "clock" || signal?.type === "commentRow" ? "binary" : signal?.type ?? "binary");
   const [width, setWidth] = useState(signal?.type === "bus" ? signal.width ?? 1 : 1);
   const [format, setFormat] = useState<"hex" | "binary" | "symbolic">(signal?.type === "bus" ? signal.displayFormat ?? "hex" : "hex");
+  const [spacingBefore, setSpacingBefore] = useState(signal?.spacingBefore ?? 0);
+  const [spacingAfter, setSpacingAfter] = useState(signal?.spacingAfter ?? 0);
   return <section className="signal-editor" aria-label="Signal Editor" data-testid="signal-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <button type="button" className="editor-tab active">Signal</button>
@@ -3912,12 +3914,13 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>
       <form className="signal-properties" onSubmit={(event) => {
         event.preventDefault();
-        onCommand({ id: nextCommandId("properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}) });
+        onCommand({ id: nextCommandId("properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), spacingBefore, spacingAfter });
       }}>
         <label>Name<InlineNameInput value={signal?.display.name ?? ""} ariaLabel="Signal name" onRename={(nextName) => signal ? onCommand({ id: nextCommandId("bottom_signal_rename"), type: "signal.rename", signalId: signal.id, name: nextName }) : { ok: false, reason: "no-op", problems: [] }} onCommitted={setName} /></label>
         <label>Role<select aria-label="Signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
         <label>Type<select aria-label="Signal type" value={signalType} onChange={(event) => setSignalType(event.target.value as ValueSignal["type"])}><option value="binary">Binary</option><option value="bus">Bus</option><option value="state">State</option><option value="logic">Logic</option><option value="event">Event</option><option value="pulse">Pulse</option></select></label>
         {signalType === "bus" && <><label>Width<input aria-label="Signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Display<select aria-label="Bus display format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label></>}
+        {signal.type !== "commentRow" && <><label>Spacing Before<input aria-label="Signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label></>}
         <button type="submit" data-testid="save-signal-properties">Apply properties</button>
       </form>
       {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}

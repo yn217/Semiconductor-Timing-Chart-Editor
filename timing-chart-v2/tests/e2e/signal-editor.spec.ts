@@ -1,5 +1,30 @@
 import { expect, test } from "@playwright/test";
 
+test("Bottom Signal Editor applies per-signal vertical spacing through the canonical command", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const nextRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']");
+  const before = await nextRow.boundingBox();
+  const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  await editor.getByLabel("Signal spacing before").fill("3");
+  await editor.getByLabel("Signal spacing after").fill("18");
+  await editor.getByTestId("save-signal-properties").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  const after = await nextRow.boundingBox();
+  expect(before).not.toBeNull();
+  expect(after).not.toBeNull();
+  expect(after!.y - before!.y).toBeGreaterThanOrEqual(18);
+  const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
+  expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
+  await editor.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+});
+
 test("follows row selection and exposes derived Event Table columns", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
