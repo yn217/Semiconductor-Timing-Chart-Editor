@@ -2,6 +2,7 @@ import type { CanonicalDocument, DocumentProblem } from "./types.js";
 
 /** Deterministic product limits applied before a document enters the session. */
 export const DOCUMENT_RESOURCE_BUDGET = Object.freeze({
+  inputBytes: 50 * 1024 * 1024,
   signalCount: 10_000,
   groupCount: 2_000,
   annotationCount: 20_000,
@@ -9,6 +10,18 @@ export const DOCUMENT_RESOURCE_BUDGET = Object.freeze({
   cycleCount: 100_000,
   valueChangeCount: 1_000_000,
 });
+
+export function validateDocumentInputBytes(byteLength: number): readonly DocumentProblem[] {
+  if (!Number.isFinite(byteLength) || byteLength <= DOCUMENT_RESOURCE_BUDGET.inputBytes) return [];
+  return [{
+    code: "RESOURCE_LIMIT_EXCEEDED",
+    path: "$",
+    message: `Document resource limit exceeded for inputBytes: ${byteLength.toLocaleString()} exceeds ${DOCUMENT_RESOURCE_BUDGET.inputBytes.toLocaleString()}.`,
+    expected: String(DOCUMENT_RESOURCE_BUDGET.inputBytes),
+    value: byteLength,
+    detail: `resource-budget;metric=inputBytes;current=${byteLength};limit=${DOCUMENT_RESOURCE_BUDGET.inputBytes}`,
+  }];
+}
 
 type BudgetMetric = Readonly<{ name: string; path: string; current: number; limit: number }>;
 

@@ -2,6 +2,7 @@ import { migrateThroughRegistry } from "./migration.js";
 import { validateCanonicalDocument } from "./validation.js";
 import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult } from "./types.js";
+import { validateDocumentInputBytes, validateDocumentResourceBudget } from "./resource-budget.js";
 
 function cloneUnknown(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(cloneUnknown);
@@ -48,11 +49,15 @@ export function normalizeDocument(input: unknown): ParseDocumentResult {
   if (!migrated) return { ok: false, kind: "validation", problems: [{ code: "MIGRATION_FAILED", path: "$", message: "Document migration could not be selected." }] };
   const problems = validateCanonicalDocument(migrated.document);
   if (problems.length > 0) return { ok: false, kind: "validation", sourceFormatVersion: version, problems };
+  const budgetProblems = validateDocumentResourceBudget(migrated.document);
+  if (budgetProblems.length > 0) return { ok: false, kind: "validation", sourceFormatVersion: version, problems: budgetProblems };
   return { ok: true, document: migrated.document, warnings: migrated.warnings, validated: true };
 }
 
 export function parseDocument(input: string | unknown): ParseDocumentResult {
   if (typeof input !== "string") return normalizeDocument(input);
+  const inputProblems = validateDocumentInputBytes(new TextEncoder().encode(input).byteLength);
+  if (inputProblems.length > 0) return { ok: false, kind: "validation", problems: inputProblems };
   let parsed: unknown;
   try {
     parsed = JSON.parse(input);
