@@ -17,7 +17,6 @@ import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
-import { RenderCoordinator } from "./runtime/render-coordinator.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
@@ -744,7 +743,7 @@ export function MinimalCycleView() {
         snapIndex = undefined;
       },
     };
-    const renderCoordinator = new RenderCoordinator(provider);
+    const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
     const snapService = new SemanticSnapCandidateService();
     let snapIndex: ImmutableSnapIndex | undefined;

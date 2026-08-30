@@ -5,6 +5,8 @@ import { EditorSessionController } from "./editor-session-controller.js";
 import { GeometryRegistry } from "./geometry-registry.js";
 import { ProjectionCoordinator } from "./projection-coordinator.js";
 import { SelectionController } from "./selection-controller.js";
+import { RenderCoordinator } from "./render-coordinator.js";
+import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 
 /** Composition boundary for the editor's long-lived application services. */
 export class EditorApplicationRuntime {
@@ -17,5 +19,9 @@ export class EditorApplicationRuntime {
 
   constructor(readonly document: CanonicalDocument) {
     this.session = new EditorSessionController(document);
+  }
+
+  createRenderer(provider: WaveformSurfaceProvider): RenderCoordinator {
+    return new RenderCoordinator(provider);
   }
 }
