@@ -237,7 +237,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const contentWidth = LABEL_WIDTH + (range.end - range.start) * cycleWidth + 24;
   const groupBands: ExportGroupBand[] = [];
   document.signalGroups.forEach((group) => {
-    const entries = group.rows.map((id) => rowEntries.get(id)).filter((entry): entry is NonNullable<typeof entry> => entry !== undefined && entry.kind !== "spacer");
+    const entries = group.rows.map((id) => rowEntries.get(id)).filter((entry): entry is NonNullable<typeof entry> => entry !== undefined);
     const first = entries[0];
     const last = entries.at(-1);
     if (!first || !last) return;

@@ -105,6 +105,17 @@ describe("deterministic document export", () => {
     expect(renderExportSvg(scene)).toContain('stroke="none"');
   });
 
+  it("includes leading and trailing Spacer rows in Group Band export bounds", () => {
+    const base = canonicalFixture();
+    const styled = { showBackground: true, background: "#123456", opacity: 0.4, extend: "both" as const, showHeader: true };
+    const withoutSpacers = buildExportScene({ ...base, signalGroups: [{ ...base.signalGroups[0]!, style: styled }] }, { format: "svg", scope: "document" });
+    const withSpacers = buildExportScene({
+      ...base,
+      signalGroups: [{ ...base.signalGroups[0]!, rows: ["spacer_lead", ...base.signalGroups[0]!.rows, "spacer_tail"], spacers: [{ id: "spacer_lead", height: 16 }, { id: "spacer_tail", height: 20 }], style: styled }],
+    }, { format: "svg", scope: "document" });
+    expect(withSpacers.groupBands[0]!.height).toBeGreaterThan(withoutSpacers.groupBands[0]!.height);
+  });
+
   it("supports selected-range SVG and deterministic PDF bytes", async () => {
     const document = scaleFixture(3);
     const service = new DeterministicExportService();
