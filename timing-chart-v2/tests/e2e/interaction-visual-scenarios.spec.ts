@@ -170,3 +170,31 @@ test("captures left pane resize visual before/after without semantic mutation", 
   expect(await host.getAttribute("data-canonical-revision")).toBe(revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(history);
 });
+
+test("captures timeline insert visual reversibility", async ({ page }, testInfo) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const output = testInfo.outputPath("timeline-insert");
+  await mkdir(output, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
+  const beforeCycles = await page.locator(".editor-shell").getAttribute("data-cycle-count");
+  const revision = await host.getAttribute("data-canonical-revision");
+  const capture = async (name: string) => {
+    const image = resolve(output, `${name}.png`);
+    await page.screenshot({ path: image, animations: "disabled" });
+    return captureScenarioReview({ page, scenario: `TIMELINE-INSERT-${name.toUpperCase()}`, gitHead, viewport: [1672, 941], rules: [{ selector: "[data-testid='cycle-ruler']", target: "cycle-ruler" }, { selector: "[data-role='timing-row']", target: "timing-rows" }], actions: [`capture:${name}`], images: { current: image }, expectedChange: ["cycle-ruler", "timing-rows"], stableRegions: ["left-tree", "inspector-shell"], outputPath: resolve(output, `${name}.json`) });
+  };
+  await capture("before");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Insert one cycle", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(Number(beforeCycles) + 1));
+  await capture("after-insert");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", beforeCycles!);
+  await capture("after-undo");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-cycle-count", String(Number(beforeCycles) + 1));
+  await capture("after-redo");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(String(Number(revision) + 3));
+});
