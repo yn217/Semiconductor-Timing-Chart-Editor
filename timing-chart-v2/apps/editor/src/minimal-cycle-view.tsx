@@ -1383,20 +1383,13 @@ export function MinimalCycleView() {
       }
       return nearest?.cycle;
     };
-    const cycleBoundaryAtRulerX = (clientX: number): number | undefined => {
-      const ticks = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")];
-      let nearest: { cycle: number; distance: number } | undefined;
-      for (const tick of ticks) {
-        const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-        const distance = Math.abs(tick.getBoundingClientRect().left - clientX);
-        if (Number.isInteger(cycle) && (!nearest || distance < nearest.distance)) nearest = { cycle, distance };
-      }
-      return nearest?.cycle;
-    };
     // The ruler ticks are placed from the same LocalGeometryMap as the
     // waveform. Their screen rectangles therefore provide the shared
     // interaction-space boundary resolver for both drag surfaces.
-    const cycleBoundaryAtPointerX = (clientX: number): number | undefined => cycleBoundaryAtRulerX(clientX) ?? cycleBoundaryAtX(clientX);
+    // Ruler labels are a bounded presentation sample. Resolve pointer input
+    // from the complete waveform geometry so omitted labels never change the
+    // canonical cycle selected by a drag.
+    const cycleBoundaryAtPointerX = (clientX: number): number | undefined => cycleBoundaryAtX(clientX);
     const timeDomainExclusions = [
       "[data-role='left-tree-rows']",
       "[data-role='frozen-label-rows']",
@@ -3629,6 +3622,17 @@ function downloadBytes(bytes: Uint8Array, filename: string, type: string): void 
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+const MAX_PRESENTATION_CYCLES = 512;
+
+function presentationCycles(cycleCount: number): number[] {
+  if (cycleCount <= MAX_PRESENTATION_CYCLES) return Array.from({ length: cycleCount + 1 }, (_, cycle) => cycle);
+  const stride = Math.ceil(cycleCount / MAX_PRESENTATION_CYCLES);
+  const cycles: number[] = [0];
+  for (let cycle = stride; cycle < cycleCount; cycle += stride) cycles.push(cycle);
+  if (cycles.at(-1) !== cycleCount) cycles.push(cycleCount);
+  return cycles;
+}
+
 function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, mapping: DisplayTimeMapping, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): void {
   element.dataset.gridEnabled = String(visible);
   element.dataset.axisMode = axisMode;
@@ -3637,7 +3641,7 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
   const terminal = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
   const scale = scaleOverride ?? (screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24));
   const lines: HTMLElement[] = [];
-  for (let displayCycle = 0; displayCycle <= mapping.displayCycleCount; displayCycle += 1) {
+  for (const displayCycle of presentationCycles(mapping.displayCycleCount)) {
     const anchor = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" });
     if (!anchor) continue;
     const line = element.ownerDocument.createElement("span");
@@ -4378,7 +4382,7 @@ function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined
   const terminalPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
   const scale = actualScreenScale ?? forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
   let finalX = 0;
-  for (let display = 0; display <= mapping.displayCycleCount; display += 1) {
+  for (const display of presentationCycles(mapping.displayCycleCount)) {
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
     if (!point) continue;
     const tick = element.ownerDocument.createElement("span");
