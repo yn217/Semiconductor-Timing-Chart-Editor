@@ -327,6 +327,8 @@ export interface CanonicalDocumentProblem {
   readonly offset?: number;
   readonly line?: number;
   readonly column?: number;
+  readonly excerpt?: string;
+  readonly caret?: string;
   readonly detail?: string;
 }
 

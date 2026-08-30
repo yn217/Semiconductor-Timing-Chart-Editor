@@ -11,6 +11,8 @@ describe("deterministic JSON syntax diagnostics", () => {
     const second = scanJsonSyntax(source.replaceAll("\n", "\r\n"));
     expect(first).toBeDefined();
     expect(first?.code).toBe("JSON_SYNTAX");
+    expect(first?.excerpt).toBeTruthy();
+    expect(first?.caret).toContain("^");
     expect(first?.line).toBe(line);
     if (_name === "multiline") expect(first?.column).toBe(column);
     expect(second?.line).toBe(line);

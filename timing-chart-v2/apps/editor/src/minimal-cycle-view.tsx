@@ -3398,7 +3398,7 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
 
 function ProblemsPanel({ diagnostics, onNavigate }: { readonly diagnostics: readonly DocumentProblem[]; readonly onNavigate: (path: string) => void }) {
   const [filter, setFilter] = useState("");
-  const visible = diagnostics.filter((item) => `${item.code} ${item.path} ${item.message} ${item.operation ?? ""} ${item.source ?? ""} ${item.stage ?? ""} ${item.recommendation ?? ""} ${item.commandId ?? ""}`.toLowerCase().includes(filter.toLowerCase()));
+  const visible = diagnostics.filter((item) => `${item.code} ${item.path} ${item.message} ${item.operation ?? ""} ${item.source ?? ""} ${item.stage ?? ""} ${item.recommendation ?? ""} ${item.commandId ?? ""} ${item.detail ?? ""} ${item.excerpt ?? ""}`.toLowerCase().includes(filter.toLowerCase()));
   return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Refresh</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th><th>Details</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td><td>{(item.operation || item.source || item.stage || item.recommendation || item.commandId || item.objectId) && <details><summary>Details</summary><dl><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd>{item.commandId && <><dt>Command ID</dt><dd>{item.commandId}</dd></>}{item.objectId && <><dt>Object Type</dt><dd>{item.objectType ?? "—"}</dd><dt>Object ID</dt><dd>{item.objectId}</dd></>}<dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.recommendation && <><dt>Recovery</dt><dd>{item.recommendation}</dd></>}</dl></details>}</td></tr>)}</tbody></table>}</section>;
 }
 
@@ -3431,8 +3431,9 @@ function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAn
     try { const value = JSON.parse(draft); onDiagnostic(undefined); return value; } catch (error) {
       const diagnostic = scanJsonSyntax(draft);
       const detail = error instanceof Error ? error.message : "Invalid JSON.";
-      onDiagnostic({ code: diagnostic?.code ?? "JSON_PARSE_ERROR", path: "$", message: diagnostic?.message ?? detail, ...(diagnostic ? { line: diagnostic.line, column: diagnostic.column, offset: diagnostic.offset } : {}), severity: "error", operation: "document.json.parse", operationLabel: "Parse Advanced JSON", source: "parser", stage: "parse", recommendation: "Fix the JSON syntax in the indicated line and column, then retry.", detail: "advanced-json:parse" });
-      setStatus(diagnostic ? `Invalid JSON · line ${diagnostic.line}, column ${diagnostic.column} · ${diagnostic.message}` : `Invalid JSON · ${detail}`);
+      const parserDetail = diagnostic ? `${detail}; excerpt: ${diagnostic.excerpt}; caret: ${diagnostic.caret}` : detail;
+      onDiagnostic({ code: diagnostic?.code ?? "JSON_PARSE_ERROR", path: diagnostic ? `$@${diagnostic.line}:${diagnostic.column}` : "$", message: diagnostic?.message ?? detail, ...(diagnostic ? { line: diagnostic.line, column: diagnostic.column, offset: diagnostic.offset, excerpt: diagnostic.excerpt, caret: diagnostic.caret } : {}), severity: "error", operation: "document.json.parse", operationLabel: "Parse Advanced JSON", source: "parser", stage: "parse", recommendation: "Fix the JSON syntax in the indicated line and column, then retry.", detail: `advanced-json:parse;${parserDetail}` });
+      setStatus(diagnostic ? `Invalid JSON · line ${diagnostic.line}, column ${diagnostic.column} · ${diagnostic.message} · ${diagnostic.excerpt}` : `Invalid JSON · ${detail}`);
       return undefined;
     }
   };

@@ -9,11 +9,21 @@ export interface JsonSyntaxDiagnostic {
   readonly line: number;
   readonly column: number;
   readonly message: string;
+  readonly excerpt: string;
+  readonly caret: string;
 }
 
 function location(source: string, offset: number): Pick<JsonSyntaxDiagnostic, "line" | "column"> {
   const before = source.slice(0, offset);
   return { line: before.split("\n").length, column: offset - before.lastIndexOf("\n") };
+}
+
+function context(source: string, offset: number): Pick<JsonSyntaxDiagnostic, "excerpt" | "caret"> {
+  const lineStart = Math.max(0, source.lastIndexOf("\n", Math.max(0, offset - 1)) + 1);
+  const lineEnd = source.indexOf("\n", offset);
+  const excerpt = source.slice(lineStart, lineEnd < 0 ? source.length : lineEnd).replace(/\r$/, "");
+  const column = offset - lineStart;
+  return { excerpt, caret: `${" ".repeat(Math.min(column, 160))}^` };
 }
 
 class JsonSyntaxScanner {
@@ -89,7 +99,7 @@ class JsonSyntaxScanner {
     if (/^[a-zA-Z0-9_.+-]/.test(this.source[this.index] ?? "")) this.fail(this.index, "Invalid JSON number.");
   }
   private consume(character: string): boolean { if (this.source[this.index] !== character) return false; this.index += 1; return true; }
-  private fail(offset: number, message: string): undefined { if (!this.failure) this.failure = { code: "JSON_SYNTAX", offset, ...location(this.source, offset), message }; return undefined; }
+  private fail(offset: number, message: string): undefined { if (!this.failure) this.failure = { code: "JSON_SYNTAX", offset, ...location(this.source, offset), ...context(this.source, offset), message }; return undefined; }
 }
 
 /** Return the first deterministic syntax failure, or undefined for valid JSON. */
