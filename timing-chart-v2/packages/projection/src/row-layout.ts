@@ -30,8 +30,9 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
     y += group.spacingBefore ?? 0;
     const headerRowId = `${group.id}:header` as RowLayoutEntry["rowId"];
     const collapsed = collapsedGroupIds.has(group.id);
-    groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), collapsed, y, height: 32 });
-    y += 32;
+    const headerHeight = group.style?.showHeader === false ? 0 : 32;
+    groupHeaders.push({ rowId: headerRowId, groupId: group.id, groupName: group.name, ...(group.style === undefined ? {} : { groupStyle: group.style }), collapsed, y, height: headerHeight });
+    y += headerHeight;
     if (collapsed) {
       y += group.spacingAfter ?? 0;
       continue;
