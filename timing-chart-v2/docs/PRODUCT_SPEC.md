@@ -87,7 +87,10 @@ Tabs: Signal / Annotation / Problems / JSON（後にTransaction）。通常はSe
 ## 14. JSON UI
 JSONは自動生成。通常非表示。JSON tabはDefault Read Only。Advanced editable、Format、Validate、Copy、Selected/Whole、Live Sync、error location。
 
-## 15. Header / Footer / Export
+## 15. Open file boundary
+Production Open checks the selected `.json`/`.tcd` file size before reading or parsing it. The initial product limit is 32 MiB (33,554,432 bytes). Oversized input is rejected without changing the current Canonical document, History, Dirty state, selection, or rendered document, and the Problems surface reports the measured and allowed byte counts with recovery guidance.
+
+## 16. Header / Footer / Export
 長文はWaveform幅とは独立したDocument Layoutでwrap。Title/Subtitle/Description/Notes/Preconditions/Legend/Figure number/Revision。SVG/PNG/PDF/Clipboard SVG/PNG、Fit Width/Page/Selection。
 
 ## 16. Transaction View

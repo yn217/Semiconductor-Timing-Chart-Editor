@@ -36,6 +36,25 @@ function parseSuppressedPeriods(text: string): readonly number[] {
   return unique;
 }
 
+const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
+
+function openFileByteBudgetProblem(file: File): DocumentProblem {
+  return {
+    code: "OPEN_FILE_TOO_LARGE",
+    path: "$",
+    message: `Open rejected before parsing: ${file.name || "selected file"} is ${file.size.toLocaleString()} bytes; the limit is ${MAX_OPEN_FILE_BYTES.toLocaleString()} bytes.`,
+    severity: "error",
+    operation: "document.open",
+    operationLabel: "Open document",
+    source: "open",
+    stage: "parse",
+    expected: String(MAX_OPEN_FILE_BYTES),
+    value: file.size,
+    recommendation: "Choose a smaller .json/.tcd file or split the document, then retry Open.",
+    detail: `open-failure:byte-budget;actualBytes=${file.size};allowedBytes=${MAX_OPEN_FILE_BYTES}`,
+  };
+}
+
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "logic" | "event" | "pulse" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
 
 function isParsedCanonicalDocument(input: CanonicalDocument | ParsedCanonicalDocument): input is ParsedCanonicalDocument {
@@ -2594,6 +2613,12 @@ export function MinimalCycleView() {
   };
   const requestNewDocument = () => requestFileAction({ kind: "new" });
   const requestOpenText = (text: string) => requestFileAction({ kind: "open", text });
+  const rejectOversizedOpen = (file: File) => {
+    const diagnostic = openFileByteBudgetProblem(file);
+    setProblem(diagnostic.message);
+    setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+    restorePendingFileFocus();
+  };
   const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
   const applyWorkspacePreset = (preset: WorkspacePreset) => {
     setWorkspacePreset(preset);
@@ -2750,7 +2775,7 @@ export function MinimalCycleView() {
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); closeDialog(() => setSaveAsVisible(false)); }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
-     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then(requestOpenText).catch(() => setProblem("Open failed.")); event.currentTarget.value = ""; }} />
+     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else void file.text().then(requestOpenText).catch(() => setProblem("Open failed.")); } event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
       <span data-testid="tool-status">{arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}</span>
       <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>

@@ -26,3 +26,23 @@ test("hands a validated Open document to the new session without duplicate sessi
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
+
+test("rejects an oversized Open file before reading and preserves document state", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+    title: await page.locator(".app-titlebar h1").textContent(),
+  };
+  const oversized = Buffer.alloc(32 * 1024 * 1024 + 1, 0x20);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "oversized.tcd.json", mimeType: "application/json", buffer: oversized });
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
+  await expect(page.getByText(/Open rejected before parsing: oversized\.tcd\.json/)).toBeVisible();
+});
