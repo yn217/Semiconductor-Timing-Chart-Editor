@@ -2549,7 +2549,7 @@ export function MinimalCycleView() {
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch.current(nextCommandId("document_properties"), commands)} onClose={() => setPropertiesVisible(false)} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
-    {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setExportVisible(false))} />}
+    {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); closeDialog(() => setSaveAsVisible(false)); }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
      <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) void file.text().then(requestOpenText).catch(() => setProblem("Open failed.")); event.currentTarget.value = ""; }} />
@@ -3386,7 +3386,7 @@ function SaveAsDialog({ defaultName, restoreFocusRef, onSave, onClose }: { reado
   }}><header><h2>Save As</h2><button type="button" aria-label="Close Save As" onClick={onClose}><EditorIcon name="close" /></button></header><label>Filename<input aria-label="Save As filename" value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoFocus /></label>{error && <output role="alert">{error}</output>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="save-as-submit">Save</button></footer></form></div>;
 }
 
-function ExportDialog({ snapshot, range, restoreFocusRef, onClose }: { readonly snapshot: CanonicalSnapshot; readonly range: { start: number; end: number }; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
+function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, onClose }: { readonly snapshot: CanonicalSnapshot; readonly range: { start: number; end: number }; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onDiagnostic: (diagnostic: DocumentProblem | undefined) => void; readonly onClose: () => void }) {
   const [format, setFormat] = useState<"svg" | "png" | "pdf">("svg");
   const [scope, setScope] = useState<"document" | "selected-range">("document");
   const [scale, setScale] = useState(2);
@@ -3404,9 +3404,21 @@ function ExportDialog({ snapshot, range, restoreFocusRef, onClose }: { readonly 
     setStatus("Generating…");
     try {
       const bytes = await new DeterministicExportService().export({ format, snapshot, settings: settings() });
-      downloadBytes(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
+      try {
+        downloadBytes(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : "Browser download preparation failed.";
+        onDiagnostic({ code: "EXPORT_FAILED", path: "$.export.download", message: `Export download failed: ${reason}`, severity: "error", operation: "document.export.download", operationLabel: `Download ${format.toUpperCase()} export`, source: "export", stage: "storage", recommendation: "Retry the download or choose another export format.", detail: "export-failure:download" });
+        setStatus(`Download failed · ${reason}`);
+        return;
+      }
+      onDiagnostic(undefined);
       setStatus(`${format.toUpperCase()} ready`);
-    } catch (error) { setStatus(error instanceof Error ? error.message : "Export failed"); }
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : "Export generation failed.";
+      onDiagnostic({ code: "EXPORT_FAILED", path: "$.export", message: `Export generation failed: ${reason}`, severity: "error", operation: "document.export.generate", operationLabel: `Generate ${format.toUpperCase()} export`, source: "export", stage: "rasterize", recommendation: "Reduce the selected range or export scale, then retry.", detail: "export-failure:generate" });
+      setStatus(reason);
+    }
   };
   const copyNow = async (copyFormat: "svg" | "png") => {
     setStatus("Copying…");
