@@ -62,21 +62,17 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
   return data.length > 0 ? { wave: wave.join(""), data } : { wave: wave.join("") };
 }
 
-function enabledAt(changes: readonly SignalValueChange[] | undefined, cycle: number): boolean {
-  if (!changes || changes.length === 0) return true;
-  let low = 0;
-  let high = changes.length - 1;
+function createEnableReader(changes: readonly SignalValueChange[] | undefined): (cycle: number) => boolean {
+  if (!changes || changes.length === 0) return () => true;
   let activeIndex = -1;
-  while (low <= high) {
-    const middle = low + Math.floor((high - low) / 2);
-    if (changes[middle]!.start <= cycle) { activeIndex = middle; low = middle + 1; }
-    else high = middle - 1;
-  }
-  const value: string | number = activeIndex < 0 ? 1 : changes[activeIndex]!.value;
-  const normalized = String(value).toLowerCase();
-  if (["1", "true", "high"].includes(normalized)) return true;
-  if (["0", "false", "low"].includes(normalized)) return false;
-  throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_ENABLE", `Clock enable value '${String(value)}' is not binary.`);
+  return (cycle) => {
+    while (activeIndex + 1 < changes.length && changes[activeIndex + 1]!.start <= cycle) activeIndex += 1;
+    const value: string | number = activeIndex < 0 ? 1 : changes[activeIndex]!.value;
+    const normalized = String(value).toLowerCase();
+    if (["1", "true", "high"].includes(normalized)) return true;
+    if (["0", "false", "low"].includes(normalized)) return false;
+    throw new WaveDromAdapterError("UNSUPPORTED_CLOCK_ENABLE", `Clock enable value '${String(value)}' is not binary.`);
+  };
 }
 
 function expandedClockPattern(signal: ClockSignal): readonly string[] {
@@ -108,9 +104,10 @@ function expandedClockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: 
   const staticToken = String(generator.initial);
   const slotCount = Math.ceil(cycleCount / generator.period);
   const wave: string[] = [];
+  const enabled = createEnableReader(signal.enable);
   for (let slot = 0; slot < slotCount; slot += 1) {
     const cycle = slot * generator.period;
-    const active = cycle >= generator.start && enabledAt(signal.enable, cycle) && !(generator.suppressedPeriods ?? []).includes(slot);
+    const active = cycle >= generator.start && enabled(cycle) && !(generator.suppressedPeriods ?? []).includes(slot);
     const slotWave = active ? pattern : staticToken.repeat(generator.period);
     wave.push(...slotWave.slice(0, Math.min(generator.period, cycleCount - wave.length)).split(""));
   }
@@ -150,10 +147,11 @@ function clockToWaveJson(signal: ClockSignal, cycleCount: number, gaps: readonly
   const staticToken = String(generator.initial);
   const suppressed = new Set(generator.suppressedPeriods ?? []);
   const wave: string[] = [];
+  const enabled = createEnableReader(signal.enable);
   let previous: string | undefined;
   for (let slot = 0; slot < slotCount; slot += 1) {
     const cycle = slot * generator.period;
-    const active = cycle >= generator.start && enabledAt(signal.enable, cycle) && !suppressed.has(slot);
+    const active = cycle >= generator.start && enabled(cycle) && !suppressed.has(slot);
     const token = active ? clockToken : staticToken;
     wave.push(token === previous ? "." : token);
     previous = token;
