@@ -746,7 +746,14 @@ export function MinimalCycleView() {
       rulerElement!.style.transform = `translateX(${-viewportElement!.scrollLeft}px) scaleX(${currentZoom})`;
       rulerElement!.dataset.scrollLeft = String(viewportElement!.scrollLeft);
     }
-    const timelineOffset = () => (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-left-width")) || 330) + (Number.parseFloat(getComputedStyle(viewportElement).getPropertyValue("--gui-frozen-width")) || 210);
+    const currentViewMetrics = () => {
+      viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth, zoom: currentZoom });
+      return viewMetricsOwner.snapshot();
+    };
+    const timelineOffset = () => {
+      const metrics = currentViewMetrics();
+      return metrics.leftPaneWidth + metrics.frozenPaneWidth;
+    };
     const applyZoom = (next: number) => {
       currentZoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
       viewMetricsOwner.update({ zoom: currentZoom, viewportWidth: viewportElement.clientWidth });
