@@ -382,6 +382,24 @@ export function MinimalCycleView() {
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" } | undefined>();
+  const menuOriginRef = useRef<HTMLElement | null>(null);
+  const restoreMenuFocus = () => {
+    const origin = menuOriginRef.current;
+    menuOriginRef.current = null;
+    if (origin?.isConnected) requestAnimationFrame(() => {
+      if (!origin.hasAttribute("tabindex")) origin.setAttribute("tabindex", "-1");
+      origin.focus({ preventScroll: true });
+    });
+  };
+  const closeContextMenu = () => { setContextMenu(undefined); };
+  const closeTreeAddMenu = () => { setTreeAddMenuOpen(false); };
+  const closeTreeMoreMenu = () => { setTreeMoreMenuOpen(false); };
+  const previousMenuOpenRef = useRef(false);
+  useEffect(() => {
+    const menuOpen = contextMenu !== undefined || treeAddMenuOpen || treeMoreMenuOpen;
+    if (previousMenuOpenRef.current && !menuOpen) restoreMenuFocus();
+    previousMenuOpenRef.current = menuOpen;
+  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   useEffect(() => {
     const onDialogKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
@@ -406,9 +424,9 @@ export function MinimalCycleView() {
       if (!activeMenu) return;
       if (event.key === "Escape") {
         event.preventDefault();
-        if (activeMenu.classList.contains("context-menu")) setContextMenu(undefined);
-        else if (activeMenu.classList.contains("tree-add-menu")) setTreeAddMenuOpen(false);
-        else setTreeMoreMenuOpen(false);
+        if (activeMenu.classList.contains("context-menu")) closeContextMenu();
+        else if (activeMenu.classList.contains("tree-add-menu")) closeTreeAddMenu();
+        else closeTreeMoreMenu();
         return;
       }
       if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
@@ -1314,10 +1332,10 @@ export function MinimalCycleView() {
         selectedSignalIdsRef.current = new Set([signalId]);
         setSelectedId(signalId);
         setSelectedSignalIds(new Set([signalId]));
-        setSelectedGroupId(undefined);
-        setSelectedAnnotationId(undefined);
-        setSelectedTransactionId(undefined);
-        setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
+         setSelectedGroupId(undefined);
+         setSelectedAnnotationId(undefined);
+         setSelectedTransactionId(undefined);
+         setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
         return;
       }
       const groupMore = closestFromEvent<HTMLElement>("[data-role='tree-group-more'][data-group-id]");
@@ -1332,9 +1350,9 @@ export function MinimalCycleView() {
         selectedSignalRef.current = undefined;
         selectedSignalIdsRef.current = new Set();
         setSelectedSignalIds(new Set());
-        setSelectedAnnotationId(undefined);
-        setSelectedTransactionId(undefined);
-        setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });
+         setSelectedAnnotationId(undefined);
+         setSelectedTransactionId(undefined);
+         setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });
         return;
       }
       const collapseOwner = closestFromEvent<HTMLElement>("[data-role='tree-collapse'][data-group-id]");
@@ -1837,7 +1855,7 @@ export function MinimalCycleView() {
       const movement = event.key === "ArrowLeft" ? { x: -delta, y: 0 } : event.key === "ArrowRight" ? { x: delta, y: 0 } : event.key === "ArrowUp" ? { x: 0, y: -delta } : event.key === "ArrowDown" ? { x: 0, y: delta } : undefined;
       if (!owner?.dataset.annotationId || !movement) {
         if (event.key === "Escape") {
-          setContextMenu(undefined);
+          closeContextMenu();
           clearAnnotationPreview();
           pendingArrow = undefined;
           setArrowPickStatus("idle");
@@ -1854,9 +1872,11 @@ export function MinimalCycleView() {
     };
     const onContextMenu = (event: MouseEvent) => {
       if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")) return;
-      event.preventDefault();
-      onSelect(event);
-      setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
+       event.preventDefault();
+       menuOriginRef.current = event.target.closest<HTMLElement>("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")
+         ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+       onSelect(event);
+       setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
     };
     const onCanvasClick = (event: MouseEvent) => {
       if (suppressCanvasClick) { suppressCanvasClick = false; return; }
@@ -2812,7 +2832,7 @@ export function MinimalCycleView() {
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
          <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={resizeLeftPaneByKeyboard} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
           <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={resizeFrozenPaneByKeyboard} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
-        <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label className="tree-filter-controls"><span className="visually-hidden">Signal tree type filter</span><select data-testid="signal-tree-type-filter" aria-label="Signal tree type filter" value={treeTypeFilter} onChange={(event) => setTreeTypeFilter(event.target.value as TreeTypeFilter)}><option value="all">All</option><option value="input">Input</option><option value="output">Output</option><option value="wire">Wire</option><option value="comment">Comment</option></select><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." />{treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => setTreeFilter("")}><EditorIcon name="close" /></button>}</label><span className="left-column-actions"><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={() => setTreeAddMenuOpen((value) => !value)}><EditorIcon name="plus" /></button><button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={() => setTreeMoreMenuOpen((value) => !value)}><EditorIcon name="more" /></button></span>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); setTreeAddMenuOpen(false); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); setTreeAddMenuOpen(false); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); setTreeAddMenuOpen(false); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); setTreeAddMenuOpen(false); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("logic"); setTreeAddMenuOpen(false); }}>Logic</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("event"); setTreeAddMenuOpen(false); }}>Event</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("pulse"); setTreeAddMenuOpen(false); }}>Pulse</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("spacer"); setTreeAddMenuOpen(false); }}>Spacer</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); setTreeAddMenuOpen(false); }}>Group</button><button type="button" role="menuitem" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); setTreeAddMenuOpen(false); }}>Bulk Signal Registration</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); setTreeAddMenuOpen(false); }}>Comment Row</button></div>}{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id))); setTreeMoreMenuOpen(false); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set()); setTreeMoreMenuOpen(false); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); setTreeMoreMenuOpen(false); }}>Clear Filter</button><button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { setHierarchyVisible(true); setTreeMoreMenuOpen(false); }}>Hierarchy</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}</span></div>
+        <div className="column-headings"><span className="left-column-heading"><strong>Signals / Groups</strong><label className="tree-filter-controls"><span className="visually-hidden">Signal tree type filter</span><select data-testid="signal-tree-type-filter" aria-label="Signal tree type filter" value={treeTypeFilter} onChange={(event) => setTreeTypeFilter(event.target.value as TreeTypeFilter)}><option value="all">All</option><option value="input">Input</option><option value="output">Output</option><option value="wire">Wire</option><option value="comment">Comment</option></select><span className="visually-hidden">Signal tree filter</span><input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => setTreeFilter(event.target.value)} placeholder="Filter signals..." />{treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => setTreeFilter("")}><EditorIcon name="close" /></button>}</label><span className="left-column-actions"><button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={treeAddMenuOpen} onClick={(event) => { menuOriginRef.current = event.currentTarget; setTreeAddMenuOpen((value) => !value); }}><EditorIcon name="plus" /></button><button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={treeMoreMenuOpen} onClick={(event) => { menuOriginRef.current = event.currentTarget; setTreeMoreMenuOpen((value) => !value); }}><EditorIcon name="more" /></button></span>{treeAddMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group"><button type="button" role="menuitem" onClick={() => { addTreeEntity("signal"); closeTreeAddMenu(); }}>Signal</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("clock"); closeTreeAddMenu(); }}>Clock</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("bus"); closeTreeAddMenu(); }}>Bus</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("state"); closeTreeAddMenu(); }}>State</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("logic"); closeTreeAddMenu(); }}>Logic</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("event"); closeTreeAddMenu(); }}>Event</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("pulse"); closeTreeAddMenu(); }}>Pulse</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("spacer"); closeTreeAddMenu(); }}>Spacer</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("group"); closeTreeAddMenu(); }}>Group</button><button type="button" role="menuitem" data-testid="bulk-register-open" onClick={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); closeTreeAddMenu(); }}>Bulk Signal Registration</button><button type="button" role="menuitem" onClick={() => { addTreeEntity("commentRow"); closeTreeAddMenu(); }}>Comment Row</button></div>}{treeMoreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions"><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id))); closeTreeMoreMenu(); }}>Collapse All Groups</button><button type="button" role="menuitem" onClick={() => { setCollapsedGroups(new Set()); closeTreeMoreMenu(); }}>Expand All Groups</button><button type="button" role="menuitem" onClick={() => { setTreeFilter(""); closeTreeMoreMenu(); }}>Clear Filter</button><button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { setHierarchyVisible(true); closeTreeMoreMenu(); }}>Hierarchy</button></div>}</span><span className="role-column-heading" aria-label="Role">Role</span><span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span><span>{snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}</span></div>
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
@@ -2842,16 +2862,16 @@ export function MinimalCycleView() {
        {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => setInspectorResetToken((value) => value + 1)} /></aside>}
     </div>
     {contextMenu && <ContextMenuSurface anchor={contextMenu} target={contextMenu.target} label={contextMenu.target === "group" ? "Group context menu" : contextMenu.target === "annotation" ? "Annotation context menu" : "Signal context menu"}>
-      <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Copy</button>
-      <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Cut</button>
-      <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); setContextMenu(undefined); }} disabled={!clipboardAvailable}>Paste</button>
-      <button type="button" role="menuitem" onClick={() => { duplicateSelectedEntity(); setContextMenu(undefined); }} disabled={!hasSelectedClipboard}>Duplicate</button>
-      <button type="button" role="menuitem" onClick={() => { moveSelection(-1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Up</button>
-      <button type="button" role="menuitem" onClick={() => { moveSelection(1); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Move Down</button>
-      <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(true); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Show</button>
-      <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(false); setContextMenu(undefined); }} disabled={!hasSelectedSignal}>Hide</button>
-      <button type="button" role="menuitem" onClick={() => { renameSelection(); setContextMenu(undefined); }} disabled={!hasSelectedEntity}>Rename</button>
-      <button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); setContextMenu(undefined); }} disabled={!hasDeletableSelection}>Delete</button>
+      <button type="button" role="menuitem" onClick={() => { copySelectedSignal(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Copy</button>
+      <button type="button" role="menuitem" onClick={() => { cutSelectedSignal(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Cut</button>
+      <button type="button" role="menuitem" onClick={() => { pasteSelectedEntity(); closeContextMenu(); }} disabled={!clipboardAvailable}>Paste</button>
+      <button type="button" role="menuitem" onClick={() => { duplicateSelectedEntity(); closeContextMenu(); }} disabled={!hasSelectedClipboard}>Duplicate</button>
+      <button type="button" role="menuitem" onClick={() => { moveSelection(-1); closeContextMenu(); }} disabled={!hasSelectedEntity}>Move Up</button>
+      <button type="button" role="menuitem" onClick={() => { moveSelection(1); closeContextMenu(); }} disabled={!hasSelectedEntity}>Move Down</button>
+      <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(true); closeContextMenu(); }} disabled={!hasSelectedSignal}>Show</button>
+      <button type="button" role="menuitem" onClick={() => { setSelectionVisibility(false); closeContextMenu(); }} disabled={!hasSelectedSignal}>Hide</button>
+      <button type="button" role="menuitem" onClick={() => { renameSelection(); closeContextMenu(); }} disabled={!hasSelectedEntity}>Rename</button>
+      <button type="button" role="menuitem" onClick={() => { commandRegistry.current.execute("selection.delete"); closeContextMenu(); }} disabled={!hasDeletableSelection}>Delete</button>
     </ContextMenuSurface>}
     {renameDialogOpen && <div className="modal-backdrop" data-testid="rename-dialog-backdrop"><form role="dialog" aria-modal="true" aria-labelledby="rename-dialog-title" className="document-properties rename-dialog" data-testid="rename-dialog" onSubmit={(event) => { event.preventDefault(); applyRename(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setRenameDialogOpen(false); } }}>
       <header><h2 id="rename-dialog-title">Rename</h2><button type="button" aria-label="Close rename dialog" onClick={() => setRenameDialogOpen(false)}><EditorIcon name="close" /></button></header>

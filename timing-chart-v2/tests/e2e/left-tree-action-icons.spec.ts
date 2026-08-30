@@ -18,8 +18,20 @@ test("Left Tree header actions use owned SVG icons without changing the document
   await expect(header.locator(".tree-add-button")).toHaveText("");
   await expect(header.locator(".tree-more-button")).toHaveText("");
 
-  await header.getByRole("button", { name: "More tree actions" }).click();
-  await expect(page.getByRole("menu", { name: "More tree actions" })).toBeVisible();
+  const more = header.getByRole("button", { name: "More tree actions" });
+  await more.click();
+  const moreMenu = page.getByRole("menu", { name: "More tree actions" });
+  await expect(moreMenu).toBeVisible();
+  await moreMenu.getByRole("menuitem").first().press("Escape");
+  await expect(more).toBeFocused();
+  const add = header.getByRole("button", { name: "Add signal or group" });
+  await add.click();
+  const addMenu = page.getByRole("menu", { name: "Add signal or group" });
+  await expect(addMenu).toBeVisible();
+  await addMenu.getByRole("menuitem").first().press("Escape");
+  await expect(add).toBeFocused();
+  await more.click();
+  await expect(moreMenu).toBeVisible();
   await page.getByRole("menuitem", { name: "Expand All Groups" }).click();
   const filter = page.getByTestId("signal-tree-search-top");
   await filter.fill("CLOCK");

@@ -158,6 +158,7 @@ test("Context Menu exposes shared commands", async ({ page }) => {
   const revision = await page.getByTestId("revision-status").textContent();
   const history = await page.getByTestId("history-status").textContent();
   await menu.getByRole("menuitem", { name: "Copy", exact: true }).click();
+  await expect(row).toBeFocused();
   await expect(page.getByTestId("revision-status")).toHaveText(revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await row.locator("[data-role='frozen-signal-name']").click({ button: "right" });
