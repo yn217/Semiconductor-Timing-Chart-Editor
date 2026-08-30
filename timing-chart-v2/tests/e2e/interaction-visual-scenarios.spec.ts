@@ -3,6 +3,8 @@ import { mkdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { captureScenarioReview } from "../../harness/gui/ai-review-bundle.mjs";
+import { reversiblePixelRegionReport } from "../../harness/gui/mechanical-diagnostics.mjs";
+import { PNG } from "pngjs";
 
 test("captures Signal visibility before/after/undo/redo visual bundles", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1672, height: 941 });
@@ -32,6 +34,24 @@ test("captures Signal visibility before/after/undo/redo visual bundles", async (
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(0);
   await capture("after-redo");
+});
+
+test("proves Signal visibility PNG reversibility by region", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  await host.locator("[data-role='left-row'][data-row-id='sig_cycle_ready'] [data-role='tree-visibility']").click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']")).toHaveCount(0);
+  const after = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  const undo = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  const redo = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  const report = reversiblePixelRegionReport({ before: before.data, after: after.data, undo: undo.data, redo: redo.data, width: before.width, regions: { full: { x: 0, y: 0, width: before.width, height: before.height } }, maxDelta: 0.01 });
+  expect(report.pass).toBe(true);
 });
 
 test("captures Annotation add/undo/redo visual bundles", async ({ page }, testInfo) => {
