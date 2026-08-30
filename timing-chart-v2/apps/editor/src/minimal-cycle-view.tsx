@@ -725,8 +725,7 @@ export function MinimalCycleView() {
             snapIndex = undefined;
             return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
           } catch (error: unknown) {
-            geometryMaps.delete(item.request.signalId);
-            geometrySvgs.delete(item.request.signalId);
+            geometryRegistry.remove(item.request.signalId);
             snapIndex = undefined;
             return { signalId: item.request.signalId, error };
           }
@@ -739,8 +738,7 @@ export function MinimalCycleView() {
       },
       disposeWave(id) {
         adapter.dispose(id);
-        geometryMaps.delete(id);
-        geometrySvgs.delete(id);
+        geometryRegistry.remove(id);
         // Snap candidates contain the disposed wave's local geometry.  The
         // next query must rebuild against the currently mounted set.
         snapIndex = undefined;
@@ -1132,10 +1130,9 @@ export function MinimalCycleView() {
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
-      geometryMaps.clear();
+      geometryRegistry.clear();
       snapIndex = undefined;
       timeAxis = { mode: "clockless" };
-      geometrySvgs.clear();
       rulerInitialized = false;
       // Open/New owns a deterministic viewport policy. Apply it before the
       // first projection so the previous document cannot seed stale rows.
