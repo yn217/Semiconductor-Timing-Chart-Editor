@@ -65,3 +65,7 @@ export function browserHealthFindings({ scenario, consoleErrors = [], pageErrors
     ...failedResources.map((url) => finding("RESOURCE_FAILURE", url, { url })),
   ];
 }
+
+export function unexpectedRegionFindings({ scenario, changedRegions, expectedChange = [], expectedStable = [], evidence = [] }) {
+  return changedRegions.filter((region) => !expectedChange.includes(region) || expectedStable.includes(region)).map((region) => ({ severity: "MAJOR", category: "LAYOUT_SHIFT", scenario, target: region, actual: { changed: true }, evidence }));
+}

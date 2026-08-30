@@ -45,4 +45,10 @@ describe("mechanical visual diagnostics", async () => {
     expect(result.findings).toHaveLength(1);
     expect(result.findings[0]?.category).toBe("ICON_ALIGNMENT");
   });
+  it("reports changed regions outside the declared interaction scope", async () => {
+    const { unexpectedRegionFindings } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    const findings = unexpectedRegionFindings({ scenario: "undo", changedRegions: ["target", "ribbon"], expectedChange: ["target"], expectedStable: ["ribbon"], evidence: ["after.png"] });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ category: "LAYOUT_SHIFT", target: "ribbon", severity: "MAJOR" });
+  });
 });
