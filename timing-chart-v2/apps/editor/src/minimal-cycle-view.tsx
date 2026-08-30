@@ -391,6 +391,23 @@ export function MinimalCycleView() {
   }, [bulkRegistrationVisible, exportVisible, hierarchyVisible, propertiesVisible, saveAsVisible]);
   useEffect(() => {
     const onDialogKeyDown = (event: KeyboardEvent) => {
+      const activeDialog = document.querySelector<HTMLElement>("[role='dialog'][aria-modal='true']");
+      if (activeDialog && event.key === "Tab") {
+        const focusable = [...activeDialog.querySelectorAll<HTMLElement>("button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])")]
+          .filter((element) => element.getClientRects().length > 0);
+        if (focusable.length > 0) {
+          const first = focusable[0]!;
+          const last = focusable.at(-1)!;
+          if (event.shiftKey && document.activeElement === first) {
+            event.preventDefault();
+            last.focus({ preventScroll: true });
+          } else if (!event.shiftKey && document.activeElement === last) {
+            event.preventDefault();
+            first.focus({ preventScroll: true });
+          }
+        }
+        return;
+      }
       if (event.key !== "Escape") return;
       if (contextMenu || treeAddMenuOpen || treeMoreMenuOpen) return;
       if (pendingFileAction) { event.preventDefault(); cancelPendingFileAction(); return; }
