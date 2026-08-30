@@ -501,6 +501,15 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signals[0]).toMatchObject({ edgeCounter: { show: true, mode: "rising", labelEvery: 2 } });
   });
 
+  it("atomically rejects invalid Edge Counter enums and booleans", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot().document;
+    const rejected = session.execute({ id: commandId("cmd_edge_numbers_invalid_shape"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { ...before.signals[0]!.edgeCounter, show: "yes" as unknown as boolean, mode: "sideways" as "rising", countFrom: "unknown" as "signal-start", position: "middle" as "above" } });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
   it("supports Annotation lifecycle, anchors, label offsets, and style domains", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const annotation = { id: "ann_editor" as AnnotationId, type: "arrow" as const, label: "Dependency", visible: true, from: { signalId: "sig_data" as SignalId, cycle: 2, point: "transition-center" as const }, to: { signalId: "sig_data" as SignalId, cycle: 4, point: "value-start" as const } };

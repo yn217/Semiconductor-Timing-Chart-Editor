@@ -732,7 +732,11 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const signal = document.signals[index];
       if (!signal || signal.type !== "clock") return fail("invalid", "SIGNAL_NOT_CLOCK", "$.signalId", "Edge Numbers require a clock signal.");
       const settings = command.edgeCounter;
-      if (!Number.isInteger(settings.startNumber) || !Number.isInteger(settings.labelEvery) || settings.labelEvery < 1 || !Number.isFinite(settings.offset.x) || !Number.isFinite(settings.offset.y)) return fail("invalid", "INVALID_EDGE_COUNTER", "$.edgeCounter", "Edge Number settings are invalid.");
+      const validMode = settings.mode === "rising" || settings.mode === "falling" || settings.mode === "both";
+      const validCountFrom = settings.countFrom === "signal-start" || settings.countFrom === "selected-edge" || settings.countFrom === "marker" || settings.countFrom === "visible-range-start";
+      const validPosition = settings.position === "above" || settings.position === "below";
+      const validAnchor = settings.anchorId === undefined || typeof settings.anchorId === "string";
+      if (typeof settings.show !== "boolean" || !validMode || !validCountFrom || !validPosition || !validAnchor || !Number.isInteger(settings.startNumber) || !Number.isInteger(settings.labelEvery) || settings.labelEvery < 1 || !Number.isFinite(settings.offset.x) || !Number.isFinite(settings.offset.y)) return fail("invalid", "INVALID_EDGE_COUNTER", "$.edgeCounter", "Edge Number settings are invalid.");
       if (JSON.stringify(signal.edgeCounter) === JSON.stringify(settings)) return fail("no-op", "NO_OP", "$", "Edge Number settings are unchanged.");
       const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
