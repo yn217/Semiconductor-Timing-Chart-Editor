@@ -553,6 +553,31 @@ export function MinimalCycleView() {
     const mappingCache = new DisplayTimeMappingCache();
     const geometrySvgs = new Map<SignalId, SVGSVGElement>();
     const geometryMaps = new Map<SignalId, LocalGeometryMap>();
+    const openPhaseMarks: Record<string, number> = {};
+    let openPhaseActive = false;
+    let openRowShellPainted = false;
+    let openReferenceGeometryReady = false;
+    let openRulerPainted = false;
+    const markOpenPhase = (phase: string) => {
+      if (!openPhaseActive || openPhaseMarks[phase] !== undefined) return;
+      const timestamp = globalThis.performance.now();
+      openPhaseMarks[phase] = timestamp;
+      globalThis.performance.mark(`timing-chart-v2:${phase}`);
+      rendererHost.dataset.openPhaseMarks = JSON.stringify(openPhaseMarks);
+      if (phase === "row-shell-painted") openRowShellPainted = true;
+      if (phase === "reference-geometry-ready") openReferenceGeometryReady = true;
+      if (phase === "ruler-painted") openRulerPainted = true;
+      if (openRowShellPainted && openReferenceGeometryReady && openRulerPainted) markOpenPhase("first-correct-paint");
+    };
+    const beginOpenMeasurement = () => {
+      openPhaseActive = true;
+      openRowShellPainted = false;
+      openReferenceGeometryReady = false;
+      openRulerPainted = false;
+      for (const key of Object.keys(openPhaseMarks)) delete openPhaseMarks[key];
+      delete rendererHost.dataset.openPhaseMarks;
+      markOpenPhase("open-start");
+    };
     // The progressive wave queue can flush many batches for one canonical
     // snapshot. Keep the derived lookup scoped to that snapshot instead of
     // rebuilding an O(totalSignals) Map for every batch.
@@ -591,9 +616,12 @@ export function MinimalCycleView() {
         return renderResults.map((item) => {
           if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
           try {
+            if (item.request.signalId === document.timeline.referenceClock) markOpenPhase("reference-clock-painted");
             const geometry = adapter.extractLocalGeometry(item.rendered);
             geometryMaps.set(item.request.signalId, geometry);
             geometrySvgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
+            if (item.request.signalId === document.timeline.referenceClock) markOpenPhase("reference-geometry-ready");
+            markOpenPhase("first-visible-wave-painted");
             snapIndex = undefined;
             return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
           } catch (error: unknown) {
@@ -652,6 +680,7 @@ export function MinimalCycleView() {
       timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
       screenGeometryScale = buildRuler(rulerElement, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), fitWidth, rulerInitialized ? screenGeometryScale : undefined, referenceSvgScreenScale(timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom), timeAxis.mode);
       rulerInitialized = true;
+      markOpenPhase("ruler-painted");
       syncPresentationScale();
     };
     const refreshGrid = (document: CanonicalDocument) => {
@@ -998,6 +1027,8 @@ export function MinimalCycleView() {
       window = viewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionService.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      markOpenPhase("canonical-replaced");
+      requestAnimationFrame(() => markOpenPhase("row-shell-painted"));
       rulerElement.replaceChildren();
       setSnapshot(session.getSnapshot());
       setValidationDiagnostics([]);
@@ -1019,11 +1050,14 @@ export function MinimalCycleView() {
         refreshOverlays(session.getSnapshot().document);
         collectWaveErrors();
         publishState();
+        markOpenPhase("all-visible-idle");
         rendererHost.dataset.editorIdle = "true";
       });
     };
     openDocument.current = (text) => {
+      beginOpenMeasurement();
       const parsed = parseDocument(text);
+      markOpenPhase("parse-done");
       if (!parsed.ok) {
         const openProblems = parsed.problems.map((item) => ({
           ...item,
@@ -1040,7 +1074,7 @@ export function MinimalCycleView() {
       }
       replaceDocument(parsed, parsed.warnings);
     };
-    newDocument.current = () => replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] });
+    newDocument.current = () => { beginOpenMeasurement(); replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] }); };
     saveDocument.current = () => {
       try {
         const text = serializeCanonicalDocument(session.getSnapshot().document);
