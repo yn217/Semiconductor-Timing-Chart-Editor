@@ -27,6 +27,8 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace slots", async ({ pag
   await expect(zoomGroup.getByTestId("zoom-status")).toHaveClass(/visually-hidden/);
   await expect(page.getByTestId("ribbon").getByLabel("Labels and structure")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();
+  const footerLabels = await page.getByTestId("ribbon").locator(".view-slot-group > .ds-ribbon-group > b").evaluateAll((labels) => labels.map((label) => getComputedStyle(label).visibility));
+  expect(footerLabels).toEqual(["hidden", "hidden", "hidden", "hidden", "hidden"]);
 
   const before = {
     revision: await surface.getAttribute("data-canonical-revision"),
