@@ -23,4 +23,13 @@ describe("mechanical visual diagnostics", async () => {
     const metrics = collectDomMetrics(document, [{ selector: ".workspace", target: "Workspace" }]);
     expect(metrics[0]).toMatchObject({ target: "Workspace", clientWidth: 10, scrollWidth: 20, rect: { left: 1, right: 21 } });
   });
+  it("reports viewport, baseline, and alignment drift", async () => {
+    const { runMechanicalDiagnostics } = await import("../../harness/gui/mechanical-diagnostics.mjs");
+    const result = runMechanicalDiagnostics({ scenario: "layout", elements: [
+      { target: "outside", rect: { left: -1, right: 10, top: 0, bottom: 10 }, viewport: { width: 10, height: 10 } },
+      { target: "baseline-drift", baselineGroup: "labels", baselineY: 8 }, { target: "baseline-ok", baselineGroup: "labels", baselineY: 4 },
+      { target: "alignment-drift", alignmentGroup: "icons", alignX: 10 }, { target: "alignment-ok", alignmentGroup: "icons", alignX: 0 },
+    ] });
+    expect(result.findings.map((finding) => finding.category)).toEqual(expect.arrayContaining(["VIEWPORT_OVERFLOW", "BASELINE", "ALIGNMENT"]));
+  });
 });

@@ -6,6 +6,7 @@ export function runMechanicalDiagnostics({ scenario, elements, evidence = [] }) 
     if (item.visible !== false && item.clientWidth !== undefined && item.scrollWidth > item.clientWidth) add("MAJOR", "TEXT_CLIPPING", item.target, { clientWidth: item.clientWidth, scrollWidth: item.scrollWidth });
     if (item.visible !== false && item.clientHeight !== undefined && item.scrollHeight > item.clientHeight) add("MAJOR", "TEXT_CLIPPING", item.target, { clientHeight: item.clientHeight, scrollHeight: item.scrollHeight });
     if (item.visible !== false && item.text && item.width === 0) add("MAJOR", "HITBOX", item.target, { width: item.width, height: item.height });
+    if (item.viewport && item.rect && (item.rect.left < 0 || item.rect.top < 0 || item.rect.right > item.viewport.width || item.rect.bottom > item.viewport.height)) add("MAJOR", "VIEWPORT_OVERFLOW", item.target, { rect: item.rect, viewport: item.viewport });
   }
   const visibleText = elements.filter((item) => item.visible !== false && item.text).map((item) => item.text.trim()).filter(Boolean);
   for (const text of new Set(visibleText)) if (visibleText.filter((value) => value === text).length > 1) add("MAJOR", "DUPLICATION", text, { text });
@@ -18,6 +19,16 @@ export function runMechanicalDiagnostics({ scenario, elements, evidence = [] }) 
     const iconCenter = (item.iconRect.left + item.iconRect.right) / 2;
     const buttonCenter = (item.buttonRect.left + item.buttonRect.right) / 2;
     if (Math.abs(iconCenter - buttonCenter) > (item.maxDeltaPx ?? 2)) add("MAJOR", "ICON_ALIGNMENT", item.target, { iconCenter, buttonCenter, delta: Math.abs(iconCenter - buttonCenter) });
+  }
+  for (const group of new Set(elements.flatMap((item) => item.baselineGroup ? [item.baselineGroup] : []))) {
+    const members = elements.filter((item) => item.baselineGroup === group && item.baselineY !== undefined);
+    const baseline = members[0]?.baselineY;
+    for (const item of members) if (baseline !== undefined && Math.abs(item.baselineY - baseline) > (item.maxDeltaPx ?? 2)) add("MAJOR", "BASELINE", item.target, { baselineY: item.baselineY, expected: baseline, delta: Math.abs(item.baselineY - baseline) });
+  }
+  for (const group of new Set(elements.flatMap((item) => item.alignmentGroup ? [item.alignmentGroup] : []))) {
+    const members = elements.filter((item) => item.alignmentGroup === group && item.alignX !== undefined);
+    const expected = members[0]?.alignX;
+    for (const item of members) if (expected !== undefined && Math.abs(item.alignX - expected) > (item.maxDeltaPx ?? 2)) add("MAJOR", "ALIGNMENT", item.target, { alignX: item.alignX, expected, delta: Math.abs(item.alignX - expected) });
   }
   return { scenario, findings };
 }
