@@ -756,7 +756,9 @@ body { min-width: 1100px; }
   gap: 2px;
   height: 92px;
   padding: 3px;
-  overflow: hidden;
+  position: relative;
+  z-index: 5;
+  overflow: visible;
 }
 .editor-shell .timeline-subgroup {
   position: relative;
@@ -777,6 +779,7 @@ body { min-width: 1100px; }
   font-size: 9px;
   font-weight: 500;
   text-align: center;
+  pointer-events: none;
 }
 .editor-shell .timeline-subgroup > label { min-width: 0; flex-direction: column; gap: 2px; font-size: 8px; }
 .editor-shell .timeline-subgroup > label > output { display: inline-flex; min-width: 42px; height: 22px; align-items: center; justify-content: center; border: 1px solid #b6c2d0; border-radius: 3px; background: #f5f7fa; color: #29425e; font-size: 10px; }
@@ -784,11 +787,24 @@ body { min-width: 1100px; }
 .editor-shell .timeline-subgroup input { width: 42px; min-width: 0; height: 22px; padding: 1px 3px; }
 .editor-shell .timeline-subgroup > button { min-width: 0; flex: 1 1 0; padding: 2px 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.05; text-align: center; }
 .editor-shell .timeline-subgroup .timeline-objects { min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; overflow: auto; }
+.editor-shell .timeline-subgroup .timeline-objects { position: relative; z-index: 2; }
 .editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
 .editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group { min-width: 0; display: flex; gap: 2px; }
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group { position: relative; z-index: 3; pointer-events: auto; }
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark > button,
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group > button { position: relative; z-index: 4; pointer-events: auto; }
 .editor-shell .timeline-subgroup .timeline-objects button { min-width: 0; max-width: 100%; padding: 1px 3px; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group,
 .editor-shell .timeline-subgroup.timeline-fold-group { flex-direction: column; align-items: stretch; justify-content: center; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group,
+.editor-shell .timeline-subgroup.timeline-fold-group { pointer-events: none; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button,
+.editor-shell .timeline-subgroup.timeline-fold-group > button,
+.editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects,
+.editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects,
+.editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects button,
+.editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects button { pointer-events: auto; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group > button { flex: 0 0 19px; min-width: 0; padding-inline: 1px; font-size: 8px; }
 .editor-shell .timeline-subgroup.timeline-fold-group { grid-column: 5; }
 .editor-shell .timeline-subgroup.timeline-fold-group > button { flex: 0 0 auto; }

@@ -225,7 +225,7 @@ test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup",
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await page.getByRole("button", { name: "Add gap" }).click();
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const tick = page.getByTestId("cycle-ruler").locator("[data-cycle='8']");
   const before = await tick.boundingBox();
@@ -437,7 +437,7 @@ test("creates geometry-positioned Marker without waveform regeneration and a Gap
   // a Marker is view-geometry only — it must not touch WaveDrom or LocalGeometry.
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
 
-  await page.getByRole("button", { name: "Add gap" }).click();
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   const gap = ruler.locator("[data-time-group-id]");
   await expect(gap).toHaveCount(1);
 
@@ -474,7 +474,7 @@ test("edits a Time Group through one semantic editor operation and supports Undo
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await page.getByRole("button", { name: "Add gap" }).click();
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click();
   await page.getByTestId(/time-group-edit-/).click();
   const editor = page.getByTestId("time-group-editor");
   await expect(editor).toBeVisible();
