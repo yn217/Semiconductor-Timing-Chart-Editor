@@ -40,6 +40,13 @@
 258
 282
 
+# ==== CURRENT REQUEST — VISUAL SCENARIO HARNESS / AI REVIEW ====
+# Build reusable diagnostics first, then apply them to Ribbon, Golden Samples and interaction scenarios.
+310
+307
+308
+309
+
 # ==== P0 / CORRECTNESS / RELIABILITY / PERFORMANCE ====
 247
 218
@@ -92,12 +99,14 @@
 287
 288
 289
+291
 292
 294
 295
 301
 303
 304
+305
 
 # ==== OPEN ITEMS THAT MAY BE PARTIAL / ALREADY IMPLEMENTED — AUDIT THEN CLOSE OR CONTINUE ====
 261
@@ -148,5 +157,6 @@
 277
 286
 293
+306
 
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
