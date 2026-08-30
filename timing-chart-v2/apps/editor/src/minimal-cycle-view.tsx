@@ -517,7 +517,7 @@ export function MinimalCycleView() {
       return;
     }
     for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
-      const cycle = Number(tick.dataset.cycle);
+      const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
       tick.dataset.rangeSelected = String(cycle >= timelineRange.start && cycle < timelineRange.end);
     }
   }, [rangeSelectionActive, timelineRange, snapshot.revision]);
@@ -717,7 +717,7 @@ export function MinimalCycleView() {
         rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
       }
       for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
-        const cycle = Number(tick.dataset.cycle);
+        const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
         tick.dataset.rangeSelected = String(cycle >= start && cycle < end);
       }
     };

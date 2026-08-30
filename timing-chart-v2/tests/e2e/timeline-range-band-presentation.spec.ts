@@ -22,6 +22,10 @@ async function assertBand(page: Page, start: number, end: number): Promise<void>
   const rulerBand = page.getByTestId("range-preview");
   await expect(band).toHaveAttribute("data-range-start", String(start));
   await expect(band).toHaveAttribute("data-range-end", String(end));
+  const selectedTicks = page.getByTestId("cycle-ruler").locator("[data-range-selected='true']");
+  await expect(selectedTicks).toHaveCount(end - start);
+  await expect(selectedTicks.first()).toHaveAttribute("data-source-cycle", String(start));
+  await expect(selectedTicks.last()).toHaveAttribute("data-source-cycle", String(end - 1));
   const bandBox = await band.boundingBox();
   const rulerBandBox = await rulerBand.boundingBox();
   expect(startBox).not.toBeNull();
