@@ -5,7 +5,7 @@ import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
-import { buildHardwareHierarchyEntries, buildMiniMapOverview, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type MiniMapOverview, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
@@ -16,7 +16,6 @@ import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
-import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { parseSuppressedPeriods } from "./runtime/clock-input.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
@@ -30,7 +29,7 @@ import { ExportDialog } from "./export-dialog.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
-import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
+import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -3746,50 +3745,6 @@ function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | u
     lines.push(line);
   }
   element.replaceChildren(...lines);
-}
-
-function MiniMap({ document, viewport }: { readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null> }) {
-  const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
-  const dragging = useRef(false);
-  const overviewBuilds = useRef(0);
-  const overview = useMemo(() => {
-    overviewBuilds.current += 1;
-    return buildMiniMapOverview(document);
-  }, [document]);
-  const sync = () => {
-    const element = viewport.current;
-    if (!element) return;
-    setMetrics(calculateMiniMapViewportMetrics(element));
-  };
-  useEffect(() => {
-    const element = viewport.current;
-    if (!element) return undefined;
-    sync();
-    element.addEventListener("scroll", sync, { passive: true });
-    const observer = typeof ResizeObserver === "undefined" ? undefined : new ResizeObserver(sync);
-    observer?.observe(element);
-    for (const child of element.children) observer?.observe(child);
-    return () => {
-      element.removeEventListener("scroll", sync);
-      observer?.disconnect();
-    };
-  }, [document]);
-  const pan = (clientX: number, clientY: number) => {
-    const element = viewport.current;
-    const minimap = documentRef.current;
-    if (!element || !minimap) return;
-    const bounds = minimap.getBoundingClientRect();
-    const verticalRatio = Math.max(0, Math.min(1, (clientY - bounds.top) / bounds.height));
-    const horizontalRatio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width));
-    element.scrollTop = verticalRatio * Math.max(0, element.scrollHeight - element.clientHeight);
-    element.scrollLeft = horizontalRatio * Math.max(0, element.scrollWidth - element.clientWidth);
-    sync();
-  };
-  const documentRef = useRef<HTMLDivElement>(null);
-  const indicatorWidth = Math.min(1 - metrics.left, Math.max(0.04, metrics.width));
-  const indicatorHeight = Math.min(1 - metrics.top, Math.max(0.04, metrics.ratio));
-  const fullViewport = metrics.ratio >= 0.999 && metrics.width >= 0.999;
-  return <div ref={documentRef} className="minimap" data-testid="minimap" aria-label="MiniMap" data-overview-builds={String(overviewBuilds.current)} data-overview-signal-lookups={String(overview.signalLookups)} data-viewport-top={String(metrics.top)} data-viewport-ratio={String(metrics.ratio)} data-viewport-left={String(metrics.left)} data-viewport-width={String(metrics.width)} onPointerDown={(event) => { if (event.button !== 0) return; dragging.current = true; event.currentTarget.setPointerCapture(event.pointerId); pan(event.clientX, event.clientY); }} onPointerMove={(event) => { if (dragging.current) pan(event.clientX, event.clientY); }} onPointerUp={(event) => { dragging.current = false; event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { dragging.current = false; }}><div className="minimap-overview-frame"><div className="minimap-rows"><MiniMapOverviewRows overview={overview} /><i data-testid="minimap-viewport" data-viewport-full={String(fullViewport)} style={{ "--minimap-left": `${metrics.left * 100}%`, "--minimap-width": `${indicatorWidth * 100}%`, "--minimap-top": `${metrics.top * 100}%`, "--minimap-height": `${indicatorHeight * 100}%` } as React.CSSProperties} /></div></div></div>;
 }
 
 function AnnotationToolbar({ document, range, signalId, onCreate, arrowPickStatus, onArmArrow }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly signalId: SignalId | undefined; readonly onCreate: (annotation: Annotation) => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly onArmArrow: () => void }) {
