@@ -311,12 +311,7 @@ export function MinimalCycleView() {
   const [exportVisible, setExportVisible] = useState(false);
   const [saveAsVisible, setSaveAsVisible] = useState(false);
   const dialogOriginRef = useRef<HTMLElement | null>(null);
-  const closeDialog = (close: () => void) => {
-    const origin = dialogOriginRef.current;
-    dialogOriginRef.current = null;
-    if (origin?.isConnected) origin.focus();
-    close();
-  };
+  const closeDialog = (close: () => void) => close();
   const [pendingFileAction, setPendingFileAction] = useState<PendingFileAction | undefined>();
   const pendingFileOriginRef = useRef<HTMLElement | null>(null);
   const unsavedCancelRef = useRef<HTMLButtonElement>(null);
@@ -357,13 +352,21 @@ export function MinimalCycleView() {
     previousMenuOpenRef.current = menuOpen;
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   useEffect(() => {
+    const captureDialogOrigin = (event: MouseEvent) => {
+      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-testid='bulk-register-open'], [data-testid='hierarchy-open']") : null;
+      if (target) dialogOriginRef.current = target;
+    };
+    document.addEventListener("click", captureDialogOrigin, true);
+    return () => document.removeEventListener("click", captureDialogOrigin, true);
+  }, []);
+  useEffect(() => {
     const onDialogKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       if (contextMenu || treeAddMenuOpen || treeMoreMenuOpen) return;
       if (pendingFileAction) { event.preventDefault(); cancelPendingFileAction(); return; }
-      if (bulkRegistrationVisible) { event.preventDefault(); setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); return; }
-      if (hierarchyVisible) { event.preventDefault(); setHierarchyVisible(false); return; }
-      if (propertiesVisible) { event.preventDefault(); setPropertiesVisible(false); return; }
+      if (bulkRegistrationVisible) { event.preventDefault(); closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }); return; }
+      if (hierarchyVisible) { event.preventDefault(); closeDialog(() => setHierarchyVisible(false)); return; }
+      if (propertiesVisible) { event.preventDefault(); closeDialog(() => setPropertiesVisible(false)); return; }
       if (exportVisible) { event.preventDefault(); closeDialog(() => setExportVisible(false)); return; }
       if (saveAsVisible) { event.preventDefault(); closeDialog(() => setSaveAsVisible(false)); }
     };
@@ -400,7 +403,7 @@ export function MinimalCycleView() {
   const [renameDraft, setRenameDraft] = useState("");
   const [renameError, setRenameError] = useState("");
   useDialogFocusLoop(renameDialogRef, undefined, renameDialogOpen);
-  useDialogFocusLoop(bulkRegistrationDialogRef, undefined, bulkRegistrationVisible);
+  useDialogFocusLoop(bulkRegistrationDialogRef, dialogOriginRef, bulkRegistrationVisible);
   useDialogFocusLoop(unsavedFileDialogRef, pendingFileOriginRef, pendingFileAction !== undefined);
   const clipboardSignalRef = useRef<Signal | undefined>(undefined);
   const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
@@ -2802,7 +2805,7 @@ export function MinimalCycleView() {
       onToggleBottom={() => startTransition(() => setBottomVisible((value) => !value))}
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
       onOpenTimeline={() => setRibbonTab("Timeline")}
-      onOpenProperties={() => setPropertiesVisible(true)}
+      onOpenProperties={() => { dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
@@ -2855,9 +2858,9 @@ export function MinimalCycleView() {
       {renameError && <p role="alert" className="dialog-error">{renameError}</p>}
       <footer><button type="button" onClick={() => setRenameDialogOpen(false)}>Cancel</button><button type="submit" data-testid="apply-rename">Apply</button></footer>
     </form></div>}
-    {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} onClose={() => setHierarchyVisible(false)} />}
-    {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch.current(nextCommandId("document_properties"), commands)} onClose={() => setPropertiesVisible(false)} />}
-    {bulkRegistrationVisible && <div className="modal-backdrop"><section ref={bulkRegistrationDialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
+    {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
+    {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch.current(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
+    {bulkRegistrationVisible && <div className="modal-backdrop"><section ref={bulkRegistrationDialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); closeDialog(() => setSaveAsVisible(false)); }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
@@ -2893,11 +2896,11 @@ function InsertSemanticIcon({ kind }: { readonly kind: InsertSemanticIconKind })
   return <svg aria-hidden="true" data-insert-icon={kind} viewBox="0 0 24 24" width="18" height="18" focusable="false">{paths[kind].map((path) => <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />)}</svg>;
 }
 
-function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly onClose: () => void }) {
+function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const [view, setView] = useState<HardwareHierarchyView>("group");
   const [scope, setScope] = useState<string>("all");
   const dialogRef = useRef<HTMLElement>(null);
-  useDialogFocusLoop(dialogRef);
+  useDialogFocusLoop(dialogRef, restoreFocusRef);
   const scopes = hardwareHierarchyScopes(document);
   const entries = buildHardwareHierarchyEntries(document, view, scope === "all" ? undefined : scope);
   return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Hardware Hierarchy" className="hierarchy-browser" data-testid="hierarchy-browser">
@@ -2948,9 +2951,9 @@ function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null
   }, [dialogRef, restoreFocusRef, enabled]);
 }
 
-function DocumentProperties({ document, onApplyProperties, onClose }: { readonly document: CanonicalDocument; readonly onApplyProperties: (commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>; readonly onClose: () => void }) {
+function DocumentProperties({ document, onApplyProperties, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly onApplyProperties: (commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const dialogRef = useRef<HTMLFormElement>(null);
-  useDialogFocusLoop(dialogRef);
+  useDialogFocusLoop(dialogRef, restoreFocusRef);
   const [title, setTitle] = useState(document.document.title);
   const [subtitle, setSubtitle] = useState(document.document.header.subtitle);
   const [description, setDescription] = useState(document.document.header.description);
