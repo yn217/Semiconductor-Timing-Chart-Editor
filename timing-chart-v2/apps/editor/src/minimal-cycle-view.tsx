@@ -847,6 +847,13 @@ export function MinimalCycleView() {
         code: "WAVE_RENDER_ERROR",
         path: `$.signals[${owner.dataset.signalId}]`,
         message: owner.dataset.waveError ?? "WaveDrom render failed.",
+        severity: "error" as const,
+        operation: "waveform.render",
+        operationLabel: "Render waveform",
+        objectType: "signal",
+        ...(owner.dataset.signalId ? { objectId: owner.dataset.signalId } : {}),
+        source: "renderer" as const,
+        stage: "render" as const,
       }));
       setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "WAVE_RENDER_ERROR"), ...failed]);
       if (failed.length > 0) setProblem(failed[0]!.message);
@@ -862,6 +869,12 @@ export function MinimalCycleView() {
         const diagnostics = result.problems.map((item) => ({
           ...item,
           message: `[${context}] ${item.message}`,
+          severity: "error" as const,
+          operation,
+          operationLabel: operation,
+          source: "command" as const,
+          stage: "commit" as const,
+          ...(result.reason === "stale" ? { recommendation: "Refresh the editor state and retry the operation." } : result.reason === "invalid" ? { recommendation: "Review the field and value shown in this diagnostic." } : {}),
           detail: `command-rejection:${operation}:${result.reason}${item.detail ? `;${item.detail}` : ""}`,
         }));
         setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
@@ -973,6 +986,11 @@ export function MinimalCycleView() {
       if (!parsed.ok) {
         const openProblems = parsed.problems.map((item) => ({
           ...item,
+          severity: "error" as const,
+          operation: "document.open",
+          operationLabel: "Open document",
+          source: "open" as const,
+          stage: item.line !== undefined || item.column !== undefined ? "parse" as const : "validate" as const,
           detail: `open-failure:${item.code}${item.detail ? `;${item.detail}` : ""}`,
         }));
         setProblem(openProblems.map((item) => item.message).join(" "));
@@ -3209,10 +3227,10 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
   </aside>;
 }
 
-function ProblemsPanel({ diagnostics, onNavigate }: { readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigate: (path: string) => void }) {
+function ProblemsPanel({ diagnostics, onNavigate }: { readonly diagnostics: readonly DocumentProblem[]; readonly onNavigate: (path: string) => void }) {
   const [filter, setFilter] = useState("");
-  const visible = diagnostics.filter((item) => `${item.code} ${item.path} ${item.message}`.toLowerCase().includes(filter.toLowerCase()));
-  return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Refresh</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td></tr>)}</tbody></table>}</section>;
+  const visible = diagnostics.filter((item) => `${item.code} ${item.path} ${item.message} ${item.operation ?? ""} ${item.source ?? ""} ${item.stage ?? ""} ${item.recommendation ?? ""}`.toLowerCase().includes(filter.toLowerCase()));
+  return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Refresh</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th><th>Details</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td><td>{(item.operation || item.source || item.stage || item.recommendation) && <details><summary>Details</summary><dl><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd><dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.recommendation && <><dt>Recovery</dt><dd>{item.recommendation}</dd></>}</dl></details>}</td></tr>)}</tbody></table>}</section>;
 }
 
 function JsonPanel({ document }: { readonly document: CanonicalDocument }) {

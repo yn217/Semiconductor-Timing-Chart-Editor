@@ -339,6 +339,20 @@ export interface DocumentProblem {
   readonly line?: number;
   readonly column?: number;
   readonly detail?: string;
+  /** Optional structured context retained by production workflows. */
+  readonly severity?: "error" | "warning" | "info";
+  readonly operation?: string;
+  readonly operationLabel?: string;
+  readonly commandId?: string;
+  readonly objectType?: string;
+  readonly objectId?: string;
+  readonly objectLabel?: string;
+  readonly field?: string;
+  readonly value?: string | number | boolean;
+  readonly expected?: string;
+  readonly recommendation?: string;
+  readonly source?: "validation" | "command" | "parser" | "save" | "open" | "export" | "clipboard" | "renderer" | "ai";
+  readonly stage?: "parse" | "validate" | "serialize" | "storage" | "rasterize" | "clipboard-write" | "render" | "commit";
 }
 
 export interface MigrationWarning { readonly code: string; readonly path: string; readonly message: string }
