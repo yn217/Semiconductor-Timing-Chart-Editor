@@ -27,7 +27,7 @@ import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
-import { createNewDocument, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
+import { createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -48,25 +48,6 @@ function parseSuppressedPeriods(text: string): readonly number[] {
   const unique = [...new Set(values)].sort((left, right) => left - right);
   if (unique.length !== values.length) throw new Error("Suppressed periods must not contain duplicates.");
   return unique;
-}
-
-const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
-
-function openFileByteBudgetProblem(file: File): DocumentProblem {
-  return {
-    code: "OPEN_FILE_TOO_LARGE",
-    path: "$",
-    message: `Open rejected before parsing: ${file.name || "selected file"} is ${file.size.toLocaleString()} bytes; the limit is ${MAX_OPEN_FILE_BYTES.toLocaleString()} bytes.`,
-    severity: "error",
-    operation: "document.open",
-    operationLabel: "Open document",
-    source: "open",
-    stage: "parse",
-    expected: String(MAX_OPEN_FILE_BYTES),
-    value: file.size,
-    recommendation: "Choose a smaller .json/.tcd file or split the document, then retry Open.",
-    detail: `open-failure:byte-budget;actualBytes=${file.size};allowedBytes=${MAX_OPEN_FILE_BYTES}`,
-  };
 }
 
 type BulkSignalDefinition = Readonly<{ path: string; kind: "binary" | "bus" | "state" | "logic" | "event" | "pulse" | "clock"; signalName: string; instancePath: readonly string[]; width?: number }>;
