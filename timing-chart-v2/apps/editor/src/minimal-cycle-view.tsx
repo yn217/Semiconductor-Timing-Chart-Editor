@@ -3235,14 +3235,13 @@ function TransactionLinkedSignals({ transaction, document, onCommand }: { readon
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
   const linkedIds = new Set(transaction.linkedSignals ?? []);
-  const signals = document.signals.filter((signal) => signal.type !== "commentRow");
+  const searchableSignals = useMemo(() => document.signals
+    .filter((signal) => signal.type !== "commentRow")
+    .map((signal) => ({ signal, normalizedSearchText: [...signal.source.instancePath, signal.source.signalName, signal.display.name].join(" ").toLocaleLowerCase() })), [document]);
+  const signals = searchableSignals.map((item) => item.signal);
   const linked = signals.filter((signal) => linkedIds.has(signal.id));
   const normalizedQuery = query.trim().toLocaleLowerCase();
-  const results = signals.filter((signal) => {
-    if (!normalizedQuery) return true;
-    const path = [...signal.source.instancePath, signal.source.signalName, signal.display.name].join(" ").toLocaleLowerCase();
-    return path.includes(normalizedQuery);
-  }).slice(0, 50);
+  const results = searchableSignals.filter((item) => !normalizedQuery || item.normalizedSearchText.includes(normalizedQuery)).slice(0, 50).map((item) => item.signal);
   const toggle = (signal: Signal) => onCommand({ id: nextCommandId("transaction_link"), type: linkedIds.has(signal.id) ? "transaction.unlinkSignal" : "transaction.linkSignal", transactionId: transaction.id, signalId: signal.id });
   return <div className="transaction-linked-signals" data-testid="transaction-linked-signals"><h3>Linked Signals ({linked.length})</h3><div className="transaction-linked-list" data-testid="linked-signal-list">{linked.map((signal) => <div className="transaction-linked-item" key={signal.id} data-signal-id={signal.id}><span title={[...signal.source.instancePath, signal.source.signalName].join(".")}>{signal.display.name}</span><button type="button" aria-label={`Unlink ${signal.display.name}`} onClick={() => toggle(signal)}>×</button></div>)}{linked.length === 0 && <span className="inspector-note">No linked signals</span>}</div><button type="button" data-testid="open-linked-signal-picker" onClick={() => setPickerOpen((open) => !open)}>{pickerOpen ? "Close signal picker" : "Add signal…"}</button>{pickerOpen && <div className="transaction-signal-picker" data-testid="linked-signal-picker"><label>Search<input aria-label="Search linked signals" value={query} onChange={(event) => setQuery(event.target.value)} /></label><div role="listbox" aria-label="Signal search results" data-testid="linked-signal-results">{results.map((signal) => <button type="button" role="option" aria-selected={linkedIds.has(signal.id)} key={signal.id} onClick={() => toggle(signal)}><span>{linkedIds.has(signal.id) ? "✓ " : ""}{signal.display.name}</span><small>{[...signal.source.instancePath, signal.source.signalName].join(".")}</small></button>)}{results.length === 0 && <span className="inspector-note">No matching signals</span>}</div></div>}</div>;
 }
