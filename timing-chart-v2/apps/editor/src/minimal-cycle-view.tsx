@@ -278,6 +278,7 @@ export function MinimalCycleView() {
   const saveDocument = useRef<() => string | undefined>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
+  const openFileReadStartedAtRef = useRef<number | undefined>(undefined);
   const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_clock") : undefined);
   const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_clock")]) : new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
@@ -662,25 +663,30 @@ export function MinimalCycleView() {
     let openRowShellPainted = false;
     let openReferenceGeometryReady = false;
     let openRulerPainted = false;
-    const markOpenPhase = (phase: string) => {
+    const markOpenPhase = (phase: string, phaseTimestamp = globalThis.performance.now()) => {
       if (!openPhaseActive || openPhaseMarks[phase] !== undefined) return;
-      const timestamp = globalThis.performance.now();
-      openPhaseMarks[phase] = timestamp;
+      openPhaseMarks[phase] = phaseTimestamp;
       globalThis.performance.mark(`timing-chart-v2:${phase}`);
       rendererHost.dataset.openPhaseMarks = JSON.stringify(openPhaseMarks);
+      const fileReadDurationMs = openPhaseMarks["file-read-start"] !== undefined && openPhaseMarks["file-read-complete"] !== undefined
+        ? Math.max(0, openPhaseMarks["file-read-complete"] - openPhaseMarks["file-read-start"]) : undefined;
+      rendererHost.dataset.openPhaseDurations = JSON.stringify(fileReadDurationMs === undefined ? {} : { fileReadDurationMs });
       if (phase === "row-shell-painted") openRowShellPainted = true;
       if (phase === "reference-geometry-ready") openReferenceGeometryReady = true;
       if (phase === "ruler-painted") openRulerPainted = true;
       if (openRowShellPainted && openReferenceGeometryReady && openRulerPainted) markOpenPhase("first-correct-paint");
     };
-    const beginOpenMeasurement = () => {
+    const beginOpenMeasurement = (commandStartedAt = globalThis.performance.now(), fileReadStartedAt?: number) => {
       openPhaseActive = true;
       openRowShellPainted = false;
       openReferenceGeometryReady = false;
       openRulerPainted = false;
       for (const key of Object.keys(openPhaseMarks)) delete openPhaseMarks[key];
       delete rendererHost.dataset.openPhaseMarks;
-      markOpenPhase("open-start");
+      delete rendererHost.dataset.openPhaseDurations;
+      markOpenPhase("open-command-start", commandStartedAt);
+      markOpenPhase("open-start", commandStartedAt);
+      if (fileReadStartedAt !== undefined) markOpenPhase("file-read-start", fileReadStartedAt);
     };
     // The progressive wave queue can flush many batches for one canonical
     // snapshot. Keep the derived lookup scoped to that snapshot instead of
@@ -1175,7 +1181,10 @@ export function MinimalCycleView() {
       });
     };
     openDocument.current = (text) => {
-      beginOpenMeasurement();
+      const fileReadStartedAt = openFileReadStartedAtRef.current;
+      openFileReadStartedAtRef.current = undefined;
+      beginOpenMeasurement(undefined, fileReadStartedAt);
+      markOpenPhase("file-read-complete");
       const parsed = parseDocument(text);
       markOpenPhase("parse-done");
       if (!parsed.ok) {
@@ -1192,6 +1201,7 @@ export function MinimalCycleView() {
         setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
         return;
       }
+      markOpenPhase("validate-done");
       replaceDocument(parsed, parsed.warnings);
     };
     newDocument.current = () => { beginOpenMeasurement(); replaceDocument({ ...cycleDocument, document: { ...cycleDocument.document, id: `document_${Date.now()}`, title: "Untitled Timing Chart" }, annotations: [], bookmarks: [], timeGroups: [], transactions: [] }); };
@@ -2899,7 +2909,7 @@ export function MinimalCycleView() {
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); closeDialog(() => setSaveAsVisible(false)); }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
-     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else void file.text().then(requestOpenText).catch(() => setProblem("Open failed.")); } event.currentTarget.value = ""; }} />
+     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else { openFileReadStartedAtRef.current = globalThis.performance.now(); void file.text().then(requestOpenText).catch(() => { openFileReadStartedAtRef.current = undefined; setProblem("Open failed."); }); } } event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
       <span data-testid="tool-status">{arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}</span>
       <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>

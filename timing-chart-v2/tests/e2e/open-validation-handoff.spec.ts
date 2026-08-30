@@ -22,8 +22,13 @@ test("hands a validated Open document to the new session without duplicate sessi
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   const counters = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
+  const openPhases = JSON.parse(await host.getAttribute("data-open-phase-marks") ?? "null") as Record<string, number>;
+  const openDurations = JSON.parse(await host.getAttribute("data-open-phase-durations") ?? "null") as { fileReadDurationMs?: number };
   expect(counters.validationRuns).toBe(0);
   expect(counters.commits).toBe(0);
+  expect(Object.keys(openPhases)).toEqual(expect.arrayContaining(["open-command-start", "file-read-start", "file-read-complete", "parse-done", "validate-done", "canonical-replaced"]));
+  expect(openPhases["file-read-start"]).toBeLessThanOrEqual(openPhases["file-read-complete"]!);
+  expect(openDurations.fileReadDurationMs).toBeGreaterThanOrEqual(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
