@@ -9,6 +9,7 @@
 #   git show origin/codex-control:.codex/ISSUE_ORDER.txt
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
+# Every executable Issue number appears at most once.
 #
 # Execution rules:
 # - Never merge/cherry-pick codex-control into main. This branch is control data only.
@@ -106,12 +107,11 @@
 202
 206
 207
-228
 233
-249
 253
 259
 260
+276
 
 # ==== BROADER PHASE / PARITY / CLOSURE / UMBRELLA — LATER ====
 168
@@ -130,9 +130,6 @@
 201
 204
 205
-209
-212
-228
 250
 262
 275
