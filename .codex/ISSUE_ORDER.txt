@@ -10,6 +10,8 @@
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
 # Every executable Issue number appears at most once.
+# This file is reconciled to contain every currently Open source Issue exactly once.
+# Closed Issues are removed during ChatGPT reconciliation; newly opened Issues are inserted by priority.
 #
 # Execution rules:
 # - Never merge/cherry-pick codex-control into main. This branch is control data only.
@@ -42,6 +44,7 @@
 # ==== P0 / CORRECTNESS / RELIABILITY / PERFORMANCE ====
 247
 218
+180
 229
 246
 257
@@ -114,6 +117,13 @@
 276
 
 # ==== BROADER PHASE / PARITY / CLOSURE / UMBRELLA — LATER ====
+161
+162
+163
+164
+165
+166
+167
 168
 169
 170
@@ -126,6 +136,9 @@
 177
 178
 181
+182
+185
+186
 200
 201
 204
@@ -137,4 +150,4 @@
 286
 293
 
-# Orchestration Issues #187 and #298 are intentionally NOT executable work items.
+# Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
