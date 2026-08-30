@@ -15,6 +15,7 @@ import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
+import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -4442,16 +4443,6 @@ function preferredSnapKinds(type: AnnotationType): readonly SnapKind[] {
   if (type === "dependency" || type === "arrow") return ["clock-edge", "signal-transition", "bus-transition", "value-boundary", "cycle-boundary"];
   if (type === "verticalLine" || type === "marker") return ["cycle-boundary", "clock-edge"];
   return ["annotation", "marker", "value-boundary", "cycle-boundary", "cycle-center", "signal-row"];
-}
-
-function withAddedOffset(anchor: SemanticAnchor, x: number, y: number): SemanticAnchor {
-  return { ...anchor, offset: { x: (anchor.offset?.x ?? 0) + x, y: (anchor.offset?.y ?? 0) + y } };
-}
-
-function withSnapOffset(anchor: SemanticAnchor, desired: Point, snapped: Point): SemanticAnchor {
-  const residual = { x: Math.round(desired.x - snapped.x), y: Math.round(desired.y - snapped.y) };
-  if (residual.x === 0 && residual.y === 0) return anchor;
-  return { ...anchor, offset: { x: (anchor.offset?.x ?? 0) + residual.x, y: (anchor.offset?.y ?? 0) + residual.y } };
 }
 
 function referenceSvgScreenScale(svg: SVGSVGElement | undefined, currentZoom: number): number | undefined {
