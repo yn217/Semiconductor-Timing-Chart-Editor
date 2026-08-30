@@ -31,6 +31,7 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
   const unlink = linked.getByRole("button", { name: "Unlink DATA" });
+  await expect(unlink).toHaveAttribute("data-icon-button", "close");
   await unlink.focus();
   await unlink.press("Enter");
   await expect(linked.getByTestId("linked-signal-list")).toContainText("No linked signals");
