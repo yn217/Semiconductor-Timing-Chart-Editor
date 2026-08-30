@@ -26,8 +26,8 @@ export interface CanonicalReference {
  */
 export function canonicalReferences(document: CanonicalDocument): readonly CanonicalReference[] {
   const references: CanonicalReference[] = [];
-  const signalIds = new Set(document.signals.map((signal) => signal.id));
-  const spacerIds = new Set(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => spacer.id)));
+  const signalIds = new Set<string>(document.signals.map((signal) => signal.id));
+  const spacerIds = new Set<string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => spacer.id)));
   if (document.timeline.referenceClock !== undefined) {
     references.push({
       kind: "timeline.referenceClock",
