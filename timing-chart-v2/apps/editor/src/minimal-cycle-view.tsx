@@ -971,8 +971,12 @@ export function MinimalCycleView() {
     openDocument.current = (text) => {
       const parsed = parseDocument(text);
       if (!parsed.ok) {
-        setProblem(parsed.problems.map((item) => item.message).join(" "));
-        upsertDiagnostic((item) => item.code === "OPEN_FAILED", { code: "OPEN_FAILED", path: "$", message: parsed.problems.map((item) => item.message).join(" ") });
+        const openProblems = parsed.problems.map((item) => ({
+          ...item,
+          detail: `open-failure:${item.code}${item.detail ? `;${item.detail}` : ""}`,
+        }));
+        setProblem(openProblems.map((item) => item.message).join(" "));
+        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
         return;
       }
       replaceDocument(parsed, parsed.warnings);

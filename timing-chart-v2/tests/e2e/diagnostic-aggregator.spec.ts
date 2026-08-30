@@ -33,7 +33,8 @@ test("surfaces an Open failure in the Problems panel", async ({ page }) => {
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "bad.tcd", mimeType: "application/json", buffer: Buffer.from("{ not json") });
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
-  await expect(page.getByTestId("problems-panel")).toContainText("OPEN_FAILED");
+  await expect(page.getByTestId("problems-panel")).toContainText("JSON_SYNTAX");
+  await expect(page.getByTestId("problems-panel")).toContainText("$@");
 });
 
 test("surfaces a V1->V2 migration warning after opening a legacy document", async ({ page }) => {
