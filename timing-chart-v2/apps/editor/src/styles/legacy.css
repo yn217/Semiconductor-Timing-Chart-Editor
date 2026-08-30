@@ -751,7 +751,7 @@ body { min-width: 1100px; }
 .editor-shell .timeline-group { width: 760px; }
 .editor-shell .timeline-group .timeline-toolbar {
   display: grid;
-  grid-template-columns: 108px 155px 220px 126px minmax(120px, 1fr);
+  grid-template-columns: minmax(78px, .8fr) minmax(98px, 1fr) minmax(138px, 1.35fr) minmax(104px, 1fr) minmax(96px, .95fr);
   align-items: stretch;
   gap: 2px;
   height: 92px;
@@ -780,7 +780,7 @@ body { min-width: 1100px; }
 }
 .editor-shell .timeline-subgroup > label { min-width: 0; flex-direction: column; gap: 2px; font-size: 8px; }
 .editor-shell .timeline-subgroup input { width: 42px; min-width: 0; height: 22px; padding: 1px 3px; }
-.editor-shell .timeline-subgroup > button { min-width: 0; flex: 1 1 auto; padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.editor-shell .timeline-subgroup > button { min-width: 0; flex: 1 1 0; padding: 2px 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.05; text-align: center; }
 .editor-shell .timeline-subgroup .timeline-objects { min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; overflow: auto; }
 .editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
 .editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group { min-width: 0; display: flex; gap: 2px; }
