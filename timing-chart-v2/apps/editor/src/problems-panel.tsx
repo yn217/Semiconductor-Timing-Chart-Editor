@@ -4,7 +4,7 @@ import { documentProblemRuleDescriptor } from "@timing-chart-v2/schema";
 
 function details(item: DocumentProblem) {
   if (!(item.operation || item.source || item.stage || item.recommendation || item.commandId || item.objectId)) return null;
-  return <details><summary>Details</summary><dl><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd>{item.commandId ? <><dt>Command ID</dt><dd>{item.commandId}</dd></> : null}{item.objectId ? <><dt>Object Type</dt><dd>{item.objectType ?? "—"}</dd><dt>Object ID</dt><dd>{item.objectId}</dd></> : null}<dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.recommendation ? <><dt>Recovery</dt><dd>{item.recommendation}</dd></> : null}</dl></details>;
+  return <details><summary>Details</summary><dl><dt>Severity</dt><dd>{severityOf(item)}</dd><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd>{item.commandId ? <><dt>Command ID</dt><dd>{item.commandId}</dd></> : null}{item.objectId ? <><dt>Object Type</dt><dd>{item.objectType ?? "—"}</dd><dt>Object ID</dt><dd>{item.objectId}</dd></> : null}{item.field ? <><dt>Field</dt><dd>{item.field}</dd></> : null}<dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.expected !== undefined ? <><dt>Expected</dt><dd>{item.expected}</dd></> : null}{item.value !== undefined ? <><dt>Value</dt><dd>{String(item.value)}</dd></> : null}{item.recommendation ? <><dt>Recovery</dt><dd>{item.recommendation}</dd></> : null}</dl></details>;
 }
 
 function severityOf(item: DocumentProblem): "error" | "warning" | "info" {
