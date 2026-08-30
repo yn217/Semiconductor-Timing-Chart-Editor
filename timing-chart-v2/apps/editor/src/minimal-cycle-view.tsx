@@ -25,6 +25,7 @@ import { DisplayMappingCoordinator } from "./runtime/display-mapping-coordinator
 import { GeometryRegistry } from "./runtime/geometry-registry.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
+import type { RangeDragState } from "./runtime/range-drag.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -1529,7 +1530,7 @@ export function MinimalCycleView() {
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
-    let rangeDrag: { readonly start: number; readonly anchor: number; readonly selectedCycle: number; readonly startClientX: number; readonly surface: "ruler" | "waveform"; moved: boolean } | undefined;
+    let rangeDrag: RangeDragState | undefined;
     let suppressCanvasClick = false;
     let suppressRulerClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
