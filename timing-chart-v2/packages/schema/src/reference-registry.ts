@@ -1,13 +1,15 @@
 import type { CanonicalDocument } from "./types.js";
 
-export type CanonicalReferenceTarget = "signal" | "time-group";
+export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spacer";
 
 export type CanonicalReferenceKind =
   | "timeline.referenceClock"
   | "annotation.anchor"
   | "annotation.ghostTraceSource"
   | "transaction.linkedSignal"
-  | "labelAnchor.ownerTimeGroup";
+  | "labelAnchor.ownerTimeGroup"
+  | "signalGroup.row"
+  | "spacer.ownerGroup";
 
 export interface CanonicalReference {
   readonly kind: CanonicalReferenceKind;
@@ -75,6 +77,27 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
         path: `$.timeline.labelAnchors[${index}].ownerTimeGroupId`,
       });
     }
+  });
+  document.signalGroups.forEach((group, groupIndex) => {
+    group.rows.forEach((rowId, rowIndex) => {
+      const targetType = document.signals.some((signal) => signal.id === rowId) ? "signal"
+        : group.spacers?.some((spacer) => spacer.id === rowId) ? "spacer" : undefined;
+      if (targetType === undefined) return;
+      references.push({
+        kind: "signalGroup.row",
+        ownerId: group.id,
+        targetId: rowId,
+        targetType,
+        path: `$.signalGroups[${groupIndex}].rows[${rowIndex}]`,
+      });
+    });
+    group.spacers?.forEach((spacer, spacerIndex) => references.push({
+      kind: "spacer.ownerGroup",
+      ownerId: spacer.id,
+      targetId: group.id,
+      targetType: "group",
+      path: `$.signalGroups[${groupIndex}].spacers[${spacerIndex}]`,
+    }));
   });
   return references;
 }

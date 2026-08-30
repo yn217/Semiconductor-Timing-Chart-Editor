@@ -36,12 +36,15 @@ describe("canonical stable-ID reference registry", () => {
       "annotation.ghostTraceSource",
       "transaction.linkedSignal",
       "labelAnchor.ownerTimeGroup",
+      "signalGroup.row",
+      "signalGroup.row",
     ]);
     expect(referencesToSignal(document, signal.id as SignalId).map((reference) => reference.kind)).toEqual([
       "annotation.anchor",
       "annotation.anchor",
       "annotation.ghostTraceSource",
       "transaction.linkedSignal",
+      "signalGroup.row",
     ]);
     expect(referencesToTimeGroup(document, groupId).map((reference) => reference.kind)).toEqual(["labelAnchor.ownerTimeGroup"]);
   });
@@ -58,6 +61,24 @@ describe("canonical stable-ID reference registry", () => {
         path: "$.timeline.referenceClock",
         message: "Signal 'sig_missing' does not exist.",
       }),
+    ]);
+  });
+
+  it("registers group row membership and spacer ownership as canonical relationships", () => {
+    const base = canonicalFixture();
+    const spacerId = "spacer_registry" as never;
+    const groupId = base.signalGroups[0]!.id;
+    const document: CanonicalDocument = {
+      ...base,
+      signalGroups: [{ ...base.signalGroups[0]!, rows: [...base.signalGroups[0]!.rows, spacerId], spacers: [{ id: spacerId, height: 12 }] }],
+    };
+
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    expect(canonicalReferences(document).filter((reference) => reference.kind === "signalGroup.row" || reference.kind === "spacer.ownerGroup")).toEqual([
+      expect.objectContaining({ kind: "signalGroup.row", ownerId: groupId, targetId: "sig_clk", targetType: "signal", path: "$.signalGroups[0].rows[0]" }),
+      expect.objectContaining({ kind: "signalGroup.row", ownerId: groupId, targetId: "sig_data", targetType: "signal", path: "$.signalGroups[0].rows[1]" }),
+      expect.objectContaining({ kind: "signalGroup.row", ownerId: groupId, targetId: spacerId, targetType: "spacer", path: "$.signalGroups[0].rows[2]" }),
+      expect.objectContaining({ kind: "spacer.ownerGroup", ownerId: spacerId, targetId: groupId, targetType: "group", path: "$.signalGroups[0].spacers[0]" }),
     ]);
   });
 });
