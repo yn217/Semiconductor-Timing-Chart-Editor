@@ -18,6 +18,7 @@ import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
 import { DocumentEpoch } from "./runtime/document-epoch.js";
+import { EditorSessionController } from "./runtime/editor-session-controller.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
@@ -632,7 +633,8 @@ export function MinimalCycleView() {
     const gridElement = gridLayer.current;
     if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
-    let session = new CommandHistorySession(initialDocument);
+    const sessionController = new EditorSessionController(initialDocument);
+    let session = sessionController.current();
     const documentEpoch = new DocumentEpoch();
     const adapter = new ProductionWaveDromAdapter();
     const screenGeometry = new DefaultScreenGeometryProjector();
@@ -1120,7 +1122,7 @@ export function MinimalCycleView() {
       documentEpoch.advance();
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
-      session = new CommandHistorySession(document);
+      session = sessionController.replace(document);
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
