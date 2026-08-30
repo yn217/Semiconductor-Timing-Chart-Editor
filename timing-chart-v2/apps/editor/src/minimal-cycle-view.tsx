@@ -1392,7 +1392,7 @@ export function MinimalCycleView() {
         setSelectedId(undefined);
         applySelectionDecorations(new Set(), undefined);
         selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
+        selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set());
         setSelectedAnnotationId(undefined);
         selectedAnnotationRef.current = undefined;
         setSelectedTransactionId(undefined);
@@ -1454,7 +1454,7 @@ export function MinimalCycleView() {
         setSelectedGroupId(spacerGroup.id);
         setSelectedId(undefined);
         selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = new Set();
+        selectedSignalIdsRef.current = selectionController.clear();
         setSelectedSignalIds(new Set());
         selectedAnnotationRef.current = undefined;
         setSelectedAnnotationId(undefined);
@@ -2403,7 +2403,7 @@ export function MinimalCycleView() {
       setSelectedGroupId(newGroupId);
       selectedSignalRef.current = undefined;
       setSelectedId(undefined);
-      selectedSignalIdsRef.current = new Set();
+        selectedSignalIdsRef.current = selectionController.clear();
       setSelectedSignalIds(new Set());
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
     }
