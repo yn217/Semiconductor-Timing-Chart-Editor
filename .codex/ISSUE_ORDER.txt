@@ -5,8 +5,8 @@
 # Path: .codex/ISSUE_ORDER.txt
 #
 # Last reconciled by ChatGPT: 2026-08-31
-# GitHub search-index Open count observed at reconciliation: 110
-# Direct Issue API confirms #241 and #291 are closed/completed in this sweep.
+# GitHub search-index Open count observed during sweep: 110 (may lag direct close state).
+# Direct Issue API confirms #241, #291 and #302 are closed/completed in this sweep.
 # Observed production HEAD: ab0ece39d9cbf658a2e003e509b043f6c9ce8598
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
@@ -147,7 +147,6 @@
 
 # ==== OPEN ITEMS THAT MAY BE PARTIAL / ALREADY IMPLEMENTED — AUDIT THEN CLOSE OR CONTINUE ====
 261
-302
 195
 199
 202
@@ -194,4 +193,4 @@
 306
 
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
-# Closed in the latest implementation-audit sweep: #241, #291.
+# Closed in the latest implementation-audit sweep: #241, #291, #302.
