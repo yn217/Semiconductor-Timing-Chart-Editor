@@ -44,7 +44,7 @@ import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileBy
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
@@ -314,30 +314,7 @@ export function MinimalCycleView() {
     }
   }, [bottomPinned, pinnedBottomSelection, snapshot.revision]);
   useEffect(() => {
-    const root = host.current;
-    if (!root) return;
-    const query = treeFilter.trim().toLocaleLowerCase();
-    const matchesType = (row: HTMLElement) => treeTypeFilter === "all"
-      || (treeTypeFilter === "comment" ? row.dataset.kind === "comment" : treeTypeFilter === "wire" ? row.dataset.signalRole === "internal" : row.dataset.signalRole === treeTypeFilter);
-    let matches = 0;
-    for (const row of root.querySelectorAll<HTMLElement>("[data-role='left-row']")) {
-      const text = [row.dataset.name, row.dataset.fullPath, row.dataset.instancePath, row.dataset.signalRole, row.dataset.groupName].filter(Boolean).join(" ").toLocaleLowerCase();
-      const visible = matchesType(row) && (query.length === 0 || text.includes(query));
-      row.hidden = !visible;
-      row.dataset.filteredOut = String(!visible);
-      row.dataset.groupCollapsed = "false";
-      if (visible && row.dataset.kind === "timing" && row.dataset.role === "left-row") matches += 1;
-    }
-    const filterActive = treeTypeFilter !== "all" || query.length > 0;
-    const rows = [...root.querySelectorAll<HTMLElement>("[data-role='left-row']")];
-    for (const header of root.querySelectorAll<HTMLElement>("[data-role='left-group-header']")) {
-      const hasVisibleChild = rows.some((row) => row.dataset.groupId === header.dataset.groupId && !row.hidden);
-      header.hidden = filterActive && !hasVisibleChild;
-      header.dataset.filteredOut = String(header.hidden);
-    }
-    root.dataset.treeFilter = treeFilter;
-    root.dataset.treeTypeFilter = treeTypeFilter;
-    root.dataset.treeFilterMatches = String(matches);
+    refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
   }, [snapshot.revision, treeFilter, treeTypeFilter, collapsedGroupIds]);
   useEffect(() => {
     refreshTreeCollapsedMetadata(host, collapsedGroupIds);
