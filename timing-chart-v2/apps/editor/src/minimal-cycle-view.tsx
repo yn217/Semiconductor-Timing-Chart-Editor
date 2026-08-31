@@ -1959,7 +1959,7 @@ export function MinimalCycleView() {
     selectedAnnotationRef.current = id;
     setSelectedAnnotationId(id);
     setSelectedId(undefined);
-        selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set());
+        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
     setSelectedGroupId(undefined);
     setSelectedTransactionId(undefined);
     selectedTransactionRef.current = undefined;
