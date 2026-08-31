@@ -21,6 +21,7 @@ controllers are extracted incrementally.
 | Advanced JSON selected-object diagnostics | `json-problems.ts` | validation diagnostic projection | Phase 1 extracted utility |
 | Presentation cycle sampling | `presentation-cycles.ts` | view-only geometry projection | Phase 1 extracted utility |
 | Text download bridge | `download-text.ts` | external export side effect | Phase 1 extracted utility |
+| Semantic command ID generation | `command-id.ts` | command dispatch identity | Phase 1 extracted utility |
 
 Rules:
 

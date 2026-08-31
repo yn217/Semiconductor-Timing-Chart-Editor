@@ -34,6 +34,7 @@ import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
 import { presentationCycles } from "./presentation-cycles.js";
 import { downloadText } from "./download-text.js";
+import { nextCommandId } from "./command-id.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -4100,12 +4101,6 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       <button type="submit" data-testid="add-signal-event">Add / replace event</button>
     </form>
   </div>;
-}
-
-let commandSequence = 0;
-function nextCommandId(scope: string): CommandId {
-  commandSequence += 1;
-  return `cmd_phase7_${scope}_${commandSequence}` as CommandId;
 }
 
 let entitySequence = 0;
