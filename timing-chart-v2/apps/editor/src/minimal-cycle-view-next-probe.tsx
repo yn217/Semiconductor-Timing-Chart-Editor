@@ -3,11 +3,15 @@ import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
+import { MinimalCycleViewRibbonTabs, MinimalCycleViewTitleBar } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
 export function MinimalCycleViewNextProbe() {
   const session = useMemo(() => new CommandHistorySession(cycleDocument), []);
   const [, refresh] = useState(0);
+  const [ribbonTab, setRibbonTab] = useState("Home");
+  const [viewMode, setViewMode] = useState("Cycle");
+  const [bottomTab, setBottomTab] = useState("Signal");
   const viewportRef = useRef<HTMLDivElement>(null);
   const surfaceHostRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
@@ -32,14 +36,14 @@ export function MinimalCycleViewNextProbe() {
     fitSelection: () => undefined, navigateToCycle: () => undefined,
     transactionBoundaryX: () => undefined, snapTransactionCycle: () => undefined,
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
-    titleBarUi: <header className="editor-title-bar"><strong>{snapshot.document.document.title}</strong></header>,
-    ribbonTabsUi: <nav className="ribbon-tabs" aria-label="Ribbon tabs"><span>Next</span></nav>,
+    titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
+    ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
     ribbonUi: <div className="ribbon" data-testid="next-ribbon"><span>Parallel replacement</span></div>,
     signalTreeAndCanvasUi: <section data-testid="next-signal-tree-canvas"><div ref={surfaceHostRef} /></section>,
     bottomEditorUi: <section data-testid="next-bottom-editor" />,
     inspectorShellUi: <aside data-testid="next-inspector" />,
     dialogsUi: null,
     statusBarUi: <footer className="status-bar" data-testid="next-status">Phase 1 · parallel replacement</footer>,
-  }), [snapshot, session]);
+  }), [snapshot, session, ribbonTab, viewMode, bottomTab]);
   return <MinimalCycleViewNext source={source} />;
 }
