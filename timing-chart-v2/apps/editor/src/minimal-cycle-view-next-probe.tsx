@@ -1,9 +1,10 @@
 import { useMemo, useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
+import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
-import { ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
+import { ContextMenuPanel, InspectorPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
@@ -19,6 +20,7 @@ export function MinimalCycleViewNextProbe() {
   const surfaceHostRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
   const gridLayerRef = useRef<HTMLDivElement>(null);
+  const registry = useMemo(() => new UiCommandRegistry(), []);
   const snapshot = session.getSnapshot();
   const source = useMemo(() => ({
     snapshot,
@@ -44,9 +46,9 @@ export function MinimalCycleViewNextProbe() {
     ribbonUi: <div className="ribbon" data-testid="next-ribbon"><span>Parallel replacement</span></div>,
     signalTreeAndCanvasUi: <section data-testid="next-signal-tree-canvas"><div ref={surfaceHostRef} /></section>,
     bottomEditorUi: <section data-testid="next-bottom-editor" />,
-    inspectorShellUi: <aside data-testid="next-inspector" />,
+    inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} onCommand={(command) => session.execute(command)} onReveal={() => undefined} onCancel={() => undefined} /></aside>,
     dialogsUi: <ContextMenuPanel contextMenu={undefined} hasSelectedClipboard={false} clipboardAvailable={false} hasSelectedEntity={false} hasSelectedSignal={false} hasDeletableSelection={false} copySelectedSignal={() => undefined} cutSelectedSignal={() => undefined} pasteSelectedEntity={() => undefined} duplicateSelectedEntity={() => undefined} moveSelection={() => undefined} setSelectionVisibility={() => undefined} renameSelection={() => undefined} closeContextMenu={() => undefined} deleteSelection={() => undefined} />,
     statusBarUi: <footer className="status-bar" data-testid="next-status">Phase 1 · parallel replacement</footer>,
-  }), [snapshot, session, ribbonTab, viewMode, bottomTab, zoom, selectedCycle]);
+  }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle]);
   return <MinimalCycleViewNext source={source} />;
 }
