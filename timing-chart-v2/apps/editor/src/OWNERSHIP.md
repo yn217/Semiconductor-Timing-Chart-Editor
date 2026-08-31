@@ -54,3 +54,4 @@ Rules:
 | `event-table.tsx` | Signal event table state, import/export, and event command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `clock-generator-editor.tsx` | Clock generator, edge counter, import/export, and preview surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `runtime/build-ruler.ts` | Ruler DOM projection from shared local geometry and display mapping | `minimal-cycle-view.tsx` composition | 2026-08-31 |
+| `document-properties.tsx` | Document metadata, header/footer, and editable legend properties surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
