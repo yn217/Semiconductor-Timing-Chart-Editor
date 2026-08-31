@@ -36,3 +36,8 @@ export function attachDialogOriginCapture(doc: Document, originRef: { current: H
   doc.addEventListener("click", capture, true);
   return () => doc.removeEventListener("click", capture, true);
 }
+
+export function scheduleDialogFocusRestore(doc: Document, originRef: { current: HTMLElement | null }, labelRef: { current: string | null }): () => void {
+  const frame = requestAnimationFrame(() => { const label = labelRef.current; const origin = originRef.current?.isConnected ? originRef.current : label === null ? null : label === "Properties" ? [...doc.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label) ?? null : doc.querySelector<HTMLElement>(`button[aria-label='${label}']`); originRef.current = null; labelRef.current = null; if (origin?.isConnected) origin.focus({ preventScroll: true }); });
+  return () => cancelAnimationFrame(frame);
+}

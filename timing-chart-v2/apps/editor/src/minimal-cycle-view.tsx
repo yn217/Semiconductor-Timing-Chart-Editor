@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -234,18 +234,7 @@ export function MinimalCycleView() {
   }, []);
   useLayoutEffect(() => {
     if (propertiesVisible || exportVisible || saveAsVisible || hierarchyVisible || bulkRegistrationVisible) return undefined;
-    const frame = requestAnimationFrame(() => {
-      const label = dialogOriginLabelRef.current;
-      const origin = dialogOriginRef.current?.isConnected
-        ? dialogOriginRef.current
-        : label === null ? null : label === "Properties"
-          ? [...document.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label) ?? null
-          : document.querySelector<HTMLElement>(`button[aria-label='${label}']`);
-      dialogOriginRef.current = null;
-      dialogOriginLabelRef.current = null;
-      if (origin?.isConnected) origin.focus({ preventScroll: true });
-    });
-    return () => cancelAnimationFrame(frame);
+    return scheduleDialogFocusRestore(document, dialogOriginRef, dialogOriginLabelRef);
   }, [bulkRegistrationVisible, exportVisible, hierarchyVisible, propertiesVisible, saveAsVisible]);
   useEffect(() => {
     const onDialogKeyDown = (event: KeyboardEvent) => {
