@@ -32,6 +32,7 @@ import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileBy
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { EventRow, QuickValues } from "./event-table-components.js";
+import { CommentRowEditor } from "./comment-row-editor.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -4012,28 +4013,9 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
         {signal.type !== "commentRow" && <><label>Spacing Before<input aria-label="Signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label></>}
         <button type="submit" data-testid="save-signal-properties">Apply properties</button>
       </form>
-      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
     </>}
   </section>;
-}
-
-function CommentRowEditor({ signal, onCommand, onCancel }: { readonly signal: CommentRow; readonly onCommand: (command: SemanticCommand) => void; readonly onCancel: () => void }) {
-  const [title, setTitle] = useState(signal.title);
-  const [body, setBody] = useState(signal.body);
-  const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
-  const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
-  return <form className="comment-row-editor" aria-label="Comment Row Editor" data-testid="comment-row-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }} onSubmit={(event) => {
-    event.preventDefault();
-    onCommand({ id: nextCommandId("comment_row_update"), type: "commentRow.update", signalId: signal.id, title, body, spacingBefore, spacingAfter });
-  }}>
-    <h2>Comment Row</h2>
-    <div className="property-row"><span>Scope</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div>
-    <label>Title<input aria-label="Comment Row title" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
-    <label>Body<textarea aria-label="Comment Row body" value={body} onChange={(event) => setBody(event.target.value)} rows={4} /></label>
-    <label>Spacing Before<input aria-label="Comment Row spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
-    <label>Spacing After<input aria-label="Comment Row spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
-    <button type="submit" data-testid="apply-comment-row">Apply Comment Row</button><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
-  </form>;
 }
 
 function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void }) {
