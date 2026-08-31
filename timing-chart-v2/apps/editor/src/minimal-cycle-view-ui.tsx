@@ -2,6 +2,7 @@ import { startTransition, type ReactNode, type RefObject } from "react";
 import type { MinimalCycleApplicationPort } from "./minimal-cycle-view-application.js";
 import type { MinimalCycleTimelinePort } from "./minimal-cycle-view-timeline.js";
 import { MinimalCycleViewPanels } from "./minimal-cycle-view-panels.js";
+import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 
 /**
  * Coarse UI owner.
@@ -82,6 +83,15 @@ export function MinimalCycleViewUi({
 export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, setViewMode, bottomTab, setBottomTab }: any) {
   const tabs = [{ key: "File", label: "File" }, { key: "Home", label: "Home" }, { key: "Insert", label: "Insert" }, { key: "Timeline", label: "Timeline" }, { key: "Annotation", label: "Annotation" }, { key: "View", label: "View" }, { key: "Review", label: "Check" }, { key: "AI", label: "AI" }] as const;
   return <nav className="ribbon-tabs" aria-label="Ribbon tabs">{tabs.map((tab) => <button type="button" key={tab.key} aria-label={tab.label} className={ribbonTab === tab.key ? "active" : ""} onClick={() => startTransition(() => setRibbonTab(tab.key))}>{tab.label}</button>)}<div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => { setViewMode(mode); if (mode === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal"); if (mode === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction"); }}>{mode}</button>)}</div></nav>;
+}
+
+export function MinimalCycleViewSignalTreeCanvas({ document, selectedSignalId, onSelect, surfaceHostRef }: { readonly document: Readonly<CanonicalDocument>; readonly selectedSignalId?: SignalId; readonly onSelect: (id: SignalId) => void; readonly surfaceHostRef: RefObject<HTMLDivElement | null> }) {
+  return <section className="cycle-panel" data-testid="next-signal-tree-canvas" aria-label="Next signal tree and canvas">
+    <div className="next-signal-tree" data-role="timing-tree" role="tree" aria-label="Signals">
+      {document.signals.map((signal) => <button type="button" role="treeitem" key={signal.id} data-row-id={signal.id} aria-selected={signal.id === selectedSignalId} onClick={() => onSelect(signal.id)}>{signal.display.name}</button>)}
+    </div>
+    <div className="cycle-viewport" data-testid="next-cycle-viewport" aria-label="Next timing canvas"><div className="surface-host" ref={surfaceHostRef} data-testid="next-surface-host" /></div>
+  </section>;
 }
 
 export function refreshTreeCollapsedMetadata(host: RefObject<HTMLDivElement | null>, collapsedGroups: ReadonlySet<string>): void { const root = host.current; if (root) root.dataset.collapsedGroups = [...collapsedGroups].join(","); }

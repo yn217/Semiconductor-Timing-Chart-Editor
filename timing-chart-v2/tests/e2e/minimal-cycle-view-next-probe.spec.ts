@@ -14,6 +14,8 @@ test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await page.getByTestId("next-cycle-next").click();
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-selected-cycle", "1");
   await expect(page.getByTestId("next-signal-tree-canvas")).toBeVisible();
+  await expect(page.getByRole("treeitem").first()).toBeVisible();
+  await expect(page.getByTestId("next-cycle-viewport")).toBeVisible();
   await expect(page.getByTestId("next-bottom-editor")).toBeVisible();
   await expect(page.getByTestId("next-inspector")).toBeVisible();
   await expect(page.getByTestId("next-status")).toContainText("Phase 1");
