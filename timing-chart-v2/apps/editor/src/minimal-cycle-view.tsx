@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -255,27 +255,7 @@ export function MinimalCycleView() {
     const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
     const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
     menu?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
-    const onMenuKeyDown = (event: KeyboardEvent) => {
-      const target = event.target instanceof HTMLElement ? event.target : undefined;
-      const activeMenu = target?.closest<HTMLElement>("[role='menu']");
-      if (!activeMenu) return;
-      if (event.key === "Escape") {
-        event.preventDefault();
-        if (activeMenu.classList.contains("context-menu")) closeContextMenu();
-        else if (activeMenu.classList.contains("tree-add-menu")) closeTreeAddMenu();
-        else closeTreeMoreMenu();
-        return;
-      }
-      if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
-      const items = [...activeMenu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
-      if (items.length === 0) return;
-      event.preventDefault();
-      const current = items.indexOf(document.activeElement as HTMLButtonElement);
-      const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length;
-      items[next]?.focus();
-    };
-    document.addEventListener("keydown", onMenuKeyDown);
-    return () => document.removeEventListener("keydown", onMenuKeyDown);
+    return attachMenuKeyboardNavigation(document, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu);
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   const [renameDialogOpen, setRenameDialogOpen] = useState(false);
   const [renameDraft, setRenameDraft] = useState("");
