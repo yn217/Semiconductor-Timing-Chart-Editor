@@ -998,9 +998,9 @@ export function MinimalCycleView() {
       if (!result.ok) {
         const target = commandDiagnosticTarget(command);
         const objectId = target.objectId;
-        const safeTarget = objectId === undefined
+        const safeTarget = (objectId === undefined
           ? (target.objectType === undefined ? {} : { objectType: target.objectType })
-          : { ...(target.objectType === undefined ? {} : { objectType: target.objectType }), objectId };
+          : { ...(target.objectType === undefined ? {} : { objectType: target.objectType }), objectId }) as Pick<DocumentProblem, "objectType" | "objectId">;
         const diagnostics = buildCommandRejectionDiagnostics({ result, operation, ...(command?.id ?? batchId ? { commandId: command?.id ?? batchId } : {}), target: safeTarget });
         setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
         setRuntimeDiagnostics((current) => [
