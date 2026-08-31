@@ -8,6 +8,7 @@ import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { renderGeometryGrid } from "../render-geometry-grid.js";
 import { buildRuler } from "./build-ruler.js";
 import { referenceSvgScreenScale } from "./screen-scale.js";
+import { buildViewportWindow } from "./viewport-window.js";
 
 export type RendererHostSizingContext = { readonly host: RefObject<HTMLDivElement | null>; readonly viewport: RefObject<HTMLDivElement | null>; readonly metrics: { readonly viewportWidth: number; readonly leftPaneWidth: number; readonly inspectorWidth: number; readonly frozenPaneWidth: number; readonly zoom: number } };
 export function applyRendererHostSizing({ host, viewport, metrics }: RendererHostSizingContext): void { const rendererHost = host.current; const viewportElement = viewport.current; if (!rendererHost || !viewportElement) return; const availableWidth = metrics.viewportWidth > 0 ? metrics.viewportWidth : globalThis.innerWidth; const baseWidth = Math.max(160, availableWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth); const width = metrics.leftPaneWidth + metrics.frozenPaneWidth + baseWidth * metrics.zoom; rendererHost.style.width = `${width}px`; const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']"); timingSurface?.style.setProperty("width", `${width}px`); timingSurface?.style.setProperty("grid-template-columns", `${metrics.leftPaneWidth}px ${metrics.frozenPaneWidth}px var(--wave-width, 640px)`); rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important"); }
@@ -23,6 +24,32 @@ export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | nul
 
 export function createEditorRuntimeBridge(initialDocument: Readonly<CanonicalDocument>): EditorApplicationRuntime {
   return new EditorApplicationRuntime(initialDocument);
+}
+
+export function projectViewportWindow({
+  viewport,
+  referenceClock,
+  snapshot,
+  previous,
+  projectionCoordinator,
+  collapsedGroupIds,
+  onProjection,
+}: {
+  readonly viewport: HTMLElement;
+  readonly referenceClock: any;
+  readonly snapshot: any;
+  readonly previous: any;
+  readonly projectionCoordinator: { project: (input: any) => any };
+  readonly collapsedGroupIds: readonly string[];
+  readonly onProjection: (projection: any, window: any, mountedSignalsChanged: boolean) => void;
+}): void {
+  const nextWindow = buildViewportWindow(viewport, referenceClock as any);
+  if (nextWindow.viewportStartY === previous.window.viewportStartY && nextWindow.viewportEndY === previous.window.viewportEndY) return;
+  const nextProjection = projectionCoordinator.project({ snapshot, changeSet: {}, viewport: nextWindow, previous: previous.projection, collapsedGroupIds });
+  const oldMounted = previous.projection.mountedSignalIds;
+  const nextMounted = nextProjection.mountedSignalIds;
+  const mountedSignalsChanged = oldMounted.length !== nextMounted.length || oldMounted.some((signalId: string, index: number) => signalId !== nextMounted[index]);
+  onProjection(nextProjection, nextWindow, mountedSignalsChanged);
 }
 
 export type WaveformProviderContext = Readonly<{

@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -494,19 +494,22 @@ export function MinimalCycleView() {
       if (reason === "scroll") {
         syncRulerScroll(rulerElement, viewportElement, currentZoom);
         cancelAnimationFrame(frame);
-        frame = requestAnimationFrame(() => {
-          const next = buildViewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
-          if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
-          const previousMountedSignals = projection.mountedSignalIds;
-          window = next;
-          projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-          const mountedSignalsChanged = previousMountedSignals.length !== projection.mountedSignalIds.length
-            || previousMountedSignals.some((signalId, index) => signalId !== projection.mountedSignalIds[index]);
-          if (mountedSignalsChanged) snapIndex = undefined;
-          renderer.update(projection);
-          rendererHost.dataset.viewportStartY = String(window.viewportStartY);
-          publishState();
-        });
+        frame = requestAnimationFrame(() => projectViewportWindow({
+          viewport: viewportElement,
+          referenceClock: session.getSnapshot().document.timeline.referenceClock,
+          snapshot: session.getSnapshot(),
+          previous: { window, projection },
+          projectionCoordinator,
+          collapsedGroupIds: [...collapsedGroupIdsRef.current],
+          onProjection: (nextProjection: any, nextWindow: any, mountedSignalsChanged: boolean) => {
+            window = nextWindow;
+            projection = nextProjection;
+            if (mountedSignalsChanged) snapIndex = undefined;
+            renderer.update(projection);
+            rendererHost.dataset.viewportStartY = String(window.viewportStartY);
+            publishState();
+          },
+        }));
         return;
       }
       const document = session.getSnapshot().document;
