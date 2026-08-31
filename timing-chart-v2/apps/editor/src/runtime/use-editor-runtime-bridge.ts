@@ -24,6 +24,48 @@ export function createEditorRuntimeBridge(initialDocument: Readonly<CanonicalDoc
   return new EditorApplicationRuntime(initialDocument);
 }
 
+export type OpenPhaseTracker = Readonly<{
+  mark: (phase: string, phaseTimestamp?: number) => void;
+  begin: (commandStartedAt?: number, fileReadStartedAt?: number) => void;
+}>;
+
+/** Owns open/first-paint instrumentation for the editor runtime bridge. */
+export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTracker {
+  const marks: Record<string, number> = {};
+  let active = false;
+  let rowShellPainted = false;
+  let referenceGeometryReady = false;
+  let rulerPainted = false;
+  const mark = (phase: string, phaseTimestamp = globalThis.performance.now()): void => {
+    if (!active || marks[phase] !== undefined) return;
+    marks[phase] = phaseTimestamp;
+    globalThis.performance.mark(`timing-chart-v2:${phase}`);
+    rendererHost.dataset.openPhaseMarks = JSON.stringify(marks);
+    const fileReadDurationMs = marks["file-read-start"] !== undefined && marks["file-read-complete"] !== undefined
+      ? Math.max(0, marks["file-read-complete"] - marks["file-read-start"]) : undefined;
+    rendererHost.dataset.openPhaseDurations = JSON.stringify(fileReadDurationMs === undefined ? {} : { fileReadDurationMs });
+    if (phase === "row-shell-painted") rowShellPainted = true;
+    if (phase === "reference-geometry-ready") referenceGeometryReady = true;
+    if (phase === "ruler-painted") rulerPainted = true;
+    if (rowShellPainted && referenceGeometryReady && rulerPainted) mark("first-correct-paint");
+  };
+  return {
+    mark,
+    begin(commandStartedAt = globalThis.performance.now(), fileReadStartedAt) {
+      active = true;
+      rowShellPainted = false;
+      referenceGeometryReady = false;
+      rulerPainted = false;
+      for (const key of Object.keys(marks)) delete marks[key];
+      delete rendererHost.dataset.openPhaseMarks;
+      delete rendererHost.dataset.openPhaseDurations;
+      mark("open-command-start", commandStartedAt);
+      mark("open-start", commandStartedAt);
+      if (fileReadStartedAt !== undefined) mark("file-read-start", fileReadStartedAt);
+    },
+  };
+}
+
 export function refreshTransactionLinkedRows(host: RefObject<HTMLDivElement | null>, linkedSignalIds: ReadonlySet<string>): void {
   for (const row of host.current?.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]") ?? []) {
     const id = row.dataset.rowId ?? row.dataset.signalId;

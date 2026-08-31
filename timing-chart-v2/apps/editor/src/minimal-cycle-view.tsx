@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -418,36 +418,9 @@ export function MinimalCycleView() {
     const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
     const geometryMaps = geometryRegistry.maps;
-    const openPhaseMarks: Record<string, number> = {};
-    let openPhaseActive = false;
-    let openRowShellPainted = false;
-    let openReferenceGeometryReady = false;
-    let openRulerPainted = false;
-    const markOpenPhase = (phase: string, phaseTimestamp = globalThis.performance.now()) => {
-      if (!openPhaseActive || openPhaseMarks[phase] !== undefined) return;
-      openPhaseMarks[phase] = phaseTimestamp;
-      globalThis.performance.mark(`timing-chart-v2:${phase}`);
-      rendererHost.dataset.openPhaseMarks = JSON.stringify(openPhaseMarks);
-      const fileReadDurationMs = openPhaseMarks["file-read-start"] !== undefined && openPhaseMarks["file-read-complete"] !== undefined
-        ? Math.max(0, openPhaseMarks["file-read-complete"] - openPhaseMarks["file-read-start"]) : undefined;
-      rendererHost.dataset.openPhaseDurations = JSON.stringify(fileReadDurationMs === undefined ? {} : { fileReadDurationMs });
-      if (phase === "row-shell-painted") openRowShellPainted = true;
-      if (phase === "reference-geometry-ready") openReferenceGeometryReady = true;
-      if (phase === "ruler-painted") openRulerPainted = true;
-      if (openRowShellPainted && openReferenceGeometryReady && openRulerPainted) markOpenPhase("first-correct-paint");
-    };
-    const beginOpenMeasurement = (commandStartedAt = globalThis.performance.now(), fileReadStartedAt?: number) => {
-      openPhaseActive = true;
-      openRowShellPainted = false;
-      openReferenceGeometryReady = false;
-      openRulerPainted = false;
-      for (const key of Object.keys(openPhaseMarks)) delete openPhaseMarks[key];
-      delete rendererHost.dataset.openPhaseMarks;
-      delete rendererHost.dataset.openPhaseDurations;
-      markOpenPhase("open-command-start", commandStartedAt);
-      markOpenPhase("open-start", commandStartedAt);
-      if (fileReadStartedAt !== undefined) markOpenPhase("file-read-start", fileReadStartedAt);
-    };
+    const openPhaseTracker = createOpenPhaseTracker(rendererHost);
+    const markOpenPhase = openPhaseTracker.mark;
+    const beginOpenMeasurement = openPhaseTracker.begin;
     // The progressive wave queue can flush many batches for one canonical
     // snapshot. Keep the derived lookup scoped to that snapshot instead of
     // rebuilding an O(totalSignals) Map for every batch.
