@@ -2,9 +2,8 @@ import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, use
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
-import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/history";
+import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
@@ -19,9 +18,7 @@ import { preferredSnapKinds } from "./runtime/snap-policy.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
-import { EditorApplicationRuntime } from "./runtime/editor-application-runtime.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
-import { buildCommandRejectionDiagnostics } from "./command-diagnostics.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
@@ -73,6 +70,7 @@ import { InspectorSignalRouter } from "./inspector-signal-router.js";
 import { InspectorClockEditor } from "./inspector-clock-editor.js";
 import { Ribbon } from "./minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "./inspector-style.js";
+import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
@@ -80,7 +78,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorRuntimeBridge, createEditorTimelineRuntime, createOpenPhaseTracker, createSnapIndexResolver, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createSnapIndexResolver, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -94,15 +92,13 @@ type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: 
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
+  const application = useEditorApplicationOwner(initialDocument);
+  const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setValidationDiagnostics, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
   const gridLayer = useRef<HTMLDivElement>(null);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
-  const execute = useRef<(command: SemanticCommand) => ReturnType<CommandHistorySession["execute"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
-  const executeBatch = useRef<(id: CommandId, commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
-  const undo = useRef<() => void>(() => undefined);
-  const redo = useRef<() => void>(() => undefined);
   const armArrowPick = useRef<() => void>(() => undefined);
   const changeZoom = useRef<(delta: number) => void>(() => undefined);
   const fitSelection = useRef<() => void>(() => undefined);
@@ -133,14 +129,9 @@ export function MinimalCycleView() {
   const [selectedTransactionId, setSelectedTransactionId] = useState<TransactionId | undefined>();
   const selectedTransactionRef = useRef<TransactionId | undefined>(undefined);
   selectedTransactionRef.current = selectedTransactionId;
-  const [snapshot, setSnapshot] = useState<CanonicalSnapshot>({ revision: 0, document: initialDocument });
-  const [history, setHistory] = useState<HistoryState>({ canUndo: false, canRedo: false, undoDepth: 0, redoDepth: 0, dirty: false });
   useEffect(() => {
     return attachDirtyUnloadGuard(history.dirty);
   }, [history.dirty]);
-  const [problem, setProblem] = useState("");
-  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => validateCanonicalDocument(initialDocument));
-  const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
   const [zoom, setZoom] = useState(1);
   const [gridEnabled, setGridEnabled] = useState(true);
@@ -346,7 +337,7 @@ export function MinimalCycleView() {
   useEffect(() => {
     const registry = commandRegistry.current;
     const unregister = [
-      registry.register<SemanticCommand>("semantic.execute", (command) => execute.current(command)),
+      registry.register<SemanticCommand>("semantic.execute", (command) => application.execute(command)),
       registry.register("selection.delete", () => {
         const annotationId = selectedAnnotationRef.current;
         const signalId = selectedSignalRef.current;
@@ -354,23 +345,23 @@ export function MinimalCycleView() {
         const transactionId = selectedTransactionRef.current;
         const spacerId = selectedSpacerRef.current;
         if (transactionId) {
-          const result = execute.current({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
+          const result = application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
           if (result.ok) { selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined); }
         } else if (annotationId) {
-          const result = execute.current({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
+          const result = application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
           if (result.ok) { selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined); }
         } else if (selectedSignalIdsRef.current.size > 1) {
           const commands = [...selectedSignalIdsRef.current].map((id) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete" as const, signalId: id }));
-          const result = executeBatch.current(nextCommandId("route_delete_selection"), commands);
+          const result = application.executeBatch(nextCommandId("route_delete_selection"), commands);
           if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
         } else if (signalId) {
-          const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
+          const result = application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
           if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
         } else if (spacerId) {
-          const result = execute.current({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
+          const result = application.execute({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
           if (result.ok) selectedSpacerRef.current = undefined;
         } else if (groupId) {
-          const result = execute.current({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId });
+          const result = application.execute({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId });
           if (result.ok) { selectedGroupRef.current = undefined; setSelectedGroupId(undefined); }
         }
       }),
@@ -378,16 +369,16 @@ export function MinimalCycleView() {
         const signalId = selectedSignalRef.current;
         const groupId = selectedGroupRef.current;
         const transactionId = selectedTransactionRef.current;
-        if (transactionId) execute.current({ id: nextCommandId("route_rename_transaction"), type: "transaction.rename", transactionId, name });
-        else if (signalId) execute.current({ id: nextCommandId("route_rename"), type: "signal.rename", signalId, name });
-        else if (groupId) execute.current({ id: nextCommandId("route_rename_group"), type: "group.rename", groupId, name });
+        if (transactionId) application.execute({ id: nextCommandId("route_rename_transaction"), type: "transaction.rename", transactionId, name });
+        else if (signalId) application.execute({ id: nextCommandId("route_rename"), type: "signal.rename", signalId, name });
+        else if (groupId) application.execute({ id: nextCommandId("route_rename_group"), type: "group.rename", groupId, name });
       }),
       registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => {
         const signalId = selectedSignalRef.current;
-        if (signalId) execute.current({ id: nextCommandId("route_visibility"), type: "signal.setVisibility", signalId, visible });
+        if (signalId) application.execute({ id: nextCommandId("route_visibility"), type: "signal.setVisibility", signalId, visible });
       }),
-      registry.register("history.undo", () => undo.current()),
-      registry.register("history.redo", () => redo.current()),
+      registry.register("history.undo", () => application.undo()),
+      registry.register("history.redo", () => application.redo()),
       registry.register("clipboard.copy", () => copySelectedSignalRef.current()),
       registry.register("clipboard.cut", () => cutSelectedSignalRef.current()),
       registry.register("clipboard.paste", () => pasteSelectedSignalRef.current()),
@@ -412,7 +403,7 @@ export function MinimalCycleView() {
     const gridElement = gridLayer.current;
     if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
-    const runtime = createEditorRuntimeBridge(initialDocument);
+    const runtime = application.runtime;
     const sessionController = runtime.session;
     let session = sessionController.current();
     const documentEpoch = runtime.documentEpoch;
@@ -641,46 +632,7 @@ export function MinimalCycleView() {
       if (failed.length > 0) setProblem(failed[0]!.message);
     };
 
-    const clearCommandDiagnostics = () => {
-      setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("command-rejection:")));
-    };
-
-    const commandDiagnosticTarget = (command: SemanticCommand | undefined): Pick<DocumentProblem, "objectType" | "objectId"> => {
-      if (!command) return {};
-      if ("signalId" in command) return { objectType: "signal", objectId: command.signalId };
-      if ("groupId" in command) return { objectType: "group", objectId: command.groupId };
-      if ("annotationId" in command) return { objectType: "annotation", objectId: command.annotationId };
-      if ("transactionId" in command) return { objectType: "transaction", objectId: command.transactionId };
-      if ("spacerId" in command) return { objectType: "spacer", objectId: command.spacerId };
-      if ("bookmarkId" in command) return { objectType: "bookmark", objectId: command.bookmarkId };
-      if ("timeGroupId" in command) return { objectType: "timeGroup", objectId: command.timeGroupId };
-      if (command.type === "signal.create") return { objectType: "signal", objectId: command.signal.id };
-      if (command.type === "signal.bulkCreate") { const firstSignalId = command.signals[0]?.id; return firstSignalId === undefined ? { objectType: "signal" } : { objectType: "signal", objectId: firstSignalId }; }
-      if (command.type === "group.create") return { objectType: "group", objectId: command.group.id };
-      if (command.type === "transaction.create") return { objectType: "transaction", objectId: command.transaction.id };
-      if (command.type === "annotation.create") return { objectType: "annotation", objectId: command.annotation.id };
-      if (command.type === "bookmark.create") return { objectType: "bookmark", objectId: command.bookmark.id };
-      if (command.type === "timeGroup.create") return { objectType: "timeGroup", objectId: command.timeGroup.id };
-      if (command.type === "spacer.create") return { objectType: "spacer", objectId: command.spacer.id };
-      return {};
-    };
-
-    const applyResult = (result: ReturnType<CommandHistorySession["execute"]>, operation = "command", command?: SemanticCommand, batchId?: CommandId) => {
-      if (!result.ok) {
-        const target = commandDiagnosticTarget(command);
-        const objectId = target.objectId;
-        const safeTarget = (objectId === undefined
-          ? (target.objectType === undefined ? {} : { objectType: target.objectType })
-          : { ...(target.objectType === undefined ? {} : { objectType: target.objectType }), objectId }) as Pick<DocumentProblem, "objectType" | "objectId">;
-        const commandId = command?.id ?? batchId;
-        const diagnostics = buildCommandRejectionDiagnostics({ result, operation, ...(commandId === undefined ? {} : { commandId }), target: safeTarget });
-        setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
-        setRuntimeDiagnostics((current) => [
-          ...current.filter((item) => !item.detail?.startsWith("command-rejection:")),
-          ...diagnostics,
-        ]);
-        return;
-      }
+    const detachApplicationHandler = application.attachAcceptedHandler((result) => {
       delete rendererHost.dataset.editorIdle;
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
@@ -695,15 +647,10 @@ export function MinimalCycleView() {
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
       renderer.update(projection);
-      setSnapshot(result.snapshot);
-      setValidationDiagnostics([]);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
         return { start, end: Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount)) };
       });
-      setHistory(session.historyState());
-      setProblem("");
-      clearCommandDiagnostics();
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
@@ -719,7 +666,7 @@ export function MinimalCycleView() {
         publishState();
         rendererHost.dataset.editorIdle = "true";
       });
-    };
+    });
     applyCollapsedGroupsRef.current = (ids) => {
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
       snapIndex = undefined;
@@ -730,10 +677,6 @@ export function MinimalCycleView() {
       timelineRuntime.refreshOverlays();
       publishState();
     };
-    execute.current = (command) => { const result = sessionController.execute(command); applyResult(result, command.type, command); return result; };
-    executeBatch.current = (id, commands) => { const result = sessionController.executeBatch(id, commands); applyResult(result, `batch:${id}`, undefined, id); return result; };
-    undo.current = () => applyResult(sessionController.undo(), "history.undo");
-    redo.current = () => applyResult(sessionController.redo(), "history.redo");
     const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
       const canonicalDocument = canonicalDocumentOf(document);
       const resourceProblems = validateDocumentResourceBudget(canonicalDocument);
@@ -755,7 +698,8 @@ export function MinimalCycleView() {
       timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
-      session = sessionController.replace(canonicalDocument);
+      const migrationDiagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message }));
+      session = application.replaceSession(canonicalDocument, migrationDiagnostics);
       setCompatibilityPreview(undefined);
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
@@ -789,16 +733,11 @@ export function MinimalCycleView() {
       markOpenPhase("canonical-replaced");
       requestAnimationFrame(() => markOpenPhase("row-shell-painted"));
       rulerElement.replaceChildren();
-      setSnapshot(session.getSnapshot());
-      setValidationDiagnostics([]);
-      setHistory(session.historyState());
       setSelectedId(undefined);
       selectedAnnotationRef.current = undefined;
       setSelectedAnnotationId(undefined);
       selectedTransactionRef.current = undefined;
       setSelectedTransactionId(undefined);
-      setProblem("");
-      setRuntimeDiagnostics(migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message })));
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
@@ -875,7 +814,7 @@ export function MinimalCycleView() {
         setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "RECENT_CACHE_FAILED"), { code: "RECENT_CACHE_FAILED", path: "$.document", message: "The document was downloaded, but the Recent cache could not be updated.", severity: "warning", operation: "document.save", operationLabel: "Save document", source: "save", stage: "storage", recommendation: "Use Open to select the downloaded .tcd file when needed.", detail: "recent-cache-failure" }]);
       }
       if (session.getSnapshot().revision === persistedRevision) session.markClean();
-      setHistory(session.historyState());
+      application.publishHistory();
       setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
       setProblem("");
       return true;
@@ -1074,7 +1013,7 @@ export function MinimalCycleView() {
           return;
         }
         const annotation: Annotation = { id: nextEntityId("annotation", session.getSnapshot().document) as AnnotationId, type: "arrow", label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
-        const result = execute.current({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
+        const result = application.execute({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
         if (result.ok) selectAnnotation(annotation.id);
         pendingArrow = undefined;
         setArrowPickStatus("idle");
@@ -1588,10 +1527,7 @@ export function MinimalCycleView() {
       timelineRuntime.detach();
       timelineRuntime.dispose();
       timelineRuntimeRef.current = null;
-      execute.current = () => ({ ok: false, reason: "no-op", problems: [] });
-      executeBatch.current = () => ({ ok: false, reason: "no-op", problems: [] });
-      undo.current = () => undefined;
-      redo.current = () => undefined;
+      detachApplicationHandler();
       armArrowPick.current = () => undefined;
       changeZoom.current = () => undefined;
       openDocument.current = () => undefined;
@@ -1612,7 +1548,7 @@ export function MinimalCycleView() {
   }, [selectedTransactionId, snapshot.revision]);
 
   const createSelectedAnnotation = (annotation: Annotation) => {
-    const result = execute.current({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
+    const result = application.execute({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
     if (!result.ok) return;
     selectedAnnotationRef.current = annotation.id;
     setSelectedAnnotationId(annotation.id);
@@ -1635,7 +1571,7 @@ export function MinimalCycleView() {
   };
   const deleteBottomSignal = () => {
     if (!bottomSignal) return;
-    const result = execute.current({ id: nextCommandId("bottom_delete_signal"), type: "signal.delete", signalId: bottomSignal.id });
+    const result = application.execute({ id: nextCommandId("bottom_delete_signal"), type: "signal.delete", signalId: bottomSignal.id });
     if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
       selectedSignalRef.current = undefined;
       setSelectedId(undefined);
@@ -1645,7 +1581,7 @@ export function MinimalCycleView() {
   };
   const deleteBottomAnnotation = () => {
     if (!bottomAnnotation) return;
-    const result = execute.current({ id: nextCommandId("bottom_delete_annotation"), type: "annotation.delete", annotationId: bottomAnnotation.id });
+    const result = application.execute({ id: nextCommandId("bottom_delete_annotation"), type: "annotation.delete", annotationId: bottomAnnotation.id });
     if (result.ok && !bottomPinnedRef.current && selectedAnnotationRef.current === bottomAnnotation.id) {
       selectedAnnotationRef.current = undefined;
       setSelectedAnnotationId(undefined);
@@ -1653,7 +1589,7 @@ export function MinimalCycleView() {
   };
   const deleteBottomTransaction = () => {
     if (!bottomTransaction) return;
-    const result = execute.current({ id: nextCommandId("bottom_delete_transaction"), type: "transaction.delete", transactionId: bottomTransaction.id });
+    const result = application.execute({ id: nextCommandId("bottom_delete_transaction"), type: "transaction.delete", transactionId: bottomTransaction.id });
     if (result.ok && !bottomPinnedRef.current && selectedTransactionRef.current === bottomTransaction.id) {
       selectedTransactionRef.current = undefined;
       setSelectedTransactionId(undefined);
@@ -1705,7 +1641,7 @@ export function MinimalCycleView() {
     onCreate={(type) => { if (annotationTargetSignalId) createSelectedAnnotation(createAnnotation(type, annotationTargetSignalId, timelineRange, snapshot.document)); }}
     onDuplicate={(source) => {
       const duplicate = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
-      const result = execute.current({ id: nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
+      const result = application.execute({ id: nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
       if (result.ok) selectAnnotation(duplicate.id);
     }}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
@@ -1884,7 +1820,7 @@ export function MinimalCycleView() {
       clipboardAnnotationRef.current = undefined;
       clipboardTransactionRef.current = undefined;
       setClipboardAvailable(true);
-      const result = execute.current({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: selectedSpacer.id });
+      const result = application.execute({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: selectedSpacer.id });
       if (result.ok) {
         selectedSpacerRef.current = undefined;
         setClipboardStatus(`Cut spacer ${selectedSpacer.id}`);
@@ -1905,7 +1841,7 @@ export function MinimalCycleView() {
         else commands.push({ id: nextCommandId("cut_group_spacer"), type: "spacer.delete", spacerId: rowId as SpacerId });
       }
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: selectedGroup.id });
-      const result = executeBatch.current(nextCommandId("cut_group"), commands);
+      const result = application.executeBatch(nextCommandId("cut_group"), commands);
       if (result.ok) {
         selectedGroupRef.current = undefined;
         setSelectedGroupId(undefined);
@@ -1927,7 +1863,7 @@ export function MinimalCycleView() {
       clipboardSignalRef.current = undefined;
       clipboardAnnotationRef.current = undefined;
       setClipboardAvailable(true);
-      const result = execute.current({ id: nextCommandId("cut_transaction"), type: "transaction.delete", transactionId: transaction.id });
+      const result = application.execute({ id: nextCommandId("cut_transaction"), type: "transaction.delete", transactionId: transaction.id });
       if (result.ok) {
         selectedTransactionRef.current = undefined;
         setSelectedTransactionId(undefined);
@@ -1942,7 +1878,7 @@ export function MinimalCycleView() {
       clipboardSignalRef.current = undefined;
       clipboardTransactionRef.current = undefined;
       setClipboardAvailable(true);
-      const result = execute.current({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: annotation.id });
+      const result = application.execute({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: annotation.id });
       if (result.ok) {
         selectedAnnotationRef.current = undefined;
         setSelectedAnnotationId(undefined);
@@ -1957,7 +1893,7 @@ export function MinimalCycleView() {
     clipboardSignalRef.current = sources[0]?.signal;
     setClipboardAvailable(true);
     const commands = sources.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete", signalId: signal.id } satisfies SemanticCommand));
-    const result = executeBatch.current(nextCommandId("cut"), commands);
+    const result = application.executeBatch(nextCommandId("cut"), commands);
     if (result.ok) {
       selectedSignalRef.current = undefined;
       setSelectedId(undefined);
@@ -1985,7 +1921,7 @@ export function MinimalCycleView() {
       commands.push({ id: nextCommandId(`${operation}_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: targetGroup.id, index } as SemanticCommand);
     }
     if (commands.length === 0) return;
-    const result = executeBatch.current(nextCommandId(operation), commands);
+    const result = application.executeBatch(nextCommandId(operation), commands);
     if (result.ok) {
       const ids = created.map((signal) => signal.id);
       selectedSignalRef.current = ids[0]; setSelectedId(ids[0]);
@@ -2015,7 +1951,7 @@ export function MinimalCycleView() {
         commands.push({ id: nextCommandId(`${operation}_group_spacer`), type: "spacer.create", spacer: { ...spacer, id }, targetGroupId: newGroupId, index: commands.length - 1 });
       }
     }
-    const result = executeBatch.current(nextCommandId(`${operation}_group_batch`), commands);
+    const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
     if (result.ok) {
       selectedGroupRef.current = newGroupId;
       setSelectedGroupId(newGroupId);
@@ -2028,7 +1964,7 @@ export function MinimalCycleView() {
   };
   const createCopiedAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
     const annotation = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
-    const result = execute.current({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
+    const result = application.execute({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
     if (result.ok) {
       selectAnnotation(annotation.id);
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`);
@@ -2036,7 +1972,7 @@ export function MinimalCycleView() {
   };
   const createCopiedTransaction = (source: Transaction, operation: "paste" | "duplicate") => {
     const transaction: Transaction = { ...source, id: nextEntityId("transaction", snapshot.document) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
-    const result = execute.current({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create", transaction });
+    const result = application.execute({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create", transaction });
     if (result.ok) {
       selectTransaction(transaction.id);
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${source.name} transaction`);
@@ -2046,7 +1982,7 @@ export function MinimalCycleView() {
     const targetGroup = snapshot.document.signalGroups.find((group) => group.id === input.groupId) ?? snapshot.document.signalGroups.at(-1);
     if (!targetGroup) return;
     const spacer = { ...input.spacer, id: spacerId(nextEntityId("spacer", snapshot.document)) };
-    const result = execute.current({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index: Math.min(input.index, targetGroup.rows.length) });
+    const result = application.execute({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index: Math.min(input.index, targetGroup.rows.length) });
     if (result.ok) {
       selectedSpacerRef.current = spacer.id;
       selectedGroupRef.current = targetGroup.id;
@@ -2178,7 +2114,7 @@ export function MinimalCycleView() {
   };
   const createSignalGroup = () => {
     const id = groupId(nextEntityId("group", snapshot.document));
-    const result = execute.current({ id: nextCommandId("group_create_tree"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index: snapshot.document.signalGroups.length });
+    const result = application.execute({ id: nextCommandId("group_create_tree"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index: snapshot.document.signalGroups.length });
     if (result.ok) {
       selectedGroupRef.current = id;
       setSelectedGroupId(id);
@@ -2208,7 +2144,7 @@ export function MinimalCycleView() {
     const index = selectedRowIndex >= 0 ? selectedRowIndex + 1 : targetGroup.rows.length;
     if (kind === "spacer") {
       const spacer = { id: spacerId(nextEntityId("spacer", snapshot.document)), height: 24 };
-      const result = execute.current({ id: nextCommandId("tree_add_spacer"), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index });
+      const result = application.execute({ id: nextCommandId("tree_add_spacer"), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index });
       if (result.ok) {
         selectedSpacerRef.current = spacer.id;
         selectedGroupRef.current = targetGroup.id;
@@ -2514,7 +2450,7 @@ export function MinimalCycleView() {
       <footer><button type="button" onClick={() => setRenameDialogOpen(false)}>Cancel</button><button type="submit" data-testid="apply-rename">Apply</button></footer>
     </form></div>}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
-    {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch.current(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
+    {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => application.executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section ref={bulkRegistrationDialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = saveDocument.current(`${name}.tcd`); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
