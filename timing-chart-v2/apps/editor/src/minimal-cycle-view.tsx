@@ -562,7 +562,7 @@ export function MinimalCycleView() {
     const refreshRangeSelectionBandNow = () => refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle), currentZoom, timelineOffset(), projection.totalHeight);
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
-      refreshRangeSelectionBandNow();
+      timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
     };
 
     const publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, snapService, snapIndex, rulerBuilds, edgeCounterResolvePasses, currentZoom);
