@@ -32,6 +32,7 @@ controllers are extracted incrementally.
 | Inspector annotation editor | `inspector-annotation-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
 | Inspector signal routing | `inspector-signal-router.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
 | Inspector style readers | `inspector-style.ts` | view-only style projection | Phase 1 extracted utility |
+| Inspector clock editor | `inspector-clock-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
 
 Rules:
 
