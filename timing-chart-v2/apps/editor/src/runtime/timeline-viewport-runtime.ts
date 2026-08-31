@@ -15,7 +15,7 @@ export type TimelineViewportRuntimeContext = {
     readonly getTimeAxisGeometry: () => unknown;
     readonly getLocalGeometryMap: () => unknown;
     readonly sourceCycleToLocalX: (cycle: number) => number | undefined;
-    readonly sourceBoundaryToLocalX: (cycle: number) => number | undefined;
+    readonly sourceBoundaryToLocalX: (document: unknown, cycle: number) => number | undefined;
     readonly localXToScreenX: (localX: number) => number;
   };
   readonly viewport: {
@@ -28,7 +28,7 @@ export type TimelineViewportRuntimeContext = {
   readonly document: {
     readonly getSnapshot: () => unknown;
     readonly getCanonicalRevision: () => number;
-    readonly getDocumentEpoch: () => number;
+    readonly getDocumentEpoch: () => unknown;
   };
   readonly render: {
     readonly requestRender: (reason: string) => void;
@@ -36,7 +36,7 @@ export type TimelineViewportRuntimeContext = {
     readonly waitForRendererIdle: () => Promise<void>;
   };
   readonly lifecycle: {
-    readonly isCurrentEpoch: (epoch: number) => boolean;
+    readonly isCurrentEpoch: (epoch: unknown) => boolean;
   };
 };
 
@@ -44,7 +44,7 @@ export type TimelineViewportRuntime = Readonly<{
   attach: () => void;
   detach: () => void;
   dispose: () => void;
-  onDocumentEpochChanged: (epoch: number) => void;
+  onDocumentEpochChanged: (epoch: unknown) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   setZoom: (zoom: number) => void;
@@ -52,6 +52,7 @@ export type TimelineViewportRuntime = Readonly<{
   fitSelection: (startLocalX: number, endLocalX: number) => void;
   navigateToCycle: (cycle: number) => void;
   screenXToSourceCycle: (screenX: number) => number | undefined;
+  sourceBoundaryToLocalX: (document: unknown, cycle: number) => number | undefined;
   refreshRuler: () => void;
   refreshGrid: () => void;
   refreshPlayhead: () => void;
@@ -69,7 +70,7 @@ function clampZoom(zoom: number): number {
 export function createTimelineViewportRuntime(context: TimelineViewportRuntimeContext): TimelineViewportRuntime {
   let attached = false;
   let disposed = false;
-  let documentEpoch = context.document.getDocumentEpoch();
+  let documentEpoch: unknown = context.document.getDocumentEpoch();
 
   const assertActive = () => {
     if (disposed) throw new Error("TimelineViewportRuntime is disposed");
@@ -95,7 +96,8 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     setZoom: (zoom) => { assertActive(); context.viewport.setZoom(clampZoom(zoom)); render("zoom"); },
     fitAll: (contentWidth) => { assertActive(); context.viewport.setZoom(fit(0, contentWidth)); context.viewport.setScrollState({ left: 0 }); render("fit-all"); },
     fitSelection: (startLocalX, endLocalX) => { assertActive(); const zoom = fit(startLocalX, endLocalX); context.viewport.setZoom(zoom); context.viewport.setScrollState({ left: Math.max(0, Math.round(startLocalX * zoom - context.viewport.getMetrics().leftInset)) }); render("fit-selection"); },
-    navigateToCycle: (cycle) => { assertActive(); const localX = context.geometry.sourceBoundaryToLocalX(cycle); if (localX === undefined) return; context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) }); render("navigate-cycle"); },
+    navigateToCycle: (cycle) => { assertActive(); const localX = context.geometry.sourceBoundaryToLocalX(context.document.getSnapshot(), cycle); if (localX === undefined) return; context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) }); render("navigate-cycle"); },
+    sourceBoundaryToLocalX: (document, cycle) => { assertActive(); return context.geometry.sourceBoundaryToLocalX(document, cycle); },
     screenXToSourceCycle: (screenX) => { assertActive(); const zoom = context.viewport.getZoom(); if (!Number.isFinite(zoom) || zoom <= 0) return undefined; const localX = screenX / zoom; const mapping = context.geometry.getDisplayTimeMapping(); return typeof mapping === "object" && mapping !== null && "displayToSourceCycle" in mapping && typeof mapping.displayToSourceCycle === "function" ? (mapping.displayToSourceCycle as (x: number) => number | undefined)(localX) : undefined; },
     refreshRuler: () => { render("ruler"); },
     refreshGrid: () => { render("grid"); },

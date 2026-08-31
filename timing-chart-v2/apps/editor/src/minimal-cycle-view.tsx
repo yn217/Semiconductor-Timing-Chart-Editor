@@ -74,6 +74,7 @@ import { buildRuler } from "./runtime/build-ruler.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
+import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -850,14 +851,32 @@ export function MinimalCycleView() {
       rendererHost.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction });
     };
     let currentZoom = 1;
+    const timelineRuntime = createTimelineViewportRuntime({
+      dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
+      geometry: {
+        getDisplayTimeMapping: () => mappingCache.get(session.getSnapshot().document.timeline, session.getSnapshot().document.timeGroups),
+        getTimeAxisGeometry: () => timeAxis.geometry,
+        getLocalGeometryMap: () => geometryMaps,
+        sourceCycleToLocalX: (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle),
+        sourceBoundaryToLocalX: (document, cycle) => {
+          const canonical = document as CanonicalDocument;
+          const axis = resolveTimeAxisGeometry(canonical, geometryMaps);
+          if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
+          const mapping = mappingCache.get(canonical.timeline, canonical.timeGroups);
+          const displayCycle = displayBoundaryForSource(mapping, cycle, canonical.timeline.cycleCount);
+          if (displayCycle === undefined) return undefined;
+          const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
+          return point === undefined ? undefined : point.x * screenGeometryScale;
+        },
+        localXToScreenX: (localX) => localX,
+      },
+      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: () => currentZoom, setZoom: (next) => { currentZoom = next; }, },
+      document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch },
+      render: { requestRender: (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); }, requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
+      lifecycle: { isCurrentEpoch: (epoch) => epoch === documentEpoch },
+    });
     function sourceBoundaryLocalX(document: CanonicalDocument, cycle: number): number | undefined {
-      const axis = resolveTimeAxisGeometry(document, geometryMaps);
-      if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
-      const mapping = mappingCache.get(document.timeline, document.timeGroups);
-      const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
-      if (displayCycle === undefined) return undefined;
-      const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-      return point === undefined ? undefined : point.x * screenGeometryScale;
+      return timelineRuntime.sourceBoundaryToLocalX(document, cycle);
     }
     transactionBoundaryX.current = (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle);
     function syncPresentationScale() {
