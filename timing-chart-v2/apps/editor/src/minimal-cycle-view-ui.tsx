@@ -1,4 +1,9 @@
-import { startTransition } from "react";
+import { startTransition, type ReactNode } from "react";
+import type { MinimalCycleApplicationPort } from "./minimal-cycle-view-application.js";
+import type { MinimalCycleTimelinePort } from "./minimal-cycle-view-timeline.js";
+
+export interface MinimalCycleViewUiSource { readonly titleBarUi: ReactNode; readonly ribbonTabsUi: ReactNode; readonly ribbonUi: ReactNode; readonly signalTreeAndCanvasUi: ReactNode; readonly bottomEditorUi: ReactNode; readonly inspectorShellUi: ReactNode; readonly dialogsUi: ReactNode; readonly statusBarUi: ReactNode; }
+export function MinimalCycleViewUi({ source, application, timeline }: { readonly source: MinimalCycleViewUiSource; readonly application: MinimalCycleApplicationPort; readonly timeline: MinimalCycleTimelinePort }) { void timeline; return <main className="editor-shell" data-cycle-count={application.snapshot.document.timeline.cycleCount} data-signal-count={application.snapshot.document.signals.length} data-transaction-count={application.snapshot.document.transactions.length}>{source.titleBarUi}{source.ribbonTabsUi}{source.ribbonUi}<div className="desktop-workspace">{source.signalTreeAndCanvasUi}{source.bottomEditorUi}{source.inspectorShellUi}</div>{source.dialogsUi}{source.statusBarUi}</main>; }
 
 export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, setViewMode, bottomTab, setBottomTab }: any) {
   const tabs = [{ key: "File", label: "File" }, { key: "Home", label: "Home" }, { key: "Insert", label: "Insert" }, { key: "Timeline", label: "Timeline", compatibilityLabel: "Timeline" }, { key: "Annotation", label: "Annotation", compatibilityLabel: "Annotation", compatibilityOnly: true }, { key: "View", label: "View" }, { key: "Review", label: "Check", compatibilityLabel: "Review" }, { key: "AI", label: "AI" }] as const;
