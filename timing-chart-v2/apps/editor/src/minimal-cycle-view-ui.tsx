@@ -1,6 +1,7 @@
 import { startTransition, type ReactNode, type RefObject } from "react";
 import type { MinimalCycleApplicationPort } from "./minimal-cycle-view-application.js";
 import type { MinimalCycleTimelinePort } from "./minimal-cycle-view-timeline.js";
+import { MinimalCycleViewPanels } from "./minimal-cycle-view-panels.js";
 
 /**
  * Coarse UI owner.
@@ -53,14 +54,13 @@ export function MinimalCycleViewUi({
       {source.ribbonTabsUi}
       {source.ribbonUi}
 
-      <div className="desktop-workspace">
-        {source.signalTreeAndCanvasUi}
-        {source.bottomEditorUi}
-        {source.inspectorShellUi}
-      </div>
-
-      {source.dialogsUi}
-      {source.statusBarUi}
+      <MinimalCycleViewPanels
+        workspace={source.signalTreeAndCanvasUi}
+        bottom={source.bottomEditorUi}
+        inspector={source.inspectorShellUi}
+        overlays={source.dialogsUi}
+        status={source.statusBarUi}
+      />
     </main>
   );
 }
