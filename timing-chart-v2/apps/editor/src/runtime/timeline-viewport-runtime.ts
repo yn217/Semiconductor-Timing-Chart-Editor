@@ -73,6 +73,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
   let attached = false;
   let disposed = false;
   let documentEpoch: unknown = context.document.getDocumentEpoch();
+  let resizeObserver: ResizeObserver | undefined;
 
   const assertActive = () => {
     if (disposed) throw new Error("TimelineViewportRuntime is disposed");
@@ -89,9 +90,20 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
   };
 
   return {
-    attach: () => { assertActive(); attached = true; },
-    detach: () => { attached = false; },
-    dispose: () => { attached = false; disposed = true; },
+    attach: () => {
+      assertActive();
+      if (attached) return;
+      attached = true;
+      const viewport = context.dom.viewportRef.current;
+      if (viewport && typeof ResizeObserver !== "undefined") {
+        resizeObserver = new ResizeObserver(() => {
+          if (attached) render("resize");
+        });
+        resizeObserver.observe(viewport);
+      }
+    },
+    detach: () => { resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; },
+    dispose: () => { resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; disposed = true; },
     onDocumentEpochChanged: (epoch) => { assertActive(); documentEpoch = epoch; },
     zoomIn: () => { assertActive(); context.viewport.setZoom(clampZoom(context.viewport.getZoom() + 0.1)); render("zoom-in"); },
     zoomOut: () => { assertActive(); context.viewport.setZoom(clampZoom(context.viewport.getZoom() - 0.1)); render("zoom-out"); },
