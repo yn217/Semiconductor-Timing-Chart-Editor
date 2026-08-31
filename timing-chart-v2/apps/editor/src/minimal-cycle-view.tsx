@@ -32,6 +32,7 @@ import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileBy
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
+import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -2911,31 +2912,6 @@ function EditorIconButton({ label, icon, disabled, onClick }: { readonly label: 
   return <button type="button" data-icon-button={icon} aria-label={label} disabled={disabled} onClick={onClick}><EditorIcon name={icon} /></button>;
 }
 
-function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T | null>, restoreFocusRef?: RefObject<HTMLElement | null>, enabled = true) {
-  useEffect(() => {
-    if (!enabled) return undefined;
-    const dialog = dialogRef.current;
-    if (!dialog) return undefined;
-    const previous = restoreFocusRef?.current ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-    const focusable = () => [...dialog.querySelectorAll<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter((item) => !item.hasAttribute("disabled") && item.getClientRects().length > 0);
-    focusable()[0]?.focus();
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Tab") return;
-      const items = focusable();
-      if (items.length === 0) return;
-      const first = items[0]!;
-      const last = items[items.length - 1]!;
-      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
-      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
-    };
-    dialog.addEventListener("keydown", onKeyDown);
-    return () => {
-      dialog.removeEventListener("keydown", onKeyDown);
-      if (previous?.isConnected) requestAnimationFrame(() => previous.focus());
-      if (restoreFocusRef?.current === previous) restoreFocusRef.current = null;
-    };
-  }, [dialogRef, restoreFocusRef, enabled]);
-}
 
 function DocumentProperties({ document, onApplyProperties, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly onApplyProperties: (commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const dialogRef = useRef<HTMLFormElement>(null);

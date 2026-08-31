@@ -12,6 +12,7 @@ controllers are extracted incrementally.
 | Canonical session and renderer bridge | `minimal-cycle-view.tsx` | `CommandHistorySession` | composition boundary |
 | Event table row editing and quick values | `event-table-components.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Comment Row editor | `comment-row-editor.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
+| Dialog focus trapping and restoration | `dialog-focus-loop.ts` | view-only focus lifecycle | Phase 1 extracted utility |
 
 Rules:
 
