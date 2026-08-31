@@ -98,6 +98,10 @@ export function ContextMenuPanel({ contextMenu, hasSelectedClipboard, clipboardA
   </ContextMenuSurface> : null;
 }
 
+export function MinimalCycleViewTitleBar({ title, dirty }: { readonly title: string; readonly dirty: boolean }) {
+  return <header className="app-titlebar"><span className="appmark">∿</span><h1>{title}</h1><span className="save-state">{dirty ? "Modified" : "Saved"}</span><span className="view-title">Cycle View</span></header>;
+}
+
 export function InspectorPanel({ signal, group, annotation, transaction, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, onCommand, onReveal, onCancel }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onReveal: () => void; readonly onCancel: () => void }) {
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
