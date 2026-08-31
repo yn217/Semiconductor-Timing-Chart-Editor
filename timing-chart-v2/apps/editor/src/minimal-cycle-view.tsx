@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorRuntimeBridge, createEditorTimelineRuntime, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorRuntimeBridge, createEditorTimelineRuntime, createOpenPhaseTracker, createSnapIndexResolver, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -427,20 +427,24 @@ export function MinimalCycleView() {
       adapter,
       geometryRegistry,
       markOpenPhase,
-      invalidateSnapIndex: () => { snapIndex = undefined; },
+      invalidateSnapIndex: () => { snapIndex = undefined; snapIndexResolver?.invalidate(); },
     });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
     const snapService = new SemanticSnapCandidateService();
     let snapIndex: ImmutableSnapIndex | undefined;
-    const currentSnapIndex = () => {
-      if (!snapIndex) {
-      const snapDocument = sessionController.snapshot().document;
-        snapIndex = buildSnapIndex(snapDocument, projection, geometryMaps, mappingCache.get(snapDocument.timeline, snapDocument.timeGroups), snapService, screenGeometryScale);
-        publishState();
-      }
-      return snapIndex;
-    };
+    let screenGeometryScale = 1;
+    const snapIndexResolver = createSnapIndexResolver({
+      getDocument: () => sessionController.snapshot().document,
+      getProjection: () => projection,
+      geometryMaps,
+      mappingCache,
+      snapService,
+      screenGeometry: screenGeometryScale,
+      build: (document, nextProjection, maps, mapping, service, scale) => buildSnapIndex(document, nextProjection, maps, mapping, service, scale),
+      onBuilt: () => publishState(),
+    });
+    const currentSnapIndex = () => { snapIndex = snapIndexResolver(); return snapIndex; };
     const initialProjection = mountInitialTimelineProjection({
       coordinator: renderCoordinator,
       renderer,
@@ -455,7 +459,6 @@ export function MinimalCycleView() {
     let projection: RenderProjection = initialProjection.projection;
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
-    let screenGeometryScale = 1;
     let rulerInitialized = false;
     refreshPlayhead.current = () => {
       refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle));
@@ -511,7 +514,7 @@ export function MinimalCycleView() {
           onProjection: (nextProjection: any, nextWindow: any, mountedSignalsChanged: boolean) => {
             window = nextWindow;
             projection = nextProjection;
-            if (mountedSignalsChanged) snapIndex = undefined;
+            if (mountedSignalsChanged) { snapIndex = undefined; snapIndexResolver.invalidate(); }
             renderer.update(projection);
             rendererHost.dataset.viewportStartY = String(window.viewportStartY);
             publishState();
@@ -679,7 +682,7 @@ export function MinimalCycleView() {
       }
       const invalidation = deriveRenderInvalidation(changed, result.snapshot.document.timeline.referenceClock);
       const snapDependenciesChanged = invalidation.snapDependenciesChanged;
-      if (snapDependenciesChanged) snapIndex = undefined;
+      if (snapDependenciesChanged) { snapIndex = undefined; snapIndexResolver.invalidate(); }
       const refreshRuler = invalidation.refreshRuler;
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
@@ -712,6 +715,7 @@ export function MinimalCycleView() {
     applyCollapsedGroupsRef.current = (ids) => {
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
       snapIndex = undefined;
+      snapIndexResolver.invalidate();
       renderer.update(projection);
       timelineRuntime.refreshPlayhead();
       timelineRuntime.refreshGrid();
@@ -749,6 +753,7 @@ export function MinimalCycleView() {
       setRangeSelectionActive(false);
       geometryRegistry.clear();
       snapIndex = undefined;
+      snapIndexResolver.invalidate();
       timeAxis = { mode: "clockless" };
       rulerInitialized = false;
       // Open/New owns a deterministic viewport policy. Apply it before the
