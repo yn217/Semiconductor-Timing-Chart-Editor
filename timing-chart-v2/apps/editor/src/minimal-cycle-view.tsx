@@ -44,7 +44,7 @@ import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileBy
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewRibbonTabs } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
@@ -340,9 +340,7 @@ export function MinimalCycleView() {
     root.dataset.treeFilterMatches = String(matches);
   }, [snapshot.revision, treeFilter, treeTypeFilter, collapsedGroupIds]);
   useEffect(() => {
-    const root = host.current;
-    if (!root) return;
-    root.dataset.collapsedGroups = [...collapsedGroupIds].join(",");
+    refreshTreeCollapsedMetadata(host, collapsedGroupIds);
   }, [snapshot.revision, collapsedGroupIds]);
   useEffect(() => {
     const root = host.current;

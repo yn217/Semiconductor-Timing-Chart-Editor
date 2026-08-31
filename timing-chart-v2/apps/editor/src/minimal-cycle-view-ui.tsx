@@ -1,4 +1,4 @@
-import { startTransition, type ReactNode } from "react";
+import { startTransition, type ReactNode, type RefObject } from "react";
 import type { MinimalCycleApplicationPort } from "./minimal-cycle-view-application.js";
 import type { MinimalCycleTimelinePort } from "./minimal-cycle-view-timeline.js";
 
@@ -12,3 +12,5 @@ export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, 
     <div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => { setViewMode(mode); if (mode === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal"); if (mode === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction"); }}>{mode}</button>)}</div>
   </nav>;
 }
+
+export function refreshTreeCollapsedMetadata(host: RefObject<HTMLDivElement | null>, collapsedGroups: ReadonlySet<string>): void { const root = host.current; if (root) root.dataset.collapsedGroups = [...collapsedGroups].join(","); }
