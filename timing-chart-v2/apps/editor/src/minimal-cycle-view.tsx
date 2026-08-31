@@ -984,7 +984,7 @@ export function MinimalCycleView() {
       if ("bookmarkId" in command) return { objectType: "bookmark", objectId: command.bookmarkId };
       if ("timeGroupId" in command) return { objectType: "timeGroup", objectId: command.timeGroupId };
       if (command.type === "signal.create") return { objectType: "signal", objectId: command.signal.id };
-      if (command.type === "signal.bulkCreate") return { objectType: "signal", objectId: command.signals[0]?.id };
+      if (command.type === "signal.bulkCreate") { const firstSignalId = command.signals[0]?.id; return firstSignalId === undefined ? { objectType: "signal" } : { objectType: "signal", objectId: firstSignalId }; }
       if (command.type === "group.create") return { objectType: "group", objectId: command.group.id };
       if (command.type === "transaction.create") return { objectType: "transaction", objectId: command.transaction.id };
       if (command.type === "annotation.create") return { objectType: "annotation", objectId: command.annotation.id };
@@ -997,7 +997,8 @@ export function MinimalCycleView() {
     const applyResult = (result: ReturnType<CommandHistorySession["execute"]>, operation = "command", command?: SemanticCommand, batchId?: CommandId) => {
       if (!result.ok) {
         const target = commandDiagnosticTarget(command);
-        const diagnostics = buildCommandRejectionDiagnostics({ result, operation, commandId: command?.id ?? batchId, target });
+        const safeTarget = target.objectId === undefined ? { ...(target.objectType === undefined ? {} : { objectType: target.objectType }) } : target;
+        const diagnostics = buildCommandRejectionDiagnostics({ result, operation, ...(command?.id ?? batchId ? { commandId: command?.id ?? batchId } : {}), target: safeTarget });
         setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
         setRuntimeDiagnostics((current) => [
           ...current.filter((item) => !item.detail?.startsWith("command-rejection:")),
