@@ -53,6 +53,7 @@ import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
+import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -2906,18 +2907,6 @@ function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, restor
     <table><thead><tr><th>Scope</th><th>Instance Path</th><th>Relative Path</th><th>Signal</th><th>Full Path</th><th>Role</th><th>Type</th><th>Width</th><th>Group</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.signalId} data-hierarchy-row-id={entry.signalId} data-selected={String(entry.signalId === selectedSignalId)}><td>{entry.scope}</td><td>{entry.instancePath}</td><td>{entry.relativePath}</td><td><button type="button" onClick={() => onSelect(entry.signalId)}>{entry.signalName}</button></td><td>{entry.fullPath}</td><td>{entry.role}</td><td>{entry.type}</td><td>{entry.width}</td><td>{entry.groupName}</td></tr>)}</tbody></table>
   </section></div>;
 }
-
-type EditorIconName = "close" | "up" | "down" | "plus" | "more";
-
-function EditorIcon({ name }: { readonly name: EditorIconName }) {
-  const path = name === "close" ? "M6 6l12 12M18 6L6 18" : name === "up" ? "M12 19V5M6 11l6-6 6 6" : name === "down" ? "M12 5v14M6 13l6 6 6-6" : name === "plus" ? "M12 5v14M5 12h14" : "M12 5.5h.01M12 12h.01M12 18.5h.01";
-  return <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16"><path d={path} fill="none" stroke="currentColor" strokeWidth={name === "more" ? "3" : "1.8"} strokeLinecap="round" strokeLinejoin="round" /></svg>;
-}
-
-function EditorIconButton({ label, icon, disabled, onClick }: { readonly label: string; readonly icon: EditorIconName; readonly disabled?: boolean; readonly onClick: () => void }) {
-  return <button type="button" data-icon-button={icon} aria-label={label} disabled={disabled} onClick={onClick}><EditorIcon name={icon} /></button>;
-}
-
 
 function DocumentProperties({ document, onApplyProperties, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly onApplyProperties: (commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const dialogRef = useRef<HTMLFormElement>(null);
