@@ -3,7 +3,8 @@ import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
-import { MinimalCycleViewRibbonTabs, MinimalCycleViewTitleBar } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
+import { MinimalCycleViewRibbonTabs } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
 export function MinimalCycleViewNextProbe() {
