@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem } from "@timing-chart-v2/schema";
+import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
 import { EditorApplicationRuntime } from "../runtime/editor-application-runtime.js";
 
@@ -71,7 +71,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     acceptedHandlerRef.current = handler;
     return () => { if (acceptedHandlerRef.current === handler) acceptedHandlerRef.current = undefined; };
   }, []);
-  const replaceSession = useCallback((document: CanonicalDocument, diagnostics: readonly DocumentProblem[] = []) => {
+  const replaceSession = useCallback((document: CanonicalDocument | ParsedCanonicalDocument, diagnostics: readonly DocumentProblem[] = []) => {
     const session = runtime.session.replace(document);
     setSnapshot(session.getSnapshot());
     setHistory(session.historyState());
@@ -102,3 +102,5 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     setRuntimeDiagnostics,
   } as const;
 }
+
+export type EditorApplicationOwner = ReturnType<typeof useEditorApplicationOwner>;

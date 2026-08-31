@@ -6,8 +6,8 @@ import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCa
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
@@ -37,7 +37,6 @@ import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorSection } from "./inspector-section.js";
-import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
@@ -71,6 +70,7 @@ import { InspectorClockEditor } from "./inspector-clock-editor.js";
 import { Ribbon } from "./minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
+import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
@@ -86,13 +86,12 @@ const LEFT_PANE_MAX_WIDTH = 420;
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
-type PendingFileAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
-type CompatibilityPreview = Readonly<{ sourceFormatVersion: number; sourceText: string; readOnly: boolean }>;
 
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
   const application = useEditorApplicationOwner(initialDocument);
+  const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
   const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setValidationDiagnostics, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
@@ -105,14 +104,9 @@ export function MinimalCycleView() {
   const fitAll = useRef<() => void>(() => undefined);
   const setZoomAbsolute = useRef<(zoom: number) => void>(() => undefined);
   const navigateToCycle = useRef<(cycle: number) => void>(() => undefined);
-  const openDocument = useRef<(text: string) => void>(() => undefined);
-  const newDocument = useRef<() => void>(() => undefined);
-  const saveDocument = useRef<(filename: string) => boolean>(() => false);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
-  const openFileReadStartedAtRef = useRef<number | undefined>(undefined);
-  const fileLifecycleRequestIdRef = useRef(0);
   const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_clock") : undefined);
   const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_clock")]) : new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
@@ -181,11 +175,11 @@ export function MinimalCycleView() {
   const [propertiesVisible, setPropertiesVisible] = useState(false);
   const [exportVisible, setExportVisible] = useState(false);
   const [saveAsVisible, setSaveAsVisible] = useState(false);
-  const [compatibilityPreview, setCompatibilityPreview] = useState<CompatibilityPreview | undefined>();
+  const compatibilityPreview = documentLifecycle.compatibilityPreview;
   const dialogOriginRef = useRef<HTMLElement | null>(null);
   const dialogOriginLabelRef = useRef<string | null>(null);
   const closeDialog = (close: () => void) => close();
-  const [pendingFileAction, setPendingFileAction] = useState<PendingFileAction | undefined>();
+  const pendingFileAction = documentLifecycle.pendingAction;
   const pendingFileOriginRef = useRef<HTMLElement | null>(null);
   const unsavedCancelRef = useRef<HTMLButtonElement>(null);
   const [hierarchyVisible, setHierarchyVisible] = useState(false);
@@ -237,7 +231,7 @@ export function MinimalCycleView() {
       if (trapDialogTab(document, event)) return;
       if (event.key !== "Escape") return;
       if (contextMenu || treeAddMenuOpen || treeMoreMenuOpen) return;
-      if (compatibilityPreview) { event.preventDefault(); setCompatibilityPreview(undefined); restorePendingFileFocus(); return; }
+      if (compatibilityPreview) { event.preventDefault(); documentLifecycle.closeCompatibility(); restorePendingFileFocus(); return; }
       if (pendingFileAction) { event.preventDefault(); cancelPendingFileAction(); return; }
       if (bulkRegistrationVisible) { event.preventDefault(); closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }); return; }
       if (hierarchyVisible) { event.preventDefault(); closeDialog(() => setHierarchyVisible(false)); return; }
@@ -677,30 +671,14 @@ export function MinimalCycleView() {
       timelineRuntime.refreshOverlays();
       publishState();
     };
-    const replaceDocument = (document: CanonicalDocument | ParsedCanonicalDocument, migrationWarnings: readonly { code: string; path: string; message: string }[] = []) => {
-      const canonicalDocument = canonicalDocumentOf(document);
-      const resourceProblems = validateDocumentResourceBudget(canonicalDocument);
-      if (resourceProblems.length > 0) {
-        const openProblems = resourceProblems.map((item) => ({
-          ...item,
-          severity: "error" as const,
-          operation: "document.open",
-          operationLabel: "Open document",
-          source: "open" as const,
-          stage: "validate" as const,
-          recommendation: "Reduce the document resource count, then retry Open.",
-          detail: `open-failure:${item.detail ?? item.code}`,
-        }));
-        setProblem(openProblems.map((item) => item.message).join(" "));
-        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
-        return;
-      }
-      timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
+    const detachDocumentLifecycle = documentLifecycle.attachEffects({
+      beginOpenMeasurement,
+      markOpenPhase,
+      applyReplacement: ({ document: canonicalDocument, session: nextSession, documentEpoch: nextDocumentEpoch }) => {
+      timelineRuntime.onDocumentEpochChanged(nextDocumentEpoch);
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
-      const migrationDiagnostics = migrationWarnings.map((warning, index) => ({ code: warning.code, path: `${warning.path}[migration:${index}]`, message: warning.message }));
-      session = application.replaceSession(canonicalDocument, migrationDiagnostics);
-      setCompatibilityPreview(undefined);
+      session = nextSession;
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
@@ -751,74 +729,8 @@ export function MinimalCycleView() {
         markOpenPhase("all-visible-idle");
         rendererHost.dataset.editorIdle = "true";
       });
-    };
-    openDocument.current = (text) => {
-      const fileReadStartedAt = openFileReadStartedAtRef.current;
-      openFileReadStartedAtRef.current = undefined;
-      beginOpenMeasurement(undefined, fileReadStartedAt);
-      markOpenPhase("file-read-complete");
-      const parsed = parseOpenDocument(text);
-      markOpenPhase("parse-done");
-      if (!parsed.ok) {
-        if (parsed.kind === "unsupported-version") {
-          setCompatibilityPreview({ sourceFormatVersion: parsed.sourceFormatVersion ?? -1, sourceText: text, readOnly: false });
-          setProblem("");
-          setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("open-failure:")));
-          return;
-        }
-        const openProblems = parsed.problems.map((item) => ({
-          ...item,
-          severity: "error" as const,
-          operation: "document.open",
-          operationLabel: "Open document",
-          source: "open" as const,
-          stage: item.line !== undefined || item.column !== undefined ? "parse" as const : "validate" as const,
-          detail: `open-failure:${item.code}${item.detail ? `;${item.detail}` : ""}`,
-        }));
-        setProblem(openProblems.map((item) => item.message).join(" "));
-        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
-        return;
-      }
-      markOpenPhase("validate-done");
-      replaceDocument(parsed, parsed.warnings);
-    };
-    newDocument.current = () => { beginOpenMeasurement(); replaceDocument(createNewDocumentFromProductTemplate(cycleDocument, `document_${Date.now()}`)); };
-    saveDocument.current = (filename) => {
-      const reportSaveFailure = (error: unknown, stage: "validate" | "serialize" | "storage") => {
-        const candidate = error as { problems?: unknown };
-        const problems = Array.isArray(candidate?.problems) ? candidate.problems.filter((item): item is DocumentProblem => item !== null && typeof item === "object" && typeof (item as { code?: unknown }).code === "string" && typeof (item as { path?: unknown }).path === "string" && typeof (item as { message?: unknown }).message === "string") : [];
-        const reason = error instanceof Error ? error.message : "Save failed.";
-        const diagnostics: readonly DocumentProblem[] = problems.length > 0
-          ? problems.map((item) => ({ ...item, severity: "error" as const, operation: "document.save", operationLabel: "Save document", source: "save" as const, stage, recommendation: "Fix the reported field and retry Save.", detail: `save-failure:${stage}:${item.code}` }))
-          : [{ code: stage === "storage" ? "SAVE_STORAGE_FAILED" : stage === "validate" ? "SAVE_VALIDATION_FAILED" : "SAVE_SERIALIZE_FAILED", path: "$.document", message: `Save document failed: ${reason}`, severity: "error" as const, operation: "document.save", operationLabel: "Save document", source: "save" as const, stage, recommendation: stage === "storage" ? "Retry Save or choose Save As; the document remains unchanged." : "Fix the reported document problem, then retry Save.", detail: `save-failure:${stage}` }];
-        setProblem(diagnostics.map((item) => item.message).join(" "));
-        setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("save-failure:")), ...diagnostics]);
-      };
-      let text: string;
-      try {
-        text = serializeSaveDocument(session.getSnapshot().document);
-      } catch (error) {
-        reportSaveFailure(error, "serialize");
-        return false;
-      }
-      const persistedRevision = session.getSnapshot().revision;
-      try {
-        downloadText(text, filename);
-      } catch (error) {
-        reportSaveFailure(error, "storage");
-        return false;
-      }
-      try {
-        localStorage.setItem("timing-chart-v2.recent", text);
-      } catch {
-        setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "RECENT_CACHE_FAILED"), { code: "RECENT_CACHE_FAILED", path: "$.document", message: "The document was downloaded, but the Recent cache could not be updated.", severity: "warning", operation: "document.save", operationLabel: "Save document", source: "save", stage: "storage", recommendation: "Use Open to select the downloaded .tcd file when needed.", detail: "recent-cache-failure" }]);
-      }
-      if (session.getSnapshot().revision === persistedRevision) session.markClean();
-      application.publishHistory();
-      setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
-      setProblem("");
-      return true;
-    };
+      },
+    });
 
     const onScroll = () => {
       timelineRuntime.onViewportScroll();
@@ -1528,11 +1440,9 @@ export function MinimalCycleView() {
       timelineRuntime.dispose();
       timelineRuntimeRef.current = null;
       detachApplicationHandler();
+      detachDocumentLifecycle();
       armArrowPick.current = () => undefined;
       changeZoom.current = () => undefined;
-      openDocument.current = () => undefined;
-      newDocument.current = () => undefined;
-      saveDocument.current = () => false;
       snapTransactionCycle.current = () => undefined;
       renderCoordinator.dispose();
     };
@@ -2279,39 +2189,15 @@ export function MinimalCycleView() {
     pendingFileOriginRef.current = null;
     if (origin?.isConnected) requestAnimationFrame(() => origin.focus());
   };
-  const cancelPendingFileAction = () => { setPendingFileAction(undefined); restorePendingFileFocus(); };
-  const requestFileAction = (action: Omit<PendingFileAction, "requestId">, requestId = ++fileLifecycleRequestIdRef.current) => {
-    if (requestId !== fileLifecycleRequestIdRef.current) return;
-    const pendingAction: PendingFileAction = { ...action, requestId };
-    if (!history.dirty) {
-      if (pendingAction.kind === "new") newDocument.current();
-      else if (pendingAction.text !== undefined) openDocument.current(pendingAction.text);
-      return;
-    }
+  const capturePendingFileOrigin = () => {
     if (pendingFileOriginRef.current === null) pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null;
-    setPendingFileAction(pendingAction);
   };
-  const continuePendingFileAction = (action: PendingFileAction) => {
-    setPendingFileAction(undefined);
-    if (action.requestId !== fileLifecycleRequestIdRef.current) { restorePendingFileFocus(); return; }
-    if (action.kind === "new") newDocument.current();
-    else if (action.text !== undefined) openDocument.current(action.text);
-    restorePendingFileFocus();
-  };
+  const cancelPendingFileAction = () => { documentLifecycle.cancelPending(); restorePendingFileFocus(); };
+  const continuePendingFileAction = () => { documentLifecycle.discardPending(); restorePendingFileFocus(); };
   const saveAndContinuePendingFileAction = () => {
-    const action = pendingFileAction;
-    if (!action) return;
-    if (!saveDocument.current(`${snapshot.document.document.title || "timing-chart"}.tcd`)) return;
-    continuePendingFileAction(action);
+    if (documentLifecycle.savePendingAndContinue(`${snapshot.document.document.title || "timing-chart"}.tcd`)) restorePendingFileFocus();
   };
-  const requestNewDocument = () => requestFileAction({ kind: "new" });
-  const requestOpenText = (text: string, requestId?: number) => requestFileAction({ kind: "open", text }, requestId);
-  const rejectOversizedOpen = (file: File) => {
-    const diagnostic = openFileByteBudgetProblem(file);
-    setProblem(diagnostic.message);
-    setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
-    restorePendingFileFocus();
-  };
+  const requestNewDocument = () => { capturePendingFileOrigin(); documentLifecycle.requestNew(); };
   const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
   const applyWorkspacePreset = (preset: WorkspacePreset) => {
     setWorkspacePreset(preset);
@@ -2397,9 +2283,9 @@ export function MinimalCycleView() {
       onDelete={() => commandRegistry.current.execute("selection.delete")}
        onNew={requestNewDocument}
        onOpen={() => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }}
-      onSave={() => { saveDocument.current(`${snapshot.document.document.title || "timing-chart"}.tcd`); }}
+      onSave={() => { documentLifecycle.save(`${snapshot.document.document.title || "timing-chart"}.tcd`); }}
       onSaveAs={() => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }}
-      onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) requestOpenText(text); else setProblem("No recent document is available."); }}
+      onRecent={documentLifecycle.openRecent}
       onProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
       onExport={() => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); }}
       onToggleInspector={() => startTransition(() => setInspectorVisible((value) => !value))}
@@ -2453,10 +2339,10 @@ export function MinimalCycleView() {
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => application.executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section ref={bulkRegistrationDialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
-     {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = saveDocument.current(`${name}.tcd`); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
-     {compatibilityPreview && <div className="modal-backdrop" data-testid="compatibility-dialog"><section ref={compatibilityDialogRef} className="document-properties compatibility-dialog" role="dialog" aria-modal="true" aria-labelledby="compatibility-dialog-title"><header><h2 id="compatibility-dialog-title">Compatibility Mode</h2></header><p>Format version {compatibilityPreview.sourceFormatVersion} is newer than this editor supports. The current document has not been replaced.</p><p className="inspector-note">Unknown fields are preserved in the original source below. Compatibility Mode is read-only and cannot Save or overwrite this file.</p><textarea aria-label="Compatibility source" readOnly value={compatibilityPreview.sourceText} rows={14} />{compatibilityPreview.readOnly && <output role="status">Read-only Compatibility Mode active</output>}<footer><button type="button" onClick={() => { setCompatibilityPreview(undefined); restorePendingFileFocus(); }}>{compatibilityPreview.readOnly ? "Close" : "Cancel"}</button>{!compatibilityPreview.readOnly && <button type="button" data-testid="compatibility-read-only" onClick={() => setCompatibilityPreview({ ...compatibilityPreview, readOnly: true })}>View Read-Only</button>}</footer></section></div>}
-     {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
-     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { const requestId = ++fileLifecycleRequestIdRef.current; if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else { openFileReadStartedAtRef.current = globalThis.performance.now(); void file.text().then((text) => requestOpenText(text, requestId)).catch(() => { if (requestId !== fileLifecycleRequestIdRef.current) return; openFileReadStartedAtRef.current = undefined; setProblem("Open failed."); }); } } event.currentTarget.value = ""; }} />
+     {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
+     {compatibilityPreview && <div className="modal-backdrop" data-testid="compatibility-dialog"><section ref={compatibilityDialogRef} className="document-properties compatibility-dialog" role="dialog" aria-modal="true" aria-labelledby="compatibility-dialog-title"><header><h2 id="compatibility-dialog-title">Compatibility Mode</h2></header><p>Format version {compatibilityPreview.sourceFormatVersion} is newer than this editor supports. The current document has not been replaced.</p><p className="inspector-note">Unknown fields are preserved in the original source below. Compatibility Mode is read-only and cannot Save or overwrite this file.</p><textarea aria-label="Compatibility source" readOnly value={compatibilityPreview.sourceText} rows={14} />{compatibilityPreview.readOnly && <output role="status">Read-only Compatibility Mode active</output>}<footer><button type="button" onClick={() => { documentLifecycle.closeCompatibility(); restorePendingFileFocus(); }}>{compatibilityPreview.readOnly ? "Close" : "Cancel"}</button>{!compatibilityPreview.readOnly && <button type="button" data-testid="compatibility-read-only" onClick={documentLifecycle.enterCompatibilityReadOnly}>View Read-Only</button>}</footer></section></div>}
+     {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={continuePendingFileAction}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
+     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { capturePendingFileOrigin(); void documentLifecycle.readFile(file); } event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
       <span data-testid="tool-status">{arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}</span>
       <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>

@@ -22,11 +22,21 @@
 - Focused browser after transfer: 2 passed.
 - TypeScript and diff-check: PASS.
 
+## Step 4 — Document Lifecycle
+
+- Owner: `apps/editor/src/application/use-document-lifecycle.ts`
+- Owns New/Open/Save/Save As behavior, pending unsaved decisions, file-read request IDs, stale async Open rejection, parse/resource-budget handling, compatibility preview state, and atomic application-session replacement.
+- Validated Open documents are handed through the Application session owner without duplicate canonical validation.
+- `MinimalCycleView` retains only the file input/focus refs, dialog presentation, and the renderer/UI synchronization effect invoked after an accepted replacement.
+- Focused browser after transfer: 11 passed (dirty New/Open Cancel/Discard/Save, Save As failure, stale Open ordering, valid/oversized/over-budget Open, atomic replacement, compatibility mode, and external Save storage failure).
+- TypeScript and diff-check: PASS.
+
 ## Current size
 
-- `minimal-cycle-view.tsx`: 2,471 lines / 175,717 bytes
-- `use-editor-application-owner.ts`: 104 lines / 6,330 bytes
+- `minimal-cycle-view.tsx`: 2,357 lines / 167,581 bytes
+- `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
+- `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 
 ## Next responsibility
 
-Document Lifecycle: New/Open/Save, pending unsaved decision, request epoch, document replacement, and file-read lifecycle.
+Selection: selected entities, ref mirrors, selection commands, and Bottom/Inspector/Transaction synchronization.

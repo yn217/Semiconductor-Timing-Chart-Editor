@@ -1,5 +1,5 @@
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 
 /** Owns the replaceable document session lifecycle for the editor runtime. */
 export class EditorSessionController {
@@ -17,7 +17,7 @@ export class EditorSessionController {
     return this.session.getSnapshot();
   }
 
-  replace(document: CanonicalDocument): CommandHistorySession {
+  replace(document: CanonicalDocument | ParsedCanonicalDocument): CommandHistorySession {
     this.session = new CommandHistorySession(document);
     return this.session;
   }

@@ -55,6 +55,32 @@ test("dirty Open uses Save before replacing the document", async ({ page }) => {
   await expect(openButton).toBeVisible();
 });
 
+test("dirty Open keeps the current document on Cancel and replaces it on Discard", async ({ page }) => {
+  await page.goto("/");
+  await makeDirty(page);
+  const host = page.getByTestId("cycle-surface");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const replacement = canonicalFixture();
+  replacement.document.title = "Discarded Into Replacement";
+  const file = { name: "dirty-open.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacement)) };
+  const input = page.locator("input[accept='.json,.tcd']");
+
+  await input.setInputFiles(file);
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-cancel").click();
+  await expect(page.getByTestId("unsaved-file-dialog")).toHaveCount(0);
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).toHaveValue("UNSAVED_REQUEST");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+
+  await input.setInputFiles(file);
+  await page.getByTestId("unsaved-discard").click();
+  await expect(page.getByTestId("unsaved-file-dialog")).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Discarded Into Replacement");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
 test("Save As failure keeps the exact revision dirty and leaves the dialog open", async ({ page }) => {
   await page.goto("/");
   await makeDirty(page);
