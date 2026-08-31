@@ -58,4 +58,5 @@ Rules:
 | `timeline-toolbar.tsx` | Timeline range, insert/edit, bookmark, and fold/break command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `layout-inspector.tsx` | Layout dimensions, column alignment, and auto-fit property surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `annotation-editor.tsx` | Annotation list, import/export, style, anchor-offset, and command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
+| `advanced-json-panel.tsx` | Advanced JSON draft, validation, resource policy, clipboard, and replace command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `transaction-editor.tsx` | Transaction create/edit list and command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
