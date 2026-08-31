@@ -2535,7 +2535,7 @@ export function MinimalCycleView() {
       const selectedGroupIndex = selectedGroup === undefined ? -1 : snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id);
       const selectedSignalGroupIndex = selectedSignalGroup === undefined ? -1 : snapshot.document.signalGroups.findIndex((group) => group.id === selectedSignalGroup.id);
       const index = selectedGroupIndex >= 0 ? selectedGroupIndex + 1 : selectedSignalGroupIndex >= 0 ? selectedSignalGroupIndex + 1 : snapshot.document.signalGroups.length;
-      const result = commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index });
+      const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index });
       if (result.ok) {
         selectedGroupRef.current = id;
         setSelectedGroupId(id);
