@@ -20,6 +20,7 @@ export function MinimalCycleViewNextProbe() {
   const [nextBottomTab, setNextBottomTab] = useState("Signal");
   const [followSelection, setFollowSelection] = useState(false);
   const [bottomPinned, setBottomPinned] = useState(false);
+  const [nextSelectedSignalId, setNextSelectedSignalId] = useState<import("@timing-chart-v2/schema").SignalId>();
   const viewportRef = useRef<HTMLDivElement>(null);
   const surfaceHostRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
@@ -49,11 +50,11 @@ export function MinimalCycleViewNextProbe() {
     titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
     ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
     ribbonUi: <div className="ribbon" data-testid="next-ribbon"><span>Parallel replacement</span></div>,
-    signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} onSelect={() => undefined} surfaceHostRef={surfaceHostRef} />,
+    signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} selectedSignalId={nextSelectedSignalId} onSelect={setNextSelectedSignalId} surfaceHostRef={surfaceHostRef} />,
     bottomEditorUi: <MinimalCycleViewBottomEditor tab={nextBottomTab} onTabChange={setNextBottomTab} followSelection={followSelection} onFollowSelectionChange={setFollowSelection} pinned={bottomPinned} onPinnedChange={setBottomPinned} />,
     inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} onCommand={(command) => session.execute(command)} onReveal={() => undefined} onCancel={() => undefined} /></aside>,
     dialogsUi: <ContextMenuPanel contextMenu={undefined} hasSelectedClipboard={false} clipboardAvailable={false} hasSelectedEntity={false} hasSelectedSignal={false} hasDeletableSelection={false} copySelectedSignal={() => undefined} cutSelectedSignal={() => undefined} pasteSelectedEntity={() => undefined} duplicateSelectedEntity={() => undefined} moveSelection={() => undefined} setSelectionVisibility={() => undefined} renameSelection={() => undefined} closeContextMenu={() => undefined} deleteSelection={() => undefined} />,
     statusBarUi: <footer className="status-bar" data-testid="next-status">Phase 1 · parallel replacement</footer>,
-  }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle, nextBottomTab, followSelection, bottomPinned]);
+  }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle, nextBottomTab, followSelection, bottomPinned, nextSelectedSignalId]);
   return <MinimalCycleViewNext source={source} />;
 }

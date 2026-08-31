@@ -18,7 +18,11 @@ test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await page.getByTestId("next-fit-all").click();
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-zoom", "1");
   await expect(page.getByTestId("next-signal-tree-canvas")).toBeVisible();
-  await expect(page.getByRole("treeitem").first()).toBeVisible();
+  const firstTreeItem = page.getByRole("treeitem").first();
+  await expect(firstTreeItem).toBeVisible();
+  await firstTreeItem.click();
+  await expect(firstTreeItem).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-revision", "0");
   await expect(page.getByTestId("next-cycle-viewport")).toBeVisible();
   await expect(page.getByTestId("next-bottom-editor")).toBeVisible();
   await page.getByRole("tab", { name: "Transaction" }).click();
