@@ -555,9 +555,9 @@ export function MinimalCycleView() {
       refreshGridPresentation(gridElement, document, geometryMaps, mappingCache, gridEnabledRef.current, projection.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale);
     };
     refreshPlayhead.current = () => {
-      refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle));
+      refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle));
     };
-    const refreshRangeSelectionBandNow = () => refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle), currentZoom, timelineOffset(), projection.totalHeight);
+    const refreshRangeSelectionBandNow = () => refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle), currentZoom, timelineOffset(), projection.totalHeight);
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
       refreshRangeSelectionBandNow();
@@ -603,10 +603,7 @@ export function MinimalCycleView() {
       renderer.update(projection);
     };
     timelineRuntime.attach();
-    function sourceBoundaryLocalX(document: CanonicalDocument, cycle: number): number | undefined {
-      return timelineRuntime.sourceBoundaryToLocalX(document, cycle);
-    }
-    transactionBoundaryX.current = (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle);
+    transactionBoundaryX.current = (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
     function syncPresentationScale() {
       // The measured screen-geometry scale is shared by the ruler, overlays,
       // and snap projection. WaveDrom text consumes the same derived value to
@@ -644,20 +641,20 @@ export function MinimalCycleView() {
     fitSelection.current = () => {
       const selected = timelineRangeRef.current;
       const document = session.getSnapshot().document;
-      const start = sourceBoundaryLocalX(document, selected.start) ?? 0;
-      const end = sourceBoundaryLocalX(document, selected.end) ?? start + 1;
+      const start = timelineRuntime.sourceBoundaryToLocalX(document, selected.start) ?? 0;
+      const end = timelineRuntime.sourceBoundaryToLocalX(document, selected.end) ?? start + 1;
       timelineRuntime.fitSelection(start, end);
     };
     fitAll.current = () => {
       const document = session.getSnapshot().document;
-      const start = sourceBoundaryLocalX(document, 0) ?? 0;
-      const end = sourceBoundaryLocalX(document, document.timeline.cycleCount) ?? start + 1;
+      const start = timelineRuntime.sourceBoundaryToLocalX(document, 0) ?? 0;
+      const end = timelineRuntime.sourceBoundaryToLocalX(document, document.timeline.cycleCount) ?? start + 1;
       timelineRuntime.fitAll(end);
     };
     navigateToCycle.current = (cycle) => {
       const document = session.getSnapshot().document;
       if (!Number.isInteger(cycle) || cycle < 0 || cycle > document.timeline.cycleCount) return;
-      const cycleX = sourceBoundaryLocalX(document, cycle);
+      const cycleX = timelineRuntime.sourceBoundaryToLocalX(document, cycle);
       if (cycleX === undefined) return;
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
