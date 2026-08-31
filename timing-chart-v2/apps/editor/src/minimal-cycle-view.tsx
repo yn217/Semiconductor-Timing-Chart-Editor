@@ -688,7 +688,7 @@ export function MinimalCycleView() {
       timelineRuntime.refreshPlayhead();
       timelineRuntime.refreshGrid();
       timelineRuntime.setZoom(currentZoom);
-      refreshOverlays(session.getSnapshot().document);
+      timelineRuntime.refreshOverlays();
       collectWaveErrors();
       publishState();
       rendererHost.dataset.cycleViewReady = "true";
@@ -795,7 +795,7 @@ export function MinimalCycleView() {
         timelineRuntime.refreshPlayhead();
         if (refreshGridNow) timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(currentZoom);
-        if (refreshOverlaysNow) refreshOverlays(result.snapshot.document);
+        if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
         collectWaveErrors();
         publishState();
         rendererHost.dataset.editorIdle = "true";
@@ -807,7 +807,7 @@ export function MinimalCycleView() {
       renderer.update(projection);
       timelineRuntime.refreshPlayhead();
       timelineRuntime.refreshGrid();
-      refreshOverlays(session.getSnapshot().document);
+      timelineRuntime.refreshOverlays();
       publishState();
     };
     execute.current = (command) => { const result = sessionController.execute(command); applyResult(result, command.type, command); return result; };
@@ -870,7 +870,7 @@ export function MinimalCycleView() {
         timelineRuntime.refreshPlayhead();
         timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(currentZoom);
-        refreshOverlays(session.getSnapshot().document);
+        timelineRuntime.refreshOverlays();
         collectWaveErrors();
         publishState();
         markOpenPhase("all-visible-idle");
