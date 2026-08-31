@@ -88,7 +88,6 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onNavigat
     {editingBookmark && <form className="bookmark-editor" aria-label="Bookmark Editor" data-testid="bookmark-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Bookmark name" value={bookmarkName} onChange={(event) => setBookmarkName(event.target.value)} /></label><label>Cycle<input aria-label="Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={bookmarkStart} onChange={(event) => setBookmarkStart(Number(event.target.value))} /></label><label>Comment<input aria-label="Bookmark comment" value={bookmarkComment} onChange={(event) => setBookmarkComment(event.target.value)} /></label><button type="button" data-testid="apply-bookmark" onClick={applyBookmark}>Apply</button><button type="button" onClick={() => setEditingBookmarkId(undefined)}>Cancel</button></form>}
   </div>;
 }
-
 export interface SignalEditorProps {
   readonly signal: Signal | undefined;
   readonly cycleCount: number;
@@ -104,4 +103,3 @@ export interface SignalEditorProps {
   readonly onDropToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
   readonly onCancel: () => void;
 }
-
