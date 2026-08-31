@@ -997,7 +997,10 @@ export function MinimalCycleView() {
     const applyResult = (result: ReturnType<CommandHistorySession["execute"]>, operation = "command", command?: SemanticCommand, batchId?: CommandId) => {
       if (!result.ok) {
         const target = commandDiagnosticTarget(command);
-        const safeTarget = target.objectId === undefined ? { ...(target.objectType === undefined ? {} : { objectType: target.objectType }) } : target;
+        const objectId = target.objectId;
+        const safeTarget = objectId === undefined
+          ? (target.objectType === undefined ? {} : { objectType: target.objectType })
+          : { ...(target.objectType === undefined ? {} : { objectType: target.objectType }), objectId };
         const diagnostics = buildCommandRejectionDiagnostics({ result, operation, ...(command?.id ?? batchId ? { commandId: command?.id ?? batchId } : {}), target: safeTarget });
         setProblem(result.reason === "no-op" ? "" : diagnostics.map((item) => item.message).join(" "));
         setRuntimeDiagnostics((current) => [
