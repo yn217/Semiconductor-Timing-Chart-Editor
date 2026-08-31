@@ -51,6 +51,7 @@ import { AnnotationList } from "./annotation-list.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
+import { RibbonIcon } from "./ribbon-icon.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -2885,12 +2886,6 @@ export function MinimalCycleView() {
       <span data-testid="time-axis-status">Time Axis: {snapshot.document.timeline.referenceClock ? `Clock · ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}</span><span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
     </footer>
   </main>;
-}
-
-const iconSprite = new URL("../../../../timing-chart-v1/gui-mockup/icons.svg", import.meta.url).href;
-
-function RibbonIcon({ name }: { readonly name: string }) {
-  return <svg aria-hidden="true"><use href={`${iconSprite}#${name}`} /></svg>;
 }
 
 type InsertSemanticIconKind = "clock" | "state" | "event" | "pulse" | "text";
