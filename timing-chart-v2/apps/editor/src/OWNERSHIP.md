@@ -15,6 +15,7 @@ controllers are extracted incrementally.
 | Dialog focus trapping and restoration | `dialog-focus-loop.ts` | view-only focus lifecycle | Phase 1 extracted utility |
 | Annotation list presentation | `annotation-list.tsx` | parent selection callback | Phase 1 extracted leaf |
 | Problems filter projection | `problem-filter.ts` | view-only diagnostic projection | Phase 1 extracted utility |
+| Read-only JSON panel | `json-panel.tsx` | parent document projection | Phase 1 extracted leaf |
 
 Rules:
 
