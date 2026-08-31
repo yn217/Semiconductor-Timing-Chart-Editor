@@ -34,6 +34,7 @@ controllers are extracted incrementally.
 | Inspector style readers | `inspector-style.ts` | view-only style projection | Phase 1 extracted utility |
 | Inspector clock editor | `inspector-clock-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
 | Timeline / viewport runtime boundary | `runtime/timeline-viewport-runtime.ts` | parent application runtime callback; view-only geometry/navigation | Step 1 owner transfer |
+| Ribbon composition | `minimal-cycle-view-ribbon.tsx` | parent callback / existing command boundary | Physical Group 3 extraction |
 
 Rules:
 
