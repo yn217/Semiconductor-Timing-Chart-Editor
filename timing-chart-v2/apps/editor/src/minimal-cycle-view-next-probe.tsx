@@ -6,7 +6,7 @@ import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
 import { ContextMenuPanel, InspectorPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewBottomEditor, MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewBottomEditor, MinimalCycleViewNextStatusBar, MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
 export function MinimalCycleViewNextProbe() {
@@ -54,7 +54,7 @@ export function MinimalCycleViewNextProbe() {
     bottomEditorUi: <MinimalCycleViewBottomEditor tab={nextBottomTab} onTabChange={setNextBottomTab} followSelection={followSelection} onFollowSelectionChange={setFollowSelection} pinned={bottomPinned} onPinnedChange={setBottomPinned} />,
     inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} onCommand={(command) => session.execute(command)} onReveal={() => undefined} onCancel={() => undefined} /></aside>,
     dialogsUi: <ContextMenuPanel contextMenu={undefined} hasSelectedClipboard={false} clipboardAvailable={false} hasSelectedEntity={false} hasSelectedSignal={false} hasDeletableSelection={false} copySelectedSignal={() => undefined} cutSelectedSignal={() => undefined} pasteSelectedEntity={() => undefined} duplicateSelectedEntity={() => undefined} moveSelection={() => undefined} setSelectionVisibility={() => undefined} renameSelection={() => undefined} closeContextMenu={() => undefined} deleteSelection={() => undefined} />,
-    statusBarUi: <footer className="status-bar" data-testid="next-status">Phase 1 · parallel replacement</footer>,
+    statusBarUi: <MinimalCycleViewNextStatusBar document={snapshot.document} revision={snapshot.revision} history={session.historyState()} />,
   }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle, nextBottomTab, followSelection, bottomPinned, nextSelectedSignalId]);
   return <MinimalCycleViewNext source={source} />;
 }

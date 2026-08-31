@@ -31,7 +31,8 @@ test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await page.getByTestId("next-bottom-pin").click();
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-revision", "0");
   await expect(page.getByTestId("next-inspector")).toBeVisible();
-  await expect(page.getByTestId("next-status")).toContainText("Phase 1");
+  await expect(page.getByTestId("next-status")).toContainText("Signals:");
+  await expect(page.getByTestId("next-dirty-status")).toHaveText("Clean");
 });
 
 test("legacy production mount remains the default", async ({ page }) => {

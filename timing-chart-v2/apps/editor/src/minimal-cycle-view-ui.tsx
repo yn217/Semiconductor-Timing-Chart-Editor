@@ -3,6 +3,7 @@ import type { MinimalCycleApplicationPort } from "./minimal-cycle-view-applicati
 import type { MinimalCycleTimelinePort } from "./minimal-cycle-view-timeline.js";
 import { MinimalCycleViewPanels } from "./minimal-cycle-view-panels.js";
 import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import type { HistoryState } from "@timing-chart-v2/history";
 
 /**
  * Coarse UI owner.
@@ -100,6 +101,10 @@ export function MinimalCycleViewBottomEditor({ tab, onTabChange, followSelection
     <nav className="bottom-tabs" role="tablist" aria-label="Next bottom context panels">{tabs.map((item) => <button type="button" role="tab" key={item} aria-selected={tab === item} className={tab === item ? "active" : ""} onClick={() => onTabChange(item)}>{item}</button>)}<span /><label><input data-testid="next-follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label><button type="button" data-testid="next-bottom-pin" aria-pressed={pinned} onClick={() => onPinnedChange(!pinned)}>{pinned ? "Unpin" : "Pin"}</button></nav>
     <div className="bottom-content" role="tabpanel" data-testid="next-bottom-content"><strong>{tab}</strong> context</div>
   </section>;
+}
+
+export function MinimalCycleViewNextStatusBar({ document, revision, history }: { readonly document: Readonly<CanonicalDocument>; readonly revision: number; readonly history: HistoryState }) {
+  return <footer className="status-bar" data-testid="next-status" aria-label="Next editor status"><span>Signals: {document.signals.length}</span><span>Transactions: {document.transactions.length}</span><span>Revision: {revision}</span><span data-testid="next-dirty-status">{history.dirty ? "Modified" : "Clean"}</span></footer>;
 }
 
 export function refreshTreeCollapsedMetadata(host: RefObject<HTMLDivElement | null>, collapsedGroups: ReadonlySet<string>): void { const root = host.current; if (root) root.dataset.collapsedGroups = [...collapsedGroups].join(","); }
