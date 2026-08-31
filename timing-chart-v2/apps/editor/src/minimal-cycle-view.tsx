@@ -695,7 +695,7 @@ export function MinimalCycleView() {
       timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
       timelineRuntime.refreshPlayhead();
       timelineRuntime.refreshGrid();
-      applyZoom(currentZoom);
+      timelineRuntime.setZoom(currentZoom);
       refreshOverlays(session.getSnapshot().document);
       collectWaveErrors();
       publishState();
@@ -802,7 +802,7 @@ export function MinimalCycleView() {
         }
         timelineRuntime.refreshPlayhead();
         if (refreshGridNow) timelineRuntime.refreshGrid();
-        applyZoom(currentZoom);
+        timelineRuntime.setZoom(currentZoom);
         if (refreshOverlaysNow) refreshOverlays(result.snapshot.document);
         collectWaveErrors();
         publishState();
@@ -877,7 +877,7 @@ export function MinimalCycleView() {
         timelineRuntime.refreshRuler();
         timelineRuntime.refreshPlayhead();
         timelineRuntime.refreshGrid();
-        applyZoom(currentZoom);
+        timelineRuntime.setZoom(currentZoom);
         refreshOverlays(session.getSnapshot().document);
         collectWaveErrors();
         publishState();
