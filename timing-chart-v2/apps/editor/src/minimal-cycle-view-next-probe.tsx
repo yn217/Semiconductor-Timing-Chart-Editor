@@ -1,5 +1,6 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
+import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import type { CommandId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
@@ -27,6 +28,20 @@ export function MinimalCycleViewNextProbe() {
   const gridLayerRef = useRef<HTMLDivElement>(null);
   const registry = useMemo(() => new UiCommandRegistry(), []);
   const snapshot = session.getSnapshot();
+  useEffect(() => {
+    const owner = surfaceHostRef.current;
+    const signal = snapshot.document.signals[0];
+    if (!owner || !signal) return;
+    const adapter = new ProductionWaveDromAdapter();
+    const waveJson = adapter.toWaveJson({ signal, cycleCount: snapshot.document.timeline.cycleCount });
+    void adapter.renderWave(signal.id, waveJson, owner).then((rendered) => {
+      adapter.extractLocalGeometry(rendered);
+      owner.dataset.geometryReady = "true";
+    }).catch((error: unknown) => {
+      owner.dataset.waveError = error instanceof Error ? error.message : "WaveDrom render failed";
+    });
+    return () => adapter.dispose(signal.id);
+  }, [snapshot]);
   const source = useMemo(() => ({
     snapshot,
     history: session.historyState(),
