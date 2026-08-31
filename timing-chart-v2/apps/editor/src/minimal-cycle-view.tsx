@@ -516,10 +516,10 @@ export function MinimalCycleView() {
         } else if (selectedSignalIdsRef.current.size > 1) {
           const commands = [...selectedSignalIdsRef.current].map((id) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete" as const, signalId: id }));
           const result = executeBatch.current(nextCommandId("route_delete_selection"), commands);
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set()); }
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
         } else if (signalId) {
           const result = execute.current({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set()); }
+          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
         } else if (spacerId) {
           const result = execute.current({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
           if (result.ok) selectedSpacerRef.current = undefined;
@@ -1341,7 +1341,7 @@ export function MinimalCycleView() {
         setSelectedId(undefined);
         applySelectionDecorations(new Set(), undefined);
         selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set());
+        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedAnnotationId(undefined);
         selectedAnnotationRef.current = undefined;
         setSelectedTransactionId(undefined);
@@ -1358,7 +1358,7 @@ export function MinimalCycleView() {
         setSelectedAnnotationId(id);
         setSelectedId(undefined);
         applySelectionDecorations(new Set(), undefined);
-        selectedSignalIdsRef.current = selectionController.clear(); setSelectedSignalIds(new Set());
+        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
         setSelectedGroupId(undefined);
         setSelectedTransactionId(undefined);
         selectedTransactionRef.current = undefined;
@@ -1403,7 +1403,7 @@ export function MinimalCycleView() {
         setSelectedGroupId(spacerGroup.id);
         setSelectedId(undefined);
         selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = selectionController.clear();
+        selectedSignalIdsRef.current = new Set();
         setSelectedSignalIds(new Set());
         selectedAnnotationRef.current = undefined;
         setSelectedAnnotationId(undefined);
@@ -1972,7 +1972,7 @@ export function MinimalCycleView() {
     if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
       selectedSignalRef.current = undefined;
       setSelectedId(undefined);
-        selectedSignalIdsRef.current = selectionController.clear();
+        selectedSignalIdsRef.current = new Set();
       setSelectedSignalIds(new Set());
     }
   };
@@ -2354,7 +2354,7 @@ export function MinimalCycleView() {
       setSelectedGroupId(newGroupId);
       selectedSignalRef.current = undefined;
       setSelectedId(undefined);
-        selectedSignalIdsRef.current = selectionController.clear();
+        selectedSignalIdsRef.current = new Set();
       setSelectedSignalIds(new Set());
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
     }
