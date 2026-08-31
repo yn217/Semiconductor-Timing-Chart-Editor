@@ -1,0 +1,26 @@
+import { useEffect, useState } from "react";
+import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { HistoryState } from "@timing-chart-v2/history";
+import type { CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import { nextCommandId } from "./command-id.js";
+import { nextEntityId } from "./entity-id.js";
+
+export function TransactionEditor({ transaction, document, history, onSelect, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+  const [name, setName] = useState("Transaction");
+  const [start, setStart] = useState(1);
+  const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
+  const [laneId, setLaneId] = useState("lane_0");
+  const [editName, setEditName] = useState(transaction?.name ?? "");
+  const [editStart, setEditStart] = useState(transaction?.start ?? 0);
+  const [editEnd, setEditEnd] = useState(transaction?.end ?? 1);
+  const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "lane_0");
+  useEffect(() => {
+    setEditName(transaction?.name ?? "");
+    setEditStart(transaction?.start ?? 0);
+    setEditEnd(transaction?.end ?? 1);
+    setEditLaneId(transaction?.laneId ?? "lane_0");
+  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId]);
+  return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{transaction && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="button" className="danger" data-testid="delete-bottom-transaction" onClick={onDelete}>Delete Transaction</button></>}</header>{transaction ? <form onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("bottom_transaction_update"), type: "transaction.update", transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(transaction.phases === undefined ? {} : { phases: transaction.phases }) }); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /></label><button type="submit" data-testid="apply-transaction-properties">Apply Transaction</button></form> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; const result = onCommand({ id: nextCommandId("transaction_create"), type: "transaction.create", transaction: { id, name: name.trim() || "Transaction", start, end, laneId } }); if (result.ok) onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /></label><button type="submit">Create Transaction</button></form>}<div className="transaction-list">{document.transactions.map((item) => <button type="button" key={item.id} data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}><b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span></button>)}</div></section>;
+}
+
+
