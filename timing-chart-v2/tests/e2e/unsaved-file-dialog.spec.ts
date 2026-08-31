@@ -51,3 +51,22 @@ test("dirty Open uses Save before replacing the document", async ({ page }) => {
   await expect(page.locator(".app-titlebar h1")).toHaveText(canonicalFixture().document.title);
   await expect(openButton).toBeVisible();
 });
+
+test("Save As failure keeps the exact revision dirty and leaves the dialog open", async ({ page }) => {
+  await page.goto("/");
+  await makeDirty(page);
+  await page.evaluate(() => {
+    HTMLAnchorElement.prototype.click = () => { throw new Error("download unavailable"); };
+  });
+
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save As", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Save As" });
+  await dialog.getByLabel("Save As filename").fill("failed-save");
+  await dialog.getByTestId("save-as-submit").click();
+
+  await expect(dialog).toBeVisible();
+  await expect(dialog.getByLabel("Save As filename")).toHaveValue("failed-save");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+  await expect(dialog.getByRole("alert")).toHaveText("Save failed. The document remains modified.");
+});

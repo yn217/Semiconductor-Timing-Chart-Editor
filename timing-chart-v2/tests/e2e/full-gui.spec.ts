@@ -304,7 +304,7 @@ test("Save As downloads the canonical document with a requested filename without
   await dialog.getByTestId("save-as-submit").click();
   const download = await downloadPromise;
 
-  expect(download.suggestedFilename()).toBe("review-copy.tcd.json");
+  expect(download.suggestedFilename()).toBe("review-copy.tcd");
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);

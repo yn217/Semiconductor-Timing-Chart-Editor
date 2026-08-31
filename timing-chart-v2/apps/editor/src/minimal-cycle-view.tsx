@@ -110,7 +110,7 @@ export function MinimalCycleView() {
   const navigateToCycle = useRef<(cycle: number) => void>(() => undefined);
   const openDocument = useRef<(text: string) => void>(() => undefined);
   const newDocument = useRef<() => void>(() => undefined);
-  const saveDocument = useRef<() => string | undefined>(() => undefined);
+  const saveDocument = useRef<(filename: string) => boolean>(() => false);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -817,7 +817,7 @@ export function MinimalCycleView() {
       replaceDocument(parsed, parsed.warnings);
     };
     newDocument.current = () => { beginOpenMeasurement(); replaceDocument(createNewDocument(cycleDocument, `document_${Date.now()}`)); };
-    saveDocument.current = () => {
+    saveDocument.current = (filename) => {
       const reportSaveFailure = (error: unknown, stage: "validate" | "serialize" | "storage") => {
         const candidate = error as { problems?: unknown };
         const problems = Array.isArray(candidate?.problems) ? candidate.problems.filter((item): item is DocumentProblem => item !== null && typeof item === "object" && typeof (item as { code?: unknown }).code === "string" && typeof (item as { path?: unknown }).path === "string" && typeof (item as { message?: unknown }).message === "string") : [];
@@ -833,18 +833,25 @@ export function MinimalCycleView() {
         text = serializeSaveDocument(session.getSnapshot().document);
       } catch (error) {
         reportSaveFailure(error, "serialize");
-        return undefined;
+        return false;
+      }
+      const persistedRevision = session.getSnapshot().revision;
+      try {
+        downloadText(text, filename);
+      } catch (error) {
+        reportSaveFailure(error, "storage");
+        return false;
       }
       try {
         localStorage.setItem("timing-chart-v2.recent", text);
-      } catch (error) {
-        reportSaveFailure(error, "storage");
-        return undefined;
+      } catch {
+        setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "RECENT_CACHE_FAILED"), { code: "RECENT_CACHE_FAILED", path: "$.document", message: "The document was downloaded, but the Recent cache could not be updated.", severity: "warning", operation: "document.save", operationLabel: "Save document", source: "save", stage: "storage", recommendation: "Use Open to select the downloaded .tcd file when needed.", detail: "recent-cache-failure" }]);
       }
-      session.markClean();
+      if (session.getSnapshot().revision === persistedRevision) session.markClean();
       setHistory(session.historyState());
       setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
-      return text;
+      setProblem("");
+      return true;
     };
 
     const onScroll = () => {
@@ -1562,7 +1569,7 @@ export function MinimalCycleView() {
       changeZoom.current = () => undefined;
       openDocument.current = () => undefined;
       newDocument.current = () => undefined;
-      saveDocument.current = () => undefined;
+      saveDocument.current = () => false;
       snapTransactionCycle.current = () => undefined;
       renderCoordinator.dispose();
     };
@@ -2328,9 +2335,7 @@ export function MinimalCycleView() {
   const saveAndContinuePendingFileAction = () => {
     const action = pendingFileAction;
     if (!action) return;
-    const text = saveDocument.current();
-    if (!text) return;
-    downloadText(text, `${snapshot.document.document.title || "timing-chart"}.tcd.json`);
+    if (!saveDocument.current(`${snapshot.document.document.title || "timing-chart"}.tcd`)) return;
     continuePendingFileAction(action);
   };
   const requestNewDocument = () => requestFileAction({ kind: "new" });
@@ -2426,7 +2431,7 @@ export function MinimalCycleView() {
       onDelete={() => commandRegistry.current.execute("selection.delete")}
        onNew={requestNewDocument}
        onOpen={() => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }}
-      onSave={() => { const text = saveDocument.current(); if (text) downloadText(text, `${snapshot.document.document.title || "timing-chart"}.tcd.json`); }}
+      onSave={() => { saveDocument.current(`${snapshot.document.document.title || "timing-chart"}.tcd`); }}
       onSaveAs={() => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }}
       onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) openDocument.current(text); else setProblem("No recent document is available."); }}
       onProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
@@ -2482,7 +2487,7 @@ export function MinimalCycleView() {
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch.current(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
     {bulkRegistrationVisible && <div className="modal-backdrop"><section ref={bulkRegistrationDialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration"><header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })}><EditorIcon name="close" /></button></header><p>One signal per line: <code>instance.path.signal [binary|bus|state|clock]</code></p><textarea aria-label="Bulk signal definitions" value={bulkRegistrationText} onChange={(event) => { setBulkRegistrationText(event.target.value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} rows={8} /><label>Target Group<select aria-label="Bulk registration target group" value={bulkRegistrationGroupId ?? ""} onChange={(event) => setBulkRegistrationGroupId(event.target.value as GroupId)}>{snapshot.document.signalGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>{bulkRegistrationPreview && <div className={`bulk-preview ${bulkRegistrationPreview.errors.length === 0 ? "valid" : "invalid"}`} data-testid="bulk-register-preview"><strong>{bulkRegistrationPreview.errors.length === 0 ? `Ready to register ${bulkRegistrationPreview.definitions.length} signal${bulkRegistrationPreview.definitions.length === 1 ? "" : "s"}` : "Preview errors"}</strong>{bulkRegistrationPreview.errors.length > 0 ? <ul>{bulkRegistrationPreview.errors.map((error) => <li key={error}>{error}</li>)}</ul> : <ul>{bulkRegistrationPreview.definitions.map((definition) => <li key={definition.path}>{definition.path} · {definition.kind}{definition.width === undefined ? "" : ` · width ${definition.width}`}</li>)}</ul>}</div>}<footer><output>{bulkRegistrationStatus}</output><button type="button" data-testid="bulk-register-preview-button" onClick={previewBulkSignals}>Preview</button><button type="button" data-testid="bulk-register-apply" onClick={registerBulkSignals} disabled={!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText || bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0}>Register Signals</button></footer></section></div>}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
-     {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const text = saveDocument.current(); if (text) downloadText(text, `${name}.tcd.json`); closeDialog(() => setSaveAsVisible(false)); }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
+     {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = saveDocument.current(`${name}.tcd`); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
      <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else { openFileReadStartedAtRef.current = globalThis.performance.now(); void file.text().then(requestOpenText).catch(() => { openFileReadStartedAtRef.current = undefined; setProblem("Open failed."); }); } } event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
