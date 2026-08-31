@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
+import type { CommandId } from "@timing-chart-v2/schema";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
@@ -26,6 +27,7 @@ export function MinimalCycleViewNextProbe() {
     snapshot,
     history: session.historyState(),
     executeSemantic: (command: SemanticCommand) => { const result = session.execute(command); refresh((value) => value + 1); return result; },
+    executeSemanticBatch: (id: CommandId, commands: readonly SemanticCommand[]) => { const result = session.executeBatch(id, commands); refresh((value) => value + 1); return result; },
     undo: () => { session.undo(); refresh((value) => value + 1); },
     redo: () => { session.redo(); refresh((value) => value + 1); },
     clearSelection: () => undefined,

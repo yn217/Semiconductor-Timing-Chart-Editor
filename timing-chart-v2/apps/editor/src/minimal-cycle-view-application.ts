@@ -7,6 +7,7 @@ import type {
   SignalId,
   TransactionId,
 } from "@timing-chart-v2/schema";
+import type { CommandId } from "@timing-chart-v2/schema";
 
 /**
  * Coarse Application / Document / Session owner.
@@ -20,6 +21,7 @@ export interface MinimalCycleApplicationSource {
   readonly history: HistoryState;
 
   readonly executeSemantic: (command: SemanticCommand) => CommandResult;
+  readonly executeSemanticBatch?: (id: CommandId, commands: readonly SemanticCommand[]) => CommandResult;
   readonly undo: () => void;
   readonly redo: () => void;
 
@@ -48,6 +50,7 @@ export interface MinimalCycleApplicationPort {
 
   readonly command: Readonly<{
     execute: (command: SemanticCommand) => CommandResult;
+    executeBatch: (id: CommandId, commands: readonly SemanticCommand[]) => CommandResult;
     undo: () => void;
     redo: () => void;
   }>;
@@ -87,6 +90,7 @@ export function createMinimalCycleApplicationPort(
     history: source.history,
     command: {
       execute: source.executeSemantic,
+      executeBatch: source.executeSemanticBatch ?? (() => ({ ok: false, reason: "no-op", problems: [] })),
       undo: source.undo,
       redo: source.redo,
     },
