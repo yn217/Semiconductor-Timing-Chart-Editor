@@ -17,6 +17,7 @@ controllers are extracted incrementally.
 | Problems filter projection | `problem-filter.ts` | view-only diagnostic projection | Phase 1 extracted utility |
 | Read-only JSON panel | `json-panel.tsx` | parent document projection | Phase 1 extracted leaf |
 | Selected JSON object replacement | `json-selection.ts` | Advanced JSON command planner | Phase 1 extracted utility |
+| Advanced JSON selected-object diagnostics | `json-problems.ts` | validation diagnostic projection | Phase 1 extracted utility |
 | Presentation cycle sampling | `presentation-cycles.ts` | view-only geometry projection | Phase 1 extracted utility |
 
 Rules:

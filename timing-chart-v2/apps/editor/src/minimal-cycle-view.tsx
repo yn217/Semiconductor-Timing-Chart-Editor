@@ -31,6 +31,7 @@ import { ProblemsPanel } from "./problems-panel.js";
 import { problemMatchesFilter } from "./problem-filter.js";
 import { JsonPanel } from "./json-panel.js";
 import { replaceSelectedJsonObject } from "./json-selection.js";
+import { selectedJsonProblem } from "./json-problems.js";
 import { presentationCycles } from "./presentation-cycles.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
@@ -3504,9 +3505,7 @@ function ProblemsPanelLegacy({ diagnostics, onNavigate }: { readonly diagnostics
   return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Clear Filter</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th><th>Details</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td><td>{(item.operation || item.source || item.stage || item.recommendation || item.commandId || item.objectId) && <details><summary>Details</summary><dl><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd>{item.commandId && <><dt>Command ID</dt><dd>{item.commandId}</dd></>}{item.objectId && <><dt>Object Type</dt><dd>{item.objectType ?? "—"}</dd><dt>Object ID</dt><dd>{item.objectId}</dd></>}<dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.recommendation && <><dt>Recovery</dt><dd>{item.recommendation}</dd></>}</dl></details>}</td></tr>)}</tbody></table>}</section>;
 }
 
-function selectedJsonProblem(code: string, path: string, message: string): DocumentProblem {
-  return { code, path, message, severity: "error", operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation", stage: "validate", recommendation: "Correct the selected object and validate again.", detail: "advanced-json:validate:selected" };
-}
+ 
 
 function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onCommand, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
   const text = useMemo(() => serializeCanonicalDocument(document), [document]);
