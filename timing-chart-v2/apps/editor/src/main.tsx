@@ -6,6 +6,7 @@ import { DefaultProjectionService, type RenderProjection, type VirtualizationWin
 import { StableTimingChartRenderer, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import type { CanonicalDocument, ClockSignal, CommandId, GroupId, SignalId, ValueSignal } from "@timing-chart-v2/schema";
 import { MinimalCycleView } from "./minimal-cycle-view.js";
+import { MinimalCycleViewNextProbe } from "./minimal-cycle-view-next-probe.js";
 import "./styles.css";
 
 const probeSignal: ValueSignal = {
@@ -158,4 +159,5 @@ function StableSurfaceProbe() {
 const root = document.getElementById("root");
 if (!root) throw new Error("Editor root is missing");
 const probe = new URLSearchParams(window.location.search).get("probe");
-createRoot(root).render(<StrictMode>{probe === "geometry" ? <ArchitectureProbe /> : probe === "stable" ? <StableSurfaceProbe /> : <MinimalCycleView />}</StrictMode>);
+const next = new URLSearchParams(window.location.search).get("implementation") === "next";
+createRoot(root).render(<StrictMode>{probe === "geometry" ? <ArchitectureProbe /> : probe === "stable" ? <StableSurfaceProbe /> : next ? <MinimalCycleViewNextProbe /> : <MinimalCycleView />}</StrictMode>);
