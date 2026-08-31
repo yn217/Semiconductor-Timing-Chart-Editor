@@ -162,6 +162,33 @@ export function createTimelineNavigationController(context: {
   };
 }
 
+export function resolveTransactionSnapCycle(context: {
+  readonly clientX: number;
+  readonly host: HTMLElement;
+  readonly projection: any;
+  readonly timeAxis: any;
+  readonly screenGeometry: any;
+  readonly zoom: number;
+  readonly snapEnabled: boolean;
+  readonly document: CanonicalDocument;
+  readonly currentSnapIndex: () => any;
+  readonly cycleBoundaryAtPointerX: (clientX: number) => number | undefined;
+  readonly cycleBoundaryAtX: (clientX: number) => number | undefined;
+  readonly publishState: () => void;
+}): number | undefined {
+  const waveLayer = context.host.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+  const axisOwner = context.timeAxis.ownerSignalId;
+  const axisRow = axisOwner === undefined ? undefined : context.projection.rowLayout.find((row: any) => row.rowId === axisOwner);
+  if (!waveLayer || !axisOwner || !axisRow) return context.cycleBoundaryAtPointerX(context.clientX);
+  context.host.dataset.transactionSnapAxisRowId = axisRow.rowId;
+  const bounds = waveLayer.getBoundingClientRect();
+  if (!context.snapEnabled) return context.cycleBoundaryAtX(context.clientX);
+  const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom });
+  const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
+  context.publishState();
+  return snap?.anchor.cycle;
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };

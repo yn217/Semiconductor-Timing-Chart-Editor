@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -583,22 +583,20 @@ export function MinimalCycleView() {
     fitSelection.current = navigation.fitSelection;
     fitAll.current = navigation.fitAll;
     navigateToCycle.current = navigation.navigateToCycle;
-    snapTransactionCycle.current = (clientX) => {
-      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-      const axisOwner = timeAxis.ownerSignalId;
-      const axisRow = axisOwner === undefined ? undefined : projection.rowLayout.find((row) => row.rowId === axisOwner);
-      // The boundary resolver is independent of a rendered owner row. This
-      // keeps clockless transactions usable while a virtualized wave is being
-      // mounted (or when no geometry owner is currently available).
-      if (!waveLayer || !axisOwner || !axisRow) return cycleBoundaryAtPointerX(clientX);
-      rendererHost.dataset.transactionSnapAxisRowId = axisRow.rowId;
-      const bounds = waveLayer.getBoundingClientRect();
-      if (!snapEnabledRef.current) return cycleBoundaryAtX(clientX);
-      const localPointer = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });
-       const snap = currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + session.getSnapshot().document.layout.rowHeight / 2 }, 14 / currentZoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
-      publishState();
-      return snap?.anchor.cycle;
-    };
+    snapTransactionCycle.current = (clientX) => resolveTransactionSnapCycle({
+      clientX,
+      host: rendererHost,
+      projection,
+      timeAxis,
+      screenGeometry,
+      zoom: currentZoom,
+      snapEnabled: snapEnabledRef.current,
+      document: session.getSnapshot().document,
+      currentSnapIndex,
+      cycleBoundaryAtPointerX,
+      cycleBoundaryAtX,
+      publishState,
+    });
     publishState();
 
     void renderer.whenIdle().then(() => {
