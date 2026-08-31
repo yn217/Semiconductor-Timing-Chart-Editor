@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, refreshRulerRangeSelection } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, createEditorRuntimeBridge, refreshRulerRangeSelection } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -503,7 +503,7 @@ export function MinimalCycleView() {
     const gridElement = gridLayer.current;
     if (!rendererHost || !viewportElement || !rulerElement || !rulerViewportElement || !gridElement) return;
 
-    const runtime = new EditorApplicationRuntime(initialDocument);
+    const runtime = createEditorRuntimeBridge(initialDocument);
     const sessionController = runtime.session;
     let session = sessionController.current();
     const documentEpoch = runtime.documentEpoch;
