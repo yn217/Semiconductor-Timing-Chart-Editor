@@ -25,6 +25,7 @@ controllers are extracted incrementally.
 | Stable entity ID generation | `entity-id.ts` | canonical entity identity | Phase 1 extracted utility |
 | Annotation anchor screen projection | `resolve-anchor-point.ts` | geometry projection | Phase 1 extracted utility |
 | Annotation creation planning | `create-annotation.ts` | annotation SemanticCommand planner | Phase 1 extracted utility |
+| Annotation toolbar | `annotation-toolbar.tsx` | parent annotation command callback | Phase 1 extracted leaf |
 
 Rules:
 
