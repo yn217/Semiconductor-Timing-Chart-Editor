@@ -26,10 +26,10 @@ export interface MinimalCycleApplicationSource {
   readonly undo: () => void;
   readonly redo: () => void;
 
-  readonly selectedSignalId?: SignalId;
-  readonly selectedGroupId?: GroupId;
-  readonly selectedAnnotationId?: AnnotationId;
-  readonly selectedTransactionId?: TransactionId;
+  readonly selectedSignalId?: SignalId | undefined;
+  readonly selectedGroupId?: GroupId | undefined;
+  readonly selectedAnnotationId?: AnnotationId | undefined;
+  readonly selectedTransactionId?: TransactionId | undefined;
 
   readonly clearSelection: () => void;
 

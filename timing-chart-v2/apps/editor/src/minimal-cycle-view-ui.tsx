@@ -54,6 +54,7 @@ export function MinimalCycleViewUi({
       data-next-zoom={String(timeline.state.zoom)}
       data-next-revision={String(application.snapshot.revision)}
       data-next-selected-cycle={String(timeline.state.selectedCycle)}
+      data-next-selected-signal={application.selection.signalId ?? ""}
       data-cycle-count={application.snapshot.document.timeline.cycleCount}
       data-signal-count={application.snapshot.document.signals.length}
       data-transaction-count={application.snapshot.document.transactions.length}

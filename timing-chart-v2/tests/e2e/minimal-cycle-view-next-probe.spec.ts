@@ -22,6 +22,7 @@ test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await expect(firstTreeItem).toBeVisible();
   await firstTreeItem.click();
   await expect(firstTreeItem).toHaveAttribute("aria-selected", "true");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-selected-signal", /.+/);
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-revision", "0");
   await expect(page.getByTestId("next-cycle-viewport")).toBeVisible();
   await expect(page.getByTestId("next-geometry-grid")).toHaveCount(1);
