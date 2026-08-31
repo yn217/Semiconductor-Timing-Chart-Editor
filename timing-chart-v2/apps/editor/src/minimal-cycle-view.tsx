@@ -566,6 +566,7 @@ export function MinimalCycleView() {
     const publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, snapService, snapIndex, rulerBuilds, edgeCounterResolvePasses, currentZoom);
     let currentZoom = 1;
     let applyZoom: (next: number) => void = () => undefined;
+    let timelineRender: (reason: string) => void = (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); };
     const timelineRuntime = createTimelineViewportRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
@@ -587,9 +588,19 @@ export function MinimalCycleView() {
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: () => currentZoom, setZoom: (next) => { applyZoom(next); }, },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch },
-      render: { requestRender: (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); }, requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
       lifecycle: { isCurrentEpoch: (epoch) => epoch === documentEpoch },
     });
+    timelineRender = (reason) => {
+      rendererHost.dataset.timelineRefreshReason = reason;
+      const document = session.getSnapshot().document;
+      if (reason === "ruler") rebuildRuler(document);
+      if (reason === "grid") refreshGrid(document);
+      if (reason === "playhead") refreshPlayhead.current();
+      if (reason === "range") refreshRangeSelectionBand.current();
+      if (reason === "resize") applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
+      renderer.update(projection);
+    };
     function sourceBoundaryLocalX(document: CanonicalDocument, cycle: number): number | undefined {
       return timelineRuntime.sourceBoundaryToLocalX(document, cycle);
     }
