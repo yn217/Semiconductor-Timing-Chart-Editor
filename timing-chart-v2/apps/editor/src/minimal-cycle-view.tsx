@@ -3431,6 +3431,7 @@ function InspectorValueSignalEditor({ signal, document, viewport, onCommand, onR
 
 function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal, onCancel }: { readonly signal: ClockSignal; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onReveal: () => void; readonly onCancel: () => void }) {
   const [name, setName] = useState(signal.name);
+  const [problem, setProblem] = useState("");
   const [role, setRole] = useState<SignalRole>(signal.role);
   const [visible, setVisible] = useState(signal.display.visible !== false);
   const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
