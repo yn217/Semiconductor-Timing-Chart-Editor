@@ -50,6 +50,7 @@ import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { AnnotationList } from "./annotation-list.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
+import { AIOperationPanel } from "./ai-operation-panel.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -2996,34 +2997,6 @@ function DocumentProperties({ document, onApplyProperties, restoreFocusRef, onCl
   </form></div>;
 }
 
-function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult }) {
-  const [query, setQuery] = useState("");
-  const [preview, setPreview] = useState<{ readonly baseRevision: number; readonly command: SemanticCommand; readonly summary: string }>();
-  const [status, setStatus] = useState("Ready");
-  const selected = document.signals.find((signal) => signal.id === selectedSignalId && signal.type !== "commentRow");
-  const buildPreview = () => {
-    const text = query.trim();
-    if (!selected) { setPreview(undefined); setStatus("Select a timing Signal first."); return; }
-    const rename = /^rename(?: selected)?(?: signal)? to (.+)$/i.exec(text);
-    const command: SemanticCommand | undefined = rename
-      ? { id: nextCommandId("ai_rename"), type: "signal.rename", signalId: selected.id, name: rename[1]!.trim() }
-      : /^(hide|show)(?: selected)?(?: signal)?$/i.test(text)
-        ? { id: nextCommandId("ai_visibility"), type: "signal.setVisibility", signalId: selected.id, visible: text.toLowerCase().startsWith("show") }
-        : undefined;
-    if (!command) { setPreview(undefined); setStatus("Supported intents: rename selected signal to <name>, hide selected signal, show selected signal."); return; }
-    setPreview({ baseRevision: revision, command, summary: command.type === "signal.rename" ? `Rename ${selected.display.name} to ${(command as Extract<SemanticCommand, { type: "signal.rename" }>).name}` : `${(command as Extract<SemanticCommand, { type: "signal.setVisibility" }>).visible ? "Show" : "Hide"} ${selected.display.name}` });
-    setStatus("Preview ready · no document mutation");
-  };
-  const applyPreview = () => {
-    if (!preview) { setStatus("Create a preview first."); return; }
-    if (preview.baseRevision !== revision) { setPreview(undefined); setStatus(`Conflict · preview revision ${preview.baseRevision}, current revision ${revision}`); return; }
-    const result = onCommand(preview.command);
-    if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
-    setPreview(undefined);
-    setStatus("Applied · one SemanticCommand");
-  };
-  return <section className="ai-operation-panel" data-testid="ai-operation-panel"><div className="ai-query-row"><RibbonIcon name="i-ai" /><label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={buildPreview}>Preview</button></div><div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>{preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span><button type="button" onClick={applyPreview}>Apply Preview</button><button type="button" onClick={() => { setPreview(undefined); setStatus("Preview cancelled · no document mutation"); }}>Cancel</button></div>}<output role="status" data-testid="ai-status">{status}</output></section>;
-}
 
 function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, arrowPickStatus, selectedSignalId, selectedGroupId, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, viewMode, density, workspacePreset, onDensityChange, onWorkspacePresetChange, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly showSignalNames: boolean; readonly showRoles: boolean; readonly showAnnotations: boolean; readonly showTransactions: boolean; readonly showGroupBackground: boolean; readonly signalTreeVisible: boolean; readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly problemsCount: number; readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigateProblem: (path: string) => void; readonly onRefreshChecks: () => void; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly density: DensityMode; readonly workspacePreset: WorkspacePreset; readonly onDensityChange: (density: DensityMode) => void; readonly onWorkspacePresetChange: (preset: WorkspacePreset) => void; readonly selectedTransactionId: TransactionId | undefined;
@@ -3237,7 +3210,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <div className="ribbon-major-group view-slot-group" data-major-group="Workspace" aria-label="Workspace commands"><DsRibbonGroup ariaLabel="Workspace" className="view-workspace-group" label="Workspace"><div className="view-workspace-settings" aria-label="Workspace settings"><label>Workspace<DsRibbonSelect ariaLabel="Workspace preset" value={workspacePreset} onChange={(event) => onWorkspacePresetChange(event.target.value as WorkspacePreset)}><option value="edit">Edit</option><option value="waveform">Waveform Focus</option><option value="review">Review</option><option value="transaction">Transaction</option></DsRibbonSelect></label><label>Density<DsRibbonSelect ariaLabel="UI density" value={density} onChange={(event) => onDensityChange(event.target.value as DensityMode)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></DsRibbonSelect></label></div><div className="view-workspace-actions" aria-label="Workspace layout actions"><DsRibbonButton className="view-mini-tool" ariaLabel="Reset Layout" icon={<RibbonIcon name="i-settings" />} onClick={() => onWorkspacePresetChange("edit")}><span>Reset</span><span>Layout</span></DsRibbonButton><DsRibbonButton className="view-mini-tool" ariaLabel="Focus Waveform" icon={<RibbonIcon name="i-preview" />} onClick={() => onWorkspacePresetChange("waveform")}><span>Focus</span><span>Waveform</span></DsRibbonButton></div></DsRibbonGroup></div>
     </>}
     {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
-    {tab === "AI" && <div className="ribbon-group ai-group"><AIOperationPanel document={document} revision={revision} selectedSignalId={selectedSignalId} onCommand={onCommand} /><b>AI</b></div>}
+    {tab === "AI" && <div className="ribbon-group ai-group"><AIOperationPanel document={document} revision={revision} selectedSignalId={selectedSignalId} onCommand={onCommand} icon={<RibbonIcon name="i-ai" />} /><b>AI</b></div>}
   </section>;
 }
 
