@@ -80,6 +80,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
   };
   const render = (reason: string) => {
     assertActive();
+    if (!attached) return;
     if (!context.lifecycle.isCurrentEpoch(documentEpoch)) return;
     context.render.requestRender(reason);
   };
@@ -116,9 +117,9 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     refreshRuler: () => { render("ruler"); },
     refreshGrid: () => { render("grid"); },
     refreshPlayhead: () => { render("playhead"); },
-    refreshRange: () => { render("range"); context.render.requestOverlayRefresh("range"); },
-    refreshOverlays: () => { assertActive(); if (!context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestOverlayRefresh("overlays"); },
-    onViewportScroll: () => { assertActive(); if (!context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestRender("scroll"); },
+    refreshRange: () => { render("range"); if (attached && context.lifecycle.isCurrentEpoch(documentEpoch)) context.render.requestOverlayRefresh("range"); },
+    refreshOverlays: () => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestOverlayRefresh("overlays"); },
+    onViewportScroll: () => { assertActive(); if (!attached || !context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestRender("scroll"); },
     onViewportResize: () => { render("resize"); },
   };
 }
