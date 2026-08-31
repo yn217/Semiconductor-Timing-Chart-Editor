@@ -613,12 +613,6 @@ export function MinimalCycleView() {
       // undo only the non-uniform viewport stretch applied to the SVG root.
       syncPresentationScaleDom(viewportElement!, rendererHost!, rulerViewportElement!, currentZoom, screenGeometryScale);
     }
-    function syncRulerContent() {
-      // The outer ruler is a sticky/clipped viewport. Its content follows the
-      // actual horizontal scroll while the viewport remains at the domain
-      // boundary next to the frozen columns.
-      syncRulerScroll(rulerElement!, viewportElement!, currentZoom);
-    }
     const currentViewMetrics = () => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth, zoom: currentZoom });
       return viewMetricsOwner.snapshot();
