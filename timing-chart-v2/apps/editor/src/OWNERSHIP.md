@@ -52,3 +52,4 @@ Rules:
 | `save-as-dialog.tsx` | Save As filename draft, validation, and focus-loop UI | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `problems-panel-legacy.tsx` | Filterable diagnostic presentation and problem navigation | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `event-table.tsx` | Signal event table state, import/export, and event command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
+| `clock-generator-editor.tsx` | Clock generator, edge counter, import/export, and preview surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
