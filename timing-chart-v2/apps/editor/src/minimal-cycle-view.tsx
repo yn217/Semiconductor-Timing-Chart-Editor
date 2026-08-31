@@ -31,6 +31,7 @@ import { ProblemsPanel } from "./problems-panel.js";
 import { problemMatchesFilter } from "./problem-filter.js";
 import { JsonPanel } from "./json-panel.js";
 import { replaceSelectedJsonObject } from "./json-selection.js";
+import { presentationCycles } from "./presentation-cycles.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -3690,17 +3691,6 @@ function downloadText(text: string, filename: string): void {
   anchor.download = filename;
   anchor.click();
   URL.revokeObjectURL(url);
-}
-
-const MAX_PRESENTATION_CYCLES = 512;
-
-function presentationCycles(cycleCount: number): number[] {
-  if (cycleCount <= MAX_PRESENTATION_CYCLES) return Array.from({ length: cycleCount + 1 }, (_, cycle) => cycle);
-  const stride = Math.ceil(cycleCount / MAX_PRESENTATION_CYCLES);
-  const cycles: number[] = [0];
-  for (let cycle = stride; cycle < cycleCount; cycle += stride) cycles.push(cycle);
-  if (cycles.at(-1) !== cycleCount) cycles.push(cycleCount);
-  return cycles;
 }
 
 function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, mapping: DisplayTimeMapping, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): void {
