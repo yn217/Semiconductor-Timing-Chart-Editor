@@ -23,6 +23,7 @@ controllers are extracted incrementally.
 | Text download bridge | `download-text.ts` | external export side effect | Phase 1 extracted utility |
 | Semantic command ID generation | `command-id.ts` | command dispatch identity | Phase 1 extracted utility |
 | Stable entity ID generation | `entity-id.ts` | canonical entity identity | Phase 1 extracted utility |
+| Annotation anchor screen projection | `resolve-anchor-point.ts` | geometry projection | Phase 1 extracted utility |
 
 Rules:
 

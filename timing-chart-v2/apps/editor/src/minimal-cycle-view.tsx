@@ -36,6 +36,7 @@ import { presentationCycles } from "./presentation-cycles.js";
 import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
+import { resolveAnchorPoint } from "./resolve-anchor-point.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -4105,24 +4106,6 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
 }
 
 const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
-
-function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): Point | undefined {
-  if (!anchor) return undefined;
-  const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
-  const signalId = anchor.signalId ?? axisOwnerSignalId;
-  if (!signalId) return undefined;
-  const renderedCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay[anchor.cycle];
-  if (renderedCycle === undefined) return undefined;
-  const local = maps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
-  if (!local) return undefined;
-  const row = anchor.signalId ? projection.rowLayout.find((item) => item.rowId === anchor.signalId) : undefined;
-  if (anchor.signalId && !row) return undefined;
-  const rowY = row?.y ?? 0;
-  const sharedBoundary = anchor.point === "cycle-start" && axisOwnerSignalId !== undefined
-    ? maps.get(axisOwnerSignalId)?.find({ ...anchor, signalId: axisOwnerSignalId, cycle: renderedCycle })?.point
-    : undefined;
-  return { x: (sharedBoundary?.x ?? local.point.x) * xScale, y: rowY + local.point.y };
-}
 
 function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
   return document.annotations.flatMap((annotation) => {
