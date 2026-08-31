@@ -123,3 +123,27 @@ test("Open atomically clears document-scoped selection, pin, filter and timeline
   await expect(page.getByTestId("range-status")).toHaveText("Range: [0, 1)");
   await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 0");
 });
+
+test("future format opens a source-preserving read-only Compatibility Mode", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  const originalTitle = await page.locator(".app-titlebar h1").textContent();
+  const originalRevision = await host.getAttribute("data-canonical-revision");
+  const futureSource = JSON.stringify({ formatVersion: 99, document: { id: "future", title: "Future Document" }, futureField: { mustRemain: true } }, null, 2);
+
+  await page.locator("input[accept='.json,.tcd']").setInputFiles({ name: "future.tcd", mimeType: "application/json", buffer: Buffer.from(futureSource) });
+  const dialog = page.getByTestId("compatibility-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toContainText("Format version 99");
+  await expect(dialog.getByLabel("Compatibility source")).toHaveValue(futureSource);
+  await expect(page.locator(".app-titlebar h1")).toHaveText(originalTitle!);
+  await expect(host).toHaveAttribute("data-canonical-revision", originalRevision!);
+
+  await dialog.getByTestId("compatibility-read-only").click();
+  await expect(dialog.getByRole("status")).toHaveText("Read-only Compatibility Mode active");
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).toHaveText(originalTitle!);
+  await expect(host).toHaveAttribute("data-canonical-revision", originalRevision!);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
