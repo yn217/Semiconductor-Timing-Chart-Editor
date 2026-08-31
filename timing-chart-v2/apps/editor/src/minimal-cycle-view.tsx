@@ -1087,7 +1087,7 @@ export function MinimalCycleView() {
       documentEpoch.advance();
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
-      session = sessionController.replace(document);
+      session = sessionController.replace(canonicalDocument);
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
