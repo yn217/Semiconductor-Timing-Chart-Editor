@@ -52,6 +52,7 @@ import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -2886,19 +2887,6 @@ export function MinimalCycleView() {
       <span data-testid="time-axis-status">Time Axis: {snapshot.document.timeline.referenceClock ? `Clock · ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}</span><span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
     </footer>
   </main>;
-}
-
-type InsertSemanticIconKind = "clock" | "state" | "event" | "pulse" | "text";
-
-function InsertSemanticIcon({ kind }: { readonly kind: InsertSemanticIconKind }) {
-  const paths: Record<InsertSemanticIconKind, readonly string[]> = {
-    clock: ["M2 7h4v10h4V7h4v10h4V7h4"],
-    state: ["M2 7h6v10H2z", "M8 7h6v10H8z", "M14 7h8v10h-8z"],
-    event: ["M12 3v18", "m12 7 5 5-5 5-5-5z"],
-    pulse: ["M2 15h5l2-8 3 10 2-6 2 4h6"],
-    text: ["M4 5h12M10 5v14M6 19h8", "M17 8h5M17 12h5M17 16h5"],
-  };
-  return <svg aria-hidden="true" data-insert-icon={kind} viewBox="0 0 24 24" width="18" height="18" focusable="false">{paths[kind].map((path) => <path key={path} d={path} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />)}</svg>;
 }
 
 function HardwareHierarchyBrowser({ document, selectedSignalId, onSelect, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly selectedSignalId: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
