@@ -4,7 +4,7 @@ import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/proj
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { resolveAnchorPoint } from "../resolve-anchor-point.js";
 
-const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
+export const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
   return document.annotations.flatMap((annotation) => {

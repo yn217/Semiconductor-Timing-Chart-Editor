@@ -59,7 +59,7 @@ import { InlineNameInput } from "./inline-name-input.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
-import { projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
+import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -69,7 +69,6 @@ const LEFT_PANE_MAX_WIDTH = 420;
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
-const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 type PendingFileAction = Readonly<{ kind: "new" | "open"; text?: string }>;
 
 const clock: ClockSignal = {
