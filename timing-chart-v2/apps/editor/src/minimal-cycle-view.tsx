@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -557,57 +557,7 @@ export function MinimalCycleView() {
     refreshPlayhead.current = () => {
       refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle));
     };
-    const refreshRangeSelectionBandNow = () => {
-      const band = viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']");
-      const rulerBand = rulerElement.querySelector<HTMLElement>("[data-role='range-selection-ruler-band']");
-      if (!band) return;
-      const preview = rendererHost.dataset.rangePreview;
-      if (!rangeSelectionActiveRef.current && !preview) {
-        band.hidden = true;
-        if (rulerBand) rulerBand.hidden = true;
-        for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected;
-        return;
-      }
-      const [startText, endText] = (preview ? preview : `${timelineRangeRef.current.start}:${timelineRangeRef.current.end}`).split(":");
-      const start = Number(startText);
-      const end = Number(endText);
-      const currentDocument = session.getSnapshot().document;
-      const startLocalX = sourceBoundaryLocalX(currentDocument, start);
-      const endLocalX = sourceBoundaryLocalX(currentDocument, end);
-      if (startLocalX === undefined || endLocalX === undefined || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) {
-        band.hidden = true;
-        return;
-      }
-      const startX = startLocalX * currentZoom;
-      const endX = endLocalX * currentZoom;
-      const timeDomainLeft = timelineOffset();
-      if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) {
-        band.hidden = true;
-        return;
-      }
-      band.hidden = false;
-      band.dataset.rangeStart = String(start);
-      band.dataset.rangeEnd = String(end);
-      band.dataset.source = "ruler-local-geometry";
-      band.style.left = `${timeDomainLeft + startX}px`;
-      band.style.width = `${endX - startX}px`;
-      band.style.top = "34px";
-      band.style.height = `${Math.max(projection.totalHeight, viewportElement.clientHeight - 34)}px`;
-      band.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
-      if (rulerBand) {
-        rulerBand.hidden = false;
-        rulerBand.dataset.rangeStart = String(start);
-        rulerBand.dataset.rangeEnd = String(end);
-        rulerBand.dataset.source = "ruler-local-geometry";
-        rulerBand.style.left = `${startLocalX}px`;
-        rulerBand.style.width = `${endLocalX - startLocalX}px`;
-        rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`);
-      }
-      for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
-        const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-        tick.dataset.rangeSelected = String(cycle >= start && cycle < end);
-      }
-    };
+    const refreshRangeSelectionBandNow = () => refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle), currentZoom, timelineOffset(), projection.totalHeight);
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
       refreshRangeSelectionBandNow();
