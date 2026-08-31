@@ -13,6 +13,8 @@ export function MinimalCycleViewNextProbe() {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [viewMode, setViewMode] = useState("Cycle");
   const [bottomTab, setBottomTab] = useState("Signal");
+  const [zoom, setZoom] = useState(1);
+  const [selectedCycle, setSelectedCycle] = useState(0);
   const viewportRef = useRef<HTMLDivElement>(null);
   const surfaceHostRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
@@ -32,9 +34,9 @@ export function MinimalCycleViewNextProbe() {
     duplicateSelection: () => undefined, deleteSelection: () => undefined, refreshDiagnostics: () => undefined,
     timelineDocument: snapshot.document,
     viewportRef, surfaceHostRef, rulerRef, gridLayerRef,
-    zoom: 1, gridEnabled: true, snapEnabled: false, rulerEnabled: true, selectedCycle: 0,
-    changeZoom: () => undefined, setZoomAbsolute: () => undefined, fitAll: () => undefined,
-    fitSelection: () => undefined, navigateToCycle: () => undefined,
+    zoom, gridEnabled: true, snapEnabled: false, rulerEnabled: true, selectedCycle,
+    changeZoom: (delta: number) => setZoom((value) => Math.max(0.25, Math.min(4, value + delta))), setZoomAbsolute: setZoom, fitAll: () => setZoom(1),
+    fitSelection: () => setZoom(1.5), navigateToCycle: setSelectedCycle,
     transactionBoundaryX: () => undefined, snapTransactionCycle: () => undefined,
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
     titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
@@ -45,6 +47,6 @@ export function MinimalCycleViewNextProbe() {
     inspectorShellUi: <aside data-testid="next-inspector" />,
     dialogsUi: <ContextMenuPanel contextMenu={undefined} hasSelectedClipboard={false} clipboardAvailable={false} hasSelectedEntity={false} hasSelectedSignal={false} hasDeletableSelection={false} copySelectedSignal={() => undefined} cutSelectedSignal={() => undefined} pasteSelectedEntity={() => undefined} duplicateSelectedEntity={() => undefined} moveSelection={() => undefined} setSelectionVisibility={() => undefined} renameSelection={() => undefined} closeContextMenu={() => undefined} deleteSelection={() => undefined} />,
     statusBarUi: <footer className="status-bar" data-testid="next-status">Phase 1 · parallel replacement</footer>,
-  }), [snapshot, session, ribbonTab, viewMode, bottomTab]);
+  }), [snapshot, session, ribbonTab, viewMode, bottomTab, zoom, selectedCycle]);
   return <MinimalCycleViewNext source={source} />;
 }

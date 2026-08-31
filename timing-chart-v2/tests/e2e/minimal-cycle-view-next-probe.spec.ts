@@ -6,6 +6,10 @@ test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-application-owner", "application");
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-timeline-owner", "timeline");
   await expect(page.getByTestId("next-ribbon")).toBeVisible();
+  await expect(page.getByTestId("next-timeline-controls")).toBeVisible();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-zoom", "1");
+  await page.getByTestId("next-zoom-in").click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-zoom", "1.1");
   await expect(page.getByTestId("next-signal-tree-canvas")).toBeVisible();
   await expect(page.getByTestId("next-bottom-editor")).toBeVisible();
   await expect(page.getByTestId("next-inspector")).toBeVisible();

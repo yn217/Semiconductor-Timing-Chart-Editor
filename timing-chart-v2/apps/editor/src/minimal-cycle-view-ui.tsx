@@ -49,6 +49,7 @@ export function MinimalCycleViewUi({
       data-next-owner="ui"
       data-application-owner="application"
       data-timeline-owner="timeline"
+      data-next-zoom={String(timeline.state.zoom)}
       data-cycle-count={application.snapshot.document.timeline.cycleCount}
       data-signal-count={application.snapshot.document.signals.length}
       data-transaction-count={application.snapshot.document.transactions.length}
@@ -56,6 +57,14 @@ export function MinimalCycleViewUi({
       {source.titleBarUi}
       {source.ribbonTabsUi}
       {source.ribbonUi}
+
+      <div className="next-timeline-controls" data-testid="next-timeline-controls" aria-label="Next timeline controls">
+        <button type="button" data-testid="next-zoom-out" onClick={() => timeline.view.zoomBy(-0.1)}>Zoom Out</button>
+        <button type="button" data-testid="next-zoom-in" onClick={() => timeline.view.zoomBy(0.1)}>Zoom In</button>
+        <button type="button" data-testid="next-fit-all" onClick={() => timeline.view.fitAll()}>Fit All</button>
+        <button type="button" data-testid="next-fit-selection" onClick={() => timeline.view.fitSelection()}>Fit Selection</button>
+        <button type="button" data-testid="next-cycle-next" onClick={() => timeline.view.navigateToCycle(timeline.state.selectedCycle + 1)}>Next Cycle</button>
+      </div>
 
       <MinimalCycleViewPanels
         workspace={source.signalTreeAndCanvasUi}
