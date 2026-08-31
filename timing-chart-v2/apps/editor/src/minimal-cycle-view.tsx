@@ -813,8 +813,8 @@ export function MinimalCycleView() {
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
       snapIndex = undefined;
       renderer.update(projection);
-      refreshPlayhead.current();
-      refreshGrid(session.getSnapshot().document);
+      timelineRuntime.refreshPlayhead();
+      timelineRuntime.refreshGrid();
       refreshOverlays(session.getSnapshot().document);
       publishState();
     };
