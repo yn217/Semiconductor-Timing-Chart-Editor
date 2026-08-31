@@ -31,6 +31,7 @@ import { ProblemsPanel } from "./problems-panel.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
+import { EventRow, QuickValues } from "./event-table-components.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -4165,7 +4166,7 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
     </div>
     <div className="event-table" role="table" aria-label="Signal events">
       <div className="event-row event-columns" role="row"><span>Start</span><span>Value</span><span>End</span><span>Duration</span><span>Comment</span><span>Actions</span></div>
-      {signal.values.map((change, index) => <EventRow key={change.start} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} onSelect={setSelectedStart} onCommand={onCommand} />)}
+      {signal.values.map((change, index) => <EventRow key={change.start} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
     </div>
     <form className="event-add" onSubmit={(event) => {
       event.preventDefault();
@@ -4177,27 +4178,6 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       <button type="submit" data-testid="add-signal-event">Add / replace event</button>
     </form>
   </div>;
-}
-
-function EventRow({ signal, change, end, selected, onSelect, onCommand }: { readonly signal: ValueSignal; readonly change: ValueSignal["values"][number]; readonly end: number; readonly selected: boolean; readonly onSelect: (start: number) => void; readonly onCommand: (command: SemanticCommand) => void }) {
-  const [start, setStart] = useState(change.start);
-  const [value, setValue] = useState(String(change.value));
-  const [comment, setComment] = useState(change.comment ?? "");
-  return <form className={`event-row${selected ? " selected" : ""}`} role="row" data-event-start={change.start} onClick={() => onSelect(change.start)} onSubmit={(event) => {
-    event.preventDefault();
-    onCommand({ id: nextCommandId("replace_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: change.start, start, value, ...(comment ? { comment } : {}) });
-  }}>
-    <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
-    <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />
-    <output>{end}</output><output>{end - change.start}</output>
-    <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
-    <span className="event-actions"><button type="submit">Save</button><button type="button" onClick={() => onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start })}>Remove</button></span>
-  </form>;
-}
-
-function QuickValues({ signal, setValue }: { readonly signal: ValueSignal; readonly setValue: (value: string) => void }) {
-  const values = quickValueOptions(signal.type);
-  return <div className="quick-values" role="group" aria-label="Quick values">{values.map((item) => <button type="button" key={item} onClick={() => setValue(quickValueLiteral(signal.type, item))}>{item}</button>)}</div>;
 }
 
 function quickValue(signal: ValueSignal): string {
