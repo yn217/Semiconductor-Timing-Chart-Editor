@@ -535,18 +535,6 @@ export function MinimalCycleView() {
     let edgeCounterResolvePasses = 0;
     let screenGeometryScale = 1;
     let rulerInitialized = false;
-    const rebuildRuler = (document: CanonicalDocument) => {
-      rulerBuilds += 1;
-      viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
-      const metrics = viewMetricsOwner.snapshot();
-      const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
-      const rebuilt = rebuildRulerPresentation(rulerElement, document, geometryMaps, mappingCache, fitWidth, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom);
-      timeAxis = rebuilt.timeAxis;
-      screenGeometryScale = rebuilt.scale;
-      rulerInitialized = true;
-      markOpenPhase("ruler-painted");
-      syncPresentationScaleDom(viewportElement, rendererHost, rulerViewportElement, currentZoom, screenGeometryScale);
-    };
     refreshPlayhead.current = () => {
       refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle));
     };
@@ -589,7 +577,18 @@ export function MinimalCycleView() {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") { syncRulerScroll(rulerElement, viewportElement, currentZoom); return; }
       const document = session.getSnapshot().document;
-      if (reason === "ruler") rebuildRuler(document);
+      if (reason === "ruler") {
+        rulerBuilds += 1;
+        viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
+        const metrics = viewMetricsOwner.snapshot();
+        const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
+        const rebuilt = rebuildRulerPresentation(rulerElement, document, geometryMaps, mappingCache, fitWidth, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom);
+        timeAxis = rebuilt.timeAxis;
+        screenGeometryScale = rebuilt.scale;
+        rulerInitialized = true;
+        markOpenPhase("ruler-painted");
+        syncPresentationScaleDom(viewportElement, rendererHost, rulerViewportElement, currentZoom, screenGeometryScale);
+      }
       if (reason === "grid") {
         viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
         const metrics = viewMetricsOwner.snapshot();
