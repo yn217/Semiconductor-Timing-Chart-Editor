@@ -41,6 +41,7 @@ import { createAnnotation } from "./create-annotation.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
+import { InspectorSection } from "./inspector-section.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -3254,14 +3255,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     </>}
     {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <div className="ribbon-group ai-group"><AIOperationPanel document={document} revision={revision} selectedSignalId={selectedSignalId} onCommand={onCommand} /><b>AI</b></div>}
-  </section>;
-}
-
-function InspectorSection({ sectionId, title, open, onToggle, children }: { readonly sectionId: string; readonly title: string; readonly open: boolean; readonly onToggle: () => void; readonly children: React.ReactNode }) {
-  const contentId = `inspector-section-${sectionId}`;
-  return <section className={`inspector-section${open ? " is-open" : " is-collapsed"}`} data-section-id={sectionId}>
-    <h3><button type="button" className="inspector-section-toggle" aria-expanded={open} aria-controls={contentId} onClick={onToggle}><span aria-hidden="true">{open ? "▼" : "▶"}</span>{title}</button></h3>
-    {open && <div id={contentId} className="inspector-section-content">{children}</div>}
   </section>;
 }
 

@@ -28,6 +28,7 @@ controllers are extracted incrementally.
 | Annotation toolbar | `annotation-toolbar.tsx` | parent annotation command callback | Phase 1 extracted leaf |
 | Geometry grid DOM projection | `render-geometry-grid.ts` | view-only geometry projection | Phase 1 extracted utility |
 | Inspector accordion state | `inspector-accordion.ts` | view-only Inspector state | Phase 1 extracted utility |
+| Inspector section presentation | `inspector-section.tsx` | parent Inspector callback | Phase 1 extracted leaf |
 
 Rules:
 
