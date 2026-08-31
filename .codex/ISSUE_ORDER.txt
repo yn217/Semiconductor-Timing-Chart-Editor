@@ -3,10 +3,7 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-#
-# Last reconciled by ChatGPT: 2026-08-31
-# GitHub Open Issue count at reconciliation: 109
-# Observed production HEAD: c77dd21b47b0964e64395df9fa0f4303cce04a0e
+# Last reconciled by ChatGPT: 2026-09-01
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -14,176 +11,158 @@
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
 # Every executable Issue number appears at most once.
-# Closed Issues are removed during ChatGPT reconciliation; newly opened Issues are inserted by priority.
+# Never merge/cherry-pick codex-control into main.
 #
-# Execution rules:
-# - Never merge/cherry-pick codex-control into main. This branch is control data only.
+# ============================================================================
+# CURRENT PRODUCT GOAL
+# ============================================================================
+# Do NOT optimize for architecture cleanliness, file-size reduction, or Issue-count cosmetics.
+# Optimize for a usable, trustworthy semiconductor timing-chart editor.
+#
+# Primary goal:
+#   Close concrete production gaps that a user can observe in the real browser.
+#
+# Priority order:
+#   1. Finish already-mostly-implemented Issues and CLOSE them with focused evidence.
+#   2. Fix P0/P1 correctness bugs that can make the GUI lie about canonical state.
+#   3. Fix real editing workflows: Clock, Timeline, Signal types, Spacer/layout, File/Open/Export.
+#   4. Build visual/acceptance infrastructure that prevents regressions.
+#   5. Then continue broader performance/parity/architecture closure.
+#
+# Definition of useful progress:
+#   - production behavior changed or verified
+#   - focused test/evidence added
+#   - Issue acceptance checked
+#   - Issue closed when acceptance is satisfied
+#
+# Do NOT spend multiple commits only planning/refactoring an owner boundary unless the current
+# production Issue cannot be solved safely without it.
+#
+# #258 and #312 are explicitly DEFERRED for now.
+# Do not work on MinimalCycleView decomposition / parallel replacement unless ChatGPT/user
+# explicitly re-enables them in this control file.
+# Old monolith may remain as-is while product issues are burned down.
+#
+# ============================================================================
+# EXECUTION RULES
+# ============================================================================
 # - Skip Closed issues.
 # - For the first Open issue, inspect current main before changing code.
-# - If its full Issue-level acceptance is already satisfied, leave a concise implementation-audit note, close it, and continue.
-# - If PARTIAL/MISSING, implement the issue's prescribed production step, focused-test, commit/push main.
-# - Post implementation/result evidence directly to the source Issue, not to #298.
-# - Stay on the same Issue until all Issue-level acceptance is satisfied, unless BLOCKED/META/EVIDENCE_ONLY.
-# - Open Issue does not imply missing implementation.
-# - Meta/umbrella/evidence-only/dependency-blocked issues may be deferred with a short reason and continue.
-# - Implementation first; broad regression is deferred unless the Issue specifically requires it for closure.
+# - If full Issue acceptance is already satisfied, add concise evidence, close it, continue.
+# - If PARTIAL/MISSING, implement the smallest production-complete slice that satisfies the Issue.
+# - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
+# - One Issue should normally end in commit/push + focused evidence + close before moving on.
+# - Do not create architecture work just because code is ugly if production behavior is correct.
+# - Prefer real-browser observable behavior over internal-only completion claims.
 # - Home Ribbon is frozen unless an Issue explicitly authorizes Home changes.
 # - Never change Golden/reference/threshold/mask merely to make tests pass.
 # - Preserve unrelated dirty Evidence/work; no reset/stash/clean/delete.
 # - Single-thread sequential execution; no workers/sub-agents.
+# - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
 #
-# Issue retrieval fallback:
-# - Lack of local `gh issue view` authentication alone is NOT a reason to stop implementation.
-# - First try the normal GitHub Issue read path available to the environment.
-# - If Issue API/auth is unavailable, use the CACHED NEXT-ISSUE CONTEXT below for the listed issue.
-# - Cached context is a fallback snapshot only; if live Issue access works, the live Issue body/comments win.
-# - Do not invent acceptance beyond the cached context.
-# - If GitHub write access is unavailable, implementation/commit/push may continue; defer the Issue comment rather than stopping production work.
-#
-# ChatGPT may reorder/add/remove Issue numbers by updating only codex-control.
-# A control-branch update must never be treated as main divergence.
-
-# ==== OPERATIONAL BLOCKER — REDUCE MINIMALCYCLEVIEW HOT FILE FIRST ====
-# #258 now has a FIXED coarse-cut execution plan pinned to main c77dd21 (3915 lines).
-# Do NOT continue 10-50 line leaf extraction before the prescribed coarse cuts finish.
-# If line numbers drift on newer main, locate the same start/end anchors and move the same block; do not re-plan architecture.
-258
-
-# ==== NEXT EXECUTABLE PRODUCTION / CLOSURE WORK ====
-# After #258 is materially decomposed/closed, prefer a small closure task, then correctness, then visual-test infrastructure.
+# ============================================================================
+# IMMEDIATE BURN-DOWN — CLOSE USER-VISIBLE WORK FIRST
+# ============================================================================
+# #196 is believed mostly implemented. Verify focused browser behavior and close if acceptance holds.
 196
+
+# Correctness: selected range/cycle geometry must identify exactly what Timeline commands will edit.
 300
+
+# Real Clock editing behavior: Duty / missing pulse / Edge Counter must visibly update.
+247
+
+# Production file lifecycle: safe New/Open/Save/unsaved dialog and atomic replacement.
+208
+
+# Reference clock / reference edge must be editable/truthful in GUI.
+228
+
+# Clockless documents / removing reference clock.
+246
+
+# Canonical values/types accepted by Core must be renderable; conversion policy must be explicit.
+229
+
+# Event/Pulse production lifecycle.
+264
+
+# Spacer and vertical layout workflow.
+265
+266
+267
+
+# ============================================================================
+# VISUAL / ACCEPTANCE INFRASTRUCTURE
+# ============================================================================
+# Mechanical diagnostics first, then Ribbon, Golden samples, interaction before/after/undo.
 310
 307
 308
 309
-173
-311
 
-# ==== CACHED NEXT-ISSUE CONTEXT (fallback when live Issue read is unavailable) ====
-# Issue #258 — FIXED EXECUTION PLAN: Decompose MinimalCycleView without re-planning
-# Pin: main c77dd21b47b0964e64395df9fa0f4303cce04a0e, minimal-cycle-view.tsx = 3915 lines.
-# Execute in this order. Local import/export/type/props plumbing is allowed; changing the split order/boundaries is not.
-#
-# CUT-0 fixture:
-#   lines 77-169, anchor `const clock: ClockSignal = {` through v1ReferenceDocument closing `};`
-#   -> apps/editor/src/fixtures/cycle-reference-documents.ts
-#
-# CUT-A runtime bridge — highest priority:
-#   lines 596-1954
-#   start anchor: mount useEffect with `const rendererHost = host.current; const viewportElement = viewport.current; const rulerElement = ruler.current;`
-#   end anchor: `renderCoordinator.dispose(); } ; }, []);`
-#   -> apps/editor/src/runtime/use-editor-runtime-bridge.ts
-#   Move the whole ~1359-line runtime/mount/listener/render/geometry/open/zoom/range/annotation/tree block first. A temporarily large typed input is acceptable. Do not split it internally yet.
-#
-# CUT-B editor actions:
-#   lines 1969-2742
-#   start anchor: `const createSelectedAnnotation = (annotation: Annotation) => {`
-#   end anchor: `const applyWorkspacePreset = (preset: WorkspacePreset) => { ... };`
-#   -> apps/editor/src/runtime/use-editor-actions.ts
-#   Move selection/clipboard/Bottom/Problems navigation/pane resize/pending file actions/workspace actions as one block before fine-grained cleanup.
-#
-# CUT-C shell JSX:
-#   lines 2743-2900
-#   start anchor: `return <main className="editor-shell"`
-#   end anchor: `</main>; }`
-#   -> apps/editor/src/editor-shell-view.tsx
-#   Preserve exact DOM/test IDs/Home structure. A temporarily large props contract is acceptable; do not redesign during move.
-#
-# CUT-D top-level presentation after MinimalCycleView:
-#   D1 lines 2902-2961 `function DocumentProperties(` -> apps/editor/src/document-properties.tsx
-#   D2 lines 2964-3178 `function Ribbon(` -> apps/editor/src/ribbon/editor-ribbon.tsx; Home DOM/CSS completely frozen
-#   D3 lines 3180-3848 `function InspectorPanel(` through component before buildRuler -> apps/editor/src/editor-secondary-surfaces.tsx temporarily
-#   D4 lines 3849-3915 `function buildRuler(` -> apps/editor/src/runtime/ruler-view.ts
-#
-# Per CUT: move -> minimal compile plumbing -> focused tests -> git diff --check -> OWNERSHIP.md -> commit/push -> report remaining size -> next CUT.
-# Do not leave #258 for another issue between CUTs. Do not mix feature fixes or Golden changes.
-#
-# SECOND PASS only after CUT-0/A/B/C/D are done:
-#   use-editor-runtime-bridge -> viewport-controller, interaction-controller, document-lifecycle-controller, render-coordinator
-#   use-editor-actions -> selection-actions, clipboard-actions, bottom-editor-actions, file-action-controller
-#   editor-secondary-surfaces -> inspector-panel, advanced-json-panel, transaction-lanes, signal-editor, clock-generator-editor
-#   editor-ribbon -> optional non-Home tab subcomponents; Home stays frozen
-# Target guidance after second pass: ordinary UI <=500 lines preferred, runtime controller <=800 lines preferred.
-# Preserve SemanticCommand/History/Canonical/Renderer ownership, stable DOM/test IDs, Home, Golden/reference/threshold/mask.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/258
-#
-# Issue #196 — Transaction Bottom Editor must distinguish Create vs Edit
-# Current audit: production dual-mode code is already present. Remaining closure gap is focused real-browser Bottom-editor evidence.
-# Required focused scenario: create A -> select A -> verify A fields -> edit name/start/end/lane in Bottom -> Apply -> same stable ID/no extra Transaction -> exactly one History entry -> Undo -> Redo; confirm Bottom/Inspector/lane selection synchronization.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/196
-#
-# Issue #300 — Cycle Insert / range-selection geometry correctness
-# Current post-closure review found a broader production gap: interaction geometry still depends on sampled Ruler DOM ticks for playhead/range/fit/navigation.
-# Required architecture: canonical source cycle/boundary -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometryMap -> local X -> screen X. Ruler ticks are presentation only.
-# Acceptance focus: arbitrary non-sampled long-timeline cycles, Fit Selection, Navigate to Cycle including terminal boundary, range band endpoints, LabelAnchor/rebased labels, Fold/Axis Break, and no re-materializing one DOM tick per cycle.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/300
-#
-# Issue #310/#307/#308/#309 — Visual Scenario Harness
-# Order is dependency-driven: mechanical diagnostics -> Ribbon visual matrix -> Golden Sample visual matrix -> interaction before/after/undo scenarios.
-# Do not modify approved Golden/reference assets to make these pass.
-#
-# Issue #173 — Transaction + Export shared-timeline architecture
-# Goal: Transaction View and export share canonical source-time/display geometry; export must not use viewport screenshot, fixed-pitch lookalike geometry, or a second semantic time axis.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/173
-#
-# Issue #311 — parity feature identity / implementation-status gate
-# Goal: prevent semantically different features from satisfying each other's parity evidence (known case: #98/#200 Signal Split vs #173 Cycle/Transaction Split).
-# Do not implement #200 inside #311; #311 fixes the audit/gate.
-# Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/311
-
-# ==== CONTINUITY / BROAD HIGH-VALUE WORK ====
-219
-217
-282
-228
-
-# ==== P0 / CORRECTNESS / RELIABILITY / PERFORMANCE ====
-247
-218
-180
-229
-246
-257
-269
-264
-265
-266
-267
+# Golden must fail on missing semantics/export instead of evidence-only PASS.
 234
-272
-184
 
-# ==== P1 PRODUCT / UX / ARCHITECTURE ====
-224
-226
-197
-208
+# ============================================================================
+# PRODUCT WORKFLOWS / PARITY WITH HIGH USER VALUE
+# ============================================================================
+196
+173
 209
 210
-211
 212
-214
-216
+202
+201
+206
+207
 221
 222
 223
+224
+226
 230
-235
-236
-237
 244
 248
 252
 254
 255
-256
-270
+261
+269
+
+# ============================================================================
+# PERFORMANCE / CORRECTNESS ENGINE WORK
+# ============================================================================
+218
+219
+217
+180
 279
+257
+256
+276
+275
 281
+282
 283
 284
 285
+
+# ============================================================================
+# GUI / INTERACTION CONSISTENCY
+# ============================================================================
+195
+197
+199
+211
+214
+216
+233
+235
+236
+253
+260
+270
 287
 288
 289
@@ -195,20 +174,16 @@
 304
 305
 
-# ==== OPEN ITEMS THAT MAY BE PARTIAL / ALREADY IMPLEMENTED — AUDIT THEN CLOSE OR CONTINUE ====
-261
-195
-199
-202
-206
-207
-233
-253
-259
-260
-276
+# ============================================================================
+# CI / CLOSURE GATES
+# ============================================================================
+272
+184
+311
 
-# ==== BROADER PHASE / PARITY / CLOSURE / UMBRELLA — LATER ====
+# ============================================================================
+# BROADER PHASE / PARITY / UMBRELLA — LATER
+# ============================================================================
 161
 162
 163
@@ -231,16 +206,21 @@
 185
 186
 200
-201
 204
 205
 250
 262
-275
 277
 286
 293
 306
 
+# ============================================================================
+# EXPLICITLY DEFERRED — DO NOT EXECUTE UNTIL RE-ENABLED
+# ============================================================================
+# 258 [V2][Architecture] Decompose MinimalCycleView monolith
+# 312 Build parallel 4-way MinimalCycleView replacement and cut over after parity
+#
+# These remain open on GitHub intentionally. Their open state must not block the queue.
+#
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
-# Recently closed implementation-audit items: #241, #291, #302.
