@@ -29,6 +29,9 @@ controllers are extracted incrementally.
 | Geometry grid DOM projection | `render-geometry-grid.ts` | view-only geometry projection | Phase 1 extracted utility |
 | Inspector accordion state | `inspector-accordion.ts` | view-only Inspector state | Phase 1 extracted utility |
 | Inspector section presentation | `inspector-section.tsx` | parent Inspector callback | Phase 1 extracted leaf |
+| Inspector annotation editor | `inspector-annotation-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
+| Inspector signal routing | `inspector-signal-router.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
+| Inspector style readers | `inspector-style.ts` | view-only style projection | Phase 1 extracted utility |
 
 Rules:
 
