@@ -797,11 +797,11 @@ export function MinimalCycleView() {
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
         if (refreshRuler) {
-          rebuildRuler(result.snapshot.document);
-          refreshRangeSelectionBand.current();
+          timelineRuntime.refreshRuler();
+          timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
         }
-        refreshPlayhead.current();
-        if (refreshGridNow) refreshGrid(result.snapshot.document);
+        timelineRuntime.refreshPlayhead();
+        if (refreshGridNow) timelineRuntime.refreshGrid();
         applyZoom(currentZoom);
         if (refreshOverlaysNow) refreshOverlays(result.snapshot.document);
         collectWaveErrors();
