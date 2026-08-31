@@ -73,5 +73,3 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
   };
   return <section className="json-panel" data-testid="json-panel"><div className="json-toolbar"><strong>JSON</strong><button type="button" data-testid="json-advanced-toggle" aria-pressed={advanced} onClick={() => setAdvanced((value) => !value)}>{advanced ? "Read Only" : "Advanced Editable"}</button><span aria-label="JSON editing mode">{advanced ? "Advanced" : "Read only"}</span><select aria-label="JSON scope" value={scope} onChange={(event) => setScope(event.target.value as typeof scope)}><option value="selected">Selected Object</option><option value="document">Whole Document</option></select><button type="button" onClick={format}>Format</button><button type="button" onClick={validate}>Validate</button><button type="button" onClick={() => void copy()}>Copy</button>{advanced && <button type="button" data-testid="apply-advanced-json" onClick={apply}>Apply JSON</button>}<output>{status}</output></div>{advanced ? <textarea aria-label="Advanced JSON" value={draft} onChange={(event) => setDraft(event.target.value)} spellCheck={false} /> : <pre>{text}</pre>}</section>;
 }
-
-
