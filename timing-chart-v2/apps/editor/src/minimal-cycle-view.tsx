@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -614,24 +614,22 @@ export function MinimalCycleView() {
       return metrics.leftPaneWidth + metrics.frozenPaneWidth;
     };
     const applyZoom = (next: number) => {
-      currentZoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
-      viewMetricsOwner.update({ zoom: currentZoom, viewportWidth: viewportElement.clientWidth });
-      const metrics = viewMetricsOwner.snapshot();
-      const scalable = [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")];
-      for (const element of scalable) {
-        element.style.transformOrigin = "0 0";
-        element.style.scale = `${currentZoom} 1`;
-      }
-      rulerElement.style.transformOrigin = "0 0";
-      syncRulerContent();
-      viewportElement.style.setProperty("--zoom-x", String(currentZoom));
-      syncPresentationScale();
-      const baseWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
-      const width = timelineOffset() + baseWidth * currentZoom;
-      rendererHost.style.width = `${width}px`;
-      rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
-      rendererHost.dataset.zoom = String(currentZoom);
-      startTransition(() => setZoom(currentZoom));
+      currentZoom = applyTimelineZoom(next, {
+        rendererHost,
+        viewport: viewportElement,
+        ruler: rulerElement,
+        scalable: [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")],
+        leftPaneWidth: viewMetricsOwner.snapshot().leftPaneWidth,
+        frozenPaneWidth: viewMetricsOwner.snapshot().frozenPaneWidth,
+        inspectorWidth: viewMetricsOwner.snapshot().inspectorWidth,
+        viewportWidth: globalThis.innerWidth,
+        timelineOffset: timelineOffset(),
+        onPresentationScale: () => syncPresentationScale(),
+        onZoom: (zoom) => {
+          viewMetricsOwner.update({ zoom, viewportWidth: viewportElement.clientWidth });
+          startTransition(() => setZoom(zoom));
+        },
+      });
     };
     changeZoom.current = (delta) => applyZoom(currentZoom + delta);
     setZoomAbsolute.current = (zoom) => applyZoom(zoom);

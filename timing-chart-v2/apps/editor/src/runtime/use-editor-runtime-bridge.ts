@@ -74,6 +74,39 @@ export function publishRendererState(host: HTMLElement, session: any, viewMetric
 export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void { const presentationScale = Math.max(0.0001, zoom * screenGeometryScale); viewport.style.setProperty("--presentation-x-scale", String(presentationScale)); host.style.setProperty("--presentation-x-scale", String(presentationScale)); rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale)); }
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void { ruler.style.transform = `translateX(${-viewport.scrollLeft}px) scaleX(${zoom})`; ruler.dataset.scrollLeft = String(viewport.scrollLeft); }
 
+export type TimelineZoomSurfaceContext = {
+  readonly rendererHost: HTMLElement;
+  readonly viewport: HTMLElement;
+  readonly ruler: HTMLElement;
+  readonly scalable: readonly HTMLElement[];
+  readonly leftPaneWidth: number;
+  readonly frozenPaneWidth: number;
+  readonly inspectorWidth: number;
+  readonly viewportWidth: number;
+  readonly timelineOffset: number;
+  readonly onPresentationScale: (zoom: number) => void;
+  readonly onZoom: (zoom: number) => void;
+};
+
+export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceContext): number {
+  const zoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
+  for (const element of context.scalable) {
+    element.style.transformOrigin = "0 0";
+    element.style.scale = `${zoom} 1`;
+  }
+  context.ruler.style.transformOrigin = "0 0";
+  syncRulerScroll(context.ruler, context.viewport, zoom);
+  context.viewport.style.setProperty("--zoom-x", String(zoom));
+  context.onPresentationScale(zoom);
+  const baseWidth = Math.max(160, context.viewportWidth - context.leftPaneWidth - context.inspectorWidth - context.frozenPaneWidth);
+  const width = context.timelineOffset + baseWidth * zoom;
+  context.rendererHost.style.width = `${width}px`;
+  context.rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
+  context.rendererHost.dataset.zoom = String(zoom);
+  context.onZoom(zoom);
+  return zoom;
+}
+
 export function attachMenuKeyboardNavigation(doc: Document, closeContextMenu: () => void, closeTreeAddMenu: () => void, closeTreeMoreMenu: () => void): () => void {
   const onKeyDown = (event: KeyboardEvent) => { const target = event.target instanceof HTMLElement ? event.target : undefined; const activeMenu = target?.closest<HTMLElement>("[role='menu']"); if (!activeMenu) return; if (event.key === "Escape") { event.preventDefault(); if (activeMenu.classList.contains("context-menu")) closeContextMenu(); else if (activeMenu.classList.contains("tree-add-menu")) closeTreeAddMenu(); else closeTreeMoreMenu(); return; } if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return; const items = [...activeMenu.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")]; if (items.length === 0) return; event.preventDefault(); const current = items.indexOf(doc.activeElement as HTMLButtonElement); const next = event.key === "Home" ? 0 : event.key === "End" ? items.length - 1 : (current + (event.key === "ArrowDown" ? 1 : -1) + items.length) % items.length; items[next]?.focus(); };
   doc.addEventListener("keydown", onKeyDown);
