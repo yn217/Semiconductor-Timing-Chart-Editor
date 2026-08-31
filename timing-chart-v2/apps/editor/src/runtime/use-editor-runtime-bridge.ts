@@ -74,6 +74,20 @@ export function publishRendererState(host: HTMLElement, session: any, viewMetric
 export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void { const presentationScale = Math.max(0.0001, zoom * screenGeometryScale); viewport.style.setProperty("--presentation-x-scale", String(presentationScale)); host.style.setProperty("--presentation-x-scale", String(presentationScale)); rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale)); }
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void { ruler.style.transform = `translateX(${-viewport.scrollLeft}px) scaleX(${zoom})`; ruler.dataset.scrollLeft = String(viewport.scrollLeft); }
 
+export type EditorEventBinding = {
+  readonly target: EventTarget;
+  readonly type: string;
+  readonly listener: EventListener;
+  readonly options?: boolean | AddEventListenerOptions;
+};
+
+export function attachEditorEventBindings(bindings: readonly EditorEventBinding[]): () => void {
+  for (const binding of bindings) binding.target.addEventListener(binding.type, binding.listener, binding.options);
+  return () => {
+    for (const binding of [...bindings].reverse()) binding.target.removeEventListener(binding.type, binding.listener, binding.options);
+  };
+}
+
 export type TimelineZoomSurfaceContext = {
   readonly rendererHost: HTMLElement;
   readonly viewport: HTMLElement;

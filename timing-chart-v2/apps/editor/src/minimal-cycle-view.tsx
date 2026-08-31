@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -1602,70 +1602,43 @@ export function MinimalCycleView() {
       if (rendererHost.dataset.arrowPick) onSelect(event);
       else selectCanvasCycle(event);
     };
-    viewportElement.addEventListener("scroll", onScroll, { passive: true });
-    viewportElement.addEventListener("keydown", onViewportKeyDown);
-    rendererHost.addEventListener("click", onCanvasClick);
-    rendererHost.addEventListener("pointerdown", onRangePointerDown);
-    rendererHost.addEventListener("pointermove", onRangePointerMove);
-    rendererHost.addEventListener("pointerup", onRangePointerUp);
-    rendererHost.addEventListener("pointercancel", onRangePointerCancel);
-    rendererHost.ownerDocument.addEventListener("keydown", onRangeKeyDown);
-    rendererHost.addEventListener("dragstart", onDragStart);
-    rendererHost.addEventListener("dragover", onDragOver);
-    rendererHost.addEventListener("drop", onDrop);
-    rendererHost.addEventListener("dragend", onDragEnd);
-    viewportElement.addEventListener("click", onViewportClick);
-    viewportElement.addEventListener("pointerdown", onRangePointerDown);
-    viewportElement.addEventListener("pointermove", onRangePointerMove);
-    viewportElement.addEventListener("pointerup", onRangePointerUp);
-    viewportElement.addEventListener("pointercancel", onRangePointerCancel);
-    // Listen on the clipped viewport so direct synthetic events and bubbled
-    // events from the translated content share the same interaction surface.
-    rulerViewportElement.addEventListener("click", onRulerSelect);
-    rulerViewportElement.addEventListener("pointerdown", onRangePointerDown);
-    rulerViewportElement.addEventListener("pointermove", onRangePointerMove);
-    rulerViewportElement.addEventListener("pointerup", onRangePointerUp);
-    rulerViewportElement.addEventListener("pointercancel", onRangePointerCancel);
-    rendererHost.addEventListener("pointerdown", onAnnotationPointerDown);
-    rendererHost.addEventListener("pointermove", onAnnotationPointerMove);
-    rendererHost.addEventListener("pointerup", onAnnotationPointerUp);
-    rendererHost.addEventListener("pointercancel", clearAnnotationPreview);
-    rendererHost.addEventListener("contextmenu", onContextMenu);
-    rendererHost.ownerDocument.addEventListener("keydown", onAnnotationKeyDown);
+    const detachTimelineListeners = attachEditorEventBindings([
+      ...(leftTree ? [{ target: leftTree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []),
+      { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true } },
+      { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
+      { target: rendererHost, type: "click", listener: onCanvasClick as EventListener },
+      { target: rendererHost, type: "pointerdown", listener: onRangePointerDown as EventListener },
+      { target: rendererHost, type: "pointermove", listener: onRangePointerMove as EventListener },
+      { target: rendererHost, type: "pointerup", listener: onRangePointerUp as EventListener },
+      { target: rendererHost, type: "pointercancel", listener: onRangePointerCancel as EventListener },
+      { target: rendererHost.ownerDocument, type: "keydown", listener: onRangeKeyDown as EventListener },
+      { target: rendererHost, type: "dragstart", listener: onDragStart as EventListener },
+      { target: rendererHost, type: "dragover", listener: onDragOver as EventListener },
+      { target: rendererHost, type: "drop", listener: onDrop as EventListener },
+      { target: rendererHost, type: "dragend", listener: onDragEnd as EventListener },
+      { target: viewportElement, type: "click", listener: onViewportClick as EventListener },
+      { target: viewportElement, type: "pointerdown", listener: onRangePointerDown as EventListener },
+      { target: viewportElement, type: "pointermove", listener: onRangePointerMove as EventListener },
+      { target: viewportElement, type: "pointerup", listener: onRangePointerUp as EventListener },
+      { target: viewportElement, type: "pointercancel", listener: onRangePointerCancel as EventListener },
+      { target: rulerViewportElement, type: "click", listener: onRulerSelect as EventListener },
+      { target: rulerViewportElement, type: "pointerdown", listener: onRangePointerDown as EventListener },
+      { target: rulerViewportElement, type: "pointermove", listener: onRangePointerMove as EventListener },
+      { target: rulerViewportElement, type: "pointerup", listener: onRangePointerUp as EventListener },
+      { target: rulerViewportElement, type: "pointercancel", listener: onRangePointerCancel as EventListener },
+      { target: rendererHost, type: "pointerdown", listener: onAnnotationPointerDown as EventListener },
+      { target: rendererHost, type: "pointermove", listener: onAnnotationPointerMove as EventListener },
+      { target: rendererHost, type: "pointerup", listener: onAnnotationPointerUp as EventListener },
+      { target: rendererHost, type: "pointercancel", listener: clearAnnotationPreview as EventListener },
+      { target: rendererHost, type: "contextmenu", listener: onContextMenu as EventListener },
+      { target: rendererHost.ownerDocument, type: "keydown", listener: onAnnotationKeyDown as EventListener },
+    ]);
     return () => {
       applyCollapsedGroupsRef.current = () => undefined;
       refreshPlayhead.current = () => undefined;
       navigateToCycle.current = () => undefined;
       cancelAnimationFrame(frame);
-      leftTree?.removeEventListener("keydown", onTreeKeyDown);
-      viewportElement.removeEventListener("scroll", onScroll);
-      viewportElement.removeEventListener("keydown", onViewportKeyDown);
-      rendererHost.removeEventListener("click", onCanvasClick);
-      rendererHost.removeEventListener("pointerdown", onRangePointerDown);
-      rendererHost.removeEventListener("pointermove", onRangePointerMove);
-      rendererHost.removeEventListener("pointerup", onRangePointerUp);
-      rendererHost.removeEventListener("pointercancel", onRangePointerCancel);
-      rendererHost.ownerDocument.removeEventListener("keydown", onRangeKeyDown);
-      rendererHost.removeEventListener("dragstart", onDragStart);
-      rendererHost.removeEventListener("dragover", onDragOver);
-      rendererHost.removeEventListener("drop", onDrop);
-      rendererHost.removeEventListener("dragend", onDragEnd);
-      viewportElement.removeEventListener("click", onViewportClick);
-      viewportElement.removeEventListener("pointerdown", onRangePointerDown);
-      viewportElement.removeEventListener("pointermove", onRangePointerMove);
-      viewportElement.removeEventListener("pointerup", onRangePointerUp);
-      viewportElement.removeEventListener("pointercancel", onRangePointerCancel);
-      rulerViewportElement.removeEventListener("click", onRulerSelect);
-      rulerViewportElement.removeEventListener("pointerdown", onRangePointerDown);
-      rulerViewportElement.removeEventListener("pointermove", onRangePointerMove);
-      rulerViewportElement.removeEventListener("pointerup", onRangePointerUp);
-      rulerViewportElement.removeEventListener("pointercancel", onRangePointerCancel);
-      rendererHost.removeEventListener("pointerdown", onAnnotationPointerDown);
-      rendererHost.removeEventListener("pointermove", onAnnotationPointerMove);
-      rendererHost.removeEventListener("pointerup", onAnnotationPointerUp);
-      rendererHost.removeEventListener("pointercancel", clearAnnotationPreview);
-      rendererHost.removeEventListener("contextmenu", onContextMenu);
-      rendererHost.ownerDocument.removeEventListener("keydown", onAnnotationKeyDown);
+      detachTimelineListeners();
       timelineRuntime.detach();
       timelineRuntime.dispose();
       timelineRuntimeRef.current = null;
