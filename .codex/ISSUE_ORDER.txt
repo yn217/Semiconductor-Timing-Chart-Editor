@@ -43,6 +43,11 @@
 # explicitly re-enables them in this control file.
 # Old monolith may remain as-is while product issues are burned down.
 #
+# Future hot-file refactors must follow:
+#   .codex/HOT_FILE_REFACTOR_PLAYBOOK.md
+# The playbook requires responsibility ownership/seams before physical file movement and includes
+# fallback plans/time-box rules to prevent another 10-50-line-per-session refactor stall.
+#
 # ============================================================================
 # EXECUTION RULES
 # ============================================================================
@@ -221,5 +226,7 @@
 # 312 Build parallel 4-way MinimalCycleView replacement and cut over after parity
 #
 # These remain open on GitHub intentionally. Their open state must not block the queue.
+# If re-enabled, do NOT resume old CUT-A/CUT-B/CUT-C/CUT-D mechanically. Start from
+# `.codex/HOT_FILE_REFACTOR_PLAYBOOK.md` and transfer responsibility ownership first.
 #
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
