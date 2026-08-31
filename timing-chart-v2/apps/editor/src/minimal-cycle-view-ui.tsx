@@ -46,6 +46,9 @@ export function MinimalCycleViewUi({
   return (
     <main
       className="editor-shell"
+      data-next-owner="ui"
+      data-application-owner="application"
+      data-timeline-owner="timeline"
       data-cycle-count={application.snapshot.document.timeline.cycleCount}
       data-signal-count={application.snapshot.document.signals.length}
       data-transaction-count={application.snapshot.document.transactions.length}
