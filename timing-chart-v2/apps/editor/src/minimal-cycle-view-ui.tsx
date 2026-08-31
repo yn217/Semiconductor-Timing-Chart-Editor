@@ -86,12 +86,12 @@ export function MinimalCycleViewRibbonTabs({ ribbonTab, setRibbonTab, viewMode, 
   return <nav className="ribbon-tabs" aria-label="Ribbon tabs">{tabs.map((tab) => <button type="button" key={tab.key} aria-label={tab.label} className={ribbonTab === tab.key ? "active" : ""} onClick={() => startTransition(() => setRibbonTab(tab.key))}>{tab.label}</button>)}<div className="view-mode"><span>View Mode:</span>{(["Cycle", "Transaction", "Split"] as const).map((mode) => <button type="button" key={mode} className={viewMode === mode ? "active" : ""} onClick={() => { setViewMode(mode); if (mode === "Cycle" && bottomTab === "Transaction") setBottomTab("Signal"); if (mode === "Transaction" && bottomTab === "Signal") setBottomTab("Transaction"); }}>{mode}</button>)}</div></nav>;
 }
 
-export function MinimalCycleViewSignalTreeCanvas({ document, selectedSignalId, onSelect, surfaceHostRef }: { readonly document: Readonly<CanonicalDocument>; readonly selectedSignalId?: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly surfaceHostRef: RefObject<HTMLDivElement | null> }) {
+export function MinimalCycleViewSignalTreeCanvas({ document, selectedSignalId, onSelect, surfaceHostRef, rulerRef, gridLayerRef }: { readonly document: Readonly<CanonicalDocument>; readonly selectedSignalId?: SignalId | undefined; readonly onSelect: (id: SignalId) => void; readonly surfaceHostRef: RefObject<HTMLDivElement | null>; readonly rulerRef: RefObject<HTMLDivElement | null>; readonly gridLayerRef: RefObject<HTMLDivElement | null> }) {
   return <section className="cycle-panel" data-testid="next-signal-tree-canvas" aria-label="Next signal tree and canvas">
     <div className="next-signal-tree" data-role="timing-tree" role="tree" aria-label="Signals">
       {document.signals.map((signal) => <button type="button" role="treeitem" key={signal.id} data-row-id={signal.id} aria-selected={signal.id === selectedSignalId} onClick={() => onSelect(signal.id)}>{signal.display.name}</button>)}
     </div>
-    <div className="cycle-viewport" data-testid="next-cycle-viewport" aria-label="Next timing canvas"><div className="surface-host" ref={surfaceHostRef} data-testid="next-surface-host" /></div>
+    <div className="cycle-viewport" data-testid="next-cycle-viewport" aria-label="Next timing canvas"><div className="geometry-grid" ref={gridLayerRef} data-testid="next-geometry-grid" aria-hidden="true" /><div className="cycle-ruler" data-testid="next-cycle-ruler" aria-label="Cycle ruler"><div ref={rulerRef} /></div><div className="range-selection-band" data-testid="next-range-band" aria-hidden="true" /><div className="surface-host" ref={surfaceHostRef} data-testid="next-surface-host" /></div>
   </section>;
 }
 
