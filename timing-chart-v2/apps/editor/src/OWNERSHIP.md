@@ -19,6 +19,7 @@ controllers are extracted incrementally.
 | Selected JSON object replacement | `json-selection.ts` | Advanced JSON command planner | Phase 1 extracted utility |
 | Advanced JSON selected-object diagnostics | `json-problems.ts` | validation diagnostic projection | Phase 1 extracted utility |
 | Presentation cycle sampling | `presentation-cycles.ts` | view-only geometry projection | Phase 1 extracted utility |
+| Text download bridge | `download-text.ts` | external export side effect | Phase 1 extracted utility |
 
 Rules:
 
