@@ -30,3 +30,9 @@ export function attachDirtyUnloadGuard(dirty: boolean): () => void {
   window.addEventListener("beforeunload", onBeforeUnload);
   return () => window.removeEventListener("beforeunload", onBeforeUnload);
 }
+
+export function attachDialogOriginCapture(doc: Document, originRef: { current: HTMLElement | null }, labelRef: { current: string | null }, menuOriginRef: { current: HTMLElement | null }): () => void {
+  const capture = (event: MouseEvent) => { const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-testid='bulk-register-open'], [data-testid='hierarchy-open']") : null; if (!target) return; labelRef.current = target.dataset.testid === "bulk-register-open" ? "Add signal or group" : "More tree actions"; originRef.current = menuOriginRef.current ?? doc.querySelector<HTMLElement>(`button[aria-label='${labelRef.current}']`) ?? target; };
+  doc.addEventListener("click", capture, true);
+  return () => doc.removeEventListener("click", capture, true);
+}

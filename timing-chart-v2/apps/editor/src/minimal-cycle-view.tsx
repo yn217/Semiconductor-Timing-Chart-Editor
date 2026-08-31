@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDirtyUnloadGuard, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -230,15 +230,7 @@ export function MinimalCycleView() {
     previousMenuOpenRef.current = menuOpen;
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   useEffect(() => {
-    const captureDialogOrigin = (event: MouseEvent) => {
-      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-testid='bulk-register-open'], [data-testid='hierarchy-open']") : null;
-      if (target) {
-        dialogOriginLabelRef.current = target.dataset.testid === "bulk-register-open" ? "Add signal or group" : "More tree actions";
-        dialogOriginRef.current = menuOriginRef.current ?? document.querySelector<HTMLElement>(`button[aria-label='${dialogOriginLabelRef.current}']`) ?? target;
-      }
-    };
-    document.addEventListener("click", captureDialogOrigin, true);
-    return () => document.removeEventListener("click", captureDialogOrigin, true);
+    return attachDialogOriginCapture(document, dialogOriginRef, dialogOriginLabelRef, menuOriginRef);
   }, []);
   useLayoutEffect(() => {
     if (propertiesVisible || exportVisible || saveAsVisible || hierarchyVisible || bulkRegistrationVisible) return undefined;
