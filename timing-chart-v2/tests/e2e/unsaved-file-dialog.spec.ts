@@ -99,3 +99,27 @@ test("concurrent Open requests are latest-request-wins", async ({ page }) => {
   await expect(page.locator(".app-titlebar h1")).toHaveText("Latest B");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("Open atomically clears document-scoped selection, pin, filter and timeline state", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click({ modifiers: ["Control"] });
+  await expect(page.getByTestId("selection-status")).toHaveText("2 signals");
+  await page.getByTestId("bottom-pin").click();
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+  await page.getByTestId("signal-tree-search-top").fill("REQUEST");
+  await page.getByTestId("cycle-status").click();
+
+  const replacement = canonicalFixture();
+  replacement.document.title = "Replacement B";
+  await page.locator("input[accept='.json,.tcd']").setInputFiles({ name: "replacement-b.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacement)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Replacement B");
+  await expect(page.getByTestId("selection-status")).toContainText("None");
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("signal-tree-search-top")).toHaveValue("");
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [0, 1)");
+  await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 0");
+});
