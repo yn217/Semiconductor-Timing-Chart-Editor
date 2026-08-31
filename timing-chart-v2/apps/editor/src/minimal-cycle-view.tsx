@@ -79,7 +79,7 @@ import { buildRuler } from "./runtime/build-ruler.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
-import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
+import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
@@ -97,6 +97,7 @@ export function MinimalCycleView() {
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
   const gridLayer = useRef<HTMLDivElement>(null);
+  const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const execute = useRef<(command: SemanticCommand) => ReturnType<CommandHistorySession["execute"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
   const executeBatch = useRef<(id: CommandId, commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>>(() => ({ ok: false, reason: "no-op", problems: [] }));
   const undo = useRef<() => void>(() => undefined);
@@ -393,7 +394,8 @@ export function MinimalCycleView() {
   }, [rangeSelectionActive, timelineRange, snapshot.revision]);
 
   useEffect(() => {
-    applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
+    if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
+    else applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
   }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth, zoom]);
 
   useEffect(() => {
@@ -591,6 +593,7 @@ export function MinimalCycleView() {
       render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch as number) },
     });
+    timelineRuntimeRef.current = timelineRuntime;
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") { syncRulerScroll(rulerElement, viewportElement, currentZoom); return; }
@@ -1675,6 +1678,7 @@ export function MinimalCycleView() {
       rendererHost.ownerDocument.removeEventListener("keydown", onAnnotationKeyDown);
       timelineRuntime.detach();
       timelineRuntime.dispose();
+      timelineRuntimeRef.current = null;
       execute.current = () => ({ ok: false, reason: "no-op", problems: [] });
       executeBatch.current = () => ({ ok: false, reason: "no-op", problems: [] });
       undo.current = () => undefined;
