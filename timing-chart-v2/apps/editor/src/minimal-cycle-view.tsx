@@ -550,7 +550,7 @@ export function MinimalCycleView() {
       timeAxis = presentation.timeAxis;
       screenGeometryScale = presentation.screenGeometryScale;
       rulerInitialized = presentation.rulerInitialized;
-      renderer.update(projection);
+      if (reason !== "range" && reason !== "playhead") renderer.update(projection);
     };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
