@@ -28,7 +28,7 @@ export type TimelineViewportRuntimeContext = {
   readonly document: {
     readonly getSnapshot: () => unknown;
     readonly getCanonicalRevision: () => number;
-    readonly getDocumentEpoch: () => unknown;
+    readonly getDocumentEpoch: () => number;
   };
   readonly render: {
     readonly requestRender: (reason: string) => void;
@@ -36,7 +36,7 @@ export type TimelineViewportRuntimeContext = {
     readonly waitForRendererIdle: () => Promise<void>;
   };
   readonly lifecycle: {
-    readonly isCurrentEpoch: (epoch: unknown) => boolean;
+    readonly isCurrentEpoch: (epoch: number) => boolean;
   };
 };
 
@@ -44,7 +44,7 @@ export type TimelineViewportRuntime = Readonly<{
   attach: () => void;
   detach: () => void;
   dispose: () => void;
-  onDocumentEpochChanged: (epoch: unknown) => void;
+  onDocumentEpochChanged: (epoch: number) => void;
   zoomIn: () => void;
   zoomOut: () => void;
   setZoom: (zoom: number) => void;
@@ -72,7 +72,7 @@ function clampZoom(zoom: number): number {
 export function createTimelineViewportRuntime(context: TimelineViewportRuntimeContext): TimelineViewportRuntime {
   let attached = false;
   let disposed = false;
-  let documentEpoch: unknown = context.document.getDocumentEpoch();
+  let documentEpoch = context.document.getDocumentEpoch();
   let resizeObserver: ResizeObserver | undefined;
 
   const assertActive = () => {
