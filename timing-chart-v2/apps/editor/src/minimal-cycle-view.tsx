@@ -601,6 +601,7 @@ export function MinimalCycleView() {
       if (reason === "resize") applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
       renderer.update(projection);
     };
+    timelineRuntime.attach();
     function sourceBoundaryLocalX(document: CanonicalDocument, cycle: number): number | undefined {
       return timelineRuntime.sourceBoundaryToLocalX(document, cycle);
     }
@@ -1680,6 +1681,8 @@ export function MinimalCycleView() {
       rendererHost.removeEventListener("pointercancel", clearAnnotationPreview);
       rendererHost.removeEventListener("contextmenu", onContextMenu);
       rendererHost.ownerDocument.removeEventListener("keydown", onAnnotationKeyDown);
+      timelineRuntime.detach();
+      timelineRuntime.dispose();
       execute.current = () => ({ ok: false, reason: "no-op", problems: [] });
       executeBatch.current = () => ({ ok: false, reason: "no-op", problems: [] });
       undo.current = () => undefined;
