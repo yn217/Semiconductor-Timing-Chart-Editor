@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -699,16 +699,12 @@ export function MinimalCycleView() {
         timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
         clearAnnotationPreview();
       }
-      const snapDependenciesChanged = changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined || changed.waveSemantics !== undefined || changed.geometryLocal !== undefined || changed.geometryScreenX === true || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.bookmarkPosition !== undefined || changed.timeGroupSemantics !== undefined || changed.timelineSemantics === true;
+      const invalidation = deriveRenderInvalidation(changed, result.snapshot.document.timeline.referenceClock);
+      const snapDependenciesChanged = invalidation.snapDependenciesChanged;
       if (snapDependenciesChanged) snapIndex = undefined;
-      const referenceSignalId = result.snapshot.document.timeline.referenceClock;
-      const referenceWaveChanged = referenceSignalId !== undefined && (changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.waveSemantics?.includes(referenceSignalId) === true || changed.geometryLocal?.includes(referenceSignalId) === true);
-      const refreshRuler = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || changed.bookmarkPosition !== undefined || referenceWaveChanged;
-      const refreshGridNow = changed.fullDocumentReplace === true || changed.timelineSemantics === true || changed.timeGroupSemantics !== undefined || referenceWaveChanged;
-      // Row presentation (for example a signal rename or role/style edit) does
-      // not change annotation anchor coordinates. Re-resolve overlays only for
-      // actual screen-Y/order changes or an explicit annotation dependency.
-      const refreshOverlaysNow = refreshRuler || changed.rowOrder !== undefined || changed.geometryScreenY !== undefined || changed.edgeCounter !== undefined || (changed.annotationPosition?.length ?? 0) > 0 || (changed.annotationStyle?.length ?? 0) > 0 || (changed.addedSignals?.length ?? 0) > 0 || (changed.removedSignals?.length ?? 0) > 0;
+      const refreshRuler = invalidation.refreshRuler;
+      const refreshGridNow = invalidation.refreshGrid;
+      const refreshOverlaysNow = invalidation.refreshOverlays;
       renderer.update(projection);
       setSnapshot(result.snapshot);
       setValidationDiagnostics([]);

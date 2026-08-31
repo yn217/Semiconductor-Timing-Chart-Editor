@@ -100,6 +100,16 @@ export function refreshTimelinePresentation(context: {
   return { timeAxis, screenGeometryScale, rulerInitialized };
 }
 
+export function deriveRenderInvalidation(changeSet: any, referenceSignalId: string | undefined): Readonly<{ snapDependenciesChanged: boolean; referenceWaveChanged: boolean; refreshRuler: boolean; refreshGrid: boolean; refreshOverlays: boolean }> {
+  const full = changeSet.fullDocumentReplace === true;
+  const snapDependenciesChanged = full || changeSet.rowOrder !== undefined || changeSet.addedSignals !== undefined || changeSet.removedSignals !== undefined || changeSet.addedGroups !== undefined || changeSet.removedGroups !== undefined || changeSet.waveSemantics !== undefined || changeSet.geometryLocal !== undefined || changeSet.geometryScreenX === true || changeSet.geometryScreenY !== undefined || changeSet.annotationPosition !== undefined || changeSet.annotationStyle !== undefined || changeSet.bookmarkPosition !== undefined || changeSet.timeGroupSemantics !== undefined || changeSet.timelineSemantics === true;
+  const referenceWaveChanged = referenceSignalId !== undefined && (full || changeSet.timelineSemantics === true || changeSet.timeGroupSemantics !== undefined || changeSet.waveSemantics?.includes(referenceSignalId) === true || changeSet.geometryLocal?.includes(referenceSignalId) === true);
+  const refreshRuler = full || changeSet.timelineSemantics === true || changeSet.timeGroupSemantics !== undefined || changeSet.bookmarkPosition !== undefined || referenceWaveChanged;
+  const refreshGrid = full || changeSet.timelineSemantics === true || changeSet.timeGroupSemantics !== undefined || referenceWaveChanged;
+  const refreshOverlays = refreshRuler || changeSet.rowOrder !== undefined || changeSet.geometryScreenY !== undefined || changeSet.edgeCounter !== undefined || (changeSet.annotationPosition?.length ?? 0) > 0 || (changeSet.annotationStyle?.length ?? 0) > 0 || (changeSet.addedSignals?.length ?? 0) > 0 || (changeSet.removedSignals?.length ?? 0) > 0;
+  return { snapDependenciesChanged, referenceWaveChanged, refreshRuler, refreshGrid, refreshOverlays };
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };
