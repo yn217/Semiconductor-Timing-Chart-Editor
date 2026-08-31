@@ -1,17 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { canonicalFixture } from "../fixtures/canonical.js";
-import { createNewDocument, serializeSaveDocument } from "../../apps/editor/src/file-document-controller.js";
+import { createNewDocumentFromProductTemplate, serializeSaveDocument } from "../../apps/editor/src/file-document-controller.js";
 
 describe("file document controller boundaries", () => {
   it("creates a new document without mutating the base document", () => {
     const base = canonicalFixture();
-    const next = createNewDocument(base, "document_new" );
+    const next = createNewDocumentFromProductTemplate(base, "document_new" );
     expect(next.document.id).toBe("document_new");
     expect(next.document.title).toBe("Untitled Timing Chart");
     expect(next.annotations).toEqual([]);
     expect(next.bookmarks).toEqual([]);
     expect(next.timeGroups).toEqual([]);
     expect(next.transactions).toEqual([]);
+    expect(next.signals).toEqual(base.signals);
+    expect(next.signalGroups).toEqual(base.signalGroups);
+    expect(next.timeline).toEqual(base.timeline);
     expect(base.document.id).not.toBe(next.document.id);
     expect(base.annotations.length).toBeGreaterThanOrEqual(0);
   });

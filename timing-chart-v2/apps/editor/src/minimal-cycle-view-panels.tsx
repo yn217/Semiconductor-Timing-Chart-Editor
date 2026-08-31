@@ -41,7 +41,7 @@ import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorSection } from "./inspector-section.js";
-import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
+import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";

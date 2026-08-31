@@ -34,6 +34,9 @@ test("dirty New uses Cancel and Discard without losing the current document", as
   await page.getByTestId("unsaved-discard").click();
   await expect(dialog).toHaveCount(0);
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Untitled Timing Chart");
+  await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 8");
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
 });
 
 test("dirty Open uses Save before replacing the document", async ({ page }) => {

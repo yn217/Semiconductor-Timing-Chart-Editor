@@ -17,11 +17,11 @@ export function serializeSaveDocument(document: CanonicalDocument): string {
   return serializeCanonicalDocument(document);
 }
 
-/** Pure New boundary: retain the base signal/group layout and clear document-scoped content. */
-export function createNewDocument(base: CanonicalDocument, documentId: string): CanonicalDocument {
+/** Product New boundary: start from the approved product template, never the current user document. */
+export function createNewDocumentFromProductTemplate(template: CanonicalDocument, documentId: string): CanonicalDocument {
   return {
-    ...base,
-    document: { ...base.document, id: documentId, title: "Untitled Timing Chart" },
+    ...template,
+    document: { ...template.document, id: documentId, title: "Untitled Timing Chart" },
     annotations: [],
     bookmarks: [],
     timeGroups: [],

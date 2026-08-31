@@ -40,7 +40,7 @@ import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorSection } from "./inspector-section.js";
-import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
+import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
@@ -843,7 +843,7 @@ export function MinimalCycleView() {
       markOpenPhase("validate-done");
       replaceDocument(parsed, parsed.warnings);
     };
-    newDocument.current = () => { beginOpenMeasurement(); replaceDocument(createNewDocument(cycleDocument, `document_${Date.now()}`)); };
+    newDocument.current = () => { beginOpenMeasurement(); replaceDocument(createNewDocumentFromProductTemplate(cycleDocument, `document_${Date.now()}`)); };
     saveDocument.current = (filename) => {
       const reportSaveFailure = (error: unknown, stage: "validate" | "serialize" | "storage") => {
         const candidate = error as { problems?: unknown };
