@@ -31,11 +31,20 @@
 - Focused browser after transfer: 11 passed (dirty New/Open Cancel/Discard/Save, Save As failure, stale Open ordering, valid/oversized/over-budget Open, atomic replacement, compatibility mode, and external Save storage failure).
 - TypeScript and diff-check: PASS.
 
+## Step 5 — Selection (state authority seam)
+
+- Owner: `apps/editor/src/application/use-selection-owner.ts`
+- The selected signal/multi-signal/group/spacer/annotation/transaction state and synchronous event-handler mirrors now have one React owner.
+- Existing production selection handlers route their reads and writes through the owner while transition-level APIs and Bottom/Inspector synchronization remain the next Step 5 slice.
+- Focused browser: Status/selection and Bottom synchronization passed; the Inspector geometry and Transaction helper failures reproduce the recorded baseline issues (297px vs 300px and the ambiguous Transaction button locator).
+- TypeScript and diff-check: PASS.
+
 ## Current size
 
 - `minimal-cycle-view.tsx`: 2,357 lines / 167,581 bytes
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
+- `use-selection-owner.ts`: 59 lines / 3,061 bytes
 
 ## Next responsibility
 
