@@ -30,6 +30,7 @@ import { ReviewWorkflow } from "./review-workflow.js";
 import { ProblemsPanel } from "./problems-panel.js";
 import { problemMatchesFilter } from "./problem-filter.js";
 import { JsonPanel } from "./json-panel.js";
+import { replaceSelectedJsonObject } from "./json-selection.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -3500,13 +3501,6 @@ function ProblemsPanelLegacy({ diagnostics, onNavigate }: { readonly diagnostics
   const [filter, setFilter] = useState("");
   const visible = diagnostics.filter((item) => problemMatchesFilter(item, filter));
   return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Clear Filter</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th><th>Details</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td><td>{(item.operation || item.source || item.stage || item.recommendation || item.commandId || item.objectId) && <details><summary>Details</summary><dl><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd>{item.commandId && <><dt>Command ID</dt><dd>{item.commandId}</dd></>}{item.objectId && <><dt>Object Type</dt><dd>{item.objectType ?? "—"}</dd><dt>Object ID</dt><dd>{item.objectId}</dd></>}<dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.recommendation && <><dt>Recovery</dt><dd>{item.recommendation}</dd></>}</dl></details>}</td></tr>)}</tbody></table>}</section>;
-}
-
-function replaceSelectedJsonObject(document: CanonicalDocument, value: object, selectedSignal: Signal | undefined, selectedGroup: SignalGroup | undefined, selectedAnnotation: Annotation | undefined, selectedTransaction: Transaction | undefined): CanonicalDocument {
-  if (selectedSignal) return { ...document, signals: document.signals.map((item) => item.id === selectedSignal.id ? value as Signal : item) };
-  if (selectedAnnotation) return { ...document, annotations: document.annotations.map((item) => item.id === selectedAnnotation.id ? value as Annotation : item) };
-  if (selectedGroup) return { ...document, signalGroups: document.signalGroups.map((item) => item.id === selectedGroup.id ? value as SignalGroup : item) };
-  return { ...document, transactions: document.transactions.map((item) => item.id === selectedTransaction?.id ? value as Transaction : item) };
 }
 
 function selectedJsonProblem(code: string, path: string, message: string): DocumentProblem {
