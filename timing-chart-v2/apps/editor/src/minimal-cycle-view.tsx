@@ -565,6 +565,7 @@ export function MinimalCycleView() {
 
     const publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, snapService, snapIndex, rulerBuilds, edgeCounterResolvePasses, currentZoom);
     let currentZoom = 1;
+    let applyZoom: (next: number) => void = () => undefined;
     const timelineRuntime = createTimelineViewportRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
@@ -584,7 +585,7 @@ export function MinimalCycleView() {
         },
         localXToScreenX: (localX) => localX,
       },
-      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: () => currentZoom, setZoom: (next) => { currentZoom = next; }, },
+      viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: () => currentZoom, setZoom: (next) => { applyZoom(next); }, },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch },
       render: { requestRender: (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); }, requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
       lifecycle: { isCurrentEpoch: (epoch) => epoch === documentEpoch },
@@ -613,7 +614,7 @@ export function MinimalCycleView() {
       const metrics = currentViewMetrics();
       return metrics.leftPaneWidth + metrics.frozenPaneWidth;
     };
-    const applyZoom = (next: number) => {
+    applyZoom = (next: number) => {
       currentZoom = applyTimelineZoom(next, {
         rendererHost,
         viewport: viewportElement,
@@ -638,19 +639,13 @@ export function MinimalCycleView() {
       const document = session.getSnapshot().document;
       const start = sourceBoundaryLocalX(document, selected.start) ?? 0;
       const end = sourceBoundaryLocalX(document, selected.end) ?? start + 1;
-      const span = Math.max(1, end - start);
-      const available = Math.max(160, viewportElement.clientWidth - timelineOffset() - 20);
-      applyZoom(available / span);
-      requestAnimationFrame(() => { viewportElement.scrollLeft = Math.max(0, Math.round(start * currentZoom - timelineOffset())); });
+      timelineRuntime.fitSelection(start, end);
     };
     fitAll.current = () => {
       const document = session.getSnapshot().document;
       const start = sourceBoundaryLocalX(document, 0) ?? 0;
       const end = sourceBoundaryLocalX(document, document.timeline.cycleCount) ?? start + 1;
-      const span = Math.max(1, end - start);
-      const available = Math.max(160, viewportElement.clientWidth - timelineOffset() - 20);
-      applyZoom(available / span);
-      requestAnimationFrame(() => { viewportElement.scrollLeft = 0; });
+      timelineRuntime.fitAll(end);
     };
     navigateToCycle.current = (cycle) => {
       const document = session.getSnapshot().document;
@@ -661,10 +656,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.selectedCycle = String(cycle);
       if (cycle === document.timeline.cycleCount) setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
       else setTimelineRange({ start: cycle, end: cycle + 1 });
-      requestAnimationFrame(() => {
-        const target = Math.max(0, Math.round(cycleX * currentZoom - Math.max(0, viewportElement.clientWidth * 0.35)));
-        viewportElement.scrollLeft = target;
-      });
+      timelineRuntime.navigateToCycle(cycle);
       publishState();
     };
     snapTransactionCycle.current = (clientX) => {
