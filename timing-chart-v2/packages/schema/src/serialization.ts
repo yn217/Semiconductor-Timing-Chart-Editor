@@ -56,7 +56,7 @@ export function normalizeDocument(input: unknown): ParseDocumentResult {
 
 export function parseDocument(input: string | unknown): ParseDocumentResult {
   if (typeof input !== "string") return normalizeDocument(input);
-  const inputProblems = validateDocumentInputBytes(new TextEncoder().encode(input).byteLength);
+  const inputProblems = validateDocumentInputBytes(utf8ByteLength(input));
   if (inputProblems.length > 0) return { ok: false, kind: "validation", problems: inputProblems };
   let parsed: unknown;
   try {
@@ -74,6 +74,10 @@ export function parseDocument(input: string | unknown): ParseDocumentResult {
  */
 export function serializeValidatedCanonicalDocument(document: CanonicalDocument, indent = 2): string {
   return `${JSON.stringify(sortObjectKeys(document), null, indent)}\n`;
+}
+
+function utf8ByteLength(value: string): number {
+  return encodeURIComponent(value).match(/%[0-9A-F]{2}|./g)?.length ?? 0;
 }
 
 export function serializeCanonicalDocument(document: CanonicalDocument, indent = 2): string {
