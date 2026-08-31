@@ -6,7 +6,7 @@ import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
 import { ContextMenuPanel, InspectorPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewBottomEditor, MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
 export function MinimalCycleViewNextProbe() {
@@ -17,6 +17,9 @@ export function MinimalCycleViewNextProbe() {
   const [bottomTab, setBottomTab] = useState("Signal");
   const [zoom, setZoom] = useState(1);
   const [selectedCycle, setSelectedCycle] = useState(0);
+  const [nextBottomTab, setNextBottomTab] = useState("Signal");
+  const [followSelection, setFollowSelection] = useState(false);
+  const [bottomPinned, setBottomPinned] = useState(false);
   const viewportRef = useRef<HTMLDivElement>(null);
   const surfaceHostRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
@@ -47,10 +50,10 @@ export function MinimalCycleViewNextProbe() {
     ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
     ribbonUi: <div className="ribbon" data-testid="next-ribbon"><span>Parallel replacement</span></div>,
     signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} onSelect={() => undefined} surfaceHostRef={surfaceHostRef} />,
-    bottomEditorUi: <section data-testid="next-bottom-editor" />,
+    bottomEditorUi: <MinimalCycleViewBottomEditor tab={nextBottomTab} onTabChange={setNextBottomTab} followSelection={followSelection} onFollowSelectionChange={setFollowSelection} pinned={bottomPinned} onPinnedChange={setBottomPinned} />,
     inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} onCommand={(command) => session.execute(command)} onReveal={() => undefined} onCancel={() => undefined} /></aside>,
     dialogsUi: <ContextMenuPanel contextMenu={undefined} hasSelectedClipboard={false} clipboardAvailable={false} hasSelectedEntity={false} hasSelectedSignal={false} hasDeletableSelection={false} copySelectedSignal={() => undefined} cutSelectedSignal={() => undefined} pasteSelectedEntity={() => undefined} duplicateSelectedEntity={() => undefined} moveSelection={() => undefined} setSelectionVisibility={() => undefined} renameSelection={() => undefined} closeContextMenu={() => undefined} deleteSelection={() => undefined} />,
     statusBarUi: <footer className="status-bar" data-testid="next-status">Phase 1 · parallel replacement</footer>,
-  }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle]);
+  }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle, nextBottomTab, followSelection, bottomPinned]);
   return <MinimalCycleViewNext source={source} />;
 }
