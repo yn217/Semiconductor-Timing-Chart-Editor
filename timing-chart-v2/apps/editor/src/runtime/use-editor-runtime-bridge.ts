@@ -41,3 +41,14 @@ export function scheduleDialogFocusRestore(doc: Document, originRef: { current: 
   const frame = requestAnimationFrame(() => { const label = labelRef.current; const origin = originRef.current?.isConnected ? originRef.current : label === null ? null : label === "Properties" ? [...doc.querySelectorAll<HTMLButtonElement>("button")].find((button) => button.textContent?.trim() === label) ?? null : doc.querySelector<HTMLElement>(`button[aria-label='${label}']`); originRef.current = null; labelRef.current = null; if (origin?.isConnected) origin.focus({ preventScroll: true }); });
   return () => cancelAnimationFrame(frame);
 }
+
+export function trapDialogTab(doc: Document, event: KeyboardEvent): boolean {
+  const activeDialog = doc.querySelector<HTMLElement>("[role='dialog'][aria-modal='true']");
+  if (!activeDialog || event.key !== "Tab") return false;
+  const focusable = [...activeDialog.querySelectorAll<HTMLElement>("button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex='-1'])")].filter((element) => element.getClientRects().length > 0);
+  if (focusable.length === 0) return true;
+  const first = focusable[0]!; const last = focusable.at(-1)!;
+  if (event.shiftKey && doc.activeElement === first) { event.preventDefault(); last.focus({ preventScroll: true }); }
+  else if (!event.shiftKey && doc.activeElement === last) { event.preventDefault(); first.focus({ preventScroll: true }); }
+  return true;
+}
