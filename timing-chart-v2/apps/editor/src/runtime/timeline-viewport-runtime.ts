@@ -57,6 +57,7 @@ export type TimelineViewportRuntime = Readonly<{
   refreshGrid: () => void;
   refreshPlayhead: () => void;
   refreshRange: (start: number, end: number) => void;
+  onViewportScroll: () => void;
   onViewportResize: () => void;
 }>;
 
@@ -103,6 +104,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     refreshGrid: () => { render("grid"); },
     refreshPlayhead: () => { render("playhead"); },
     refreshRange: () => { render("range"); context.render.requestOverlayRefresh("range"); },
+    onViewportScroll: () => { assertActive(); if (!context.lifecycle.isCurrentEpoch(documentEpoch)) return; context.render.requestRender("scroll"); },
     onViewportResize: () => { render("resize"); },
   };
 }

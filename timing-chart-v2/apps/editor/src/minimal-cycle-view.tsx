@@ -593,6 +593,7 @@ export function MinimalCycleView() {
     });
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
+      if (reason === "scroll") { syncRulerScroll(rulerElement, viewportElement, currentZoom); return; }
       const document = session.getSnapshot().document;
       if (reason === "ruler") rebuildRuler(document);
       if (reason === "grid") refreshGrid(document);
@@ -942,10 +943,10 @@ export function MinimalCycleView() {
 
     let frame = 0;
     const onScroll = () => {
-      syncRulerContent();
+      timelineRuntime.onViewportScroll();
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        syncRulerContent();
+        timelineRuntime.onViewportScroll();
         const next = buildViewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
         if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
         const previousMountedSignals = projection.mountedSignalIds;
