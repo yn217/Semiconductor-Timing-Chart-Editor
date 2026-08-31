@@ -16,7 +16,6 @@ import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { normalizeSnapDistance } from "./runtime/snap-distance.js";
 import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
 import { preferredSnapKinds } from "./runtime/snap-policy.js";
-import { parseSuppressedPeriods } from "./runtime/clock-input.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import { rangeFromBoundaries } from "./runtime/range-selection.js";
 import { RangeDragController, type RangeDragState } from "./runtime/range-drag.js";
@@ -32,7 +31,6 @@ import { problemMatchesFilter } from "./problem-filter.js";
 import { JsonPanel } from "./json-panel.js";
 import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
-import { presentationCycles } from "./presentation-cycles.js";
 import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
@@ -60,9 +58,9 @@ import { SaveAsDialog } from "./save-as-dialog.js";
 import { ProblemsPanelLegacy } from "./problems-panel-legacy.js";
 import { EventTable } from "./event-table.js";
 import { ClockGeneratorEditor } from "./clock-generator-editor.js";
+import { buildRuler } from "./runtime/build-ruler.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
-import { serializeClockSettings } from "./runtime/clock-settings.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -3775,72 +3773,4 @@ function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand,
       {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
     </>}
   </section>;
-}
-
-function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
-  element.dataset.axisMode = axisMode;
-  if (!geometry || !axisOwnerSignalId) {
-    element.dataset.geometryError = "Time-axis geometry unavailable";
-    element.parentElement?.setAttribute("data-geometry-error", "Time-axis geometry unavailable");
-    element.replaceChildren();
-    return 1;
-  }
-  delete element.dataset.geometryError;
-  element.parentElement?.removeAttribute("data-geometry-error");
-  const rangeBand = element.ownerDocument.createElement("div");
-  rangeBand.dataset.role = "range-selection-ruler-band";
-  rangeBand.dataset.testid = "range-preview";
-  rangeBand.setAttribute("aria-hidden", "true");
-  rangeBand.hidden = true;
-  const ticks: HTMLElement[] = [];
-  const terminalPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
-  const scale = actualScreenScale ?? forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
-  let finalX = 0;
-  for (const display of presentationCycles(mapping.displayCycleCount)) {
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
-    if (!point) continue;
-    const tick = element.ownerDocument.createElement("span");
-    tick.dataset.cycle = String(mapping.labelFor(display));
-    tick.dataset.displayCycle = String(display);
-    tick.dataset.sourceCycle = String(display === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[display]);
-    tick.className = "cycle-tick";
-    tick.style.left = `${point.x * scale}px`;
-    tick.textContent = String(mapping.labelFor(display));
-    ticks.push(tick);
-    finalX = point.x;
-  }
-  const overlays: HTMLElement[] = [];
-  for (const bookmark of document.bookmarks) {
-    const displayCycle = mapping.sourceToDisplay[bookmark.start];
-    if (displayCycle === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-    if (!point) continue;
-    const marker = element.ownerDocument.createElement("span");
-    marker.className = "timeline-marker";
-    marker.dataset.bookmarkId = bookmark.id;
-    marker.style.left = `${point.x * scale}px`;
-    marker.textContent = `◆ ${bookmark.name}`;
-    overlays.push(marker);
-  }
-  for (const group of document.timeGroups.filter((item) => item.presentation?.collapsed)) {
-    const anchorDisplay = (group.end < document.timeline.cycleCount ? mapping.sourceToDisplay[group.end] : undefined)
-      ?? (group.start > 0 ? mapping.sourceToDisplay[group.start - 1] : undefined);
-    if (anchorDisplay === undefined) continue;
-    const point = geometry.find({ signalId: axisOwnerSignalId, cycle: anchorDisplay, point: "cycle-start" })?.point;
-    if (!point) continue;
-    const gap = element.ownerDocument.createElement("span");
-    gap.className = "timeline-gap";
-    gap.dataset.timeGroupId = group.id;
-    gap.style.left = `${point.x * scale}px`;
-    gap.textContent = group.presentation?.foldLabel ?? group.name;
-    overlays.push(gap);
-  }
-  element.replaceChildren(rangeBand, ...ticks, ...overlays);
-  element.dataset.source = "local-geometry";
-  element.parentElement?.setAttribute("data-source", "local-geometry");
-  const targetWidth = forcedScale === undefined && screenWidth !== undefined ? Math.ceil(screenWidth) : Math.ceil((finalX + 24) * scale);
-  element.style.width = `${targetWidth}px`;
-  const widthOwner = element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
-  widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);
-  return scale;
 }
