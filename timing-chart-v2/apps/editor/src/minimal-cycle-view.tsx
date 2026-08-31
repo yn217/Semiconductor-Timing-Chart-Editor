@@ -830,6 +830,7 @@ export function MinimalCycleView() {
       if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
       const mapping = mappingCache.get(document.timeline, document.timeGroups);
       const displayCycle = displayBoundaryForSource(mapping, cycle, document.timeline.cycleCount);
+      if (displayCycle === undefined) return undefined;
       const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
       return point === undefined ? undefined : point.x * screenGeometryScale;
     }
