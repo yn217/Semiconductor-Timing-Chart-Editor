@@ -61,6 +61,7 @@ import { ClockGeneratorEditor } from "./clock-generator-editor.js";
 import { DocumentProperties } from "./document-properties.js";
 import { TimelineToolbar, type SignalEditorProps } from "./timeline-toolbar.js";
 import { LayoutInspector } from "./layout-inspector.js";
+import { AnnotationEditor } from "./annotation-editor.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
@@ -3421,80 +3422,6 @@ function TransactionLanes({ document, zoom, selectedId, getBoundaryX, onSelect, 
   const capture = (event: React.PointerEvent, next: { id: TransactionId; edge: "body" | "start" | "end" }) => { event.stopPropagation(); event.currentTarget.parentElement?.setPointerCapture(event.pointerId); setDrag({ ...next, startX: event.clientX }); };
   const x = (cycle: number) => cycleXs.find((value) => value.cycle === cycle)?.x;
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom } as React.CSSProperties}><div className="transaction-lane-labels">{lanes.map((lane) => <span key={lane}>{lane}</span>)}</div><div className="transaction-track">{lanes.map((lane, laneIndex) => <div className="transaction-lane" key={lane} style={{ top: laneIndex * 28 }}>{cycleXs.map((value) => <i className="transaction-geometry-line" aria-hidden="true" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}{document.transactions.filter((transaction) => (transaction.laneId ?? "lane_0") === lane).map((transaction) => { const startX = x(transaction.start); const endX = x(transaction.end); if (startX === undefined || endX === undefined) return null; return <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: startX, width: endX - startX }} onClick={() => onSelect(transaction.id)} onPointerUp={(event) => finish(event, transaction)}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>; })}</div>)}</div></section>;
-}
-
-function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
-  const [label, setLabel] = useState(annotation.label);
-  const [color, setColor] = useState(annotation.color ?? "#d04a36");
-  const [visible, setVisible] = useState(annotation.visible);
-  const [lineType, setLineType] = useState<NonNullable<Annotation["lineType"]>>(annotation.lineType ?? "straight");
-  const [arrowhead, setArrowhead] = useState<NonNullable<Annotation["arrowhead"]>>(annotation.arrowhead ?? "end");
-  const [labelX, setLabelX] = useState(annotation.labelOffset?.x ?? 0);
-  const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
-  const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
-  const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
-  const [previewRevision, setPreviewRevision] = useState(0);
-  const [importStatus, setImportStatus] = useState("Import annotations JSON");
-  const fileInput = useRef<HTMLInputElement>(null);
-  const importAnnotations = async (file: File) => {
-    try {
-      const parsed: unknown = JSON.parse(await file.text());
-      const items = Array.isArray(parsed) ? parsed : (parsed && typeof parsed === "object" && "annotations" in parsed ? (parsed as { annotations: unknown }).annotations : undefined);
-      if (!Array.isArray(items) || items.some((item) => item === null || typeof item !== "object" || typeof (item as { id?: unknown }).id !== "string")) throw new Error("Expected an annotation array with stable IDs.");
-      const result = onCommand({ id: nextCommandId("annotation_import"), type: "document.replace", document: { ...document, annotations: items as Annotation[] } });
-      if (!result.ok) {
-        setImportStatus(result.problems[0]?.message ?? "Annotation import was rejected.");
-        return;
-      }
-      const first = items[0] as { id?: unknown } | undefined;
-      if (typeof first?.id === "string") onSelect(first.id as AnnotationId);
-      setImportStatus(`Imported ${items.length} annotation${items.length === 1 ? "" : "s"}`);
-    } catch (error) {
-      setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
-    }
-  };
-  return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" data-bottom-target-id={annotation.id} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
-    <div className="editor-tabbar">
-      <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
-      <span className="editor-selection">{annotation.label} · {annotation.type}</span>
-      <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
-      <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
-      <button type="button" onClick={onDelete} data-testid="delete-annotation">Delete</button>
-    </div>
-    <div className="annotation-context-toolbar" role="toolbar" aria-label="Annotation operations" data-testid="annotation-context-toolbar">
-      <button type="button" aria-label="Create context annotation" onClick={() => onCreate("text")}>＋ Add Annotation</button>
-      <button type="button" onClick={() => onDuplicate(annotation)}>Duplicate</button>
-      <button type="button" onClick={onDelete}>Delete</button>
-      <button type="button" onClick={() => setPreviewRevision((value) => value + 1)}>⟳ Preview Update</button>
-      <button type="button" onClick={() => downloadText(JSON.stringify(annotations, null, 2), "annotations.json")}>Export</button>
-      <button type="button" onClick={() => fileInput.current?.click()}>Import</button>
-      <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import annotations" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAnnotations(file); event.currentTarget.value = ""; }} />
-      <output data-testid="annotation-preview-status">Preview {previewRevision > 0 ? `updated ${previewRevision}` : "ready"}</output>
-      <output data-testid="annotation-import-status">{importStatus}</output>
-    </div>
-    <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} />
-    {problem && <div className="editor-problem" role="alert">{problem}</div>}
-    <form className="annotation-properties" onSubmit={(event) => {
-      event.preventDefault();
-      onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, label, visible, color, ...(annotation.type === "arrow" ? { lineType, arrowhead } : {}), ...(["timingRegion", "ghostTrace"].includes(annotation.type) ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
-    }}>
-      <label>Label<input aria-label="Annotation label" value={label} onChange={(event) => setLabel(event.target.value)} /></label>
-      <label>Color<input aria-label="Annotation color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label>
-      <label className="check-label"><input aria-label="Annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Visible</label>
-      {(["timingRegion", "ghostTrace"] as const).includes(annotation.type as "timingRegion") && <label>Opacity<input aria-label="Annotation opacity" type="number" min="0" max="1" step="0.05" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} /></label>}
-      {annotation.type === "ghostTrace" && <><div className="property-row"><span>Source Signal</span><b data-testid="ghost-source-signal">{annotation.sourceSignalId ?? "Missing"}</b></div><label>Cycle Offset<input aria-label="Ghost Trace cycle offset" type="number" step="1" value={traceOffsetCycles} onChange={(event) => setTraceOffsetCycles(Number(event.target.value))} /></label></>}
-      {annotation.type === "arrow" && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}
-      <button type="submit" data-testid="apply-annotation-properties">Apply</button>
-      <button type="button" onClick={() => onCommand({ id: nextCommandId("annotation_reset_offsets"), type: "annotation.resetOffsets", annotationId: annotation.id })}>Reset offsets</button>
-    </form>
-    <form className="annotation-properties" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("annotation_label_offset"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: labelX, y: labelY } }); }}>
-      <strong>Label offset</strong>
-      <label>X<input aria-label="Annotation label X" type="number" value={labelX} onChange={(event) => setLabelX(Number(event.target.value))} /></label>
-      <label>Y<input aria-label="Annotation label Y" type="number" value={labelY} onChange={(event) => setLabelY(Number(event.target.value))} /></label>
-      <button type="submit">Move label</button>
-      <span className="annotation-hint">Arrow keys nudge 1 px; Shift+Arrow nudges 10 px. Drag endpoints to snap.</span>
-    </form>
-  </section>;
 }
 
 function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel }: SignalEditorProps) {
