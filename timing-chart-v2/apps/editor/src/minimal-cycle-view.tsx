@@ -61,6 +61,7 @@ import { ProblemsPanelLegacy } from "./problems-panel-legacy.js";
 import { EventTable } from "./event-table.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
+import { serializeClockSettings } from "./runtime/clock-settings.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -3790,7 +3791,7 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
     setGeneratorError("");
   }, [signal.id, signal.generator, signal.edgeCounter]);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
-  const exportSettings = () => { const blob = new Blob([JSON.stringify({ signalId: signal.id, name: signal.name, generator, edgeCounter }, null, 2)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
+  const exportSettings = () => { const blob = new Blob([serializeClockSettings(signal.id, signal.name, generator, edgeCounter)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
   const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
