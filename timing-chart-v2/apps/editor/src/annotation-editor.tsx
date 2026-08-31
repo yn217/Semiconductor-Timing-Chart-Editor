@@ -79,5 +79,3 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     </form>
   </section>;
 }
-
-
