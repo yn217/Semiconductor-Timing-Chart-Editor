@@ -14,6 +14,7 @@ controllers are extracted incrementally.
 | Comment Row editor | `comment-row-editor.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Dialog focus trapping and restoration | `dialog-focus-loop.ts` | view-only focus lifecycle | Phase 1 extracted utility |
 | Annotation list presentation | `annotation-list.tsx` | parent selection callback | Phase 1 extracted leaf |
+| Problems filter projection | `problem-filter.ts` | view-only diagnostic projection | Phase 1 extracted utility |
 
 Rules:
 
