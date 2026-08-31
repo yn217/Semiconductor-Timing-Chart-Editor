@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, rebuildRulerPresentation, refreshGridPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, createEditorRuntimeBridge, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -555,22 +555,7 @@ export function MinimalCycleView() {
       refreshGridPresentation(gridElement, document, geometryMaps, mappingCache, gridEnabledRef.current, projection.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale);
     };
     refreshPlayhead.current = () => {
-      const cycle = selectedCycleRef.current;
-      const playheadX = sourceBoundaryLocalX(session.getSnapshot().document, cycle);
-      let playhead = rulerElement.querySelector<HTMLElement>("[data-role='playhead']");
-      if (playheadX === undefined) {
-        playhead?.remove();
-        return;
-      }
-      if (!playhead) {
-        playhead = rulerElement.ownerDocument.createElement("span");
-        playhead.dataset.role = "playhead";
-        playhead.dataset.testid = "playhead";
-        playhead.setAttribute("aria-label", "Playhead");
-        rulerElement.append(playhead);
-      }
-      playhead.dataset.playheadCycle = String(cycle);
-      playhead.style.left = `${playheadX}px`;
+      refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => sourceBoundaryLocalX(session.getSnapshot().document, cycle));
     };
     const refreshRangeSelectionBandNow = () => {
       const band = viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']");
