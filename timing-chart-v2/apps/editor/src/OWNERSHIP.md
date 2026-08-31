@@ -47,4 +47,5 @@ Rules:
 | `inline-name-input.tsx` | Transient name draft, validation feedback, and rename command boundary | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `runtime/display-boundary.ts` | Shared source-cycle to display-boundary mapping helper | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `runtime/snap-index.ts` | Shared semantic snap-index construction from projection and local geometry | `minimal-cycle-view.tsx` composition | 2026-08-31 |
+| `runtime/annotation-overlays.ts` | Annotation anchor, measurement, and ghost-trace overlay projection | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `save-as-dialog.tsx` | Save As filename draft, validation, and focus-loop UI | `minimal-cycle-view.tsx` composition | 2026-08-31 |
