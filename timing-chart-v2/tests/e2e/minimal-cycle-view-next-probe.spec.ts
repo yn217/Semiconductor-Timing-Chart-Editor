@@ -13,6 +13,10 @@ test("parallel replacement has an isolated opt-in mount", async ({ page }) => {
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-revision", "0");
   await page.getByTestId("next-cycle-next").click();
   await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-selected-cycle", "1");
+  await page.getByTestId("next-fit-selection").click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-zoom", "1.5");
+  await page.getByTestId("next-fit-all").click();
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-next-zoom", "1");
   await expect(page.getByTestId("next-signal-tree-canvas")).toBeVisible();
   await expect(page.getByRole("treeitem").first()).toBeVisible();
   await expect(page.getByTestId("next-cycle-viewport")).toBeVisible();

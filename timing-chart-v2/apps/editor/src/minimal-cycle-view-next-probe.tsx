@@ -43,7 +43,7 @@ export function MinimalCycleViewNextProbe() {
     viewportRef, surfaceHostRef, rulerRef, gridLayerRef,
     zoom, gridEnabled: true, snapEnabled: false, rulerEnabled: true, selectedCycle,
     changeZoom: (delta: number) => setZoom((value) => Math.max(0.25, Math.min(4, value + delta))), setZoomAbsolute: setZoom, fitAll: () => setZoom(1),
-    fitSelection: () => setZoom(1.5), navigateToCycle: setSelectedCycle,
+    fitSelection: () => setZoom(1.5), navigateToCycle: (cycle: number) => setSelectedCycle(Math.max(0, Math.min(snapshot.document.timeline.cycleCount - 1, cycle))),
     transactionBoundaryX: () => undefined, snapTransactionCycle: () => undefined,
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
     titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
