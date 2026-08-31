@@ -57,6 +57,7 @@ import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { InlineNameInput } from "./inline-name-input.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
+import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -3998,20 +3999,6 @@ function buildSnapIndex(document: CanonicalDocument, projection: RenderProjectio
     sourceCycleForRenderedCycle: (renderedCycle) => renderedCycle === mapping.displayCycleCount ? document.timeline.cycleCount : mapping.displayToSource[renderedCycle],
     renderedCycleForSourceCycle: (sourceCycle) => mapping.sourceToDisplay[sourceCycle],
   });
-}
-
-function displayBoundaryForSource(mapping: DisplayTimeMapping, sourceCycle: number, sourceCycleCount: number): number | undefined {
-  if (!Number.isInteger(sourceCycle) || sourceCycle < 0 || sourceCycle > sourceCycleCount) return undefined;
-  if (sourceCycle === sourceCycleCount) return mapping.displayCycleCount;
-  const direct = mapping.sourceToDisplay[sourceCycle];
-  if (direct !== undefined) return direct;
-  // A folded source cycle has no rendered slot. Resolve the boundary to the
-  // next visible display boundary owned by the same shared mapping.
-  for (let source = sourceCycle + 1; source < sourceCycleCount; source += 1) {
-    const display = mapping.sourceToDisplay[source];
-    if (display !== undefined) return display;
-  }
-  return mapping.displayCycleCount;
 }
 
 function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
