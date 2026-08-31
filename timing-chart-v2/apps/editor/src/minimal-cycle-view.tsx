@@ -35,6 +35,7 @@ import { selectedJsonProblem } from "./json-problems.js";
 import { presentationCycles } from "./presentation-cycles.js";
 import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
+import { nextEntityId } from "./entity-id.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -4101,27 +4102,6 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       <button type="submit" data-testid="add-signal-event">Add / replace event</button>
     </form>
   </div>;
-}
-
-let entitySequence = 0;
-function nextEntityId(scope: "bookmark" | "time" | "annotation" | "transaction" | "signal" | "group" | "commentRow" | "spacer", document: CanonicalDocument): string {
-  const used = new Set<string>([
-    ...document.signals.map((item) => item.id),
-    ...document.signalGroups.map((item) => item.id),
-    ...document.signalGroups.flatMap((item) => item.spacers?.map((spacer) => spacer.id) ?? []),
-    ...document.annotations.map((item) => item.id),
-    ...document.transactions.map((item) => item.id),
-    ...document.bookmarks.map((item) => item.id),
-    ...document.timeGroups.map((item) => item.id),
-    ...document.timeline.labelAnchors.map((item) => item.id),
-    ...document.constraints.map((item) => item.id),
-  ]);
-  let candidate: string;
-  do {
-    entitySequence += 1;
-    candidate = `${scope}_phase9_${entitySequence}`;
-  } while (used.has(candidate));
-  return candidate;
 }
 
 const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
