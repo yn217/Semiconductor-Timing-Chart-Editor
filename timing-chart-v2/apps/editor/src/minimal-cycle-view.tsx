@@ -550,7 +550,9 @@ export function MinimalCycleView() {
       timeAxis = presentation.timeAxis;
       screenGeometryScale = presentation.screenGeometryScale;
       rulerInitialized = presentation.rulerInitialized;
-      if (reason !== "range" && reason !== "playhead") renderer.update(projection);
+      // Timeline presentation refreshes are view-only. The canonical command path
+      // already submits the changed projection once; replaying that projection for
+      // ruler/grid/zoom refreshes would regenerate the same WaveDrom rows.
     };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
