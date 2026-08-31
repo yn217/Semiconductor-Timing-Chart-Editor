@@ -6,7 +6,7 @@
 #
 # Last reconciled by ChatGPT: 2026-08-31
 # GitHub Open Issue count at reconciliation: 109
-# Observed production HEAD: 3d3b7724c3722bb4a8fe36416ecb605dc65b35c8
+# Observed production HEAD: c77dd21b47b0964e64395df9fa0f4303cce04a0e
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -21,7 +21,7 @@
 # - Skip Closed issues.
 # - For the first Open issue, inspect current main before changing code.
 # - If its full Issue-level acceptance is already satisfied, leave a concise implementation-audit note, close it, and continue.
-# - If PARTIAL/MISSING, implement one bounded production gap, focused-test, commit/push main.
+# - If PARTIAL/MISSING, implement the issue's prescribed production step, focused-test, commit/push main.
 # - Post implementation/result evidence directly to the source Issue, not to #298.
 # - Stay on the same Issue until all Issue-level acceptance is satisfied, unless BLOCKED/META/EVIDENCE_ONLY.
 # - Open Issue does not imply missing implementation.
@@ -44,8 +44,9 @@
 # A control-branch update must never be treated as main divergence.
 
 # ==== OPERATIONAL BLOCKER — REDUCE MINIMALCYCLEVIEW HOT FILE FIRST ====
-# This is intentionally first because the ~405 KB monolith is causing Codex/LLM read/edit instability and increases blast radius for nearly every subsequent feature task.
-# Execute #258 as a sequence of small behavior-preserving extraction commits; do not rewrite the whole editor at once.
+# #258 now has a FIXED coarse-cut execution plan pinned to main c77dd21 (3915 lines).
+# Do NOT continue 10-50 line leaf extraction before the prescribed coarse cuts finish.
+# If line numbers drift on newer main, locate the same start/end anchors and move the same block; do not re-plan architecture.
 258
 
 # ==== NEXT EXECUTABLE PRODUCTION / CLOSURE WORK ====
@@ -60,21 +61,51 @@
 311
 
 # ==== CACHED NEXT-ISSUE CONTEXT (fallback when live Issue read is unavailable) ====
-# Issue #258 — Decompose MinimalCycleView monolith into explicit UI/runtime owners without changing behavior
-# Current main: timing-chart-v2/apps/editor/src/minimal-cycle-view.tsx is about 405 KB and remains the main app-layer hot file.
-# Goal: reduce it to a composition/orchestration shell while preserving SemanticCommand/History/Canonical/Renderer contracts.
-# Required procedure, in order:
-#   Phase 0: baseline + OWNERSHIP.md + complexity guard.
-#   Phase 1: extract fixtures and low-risk leaf UI (CommentRowEditor, ClockGeneratorEditor, EventTable, Legend, AI panel, etc.).
-#   Phase 2: extract Bottom/Inspector/Signal Tree/Ribbon/major editor surfaces without changing semantics.
-#   Phase 3: extract diagnostics/result plumbing.
-#   Phase 4: extract viewport/timeline/ruler/grid/zoom/fit/navigation runtime; coordinate with #300/#279 and keep Ruler DOM presentation-only.
-#   Phase 5: extract range/annotation/transaction/tree/keyboard interaction lifecycle with explicit attach/detach/cancel ownership.
-#   Phase 6: extract New/Open/Save/document-epoch coordination using existing file-document helpers.
-#   Phase 7: leave MinimalCycleView primarily as typed composition.
-# Size ratchet guidance: current ~405 KB -> Phase 1-3 <300 KB -> Phase 4-6 <180 KB -> closure preferably <100 KB, unless remaining ownership is explicitly justified.
-# Per bounded extraction: focused test + git diff --check + OWNERSHIP.md update when owner changes + commit/push. Do not mix unrelated feature fixes.
-# Home DOM/CSS, Golden/reference/threshold/mask remain unchanged.
+# Issue #258 — FIXED EXECUTION PLAN: Decompose MinimalCycleView without re-planning
+# Pin: main c77dd21b47b0964e64395df9fa0f4303cce04a0e, minimal-cycle-view.tsx = 3915 lines.
+# Execute in this order. Local import/export/type/props plumbing is allowed; changing the split order/boundaries is not.
+#
+# CUT-0 fixture:
+#   lines 77-169, anchor `const clock: ClockSignal = {` through v1ReferenceDocument closing `};`
+#   -> apps/editor/src/fixtures/cycle-reference-documents.ts
+#
+# CUT-A runtime bridge — highest priority:
+#   lines 596-1954
+#   start anchor: mount useEffect with `const rendererHost = host.current; const viewportElement = viewport.current; const rulerElement = ruler.current;`
+#   end anchor: `renderCoordinator.dispose(); } ; }, []);`
+#   -> apps/editor/src/runtime/use-editor-runtime-bridge.ts
+#   Move the whole ~1359-line runtime/mount/listener/render/geometry/open/zoom/range/annotation/tree block first. A temporarily large typed input is acceptable. Do not split it internally yet.
+#
+# CUT-B editor actions:
+#   lines 1969-2742
+#   start anchor: `const createSelectedAnnotation = (annotation: Annotation) => {`
+#   end anchor: `const applyWorkspacePreset = (preset: WorkspacePreset) => { ... };`
+#   -> apps/editor/src/runtime/use-editor-actions.ts
+#   Move selection/clipboard/Bottom/Problems navigation/pane resize/pending file actions/workspace actions as one block before fine-grained cleanup.
+#
+# CUT-C shell JSX:
+#   lines 2743-2900
+#   start anchor: `return <main className="editor-shell"`
+#   end anchor: `</main>; }`
+#   -> apps/editor/src/editor-shell-view.tsx
+#   Preserve exact DOM/test IDs/Home structure. A temporarily large props contract is acceptable; do not redesign during move.
+#
+# CUT-D top-level presentation after MinimalCycleView:
+#   D1 lines 2902-2961 `function DocumentProperties(` -> apps/editor/src/document-properties.tsx
+#   D2 lines 2964-3178 `function Ribbon(` -> apps/editor/src/ribbon/editor-ribbon.tsx; Home DOM/CSS completely frozen
+#   D3 lines 3180-3848 `function InspectorPanel(` through component before buildRuler -> apps/editor/src/editor-secondary-surfaces.tsx temporarily
+#   D4 lines 3849-3915 `function buildRuler(` -> apps/editor/src/runtime/ruler-view.ts
+#
+# Per CUT: move -> minimal compile plumbing -> focused tests -> git diff --check -> OWNERSHIP.md -> commit/push -> report remaining size -> next CUT.
+# Do not leave #258 for another issue between CUTs. Do not mix feature fixes or Golden changes.
+#
+# SECOND PASS only after CUT-0/A/B/C/D are done:
+#   use-editor-runtime-bridge -> viewport-controller, interaction-controller, document-lifecycle-controller, render-coordinator
+#   use-editor-actions -> selection-actions, clipboard-actions, bottom-editor-actions, file-action-controller
+#   editor-secondary-surfaces -> inspector-panel, advanced-json-panel, transaction-lanes, signal-editor, clock-generator-editor
+#   editor-ribbon -> optional non-Home tab subcomponents; Home stays frozen
+# Target guidance after second pass: ordinary UI <=500 lines preferred, runtime controller <=800 lines preferred.
+# Preserve SemanticCommand/History/Canonical/Renderer ownership, stable DOM/test IDs, Home, Golden/reference/threshold/mask.
 # Source: https://github.com/yn217/Semiconductor-Timing-Chart-Editor/issues/258
 #
 # Issue #196 — Transaction Bottom Editor must distinguish Create vs Edit
