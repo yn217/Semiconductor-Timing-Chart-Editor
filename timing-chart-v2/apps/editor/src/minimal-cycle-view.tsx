@@ -549,7 +549,7 @@ export function MinimalCycleView() {
       screenGeometryScale = rebuilt.scale;
       rulerInitialized = true;
       markOpenPhase("ruler-painted");
-      syncPresentationScale();
+      syncPresentationScaleDom(viewportElement, rendererHost, rulerViewportElement, currentZoom, screenGeometryScale);
     };
     const refreshGrid = (document: CanonicalDocument) => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
@@ -607,12 +607,6 @@ export function MinimalCycleView() {
     };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
-    function syncPresentationScale() {
-      // The measured screen-geometry scale is shared by the ruler, overlays,
-      // and snap projection. WaveDrom text consumes the same derived value to
-      // undo only the non-uniform viewport stretch applied to the SVG root.
-      syncPresentationScaleDom(viewportElement!, rendererHost!, rulerViewportElement!, currentZoom, screenGeometryScale);
-    }
     const currentViewMetrics = () => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth, zoom: currentZoom });
       return viewMetricsOwner.snapshot();
@@ -632,7 +626,7 @@ export function MinimalCycleView() {
         inspectorWidth: viewMetricsOwner.snapshot().inspectorWidth,
         viewportWidth: globalThis.innerWidth,
         timelineOffset: timelineOffset(),
-        onPresentationScale: () => syncPresentationScale(),
+        onPresentationScale: (zoom) => syncPresentationScaleDom(viewportElement, rendererHost, rulerViewportElement, zoom, screenGeometryScale),
         onZoom: (zoom) => {
           viewMetricsOwner.update({ zoom, viewportWidth: viewportElement.clientWidth });
           startTransition(() => setZoom(zoom));
