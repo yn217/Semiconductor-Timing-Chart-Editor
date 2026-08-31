@@ -1,6 +1,7 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
+import { CommandHistorySession } from "@timing-chart-v2/history";
 import type {
   AnnotationId,
   GroupId,
@@ -80,6 +81,10 @@ export interface MinimalCycleApplicationPort {
   readonly diagnostics: Readonly<{
     refresh: () => void;
   }>;
+}
+
+export function createMinimalCycleApplicationSession(initial: CanonicalSnapshot["document"]): CommandHistorySession {
+  return new CommandHistorySession(initial);
 }
 
 export function createMinimalCycleApplicationPort(

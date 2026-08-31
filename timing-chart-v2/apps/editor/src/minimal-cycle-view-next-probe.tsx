@@ -1,16 +1,16 @@
 import { useMemo, useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CommandId } from "@timing-chart-v2/schema";
-import { CommandHistorySession } from "@timing-chart-v2/history";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
+import { createMinimalCycleApplicationSession } from "./minimal-cycle-view-application.js";
 import { ContextMenuPanel, InspectorPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewBottomEditor, MinimalCycleViewNextStatusBar, MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
 export function MinimalCycleViewNextProbe() {
-  const session = useMemo(() => new CommandHistorySession(cycleDocument), []);
+  const session = useMemo(() => createMinimalCycleApplicationSession(cycleDocument), []);
   const [, refresh] = useState(0);
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [viewMode, setViewMode] = useState("Cycle");
