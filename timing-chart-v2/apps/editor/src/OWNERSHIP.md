@@ -35,6 +35,7 @@ controllers are extracted incrementally.
 | Inspector clock editor | `inspector-clock-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
 | Timeline / viewport runtime boundary | `runtime/timeline-viewport-runtime.ts` | parent application runtime callback; view-only geometry/navigation | Step 1 owner transfer |
 | Ribbon composition | `minimal-cycle-view-ribbon.tsx` | parent callback / existing command boundary | Physical Group 3 extraction |
+| Panels / editor composition | `minimal-cycle-view.tsx` | parent application command boundary | Pending Group 4 extraction |
 
 Rules:
 
