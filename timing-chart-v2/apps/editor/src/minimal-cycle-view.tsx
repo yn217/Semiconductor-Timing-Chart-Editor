@@ -1334,7 +1334,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.rangePreviewCycle = String(cycle);
       rendererHost.dataset.rangeDrag = "active";
       refreshRangePreview();
-      refreshPlayhead.current();
+      timelineRuntime.refreshPlayhead();
       event.preventDefault();
     };
     const onRangePointerUp = (event: PointerEvent) => {
@@ -1349,7 +1349,7 @@ export function MinimalCycleView() {
         delete rendererHost.dataset.rangePreview;
         delete rendererHost.dataset.rangePreviewCycle;
         refreshRangePreview();
-        refreshPlayhead.current();
+        timelineRuntime.refreshPlayhead();
         suppressCanvasClick = true;
         suppressRulerClick = dragSurface === "ruler";
         const clickCycle = dragSurface === "ruler" ? cycle : cycleBoundaryAtX(event.clientX);
@@ -1370,7 +1370,7 @@ export function MinimalCycleView() {
       delete rendererHost.dataset.rangePreview;
       delete rendererHost.dataset.rangePreviewCycle;
       refreshRangePreview();
-      refreshPlayhead.current();
+      timelineRuntime.refreshPlayhead();
       rangeDragController.clear();
       suppressCanvasClick = true;
       suppressRulerClick = dragSurface === "ruler";
