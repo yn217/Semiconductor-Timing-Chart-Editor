@@ -39,6 +39,7 @@ import { nextEntityId } from "./entity-id.js";
 import { resolveAnchorPoint } from "./resolve-anchor-point.js";
 import { createAnnotation } from "./create-annotation.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
+import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
@@ -734,7 +735,7 @@ export function MinimalCycleView() {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
       const metrics = viewMetricsOwner.snapshot();
       timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
-      renderGeometryGrid(gridElement, timeAxis.geometry, document, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode);
+      renderGeometryGrid(gridElement, timeAxis.geometry, timeAxis.ownerSignalId, gridEnabledRef.current, projection.totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth), screenGeometryScale, timeAxis.mode);
     };
     refreshPlayhead.current = () => {
       const cycle = selectedCycleRef.current;
@@ -3687,28 +3688,6 @@ function SaveAsDialog({ defaultName, restoreFocusRef, onSave, onClose }: { reado
     if (!trimmed || trimmed === "." || trimmed === ".." || /[\\/:*?"<>|]/.test(trimmed)) { setError("Enter a valid filename."); return; }
     onSave(trimmed);
   }}><header><h2>Save As</h2><button type="button" aria-label="Close Save As" onClick={onClose}><EditorIcon name="close" /></button></header><label>Filename<input aria-label="Save As filename" value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoFocus /></label>{error && <output role="alert">{error}</output>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="save-as-submit">Save</button></footer></form></div>;
-}
-
-function renderGeometryGrid(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, visible: boolean, height: number, mapping: DisplayTimeMapping, screenWidth?: number, scaleOverride?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): void {
-  element.dataset.gridEnabled = String(visible);
-  element.dataset.axisMode = axisMode;
-  element.style.height = `${height}px`;
-  if (!geometry || !axisOwnerSignalId) return;
-  const terminal = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point.x ?? 0;
-  const scale = scaleOverride ?? (screenWidth === undefined || terminal <= 0 ? 1 : screenWidth / Math.max(1, terminal + 24));
-  const lines: HTMLElement[] = [];
-  for (const displayCycle of presentationCycles(mapping.displayCycleCount)) {
-    const anchor = geometry.find({ signalId: axisOwnerSignalId, cycle: displayCycle, point: "cycle-start" });
-    if (!anchor) continue;
-    const line = element.ownerDocument.createElement("span");
-    line.dataset.role = "geometry-grid-line";
-    line.className = "geometry-grid-line";
-    line.dataset.cycle = String(mapping.labelFor(displayCycle));
-    line.style.left = `${anchor.point.x * scale}px`;
-    line.style.height = `${height}px`;
-    lines.push(line);
-  }
-  element.replaceChildren(...lines);
 }
 
 function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
