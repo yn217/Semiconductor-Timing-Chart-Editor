@@ -1011,6 +1011,8 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await inspector.getByTestId("apply-inspector-edge-counter").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-discard").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
