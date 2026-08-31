@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
+import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { CommandId } from "@timing-chart-v2/schema";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
@@ -26,6 +27,7 @@ export function MinimalCycleViewNextProbe() {
   const surfaceHostRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
   const gridLayerRef = useRef<HTMLDivElement>(null);
+  const localGeometryRef = useRef<LocalGeometryMap | undefined>(undefined);
   const registry = useMemo(() => new UiCommandRegistry(), []);
   const snapshot = session.getSnapshot();
   useEffect(() => {
@@ -35,7 +37,7 @@ export function MinimalCycleViewNextProbe() {
     const adapter = new ProductionWaveDromAdapter();
     const waveJson = adapter.toWaveJson({ signal, cycleCount: snapshot.document.timeline.cycleCount });
     void adapter.renderWave(signal.id, waveJson, owner).then((rendered) => {
-      adapter.extractLocalGeometry(rendered);
+      localGeometryRef.current = adapter.extractLocalGeometry(rendered);
       owner.dataset.geometryReady = "true";
     }).catch((error: unknown) => {
       owner.dataset.waveError = error instanceof Error ? error.message : "WaveDrom render failed";
@@ -60,7 +62,7 @@ export function MinimalCycleViewNextProbe() {
     zoom, gridEnabled: true, snapEnabled: false, rulerEnabled: true, selectedCycle,
     changeZoom: (delta: number) => setZoom((value) => Math.max(0.25, Math.min(4, value + delta))), setZoomAbsolute: setZoom, fitAll: () => setZoom(1),
     fitSelection: () => setZoom(1.5), navigateToCycle: (cycle: number) => setSelectedCycle(Math.max(0, Math.min(snapshot.document.timeline.cycleCount - 1, cycle))),
-    transactionBoundaryX: () => undefined, snapTransactionCycle: () => undefined,
+    transactionBoundaryX: (cycle: number) => { const signal = snapshot.document.signals[0]; return signal === undefined ? undefined : localGeometryRef.current?.find({ signalId: signal.id, cycle, point: "cycle-start" })?.point.x; }, snapTransactionCycle: () => undefined,
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
     titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
     ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
