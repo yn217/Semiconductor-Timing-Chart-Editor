@@ -535,10 +535,6 @@ export function MinimalCycleView() {
     let edgeCounterResolvePasses = 0;
     let screenGeometryScale = 1;
     let rulerInitialized = false;
-    const refreshOverlays = (document: CanonicalDocument) => {
-      refreshRendererOverlays(renderer, host, document, projection, geometryMaps, mappingCache, screenGeometryScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current);
-      edgeCounterResolvePasses += 1;
-    };
     const rebuildRuler = (document: CanonicalDocument) => {
       rulerBuilds += 1;
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
@@ -590,7 +586,7 @@ export function MinimalCycleView() {
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: () => currentZoom, setZoom: (next) => { applyZoom(next); }, },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererOverlays(renderer, host, session.getSnapshot().document, projection, geometryMaps, mappingCache, screenGeometryScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: async () => undefined },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch as number) },
     });
     timelineRuntimeRef.current = timelineRuntime;
