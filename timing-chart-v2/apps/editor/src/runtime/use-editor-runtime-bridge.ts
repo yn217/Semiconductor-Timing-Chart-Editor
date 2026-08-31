@@ -189,6 +189,21 @@ export function resolveTransactionSnapCycle(context: {
   return snap?.anchor.cycle;
 }
 
+export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }): void {
+  void renderer.whenIdle().then(() => {
+    if (!host.isConnected) return;
+    refresh.ruler();
+    refresh.range();
+    refresh.playhead();
+    refresh.grid();
+    refresh.zoom();
+    refresh.overlays();
+    refresh.collectErrors();
+    refresh.publish();
+    host.dataset.cycleViewReady = "true";
+  });
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };

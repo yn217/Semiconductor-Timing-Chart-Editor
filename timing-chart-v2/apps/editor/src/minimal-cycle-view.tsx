@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -599,17 +599,15 @@ export function MinimalCycleView() {
     });
     publishState();
 
-    void renderer.whenIdle().then(() => {
-      if (!rendererHost.isConnected) return;
-      timelineRuntime.refreshRuler();
-      timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
-      timelineRuntime.refreshPlayhead();
-      timelineRuntime.refreshGrid();
-      timelineRuntime.setZoom(currentZoom);
-      timelineRuntime.refreshOverlays();
-      collectWaveErrors();
-      publishState();
-      rendererHost.dataset.cycleViewReady = "true";
+    scheduleInitialTimelineRefresh(renderer, rendererHost, {
+      ruler: () => timelineRuntime.refreshRuler(),
+      range: () => timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end),
+      playhead: () => timelineRuntime.refreshPlayhead(),
+      grid: () => timelineRuntime.refreshGrid(),
+      zoom: () => timelineRuntime.setZoom(currentZoom),
+      overlays: () => timelineRuntime.refreshOverlays(),
+      collectErrors: () => collectWaveErrors(),
+      publish: publishState,
     });
 
     const upsertDiagnostic = (predicate: (item: DocumentProblem) => boolean, next: DocumentProblem | undefined) => {
