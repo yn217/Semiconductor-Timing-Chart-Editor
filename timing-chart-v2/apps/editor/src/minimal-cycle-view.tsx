@@ -547,11 +547,6 @@ export function MinimalCycleView() {
       markOpenPhase("ruler-painted");
       syncPresentationScaleDom(viewportElement, rendererHost, rulerViewportElement, currentZoom, screenGeometryScale);
     };
-    const refreshGrid = (document: CanonicalDocument) => {
-      viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
-      const metrics = viewMetricsOwner.snapshot();
-      refreshGridPresentation(gridElement, document, geometryMaps, mappingCache, gridEnabledRef.current, projection.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale);
-    };
     refreshPlayhead.current = () => {
       refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle));
     };
@@ -595,7 +590,11 @@ export function MinimalCycleView() {
       if (reason === "scroll") { syncRulerScroll(rulerElement, viewportElement, currentZoom); return; }
       const document = session.getSnapshot().document;
       if (reason === "ruler") rebuildRuler(document);
-      if (reason === "grid") refreshGrid(document);
+      if (reason === "grid") {
+        viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
+        const metrics = viewMetricsOwner.snapshot();
+        refreshGridPresentation(gridElement, document, geometryMaps, mappingCache, gridEnabledRef.current, projection.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale);
+      }
       if (reason === "playhead") refreshPlayhead.current();
       if (reason === "range") refreshRangeSelectionBand.current();
       if (reason === "resize") applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
