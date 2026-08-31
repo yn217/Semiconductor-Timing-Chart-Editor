@@ -70,3 +70,32 @@ test("Save As failure keeps the exact revision dirty and leaves the dialog open"
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
   await expect(dialog.getByRole("alert")).toHaveText("Save failed. The document remains modified.");
 });
+
+test("concurrent Open requests are latest-request-wins", async ({ page }) => {
+  await page.addInitScript(() => {
+    const nativeText = Blob.prototype.text;
+    const resolvers: Record<string, () => void> = {};
+    Object.assign(globalThis, { __openReadResolvers: resolvers });
+    File.prototype.text = function () {
+      const file = this;
+      return new Promise<string>((resolve, reject) => {
+        resolvers[file.name] = () => { void nativeText.call(file).then(resolve, reject); };
+      });
+    };
+  });
+  await page.goto("/");
+  const input = page.locator("input[accept='.json,.tcd']");
+  const documentA = canonicalFixture();
+  const documentB = canonicalFixture();
+  documentA.document.title = "Slow A";
+  documentB.document.title = "Latest B";
+
+  await input.setInputFiles({ name: "slow-a.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(documentA)) });
+  await input.setInputFiles({ name: "latest-b.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(documentB)) });
+  await page.evaluate(() => (globalThis as typeof globalThis & { __openReadResolvers: Record<string, () => void> }).__openReadResolvers["latest-b.tcd"]?.());
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Latest B");
+  await page.evaluate(() => (globalThis as typeof globalThis & { __openReadResolvers: Record<string, () => void> }).__openReadResolvers["slow-a.tcd"]?.());
+  await page.waitForTimeout(100);
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Latest B");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});

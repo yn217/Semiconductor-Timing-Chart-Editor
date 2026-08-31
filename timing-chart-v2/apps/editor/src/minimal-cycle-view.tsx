@@ -88,7 +88,7 @@ const LEFT_PANE_MAX_WIDTH = 420;
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
-type PendingFileAction = Readonly<{ kind: "new" | "open"; text?: string }>;
+type PendingFileAction = Readonly<{ kind: "new" | "open"; requestId: number; text?: string }>;
 
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
@@ -115,6 +115,7 @@ export function MinimalCycleView() {
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const openFileReadStartedAtRef = useRef<number | undefined>(undefined);
+  const fileLifecycleRequestIdRef = useRef(0);
   const [selectedId, setSelectedId] = useState<SignalId | undefined>(() => visualReference ? signalId("sig_cycle_clock") : undefined);
   const [selectedSignalIds, setSelectedSignalIds] = useState<ReadonlySet<SignalId>>(() => visualReference ? new Set([signalId("sig_cycle_clock")]) : new Set());
   const selectedSignalRef = useRef<SignalId | undefined>(undefined);
@@ -2317,17 +2318,20 @@ export function MinimalCycleView() {
     if (origin?.isConnected) requestAnimationFrame(() => origin.focus());
   };
   const cancelPendingFileAction = () => { setPendingFileAction(undefined); restorePendingFileFocus(); };
-  const requestFileAction = (action: PendingFileAction) => {
+  const requestFileAction = (action: Omit<PendingFileAction, "requestId">, requestId = ++fileLifecycleRequestIdRef.current) => {
+    if (requestId !== fileLifecycleRequestIdRef.current) return;
+    const pendingAction: PendingFileAction = { ...action, requestId };
     if (!history.dirty) {
-      if (action.kind === "new") newDocument.current();
-      else if (action.text !== undefined) openDocument.current(action.text);
+      if (pendingAction.kind === "new") newDocument.current();
+      else if (pendingAction.text !== undefined) openDocument.current(pendingAction.text);
       return;
     }
     if (pendingFileOriginRef.current === null) pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null;
-    setPendingFileAction(action);
+    setPendingFileAction(pendingAction);
   };
   const continuePendingFileAction = (action: PendingFileAction) => {
     setPendingFileAction(undefined);
+    if (action.requestId !== fileLifecycleRequestIdRef.current) { restorePendingFileFocus(); return; }
     if (action.kind === "new") newDocument.current();
     else if (action.text !== undefined) openDocument.current(action.text);
     restorePendingFileFocus();
@@ -2339,7 +2343,7 @@ export function MinimalCycleView() {
     continuePendingFileAction(action);
   };
   const requestNewDocument = () => requestFileAction({ kind: "new" });
-  const requestOpenText = (text: string) => requestFileAction({ kind: "open", text });
+  const requestOpenText = (text: string, requestId?: number) => requestFileAction({ kind: "open", text }, requestId);
   const rejectOversizedOpen = (file: File) => {
     const diagnostic = openFileByteBudgetProblem(file);
     setProblem(diagnostic.message);
@@ -2433,7 +2437,7 @@ export function MinimalCycleView() {
        onOpen={() => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }}
       onSave={() => { saveDocument.current(`${snapshot.document.document.title || "timing-chart"}.tcd`); }}
       onSaveAs={() => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }}
-      onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) openDocument.current(text); else setProblem("No recent document is available."); }}
+      onRecent={() => { const text = localStorage.getItem("timing-chart-v2.recent"); if (text) requestOpenText(text); else setProblem("No recent document is available."); }}
       onProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
       onExport={() => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); }}
       onToggleInspector={() => startTransition(() => setInspectorVisible((value) => !value))}
@@ -2489,7 +2493,7 @@ export function MinimalCycleView() {
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = saveDocument.current(`${name}.tcd`); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={() => continuePendingFileAction(pendingFileAction)}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
-     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else { openFileReadStartedAtRef.current = globalThis.performance.now(); void file.text().then(requestOpenText).catch(() => { openFileReadStartedAtRef.current = undefined; setProblem("Open failed."); }); } } event.currentTarget.value = ""; }} />
+     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { const requestId = ++fileLifecycleRequestIdRef.current; if (file.size > MAX_OPEN_FILE_BYTES) rejectOversizedOpen(file); else { openFileReadStartedAtRef.current = globalThis.performance.now(); void file.text().then((text) => requestOpenText(text, requestId)).catch(() => { if (requestId !== fileLifecycleRequestIdRef.current) return; openFileReadStartedAtRef.current = undefined; setProblem("Open failed."); }); } } event.currentTarget.value = ""; }} />
     <footer className="status-bar" aria-label="Editor status">
       <span data-testid="tool-status">{arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}</span>
       <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
