@@ -8,7 +8,8 @@ export function parseOpenDocument(text: string): ReturnType<typeof parseDocument
 }
 
 export function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDocument): CanonicalDocument {
-  return "ok" in input && input.ok === true && input.validated === true ? input.document : input;
+  if ("ok" in input && input.ok === true && input.validated === true) return (input as ParsedCanonicalDocument).document;
+  return input as CanonicalDocument;
 }
 
 /** Pure Save boundary: serialization stays independent of the editor shell. */
