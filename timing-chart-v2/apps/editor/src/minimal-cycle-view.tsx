@@ -57,6 +57,7 @@ import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { InlineNameInput } from "./inline-name-input.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
+import { ProblemsPanelLegacy } from "./problems-panel-legacy.js";
 import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
@@ -3382,11 +3383,6 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
   </aside>;
 }
 
-function ProblemsPanelLegacy({ diagnostics, onNavigate }: { readonly diagnostics: readonly DocumentProblem[]; readonly onNavigate: (path: string) => void }) {
-  const [filter, setFilter] = useState("");
-  const visible = diagnostics.filter((item) => problemMatchesFilter(item, filter));
-  return <section className="problems-panel" data-testid="problems-panel"><header><strong>Problems</strong><span>{diagnostics.length} diagnostics</span><input aria-label="Filter problems" value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Filter" /><button type="button" onClick={() => setFilter("")}>Clear Filter</button></header>{visible.length === 0 ? <p>{diagnostics.length === 0 ? "No validation problems." : "No matching problems."}</p> : <table><thead><tr><th>Code</th><th>Path</th><th>Message</th><th>Details</th></tr></thead><tbody>{visible.map((item, index) => <tr key={`${item.code}:${index}`}><td><button type="button" onClick={() => onNavigate(item.path)}>{item.code}</button></td><td>{item.path}</td><td>{item.message}</td><td>{(item.operation || item.source || item.stage || item.recommendation || item.commandId || item.objectId) && <details><summary>Details</summary><dl><dt>Operation</dt><dd>{item.operationLabel ?? item.operation ?? "—"}</dd>{item.commandId && <><dt>Command ID</dt><dd>{item.commandId}</dd></>}{item.objectId && <><dt>Object Type</dt><dd>{item.objectType ?? "—"}</dd><dt>Object ID</dt><dd>{item.objectId}</dd></>}<dt>Source</dt><dd>{item.source ?? "—"}</dd><dt>Stage</dt><dd>{item.stage ?? "—"}</dd>{item.recommendation && <><dt>Recovery</dt><dd>{item.recommendation}</dd></>}</dl></details>}</td></tr>)}</tbody></table>}</section>;
-}
 
 
 
