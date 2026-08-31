@@ -60,7 +60,7 @@ export function MinimalCycleViewUi({
     >
       {source.titleBarUi}
       {source.ribbonTabsUi}
-      {source.ribbonUi}
+      <MinimalCycleViewNextRibbon application={application} timeline={timeline} />
 
       <div className="next-timeline-controls" data-testid="next-timeline-controls" aria-label="Next timeline controls">
         <button type="button" data-testid="next-zoom-out" onClick={() => timeline.view.zoomBy(-0.1)}>Zoom Out</button>
@@ -105,6 +105,10 @@ export function MinimalCycleViewBottomEditor({ tab, onTabChange, followSelection
 
 export function MinimalCycleViewNextStatusBar({ document, revision, history }: { readonly document: Readonly<CanonicalDocument>; readonly revision: number; readonly history: HistoryState }) {
   return <footer className="status-bar" data-testid="next-status" aria-label="Next editor status"><span>Signals: {document.signals.length}</span><span>Transactions: {document.transactions.length}</span><span>Revision: {revision}</span><span data-testid="next-dirty-status">{history.dirty ? "Modified" : "Clean"}</span></footer>;
+}
+
+export function MinimalCycleViewNextRibbon({ application, timeline }: { readonly application: MinimalCycleApplicationPort; readonly timeline: MinimalCycleTimelinePort }) {
+  return <div className="ribbon" data-testid="next-ribbon"><div className="next-ribbon-group" aria-label="Edit"><button type="button" onClick={application.command.undo} disabled={!application.history.canUndo}>Undo</button><button type="button" onClick={application.command.redo} disabled={!application.history.canRedo}>Redo</button><button type="button" onClick={application.clipboard.delete}>Delete</button></div><div className="next-ribbon-group" aria-label="Timeline"><button type="button" onClick={() => timeline.view.zoomBy(-0.1)}>Zoom Out</button><button type="button" onClick={() => timeline.view.zoomBy(0.1)}>Zoom In</button><button type="button" onClick={timeline.view.fitAll}>Fit All</button></div></div>;
 }
 
 export function refreshTreeCollapsedMetadata(host: RefObject<HTMLDivElement | null>, collapsedGroups: ReadonlySet<string>): void { const root = host.current; if (root) root.dataset.collapsedGroups = [...collapsedGroups].join(","); }

@@ -49,7 +49,7 @@ export function MinimalCycleViewNextProbe() {
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
     titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
     ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
-    ribbonUi: <div className="ribbon" data-testid="next-ribbon"><span>Parallel replacement</span></div>,
+    ribbonUi: null,
     signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} selectedSignalId={nextSelectedSignalId} onSelect={setNextSelectedSignalId} surfaceHostRef={surfaceHostRef} />,
     bottomEditorUi: <MinimalCycleViewBottomEditor tab={nextBottomTab} onTabChange={setNextBottomTab} followSelection={followSelection} onFollowSelectionChange={setFollowSelection} pinned={bottomPinned} onPinnedChange={setBottomPinned} />,
     inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} onCommand={(command) => session.execute(command)} onReveal={() => undefined} onCancel={() => undefined} /></aside>,
