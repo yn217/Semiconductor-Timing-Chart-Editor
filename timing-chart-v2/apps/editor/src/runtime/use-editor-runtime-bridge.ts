@@ -17,3 +17,10 @@ export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | nul
 export function createEditorRuntimeBridge(initialDocument: Readonly<CanonicalDocument>): EditorApplicationRuntime {
   return new EditorApplicationRuntime(initialDocument);
 }
+
+export function refreshTransactionLinkedRows(host: RefObject<HTMLDivElement | null>, linkedSignalIds: ReadonlySet<string>): void {
+  for (const row of host.current?.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]") ?? []) {
+    const id = row.dataset.rowId ?? row.dataset.signalId;
+    row.dataset.transactionLinked = String(id !== undefined && linkedSignalIds.has(id));
+  }
+}

@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, createEditorRuntimeBridge, refreshRulerRangeSelection } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, createEditorRuntimeBridge, refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -1879,11 +1879,7 @@ export function MinimalCycleView() {
   }, [selectedCycle, snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
-    const linked = new Set(selectedTransaction?.linkedSignals ?? []);
-    for (const row of host.current?.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]") ?? []) {
-      const id = row.dataset.rowId ?? row.dataset.signalId;
-      row.dataset.transactionLinked = String(id !== undefined && linked.has(id as SignalId));
-    }
+    refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
   }, [selectedTransactionId, snapshot.revision]);
 
   const createSelectedAnnotation = (annotation: Annotation) => {
