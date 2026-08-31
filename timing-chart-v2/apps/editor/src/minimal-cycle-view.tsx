@@ -1203,7 +1203,11 @@ export function MinimalCycleView() {
       const target = event.target instanceof Element ? event.target : undefined;
       const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
       if (event.button !== 0 || !isTimeDomainPointerTarget(event)) return;
-      const cycle = cycleBoundaryAtPointerX(event.clientX);
+      const tick = onRuler && event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
+      const rulerCycleAtX = () => [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")]
+        .map((item) => ({ cycle: Number(item.dataset.sourceCycle ?? item.dataset.cycle), distance: Math.abs(item.getBoundingClientRect().x - event.clientX) }))
+        .sort((left, right) => left.distance - right.distance)[0]?.cycle;
+      const cycle = onRuler ? (tick ? Number(tick.dataset.sourceCycle ?? tick.dataset.cycle) : (rulerCycleAtX() ?? cycleBoundaryAtPointerX(event.clientX))) : cycleBoundaryAtPointerX(event.clientX);
       if (cycle === undefined || cycle > session.getSnapshot().document.timeline.cycleCount) return;
       rangeDragController.begin({ start: cycle, anchor: event.shiftKey ? timelineRangeRef.current.start : cycle, selectedCycle: selectedCycleRef.current, startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false });
       (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -1229,7 +1233,9 @@ export function MinimalCycleView() {
     const onRangePointerUp = (event: PointerEvent) => {
       const rangeDrag = rangeDragController.current;
       if (!rangeDrag) return;
-      const cycle = cycleBoundaryAtPointerX(event.clientX) ?? rangeDrag.start;
+      const cycle = [...rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")]
+        .map((item) => ({ cycle: Number(item.dataset.sourceCycle ?? item.dataset.cycle), distance: Math.abs(item.getBoundingClientRect().x - event.clientX) }))
+        .sort((left, right) => left.distance - right.distance)[0]?.cycle ?? cycleBoundaryAtPointerX(event.clientX) ?? rangeDrag.start;
       if (!rangeDrag.moved) {
         const dragSurface = rangeDrag.surface;
         selectedCycleRef.current = rangeDrag.selectedCycle;
@@ -1241,7 +1247,7 @@ export function MinimalCycleView() {
         timelineRuntime.refreshPlayhead();
         suppressCanvasClick = true;
         suppressRulerClick = dragSurface === "ruler";
-        const clickCycle = dragSurface === "ruler" ? cycle : cycleBoundaryAtX(event.clientX);
+        const clickCycle = dragSurface === "ruler" ? rangeDrag.start : cycleBoundaryAtX(event.clientX);
         if (clickCycle !== undefined) applyCanvasCycleSelection(clickCycle, event.shiftKey);
         requestAnimationFrame(() => { suppressCanvasClick = false; });
         if (suppressRulerClick) requestAnimationFrame(() => { suppressRulerClick = false; });
