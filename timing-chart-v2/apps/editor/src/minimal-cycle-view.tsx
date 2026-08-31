@@ -49,6 +49,7 @@ import { defaultEventValue, EventRow, QuickValues } from "./event-table-componen
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { AnnotationList } from "./annotation-list.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
+import { LegendView } from "./legend-view.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -2993,30 +2994,6 @@ function DocumentProperties({ document, onApplyProperties, restoreFocusRef, onCl
     <section><h3>Legend</h3><label className="checkline">Show Legend<input aria-label="Legend show" type="checkbox" checked={legendShow} onChange={(event) => setLegendShow(event.target.checked)} /></label><label>Orientation<select aria-label="Legend orientation" value={legendOrientation} onChange={(event) => setLegendOrientation(event.target.value as typeof legendOrientation)}><option value="horizontal">Horizontal</option><option value="vertical">Vertical</option></select></label><label className="checkline">Used Roles Only<input aria-label="Legend used roles only" type="checkbox" checked={legendUsedRolesOnly} onChange={(event) => setLegendUsedRolesOnly(event.target.checked)} /></label><div className="legend-position-editor"><label>X<input aria-label="Legend position X" type="number" step="1" value={legendPositionX} onChange={(event) => setLegendPositionX(Number(event.target.value))} /></label><label>Y<input aria-label="Legend position Y" type="number" step="1" value={legendPositionY} onChange={(event) => setLegendPositionY(Number(event.target.value))} /></label></div><div className="legend-entry-editor" data-testid="legend-entry-editor"><strong>Entries</strong>{legendEntries.map((entry, index) => <div className="legend-entry-row" key={entry.id} data-legend-entry-id={entry.id}><code>{entry.id}</code><input aria-label={`Legend label ${entry.id}`} value={entry.label} onChange={(event) => updateLegendEntries(legendEntries.map((item) => item.id === entry.id ? { ...item, label: event.target.value } : item))} /><label className="checkline"><span>Visible</span><input aria-label={`Legend visibility ${entry.id}`} type="checkbox" checked={entry.visible} onChange={(event) => updateLegendEntries(legendEntries.map((item) => item.id === entry.id ? { ...item, visible: event.target.checked } : item))} /></label><EditorIconButton label={`Move ${entry.id} up`} icon="up" disabled={index === 0} onClick={() => { const next = [...legendEntries]; [next[index - 1], next[index]] = [next[index]!, next[index - 1]!]; updateLegendEntries(next); }} /><EditorIconButton label={`Move ${entry.id} down`} icon="down" disabled={index === legendEntries.length - 1} onClick={() => { const next = [...legendEntries]; [next[index], next[index + 1]] = [next[index + 1]!, next[index]!]; updateLegendEntries(next); }} /></div>)}</div><button type="button" aria-expanded={legendAdvancedOpen} onClick={() => setLegendAdvancedOpen((open) => !open)}>{legendAdvancedOpen ? "Hide Advanced Legend JSON" : "Show Advanced Legend JSON"}</button>{legendAdvancedOpen && <label>Entries (stable ID / label / visibility / order)<textarea aria-label="Legend entries JSON" rows={5} value={legendItemsText} onChange={(event) => setLegendItemsText(event.target.value)} spellCheck={false} /></label>}<p className="inspector-note">Legend changes are committed with the Document Properties Apply button.</p>{legendStatus && <output role="status" data-testid="legend-status">{legendStatus}</output>}</section>
     <footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="apply-document-properties">Apply Document Properties</button></footer>
   </form></div>;
-}
-
-function LegendView({ document, onCommand }: { readonly document: CanonicalDocument; readonly onCommand: (command: SemanticCommand) => void }) {
-  const [position, setPosition] = useState(document.legend.position);
-  const dragRef = useRef<{ readonly offsetX: number; readonly offsetY: number } | undefined>(undefined);
-  useEffect(() => setPosition(document.legend.position), [document.legend.position.x, document.legend.position.y]);
-  if (!document.legend.show) return null;
-  const defaultRoles = document.legend.usedRolesOnly ? [...new Set(document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.role))] : ["input", "output", "internal"];
-  const entries = document.legend.items?.length ? [...document.legend.items].filter((entry) => entry.visible).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map((entry) => ({ id: entry.id, role: entry.role, label: entry.label })) : defaultRoles.map((role) => ({ id: `legend_${role}`, role, label: role }));
-  const commitPosition = (next: { readonly x: number; readonly y: number }) => {
-    if (next.x === document.legend.position.x && next.y === document.legend.position.y) return;
-    onCommand({ id: nextCommandId("legend_position"), type: "legend.update", legend: { ...document.legend, position: next } });
-  };
-  const nudge = (event: React.KeyboardEvent<HTMLElement>) => {
-    if (!(event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown")) return;
-    event.preventDefault();
-    const amount = event.shiftKey ? 10 : 1;
-    const dx = event.key === "ArrowLeft" ? -amount : event.key === "ArrowRight" ? amount : 0;
-    const dy = event.key === "ArrowUp" ? -amount : event.key === "ArrowDown" ? amount : 0;
-    const next = { x: position.x + dx, y: position.y + dy };
-    setPosition(next);
-    commitPosition(next);
-  };
-  return <aside className={`editor-legend ${document.legend.orientation}`} data-testid="editor-legend" aria-label="Legend" tabIndex={0} data-legend-position-x={position.x} data-legend-position-y={position.y} style={{ left: `${position.x}px`, top: `${position.y}px` }} onKeyDown={nudge} onPointerDown={(event) => { if (event.button !== 0) return; dragRef.current = { offsetX: event.clientX - position.x, offsetY: event.clientY - position.y }; event.currentTarget.setPointerCapture(event.pointerId); }} onPointerMove={(event) => { if (!dragRef.current) return; setPosition({ x: event.clientX - dragRef.current.offsetX, y: event.clientY - dragRef.current.offsetY }); }} onPointerUp={(event) => { if (!dragRef.current) return; const next = { x: event.clientX - dragRef.current.offsetX, y: event.clientY - dragRef.current.offsetY }; dragRef.current = undefined; setPosition(next); event.currentTarget.releasePointerCapture(event.pointerId); commitPosition(next); }} onPointerCancel={() => { dragRef.current = undefined; }}><strong>Legend</strong>{entries.map((entry) => <span key={entry.id} data-legend-id={entry.id} data-legend-role={entry.role}><i />{entry.label}</span>)}</aside>;
 }
 
 function AIOperationPanel({ document, revision, selectedSignalId, onCommand }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult }) {

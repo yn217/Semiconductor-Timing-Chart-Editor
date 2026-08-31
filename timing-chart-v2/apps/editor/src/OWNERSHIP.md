@@ -38,3 +38,4 @@ Rules:
 - Renderer and WaveDrom ownership remains in their existing packages.
 - A new surface owner must be added here before adding another responsibility
   to `minimal-cycle-view.tsx`.
+| `legend-view.tsx` | Legend presentation, drag/nudge interaction, and `legend.update` command emission | `minimal-cycle-view.tsx` composition | 2026-08-31 |
