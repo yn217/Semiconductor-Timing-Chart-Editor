@@ -44,7 +44,7 @@ import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileBy
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
-import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata } from "./minimal-cycle-view-ui.js";
+import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
@@ -343,20 +343,7 @@ export function MinimalCycleView() {
     refreshTreeCollapsedMetadata(host, collapsedGroupIds);
   }, [snapshot.revision, collapsedGroupIds]);
   useEffect(() => {
-    const root = host.current;
-    const tree = root?.querySelector<HTMLElement>("[data-role='left-tree-rows']");
-    if (!tree) return;
-    const items = [...tree.querySelectorAll<HTMLElement>("[role='treeitem']")].filter((item) => !item.hidden && !item.closest("[hidden]"));
-    const preferred = items.find((item) => item.dataset.rowId === treeFocusRowIdRef.current)
-      ?? items.find((item) => item.getAttribute("aria-selected") === "true")
-      ?? items[0];
-    for (const item of tree.querySelectorAll<HTMLElement>("[role='treeitem']")) item.tabIndex = item === preferred ? 0 : -1;
-    if (preferred) {
-      const shouldRepairFocus = treeFocusRowIdRef.current !== undefined && !tree.contains(tree.ownerDocument.activeElement);
-      treeFocusRowIdRef.current = preferred.dataset.rowId;
-      if (shouldRepairFocus) preferred.focus({ preventScroll: true });
-    }
-    tree.dataset.focusRowId = preferred?.dataset.rowId ?? "";
+    refreshTreeRovingFocus(host, treeFocusRowIdRef);
   }, [snapshot.revision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
   const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
