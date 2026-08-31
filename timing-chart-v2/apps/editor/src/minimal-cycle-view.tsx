@@ -55,6 +55,7 @@ import { RibbonIcon } from "./ribbon-icon.js";
 import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
 import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon.js";
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
+import { InlineNameInput } from "./inline-name-input.js";
 
 const signalId = (value: string) => value as SignalId;
 const groupId = (value: string) => value as GroupId;
@@ -3167,29 +3168,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <div className="ribbon-group ai-group"><AIOperationPanel document={document} revision={revision} selectedSignalId={selectedSignalId} onCommand={onCommand} icon={<RibbonIcon name="i-ai" />} /><b>AI</b></div>}
   </section>;
-}
-
-function InlineNameInput({ value, ariaLabel, onRename, onCommitted }: { readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void }) {
-  const [draft, setDraft] = useState(value);
-  const [error, setError] = useState("");
-  useEffect(() => { setDraft(value); setError(""); }, [value]);
-  const commit = () => {
-    const name = draft.trim();
-    if (!name) { setError("Name is required."); return; }
-    if (name === value) { setDraft(value); setError(""); return; }
-    const result = onRename(name);
-    if (!result.ok) { setError(result.problems[0]?.message ?? "Name was rejected."); return; }
-    setDraft(name);
-    setError("");
-    onCommitted?.(name);
-  };
-  return <>
-    <input aria-label={ariaLabel} value={draft} data-commit-policy="enter-only" onChange={(event) => { setDraft(event.target.value); setError(""); }} onKeyDown={(event) => {
-      if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); commit(); }
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDraft(value); setError(""); }
-    }} />
-    {error && <span role="alert" className="editor-problem">{error}</span>}
-  </>;
 }
 
 function InspectorPanel({ signal, group, annotation, transaction, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, onCommand, onReveal, onCancel }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onReveal: () => void; readonly onCancel: () => void }) {
