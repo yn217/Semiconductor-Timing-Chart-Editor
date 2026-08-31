@@ -80,6 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
+import { applyRendererHostSizing } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -500,18 +501,7 @@ export function MinimalCycleView() {
   }, [rangeSelectionActive, timelineRange, snapshot.revision]);
 
   useEffect(() => {
-    const rendererHost = host.current;
-    const viewportElement = viewport.current;
-    if (!rendererHost || !viewportElement) return;
-    const metrics = viewMetricsOwner.snapshot();
-    const availableWidth = metrics.viewportWidth > 0 ? metrics.viewportWidth : globalThis.innerWidth;
-    const baseWidth = Math.max(160, availableWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
-    const width = metrics.leftPaneWidth + metrics.frozenPaneWidth + baseWidth * metrics.zoom;
-    rendererHost.style.width = `${width}px`;
-    const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']");
-    timingSurface?.style.setProperty("width", `${width}px`);
-    timingSurface?.style.setProperty("grid-template-columns", `${metrics.leftPaneWidth}px ${metrics.frozenPaneWidth}px var(--wave-width, 640px)`);
-    rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important");
+    applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
   }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth, zoom]);
 
   useEffect(() => {
