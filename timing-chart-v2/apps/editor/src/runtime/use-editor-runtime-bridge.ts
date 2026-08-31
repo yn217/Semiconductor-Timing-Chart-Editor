@@ -212,6 +212,21 @@ export function mountInitialTimelineProjection(context: { readonly coordinator: 
   return { window, projection };
 }
 
+export function collectWaveRenderErrors(host: HTMLElement): readonly any[] {
+  return [...host.querySelectorAll<HTMLElement>("[data-wave-error]")].map((owner) => ({
+    code: "WAVE_RENDER_ERROR",
+    path: `$.signals[${owner.dataset.signalId}]`,
+    message: owner.dataset.waveError ?? "WaveDrom render failed.",
+    severity: "error" as const,
+    operation: "waveform.render",
+    operationLabel: "Render waveform",
+    objectType: "signal",
+    ...(owner.dataset.signalId ? { objectId: owner.dataset.signalId } : {}),
+    source: "renderer" as const,
+    stage: "render" as const,
+  }));
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };

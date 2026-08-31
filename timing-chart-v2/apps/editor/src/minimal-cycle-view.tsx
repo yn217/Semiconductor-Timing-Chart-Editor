@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -625,18 +625,7 @@ export function MinimalCycleView() {
     };
 
     const collectWaveErrors = () => {
-      const failed = [...rendererHost.querySelectorAll<HTMLElement>("[data-wave-error]")].map((owner) => ({
-        code: "WAVE_RENDER_ERROR",
-        path: `$.signals[${owner.dataset.signalId}]`,
-        message: owner.dataset.waveError ?? "WaveDrom render failed.",
-        severity: "error" as const,
-        operation: "waveform.render",
-        operationLabel: "Render waveform",
-        objectType: "signal",
-        ...(owner.dataset.signalId ? { objectId: owner.dataset.signalId } : {}),
-        source: "renderer" as const,
-        stage: "render" as const,
-      }));
+      const failed = collectWaveRenderErrors(rendererHost);
       setRuntimeDiagnostics((current) => [...current.filter((item) => item.code !== "WAVE_RENDER_ERROR"), ...failed]);
       if (failed.length > 0) setProblem(failed[0]!.message);
     };
