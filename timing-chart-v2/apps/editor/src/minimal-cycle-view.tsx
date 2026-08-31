@@ -587,9 +587,9 @@ export function MinimalCycleView() {
         localXToScreenX: (localX) => localX,
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: () => currentZoom, setZoom: (next) => { applyZoom(next); }, },
-      document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch },
+      document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
       render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshOverlays(session.getSnapshot().document); }, waitForRendererIdle: async () => undefined },
-      lifecycle: { isCurrentEpoch: (epoch) => epoch === documentEpoch },
+      lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch as number) },
     });
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
@@ -770,7 +770,7 @@ export function MinimalCycleView() {
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
       if (changed.fullDocumentReplace === true) {
-        documentEpoch.advance();
+        timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
         clearAnnotationPreview();
       }
       const snapDependenciesChanged = changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined || changed.waveSemantics !== undefined || changed.geometryLocal !== undefined || changed.geometryScreenX === true || changed.geometryScreenY !== undefined || changed.annotationPosition !== undefined || changed.annotationStyle !== undefined || changed.bookmarkPosition !== undefined || changed.timeGroupSemantics !== undefined || changed.timelineSemantics === true;
@@ -840,7 +840,7 @@ export function MinimalCycleView() {
         setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), ...openProblems]);
         return;
       }
-      documentEpoch.advance();
+      timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
       clearAnnotationPreview();
       delete rendererHost.dataset.editorIdle;
       session = sessionController.replace(canonicalDocument);
