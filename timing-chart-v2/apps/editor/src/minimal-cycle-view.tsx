@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, refreshRulerRangeSelection } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -488,16 +488,7 @@ export function MinimalCycleView() {
   }, []);
 
   useEffect(() => {
-    const rulerElement = ruler.current;
-    if (!rulerElement) return;
-    if (!rangeSelectionActive) {
-      for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected;
-      return;
-    }
-    for (const tick of rulerElement.querySelectorAll<HTMLElement>("[data-cycle]")) {
-      const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-      tick.dataset.rangeSelected = String(cycle >= timelineRange.start && cycle < timelineRange.end);
-    }
+    refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
   }, [rangeSelectionActive, timelineRange, snapshot.revision]);
 
   useEffect(() => {
