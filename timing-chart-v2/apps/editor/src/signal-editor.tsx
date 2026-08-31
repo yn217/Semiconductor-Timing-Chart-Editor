@@ -59,4 +59,3 @@ export function SignalEditor({ signal, cycleCount, history, groups, problem, onC
     </>}
   </section>;
 }
-
