@@ -547,6 +547,7 @@ export function MinimalCycleView() {
     const publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, snapService, snapIndex, rulerBuilds, edgeCounterResolvePasses, currentZoom);
     let currentZoom = 1;
     let applyZoom: (next: number) => void = () => undefined;
+    let frame = 0;
     let timelineRender: (reason: string) => void = (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); };
     const timelineRuntime = createTimelineViewportRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
@@ -575,7 +576,24 @@ export function MinimalCycleView() {
     timelineRuntimeRef.current = timelineRuntime;
     timelineRender = (reason) => {
       rendererHost.dataset.timelineRefreshReason = reason;
-      if (reason === "scroll") { syncRulerScroll(rulerElement, viewportElement, currentZoom); return; }
+      if (reason === "scroll") {
+        syncRulerScroll(rulerElement, viewportElement, currentZoom);
+        cancelAnimationFrame(frame);
+        frame = requestAnimationFrame(() => {
+          const next = buildViewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
+          if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
+          const previousMountedSignals = projection.mountedSignalIds;
+          window = next;
+          projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+          const mountedSignalsChanged = previousMountedSignals.length !== projection.mountedSignalIds.length
+            || previousMountedSignals.some((signalId, index) => signalId !== projection.mountedSignalIds[index]);
+          if (mountedSignalsChanged) snapIndex = undefined;
+          renderer.update(projection);
+          rendererHost.dataset.viewportStartY = String(window.viewportStartY);
+          publishState();
+        });
+        return;
+      }
       const document = session.getSnapshot().document;
       if (reason === "ruler") {
         rulerBuilds += 1;
@@ -923,24 +941,8 @@ export function MinimalCycleView() {
       return text;
     };
 
-    let frame = 0;
     const onScroll = () => {
       timelineRuntime.onViewportScroll();
-      cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        timelineRuntime.onViewportScroll();
-        const next = buildViewportWindow(viewportElement, session.getSnapshot().document.timeline.referenceClock);
-        if (next.viewportStartY === window.viewportStartY && next.viewportEndY === window.viewportEndY) return;
-        const previousMountedSignals = projection.mountedSignalIds;
-        window = next;
-        projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
-        const mountedSignalsChanged = previousMountedSignals.length !== projection.mountedSignalIds.length
-          || previousMountedSignals.some((signalId, index) => signalId !== projection.mountedSignalIds[index]);
-        if (mountedSignalsChanged) snapIndex = undefined;
-        renderer.update(projection);
-        rendererHost.dataset.viewportStartY = String(window.viewportStartY);
-        publishState();
-      });
     };
     const onViewportKeyDown = (event: KeyboardEvent) => {
       const target = event.target instanceof Element ? event.target : null;
