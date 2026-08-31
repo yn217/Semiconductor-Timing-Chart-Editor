@@ -110,6 +110,22 @@ export function deriveRenderInvalidation(changeSet: any, referenceSignalId: stri
   return { snapDependenciesChanged, referenceWaveChanged, refreshRuler, refreshGrid, refreshOverlays };
 }
 
+export function createTimelineZoomController(context: {
+  readonly rendererHost: HTMLElement;
+  readonly viewport: HTMLElement;
+  readonly ruler: HTMLElement;
+  readonly scalable: readonly HTMLElement[];
+  readonly leftPaneWidth: number;
+  readonly frozenPaneWidth: number;
+  readonly inspectorWidth: number;
+  readonly viewportWidth: number;
+  readonly timelineOffset: number;
+  readonly onPresentationScale: (zoom: number) => void;
+  readonly onZoom: (zoom: number) => void;
+}): (next: number) => number {
+  return (next) => applyTimelineZoom(next, context);
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };

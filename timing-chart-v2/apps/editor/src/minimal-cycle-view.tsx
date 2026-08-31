@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -552,8 +552,7 @@ export function MinimalCycleView() {
       const metrics = currentViewMetrics();
       return metrics.leftPaneWidth + metrics.frozenPaneWidth;
     };
-    applyZoom = (next: number) => {
-      currentZoom = applyTimelineZoom(next, {
+    const zoomController = createTimelineZoomController({
         rendererHost,
         viewport: viewportElement,
         ruler: rulerElement,
@@ -569,7 +568,7 @@ export function MinimalCycleView() {
           startTransition(() => setZoom(zoom));
         },
       });
-    };
+    applyZoom = (next: number) => { currentZoom = zoomController(next); };
     changeZoom.current = (delta) => applyZoom(currentZoom + delta);
     setZoomAbsolute.current = (zoom) => applyZoom(zoom);
     fitSelection.current = () => {
