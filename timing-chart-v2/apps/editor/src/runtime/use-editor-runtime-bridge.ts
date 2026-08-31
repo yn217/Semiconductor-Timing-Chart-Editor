@@ -126,6 +126,42 @@ export function createTimelineZoomController(context: {
   return (next) => applyTimelineZoom(next, context);
 }
 
+export function createTimelineNavigationController(context: {
+  readonly runtime: { sourceBoundaryToLocalX: (document: CanonicalDocument, cycle: number) => number | undefined; fitSelection: (start: number, end: number) => void; fitAll: (end: number) => void; navigateToCycle: (cycle: number) => void };
+  readonly getDocument: () => CanonicalDocument;
+  readonly getRange: () => { readonly start: number; readonly end: number };
+  readonly setSelectedCycle: (cycle: number) => void;
+  readonly setRange: (range: { readonly start: number; readonly end: number }) => void;
+  readonly host: HTMLElement;
+  readonly publishState: () => void;
+}): Readonly<{ fitSelection: () => void; fitAll: () => void; navigateToCycle: (cycle: number) => void }> {
+  return {
+    fitSelection() {
+      const document = context.getDocument();
+      const range = context.getRange();
+      const start = context.runtime.sourceBoundaryToLocalX(document, range.start) ?? 0;
+      const end = context.runtime.sourceBoundaryToLocalX(document, range.end) ?? start + 1;
+      context.runtime.fitSelection(start, end);
+    },
+    fitAll() {
+      const document = context.getDocument();
+      const start = context.runtime.sourceBoundaryToLocalX(document, 0) ?? 0;
+      const end = context.runtime.sourceBoundaryToLocalX(document, document.timeline.cycleCount) ?? start + 1;
+      context.runtime.fitAll(end);
+    },
+    navigateToCycle(cycle) {
+      const document = context.getDocument();
+      if (!Number.isInteger(cycle) || cycle < 0 || cycle > document.timeline.cycleCount) return;
+      if (context.runtime.sourceBoundaryToLocalX(document, cycle) === undefined) return;
+      context.setSelectedCycle(cycle);
+      context.host.dataset.selectedCycle = String(cycle);
+      context.setRange(cycle === document.timeline.cycleCount ? { start: Math.max(0, cycle - 1), end: cycle } : { start: cycle, end: cycle + 1 });
+      context.runtime.navigateToCycle(cycle);
+      context.publishState();
+    },
+  };
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };

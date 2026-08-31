@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createTimelineNavigationController, createTimelineZoomController, createWaveformSurfaceProvider, deriveRenderInvalidation, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -571,31 +571,18 @@ export function MinimalCycleView() {
     applyZoom = (next: number) => { currentZoom = zoomController(next); };
     changeZoom.current = (delta) => applyZoom(currentZoom + delta);
     setZoomAbsolute.current = (zoom) => applyZoom(zoom);
-    fitSelection.current = () => {
-      const selected = timelineRangeRef.current;
-      const document = session.getSnapshot().document;
-      const start = timelineRuntime.sourceBoundaryToLocalX(document, selected.start) ?? 0;
-      const end = timelineRuntime.sourceBoundaryToLocalX(document, selected.end) ?? start + 1;
-      timelineRuntime.fitSelection(start, end);
-    };
-    fitAll.current = () => {
-      const document = session.getSnapshot().document;
-      const start = timelineRuntime.sourceBoundaryToLocalX(document, 0) ?? 0;
-      const end = timelineRuntime.sourceBoundaryToLocalX(document, document.timeline.cycleCount) ?? start + 1;
-      timelineRuntime.fitAll(end);
-    };
-    navigateToCycle.current = (cycle) => {
-      const document = session.getSnapshot().document;
-      if (!Number.isInteger(cycle) || cycle < 0 || cycle > document.timeline.cycleCount) return;
-      const cycleX = timelineRuntime.sourceBoundaryToLocalX(document, cycle);
-      if (cycleX === undefined) return;
-      setSelectedCycle(cycle);
-      rendererHost.dataset.selectedCycle = String(cycle);
-      if (cycle === document.timeline.cycleCount) setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
-      else setTimelineRange({ start: cycle, end: cycle + 1 });
-      timelineRuntime.navigateToCycle(cycle);
-      publishState();
-    };
+    const navigation = createTimelineNavigationController({
+      runtime: timelineRuntime,
+      getDocument: () => session.getSnapshot().document,
+      getRange: () => timelineRangeRef.current,
+      setSelectedCycle,
+      setRange: setTimelineRange,
+      host: rendererHost,
+      publishState,
+    });
+    fitSelection.current = navigation.fitSelection;
+    fitAll.current = navigation.fitAll;
+    navigateToCycle.current = navigation.navigateToCycle;
     snapTransactionCycle.current = (clientX) => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       const axisOwner = timeAxis.ownerSignalId;
