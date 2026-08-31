@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters } from "./edge-counter-projection.js";
 import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
@@ -22,6 +23,69 @@ export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | nul
 
 export function createEditorRuntimeBridge(initialDocument: Readonly<CanonicalDocument>): EditorApplicationRuntime {
   return new EditorApplicationRuntime(initialDocument);
+}
+
+export type WaveformProviderContext = Readonly<{
+  sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
+  mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };
+  adapter: any;
+  geometryRegistry: { readonly maps: Map<string, any>; readonly svgs: Map<string, SVGSVGElement>; remove: (id: any) => void };
+  markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
+  invalidateSnapIndex: () => void;
+}>;
+
+export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
+  let signalIndexDocument: CanonicalDocument | undefined;
+  let signalIndexRevision = -1;
+  let signalById = new Map<string, CanonicalDocument["signals"][number]>();
+  return {
+    async mountWaveBatch(requests) {
+      const currentSnapshot = context.sessionController.snapshot();
+      const document = currentSnapshot.document;
+      const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
+      if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
+        signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
+        signalIndexDocument = document;
+        signalIndexRevision = currentSnapshot.revision;
+      }
+      const prepared = requests.map((request) => {
+        const signal = signalById.get(request.signalId);
+        if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
+        const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
+          ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
+          : { ...signal, values: context.mappingCache.remapValueChanges(signal.values, mapping) };
+        return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), error: undefined };
+      });
+      const renderResults = await Promise.all(prepared.map(async (item) => {
+        if (item.error || !item.waveJson) return { ...item, rendered: undefined };
+        try { return { ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner) }; }
+        catch (error: unknown) { return { ...item, rendered: undefined, error }; }
+      }));
+      return renderResults.map((item) => {
+        if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
+        try {
+          if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-clock-painted");
+          const geometry = context.adapter.extractLocalGeometry(item.rendered);
+          context.geometryRegistry.maps.set(item.request.signalId, geometry);
+          context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
+          if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-geometry-ready");
+          context.markOpenPhase("first-visible-wave-painted");
+          context.invalidateSnapIndex();
+          return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
+        } catch (error: unknown) {
+          context.geometryRegistry.remove(item.request.signalId);
+          context.invalidateSnapIndex();
+          return { signalId: item.request.signalId, error };
+        }
+      });
+    },
+    async mountWave(id, owner) {
+      const item = (await this.mountWaveBatch?.([{ signalId: id, owner }]))?.[0];
+      if (!item?.result) throw item?.error instanceof Error ? item.error : new Error("Waveform batch did not produce a result.");
+      return item.result;
+    },
+    disposeWave(id) { context.adapter.dispose(id); context.geometryRegistry.remove(id); context.invalidateSnapIndex(); },
+  };
 }
 
 export type OpenPhaseTracker = Readonly<{

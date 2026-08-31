@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -421,72 +421,14 @@ export function MinimalCycleView() {
     const openPhaseTracker = createOpenPhaseTracker(rendererHost);
     const markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
-    // The progressive wave queue can flush many batches for one canonical
-    // snapshot. Keep the derived lookup scoped to that snapshot instead of
-    // rebuilding an O(totalSignals) Map for every batch.
-    let signalIndexDocument: CanonicalDocument | undefined;
-    let signalIndexRevision = -1;
-    let signalById = new Map<SignalId, CanonicalDocument["signals"][number]>();
-    const provider: WaveformSurfaceProvider = {
-      async mountWaveBatch(requests) {
-        const currentSnapshot = sessionController.snapshot();
-        const document = currentSnapshot.document;
-        const mapping = mappingCache.get(document.timeline, document.timeGroups);
-        if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
-          signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
-          signalIndexDocument = document;
-          signalIndexRevision = currentSnapshot.revision;
-        }
-        const prepared = requests.map((request) => {
-          const signal = signalById.get(request.signalId);
-          if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
-          const displaySignal = signal.type === "commentRow" ? signal
-            : signal.type === "clock" ? { ...signal, ...(signal.enable ? { enable: mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
-            : { ...signal, values: mappingCache.remapValueChanges(signal.values, mapping) };
-          return { request, waveJson: adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), error: undefined };
-        });
-
-        // WaveDrom materialization is a DOM write. Start every render before
-        // awaiting any of them so this phase completes all writes as one batch.
-        const renderResults = await Promise.all(prepared.map(async (item) => {
-          if (item.error || !item.waveJson) return { ...item, rendered: undefined };
-          try { return { ...item, rendered: await adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner) }; }
-          catch (error: unknown) { return { ...item, rendered: undefined, error }; }
-        }));
-
-        // Geometry extraction calls getScreenCTM(). Keep it in a separate
-        // phase, after every SVG write in this batch has completed.
-        return renderResults.map((item) => {
-          if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
-          try {
-            if (item.request.signalId === document.timeline.referenceClock) markOpenPhase("reference-clock-painted");
-            const geometry = adapter.extractLocalGeometry(item.rendered);
-            geometryMaps.set(item.request.signalId, geometry);
-            geometrySvgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
-            if (item.request.signalId === document.timeline.referenceClock) markOpenPhase("reference-geometry-ready");
-            markOpenPhase("first-visible-wave-painted");
-            snapIndex = undefined;
-            return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
-          } catch (error: unknown) {
-            geometryRegistry.remove(item.request.signalId);
-            snapIndex = undefined;
-            return { signalId: item.request.signalId, error };
-          }
-        });
-      },
-      async mountWave(id, owner) {
-        const item = (await this.mountWaveBatch?.([{ signalId: id, owner }]))?.[0];
-        if (!item?.result) throw item?.error instanceof Error ? item.error : new Error("Waveform batch did not produce a result.");
-        return item.result;
-      },
-      disposeWave(id) {
-        adapter.dispose(id);
-        geometryRegistry.remove(id);
-        // Snap candidates contain the disposed wave's local geometry.  The
-        // next query must rebuild against the currently mounted set.
-        snapIndex = undefined;
-      },
-    };
+    const provider = createWaveformSurfaceProvider({
+      sessionController,
+      mappingCache,
+      adapter,
+      geometryRegistry,
+      markOpenPhase,
+      invalidateSnapIndex: () => { snapIndex = undefined; },
+    });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
     const snapService = new SemanticSnapCandidateService();
