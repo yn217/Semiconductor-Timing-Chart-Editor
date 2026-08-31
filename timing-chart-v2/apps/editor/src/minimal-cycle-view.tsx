@@ -874,9 +874,9 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        rebuildRuler(session.getSnapshot().document);
-        refreshPlayhead.current();
-        refreshGrid(session.getSnapshot().document);
+        timelineRuntime.refreshRuler();
+        timelineRuntime.refreshPlayhead();
+        timelineRuntime.refreshGrid();
         applyZoom(currentZoom);
         refreshOverlays(session.getSnapshot().document);
         collectWaveErrors();
