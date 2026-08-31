@@ -33,6 +33,7 @@ import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
+import { AnnotationList } from "./annotation-list.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -3759,14 +3760,6 @@ function createAnnotation(type: AnnotationType, signalId: SignalId, range: { rea
   if (type === "arrow" || type === "dependency") return { ...base, from: first, to: second, lineType: "straight", arrowhead: "end" };
   if (["range", "bracket", "highlight", "measurement", "timingRegion", "ghostTrace"].includes(type)) return { ...base, start: first, end: second };
   return { ...base, anchor: first };
-}
-
-function AnnotationList({ annotations, selectedId, onSelect }: { readonly annotations: readonly Annotation[]; readonly selectedId: AnnotationId | undefined; readonly onSelect: (id: AnnotationId) => void }) {
-  const anchorText = (anchor: SemanticAnchor | undefined) => anchor ? `${anchor.signalId ?? "cycle"} @ ${anchor.cycle}` : "—";
-  return <div className="annotation-list" role="table" aria-label="Annotations" data-testid="annotation-list">
-    <div className="annotation-list-row annotation-list-header" role="row"><span>#</span><span>Type</span><span>Start</span><span>End</span><span>Label / Text</span><span>Target</span><span>X</span><span>Y</span></div>
-    {annotations.map((item, index) => <button type="button" role="row" key={item.id} data-annotation-list-id={item.id} data-annotation-row={item.id} data-selected={String(item.id === selectedId)} aria-label={`Select annotation ${item.label || item.type}`} onClick={() => onSelect(item.id)}><span className="annotation-list-index">{index + 1}</span><span className="annotation-list-type">{item.type}</span><span>{anchorText(item.start ?? item.from ?? item.anchor)}</span><span>{anchorText(item.end ?? item.to)}</span><span className="annotation-list-label">{item.label || "(untitled)"}</span><span>canvas</span><span>{item.labelOffset?.x ?? 0}</span><span>{item.labelOffset?.y ?? 0}</span></button>)}
-  </div>;
 }
 
 function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
