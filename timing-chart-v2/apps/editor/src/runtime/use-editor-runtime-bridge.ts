@@ -204,6 +204,14 @@ export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promi
   });
 }
 
+export function mountInitialTimelineProjection(context: { readonly coordinator: { mount: (host: HTMLElement) => void }; readonly renderer: { update: (projection: any) => void }; readonly host: HTMLElement; readonly viewport: HTMLElement; readonly referenceClock: any; readonly projectionCoordinator: { project: (input: any) => any }; readonly snapshot: any; readonly collapsedGroupIds: readonly string[] }): { readonly window: any; readonly projection: any } {
+  context.coordinator.mount(context.host);
+  const window = buildViewportWindow(context.viewport, context.referenceClock);
+  const projection = context.projectionCoordinator.project({ snapshot: context.snapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: context.collapsedGroupIds });
+  context.renderer.update(projection);
+  return { window, projection };
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };
