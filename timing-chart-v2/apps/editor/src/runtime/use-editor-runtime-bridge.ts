@@ -52,6 +52,54 @@ export function projectViewportWindow({
   onProjection(nextProjection, nextWindow, mountedSignalsChanged);
 }
 
+export function refreshTimelinePresentation(context: {
+  readonly reason: string;
+  readonly document: CanonicalDocument;
+  readonly ruler: HTMLElement;
+  readonly grid: HTMLElement;
+  readonly viewport: HTMLElement;
+  readonly host: HTMLElement;
+  readonly rulerViewport: HTMLElement;
+  readonly geometryMaps: any;
+  readonly geometrySvgs: any;
+  readonly mappingCache: any;
+  readonly metricsOwner: any;
+  readonly currentZoom: number;
+  readonly previousScale: number;
+  readonly rulerInitialized: boolean;
+  readonly timeAxis: any;
+  readonly totalHeight: number;
+  readonly gridEnabled: boolean;
+  readonly markOpenPhase: (phase: string) => void;
+  readonly onPlayhead: () => void;
+  readonly onRange: () => void;
+  readonly onResize: () => void;
+}): { readonly timeAxis: any; readonly screenGeometryScale: number; readonly rulerInitialized: boolean } {
+  let timeAxis = context.timeAxis;
+  let screenGeometryScale = context.previousScale;
+  let rulerInitialized = context.rulerInitialized;
+  if (context.reason === "ruler") {
+    context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
+    const metrics = context.metricsOwner.snapshot();
+    const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
+    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, fitWidth, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? context.geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom);
+    timeAxis = rebuilt.timeAxis;
+    screenGeometryScale = rebuilt.scale;
+    rulerInitialized = true;
+    context.markOpenPhase("ruler-painted");
+    syncPresentationScale(context.viewport, context.host, context.rulerViewport, context.currentZoom, screenGeometryScale);
+  }
+  if (context.reason === "grid") {
+    context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
+    const metrics = context.metricsOwner.snapshot();
+    refreshGridPresentation(context.grid, context.document, context.geometryMaps, context.mappingCache, context.gridEnabled, context.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale);
+  }
+  if (context.reason === "playhead") context.onPlayhead();
+  if (context.reason === "range") context.onRange();
+  if (context.reason === "resize") context.onResize();
+  return { timeAxis, screenGeometryScale, rulerInitialized };
+}
+
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };

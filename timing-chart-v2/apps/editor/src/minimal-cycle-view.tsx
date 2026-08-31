@@ -80,7 +80,7 @@ import { displayBoundaryForSource } from "./runtime/display-boundary.js";
 import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, applyTimelineZoom, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, createEditorRuntimeBridge, createOpenPhaseTracker, createWaveformSurfaceProvider, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, scheduleDialogFocusRestore, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -513,26 +513,33 @@ export function MinimalCycleView() {
         return;
       }
       const document = session.getSnapshot().document;
-      if (reason === "ruler") {
-        rulerBuilds += 1;
-        viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
-        const metrics = viewMetricsOwner.snapshot();
-        const fitWidth = Math.max(160, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth);
-        const rebuilt = rebuildRulerPresentation(rulerElement, document, geometryMaps, mappingCache, fitWidth, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom);
-        timeAxis = rebuilt.timeAxis;
-        screenGeometryScale = rebuilt.scale;
-        rulerInitialized = true;
-        markOpenPhase("ruler-painted");
-        syncPresentationScaleDom(viewportElement, rendererHost, rulerViewportElement, currentZoom, screenGeometryScale);
-      }
-      if (reason === "grid") {
-        viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth });
-        const metrics = viewMetricsOwner.snapshot();
-        refreshGridPresentation(gridElement, document, geometryMaps, mappingCache, gridEnabledRef.current, projection.totalHeight, globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, screenGeometryScale);
-      }
-      if (reason === "playhead") refreshPlayhead.current();
-      if (reason === "range") refreshRangeSelectionBand.current();
-      if (reason === "resize") applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
+      if (reason === "ruler") rulerBuilds += 1;
+      const presentation = refreshTimelinePresentation({
+        reason,
+        document,
+        ruler: rulerElement,
+        grid: gridElement,
+        viewport: viewportElement,
+        host: rendererHost,
+        rulerViewport: rulerViewportElement,
+        geometryMaps,
+        geometrySvgs,
+        mappingCache,
+        metricsOwner: viewMetricsOwner,
+        currentZoom,
+        previousScale: screenGeometryScale,
+        rulerInitialized,
+        timeAxis,
+        totalHeight: projection.totalHeight,
+        gridEnabled: gridEnabledRef.current,
+        markOpenPhase,
+        onPlayhead: () => refreshPlayhead.current(),
+        onRange: () => refreshRangeSelectionBand.current(),
+        onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
+      });
+      timeAxis = presentation.timeAxis;
+      screenGeometryScale = presentation.screenGeometryScale;
+      rulerInitialized = presentation.rulerInitialized;
       renderer.update(projection);
     };
     timelineRuntime.attach();
