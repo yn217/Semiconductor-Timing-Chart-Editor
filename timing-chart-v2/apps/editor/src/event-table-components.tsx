@@ -32,3 +32,10 @@ export function QuickValues({ signal, setValue }: { readonly signal: ValueSignal
   const values = quickValueOptions(signal.type);
   return <div className="quick-values" role="group" aria-label="Quick values">{values.map((item) => <button type="button" key={item} onClick={() => setValue(quickValueLiteral(signal.type, item))}>{item}</button>)}</div>;
 }
+
+export function defaultEventValue(signal: ValueSignal): string {
+  if (signal.type === "bus") return signal.displayFormat === "binary" ? "00000000" : "00";
+  if (signal.type === "state") return "IDLE";
+  if (signal.type === "event") return "NONE";
+  return "0";
+}

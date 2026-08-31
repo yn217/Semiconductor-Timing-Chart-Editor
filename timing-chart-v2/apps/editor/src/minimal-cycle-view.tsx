@@ -31,7 +31,7 @@ import { ProblemsPanel } from "./problems-panel.js";
 import { canonicalDocumentOf, createNewDocument, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "./file-document-controller.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
-import { EventRow, QuickValues } from "./event-table-components.js";
+import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 
 const signalId = (value: string) => value as SignalId;
@@ -4090,7 +4090,7 @@ function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly sig
 
 function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => void }) {
   const [start, setStart] = useState(0);
-  const [value, setValue] = useState(quickValue(signal));
+  const [value, setValue] = useState(defaultEventValue(signal));
   const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [importStatus, setImportStatus] = useState("Import signal events");
@@ -4160,13 +4160,6 @@ function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueS
       <button type="submit" data-testid="add-signal-event">Add / replace event</button>
     </form>
   </div>;
-}
-
-function quickValue(signal: ValueSignal): string {
-  if (signal.type === "bus") return signal.displayFormat === "binary" ? "00000000" : "00";
-  if (signal.type === "state") return "IDLE";
-  if (signal.type === "event") return "NONE";
-  return "0";
 }
 
 let commandSequence = 0;
