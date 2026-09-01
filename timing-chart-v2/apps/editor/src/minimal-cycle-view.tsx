@@ -73,6 +73,7 @@ import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
 import { TimelineRangeInteractionOwner } from "./runtime/timeline-range-interaction-owner.js";
 import { AnnotationInteractionOwner } from "./runtime/timeline-annotation-interaction-owner.js";
 import { TreeDragInteractionOwner } from "./runtime/tree-drag-interaction-owner.js";
+import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, useWorkspaceUiState, type TreeTypeFilter, type WorkspacePreset } from "./workspace/use-workspace-ui-state.js";
 import { routeGlobalShortcut } from "./runtime/keyboard-shortcut-router.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
@@ -82,11 +83,6 @@ import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtim
 import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
-const LEFT_PANE_MIN_WIDTH = 265;
-const LEFT_PANE_MAX_WIDTH = 420;
-type DensityMode = "compact" | "comfortable";
-type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
-type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
@@ -127,12 +123,25 @@ export function MinimalCycleView() {
   const [showAnnotations, setShowAnnotations] = useState(true);
   const [showTransactions, setShowTransactions] = useState(true);
   const [showGroupBackground, setShowGroupBackground] = useState(true);
-  const [signalTreeVisible, setSignalTreeVisible] = useState(true);
-  const [ribbonTab, setRibbonTab] = useState("Home");
-  const [bottomTab, setBottomTab] = useState<"Signal" | "Annotation" | "Transaction" | "Problems" | "JSON">("Signal");
-  const [viewMode, setViewMode] = useState<"Cycle" | "Transaction" | "Split">("Cycle");
-  const [density, setDensity] = useState<DensityMode>("comfortable");
-  const [workspacePreset, setWorkspacePreset] = useState<WorkspacePreset>("edit");
+  const workspace = useWorkspaceUiState();
+  const {
+    ribbonTab, setRibbonTab,
+    bottomTab, setBottomTab,
+    viewMode, setViewMode,
+    density, setDensity,
+    workspacePreset, setWorkspacePreset,
+    signalTreeVisible, setSignalTreeVisible,
+    inspectorVisible, setInspectorVisible,
+    inspectorResetToken, setInspectorResetToken,
+    bottomResetToken, setBottomResetToken,
+    bottomVisible, setBottomVisible,
+    leftPaneWidth, setLeftPaneWidth, leftPaneResizeRef,
+    frozenPaneWidth, setFrozenPaneWidth, frozenPaneResizeRef,
+    inspectorWidth, setInspectorWidth, inspectorResizeRef,
+    bottomHeight, setBottomHeight, bottomResizeRef,
+    treeFilter, setTreeFilter,
+    treeTypeFilter, setTreeTypeFilter,
+  } = workspace;
   const [followSelection, setFollowSelection] = useState(true);
   const followSelectionRef = useRef(true);
   followSelectionRef.current = followSelection;
@@ -149,18 +158,6 @@ export function MinimalCycleView() {
     },
   });
   const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
-  const [inspectorVisible, setInspectorVisible] = useState(true);
-  const [inspectorResetToken, setInspectorResetToken] = useState(0);
-  const [bottomResetToken, setBottomResetToken] = useState(0);
-  const [leftPaneWidth, setLeftPaneWidth] = useState(LEFT_PANE_MIN_WIDTH);
-  const leftPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
-  const [frozenPaneWidth, setFrozenPaneWidth] = useState(209);
-  const frozenPaneResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
-  const [inspectorWidth, setInspectorWidth] = useState(297);
-  const inspectorResizeRef = useRef<{ readonly startX: number; readonly startWidth: number } | undefined>(undefined);
-  const [bottomVisible, setBottomVisible] = useState(true);
-  const [bottomHeight, setBottomHeight] = useState(240);
-  const bottomResizeRef = useRef<{ readonly startY: number; readonly startHeight: number } | undefined>(undefined);
   const viewMetricsOwnerRef = useRef<ViewMetricsOwner | null>(null);
   if (viewMetricsOwnerRef.current === null) {
     viewMetricsOwnerRef.current = new ViewMetricsOwner({ leftPaneWidth, frozenPaneWidth, inspectorWidth, viewportWidth: viewport.current?.clientWidth ?? 0, zoom });
@@ -187,8 +184,6 @@ export function MinimalCycleView() {
   const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
   const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
   const [bulkRegistrationPreview, setBulkRegistrationPreview] = useState<{ readonly sourceText: string; readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] }>();
-  const [treeFilter, setTreeFilter] = useState("");
-  const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
   const [treeAddMenuOpen, setTreeAddMenuOpen] = useState(false);
   const [treeMoreMenuOpen, setTreeMoreMenuOpen] = useState(false);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());

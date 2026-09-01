@@ -131,7 +131,7 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,614 lines
+- `minimal-cycle-view.tsx`: 1,612 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -142,6 +142,7 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 - `timeline-annotation-interaction-owner.ts`: 154 lines
 - `tree-drag-interaction-owner.ts`: 95 lines
 - `keyboard-shortcut-router.ts`: 55 lines
+- `use-workspace-ui-state.ts`: 65 lines
 
 ## Step 10 — Render Coordinator (audited; already substantially owned)
 
@@ -152,6 +153,13 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 - Three call sites (`application.attachAcceptedHandler`, `applyCollapsedGroupsRef.current`, `documentLifecycle.attachEffects`'s `applyReplacement`) each recompute `projection` and call `renderer.update(projection)` directly before delegating their conditional refresh work to `timelineRuntime`. These are **not** duplicate implementations of the same responsibility -- they are three genuinely different triggers (command accepted with per-field invalidation, collapsed-group toggle, full document replace with React state reset) that legitimately need their own projection-rebuild-then-refresh sequencing; forcing them into one generic function would blur real behavioral differences (e.g. only `applyReplacement` resets 15+ pieces of React state) for no ownership-transfer benefit, so left as-is rather than manufacturing a "Bad slice" per the playbook's own warning against arbitrary consolidation.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS. `tests/e2e/minimal-cycle-view.spec.ts`/`view-metrics-owner.spec.ts` smoke-tested; 1 pre-existing failure (unrelated `"Cycle View"` visibility timing), confirmed identical via `git stash`.
 
+## Step 11 — Workspace UI State (first slice complete; more remains)
+
+- Owner: `apps/editor/src/workspace/use-workspace-ui-state.ts` (`useWorkspaceUiState`, a React hook -- state must stay hook-based to keep React's re-render contract, unlike the class-based Step 9 owners).
+- Moved 16 `useState` calls (and their 4 paired resize-gesture `useRef`s) out of `minimal-cycle-view.tsx`: `ribbonTab`, `bottomTab`, `viewMode`, `density`, `workspacePreset`, `signalTreeVisible`, `inspectorVisible`, `inspectorResetToken`, `bottomResetToken`, `bottomVisible`, `leftPaneWidth`(+resize ref), `frozenPaneWidth`(+resize ref), `inspectorWidth`(+resize ref), `bottomHeight`(+resize ref), `treeFilter`, `treeTypeFilter`. `MinimalCycleView` calls `useWorkspaceUiState()` once and destructures the identical names back out, so every existing read/write site (JSX props, resize-gesture handlers, `applyWorkspacePreset`, the tree filter `<select>`/`<input>`) needed zero further changes -- purely mechanical relocation, no behavior change, matching the plan's explicit "not LOC reduction, ownership transfer" bar without introducing risk by touching call sites.
+- **Deliberately NOT moved in this slice** (left in `minimal-cycle-view.tsx` for a follow-up): `followSelection`/`bottomPinned` (read via refs inside `selection.configure(...)`'s `synchronizeContext` callback -- tangled with the Selection owner's cross-cutting sync, needs its own careful pass), `pinnedBottomSelection`, `collapsedGroupIds`, `contextMenu`/`treeAddMenuOpen`/`treeMoreMenuOpen` (wired into a shared focus-restoration `useEffect` keyed on all three), and the dialog visibility flags (`propertiesVisible`/`exportVisible`/`saveAsVisible`/`hierarchyVisible`/`bulkRegistrationVisible` + the bulk-registration form fields, all wired into another shared focus-restoration effect). These are real "presentation-only" state per the plan's list but each has cross-cutting effect dependencies that deserve a dedicated, verified pass rather than being bundled into this first slice under time pressure.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `gui-left-pane-resize.spec.ts`, `gui-inspector-resize.spec.ts`, `gui-bottom-resize.spec.ts`, `left-tree-type-filter.spec.ts`, `signal-filter-clear-affordance.spec.ts`, `ribbon-tabs.spec.ts`, `bottom-tab-header-visibility.spec.ts`, `workspace-preset-density.spec.ts` -- 7 pre-existing failures, confirmed identical via `git stash`. Zero new regressions.
+
 ## Next responsibility
 
-Step 11 — Workspace UI State: consolidate `ribbonTab`/`bottomTab`/`viewMode`/`density`/`workspacePreset`/`followSelection`/`bottomPinned`/panel-visibility/pane-widths/`bottomHeight`/tree-filter/collapse presentation-only state (currently ~15+ separate `useState` calls in `minimal-cycle-view.tsx`) behind one `workspace/use-workspace-ui-state.ts` owner, kept strictly separate from Document/Selection/Timeline canonical state.
+Step 11 continued: move `followSelection`/`bottomPinned`/`pinnedBottomSelection`, `collapsedGroupIds`, the context-menu/tree-menu open state, and the dialog-visibility flags into the same `use-workspace-ui-state.ts` owner (each needs its cross-cutting `useEffect` dependency moved or re-derived carefully). Then Step 12 (UI Presentation / JSX split) and Step 13 (Shell).
