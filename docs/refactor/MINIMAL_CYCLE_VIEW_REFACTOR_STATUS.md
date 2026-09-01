@@ -131,7 +131,7 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,612 lines
+- `minimal-cycle-view.tsx`: 1,608 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -171,6 +171,14 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 - The JSX itself (dialogs, Signal Tree column headings/menus, Bottom Editor, Inspector shell) has **not** been split into separate files yet -- this step's slice was the state-ownership transfer only, following the same incremental-slice discipline as Step 11, so the eventual JSX componentization lands on an already-consolidated state surface instead of having to migrate ~15 `useState` declarations *and* restructure JSX in one risky pass.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `left-tree-menu-contrast.spec.ts`, `left-tree-interaction.spec.ts`, `left-tree-compact-footer.spec.ts`, `icon-button-dialog-close.spec.ts`, `home-command-surface.spec.ts`, `full-gui.spec.ts`, `bulk-registration-strict.spec.ts` -- 31 pre-existing failures / 34 passed, confirmed byte-identical via `git stash`. Zero new regressions.
 
+## Step 12 — UI Presentation (Rename / Bulk Registration dialog JSX extracted)
+
+- Extracted the Rename dialog and Bulk Signal Registration dialog JSX bodies (previously ~40 lines of dense inline JSX in `minimal-cycle-view.tsx`'s return) into `RenameDialog` and `BulkRegistrationDialog` components in `minimal-cycle-view-panels.tsx`, next to the other already-extracted presentational components (`ContextMenuPanel`, `InspectorPanel`, `MinimalCycleViewTitleBar`).
+- Both take grouped, component-scoped props (dialog ref, current field values, one callback per user action) rather than passing the raw `use-dialog-menu-state.ts` setters straight through -- `minimal-cycle-view.tsx` still owns exactly how a field edit maps to state updates (e.g. `onDraftChange` still clears `renameError` in the same call, matching pre-extraction behavior byte-for-byte), the components only render and forward events.
+- `minimal-cycle-view.tsx` now renders `<RenameDialog .../>` and `<BulkRegistrationDialog .../>` in place of the inline markup; no behavior change, no test-id/DOM-order change.
+- The Properties/Export/SaveAs/Hierarchy/Compatibility/Unsaved-file dialogs, the Signal Tree column headers/menus, the Bottom Editor, and the status bar footer remain inline in `minimal-cycle-view.tsx` -- the Properties/Export/SaveAs/Hierarchy dialogs were already their own separate components before this refactor started (this step only had visibility-flag ownership to transfer, done in the state slice above); Compatibility/Unsaved-file dialogs are owned by Document Lifecycle's `pendingFileAction`/`compatibilityPreview` and were intentionally left with the owner that already manages their trigger conditions; Signal Tree/Bottom Editor/status bar are the larger remaining JSX split for a future slice.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `bulk-registration-strict.spec.ts`, `home-command-surface.spec.ts`, `icon-button-dialog-close.spec.ts`, `full-gui.spec.ts` -- 30 pre-existing failures / 30 passed, confirmed byte-identical via `git stash`. Zero new regressions.
+
 ## Next responsibility
 
-Step 12 continued: split `minimal-cycle-view.tsx`'s JSX into files (Signal Tree column/menus, Bottom Editor, Inspector shell wrapper, the Rename and Bulk-Registration dialog bodies, editor shell), reusing the existing `minimal-cycle-view-ribbon.tsx`/`minimal-cycle-view-panels.tsx`/`minimal-cycle-view-ui.tsx`/`minimal-cycle-view-timeline.tsx`. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
+Step 12 continued: split the remaining `minimal-cycle-view.tsx` JSX into files (Signal Tree column/menus, Bottom Editor, editor shell), reusing the existing `minimal-cycle-view-ribbon.tsx`/`minimal-cycle-view-panels.tsx`/`minimal-cycle-view-ui.tsx`/`minimal-cycle-view-timeline.tsx`. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
