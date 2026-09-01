@@ -34,7 +34,7 @@ import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorSection } from "./inspector-section.js";
 import { MiniMap } from "./minimap.js";
 import { parseBulkSignalDefinitions } from "./bulk-signal-parser.js";
-import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog, SignalTreeColumnHeader, BottomEditorPanel } from "./minimal-cycle-view-panels.js";
+import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog, SignalTreeColumnHeader, BottomEditorPanel, EditorStatusBar } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
@@ -1609,15 +1609,26 @@ export function MinimalCycleView() {
      {compatibilityPreview && <div className="modal-backdrop" data-testid="compatibility-dialog"><section ref={compatibilityDialogRef} className="document-properties compatibility-dialog" role="dialog" aria-modal="true" aria-labelledby="compatibility-dialog-title"><header><h2 id="compatibility-dialog-title">Compatibility Mode</h2></header><p>Format version {compatibilityPreview.sourceFormatVersion} is newer than this editor supports. The current document has not been replaced.</p><p className="inspector-note">Unknown fields are preserved in the original source below. Compatibility Mode is read-only and cannot Save or overwrite this file.</p><textarea aria-label="Compatibility source" readOnly value={compatibilityPreview.sourceText} rows={14} />{compatibilityPreview.readOnly && <output role="status">Read-only Compatibility Mode active</output>}<footer><button type="button" onClick={() => { documentLifecycle.closeCompatibility(); restorePendingFileFocus(); }}>{compatibilityPreview.readOnly ? "Close" : "Cancel"}</button>{!compatibilityPreview.readOnly && <button type="button" data-testid="compatibility-read-only" onClick={documentLifecycle.enterCompatibilityReadOnly}>View Read-Only</button>}</footer></section></div>}
      {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={continuePendingFileAction}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
      <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { capturePendingFileOrigin(); void documentLifecycle.readFile(file); } event.currentTarget.value = ""; }} />
-    <footer className="status-bar" aria-label="Editor status">
-      <span data-testid="tool-status">{arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}</span>
-      <span>Selected: <strong data-testid="selection-status">{selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}</strong></span>
-      <span data-testid="signal-count-status">Signals: {snapshot.document.signals.length}</span><span data-testid="annotation-count-status">Annotations: {snapshot.document.annotations.length}</span><span data-testid="range-status">{visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
-      <span className="status-context" data-testid="status-context">Workspace: {workspacePreset} · {bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}{selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}</span>
-      <span className={visualReference ? "status-detail-hidden" : undefined} data-testid="revision-status">Canonical revision {snapshot.revision}</span>
-      <span className={visualReference ? "status-detail-hidden" : undefined} data-testid="history-status">History {history.undoDepth} / Redo {history.redoDepth}</span>
-      <span data-testid="time-axis-status">Time Axis: {snapshot.document.timeline.referenceClock ? `Clock · ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}</span><span data-testid="dirty-status">{history.dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {diagnostics.length}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
-    </footer>
+    <EditorStatusBar
+      toolStatus={arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}
+      selectionStatus={selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}
+      signalCount={snapshot.document.signals.length}
+      annotationCount={snapshot.document.annotations.length}
+      rangeStatus={visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`}
+      selectedCycle={selectedCycle}
+      zoom={zoom}
+      snapEnabled={snapEnabled}
+      viewMode={viewMode}
+      statusContext={`Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`}
+      hideRevisionDetail={visualReference}
+      revision={snapshot.revision}
+      undoDepth={history.undoDepth}
+      redoDepth={history.redoDepth}
+      timeAxisStatus={`Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`}
+      dirty={history.dirty}
+      problemsCount={diagnostics.length}
+      waveDromHasError={waveDromHasError}
+    />
     </MinimalCycleViewPanels>
   </main>;
 }

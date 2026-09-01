@@ -237,6 +237,42 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
   </section>;
 }
 
+export type EditorStatusBarProps = {
+  readonly toolStatus: string;
+  readonly selectionStatus: string;
+  readonly signalCount: number;
+  readonly annotationCount: number;
+  readonly rangeStatus: string;
+  readonly selectedCycle: number;
+  readonly zoom: number;
+  readonly snapEnabled: boolean;
+  readonly viewMode: string;
+  readonly statusContext: string;
+  readonly hideRevisionDetail: boolean;
+  readonly revision: number;
+  readonly undoDepth: number;
+  readonly redoDepth: number;
+  readonly timeAxisStatus: string;
+  readonly dirty: boolean;
+  readonly problemsCount: number;
+  readonly waveDromHasError: boolean;
+};
+
+/** The editor's bottom status bar. Purely a display of values already
+ * computed by their owners (Application/History, Selection, Timeline
+ * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
+export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError }: EditorStatusBarProps) {
+  return <footer className="status-bar" aria-label="Editor status">
+    <span data-testid="tool-status">{toolStatus}</span>
+    <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
+    <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
+    <span className="status-context" data-testid="status-context">{statusContext}</span>
+    <span className={hideRevisionDetail ? "status-detail-hidden" : undefined} data-testid="revision-status">Canonical revision {revision}</span>
+    <span className={hideRevisionDetail ? "status-detail-hidden" : undefined} data-testid="history-status">History {undoDepth} / Redo {redoDepth}</span>
+    <span data-testid="time-axis-status">{timeAxisStatus}</span><span data-testid="dirty-status">{dirty ? "Modified" : "Clean"}</span><span data-testid="problems-status">Problems: {problemsCount}</span><span data-testid="wavedrom-status">WaveDrom: {waveDromHasError ? "Error" : "Ready"}</span>
+  </footer>;
+}
+
 export function BulkRegistrationDialog({ dialogRef, groups, text, onTextChange, groupId, onGroupIdChange, status, preview, onPreview, onApply, onClose }: BulkRegistrationDialogProps) {
   return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration">
     <header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={onClose}><EditorIcon name="close" /></button></header>

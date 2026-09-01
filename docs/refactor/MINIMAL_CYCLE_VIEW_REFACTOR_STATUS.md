@@ -131,7 +131,7 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,624 lines
+- `minimal-cycle-view.tsx`: 1,635 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -192,6 +192,13 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 - Which editor renders for the active tab (`signalEditor`/`annotationEditor`/`transactionEditor`/`ProblemsPanel`/`AdvancedJsonPanel`) is still decided by `minimal-cycle-view.tsx` and passed in as a `content` prop -- that ternary depends on several different owners' selection state and stays with the caller rather than being duplicated into the presentational component.
 - TypeScript, `check:boundaries`, `check:editor-complexity` (1,624 lines), `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `bottom-tab-header-visibility.spec.ts`, `bottom-context.spec.ts`, `status-context.spec.ts`, `pinned-bottom-target.spec.ts`, `full-gui.spec.ts` -- 26 pre-existing failures / 31 passed, confirmed byte-identical via `git stash`. Zero new regressions.
 
+## Step 12 — UI Presentation (status bar footer extracted)
+
+- Extracted the editor's bottom status bar into `EditorStatusBar` in `minimal-cycle-view-panels.tsx`. It is purely a display of values already computed by their owners (Application/History, Selection, Timeline Geometry/Navigation, Workspace UI State) -- no state or logic of its own, only formatting.
+- The few inline ternaries (tool status, selection label, range label, workspace/pin/scope status-context line, time-axis label) are now computed once in `minimal-cycle-view.tsx` and passed as finished strings, rather than duplicated inside the presentational component -- kept the "Time Axis: " / "Workspace: " literal prefixes intact (verified against the pre-extraction JSX line by line) so status text is byte-identical.
+- TypeScript, `check:boundaries`, `check:editor-complexity` (1,635 lines), `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `status-context.spec.ts`, `minimal-cycle-view.spec.ts`, `edit-commit-contract.spec.ts`, `full-gui.spec.ts` -- 24 pre-existing failures / 31 passed, confirmed byte-identical via `git stash`. Zero new regressions.
+- This closes out the practical Step 12 JSX split for the current pass: every large, self-contained block called out in the plan (Signal Tree column header, Bottom Editor, Rename/Bulk-Registration dialogs, status bar) now has its own component in `minimal-cycle-view-panels.tsx`/-`ribbon.tsx`, reusing what already existed (`ContextMenuPanel`/`InspectorPanel`/`Ribbon`) rather than re-deriving it. What remains inline in `minimal-cycle-view.tsx` is mostly: the `<main>` shell/title-bar composition, the cycle canvas/viewport `<section>` (ref-heavy DOM mount points for the renderer, not really "presentation" to extract), the resize-handle elements, the still-inline Compatibility/Unsaved-file dialogs (owned by Document Lifecycle), and the Context Menu wiring (already a component, `ContextMenuPanel`) -- i.e. composition and ref plumbing, which is Step 13's territory rather than more JSX-file splitting.
+
 ## Next responsibility
 
-Step 12 continued: split the remaining `minimal-cycle-view.tsx` JSX into files (editor shell / top-level composition, status bar footer). Do **not** route new extractions through `minimal-cycle-view-ui.tsx`'s `MinimalCycleViewUi`/`MinimalCycleViewSignalTreeCanvas`/etc. -- those belong to a separate non-production "Next" scaffold, not this file's production JSX split. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
+Step 13 — Shell reduction: with Steps 3-12 complete, `minimal-cycle-view.tsx` should now mainly be owner construction + composition. Audit what remains inline (viewport/canvas DOM refs, resize handles, Compatibility/Unsaved-file dialogs, `<main>` composition) and decide what, if anything, still needs its own file versus staying as intentional ref-plumbing in the composition shell. Re-verify final LOC against the plan's target range, confirm no duplicate semantic/selection/geometry/render paths exist, and do a final `git fetch origin` + `git diff origin/main...HEAD` review per the goal's stated end conditions.
