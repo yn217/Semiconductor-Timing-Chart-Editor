@@ -407,7 +407,10 @@ export function MinimalCycleView() {
 
     publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom());
     let frame = 0;
-    let timelineRender: (reason: string) => void = (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); };
+    // Definite-assignment: assigned below before createEditorTimelineRuntime's
+    // returned closures can ever be invoked (matches this file's rangeInteractions/
+    // treeDrag forward-declaration convention); no dummy body is reachable.
+    let timelineRender!: (reason: string) => void;
     const timelineRuntime = createEditorTimelineRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
