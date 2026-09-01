@@ -93,11 +93,22 @@
 - Regression sweep: `timeline-editor.spec.ts`, `annotation-snap.spec.ts`, `transaction-export.spec.ts`, `zoom-cross-surface-alignment.spec.ts`, `clockless-time-axis.spec.ts`, `edit-commit-contract.spec.ts`, `result-aware-create-effects.spec.ts`, `gui-split-view-visual.spec.ts`: 23 pre-existing failures (mostly the already-known ambiguous `"Transaction"` button locator — a ribbon tool and a ribbon *tab* now share the same accessible name — plus the already-known range-preview/drag/marker-geometry set), confirmed identical via `git stash` against the pre-step baseline. Zero new regressions.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
 
-Remaining Step 9 ownership: tree DnD (Step 9-C), keyboard routing (Step 9-D), and symmetric listener-lifecycle audit (Step 9-E).
+### Step 9-C — Tree Drag & Drop (complete)
+
+- Owner: `apps/editor/src/runtime/tree-drag-interaction-owner.ts`
+- Owns Signal/Group Left Tree drag state, `dragover` hover-target drop-position (presentation dataset only, no canonical mutation), drop validation, and the semantic reorder command commit (`signal.move` / `group.move`) — a mechanical extraction of logic that was already single-owned in `minimal-cycle-view.tsx` (no parallel implementation existed) into its own file, matching the `AnnotationInteractionOwner`/`TimelineRangeInteractionOwner`/`TransactionLanes` convention.
+- `MinimalCycleView` retains only thin aliases (`onDragStart/onDragOver/onDrop/onDragEnd` = `treeDrag.onDragStart/onDragOver/onDrop/onDragEnd`) bound to the same `dragstart/dragover/drop/dragend` listeners as before.
+- **Real gap closed**: Spacer rows were not draggable at all. `packages/renderer/src/stable-surface.ts` only ever set `shell.draggable = true` for `row.kind === "timing"`, never for `row.kind === "spacer"`, even though a dedicated `spacer.move` command already existed in `@timing-chart-v2/commands` and was never invoked from the tree. Fixed by (1) also marking `spacer` rows draggable, (2) `TreeDragInteractionOwner.onDragStart` now reads `row.dataset.kind` to classify a drag as `"spacer"` vs `"signal"`, and (3) `onDrop` dispatches `spacer.move` for a Spacer drag (validated to stay within its owning Group, matching `spacer.move`'s own `SPACER_OWNER_MISMATCH` semantics) instead of misrouting it through `signal.move`.
+- Focused browser (new): `tests/e2e/tree-drag-drop.spec.ts` 5/5 passed — Signal reorder with one command per drop + Undo/Redo restoring exact order, Spacer reorder within its owning Group with one command per drop + Undo, an invalid self-drop committing no command and leaving `data-canonical-revision`/History untouched, selection surviving a reorder, and a collapse/expand cycle not breaking a subsequent reorder among the group's visible siblings.
+- Regression sweep (touched a shared renderer file): `left-tree-interaction.spec.ts`, `left-tree-critical-icons.spec.ts`, `group-band.spec.ts`, `spacer.spec.ts`, `spacer-row.spec.ts`, `signal-spacing.spec.ts`, `left-tree-type-filter.spec.ts` — 4 pre-existing failures, confirmed identical via `git stash`. Zero new regressions.
+- `tests/e2e/reorder-visibility.spec.ts` (pre-existing, no changes needed for this step): 2/8 passed both before and after this extraction (verified via `git stash`) — the other 6 assert against a `data-canonical-row-ids` surface attribute that no longer exists anywhere in the source (`grep` found zero producers), a pre-existing test/implementation drift unrelated to Step 9-C's ownership-transfer scope.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
+
+Remaining Step 9 ownership: keyboard routing (Step 9-D) and symmetric listener-lifecycle audit (Step 9-E).
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,690 lines
+- `minimal-cycle-view.tsx`: 1,637 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -106,6 +117,7 @@ Remaining Step 9 ownership: tree DnD (Step 9-C), keyboard routing (Step 9-D), an
 - `timeline-geometry-owner.ts`: 100 lines / 4,891 bytes
 - `timeline-range-interaction-owner.ts`: 125 lines / 6,007 bytes
 - `timeline-annotation-interaction-owner.ts`: 154 lines
+- `tree-drag-interaction-owner.ts`: 95 lines
 
 ## Next responsibility
 

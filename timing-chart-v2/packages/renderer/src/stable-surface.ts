@@ -653,7 +653,7 @@ function syncShellLayer(layer: HTMLElement, cache: Map<string, HTMLElement>, row
     if (row.role) shell.dataset.signalRole = row.role; else delete shell.dataset.signalRole;
     applyDisplayStyle(shell, row);
     if (!shell.hasAttribute("aria-selected")) shell.setAttribute("aria-selected", "false");
-    if (surface === "left" && row.kind === "timing") {
+    if (surface === "left" && (row.kind === "timing" || row.kind === "spacer")) {
       shell.draggable = true;
       shell.setAttribute("aria-grabbed", "false");
     }

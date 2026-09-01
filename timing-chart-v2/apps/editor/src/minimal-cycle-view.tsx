@@ -73,6 +73,7 @@ import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-ow
 import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
 import { TimelineRangeInteractionOwner } from "./runtime/timeline-range-interaction-owner.js";
 import { AnnotationInteractionOwner } from "./runtime/timeline-annotation-interaction-owner.js";
+import { TreeDragInteractionOwner } from "./runtime/tree-drag-interaction-owner.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
@@ -862,7 +863,6 @@ export function MinimalCycleView() {
         setTimelineRange({ start: Math.min(anchor, cycle), end: Math.max(anchor, cycle) + 1 });
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
     };
-    let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
     let rangeInteractions!: TimelineRangeInteractionOwner;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
@@ -932,67 +932,15 @@ export function MinimalCycleView() {
     const onRangePointerUp = rangeInteractions.pointerUp;
     const onRangePointerCancel = rangeInteractions.pointerCancel;
     const onRangeKeyDown = rangeInteractions.keyDown;
-    const clearDropState = () => {
-      for (const element of rendererHost.querySelectorAll<HTMLElement>("[data-drop-position], [data-dragging]")) {
-        delete element.dataset.dropPosition;
-        delete element.dataset.dragging;
-        element.setAttribute("aria-grabbed", "false");
-      }
-    };
-    const onDragStart = (event: DragEvent) => {
-      const element = event.target instanceof Element ? event.target : null;
-      const branch = element?.closest<HTMLElement>("[data-role='tree-branch'][draggable='true']");
-      const row = element?.closest<HTMLElement>("[data-role='left-row'][data-row-id]");
-      if (branch?.dataset.groupId) dragged = { kind: "group", id: branch.dataset.groupId };
-      else if (row?.dataset.rowId) dragged = { kind: "signal", id: row.dataset.rowId };
-      else return;
-      const owner = dragged.kind === "group" ? branch : row;
-      if (owner) {
-        owner.dataset.dragging = "true";
-        owner.setAttribute("aria-grabbed", "true");
-      }
-      event.dataTransfer?.setData("text/plain", `${dragged.kind}:${dragged.id}`);
-      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-    };
-    const onDragOver = (event: DragEvent) => {
-      if (!dragged) return;
-      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-row'][data-row-id]") : null;
-      if (!target) return;
-      event.preventDefault();
-      for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-drop-position]")) delete row.dataset.dropPosition;
-      const bounds = target.getBoundingClientRect();
-      target.dataset.dropPosition = event.clientY >= bounds.top + bounds.height / 2 ? "after" : "before";
-      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-    };
-    const onDrop = (event: DragEvent) => {
-      if (!dragged) return;
-      const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='left-row'][data-row-id]") : null;
-      if (!target?.dataset.rowId || !target.dataset.groupId) return;
-      event.preventDefault();
-      const after = target.dataset.dropPosition === "after";
-      const document = session.getSnapshot().document;
-      if (dragged.kind === "signal") {
-        const sourceGroup = document.signalGroups.find((group) => group.rows.includes(dragged!.id as SignalId));
-        const targetGroup = document.signalGroups.find((group) => group.id === target.dataset.groupId);
-        if (sourceGroup && targetGroup && dragged.id !== target.dataset.rowId) {
-          const sourceIndex = sourceGroup.rows.indexOf(dragged.id as SignalId);
-          let index = targetGroup.rows.indexOf(target.dataset.rowId as SignalId) + (after ? 1 : 0);
-          if (sourceGroup.id === targetGroup.id && sourceIndex < index) index -= 1;
-          commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drag_signal"), type: "signal.move", signalId: dragged.id as SignalId, targetGroupId: targetGroup.id, index });
-        }
-      } else {
-        const sourceIndex = document.signalGroups.findIndex((group) => group.id === dragged!.id);
-        const targetIndex = document.signalGroups.findIndex((group) => group.id === target.dataset.groupId);
-        if (sourceIndex >= 0 && targetIndex >= 0 && sourceIndex !== targetIndex) {
-          let index = targetIndex + (after ? 1 : 0);
-          if (sourceIndex < index) index -= 1;
-          commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drag_group"), type: "group.move", groupId: dragged.id as GroupId, index });
-        }
-      }
-      dragged = undefined;
-      clearDropState();
-    };
-    const onDragEnd = () => { dragged = undefined; clearDropState(); };
+    const treeDrag = new TreeDragInteractionOwner({
+      rendererHost,
+      getDocument: () => session.getSnapshot().document,
+      execute: (command) => { commandRegistry.current.execute<SemanticCommand>("semantic.execute", command); },
+    });
+    const onDragStart = treeDrag.onDragStart;
+    const onDragOver = treeDrag.onDragOver;
+    const onDrop = treeDrag.onDrop;
+    const onDragEnd = treeDrag.onDragEnd;
     const annotationInteraction = new AnnotationInteractionOwner({
       rendererHost,
       renderer,
