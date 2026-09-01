@@ -59,15 +59,25 @@
 - Focused browser: 4 passed for status/view-only invariants, Fit All/Fit Selection, ruler-backed cycle navigation/playhead, and horizontal-scroll range alignment across 50/100/150/200% zoom.
 - TypeScript and diff-check: PASS.
 
+## Step 8 — Timeline Geometry
+
+- Owner: `apps/editor/src/runtime/timeline-geometry-owner.ts`
+- Owns the read-only Canonical source time → `DisplayTimeMapping` → `TimeAxisGeometry`/`LocalGeometryMap` → local/screen coordinate path.
+- Also owns presentation geometry revision state, source-boundary lookup, screen-to-local conversion, cycle-boundary hit testing, transaction boundary lookup, and snap-index construction/invalidation.
+- `MinimalCycleView` no longer constructs a second mapping function, screen projector, time-axis state, snap service, or snap-index resolver; interaction and `TimelineViewportRuntime` consume the same geometry owner.
+- Focused unit: 1 passed. Focused browser: 5 passed for axis-break compression, canonical anchor preservation through a fold, terminal boundary, Canvas boundary selection, and reverse/Shift range selection. Two additional legacy tests reached the geometry assertion path but reproduced pre-existing missing/ambiguous UI locators.
+- TypeScript, boundary gate, and diff-check: PASS.
+
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,886 lines / 136,435 bytes
+- `minimal-cycle-view.tsx`: 1,850 lines / 134,146 bytes
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
 - `use-clipboard-actions.ts`: 237 lines / 18,024 bytes
 - `use-timeline-navigation-owner.ts`: 95 lines / 4,036 bytes
+- `timeline-geometry-owner.ts`: 100 lines / 4,891 bytes
 
 ## Next responsibility
 
-Timeline Presentation: ruler, grid, playhead, range, resize, and scroll refresh coordination through the existing TimelineViewportRuntime.
+Timeline Interactions: pointer/range/annotation/transaction drag, keyboard/cancel, snap consumption, and symmetric listener lifecycle.

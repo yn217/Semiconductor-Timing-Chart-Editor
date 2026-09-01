@@ -2,7 +2,7 @@ import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, use
 import type { RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import { DefaultScreenGeometryProjector, resolveTimeAxisGeometry, SemanticSnapCandidateService, type ImmutableSnapIndex, type LocalGeometryMap, type Point, type SnapKind, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
+import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
@@ -74,14 +74,13 @@ import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
+import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
-import { displayBoundaryForSource } from "./runtime/display-boundary.js";
-import { buildSnapIndex } from "./runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createSnapIndexResolver, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 const LEFT_PANE_MIN_WIDTH = 265;
@@ -353,9 +352,7 @@ export function MinimalCycleView() {
     let session = sessionController.current();
     const documentEpoch = runtime.documentEpoch;
     const adapter = runtime.createWaveDromAdapter();
-    const screenGeometry = new DefaultScreenGeometryProjector();
     const projectionCoordinator = runtime.projection;
-    let timeAxis: TimeAxisGeometry = { mode: "clockless" };
     const mappingCache = runtime.displayMapping;
     const geometryRegistry = runtime.geometry;
     const geometrySvgs = geometryRegistry.svgs;
@@ -363,30 +360,25 @@ export function MinimalCycleView() {
     const openPhaseTracker = createOpenPhaseTracker(rendererHost);
     const markOpenPhase = openPhaseTracker.mark;
     const beginOpenMeasurement = openPhaseTracker.begin;
+    let projection!: RenderProjection;
+    let publishState: () => void = () => undefined;
+    const timelineGeometry = new TimelineGeometryOwner({
+      mappingCache,
+      geometryMaps,
+      getDocument: () => sessionController.snapshot().document,
+      getProjection: () => projection,
+      onSnapIndexBuilt: () => publishState(),
+    });
     const provider = createWaveformSurfaceProvider({
       sessionController,
       mappingCache,
       adapter,
       geometryRegistry,
       markOpenPhase,
-      invalidateSnapIndex: () => { snapIndex = undefined; snapIndexResolver?.invalidate(); },
+      invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
     });
     const renderCoordinator = runtime.createRenderer(provider);
     const renderer = renderCoordinator.renderer;
-    const snapService = new SemanticSnapCandidateService();
-    let snapIndex: ImmutableSnapIndex | undefined;
-    let screenGeometryScale = 1;
-    const snapIndexResolver = createSnapIndexResolver({
-      getDocument: () => sessionController.snapshot().document,
-      getProjection: () => projection,
-      geometryMaps,
-      mappingCache,
-      snapService,
-      screenGeometry: screenGeometryScale,
-      build: (document, nextProjection, maps, mapping, service, scale) => buildSnapIndex(document, nextProjection, maps, mapping, service, scale),
-      onBuilt: () => publishState(),
-    });
-    const currentSnapIndex = () => { snapIndex = snapIndexResolver(); return snapIndex; };
     const initialProjection = mountInitialTimelineProjection({
       coordinator: renderCoordinator,
       renderer,
@@ -398,7 +390,7 @@ export function MinimalCycleView() {
       collapsedGroupIds: [...collapsedGroupIdsRef.current],
     });
     let window: VirtualizationWindow = initialProjection.window;
-    let projection: RenderProjection = initialProjection.projection;
+    projection = initialProjection.projection;
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
     let rulerInitialized = false;
@@ -411,31 +403,22 @@ export function MinimalCycleView() {
       timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
     };
 
-    const publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, snapService, snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom());
+    publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom());
     let frame = 0;
     let timelineRender: (reason: string) => void = (reason) => { rendererHost.dataset.timelineRefreshReason = reason; renderer.update(projection); };
     const timelineRuntime = createEditorTimelineRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
-        getDisplayTimeMapping: () => mappingCache.get(session.getSnapshot().document.timeline, session.getSnapshot().document.timeGroups),
-        getTimeAxisGeometry: () => timeAxis.geometry,
+        getDisplayTimeMapping: () => timelineGeometry.displayMapping,
+        getTimeAxisGeometry: () => timelineGeometry.timeAxis.geometry,
         getLocalGeometryMap: () => geometryMaps,
-        sourceCycleToLocalX: (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle),
-        sourceBoundaryToLocalX: (document, cycle) => {
-          const canonical = document as CanonicalDocument;
-          const axis = resolveTimeAxisGeometry(canonical, geometryMaps);
-          if (!axis.geometry || axis.ownerSignalId === undefined) return undefined;
-          const mapping = mappingCache.get(canonical.timeline, canonical.timeGroups);
-          const displayCycle = displayBoundaryForSource(mapping, cycle, canonical.timeline.cycleCount);
-          if (displayCycle === undefined) return undefined;
-          const point = axis.geometry.find({ signalId: axis.ownerSignalId, cycle: displayCycle, point: "cycle-start" })?.point;
-          return point === undefined ? undefined : point.x * screenGeometryScale;
-        },
+        sourceCycleToLocalX: (cycle) => timelineGeometry.sourceBoundaryToLocalX(session.getSnapshot().document, cycle),
+        sourceBoundaryToLocalX: (document, cycle) => timelineGeometry.sourceBoundaryToLocalX(document as CanonicalDocument, cycle),
         localXToScreenX: (localX) => localX,
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererOverlays(renderer, host, session.getSnapshot().document, projection, geometryMaps, mappingCache, screenGeometryScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererOverlays(renderer, host, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
@@ -454,7 +437,7 @@ export function MinimalCycleView() {
           onProjection: (nextProjection: any, nextWindow: any, mountedSignalsChanged: boolean) => {
             window = nextWindow;
             projection = nextProjection;
-            if (mountedSignalsChanged) { snapIndex = undefined; snapIndexResolver.invalidate(); }
+            if (mountedSignalsChanged) timelineGeometry.invalidateSnapIndex();
             renderer.update(projection);
             rendererHost.dataset.viewportStartY = String(window.viewportStartY);
             publishState();
@@ -477,9 +460,9 @@ export function MinimalCycleView() {
         mappingCache,
         metricsOwner: viewMetricsOwner,
         currentZoom: timelineNavigation.getZoom(),
-        previousScale: screenGeometryScale,
+        previousScale: timelineGeometry.presentationScale,
         rulerInitialized,
-        timeAxis,
+        timeAxis: timelineGeometry.timeAxis,
         totalHeight: projection.totalHeight,
         gridEnabled: gridEnabledRef.current,
         markOpenPhase,
@@ -487,15 +470,14 @@ export function MinimalCycleView() {
         onRange: () => refreshRangeSelectionBand.current(),
         onResize: () => applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() }),
       });
-      timeAxis = presentation.timeAxis;
-      screenGeometryScale = presentation.screenGeometryScale;
+      timelineGeometry.updatePresentation(presentation.timeAxis, presentation.screenGeometryScale);
       rulerInitialized = presentation.rulerInitialized;
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for
       // ruler/grid/zoom refreshes would regenerate the same WaveDrom rows.
     };
     timelineRuntime.attach();
-    transactionBoundaryX.current = (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
+    transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
     const currentViewMetrics = () => {
       viewMetricsOwner.update({ viewportWidth: viewportElement.clientWidth, zoom: timelineNavigation.getZoom() });
       return viewMetricsOwner.snapshot();
@@ -513,7 +495,7 @@ export function MinimalCycleView() {
       rulerViewport: rulerViewportElement,
       viewMetrics: viewMetricsOwner,
       timelineOffset,
-      getPresentationScale: () => screenGeometryScale,
+      getPresentationScale: () => timelineGeometry.presentationScale,
       syncPresentationScale: syncPresentationScaleDom,
       getDocument: () => session.getSnapshot().document,
       getRange: () => timelineRangeRef.current,
@@ -525,12 +507,12 @@ export function MinimalCycleView() {
       clientX,
       host: rendererHost,
       projection,
-      timeAxis,
-      screenGeometry,
+      timeAxis: timelineGeometry.timeAxis,
+      screenGeometry: timelineGeometry.screen,
       zoom: timelineNavigation.getZoom(),
       snapEnabled: snapEnabledRef.current,
       document: session.getSnapshot().document,
-      currentSnapIndex,
+      currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
       cycleBoundaryAtPointerX,
       cycleBoundaryAtX,
       publishState,
@@ -571,7 +553,7 @@ export function MinimalCycleView() {
       }
       const invalidation = deriveRenderInvalidation(changed, result.snapshot.document.timeline.referenceClock);
       const snapDependenciesChanged = invalidation.snapDependenciesChanged;
-      if (snapDependenciesChanged) { snapIndex = undefined; snapIndexResolver.invalidate(); }
+      if (snapDependenciesChanged) timelineGeometry.invalidateSnapIndex();
       const refreshRuler = invalidation.refreshRuler;
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
@@ -598,8 +580,7 @@ export function MinimalCycleView() {
     });
     applyCollapsedGroupsRef.current = (ids) => {
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
-      snapIndex = undefined;
-      snapIndexResolver.invalidate();
+      timelineGeometry.invalidateSnapIndex();
       renderer.update(projection);
       timelineRuntime.refreshPlayhead();
       timelineRuntime.refreshGrid();
@@ -630,9 +611,7 @@ export function MinimalCycleView() {
       setRenameDialogOpen(false);
       treeFocusRowIdRef.current = undefined;
       geometryRegistry.clear();
-      snapIndex = undefined;
-      snapIndexResolver.invalidate();
-      timeAxis = { mode: "clockless" };
+      timelineGeometry.reset();
       rulerInitialized = false;
       // Open/New owns a deterministic viewport policy. Apply it before the
       // first projection so the previous document cannot seed stale rows.
@@ -804,8 +783,8 @@ export function MinimalCycleView() {
         if (!waveLayer) return;
         const bounds = waveLayer.getBoundingClientRect();
         const currentZoom = timelineNavigation.getZoom();
-        const localPointer = screenGeometry.fromScreen({ x: event.clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom });
-        const snap = currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
+        const localPointer = timelineGeometry.screenToLocal({ x: event.clientX - bounds.left, y: 0 }, currentZoom);
+        const snap = timelineGeometry.currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 12 / currentZoom, ["clock-edge", "signal-transition", "bus-transition"]);
         publishState();
         if (!snap) {
           setProblem("No rendered transition is within the 12 px snap tolerance.");
@@ -896,22 +875,7 @@ export function MinimalCycleView() {
       const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
       if (!waveLayer) return undefined;
       const bounds = waveLayer.getBoundingClientRect();
-      const currentZoom = timelineNavigation.getZoom();
-      const x = screenGeometry.fromScreen({ x: clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x;
-      const candidates = currentSnapIndex().entries().filter((candidate) => candidate.kind === "cycle-boundary");
-      if (!snapEnabledRef.current) {
-        const ordered = [...candidates].sort((left, right) => left.point.x - right.point.x);
-        const x = (clientX - bounds.left) / currentZoom;
-        const terminal = ordered.at(-1);
-        if (terminal && x >= terminal.point.x - 32 / currentZoom) return terminal.anchor.cycle;
-        return ordered.filter((candidate) => candidate.point.x <= x).at(-1)?.anchor.cycle ?? ordered[0]?.anchor.cycle;
-      }
-      let nearest: { cycle: number; distance: number } | undefined;
-      for (const candidate of candidates) {
-        const distance = Math.abs(candidate.point.x - x);
-        if (!nearest || distance < nearest.distance) nearest = { cycle: candidate.anchor.cycle, distance };
-      }
-      return nearest?.cycle;
+      return timelineGeometry.cycleBoundaryAtScreenX(clientX, bounds.left, timelineNavigation.getZoom(), snapEnabledRef.current);
     };
     // The ruler ticks are placed from the same LocalGeometryMap as the
     // waveform. Their screen rectangles therefore provide the shared
@@ -1144,17 +1108,17 @@ export function MinimalCycleView() {
       if (!documentEpoch.isCurrent(annotationDrag.epoch)) { clearAnnotationPreview(); return; }
       const screenDx = Math.round(event.clientX - annotationDrag.startX);
       const currentZoom = timelineNavigation.getZoom();
-      const dx = Math.round(screenGeometry.fromScreen({ x: screenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
+      const dx = Math.round(timelineGeometry.screenToLocal({ x: screenDx, y: 0 }, currentZoom).x);
       const dy = Math.round(event.clientY - annotationDrag.startY);
       annotationDrag.owner.style.translate = `${screenDx}px ${dy}px`;
       if (!annotationDrag.field || annotationDrag.label) return;
       const document = session.getSnapshot().document;
       const annotation = document.annotations.find((item) => item.id === annotationDrag?.annotationId);
       const anchor = annotation?.[annotationDrag.field];
-       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale);
+       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), timelineGeometry.presentationScale);
       if (!annotation || !anchor || !point) return;
        const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
-      const snap = snapEnabledRef.current ? currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
+      const snap = snapEnabledRef.current ? timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       publishState();
       if (!snap) {
         renderer.updateSnapGuide();
@@ -1175,7 +1139,7 @@ export function MinimalCycleView() {
       if (!documentEpoch.isCurrent(drag.epoch)) { clearAnnotationPreview(); return; }
        const rawScreenDx = event.clientX - drag.startX;
        const currentZoom = timelineNavigation.getZoom();
-       const dx = Math.round(screenGeometry.fromScreen({ x: rawScreenDx, y: 0 }, { scrollX: 0, scrollY: 0, zoom: currentZoom }).x);
+       const dx = Math.round(timelineGeometry.screenToLocal({ x: rawScreenDx, y: 0 }, currentZoom).x);
       const dy = Math.round(event.clientY - drag.startY);
       drag.owner.style.translate = "";
       annotationDrag = undefined;
@@ -1193,10 +1157,10 @@ export function MinimalCycleView() {
       }
       const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
       const anchor = field ? annotation[field] : undefined;
-       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, mappingCache.get(snapshot.document.timeline, snapshot.document.timeGroups), screenGeometryScale);
+       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, mappingCache.get(snapshot.document.timeline, snapshot.document.timeGroups), timelineGeometry.presentationScale);
       if (!field || !anchor || !point) return;
        const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + dy };
-      const snap = snapEnabledRef.current ? currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
+      const snap = snapEnabledRef.current ? timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
       publishState();
       const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
       if (snap) {
