@@ -204,6 +204,39 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
   </div>;
 }
 
+export type BottomEditorPanelProps<Tab extends string> = {
+  readonly tabs: readonly Tab[];
+  readonly activeTab: Tab;
+  readonly onSelectTab: (tab: Tab) => void;
+  readonly onTabKeyDown: (event: React.KeyboardEvent<HTMLButtonElement>, tab: Tab) => void;
+  readonly followSelection: boolean;
+  readonly onFollowSelectionChange: (value: boolean) => void;
+  readonly pinned: boolean;
+  readonly onTogglePinned: () => void;
+  readonly content: ReactNode;
+};
+
+/** The Bottom Editor section: its tab strip (Signal/Annotation/Transaction/
+ * Problems/JSON), the Follow-Selection checkbox and Bottom-Pin toggle, and
+ * the single active-tab content pane. Which editor renders for the active
+ * tab is decided by the caller (it depends on the current selection across
+ * several owners) and passed in as `content`. */
+export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelectTab, onTabKeyDown, followSelection, onFollowSelectionChange, pinned, onTogglePinned, content }: BottomEditorPanelProps<Tab>) {
+  return <section className="bottom-editor" data-testid="bottom-editor">
+    <nav className="bottom-tabs" data-testid="bottom-tabs" role="tablist" aria-label="Bottom context panels">
+      {tabs.map((tab) => {
+        const active = activeTab === tab;
+        const tabId = `bottom-tab-${tab.toLowerCase()}`;
+        return <button type="button" role="tab" key={tab} id={tabId} data-bottom-tab={tab} tabIndex={active ? 0 : -1} aria-label={tab} aria-selected={active} aria-controls="bottom-context-content" className={active ? "active" : ""} onClick={() => onSelectTab(tab)} onKeyDown={(event) => onTabKeyDown(event, tab)}>{tab}</button>;
+      })}
+      <span />
+      <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
+      <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
+    </nav>
+    <div className="bottom-content" id="bottom-context-content" role="tabpanel" aria-labelledby={`bottom-tab-${activeTab.toLowerCase()}`}>{content}</div>
+  </section>;
+}
+
 export function BulkRegistrationDialog({ dialogRef, groups, text, onTextChange, groupId, onGroupIdChange, status, preview, onPreview, onApply, onClose }: BulkRegistrationDialogProps) {
   return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration">
     <header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={onClose}><EditorIcon name="close" /></button></header>

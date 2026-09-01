@@ -131,7 +131,7 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,626 lines
+- `minimal-cycle-view.tsx`: 1,624 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -186,6 +186,12 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 - `SignalTreeColumnHeader` takes grouped, component-scoped props -- one callback per user action (`onAddEntity`, `onOpenBulkRegistration`, `onCollapseAllGroups`, etc.) -- not the raw state setters; `minimal-cycle-view.tsx` still decides the exact state-update semantics for each action (e.g. `onOpenBulkRegistration` still sets the target group to the last group before opening the dialog, matching prior behavior exactly).
 - TypeScript, `check:boundaries`, `check:editor-complexity` (1,626 lines, still far under the 5,000 budget), `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `left-tree-type-filter.spec.ts`, `signal-filter-clear-affordance.spec.ts`, `full-gui.spec.ts`, `bulk-registration-strict.spec.ts`, `left-tree-interaction.spec.ts` -- 27 pre-existing failures / 25 passed, confirmed byte-identical via `git stash`. Zero new regressions.
 
+## Step 12 — UI Presentation (Bottom Editor section extracted)
+
+- Extracted the Bottom Editor section (tab strip, Follow-Selection checkbox, Bottom-Pin toggle, and the active-tab content wrapper) into `BottomEditorPanel<Tab extends string>` in `minimal-cycle-view-panels.tsx` -- generic over the tab-name union so `onSelectTab`/`onTabKeyDown` keep their exact `BottomTab` typing instead of widening to `string` (TypeScript caught this immediately when the first non-generic version was tried; fixed before it could mask a real type error elsewhere).
+- Which editor renders for the active tab (`signalEditor`/`annotationEditor`/`transactionEditor`/`ProblemsPanel`/`AdvancedJsonPanel`) is still decided by `minimal-cycle-view.tsx` and passed in as a `content` prop -- that ternary depends on several different owners' selection state and stays with the caller rather than being duplicated into the presentational component.
+- TypeScript, `check:boundaries`, `check:editor-complexity` (1,624 lines), `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `bottom-tab-header-visibility.spec.ts`, `bottom-context.spec.ts`, `status-context.spec.ts`, `pinned-bottom-target.spec.ts`, `full-gui.spec.ts` -- 26 pre-existing failures / 31 passed, confirmed byte-identical via `git stash`. Zero new regressions.
+
 ## Next responsibility
 
-Step 12 continued: split the remaining `minimal-cycle-view.tsx` JSX into files (Bottom Editor section, editor shell), reusing the existing `minimal-cycle-view-ribbon.tsx`/`minimal-cycle-view-panels.tsx`/`minimal-cycle-view-timeline.tsx`. Do **not** route new extractions through `minimal-cycle-view-ui.tsx`'s `MinimalCycleViewUi`/`MinimalCycleViewSignalTreeCanvas`/etc. -- those belong to a separate non-production "Next" scaffold, not this file's production JSX split. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
+Step 12 continued: split the remaining `minimal-cycle-view.tsx` JSX into files (editor shell / top-level composition, status bar footer). Do **not** route new extractions through `minimal-cycle-view-ui.tsx`'s `MinimalCycleViewUi`/`MinimalCycleViewSignalTreeCanvas`/etc. -- those belong to a separate non-production "Next" scaffold, not this file's production JSX split. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
