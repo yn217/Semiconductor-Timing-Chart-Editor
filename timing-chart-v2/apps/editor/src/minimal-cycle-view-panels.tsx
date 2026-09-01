@@ -136,6 +136,74 @@ export type BulkRegistrationDialogProps = {
   readonly onClose: () => void;
 };
 
+export type SignalTreeAddEntityKind = "signal" | "clock" | "bus" | "state" | "logic" | "event" | "pulse" | "group" | "spacer" | "commentRow";
+
+export type SignalTreeColumnHeaderProps = {
+  readonly treeTypeFilter: string;
+  readonly onTreeTypeFilterChange: (value: string) => void;
+  readonly treeFilter: string;
+  readonly onTreeFilterChange: (value: string) => void;
+  readonly onClearTreeFilter: () => void;
+  readonly addMenuOpen: boolean;
+  readonly onToggleAddMenu: (origin: HTMLElement) => void;
+  readonly moreMenuOpen: boolean;
+  readonly onToggleMoreMenu: (origin: HTMLElement) => void;
+  readonly onAddEntity: (kind: SignalTreeAddEntityKind) => void;
+  readonly onCloseAddMenu: () => void;
+  readonly onOpenBulkRegistration: () => void;
+  readonly onCollapseAllGroups: () => void;
+  readonly onExpandAllGroups: () => void;
+  readonly onOpenHierarchy: () => void;
+  readonly onCloseMoreMenu: () => void;
+  readonly timeScaleLabel: string;
+};
+
+/** The Signal/Group tree's column header: type/text filter, the Add and
+ * More popup menus, and the Role/Signal/Time-Scale column labels. Presents
+ * state owned by `use-workspace-ui-state.ts` (filters) and
+ * `use-dialog-menu-state.ts` (menu open flags) -- every state transition is
+ * still decided by the caller via these callbacks. */
+export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel }: SignalTreeColumnHeaderProps) {
+  return <div className="column-headings">
+    <span className="left-column-heading">
+      <strong>Signals / Groups</strong>
+      <label className="tree-filter-controls">
+        <span className="visually-hidden">Signal tree type filter</span>
+        <select data-testid="signal-tree-type-filter" aria-label="Signal tree type filter" value={treeTypeFilter} onChange={(event) => onTreeTypeFilterChange(event.target.value)}><option value="all">All</option><option value="input">Input</option><option value="output">Output</option><option value="wire">Wire</option><option value="comment">Comment</option></select>
+        <span className="visually-hidden">Signal tree filter</span>
+        <input data-testid="signal-tree-search-top" aria-label="Signal tree filter" value={treeFilter} onChange={(event) => onTreeFilterChange(event.target.value)} placeholder="Filter signals..." />
+        {treeFilter && <button type="button" aria-label="Clear signal tree filter" onMouseDown={(event) => event.preventDefault()} onClick={onClearTreeFilter}><EditorIcon name="close" /></button>}
+      </label>
+      <span className="left-column-actions">
+        <button type="button" className="tree-add-button" aria-label="Add signal or group" aria-expanded={addMenuOpen} onClick={(event) => onToggleAddMenu(event.currentTarget)}><EditorIcon name="plus" /></button>
+        <button type="button" className="tree-more-button" aria-label="More tree actions" aria-expanded={moreMenuOpen} onClick={(event) => onToggleMoreMenu(event.currentTarget)}><EditorIcon name="more" /></button>
+      </span>
+      {addMenuOpen && <div className="tree-add-menu" role="menu" aria-label="Add signal or group">
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("signal"); onCloseAddMenu(); }}>Signal</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("clock"); onCloseAddMenu(); }}>Clock</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("bus"); onCloseAddMenu(); }}>Bus</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("state"); onCloseAddMenu(); }}>State</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("logic"); onCloseAddMenu(); }}>Logic</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("event"); onCloseAddMenu(); }}>Event</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("pulse"); onCloseAddMenu(); }}>Pulse</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("spacer"); onCloseAddMenu(); }}>Spacer</button>
+        <button type="button" role="menuitem" data-testid="create-group" onClick={() => { onAddEntity("group"); onCloseAddMenu(); }}>Group</button>
+        <button type="button" role="menuitem" data-testid="bulk-register-open" onClick={() => { onOpenBulkRegistration(); onCloseAddMenu(); }}>Bulk Signal Registration</button>
+        <button type="button" role="menuitem" onClick={() => { onAddEntity("commentRow"); onCloseAddMenu(); }}>Comment Row</button>
+      </div>}
+      {moreMenuOpen && <div className="tree-header-menu" role="menu" aria-label="More tree actions">
+        <button type="button" role="menuitem" onClick={() => { onCollapseAllGroups(); onCloseMoreMenu(); }}>Collapse All Groups</button>
+        <button type="button" role="menuitem" onClick={() => { onExpandAllGroups(); onCloseMoreMenu(); }}>Expand All Groups</button>
+        <button type="button" role="menuitem" onClick={() => { onClearTreeFilter(); onCloseMoreMenu(); }}>Clear Filter</button>
+        <button type="button" role="menuitem" data-testid="hierarchy-open" onClick={() => { onOpenHierarchy(); onCloseMoreMenu(); }}>Hierarchy</button>
+      </div>}
+    </span>
+    <span className="role-column-heading" aria-label="Role">Role</span>
+    <span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span>
+    <span>{timeScaleLabel}</span>
+  </div>;
+}
+
 export function BulkRegistrationDialog({ dialogRef, groups, text, onTextChange, groupId, onGroupIdChange, status, preview, onPreview, onApply, onClose }: BulkRegistrationDialogProps) {
   return <div className="modal-backdrop"><section ref={dialogRef} role="dialog" aria-modal="true" aria-label="Bulk Signal Registration" className="document-properties bulk-registration">
     <header><h2>Bulk Signal Registration</h2><button type="button" aria-label="Close bulk registration" onClick={onClose}><EditorIcon name="close" /></button></header>

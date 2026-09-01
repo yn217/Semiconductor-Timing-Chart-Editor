@@ -131,7 +131,7 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,608 lines
+- `minimal-cycle-view.tsx`: 1,626 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -179,6 +179,13 @@ Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-
 - The Properties/Export/SaveAs/Hierarchy/Compatibility/Unsaved-file dialogs, the Signal Tree column headers/menus, the Bottom Editor, and the status bar footer remain inline in `minimal-cycle-view.tsx` -- the Properties/Export/SaveAs/Hierarchy dialogs were already their own separate components before this refactor started (this step only had visibility-flag ownership to transfer, done in the state slice above); Compatibility/Unsaved-file dialogs are owned by Document Lifecycle's `pendingFileAction`/`compatibilityPreview` and were intentionally left with the owner that already manages their trigger conditions; Signal Tree/Bottom Editor/status bar are the larger remaining JSX split for a future slice.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `bulk-registration-strict.spec.ts`, `home-command-surface.spec.ts`, `icon-button-dialog-close.spec.ts`, `full-gui.spec.ts` -- 30 pre-existing failures / 30 passed, confirmed byte-identical via `git stash`. Zero new regressions.
 
+## Step 12 — UI Presentation (Signal Tree column header extracted)
+
+- Extracted the Signal/Group tree's column header -- the type/text filter controls, the Add and More popup menus, and the Role/Signal/Time-Scale column labels (previously one very dense inline `<div className="column-headings">`) -- into `SignalTreeColumnHeader` in `minimal-cycle-view-panels.tsx`.
+- Investigated `minimal-cycle-view-ui.tsx` before choosing a home for this: it hosts a **separate, non-production** "Next" migration scaffold (`MinimalCycleViewUi`, `MinimalCycleViewSignalTreeCanvas`, `MinimalCycleViewBottomEditor`, etc., all `data-testid="next-*"`) that `minimal-cycle-view.tsx` does not render (only its `MinimalCycleViewRibbonTabs` and three `refreshTree*` helpers are imported from there) -- adding to that file would risk being mistaken for wiring a second production path, which the plan explicitly forbids. `minimal-cycle-view-panels.tsx` (already holding `ContextMenuPanel`/`InspectorPanel`/`RenameDialog`/`BulkRegistrationDialog`) is the correct, already-established home for real presentational components.
+- `SignalTreeColumnHeader` takes grouped, component-scoped props -- one callback per user action (`onAddEntity`, `onOpenBulkRegistration`, `onCollapseAllGroups`, etc.) -- not the raw state setters; `minimal-cycle-view.tsx` still decides the exact state-update semantics for each action (e.g. `onOpenBulkRegistration` still sets the target group to the last group before opening the dialog, matching prior behavior exactly).
+- TypeScript, `check:boundaries`, `check:editor-complexity` (1,626 lines, still far under the 5,000 budget), `check:performance-architecture`, `git diff --check`: PASS. Regression sweep: `left-tree-type-filter.spec.ts`, `signal-filter-clear-affordance.spec.ts`, `full-gui.spec.ts`, `bulk-registration-strict.spec.ts`, `left-tree-interaction.spec.ts` -- 27 pre-existing failures / 25 passed, confirmed byte-identical via `git stash`. Zero new regressions.
+
 ## Next responsibility
 
-Step 12 continued: split the remaining `minimal-cycle-view.tsx` JSX into files (Signal Tree column/menus, Bottom Editor, editor shell), reusing the existing `minimal-cycle-view-ribbon.tsx`/`minimal-cycle-view-panels.tsx`/`minimal-cycle-view-ui.tsx`/`minimal-cycle-view-timeline.tsx`. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
+Step 12 continued: split the remaining `minimal-cycle-view.tsx` JSX into files (Bottom Editor section, editor shell), reusing the existing `minimal-cycle-view-ribbon.tsx`/`minimal-cycle-view-panels.tsx`/`minimal-cycle-view-timeline.tsx`. Do **not** route new extractions through `minimal-cycle-view-ui.tsx`'s `MinimalCycleViewUi`/`MinimalCycleViewSignalTreeCanvas`/etc. -- those belong to a separate non-production "Next" scaffold, not this file's production JSX split. Pass grouped owner ports, not scalar-prop explosions. Home Ribbon DOM/CSS/order/test-ids must stay unchanged. Then Step 13 (Shell reduction).
