@@ -68,16 +68,25 @@
 - Focused unit: 1 passed. Focused browser: 5 passed for axis-break compression, canonical anchor preservation through a fold, terminal boundary, Canvas boundary selection, and reverse/Shift range selection. Two additional legacy tests reached the geometry assertion path but reproduced pre-existing missing/ambiguous UI locators.
 - TypeScript, boundary gate, and diff-check: PASS.
 
+## Step 9 — Timeline Interactions (in progress)
+
+- Range gesture owner: `apps/editor/src/runtime/timeline-range-interaction-owner.ts`
+- Owns pointer down/move/up/cancel, Escape cancellation, ruler/waveform gesture normalization, transient preview/playhead synchronization, click suppression, Shift extension, terminal-boundary clamping, and final range selection state handoff.
+- Parent listener registration now binds the owner's symmetric event methods and contains no range-drag controller or gesture implementation.
+- Focused browser: 5 passed for every accepted hit surface, preview/playhead synchronization, scroll/zoom geometry, reverse/Shift/terminal selection, exclusions, and cancellation.
+- Remaining Step 9 ownership: annotation drag, transaction drag/snap adapter, tree DnD, and keyboard routing.
+
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,850 lines / 134,146 bytes
+- `minimal-cycle-view.tsx`: 1,770 lines / 129,295 bytes
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
 - `use-clipboard-actions.ts`: 237 lines / 18,024 bytes
 - `use-timeline-navigation-owner.ts`: 95 lines / 4,036 bytes
 - `timeline-geometry-owner.ts`: 100 lines / 4,891 bytes
+- `timeline-range-interaction-owner.ts`: 125 lines / 6,007 bytes
 
 ## Next responsibility
 
-Timeline Interactions: pointer/range/annotation/transaction drag, keyboard/cancel, snap consumption, and symmetric listener lifecycle.
+Timeline Interactions: annotation drag, transaction drag/snap adapter, tree DnD, keyboard routing, and symmetric listener lifecycle.
