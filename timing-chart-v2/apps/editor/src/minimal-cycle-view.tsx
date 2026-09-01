@@ -123,7 +123,7 @@ export function MinimalCycleView() {
   const [showAnnotations, setShowAnnotations] = useState(true);
   const [showTransactions, setShowTransactions] = useState(true);
   const [showGroupBackground, setShowGroupBackground] = useState(true);
-  const workspace = useWorkspaceUiState();
+  const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>();
   const {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
@@ -141,13 +141,10 @@ export function MinimalCycleView() {
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter,
     treeTypeFilter, setTreeTypeFilter,
+    followSelection, setFollowSelection, followSelectionRef,
+    bottomPinned, setBottomPinned, bottomPinnedRef,
+    pinnedBottomSelection, setPinnedBottomSelection,
   } = workspace;
-  const [followSelection, setFollowSelection] = useState(true);
-  const followSelectionRef = useRef(true);
-  followSelectionRef.current = followSelection;
-  const [bottomPinned, setBottomPinned] = useState(false);
-  const bottomPinnedRef = useRef(false);
-  bottomPinnedRef.current = bottomPinned;
   selection.configure({
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
@@ -157,7 +154,6 @@ export function MinimalCycleView() {
       else if (kind === "signal" || kind === "spacer") setBottomTab("Signal");
     },
   });
-  const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const viewMetricsOwnerRef = useRef<ViewMetricsOwner | null>(null);
   if (viewMetricsOwnerRef.current === null) {
     viewMetricsOwnerRef.current = new ViewMetricsOwner({ leftPaneWidth, frozenPaneWidth, inspectorWidth, viewportWidth: viewport.current?.clientWidth ?? 0, zoom });

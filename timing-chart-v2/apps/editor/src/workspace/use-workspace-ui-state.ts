@@ -12,12 +12,19 @@ export const LEFT_PANE_MAX_WIDTH = 420;
 export type PaneResizeGesture = { readonly startX: number; readonly startWidth: number };
 export type VerticalResizeGesture = { readonly startY: number; readonly startHeight: number };
 
+export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> = {
+  readonly signalId?: SignalId;
+  readonly groupId?: GroupId;
+  readonly annotationId?: AnnotationId;
+  readonly transactionId?: TransactionId;
+};
+
 /** Owns presentation-only workspace UI state: ribbon/bottom tabs, view mode,
  * density/workspace presets, pane visibility, pane/bottom sizes and their
  * resize-gesture scratch refs, and the Left Tree filter. None of this is
  * Document/Selection/Timeline canonical state -- every setter here only
  * ever affects layout/chrome, never the .tcd document or command history. */
-export function useWorkspaceUiState() {
+export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>() {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
   const [viewMode, setViewMode] = useState<ViewMode>("Cycle");
@@ -42,6 +49,14 @@ export function useWorkspaceUiState() {
   const [treeFilter, setTreeFilter] = useState("");
   const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
 
+  const [followSelection, setFollowSelection] = useState(true);
+  const followSelectionRef = useRef(true);
+  followSelectionRef.current = followSelection;
+  const [bottomPinned, setBottomPinned] = useState(false);
+  const bottomPinnedRef = useRef(false);
+  bottomPinnedRef.current = bottomPinned;
+  const [pinnedBottomSelection, setPinnedBottomSelection] = useState<BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId>>();
+
   return {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
@@ -59,7 +74,12 @@ export function useWorkspaceUiState() {
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter,
     treeTypeFilter, setTreeTypeFilter,
+    followSelection, setFollowSelection, followSelectionRef,
+    bottomPinned, setBottomPinned, bottomPinnedRef,
+    pinnedBottomSelection, setPinnedBottomSelection,
   } as const;
 }
 
-export type WorkspaceUiState = ReturnType<typeof useWorkspaceUiState>;
+export type WorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId> = ReturnType<
+  typeof useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>
+>;
