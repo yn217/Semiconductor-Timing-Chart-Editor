@@ -12,9 +12,7 @@ import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from 
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
-import { normalizeSnapDistance } from "./runtime/snap-distance.js";
-import { withAddedOffset, withSnapOffset } from "./runtime/anchor-offset.js";
-import { preferredSnapKinds } from "./runtime/snap-policy.js";
+import { withAddedOffset } from "./runtime/anchor-offset.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import type { RangeDragState } from "./runtime/range-drag.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
@@ -30,7 +28,6 @@ import { selectedJsonProblem } from "./json-problems.js";
 import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
-import { resolveAnchorPoint } from "./resolve-anchor-point.js";
 import { createAnnotation } from "./create-annotation.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { renderGeometryGrid } from "./render-geometry-grid.js";
@@ -75,6 +72,7 @@ import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
 import { TimelineRangeInteractionOwner } from "./runtime/timeline-range-interaction-owner.js";
+import { AnnotationInteractionOwner } from "./runtime/timeline-annotation-interaction-owner.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
@@ -995,103 +993,24 @@ export function MinimalCycleView() {
       clearDropState();
     };
     const onDragEnd = () => { dragged = undefined; clearDropState(); };
-    let annotationDrag: { readonly annotationId: AnnotationId; readonly field?: typeof annotationFields[number]; readonly label: boolean; readonly startX: number; readonly startY: number; readonly owner: HTMLElement; readonly epoch: number } | undefined;
-    const clearAnnotationPreview = () => {
-      if (annotationDrag) annotationDrag.owner.style.translate = "";
-      annotationDrag = undefined;
-      renderer.updateSnapGuide();
-      delete rendererHost.dataset.snapKind;
-      delete rendererHost.dataset.snapDistance;
-    };
-    const onAnnotationPointerDown = (event: PointerEvent) => {
-      if (event.button !== 0 || !(event.target instanceof Element)) return;
-      const owner = event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]");
-      if (!owner?.dataset.annotationId) return;
-      const fieldElement = event.target.closest<HTMLElement>("[data-role='annotation-handle'][data-annotation-field]");
-      const label = event.target.closest<HTMLElement>("[data-annotation-label='true']") !== null;
-      const field = fieldElement?.dataset.annotationField as typeof annotationFields[number] | undefined;
-      annotationDrag = {
-        annotationId: owner.dataset.annotationId as AnnotationId,
-        ...(field ? { field } : {}),
-        label,
-        startX: event.clientX,
-        startY: event.clientY,
-        owner,
-        epoch: documentEpoch.current(),
-      };
-      publishState();
-      owner.setPointerCapture(event.pointerId);
-      event.preventDefault();
-    };
-    const onAnnotationPointerMove = (event: PointerEvent) => {
-      if (!annotationDrag) return;
-      if (!documentEpoch.isCurrent(annotationDrag.epoch)) { clearAnnotationPreview(); return; }
-      const screenDx = Math.round(event.clientX - annotationDrag.startX);
-      const currentZoom = timelineNavigation.getZoom();
-      const dx = Math.round(timelineGeometry.screenToLocal({ x: screenDx, y: 0 }, currentZoom).x);
-      const dy = Math.round(event.clientY - annotationDrag.startY);
-      annotationDrag.owner.style.translate = `${screenDx}px ${dy}px`;
-      if (!annotationDrag.field || annotationDrag.label) return;
-      const document = session.getSnapshot().document;
-      const annotation = document.annotations.find((item) => item.id === annotationDrag?.annotationId);
-      const anchor = annotation?.[annotationDrag.field];
-       const point = resolveAnchorPoint(anchor, document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), timelineGeometry.presentationScale);
-      if (!annotation || !anchor || !point) return;
-       const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
-      const snap = snapEnabledRef.current ? timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
-      publishState();
-      if (!snap) {
-        renderer.updateSnapGuide();
-        delete rendererHost.dataset.snapKind;
-        delete rendererHost.dataset.snapDistance;
-        delete rendererHost.dataset.snapCycle;
-        return;
-      }
-      const row = projection.rowLayout.find((item) => item.rowId === snap.anchor.signalId);
-      renderer.updateSnapGuide({ x: snap.point.x, y: snap.point.y, rowY: row?.y ?? 0, rowHeight: row?.height ?? projection.totalHeight, surfaceHeight: projection.totalHeight, label: `${snap.kind} · cycle ${snap.anchor.cycle}` });
-      rendererHost.dataset.snapKind = snap.kind;
-       rendererHost.dataset.snapDistance = String(normalizeSnapDistance(snap.distance));
-      rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
-    };
-    const onAnnotationPointerUp = (event: PointerEvent) => {
-      const drag = annotationDrag;
-      if (!drag) return;
-      if (!documentEpoch.isCurrent(drag.epoch)) { clearAnnotationPreview(); return; }
-       const rawScreenDx = event.clientX - drag.startX;
-       const currentZoom = timelineNavigation.getZoom();
-       const dx = Math.round(timelineGeometry.screenToLocal({ x: rawScreenDx, y: 0 }, currentZoom).x);
-      const dy = Math.round(event.clientY - drag.startY);
-      drag.owner.style.translate = "";
-      annotationDrag = undefined;
-      renderer.updateSnapGuide();
-      if (dx === 0 && dy === 0) return;
-      const annotation = session.getSnapshot().document.annotations.find((item) => item.id === drag.annotationId);
-      if (!annotation) return;
-      if (drag.label) {
-        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_label_drag"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: (annotation.labelOffset?.x ?? 0) + dx, y: (annotation.labelOffset?.y ?? -14) + dy } });
-        return;
-      }
-      if (!drag.field) {
-        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: annotation.id, delta: { x: dx, y: dy } });
-        return;
-      }
-      const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
-      const anchor = field ? annotation[field] : undefined;
-       const point = resolveAnchorPoint(anchor, session.getSnapshot().document, projection, geometryMaps, mappingCache.get(snapshot.document.timeline, snapshot.document.timeGroups), timelineGeometry.presentationScale);
-      if (!field || !anchor || !point) return;
-       const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + dy };
-      const snap = snapEnabledRef.current ? timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
-      publishState();
-      const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point) : withAddedOffset(anchor, dx, dy);
-      if (snap) {
-        rendererHost.dataset.snapKind = snap.kind;
-         rendererHost.dataset.snapDistance = String(normalizeSnapDistance(snap.distance));
-        rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
-      }
-      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
-    };
+    const annotationInteraction = new AnnotationInteractionOwner({
+      rendererHost,
+      renderer,
+      timelineGeometry,
+      documentEpoch,
+      getZoom: () => timelineNavigation.getZoom(),
+      getDocument: () => session.getSnapshot().document,
+      getProjection: () => projection,
+      isSnapEnabled: () => snapEnabledRef.current,
+      execute: (command) => { commandRegistry.current.execute<SemanticCommand>("semantic.execute", command); },
+      publishState,
+    });
+    const clearAnnotationPreview = annotationInteraction.cancel;
+    const onAnnotationPointerDown = annotationInteraction.onPointerDown;
+    const onAnnotationPointerMove = annotationInteraction.onPointerMove;
+    const onAnnotationPointerUp = annotationInteraction.onPointerUp;
     const onAnnotationKeyDown = (event: KeyboardEvent) => {
-      if (!(event.target instanceof Element) || !mayRouteGlobalShortcut(event, annotationDrag !== undefined)) return;
+      if (!(event.target instanceof Element) || !mayRouteGlobalShortcut(event, annotationInteraction.active)) return;
       if (event.ctrlKey || event.metaKey) {
         const shortcut = event.key.toLowerCase();
         if (shortcut === "c" || shortcut === "x" || shortcut === "v") {

@@ -74,11 +74,21 @@
 - Owns pointer down/move/up/cancel, Escape cancellation, ruler/waveform gesture normalization, transient preview/playhead synchronization, click suppression, Shift extension, terminal-boundary clamping, and final range selection state handoff.
 - Parent listener registration now binds the owner's symmetric event methods and contains no range-drag controller or gesture implementation.
 - Focused browser: 5 passed for every accepted hit surface, preview/playhead synchronization, scroll/zoom geometry, reverse/Shift/terminal selection, exclusions, and cancellation.
-- Remaining Step 9 ownership: annotation drag, transaction drag/snap adapter, tree DnD, and keyboard routing.
+
+### Step 9-A — Annotation Drag (complete)
+
+- Owner: `apps/editor/src/runtime/timeline-annotation-interaction-owner.ts`
+- Owns annotation pointer down/move/up, drag-preview translate, snap-guide/candidate resolution (reusing `TimelineGeometryOwner.currentSnapIndex`/`geometryMaps`/`displayMapping`/`presentationScale`), label-offset drag, whole-annotation translate, anchor-drop semantic command commit (`annotation.setAnchor` / `annotation.translateOffsets` / `annotation.updateLabelOffset`), and cancellation (`cancel()`, used for Escape and document-epoch invalidation).
+- `MinimalCycleView` retains only thin aliases (`onAnnotationPointerDown/Move/Up` = `annotationInteraction.onPointerDown/onPointerMove/onPointerUp`), the Escape branch and `mayRouteGlobalShortcut` gate now read `annotationInteraction.active`/call `annotationInteraction.cancel()`, and arrow-key nudge / clipboard / Undo-Redo shortcut routing remain in the parent for Step 9-D to claim (out of this step's closed-responsibility scope).
+- `resolveAnchorPoint`, `preferredSnapKinds`, `normalizeSnapDistance`, `withSnapOffset` are no longer imported by `minimal-cycle-view.tsx` (moved with the owner); `withAddedOffset`/`annotationFields` stay imported for the remaining parent-side nudge code.
+- Focused browser: `tests/e2e/annotation-snap.spec.ts` 13/14 passed; the one failure ("ripples and clamps Annotation anchors through Timeline edits with Undo and Redo") reproduces identically on the pre-step baseline (verified via `git stash`), confirmed pre-existing. `tests/e2e/timeline-editor.spec.ts` 11/17 passed, same 6 failures reproduce identically on the pre-step baseline.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, and `git diff --check`: PASS.
+
+Remaining Step 9 ownership: transaction drag/snap adapter, tree DnD, keyboard routing, and symmetric listener-lifecycle audit.
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,770 lines / 129,295 bytes
+- `minimal-cycle-view.tsx`: 1,690 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -86,7 +96,8 @@
 - `use-timeline-navigation-owner.ts`: 95 lines / 4,036 bytes
 - `timeline-geometry-owner.ts`: 100 lines / 4,891 bytes
 - `timeline-range-interaction-owner.ts`: 125 lines / 6,007 bytes
+- `timeline-annotation-interaction-owner.ts`: 154 lines
 
 ## Next responsibility
 
-Timeline Interactions: annotation drag, transaction drag/snap adapter, tree DnD, keyboard routing, and symmetric listener lifecycle.
+Timeline Interactions: transaction drag/snap adapter (Step 9-B), tree DnD (Step 9-C), keyboard routing (Step 9-D), and symmetric listener-lifecycle audit (Step 9-E).
