@@ -41,13 +41,23 @@
 - Focused browser: 6 passed across Signal Tree, multi-select atomic Delete, Bottom Pin/Follow, Annotation, Transaction, and Spacer selection. Additional Inspector/Home/Tree tests reached their selection assertions and then reproduced pre-existing GUI/ambiguous-locator failures.
 - TypeScript and diff-check: PASS.
 
+## Step 6 — Clipboard / Edit Actions
+
+- Owner: `apps/editor/src/application/use-clipboard-actions.ts`
+- Owns copy/cut/paste/duplicate for signals, groups, spacers, annotations, and transactions, plus stable-ID regeneration and one-batch command construction.
+- Also owns selection delete, semantic rename, visibility, and arrange/move routing using only the Application and Selection owners.
+- `MinimalCycleView` retains rename-dialog presentation and thin aliases used by Ribbon, Context Menu, keyboard routing, and Bottom editors; it contains no clipboard storage or command implementation.
+- Focused browser: 5 final focused checks passed for Cut/Paste, Context Menu duplicate, pinned-target duplicate/visibility, and pinned Annotation/Signal deletion. Multi-selection delete also passed; Group copy/cut reached the expected clipboard state before pre-existing Home Ribbon locator failures for Paste.
+- TypeScript, boundary gate, and diff-check: PASS.
+
 ## Current size
 
-- `minimal-cycle-view.tsx`: 2,200 lines / 158,407 bytes
+- `minimal-cycle-view.tsx`: 1,902 lines / 137,309 bytes
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
+- `use-clipboard-actions.ts`: 237 lines / 18,024 bytes
 
 ## Next responsibility
 
-Clipboard / Edit Actions: copy, cut, paste, duplicate, delete, rename, visibility, and arrange operations using only the Selection and Application owners.
+Timeline Navigation: zoom, Fit All, Fit Selection, cycle navigation, wheel/scroll positioning, and the existing TimelineViewportRuntime bridge.

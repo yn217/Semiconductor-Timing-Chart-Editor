@@ -7,7 +7,7 @@ import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalGroup, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
@@ -72,6 +72,7 @@ import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
+import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
@@ -109,6 +110,7 @@ export function MinimalCycleView() {
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
+  const editActions = useClipboardActions({ application, selection });
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId } = selection.state;
   const { signalId: selectedSignalRef, signalIds: selectedSignalIdsRef, groupId: selectedGroupRef, spacerId: selectedSpacerRef, annotationId: selectedAnnotationRef, transactionId: selectedTransactionRef } = selection.refs;
   useEffect(() => {
@@ -252,17 +254,8 @@ export function MinimalCycleView() {
   useDialogFocusLoop(bulkRegistrationDialogRef, dialogOriginRef, bulkRegistrationVisible);
   useDialogFocusLoop(unsavedFileDialogRef, pendingFileOriginRef, pendingFileAction !== undefined);
   useDialogFocusLoop(compatibilityDialogRef, pendingFileOriginRef, compatibilityPreview !== undefined);
-  const clipboardSignalRef = useRef<Signal | undefined>(undefined);
-  const clipboardSignalsRef = useRef<readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[]>([]);
-  const clipboardGroupRef = useRef<{ readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number } | undefined>(undefined);
-  const clipboardAnnotationRef = useRef<Annotation | undefined>(undefined);
-  const clipboardTransactionRef = useRef<Transaction | undefined>(undefined);
-  const clipboardSpacerRef = useRef<{ readonly spacer: SpacerRow; readonly groupId: GroupId; readonly index: number } | undefined>(undefined);
-  const copySelectedSignalRef = useRef<() => void>(() => undefined);
-  const cutSelectedSignalRef = useRef<() => void>(() => undefined);
-  const pasteSelectedSignalRef = useRef<() => void>(() => undefined);
-  const [clipboardStatus, setClipboardStatus] = useState("Empty");
-  const [clipboardAvailable, setClipboardAvailable] = useState(false);
+  const clipboardStatus = editActions.status;
+  const clipboardAvailable = editActions.available;
   const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState(() => visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
   const [rangeSelectionActive, setRangeSelectionActive] = useState(false);
@@ -329,50 +322,14 @@ export function MinimalCycleView() {
     const registry = commandRegistry.current;
     const unregister = [
       registry.register<SemanticCommand>("semantic.execute", (command) => application.execute(command)),
-      registry.register("selection.delete", () => {
-        const annotationId = selectedAnnotationRef.current;
-        const signalId = selectedSignalRef.current;
-        const groupId = selectedGroupRef.current;
-        const transactionId = selectedTransactionRef.current;
-        const spacerId = selectedSpacerRef.current;
-        if (transactionId) {
-          const result = application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
-          if (result.ok) selection.clear();
-        } else if (annotationId) {
-          const result = application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
-          if (result.ok) selection.clear();
-        } else if (selectedSignalIdsRef.current.size > 1) {
-          const commands = [...selectedSignalIdsRef.current].map((id) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete" as const, signalId: id }));
-          const result = application.executeBatch(nextCommandId("route_delete_selection"), commands);
-          if (result.ok) selection.clear();
-        } else if (signalId) {
-          const result = application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
-          if (result.ok) selection.clear();
-        } else if (spacerId) {
-          const result = application.execute({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
-          if (result.ok) selection.clear();
-        } else if (groupId) {
-          const result = application.execute({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId });
-          if (result.ok) selection.clear();
-        }
-      }),
-      registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {
-        const signalId = selectedSignalRef.current;
-        const groupId = selectedGroupRef.current;
-        const transactionId = selectedTransactionRef.current;
-        if (transactionId) application.execute({ id: nextCommandId("route_rename_transaction"), type: "transaction.rename", transactionId, name });
-        else if (signalId) application.execute({ id: nextCommandId("route_rename"), type: "signal.rename", signalId, name });
-        else if (groupId) application.execute({ id: nextCommandId("route_rename_group"), type: "group.rename", groupId, name });
-      }),
-      registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => {
-        const signalId = selectedSignalRef.current;
-        if (signalId) application.execute({ id: nextCommandId("route_visibility"), type: "signal.setVisibility", signalId, visible });
-      }),
+      registry.register("selection.delete", editActions.deleteSelection),
+      registry.register<{ readonly name: string }>("selection.rename", ({ name }) => editActions.rename(name)),
+      registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => editActions.setVisibility(visible)),
       registry.register("history.undo", () => application.undo()),
       registry.register("history.redo", () => application.redo()),
-      registry.register("clipboard.copy", () => copySelectedSignalRef.current()),
-      registry.register("clipboard.cut", () => cutSelectedSignalRef.current()),
-      registry.register("clipboard.paste", () => pasteSelectedSignalRef.current()),
+      registry.register("clipboard.copy", editActions.copy),
+      registry.register("clipboard.cut", editActions.cut),
+      registry.register("clipboard.paste", editActions.paste),
     ];
     return () => unregister.forEach((dispose) => dispose());
   }, []);
@@ -1397,21 +1354,21 @@ export function MinimalCycleView() {
   };
   const deleteBottomSignal = () => {
     if (!bottomSignal) return;
-    const result = application.execute({ id: nextCommandId("bottom_delete_signal"), type: "signal.delete", signalId: bottomSignal.id });
+    const result = editActions.deleteSignal(bottomSignal.id);
     if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
       selection.clear();
     }
   };
   const deleteBottomAnnotation = () => {
     if (!bottomAnnotation) return;
-    const result = application.execute({ id: nextCommandId("bottom_delete_annotation"), type: "annotation.delete", annotationId: bottomAnnotation.id });
+    const result = editActions.deleteAnnotation(bottomAnnotation.id);
     if (result.ok && !bottomPinnedRef.current && selectedAnnotationRef.current === bottomAnnotation.id) {
       selection.clear();
     }
   };
   const deleteBottomTransaction = () => {
     if (!bottomTransaction) return;
-    const result = application.execute({ id: nextCommandId("bottom_delete_transaction"), type: "transaction.delete", transactionId: bottomTransaction.id });
+    const result = editActions.deleteTransaction(bottomTransaction.id);
     if (result.ok && !bottomPinnedRef.current && selectedTransactionRef.current === bottomTransaction.id) {
       selection.clear();
     }
@@ -1426,7 +1383,7 @@ export function MinimalCycleView() {
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
-    onVisibility={(signalId, visible) => commandRegistry.current.execute("semantic.execute", { id: nextCommandId("bottom_signal_visibility"), type: "signal.setVisibility", signalId, visible })}
+    onVisibility={editActions.setSignalVisibility}
     onDelete={deleteBottomSignal}
     onDuplicate={(signalId) => {
       const source = snapshot.document.signals.find((item) => item.id === signalId);
@@ -1539,254 +1496,11 @@ export function MinimalCycleView() {
     const primary = ids[0];
     selection.selectSignals(selected, primary);
   };
-  const selectedClipboardSignals = () => snapshot.document.signals
-    .filter((signal) => selectedSignalIds.has(signal.id))
-    .map((signal) => {
-      const group = snapshot.document.signalGroups.find((candidate) => candidate.rows.includes(signal.id));
-      return group ? { signal, groupId: group.id, index: group.rows.indexOf(signal.id) } : undefined;
-    })
-    .filter((item): item is { readonly signal: Signal; readonly groupId: GroupId; readonly index: number } => item !== undefined);
-  const copySelectedSignal = () => {
-    const selectedGroup = selectedGroupRef.current === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.id === selectedGroupRef.current);
-    const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
-    if (selectedSpacer && selectedGroup) {
-      clipboardSpacerRef.current = { spacer: selectedSpacer, groupId: selectedGroup.id, index: selectedGroup.rows.indexOf(selectedSpacer.id) };
-      clipboardGroupRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardAnnotationRef.current = undefined;
-      clipboardTransactionRef.current = undefined;
-      setClipboardAvailable(true);
-      setClipboardStatus(`Copied spacer ${selectedSpacer.id}`);
-      return;
-    }
-    if (selectedGroup) {
-      const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
-      clipboardGroupRef.current = { group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) };
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardAnnotationRef.current = undefined;
-      clipboardTransactionRef.current = undefined;
-      setClipboardAvailable(true);
-      setClipboardStatus(`Copied ${selectedGroup.name} group`);
-      return;
-    }
-    const sources = selectedClipboardSignals();
-    const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
-    const transaction = selectedTransactionRef.current === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === selectedTransactionRef.current);
-    if (sources.length === 0 && annotation === undefined && transaction === undefined) { setClipboardStatus("Select a signal, Comment Row, Annotation, or Transaction to copy"); return; }
-    if (transaction !== undefined && sources.length === 0 && annotation === undefined) {
-      clipboardTransactionRef.current = transaction;
-      clipboardGroupRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardAnnotationRef.current = undefined;
-      setClipboardAvailable(true);
-      setClipboardStatus(`Copied ${transaction.name} transaction`);
-      return;
-    }
-    if (annotation !== undefined && sources.length === 0) {
-      clipboardAnnotationRef.current = annotation;
-      clipboardGroupRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardTransactionRef.current = undefined;
-      setClipboardAvailable(true);
-      setClipboardStatus(`Copied ${annotation.label || annotation.type} annotation`);
-      return;
-    }
-    clipboardAnnotationRef.current = undefined;
-    clipboardTransactionRef.current = undefined;
-    clipboardGroupRef.current = undefined;
-    clipboardSignalsRef.current = sources;
-    clipboardSignalRef.current = sources[0]?.signal;
-    setClipboardAvailable(true);
-    setClipboardStatus(sources.length === 1 ? `Copied ${sources[0]!.signal.display.name}` : `Copied ${sources.length} signals`);
-  };
-  copySelectedSignalRef.current = copySelectedSignal;
-  const cutSelectedSignal = () => {
-    const selectedGroup = selectedGroupRef.current === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.id === selectedGroupRef.current);
-    const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
-    if (selectedSpacer && selectedGroup) {
-      clipboardSpacerRef.current = { spacer: selectedSpacer, groupId: selectedGroup.id, index: selectedGroup.rows.indexOf(selectedSpacer.id) };
-      clipboardGroupRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardAnnotationRef.current = undefined;
-      clipboardTransactionRef.current = undefined;
-      setClipboardAvailable(true);
-      const result = application.execute({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: selectedSpacer.id });
-      if (result.ok) {
-        selection.clear();
-        setClipboardStatus(`Cut spacer ${selectedSpacer.id}`);
-      }
-      return;
-    }
-    if (selectedGroup) {
-      const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
-      clipboardGroupRef.current = { group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) };
-      clipboardAnnotationRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardTransactionRef.current = undefined;
-      setClipboardAvailable(true);
-      const commands: SemanticCommand[] = [];
-      for (const rowId of selectedGroup.rows) {
-        if (snapshot.document.signals.some((signal) => signal.id === rowId)) commands.push({ id: nextCommandId("cut_group_signal"), type: "signal.delete", signalId: rowId as SignalId });
-        else commands.push({ id: nextCommandId("cut_group_spacer"), type: "spacer.delete", spacerId: rowId as SpacerId });
-      }
-      commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: selectedGroup.id });
-      const result = application.executeBatch(nextCommandId("cut_group"), commands);
-      if (result.ok) {
-        selection.clear();
-        setClipboardStatus(`Cut ${selectedGroup.name} group`);
-      }
-      return;
-    }
-    const sources = selectedClipboardSignals();
-    const annotation = selectedAnnotationRef.current === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === selectedAnnotationRef.current);
-    const transaction = selectedTransactionRef.current === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === selectedTransactionRef.current);
-    if (sources.length === 0 && annotation === undefined && transaction === undefined) { setClipboardStatus("Select a signal, Comment Row, Annotation, or Transaction to cut"); return; }
-    if (transaction !== undefined && sources.length === 0 && annotation === undefined) {
-      clipboardTransactionRef.current = transaction;
-      clipboardGroupRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardAnnotationRef.current = undefined;
-      setClipboardAvailable(true);
-      const result = application.execute({ id: nextCommandId("cut_transaction"), type: "transaction.delete", transactionId: transaction.id });
-      if (result.ok) {
-        selection.clear();
-        setClipboardStatus(`Cut ${transaction.name} transaction`);
-      }
-      return;
-    }
-    if (annotation !== undefined && sources.length === 0) {
-      clipboardAnnotationRef.current = annotation;
-      clipboardGroupRef.current = undefined;
-      clipboardSignalsRef.current = [];
-      clipboardSignalRef.current = undefined;
-      clipboardTransactionRef.current = undefined;
-      setClipboardAvailable(true);
-      const result = application.execute({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: annotation.id });
-      if (result.ok) {
-        selection.clear();
-        setClipboardStatus(`Cut ${annotation.label || annotation.type} annotation`);
-      }
-      return;
-    }
-    clipboardAnnotationRef.current = undefined;
-    clipboardTransactionRef.current = undefined;
-    clipboardGroupRef.current = undefined;
-    clipboardSignalsRef.current = sources;
-    clipboardSignalRef.current = sources[0]?.signal;
-    setClipboardAvailable(true);
-    const commands = sources.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete", signalId: signal.id } satisfies SemanticCommand));
-    const result = application.executeBatch(nextCommandId("cut"), commands);
-    if (result.ok) {
-      selection.clear();
-      setClipboardStatus(sources.length === 1 ? `Cut ${sources[0]!.signal.display.name}` : `Cut ${sources.length} signals`);
-    }
-  };
-  cutSelectedSignalRef.current = cutSelectedSignal;
-  const createCopiedSignals = (input: readonly { readonly signal: Signal; readonly groupId: GroupId; readonly index: number }[], operation: "paste" | "duplicate", placement: "current-selection" | "source-group" = "current-selection") => {
-    if (input.length === 0) { setClipboardStatus("No signal clipboard available"); return; }
-    const document = snapshot.document;
-    const selectedGroup = placement === "current-selection" ? document.signalGroups.find((group) => selectedId !== undefined && group.rows.includes(selectedId)) : undefined;
-    const commands: SemanticCommand[] = [];
-    const created: Signal[] = [];
-    const insertedByGroup = new Map<GroupId, number>();
-    for (const source of input) {
-      const targetGroup = selectedGroup ?? document.signalGroups.find((group) => group.id === source.groupId) ?? document.signalGroups.at(-1);
-      if (!targetGroup) continue;
-      const id = signalId(nextEntityId(source.signal.type === "commentRow" ? "commentRow" : "signal", { ...document, signals: [...document.signals, ...created] }));
-      const name = `${source.signal.display.name}_${operation}${input.length > 1 ? `_${created.length + 1}` : ""}`;
-      const signal: Signal = { ...source.signal, id, name, display: { ...source.signal.display, name } };
-      created.push(signal);
-      const index = targetGroup.rows.length + (insertedByGroup.get(targetGroup.id) ?? 0);
-      insertedByGroup.set(targetGroup.id, (insertedByGroup.get(targetGroup.id) ?? 0) + 1);
-      commands.push({ id: nextCommandId(`${operation}_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: targetGroup.id, index } as SemanticCommand);
-    }
-    if (commands.length === 0) return;
-    const result = application.executeBatch(nextCommandId(operation), commands);
-    if (result.ok) {
-      const ids = created.map((signal) => signal.id);
-      selection.selectSignals(new Set(ids), ids[0]);
-      setClipboardStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
-    }
-  };
-  const createCopiedGroup = (input: { readonly group: SignalGroup; readonly rows: readonly Signal[]; readonly sourceIndex: number }, operation: "paste" | "duplicate") => {
-    const document = snapshot.document;
-    const newGroupId = groupId(nextEntityId("group", document));
-    const group: SignalGroup = { ...input.group, id: newGroupId, rows: [], ...(input.group.spacers === undefined ? {} : { spacers: [] }) };
-    const commands: SemanticCommand[] = [{ id: nextCommandId(`${operation}_group`), type: "group.create", group, index: Math.min(document.signalGroups.length, input.sourceIndex + 1) }];
-    const createdSignals: Signal[] = [];
-    const sourceSpacers = new Map<string, SpacerRow>((input.group.spacers ?? []).map((spacer) => [spacer.id, spacer]));
-    for (const rowId of input.group.rows) {
-      const source = input.rows.find((signal) => signal.id === rowId);
-      if (source) {
-        const id = signalId(nextEntityId(source.type === "commentRow" ? "commentRow" : "signal", { ...document, signals: [...document.signals, ...createdSignals] }));
-        const signal: Signal = { ...source, id };
-        createdSignals.push(signal);
-        commands.push({ id: nextCommandId(`${operation}_group_item`), type: signal.type === "commentRow" ? "commentRow.create" : "signal.create", ...(signal.type === "commentRow" ? { commentRow: signal } : { signal }), targetGroupId: newGroupId, index: commands.length - 1 } as SemanticCommand);
-      } else {
-        const spacer = sourceSpacers.get(rowId);
-        if (!spacer) continue;
-        const id = spacerId(nextEntityId("spacer", { ...document, signals: [...document.signals, ...createdSignals] }));
-        commands.push({ id: nextCommandId(`${operation}_group_spacer`), type: "spacer.create", spacer: { ...spacer, id }, targetGroupId: newGroupId, index: commands.length - 1 });
-      }
-    }
-    const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
-    if (result.ok) {
-      selection.selectGroup(newGroupId);
-      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
-    }
-  };
-  const createCopiedAnnotation = (source: Annotation, operation: "paste" | "duplicate") => {
-    const annotation = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
-    const result = application.execute({ id: nextCommandId(`${operation}_annotation`), type: "annotation.create", annotation });
-    if (result.ok) {
-      selectAnnotation(annotation.id);
-      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${annotation.label || annotation.type} annotation`);
-    }
-  };
-  const createCopiedTransaction = (source: Transaction, operation: "paste" | "duplicate") => {
-    const transaction: Transaction = { ...source, id: nextEntityId("transaction", snapshot.document) as TransactionId, name: `${source.name} ${operation === "paste" ? "Paste" : "Copy"}` };
-    const result = application.execute({ id: nextCommandId(`${operation}_transaction`), type: "transaction.create", transaction });
-    if (result.ok) {
-      selectTransaction(transaction.id);
-      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${source.name} transaction`);
-    }
-  };
-  const createCopiedSpacer = (input: { readonly spacer: SpacerRow; readonly groupId: GroupId; readonly index: number }, operation: "paste" | "duplicate") => {
-    const targetGroup = snapshot.document.signalGroups.find((group) => group.id === input.groupId) ?? snapshot.document.signalGroups.at(-1);
-    if (!targetGroup) return;
-    const spacer = { ...input.spacer, id: spacerId(nextEntityId("spacer", snapshot.document)) };
-    const result = application.execute({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index: Math.min(input.index, targetGroup.rows.length) });
-    if (result.ok) {
-      selection.selectSpacer(targetGroup.id, spacer.id);
-      setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} spacer`);
-    }
-  };
-  const pasteSelectedEntity = () => {
-    if (clipboardGroupRef.current) createCopiedGroup(clipboardGroupRef.current, "paste");
-    else if (clipboardAnnotationRef.current) createCopiedAnnotation(clipboardAnnotationRef.current, "paste");
-    else if (clipboardTransactionRef.current) createCopiedTransaction(clipboardTransactionRef.current, "paste");
-    else if (clipboardSpacerRef.current) createCopiedSpacer(clipboardSpacerRef.current, "paste");
-    else createCopiedSignals(clipboardSignalsRef.current, "paste");
-  };
-  const duplicateSelectedEntity = () => {
-    const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
-    if (selectedSpacer && selectedGroup) {
-      createCopiedSpacer({ spacer: selectedSpacer, groupId: selectedGroup.id, index: selectedGroup.rows.indexOf(selectedSpacer.id) }, "duplicate");
-    } else if (selectedGroup) {
-      const rows = selectedGroup.rows.flatMap((rowId) => snapshot.document.signals.find((signal) => signal.id === rowId) ?? []);
-      createCopiedGroup({ group: selectedGroup, rows, sourceIndex: snapshot.document.signalGroups.indexOf(selectedGroup) }, "duplicate");
-    } else if (selectedAnnotation) createCopiedAnnotation(selectedAnnotation, "duplicate");
-    else if (selectedTransaction) createCopiedTransaction(selectedTransaction, "duplicate");
-    else createCopiedSignals(selectedClipboardSignals(), "duplicate");
-  };
-  pasteSelectedSignalRef.current = pasteSelectedEntity;
+  const copySelectedSignal = editActions.copy;
+  const cutSelectedSignal = editActions.cut;
+  const pasteSelectedEntity = editActions.paste;
+  const duplicateSelectedEntity = editActions.duplicate;
+  const createCopiedSignals = editActions.createSignals;
   const renameSelection = () => {
     const current = selectedSignal?.display.name ?? selectedGroup?.name ?? selectedTransaction?.name;
     if (current === undefined) return;
@@ -1804,20 +1518,8 @@ export function MinimalCycleView() {
     setRenameDialogOpen(false);
     setRenameError("");
   };
-  const setSelectionVisibility = (visible: boolean) => commandRegistry.current.execute("selection.visibility", { visible });
-  const moveSelection = (direction: -1 | 1) => {
-    const document = snapshot.document;
-    if (selectedSignal) {
-      const group = document.signalGroups.find((candidate) => candidate.rows.includes(selectedSignal.id));
-      const index = group?.rows.indexOf(selectedSignal.id) ?? -1;
-      if (group && index >= 0 && index + direction >= 0 && index + direction < group.rows.length) commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("home_move_signal"), type: "signal.move", signalId: selectedSignal.id, targetGroupId: group.id, index: index + direction });
-      return;
-    }
-    if (selectedGroup) {
-      const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id);
-      if (index >= 0 && index + direction >= 0 && index + direction < document.signalGroups.length) commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("home_move_group"), type: "group.move", groupId: selectedGroup.id, index: index + direction });
-    }
-  };
+  const setSelectionVisibility = editActions.setVisibility;
+  const moveSelection = editActions.move;
   const toggleBottomPin = () => {
     if (bottomPinned) {
       setBottomPinned(false);
