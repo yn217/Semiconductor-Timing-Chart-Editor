@@ -117,11 +117,21 @@
 - Regression: `tests/e2e/home-command-surface.spec.ts` (Copy/Duplicate/Paste/multi-select clipboard/Select-All coverage) -- 3 pre-existing failures (an ambiguous `"Duplicate"` button locator matching both the Ribbon tool and ribbon-tab, unrelated to keyboard routing), confirmed identical via `git stash`. Zero new regressions.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
 
-Remaining Step 9 ownership: symmetric listener-lifecycle audit (Step 9-E).
+### Step 9-E — Listener Lifecycle (complete) — Step 9 (Timeline Interactions) now fully complete
+
+- Audited every `addEventListener` call in `minimal-cycle-view.tsx`: the `attachEditorEventBindings([...])` array (all pointer/keydown/click/drag/scroll listeners for Range/Annotation/Tree-drag/global-shortcut interactions, Steps 9-A through 9-D) attaches once inside a `[]`-dependency `useEffect` and detaches symmetrically (reverse order, exact target/type/listener/options match) on unmount; the one other raw listener (`onDialogKeyDown`, capture-phase Escape/Tab-trap for modals) already had a matching `removeEventListener` in the same effect.
+- **Real bug found and fixed**: `leftTree?.addEventListener("keydown", onTreeKeyDown)` was called directly, *in addition to* `onTreeKeyDown` already being registered correctly through the `attachEditorEventBindings` array a few hundred lines later — the same listener bound twice to the same element for the same event type. The direct call had no matching `removeEventListener` anywhere (a leak on every unmount) and caused every Left Tree keydown (arrow navigation, Enter/Space synthetic click, Shift+F10/ContextMenu synthetic contextmenu) to run twice. Confirmed by instrumenting `EventTarget.prototype.addEventListener` before app init: 4 registrations observed pre-fix (React 18 StrictMode's dev-mode double-mount surfacing the bug at 2-per-mount instead of 1), 2 after (the correct count). Fixed by deleting the redundant direct call; the array-based registration was already correct and needed no change.
+- Focused browser (new): `tests/e2e/listener-lifecycle.spec.ts` 2/2 passed — the same `addEventListener` instrumentation asserted as a regression guard (`<=2`, i.e. at most one registration per mount even under StrictMode's double-invoke), and one ArrowDown moving Left Tree focus by exactly one row (not two).
+- Regression: `tests/e2e/tree-keyboard.spec.ts` — 1 pre-existing failure (a Left Tree filter/collapse-focus-repair assertion unrelated to listener counting), confirmed identical via `git stash`. Zero new regressions.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
+
+## Step 9 summary — Timeline Interactions (all sub-steps complete)
+
+Range gesture, Annotation drag/snap/nudge, Transaction drag/snap, Tree drag-and-drop (Signal/Group/Spacer), global keyboard-shortcut routing, and listener-lifecycle symmetry are each owned by one dedicated file (`timeline-range-interaction-owner.ts`, `timeline-annotation-interaction-owner.ts`, `transaction-lanes.tsx` + `tree-drag-interaction-owner.ts` + `keyboard-shortcut-router.ts`), all reusing `TimelineGeometryOwner` for geometry/snap resolution and the shared `UiCommandRegistry`/`documentHistory` for every canonical mutation. `MinimalCycleView` holds only thin aliases to these owners' methods. Along the way this closed five confirmed, previously-unreported product bugs (Transaction terminal-boundary-drag no-op, Transaction drag had no cancel path, Spacer rows were not draggable at all, `Ctrl+D`/`Ctrl+A` had no keyboard binding, and the Left Tree keydown handler fired twice per keystroke) — each verified pre-existing/absent via `git stash` against the pre-step baseline before being fixed, and each covered by a new focused test.
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,615 lines
+- `minimal-cycle-view.tsx`: 1,614 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -135,4 +145,4 @@ Remaining Step 9 ownership: symmetric listener-lifecycle audit (Step 9-E).
 
 ## Next responsibility
 
-Timeline Interactions: tree DnD (Step 9-C), keyboard routing (Step 9-D), and symmetric listener-lifecycle audit (Step 9-E).
+Step 10 — Render Coordinator: consolidate renderer mount/dispose/projection-update/refresh(waveform/ruler/grid/playhead/range/annotation-overlay/transaction-overlay/minimap)/invalidation/diagnostics/resize-scheduling behind one owner (`runtime/use-render-coordinator.ts` or `render-coordinator.ts`), reusing what `use-editor-runtime-bridge.ts` already exposes rather than duplicating it.

@@ -724,7 +724,6 @@ export function MinimalCycleView() {
         active.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: rect.left + rect.width / 2, clientY: rect.top + rect.height / 2, view: globalThis.window }));
       }
     };
-    leftTree?.addEventListener("keydown", onTreeKeyDown);
     const onSelect = (event: MouseEvent) => {
       const closestFromEvent = <T extends Element>(selector: string): T | null => {
         const target = event.target instanceof Element ? event.target.closest<T>(selector) : null;
