@@ -33,7 +33,7 @@ import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorSection } from "./inspector-section.js";
 import { MiniMap } from "./minimap.js";
-import { parseBulkSignalDefinitions, type BulkSignalDefinition } from "./bulk-signal-parser.js";
+import { parseBulkSignalDefinitions } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
@@ -74,6 +74,7 @@ import { TimelineRangeInteractionOwner } from "./runtime/timeline-range-interact
 import { AnnotationInteractionOwner } from "./runtime/timeline-annotation-interaction-owner.js";
 import { TreeDragInteractionOwner } from "./runtime/tree-drag-interaction-owner.js";
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, useWorkspaceUiState, type TreeTypeFilter, type WorkspacePreset } from "./workspace/use-workspace-ui-state.js";
+import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { routeGlobalShortcut } from "./runtime/keyboard-shortcut-router.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
@@ -160,9 +161,24 @@ export function MinimalCycleView() {
   }
   viewMetricsOwnerRef.current.update({ leftPaneWidth, frozenPaneWidth, inspectorWidth, viewportWidth: viewport.current?.clientWidth ?? 0, zoom });
   const viewMetricsOwner = viewMetricsOwnerRef.current!;
-  const [propertiesVisible, setPropertiesVisible] = useState(false);
-  const [exportVisible, setExportVisible] = useState(false);
-  const [saveAsVisible, setSaveAsVisible] = useState(false);
+  const dialogMenu = useDialogMenuState<GroupId>();
+  const {
+    contextMenu, setContextMenu,
+    treeAddMenuOpen, setTreeAddMenuOpen,
+    treeMoreMenuOpen, setTreeMoreMenuOpen,
+    propertiesVisible, setPropertiesVisible,
+    exportVisible, setExportVisible,
+    saveAsVisible, setSaveAsVisible,
+    hierarchyVisible, setHierarchyVisible,
+    bulkRegistrationVisible, setBulkRegistrationVisible,
+    bulkRegistrationText, setBulkRegistrationText,
+    bulkRegistrationGroupId, setBulkRegistrationGroupId,
+    bulkRegistrationStatus, setBulkRegistrationStatus,
+    bulkRegistrationPreview, setBulkRegistrationPreview,
+    renameDialogOpen, setRenameDialogOpen,
+    renameDraft, setRenameDraft,
+    renameError, setRenameError,
+  } = dialogMenu;
   const compatibilityPreview = documentLifecycle.compatibilityPreview;
   const dialogOriginRef = useRef<HTMLElement | null>(null);
   const dialogOriginLabelRef = useRef<string | null>(null);
@@ -170,23 +186,14 @@ export function MinimalCycleView() {
   const pendingFileAction = documentLifecycle.pendingAction;
   const pendingFileOriginRef = useRef<HTMLElement | null>(null);
   const unsavedCancelRef = useRef<HTMLButtonElement>(null);
-  const [hierarchyVisible, setHierarchyVisible] = useState(false);
-  const [bulkRegistrationVisible, setBulkRegistrationVisible] = useState(false);
   const renameDialogRef = useRef<HTMLFormElement>(null);
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const [bulkRegistrationText, setBulkRegistrationText] = useState("dut.status binary\ndut.data[7:0] bus\n");
-  const [bulkRegistrationGroupId, setBulkRegistrationGroupId] = useState<GroupId | undefined>();
-  const [bulkRegistrationStatus, setBulkRegistrationStatus] = useState("");
-  const [bulkRegistrationPreview, setBulkRegistrationPreview] = useState<{ readonly sourceText: string; readonly definitions: readonly BulkSignalDefinition[]; readonly errors: readonly string[] }>();
-  const [treeAddMenuOpen, setTreeAddMenuOpen] = useState(false);
-  const [treeMoreMenuOpen, setTreeMoreMenuOpen] = useState(false);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
-  const [contextMenu, setContextMenu] = useState<{ readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" } | undefined>();
   const menuOriginRef = useRef<HTMLElement | null>(null);
   const restoreMenuFocus = () => {
     const origin = menuOriginRef.current;
@@ -234,9 +241,6 @@ export function MinimalCycleView() {
     menu?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     return attachMenuKeyboardNavigation(document, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu);
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
-  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
-  const [renameDraft, setRenameDraft] = useState("");
-  const [renameError, setRenameError] = useState("");
   useDialogFocusLoop(renameDialogRef, undefined, renameDialogOpen);
   useDialogFocusLoop(bulkRegistrationDialogRef, dialogOriginRef, bulkRegistrationVisible);
   useDialogFocusLoop(unsavedFileDialogRef, pendingFileOriginRef, pendingFileAction !== undefined);
