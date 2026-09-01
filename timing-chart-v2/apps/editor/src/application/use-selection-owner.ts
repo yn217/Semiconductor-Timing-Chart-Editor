@@ -1,13 +1,18 @@
 import { useRef, useState } from "react";
 import type { AnnotationId, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 
-type SelectionState = Readonly<{
+export type SelectionState = Readonly<{
   signalId: SignalId | undefined;
   signalIds: ReadonlySet<SignalId>;
   groupId: GroupId | undefined;
   spacerId: SpacerId | undefined;
   annotationId: AnnotationId | undefined;
   transactionId: TransactionId | undefined;
+}>;
+type SelectionKind = "signal" | "group" | "spacer" | "annotation" | "transaction" | "none";
+type SelectionEffects = Readonly<{
+  decorateSelection: (state: SelectionState) => void;
+  synchronizeContext: (kind: SelectionKind) => void;
 }>;
 
 function initialState(signalId: SignalId | undefined): SelectionState {
@@ -25,34 +30,54 @@ function initialState(signalId: SignalId | undefined): SelectionState {
 export function useSelectionOwner(initialSignalId?: SignalId) {
   const [state, setState] = useState<SelectionState>(() => initialState(initialSignalId));
   const stateRef = useRef(state);
+  const effectsRef = useRef<SelectionEffects | undefined>(undefined);
 
   const replace = (next: SelectionState | ((current: SelectionState) => SelectionState)) => {
     const value = typeof next === "function" ? next(stateRef.current) : next;
     stateRef.current = value;
     setState(value);
   };
-  const update = (patch: Partial<SelectionState>) => replace((current) => ({ ...current, ...patch }));
-  const writeRef = (patch: Partial<SelectionState>) => { stateRef.current = { ...stateRef.current, ...patch }; };
+  const commit = (next: SelectionState, kind: SelectionKind) => {
+    replace(next);
+    effectsRef.current?.decorateSelection(next);
+    effectsRef.current?.synchronizeContext(kind);
+  };
+  const selectSignals = (signalIds: ReadonlySet<SignalId>, primary?: SignalId) => {
+    const ids = new Set(signalIds);
+    const signalId = primary && ids.has(primary) ? primary : [...ids][0];
+    commit({ ...initialState(signalId), signalIds: ids }, signalId === undefined ? "none" : "signal");
+  };
 
   return {
     state,
     refs: {
       state: stateRef,
-      signalId: { get current() { return stateRef.current.signalId; }, set current(value: SignalId | undefined) { writeRef({ signalId: value }); } },
-      signalIds: { get current() { return stateRef.current.signalIds; }, set current(value: ReadonlySet<SignalId>) { writeRef({ signalIds: value }); } },
-      groupId: { get current() { return stateRef.current.groupId; }, set current(value: GroupId | undefined) { writeRef({ groupId: value }); } },
-      spacerId: { get current() { return stateRef.current.spacerId; }, set current(value: SpacerId | undefined) { writeRef({ spacerId: value }); } },
-      annotationId: { get current() { return stateRef.current.annotationId; }, set current(value: AnnotationId | undefined) { writeRef({ annotationId: value }); } },
-      transactionId: { get current() { return stateRef.current.transactionId; }, set current(value: TransactionId | undefined) { writeRef({ transactionId: value }); } },
+      signalId: { get current() { return stateRef.current.signalId; } },
+      signalIds: { get current() { return stateRef.current.signalIds; } },
+      groupId: { get current() { return stateRef.current.groupId; } },
+      spacerId: { get current() { return stateRef.current.spacerId; } },
+      annotationId: { get current() { return stateRef.current.annotationId; } },
+      transactionId: { get current() { return stateRef.current.transactionId; } },
     },
-    setSignalId: (signalId: SignalId | undefined) => update({ signalId }),
-    setSignalIds: (signalIds: ReadonlySet<SignalId>) => update({ signalIds }),
-    setGroupId: (groupId: GroupId | undefined) => update({ groupId }),
-    setSpacerId: (spacerId: SpacerId | undefined) => update({ spacerId }),
-    setAnnotationId: (annotationId: AnnotationId | undefined) => update({ annotationId }),
-    setTransactionId: (transactionId: TransactionId | undefined) => update({ transactionId }),
+    configure: (effects: SelectionEffects) => { effectsRef.current = effects; },
+    selectSignal: (signalId: SignalId, additive = false) => {
+      const ids = additive ? new Set(stateRef.current.signalIds) : new Set<SignalId>();
+      if (ids.has(signalId)) ids.delete(signalId); else ids.add(signalId);
+      if (ids.size === 0) ids.add(signalId);
+      selectSignals(ids, signalId);
+    },
+    selectSignals,
+    selectGroup: (groupId: GroupId) => commit({ ...initialState(undefined), groupId }, "group"),
+    selectSpacer: (groupId: GroupId, spacerId: SpacerId) => commit({ ...initialState(undefined), groupId, spacerId }, "spacer"),
+    selectAnnotation: (annotationId: AnnotationId) => commit({ ...initialState(undefined), annotationId }, "annotation"),
+    selectTransaction: (transactionId: TransactionId) => commit({ ...initialState(undefined), transactionId }, "transaction"),
+    selectTarget: (target: Partial<Omit<SelectionState, "signalIds">> & { signalIds?: ReadonlySet<SignalId> }) => {
+      const next = { ...initialState(undefined), ...target, signalIds: new Set(target.signalIds ?? []) };
+      const kind: SelectionKind = next.signalId ? "signal" : next.groupId ? "group" : next.spacerId ? "spacer" : next.annotationId ? "annotation" : next.transactionId ? "transaction" : "none";
+      commit(next, kind);
+    },
     replace,
-    clear: () => replace(initialState(undefined)),
+    clear: () => commit(initialState(undefined), "none"),
   } as const;
 }
 

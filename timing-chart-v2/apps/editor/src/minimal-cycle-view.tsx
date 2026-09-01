@@ -71,7 +71,7 @@ import { Ribbon } from "./minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
-import { useSelectionOwner } from "./application/use-selection-owner.js";
+import { useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
@@ -111,11 +111,6 @@ export function MinimalCycleView() {
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId } = selection.state;
   const { signalId: selectedSignalRef, signalIds: selectedSignalIdsRef, groupId: selectedGroupRef, spacerId: selectedSpacerRef, annotationId: selectedAnnotationRef, transactionId: selectedTransactionRef } = selection.refs;
-  const setSelectedId = selection.setSignalId;
-  const setSelectedSignalIds = selection.setSignalIds;
-  const setSelectedGroupId = selection.setGroupId;
-  const setSelectedAnnotationId = selection.setAnnotationId;
-  const setSelectedTransactionId = selection.setTransactionId;
   useEffect(() => {
     return attachDirtyUnloadGuard(history.dirty);
   }, [history.dirty]);
@@ -146,6 +141,15 @@ export function MinimalCycleView() {
   const [bottomPinned, setBottomPinned] = useState(false);
   const bottomPinnedRef = useRef(false);
   bottomPinnedRef.current = bottomPinned;
+  selection.configure({
+    decorateSelection: applySelectionDecorations,
+    synchronizeContext: (kind) => {
+      if (!followSelectionRef.current || bottomPinnedRef.current) return;
+      if (kind === "annotation") setBottomTab("Annotation");
+      else if (kind === "transaction") setBottomTab("Transaction");
+      else if (kind === "signal" || kind === "spacer") setBottomTab("Signal");
+    },
+  });
   const [pinnedBottomSelection, setPinnedBottomSelection] = useState<{ readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId }>();
   const [inspectorVisible, setInspectorVisible] = useState(true);
   const [inspectorResetToken, setInspectorResetToken] = useState(0);
@@ -333,23 +337,23 @@ export function MinimalCycleView() {
         const spacerId = selectedSpacerRef.current;
         if (transactionId) {
           const result = application.execute({ id: nextCommandId("route_delete_transaction"), type: "transaction.delete", transactionId });
-          if (result.ok) { selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined); }
+          if (result.ok) selection.clear();
         } else if (annotationId) {
           const result = application.execute({ id: nextCommandId("route_delete_annotation"), type: "annotation.delete", annotationId });
-          if (result.ok) { selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined); }
+          if (result.ok) selection.clear();
         } else if (selectedSignalIdsRef.current.size > 1) {
           const commands = [...selectedSignalIdsRef.current].map((id) => ({ id: nextCommandId("route_delete_signal"), type: "signal.delete" as const, signalId: id }));
           const result = application.executeBatch(nextCommandId("route_delete_selection"), commands);
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
+          if (result.ok) selection.clear();
         } else if (signalId) {
           const result = application.execute({ id: nextCommandId("route_delete_signal"), type: "signal.delete", signalId });
-          if (result.ok) { selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set()); }
+          if (result.ok) selection.clear();
         } else if (spacerId) {
           const result = application.execute({ id: nextCommandId("route_delete_spacer"), type: "spacer.delete", spacerId });
-          if (result.ok) selectedSpacerRef.current = undefined;
+          if (result.ok) selection.clear();
         } else if (groupId) {
           const result = application.execute({ id: nextCommandId("route_delete_group"), type: "group.delete", groupId });
-          if (result.ok) { selectedGroupRef.current = undefined; setSelectedGroupId(undefined); }
+          if (result.ok) selection.clear();
         }
       }),
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => {
@@ -677,9 +681,7 @@ export function MinimalCycleView() {
       setRangeSelectionActive(false);
       setTimelineRange({ start: 0, end: Math.min(1, canonicalDocument.timeline.cycleCount) });
       setSelectedCycle(0);
-      setSelectedSignalIds(new Set());
-      setSelectedGroupId(undefined);
-      selectedSpacerRef.current = undefined;
+      selection.clear();
       setCollapsedGroups(new Set());
       setTreeFilter("");
       setTreeTypeFilter("all");
@@ -704,11 +706,6 @@ export function MinimalCycleView() {
       markOpenPhase("canonical-replaced");
       requestAnimationFrame(() => markOpenPhase("row-shell-painted"));
       rulerElement.replaceChildren();
-      setSelectedId(undefined);
-      selectedAnnotationRef.current = undefined;
-      setSelectedAnnotationId(undefined);
-      selectedTransactionRef.current = undefined;
-      setSelectedTransactionId(undefined);
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
@@ -820,14 +817,8 @@ export function MinimalCycleView() {
         event.preventDefault();
         event.stopPropagation();
         const signalId = signalMore.dataset.treeSignalId as SignalId;
-        selectedSignalRef.current = signalId;
-        selectedSignalIdsRef.current = selectionController.replace(new Set([signalId]));
-        setSelectedId(signalId);
-        setSelectedSignalIds(new Set([signalId]));
-         setSelectedGroupId(undefined);
-         setSelectedAnnotationId(undefined);
-         setSelectedTransactionId(undefined);
-         setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
+        selection.selectSignal(signalId);
+        setContextMenu({ x: event.clientX, y: event.clientY, target: "signal" });
         return;
       }
       const groupMore = closestFromEvent<HTMLElement>("[data-role='tree-group-more'][data-group-id]");
@@ -835,16 +826,8 @@ export function MinimalCycleView() {
         event.preventDefault();
         event.stopPropagation();
         const groupId = groupMore.dataset.groupId as GroupId;
-        selectedGroupRef.current = groupId;
-        setSelectedGroupId(groupId);
-        setSelectedId(undefined);
-        applySelectionDecorations(new Set(), undefined);
-        selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = selectionController.clear();
-        setSelectedSignalIds(new Set());
-         setSelectedAnnotationId(undefined);
-         setSelectedTransactionId(undefined);
-         setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });
+        selection.selectGroup(groupId);
+        setContextMenu({ x: event.clientX, y: event.clientY, target: "group" });
         return;
       }
       const collapseOwner = closestFromEvent<HTMLElement>("[data-role='tree-collapse'][data-group-id]");
@@ -868,35 +851,14 @@ export function MinimalCycleView() {
       }
       const groupOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='tree-branch'][data-group-id]") : null;
       if (groupOwner?.dataset.groupId) {
-        selectedSpacerRef.current = undefined;
-        setSelectedGroupId(groupOwner.dataset.groupId as GroupId);
-        selectedGroupRef.current = groupOwner.dataset.groupId as GroupId;
-        setSelectedId(undefined);
-        applySelectionDecorations(new Set(), undefined);
-        selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
-        setSelectedAnnotationId(undefined);
-        selectedAnnotationRef.current = undefined;
-        setSelectedTransactionId(undefined);
-        selectedTransactionRef.current = undefined;
-        for (const treeItem of leftTree?.querySelectorAll<HTMLElement>("[role='treeitem']") ?? []) treeItem.setAttribute("aria-selected", String(treeItem.dataset.rowId === `${groupOwner.dataset.groupId}:header`));
+        selection.selectGroup(groupOwner.dataset.groupId as GroupId);
         focusTreeItem(groupOwner.closest<HTMLElement>("[role='treeitem']") ?? undefined);
         return;
       }
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
       if (annotationOwner?.dataset.annotationId) {
-        selectedSpacerRef.current = undefined;
         const id = annotationOwner.dataset.annotationId as AnnotationId;
-        selectedAnnotationRef.current = id;
-        setSelectedAnnotationId(id);
-        setSelectedId(undefined);
-        applySelectionDecorations(new Set(), undefined);
-        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
-        setSelectedGroupId(undefined);
-        setSelectedTransactionId(undefined);
-        selectedTransactionRef.current = undefined;
-        if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
-        for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === id);
+        selection.selectAnnotation(id);
         return;
       }
       if (pendingArrow && event.target instanceof Element && event.target.closest("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface']")) {
@@ -931,41 +893,17 @@ export function MinimalCycleView() {
       if (!id) return;
       const spacerGroup = session.getSnapshot().document.signalGroups.find((group) => group.rows.includes(id as SpacerId) && group.spacers?.some((spacer) => spacer.id === id));
       if (spacerGroup) {
-        selectedSpacerRef.current = id as SpacerId;
-        selectedGroupRef.current = spacerGroup.id;
-        setSelectedGroupId(spacerGroup.id);
-        setSelectedId(undefined);
-        selectedSignalRef.current = undefined;
-        selectedSignalIdsRef.current = new Set();
-        setSelectedSignalIds(new Set());
-        selectedAnnotationRef.current = undefined;
-        setSelectedAnnotationId(undefined);
-        selectedTransactionRef.current = undefined;
-        setSelectedTransactionId(undefined);
-        if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
+        selection.selectSpacer(spacerGroup.id, id as SpacerId);
         focusTreeItem(target);
         return;
       }
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
-      const nextSelected = selectionController.toggleSignal(selectedSignalIdsRef.current, signal.id, event.ctrlKey || event.metaKey);
-      selectedSignalIdsRef.current = nextSelected;
-      const primary = selectionController.primarySignal(nextSelected, signal.id);
-      applySelectionDecorations(nextSelected, primary);
-      if (primary) { rendererHost.dataset.selectedSignalId = primary; selectedSignalRef.current = primary; }
+      selection.selectSignal(signal.id, event.ctrlKey || event.metaKey);
+      const nextSelected = selection.refs.signalIds.current;
+      const primary = selection.refs.signalId.current;
+      if (primary) rendererHost.dataset.selectedSignalId = primary;
       focusTreeItem(target);
-      selectedAnnotationRef.current = undefined;
-      selectedTransactionRef.current = undefined;
-      selectedSpacerRef.current = undefined;
-      if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
-      // Selection is view-only state. Commit it synchronously so the Inspector
-      // and Bottom surfaces cannot remain on the layout context while a
-      // concurrent WaveDrom/projection update is pending.
-      setSelectedSignalIds(nextSelected);
-      if (primary) setSelectedId(primary);
-      setSelectedGroupId(undefined);
-      setSelectedAnnotationId(undefined);
-      setSelectedTransactionId(undefined);
       publishState();
     };
     const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
@@ -1013,7 +951,6 @@ export function MinimalCycleView() {
     };
     let dragged: { readonly kind: "signal" | "group"; readonly id: string } | undefined;
     const rangeDragController = new RangeDragController();
-    const selectionController = runtime.selection;
     let suppressCanvasClick = false;
     let suppressRulerClick = false;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
@@ -1453,49 +1390,30 @@ export function MinimalCycleView() {
   const createSelectedAnnotation = (annotation: Annotation) => {
     const result = application.execute({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
     if (!result.ok) return;
-    selectedAnnotationRef.current = annotation.id;
-    setSelectedAnnotationId(annotation.id);
-    setSelectedId(undefined);
-    applySelectionDecorations(new Set(), undefined);
-    setSelectedTransactionId(undefined);
-    selectedTransactionRef.current = undefined;
-    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+    selection.selectAnnotation(annotation.id);
   };
   const selectAnnotation = (id: AnnotationId) => {
-    selectedAnnotationRef.current = id;
-    setSelectedAnnotationId(id);
-    setSelectedId(undefined);
-        selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
-    setSelectedGroupId(undefined);
-    setSelectedTransactionId(undefined);
-    selectedTransactionRef.current = undefined;
-    applySelectionDecorations(new Set(), undefined);
-    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
+    selection.selectAnnotation(id);
   };
   const deleteBottomSignal = () => {
     if (!bottomSignal) return;
     const result = application.execute({ id: nextCommandId("bottom_delete_signal"), type: "signal.delete", signalId: bottomSignal.id });
     if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
-      selectedSignalRef.current = undefined;
-      setSelectedId(undefined);
-        selectedSignalIdsRef.current = new Set();
-      setSelectedSignalIds(new Set());
+      selection.clear();
     }
   };
   const deleteBottomAnnotation = () => {
     if (!bottomAnnotation) return;
     const result = application.execute({ id: nextCommandId("bottom_delete_annotation"), type: "annotation.delete", annotationId: bottomAnnotation.id });
     if (result.ok && !bottomPinnedRef.current && selectedAnnotationRef.current === bottomAnnotation.id) {
-      selectedAnnotationRef.current = undefined;
-      setSelectedAnnotationId(undefined);
+      selection.clear();
     }
   };
   const deleteBottomTransaction = () => {
     if (!bottomTransaction) return;
     const result = application.execute({ id: nextCommandId("bottom_delete_transaction"), type: "transaction.delete", transactionId: bottomTransaction.id });
     if (result.ok && !bottomPinnedRef.current && selectedTransactionRef.current === bottomTransaction.id) {
-      selectedTransactionRef.current = undefined;
-      setSelectedTransactionId(undefined);
+      selection.clear();
     }
   };
   const signalEditor = <SignalEditor
@@ -1554,14 +1472,7 @@ export function MinimalCycleView() {
     onCancel={() => setBottomResetToken((value) => value + 1)}
   /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
-    selectedSpacerRef.current = undefined;
-    selectedTransactionRef.current = id;
-    setSelectedTransactionId(id);
-    selectedSignalRef.current = undefined; setSelectedId(undefined);
-    selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
-    selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
-    applySelectionDecorations(new Set(), undefined);
-    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
+    selection.selectTransaction(id);
   };
   const transactionEditor = <TransactionEditor
     key={`${bottomTransaction?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
@@ -1586,66 +1497,47 @@ export function MinimalCycleView() {
       : target.kind === "annotation" ? Object.values(snapshot.document.annotations.find((item) => item.id === target.id) ?? {}).find((value) => value && typeof value === "object" && "cycle" in value && typeof (value as { cycle?: unknown }).cycle === "number")?.cycle as number | undefined
       : undefined;
     const targetSignalId = target.kind === "signal" ? target.id as SignalId : undefined;
-    setSelectedId(targetSignalId);
-    selectedSignalRef.current = targetSignalId;
-    selectedSignalIdsRef.current = targetSignalId ? new Set([targetSignalId]) : new Set();
-    setSelectedSignalIds(targetSignalId ? new Set([targetSignalId]) : new Set());
-    setSelectedGroupId(target.kind === "group" ? target.id as GroupId : undefined);
-    selectedGroupRef.current = target.kind === "group" ? target.id as GroupId : undefined;
-    setSelectedAnnotationId(target.kind === "annotation" ? target.id as AnnotationId : undefined);
-    selectedAnnotationRef.current = target.kind === "annotation" ? target.id as AnnotationId : undefined;
-    setSelectedTransactionId(target.kind === "transaction" ? target.id as TransactionId : undefined);
-    selectedTransactionRef.current = target.kind === "transaction" ? target.id as TransactionId : undefined;
+    selection.selectTarget({
+      signalId: targetSignalId,
+      signalIds: targetSignalId ? new Set([targetSignalId]) : new Set(),
+      groupId: target.kind === "group" ? target.id as GroupId : undefined,
+      annotationId: target.kind === "annotation" ? target.id as AnnotationId : undefined,
+      transactionId: target.kind === "transaction" ? target.id as TransactionId : undefined,
+    });
     if (semanticCycle !== undefined) {
       const cycle = Math.max(0, Math.min(snapshot.document.timeline.cycleCount, semanticCycle));
       selectedCycleRef.current = cycle;
       setSelectedCycle(cycle);
       if (host.current) host.current.dataset.selectedCycle = String(cycle);
     }
-    applySelectionDecorations(targetSignalId ? new Set([targetSignalId]) : new Set(), targetSignalId);
-    if (target.kind === "annotation" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Annotation");
-    if (target.kind === "transaction" && followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Transaction");
     if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
   };
 
-  function applySelectionDecorations(selected: ReadonlySet<SignalId>, primary: SignalId | undefined): void {
+  function applySelectionDecorations(next: SelectionState): void {
     const rendererHost = host.current;
     if (!rendererHost) return;
-    if (primary) rendererHost.dataset.selectedSignalId = primary;
+    if (next.signalId) rendererHost.dataset.selectedSignalId = next.signalId;
     else delete rendererHost.dataset.selectedSignalId;
     for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
-      const rowId = (row.dataset.rowId ?? row.dataset.signalId) as SignalId | undefined;
-      const isSelected = rowId !== undefined && selected.has(rowId);
+      const rowId = row.dataset.rowId ?? row.dataset.signalId;
+      const isSelected = rowId !== undefined && (next.signalIds.has(rowId as SignalId) || rowId === next.spacerId);
       row.dataset.selected = String(isSelected);
       row.setAttribute("aria-selected", String(isSelected));
+    }
+    for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === next.annotationId);
+    for (const treeItem of rendererHost.querySelectorAll<HTMLElement>("[role='treeitem']")) {
+      if (treeItem.dataset.groupHeader === "true") treeItem.setAttribute("aria-selected", String(treeItem.dataset.rowId === `${next.groupId}:header`));
     }
   }
 
   const clearSelection = () => {
-    selectedSpacerRef.current = undefined;
-    selectedSignalRef.current = undefined; setSelectedId(undefined); selectedSignalIdsRef.current = new Set(); setSelectedSignalIds(new Set());
-    selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
-    selectedAnnotationRef.current = undefined; setSelectedAnnotationId(undefined);
-    selectedTransactionRef.current = undefined; setSelectedTransactionId(undefined);
-    applySelectionDecorations(new Set(), undefined);
+    selection.clear();
   };
   const selectAllSignals = () => {
     const ids = snapshot.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
     const selected = new Set(ids);
-    selectedSignalIdsRef.current = selected;
-    setSelectedSignalIds(selected);
     const primary = ids[0];
-    selectedSignalRef.current = primary;
-    setSelectedId(primary);
-    setSelectedGroupId(undefined);
-    setSelectedAnnotationId(undefined);
-    setSelectedTransactionId(undefined);
-    if (primary) {
-      const rendererHost = host.current;
-      if (rendererHost) {
-        applySelectionDecorations(selected, primary);
-      }
-    }
+    selection.selectSignals(selected, primary);
   };
   const selectedClipboardSignals = () => snapshot.document.signals
     .filter((signal) => selectedSignalIds.has(signal.id))
@@ -1725,7 +1617,7 @@ export function MinimalCycleView() {
       setClipboardAvailable(true);
       const result = application.execute({ id: nextCommandId("cut_spacer"), type: "spacer.delete", spacerId: selectedSpacer.id });
       if (result.ok) {
-        selectedSpacerRef.current = undefined;
+        selection.clear();
         setClipboardStatus(`Cut spacer ${selectedSpacer.id}`);
       }
       return;
@@ -1746,11 +1638,7 @@ export function MinimalCycleView() {
       commands.push({ id: nextCommandId("cut_group_delete"), type: "group.delete", groupId: selectedGroup.id });
       const result = application.executeBatch(nextCommandId("cut_group"), commands);
       if (result.ok) {
-        selectedGroupRef.current = undefined;
-        setSelectedGroupId(undefined);
-        selectedSignalRef.current = undefined;
-        setSelectedId(undefined);
-        setSelectedSignalIds(new Set());
+        selection.clear();
         setClipboardStatus(`Cut ${selectedGroup.name} group`);
       }
       return;
@@ -1768,8 +1656,7 @@ export function MinimalCycleView() {
       setClipboardAvailable(true);
       const result = application.execute({ id: nextCommandId("cut_transaction"), type: "transaction.delete", transactionId: transaction.id });
       if (result.ok) {
-        selectedTransactionRef.current = undefined;
-        setSelectedTransactionId(undefined);
+        selection.clear();
         setClipboardStatus(`Cut ${transaction.name} transaction`);
       }
       return;
@@ -1783,8 +1670,7 @@ export function MinimalCycleView() {
       setClipboardAvailable(true);
       const result = application.execute({ id: nextCommandId("cut_annotation"), type: "annotation.delete", annotationId: annotation.id });
       if (result.ok) {
-        selectedAnnotationRef.current = undefined;
-        setSelectedAnnotationId(undefined);
+        selection.clear();
         setClipboardStatus(`Cut ${annotation.label || annotation.type} annotation`);
       }
       return;
@@ -1798,9 +1684,7 @@ export function MinimalCycleView() {
     const commands = sources.map(({ signal }) => ({ id: nextCommandId("cut_item"), type: "signal.delete", signalId: signal.id } satisfies SemanticCommand));
     const result = application.executeBatch(nextCommandId("cut"), commands);
     if (result.ok) {
-      selectedSignalRef.current = undefined;
-      setSelectedId(undefined);
-      setSelectedSignalIds(new Set());
+      selection.clear();
       setClipboardStatus(sources.length === 1 ? `Cut ${sources[0]!.signal.display.name}` : `Cut ${sources.length} signals`);
     }
   };
@@ -1827,9 +1711,7 @@ export function MinimalCycleView() {
     const result = application.executeBatch(nextCommandId(operation), commands);
     if (result.ok) {
       const ids = created.map((signal) => signal.id);
-      selectedSignalRef.current = ids[0]; setSelectedId(ids[0]);
-      setSelectedSignalIds(new Set(ids));
-      selectedGroupRef.current = undefined; setSelectedGroupId(undefined);
+      selection.selectSignals(new Set(ids), ids[0]);
       setClipboardStatus(operation === "paste" ? `Pasted ${created.length} signal${created.length === 1 ? "" : "s"}` : `Duplicated ${created.length} signal${created.length === 1 ? "" : "s"}`);
     }
   };
@@ -1856,12 +1738,7 @@ export function MinimalCycleView() {
     }
     const result = application.executeBatch(nextCommandId(`${operation}_group_batch`), commands);
     if (result.ok) {
-      selectedGroupRef.current = newGroupId;
-      setSelectedGroupId(newGroupId);
-      selectedSignalRef.current = undefined;
-      setSelectedId(undefined);
-        selectedSignalIdsRef.current = new Set();
-      setSelectedSignalIds(new Set());
+      selection.selectGroup(newGroupId);
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} ${input.group.name} group`);
     }
   };
@@ -1887,9 +1764,7 @@ export function MinimalCycleView() {
     const spacer = { ...input.spacer, id: spacerId(nextEntityId("spacer", snapshot.document)) };
     const result = application.execute({ id: nextCommandId(`${operation}_spacer`), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index: Math.min(input.index, targetGroup.rows.length) });
     if (result.ok) {
-      selectedSpacerRef.current = spacer.id;
-      selectedGroupRef.current = targetGroup.id;
-      setSelectedGroupId(targetGroup.id);
+      selection.selectSpacer(targetGroup.id, spacer.id);
       setClipboardStatus(`${operation === "paste" ? "Pasted" : "Duplicated"} spacer`);
     }
   };
@@ -1960,27 +1835,11 @@ export function MinimalCycleView() {
   const selectHierarchySignal = (id: SignalId) => {
     const signal = snapshot.document.signals.find((item) => item.id === id);
     if (!signal) return;
-    selectedSignalRef.current = id;
-    selectedSignalIdsRef.current = new Set([id]);
-    setSelectedSignalIds(new Set([id]));
-    setSelectedId(id);
-    setSelectedGroupId(undefined);
-    selectedAnnotationRef.current = undefined;
-    setSelectedAnnotationId(undefined);
-    selectedTransactionRef.current = undefined;
-    setSelectedTransactionId(undefined);
-    if (followSelectionRef.current && !bottomPinnedRef.current) setBottomTab("Signal");
-    for (const row of host.current?.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]") ?? []) {
-      const rowId = row.dataset.rowId ?? row.dataset.signalId;
-      const selected = rowId === id;
-      row.dataset.selected = String(selected);
-      row.setAttribute("aria-selected", String(selected));
-    }
+    selection.selectSignal(id);
   };
   const revealSelectedInHierarchy = () => {
     if (!selectedSignal) return;
-    selectedSignalRef.current = selectedSignal.id;
-    setSelectedId(selectedSignal.id);
+    selection.selectSignal(selectedSignal.id);
     requestAnimationFrame(() => host.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(selectedSignal.id)}']`)?.scrollIntoView({ block: "nearest" }));
   };
   const registerBulkSignals = () => {
@@ -2019,10 +1878,7 @@ export function MinimalCycleView() {
     const id = groupId(nextEntityId("group", snapshot.document));
     const result = application.execute({ id: nextCommandId("group_create_tree"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index: snapshot.document.signalGroups.length });
     if (result.ok) {
-      selectedGroupRef.current = id;
-      setSelectedGroupId(id);
-      selectedSignalRef.current = undefined;
-      setSelectedId(undefined);
+      selection.selectGroup(id);
     }
   };
   const addTreeEntity = (kind: "signal" | "clock" | "bus" | "state" | "logic" | "event" | "pulse" | "group" | "spacer" | "commentRow") => {
@@ -2035,10 +1891,7 @@ export function MinimalCycleView() {
       const index = selectedGroupIndex >= 0 ? selectedGroupIndex + 1 : selectedSignalGroupIndex >= 0 ? selectedSignalGroupIndex + 1 : snapshot.document.signalGroups.length;
       const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index });
       if (result.ok) {
-        selectedGroupRef.current = id;
-        setSelectedGroupId(id);
-        selectedSignalRef.current = undefined;
-        setSelectedId(undefined);
+        selection.selectGroup(id);
       }
       return;
     }
@@ -2049,10 +1902,7 @@ export function MinimalCycleView() {
       const spacer = { id: spacerId(nextEntityId("spacer", snapshot.document)), height: 24 };
       const result = application.execute({ id: nextCommandId("tree_add_spacer"), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index });
       if (result.ok) {
-        selectedSpacerRef.current = spacer.id;
-        selectedGroupRef.current = targetGroup.id;
-        setSelectedGroupId(targetGroup.id);
-        setSelectedId(undefined);
+        selection.selectSpacer(targetGroup.id, spacer.id);
       }
       return;
     }

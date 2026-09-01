@@ -4,7 +4,6 @@ import { DisplayMappingCoordinator } from "./display-mapping-coordinator.js";
 import { EditorSessionController } from "./editor-session-controller.js";
 import { GeometryRegistry } from "./geometry-registry.js";
 import { ProjectionCoordinator } from "./projection-coordinator.js";
-import { SelectionController } from "./selection-controller.js";
 import { RenderCoordinator } from "./render-coordinator.js";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { ProductionWaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
@@ -15,7 +14,6 @@ export class EditorApplicationRuntime {
   readonly displayMapping = new DisplayMappingCoordinator();
   readonly geometry = new GeometryRegistry();
   readonly projection = new ProjectionCoordinator();
-  readonly selection = new SelectionController();
   readonly session: EditorSessionController;
 
   constructor(readonly document: CanonicalDocument) {
