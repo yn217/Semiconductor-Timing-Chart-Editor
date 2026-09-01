@@ -84,7 +84,16 @@
 - Focused browser: `tests/e2e/annotation-snap.spec.ts` 13/14 passed; the one failure ("ripples and clamps Annotation anchors through Timeline edits with Undo and Redo") reproduces identically on the pre-step baseline (verified via `git stash`), confirmed pre-existing. `tests/e2e/timeline-editor.spec.ts` 11/17 passed, same 6 failures reproduce identically on the pre-step baseline.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, and `git diff --check`: PASS.
 
-Remaining Step 9 ownership: transaction drag/snap adapter, tree DnD, keyboard routing, and symmetric listener-lifecycle audit.
+### Step 9-B — Transaction Drag / Snap (complete)
+
+- Transaction lane drag/resize/move already lived in one place (`apps/editor/src/runtime/transaction-lanes.tsx`), with all `clientX -> cycle` resolution delegated to `TimelineGeometryOwner` (`timelineGeometry.sourceBoundaryToLocalX` for boundary X, `resolveTransactionSnapCycle` — which itself only reads `timelineGeometry.currentSnapIndex()`/`screen`/`timeAxis` — for pointer-to-cycle snap). No parent-side duplicate geometry math existed; this step closed two real gaps found while adding a behavior-fence test (`tests/e2e/transaction-drag.spec.ts`, none previously existed for Transaction drag):
+  1. **Terminal boundary clamp bug**: `resolveTransactionSnapCycle` (`runtime/use-editor-runtime-bridge.ts`) called `currentSnapIndex().nearest(...)` with a fixed small radius and returned `undefined` past it, silently no-opping a drag past the first/last cycle instead of clamping. Now falls back to `cycleBoundaryAtPointerX`, which already has the correct terminal-tolerance logic used elsewhere (Range/Annotation).
+  2. **No cancel path**: `TransactionLanes` had no Escape or `pointercancel` handling — an in-flight drag always committed on `pointerup` regardless of Escape. Added an Escape listener (attached only while a drag is active) and `onPointerCancel` on the transaction button, both clearing drag state via the existing `setDrag(undefined)` path so `finish()`'s own `if (!drag ...) return;` guard naturally no-ops the subsequent `pointerup`.
+- Focused browser (new): `tests/e2e/transaction-drag.spec.ts` 4/4 passed — move-with-one-history-entry+Undo, edge resize with snap, terminal clamp, Escape-cancels-without-mutation.
+- Regression sweep: `timeline-editor.spec.ts`, `annotation-snap.spec.ts`, `transaction-export.spec.ts`, `zoom-cross-surface-alignment.spec.ts`, `clockless-time-axis.spec.ts`, `edit-commit-contract.spec.ts`, `result-aware-create-effects.spec.ts`, `gui-split-view-visual.spec.ts`: 23 pre-existing failures (mostly the already-known ambiguous `"Transaction"` button locator — a ribbon tool and a ribbon *tab* now share the same accessible name — plus the already-known range-preview/drag/marker-geometry set), confirmed identical via `git stash` against the pre-step baseline. Zero new regressions.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
+
+Remaining Step 9 ownership: tree DnD (Step 9-C), keyboard routing (Step 9-D), and symmetric listener-lifecycle audit (Step 9-E).
 
 ## Current size
 
@@ -100,4 +109,4 @@ Remaining Step 9 ownership: transaction drag/snap adapter, tree DnD, keyboard ro
 
 ## Next responsibility
 
-Timeline Interactions: transaction drag/snap adapter (Step 9-B), tree DnD (Step 9-C), keyboard routing (Step 9-D), and symmetric listener-lifecycle audit (Step 9-E).
+Timeline Interactions: tree DnD (Step 9-C), keyboard routing (Step 9-D), and symmetric listener-lifecycle audit (Step 9-E).

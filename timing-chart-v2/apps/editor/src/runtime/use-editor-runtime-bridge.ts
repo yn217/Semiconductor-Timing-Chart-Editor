@@ -213,7 +213,11 @@ export function resolveTransactionSnapCycle(context: {
   const localPointer = context.screenGeometry.fromScreen({ x: context.clientX - bounds.left, y: 0 }, { scrollX: 0, scrollY: 0, zoom: context.zoom });
   const snap = context.currentSnapIndex().nearest({ x: localPointer.x, y: axisRow.y + context.document.layout.rowHeight / 2 }, 14 / context.zoom, ["cycle-boundary", "clock-edge", "signal-transition", "bus-transition", "marker", "annotation"]);
   context.publishState();
-  return snap?.anchor.cycle;
+  // A pointer dragged past the first/last cycle boundary falls outside the
+  // fixed snap-candidate radius above; fall back to the terminal-tolerant
+  // cycle-boundary resolver so a Transaction edge/move drag clamps at the
+  // timeline's terminal boundary instead of silently no-opping.
+  return snap?.anchor.cycle ?? context.cycleBoundaryAtPointerX(context.clientX);
 }
 
 export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }): void {

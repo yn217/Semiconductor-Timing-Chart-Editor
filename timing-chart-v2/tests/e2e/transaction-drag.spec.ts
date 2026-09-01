@@ -1,0 +1,109 @@
+import { expect, test, type Page } from "@playwright/test";
+
+async function ready(page: Page) {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+}
+
+/** Creates one Transaction via the Home Ribbon (canonical entry point) and
+ * sets its exact start/end/name through the selected-Transaction editor. */
+async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
+  const host = page.getByTestId("cycle-surface");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Transaction", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+  const lane = page.getByTestId("transaction-lanes");
+  await lane.locator("[data-transaction-id]").first().click();
+  const editor = page.getByTestId("transaction-editor");
+  await editor.getByLabel("Transaction name").fill(name);
+  await editor.getByLabel("Transaction end").fill(String(end));
+  await editor.getByLabel("Transaction start").fill(String(start));
+  await editor.getByRole("button", { name: "Apply Transaction" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+}
+
+test("moves a whole Transaction by dragging its body to a snapped cycle with one history entry", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await createTransaction(page, "DMA Read", 2, 6);
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const lane = page.getByTestId("transaction-lanes");
+  const transaction = lane.locator("[data-transaction-id]");
+  const before = (await transaction.boundingBox())!;
+  const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
+  const y = before.y + before.height / 2;
+  await transaction.locator("span").hover();
+  await page.mouse.down();
+  await page.mouse.move(cycle10.x, y);
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const after = (await transaction.boundingBox())!;
+  expect(Math.abs(after.x - cycle10.x)).toBeLessThanOrEqual(2);
+  expect(after.width).toBeCloseTo(before.width, 0);
+  const historyAfter = await page.getByTestId("history-status").textContent();
+  expect(historyAfter).not.toBe(historyBefore);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore!.replace("Redo 0", "Redo 1"));
+  const undone = (await transaction.boundingBox())!;
+  expect(Math.abs(undone.x - before.x)).toBeLessThanOrEqual(1);
+});
+
+test("resizes a Transaction's start/end edge with snap and keeps start < end", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await createTransaction(page, "Resize target", 4, 8);
+  const lane = page.getByTestId("transaction-lanes");
+  const transaction = lane.locator("[data-transaction-id]");
+  const before = (await transaction.boundingBox())!;
+  const cycle2 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").boundingBox())!;
+  const y = before.y + before.height / 2;
+  await transaction.locator("[data-edge='start']").hover();
+  await page.mouse.down();
+  await page.mouse.move(cycle2.x, y);
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const resized = (await transaction.boundingBox())!;
+  expect(Math.abs(resized.x - cycle2.x)).toBeLessThanOrEqual(2);
+  expect(resized.width).toBeGreaterThan(before.width);
+});
+
+test("clamps a Transaction edge drag at the terminal boundary and cannot cross the opposite edge", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await createTransaction(page, "Terminal clamp", 18, 22);
+  const lane = page.getByTestId("transaction-lanes");
+  const transaction = lane.locator("[data-transaction-id]");
+  const before = (await transaction.boundingBox())!;
+  const terminal = (await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox())!;
+  const y = before.y + before.height / 2;
+  await transaction.locator("[data-edge='end']").hover();
+  await page.mouse.down();
+  await page.mouse.move(terminal.x + 30, y);
+  await page.mouse.up();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const clamped = (await transaction.boundingBox())!;
+  expect(Math.abs((clamped.x + clamped.width) - terminal.x)).toBeLessThanOrEqual(2);
+});
+
+test("Escape cancels an in-progress Transaction drag without any semantic mutation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await createTransaction(page, "Cancel me", 2, 6);
+  const lane = page.getByTestId("transaction-lanes");
+  const transaction = lane.locator("[data-transaction-id]");
+  const before = (await transaction.boundingBox())!;
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
+  const y = before.y + before.height / 2;
+  await transaction.locator("span").hover();
+  await page.mouse.down();
+  await page.mouse.move(cycle10.x, y);
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  const after = (await transaction.boundingBox())!;
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+});
