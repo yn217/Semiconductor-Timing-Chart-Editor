@@ -50,14 +50,24 @@
 - Focused browser: 5 final focused checks passed for Cut/Paste, Context Menu duplicate, pinned-target duplicate/visibility, and pinned Annotation/Signal deletion. Multi-selection delete also passed; Group copy/cut reached the expected clipboard state before pre-existing Home Ribbon locator failures for Paste.
 - TypeScript, boundary gate, and diff-check: PASS.
 
+## Step 7 — Timeline Navigation
+
+- Owner: `apps/editor/src/runtime/use-timeline-navigation-owner.ts`
+- Owns zoom state and the production Zoom In/Out/preset, Fit All, Fit Selection, and cycle-navigation routes shared by Ribbon and bookmark navigation.
+- The owner connects the existing `TimelineViewportRuntime` to viewport geometry, presentation scaling, selection range, and `ViewMetricsOwner`; the parent no longer stores navigation callback refs or constructs separate zoom/navigation controllers.
+- Renderer, ruler, range, and interaction code reads the owner's synchronous zoom authority, avoiding a second closure-local zoom value.
+- Focused browser: 4 passed for status/view-only invariants, Fit All/Fit Selection, ruler-backed cycle navigation/playhead, and horizontal-scroll range alignment across 50/100/150/200% zoom.
+- TypeScript and diff-check: PASS.
+
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,902 lines / 137,309 bytes
+- `minimal-cycle-view.tsx`: 1,886 lines / 136,435 bytes
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
 - `use-clipboard-actions.ts`: 237 lines / 18,024 bytes
+- `use-timeline-navigation-owner.ts`: 95 lines / 4,036 bytes
 
 ## Next responsibility
 
-Timeline Navigation: zoom, Fit All, Fit Selection, cycle navigation, wheel/scroll positioning, and the existing TimelineViewportRuntime bridge.
+Timeline Presentation: ruler, grid, playhead, range, resize, and scroll refresh coordination through the existing TimelineViewportRuntime.
