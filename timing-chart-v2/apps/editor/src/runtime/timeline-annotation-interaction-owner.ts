@@ -143,6 +143,25 @@ export class AnnotationInteractionOwner {
 
   get active(): boolean { return this.#drag !== undefined; }
 
+  /** Arrow-key nudge for the focused Annotation's primary anchor. Not a
+   * global shortcut (KeyboardShortcutRouter never sees ArrowLeft/Right/Up/
+   * Down); callers invoke this after the router declines an event. Returns
+   * whether the key was handled. */
+  nudge = (event: KeyboardEvent): boolean => {
+    if (!(event.target instanceof Element)) return false;
+    const owner = event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]");
+    const delta = event.shiftKey ? 10 : 1;
+    const movement = event.key === "ArrowLeft" ? { x: -delta, y: 0 } : event.key === "ArrowRight" ? { x: delta, y: 0 } : event.key === "ArrowUp" ? { x: 0, y: -delta } : event.key === "ArrowDown" ? { x: 0, y: delta } : undefined;
+    if (!owner?.dataset.annotationId || !movement) return false;
+    const annotation = this.context.getDocument().annotations.find((item) => item.id === owner.dataset.annotationId);
+    const field = annotation && annotationFields.find((key) => annotation[key] !== undefined);
+    const anchor = field && annotation ? annotation[field] : undefined;
+    if (!annotation || !field || !anchor) return false;
+    event.preventDefault();
+    this.context.execute({ id: nextCommandId("annotation_nudge"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: withAddedOffset(anchor, movement.x, movement.y) });
+    return true;
+  };
+
   cancel = (): void => {
     if (this.#drag) this.#drag.owner.style.translate = "";
     this.#drag = undefined;

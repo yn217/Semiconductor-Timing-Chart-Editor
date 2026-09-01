@@ -8,11 +8,10 @@ import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTim
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
-import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
+import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
-import { withAddedOffset } from "./runtime/anchor-offset.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import type { RangeDragState } from "./runtime/range-drag.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
@@ -74,10 +73,11 @@ import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
 import { TimelineRangeInteractionOwner } from "./runtime/timeline-range-interaction-owner.js";
 import { AnnotationInteractionOwner } from "./runtime/timeline-annotation-interaction-owner.js";
 import { TreeDragInteractionOwner } from "./runtime/tree-drag-interaction-owner.js";
+import { routeGlobalShortcut } from "./runtime/keyboard-shortcut-router.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { buildRuler } from "./runtime/build-ruler.js";
-import { annotationFields, projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
+import { projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
@@ -100,6 +100,7 @@ export function MinimalCycleView() {
   const gridLayer = useRef<HTMLDivElement>(null);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const armArrowPick = useRef<() => void>(() => undefined);
+  const selectAllRef = useRef<() => void>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -325,6 +326,8 @@ export function MinimalCycleView() {
       registry.register("clipboard.copy", editActions.copy),
       registry.register("clipboard.cut", editActions.cut),
       registry.register("clipboard.paste", editActions.paste),
+      registry.register("clipboard.duplicate", editActions.duplicate),
+      registry.register("selection.selectAll", () => selectAllRef.current()),
     ];
     return () => unregister.forEach((dispose) => dispose());
   }, []);
@@ -957,45 +960,19 @@ export function MinimalCycleView() {
     const onAnnotationPointerDown = annotationInteraction.onPointerDown;
     const onAnnotationPointerMove = annotationInteraction.onPointerMove;
     const onAnnotationPointerUp = annotationInteraction.onPointerUp;
-    const onAnnotationKeyDown = (event: KeyboardEvent) => {
-      if (!(event.target instanceof Element) || !mayRouteGlobalShortcut(event, annotationInteraction.active)) return;
-      if (event.ctrlKey || event.metaKey) {
-        const shortcut = event.key.toLowerCase();
-        if (shortcut === "c" || shortcut === "x" || shortcut === "v") {
-          event.preventDefault();
-          commandRegistry.current.execute(`clipboard.${shortcut === "c" ? "copy" : shortcut === "x" ? "cut" : "paste"}`);
-          return;
-        }
-      }
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
-        event.preventDefault();
-        commandRegistry.current.execute(event.shiftKey ? "history.redo" : "history.undo");
-        return;
-      }
-      if (event.key === "Delete") {
-        event.preventDefault();
-        commandRegistry.current.execute("selection.delete");
-        return;
-      }
-      const owner = event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]");
-      const delta = event.shiftKey ? 10 : 1;
-      const movement = event.key === "ArrowLeft" ? { x: -delta, y: 0 } : event.key === "ArrowRight" ? { x: delta, y: 0 } : event.key === "ArrowUp" ? { x: 0, y: -delta } : event.key === "ArrowDown" ? { x: 0, y: delta } : undefined;
-      if (!owner?.dataset.annotationId || !movement) {
-        if (event.key === "Escape") {
+    const onGlobalKeyDown = (event: KeyboardEvent) => {
+      const handled = routeGlobalShortcut(event, {
+        isGestureActive: () => annotationInteraction.active,
+        execute: (name) => commandRegistry.current.execute(name),
+        cancel: () => {
           closeContextMenu();
           clearAnnotationPreview();
           pendingArrow = undefined;
           setArrowPickStatus("idle");
           delete rendererHost.dataset.arrowPick;
-        }
-        return;
-      }
-      const annotation = session.getSnapshot().document.annotations.find((item) => item.id === owner.dataset.annotationId);
-      const field = annotation && annotationFields.find((key) => annotation[key] !== undefined);
-      const anchor = field && annotation ? annotation[field] : undefined;
-      if (!annotation || !field || !anchor) return;
-      event.preventDefault();
-      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("annotation_nudge"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: withAddedOffset(anchor, movement.x, movement.y) });
+        },
+      });
+      if (!handled) annotationInteraction.nudge(event);
     };
     const onContextMenu = (event: MouseEvent) => {
       if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")) return;
@@ -1051,7 +1028,7 @@ export function MinimalCycleView() {
       { target: rendererHost, type: "pointerup", listener: onAnnotationPointerUp as EventListener },
       { target: rendererHost, type: "pointercancel", listener: clearAnnotationPreview as EventListener },
       { target: rendererHost, type: "contextmenu", listener: onContextMenu as EventListener },
-      { target: rendererHost.ownerDocument, type: "keydown", listener: onAnnotationKeyDown as EventListener },
+      { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
     ]);
     return () => {
       applyCollapsedGroupsRef.current = () => undefined;
@@ -1231,6 +1208,7 @@ export function MinimalCycleView() {
     const primary = ids[0];
     selection.selectSignals(selected, primary);
   };
+  selectAllRef.current = selectAllSignals;
   const copySelectedSignal = editActions.copy;
   const cutSelectedSignal = editActions.cut;
   const pasteSelectedEntity = editActions.paste;

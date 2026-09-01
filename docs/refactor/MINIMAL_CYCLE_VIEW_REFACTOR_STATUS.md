@@ -104,11 +104,24 @@
 - `tests/e2e/reorder-visibility.spec.ts` (pre-existing, no changes needed for this step): 2/8 passed both before and after this extraction (verified via `git stash`) — the other 6 assert against a `data-canonical-row-ids` surface attribute that no longer exists anywhere in the source (`grep` found zero producers), a pre-existing test/implementation drift unrelated to Step 9-C's ownership-transfer scope.
 - TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
 
-Remaining Step 9 ownership: keyboard routing (Step 9-D) and symmetric listener-lifecycle audit (Step 9-E).
+### Step 9-D — Keyboard Routing (complete)
+
+- Router: `apps/editor/src/runtime/keyboard-shortcut-router.ts` (`routeGlobalShortcut`, a pure function, not a stateful owner — there is no persistent state to own).
+- Routes Delete / Ctrl+C / Ctrl+X / Ctrl+V / Ctrl+D / Ctrl+A / Ctrl+Z / Ctrl+Shift+Z / Escape to the shared `UiCommandRegistry` (`selection.delete`, `clipboard.copy/cut/paste/duplicate`, `selection.selectAll`, `history.undo/redo`) or to a caller-supplied `cancel()`. Holds no semantic implementation itself; every branch is a single `execute(name)` dispatch. Gated end-to-end by the existing `mayRouteGlobalShortcut`/`keyboardScope` classifier (typing/IME/dialog/gesture focus), unchanged, so native text-editing and IME composition are never intercepted.
+- The previous `onAnnotationKeyDown` handler mixed this global routing with Annotation-specific arrow-key nudge and an Escape cascade (close context menu / cancel Annotation drag / reset dependency-arrow pick). Split cleanly: the global-shortcut part moved to the router above; the nudge moved to `AnnotationInteractionOwner.nudge()` (new method, same file as Step 9-A, since it already owns `annotation.setAnchor` mutation); the Escape cascade stays as a small `cancel()` closure passed into the router from `MinimalCycleView` (it composes three different owners' state, not a single owner's responsibility).
+- Widget-scoped keyboard handling not in this step's scope, left untouched: `onViewportKeyDown` (canvas pan arrows/PageUp/PageDown/Home/End) and `onTreeKeyDown` (Left Tree roving-focus arrow/Enter/ContextMenu navigation) are not global shortcuts, they are per-widget keyboard-navigation contracts.
+- **Two real gaps closed**: `clipboard.duplicate` and `selection.selectAll` had never been registered in the `UiCommandRegistry` at all -- `Ctrl+D`/`Ctrl+A` had no keyboard binding despite `editActions.duplicate` and a local `selectAllSignals` already existing and being reachable from Ribbon/context-menu. Registered both (`selectAllSignals` needed a `useRef` indirection, matching this file's existing `armArrowPick`-style pattern, since it closes over reactive `snapshot` state and the registration effect runs once on mount).
+- `MinimalCycleView` retains no keyboard semantic logic: `onGlobalKeyDown` calls `routeGlobalShortcut(...)`, then `annotationInteraction.nudge(event)` only if unhandled.
+- Focused browser (new): `tests/e2e/keyboard-shortcut-router.spec.ts` 4/4 passed -- Ctrl+D duplicates with a fresh stable ID and one History entry, Ctrl+A selects every Signal without canonical mutation, Ctrl+A inside a text input performs native select-all (app shortcut correctly does not fire), Escape cancels an in-progress Annotation drag with zero canonical/History change.
+- `tests/e2e/full-gui.spec.ts` "keeps global shortcuts focus-aware and IME-safe" (native Ctrl+Z inside a text input, `isComposing:true` Delete on a focused Annotation) and `tests/e2e/annotation-snap.spec.ts` "nudges by 1/10 px..." (Annotation arrow-key nudge, now owner-hosted): both still pass unchanged.
+- Regression: `tests/e2e/home-command-surface.spec.ts` (Copy/Duplicate/Paste/multi-select clipboard/Select-All coverage) -- 3 pre-existing failures (an ambiguous `"Duplicate"` button locator matching both the Ribbon tool and ribbon-tab, unrelated to keyboard routing), confirmed identical via `git stash`. Zero new regressions.
+- TypeScript, `check:boundaries`, `check:editor-complexity`, `check:performance-architecture`, `git diff --check`: PASS.
+
+Remaining Step 9 ownership: symmetric listener-lifecycle audit (Step 9-E).
 
 ## Current size
 
-- `minimal-cycle-view.tsx`: 1,637 lines
+- `minimal-cycle-view.tsx`: 1,615 lines
 - `use-editor-application-owner.ts`: 106 lines / 6,470 bytes
 - `use-document-lifecycle.ts`: 204 lines / 11,128 bytes
 - `use-selection-owner.ts`: 84 lines / 4,027 bytes
@@ -118,6 +131,7 @@ Remaining Step 9 ownership: keyboard routing (Step 9-D) and symmetric listener-l
 - `timeline-range-interaction-owner.ts`: 125 lines / 6,007 bytes
 - `timeline-annotation-interaction-owner.ts`: 154 lines
 - `tree-drag-interaction-owner.ts`: 95 lines
+- `keyboard-shortcut-router.ts`: 55 lines
 
 ## Next responsibility
 
