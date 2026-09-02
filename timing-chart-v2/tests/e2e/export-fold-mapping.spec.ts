@@ -28,7 +28,7 @@ test("Export respects a collapsed TimeGroup: shorter SVG width, no hidden cycle 
 
   // Collapse the default Timeline range [2, 4) — a genuine structural fold, not a visual band.
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await page.getByRole("button", { name: "Add gap" }).click();
+  await page.getByRole("button", { name: "Axis Break" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 
   const widthAfter = Number(await dataSvg.evaluate((el) => el.getAttribute("width")));
