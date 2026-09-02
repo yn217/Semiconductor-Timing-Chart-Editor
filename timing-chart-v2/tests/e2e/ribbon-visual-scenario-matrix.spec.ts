@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { captureScenarioReview } from "../../harness/gui/ai-review-bundle.mjs";
 
-const tabs = ["File", "Home", "Insert", "Timeline", "Annotation", "View", "Review", "AI"] as const;
+const tabs = ["File", "Home", "Insert", "Timeline", "Annotation", "View", "Check", "AI"] as const;
 
 test("captures deterministic production Ribbon scenario manifests", async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1672, height: 941 });
@@ -36,7 +36,7 @@ test("covers compressed Ribbon layout and Home round-trip without semantic mutat
   const ribbon = page.getByTestId("ribbon");
   const ribbonHeight = (await ribbon.boundingBox())!.height;
   const workspaceY = (await page.locator(".desktop-workspace").boundingBox())!.y;
-  for (const tab of ["Insert", "View", "Review", "AI", "Home", "View", "Home"]) {
+  for (const tab of ["Insert", "View", "Check", "AI", "Home", "View", "Home"]) {
     await page.locator(".ribbon-tabs").getByRole("button", { name: tab, exact: true }).click();
     await expect(page.locator(".ribbon-tabs").getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
     expect((await ribbon.boundingBox())!.height).toBe(ribbonHeight);
