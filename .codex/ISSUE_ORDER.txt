@@ -9,6 +9,7 @@
 #   git fetch origin codex-control
 #   git show origin/codex-control:.codex/ISSUE_ORDER.txt
 #   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md
+#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
 # Every executable Issue number appears at most once.
@@ -23,9 +24,8 @@
 # Preserve the merged owner architecture while burning down product issues.
 #
 # Current main observed when this queue was reconciled:
-#   391f22539fe4533ba145a52490532539652ab201
-#   test(v2): attach viewport runtime before zoom assertions
-# This commit is useful test maintenance, but does NOT by itself close #279.
+#   4bc05310d50d59044c3998e9b35de856387e2f1b
+#   test(v2): cover foreign-document clipboard rejection
 #
 # Primary goal:
 #   Keep making safe product progress while quarantining repeated shared blockers.
@@ -37,7 +37,7 @@
 #   4. Mechanical visual/acceptance infrastructure that does not require rewriting Golden to pass.
 #   5. Broader product/performance/GUI closure.
 #
-# BLOCKED work is deliberately NOT executable in this file until the shared blocker is cleared.
+# BLOCKED work is deliberately NOT executable until the shared blocker is cleared.
 # Do not repeatedly rediscover the same browser-coordinate/gesture drift issue-by-issue.
 #
 # Recently completed/closed and removed from executable queue:
@@ -47,35 +47,36 @@
 #   #208 File/New/Open production lifecycle
 #
 # Architecture Issues #258 and #312 are NON-EXECUTABLE now.
-# The merged responsibility-owner implementation supersedes both old execution strategies.
 # Do not resume CUT-A/B/C/D or parallel 4-way replacement work.
 #
 # ============================================================================
 # ISSUE ACCEPTANCE RETRIEVAL / FALLBACK CONTRACT
 # ============================================================================
-# For each Issue, resolve its contract in this order:
+# Resolve each Issue contract in this order:
 #
-#   1. Fetch/read the CURRENT GitHub Issue body + Acceptance Criteria.
-#   2. If GitHub retrieval fails with 404 / permission / connector / tooling error,
-#      read origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md.
-#   3. If that snapshot contains the Issue, use the captured Goal / Acceptance / Closure rule
+#   1. Fetch/read CURRENT GitHub Issue body + Acceptance Criteria.
+#   2. If live retrieval fails with 404 / permission / connector / tooling error,
+#      search BOTH fallback snapshots:
+#        origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md
+#        origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
+#   3. If either snapshot contains the Issue, use that captured Goal / Acceptance / Closure rule
 #      as the fallback contract and continue safe work.
-#   4. If neither current GitHub text nor a snapshot section exists, do NOT guess product behavior.
-#      Mark only that Issue retrieval-blocked and continue to the next executable Issue.
+#   4. If neither live GitHub text nor either snapshot contains the Issue, do NOT guess product
+#      behavior. Mark only that Issue retrieval-blocked and continue to the next executable Issue.
 #
-# Current GitHub Issue text always wins if it is available and conflicts with the snapshot.
-# The snapshot is intentionally scoped to the current SAFE-FIRST + first visual/acceptance block.
-# Do not treat it as a permanent replacement for GitHub Issues.
+# Current GitHub Issue text always wins if available and conflicts with a snapshot.
+# Snapshot 1 covers SAFE-FIRST + first mechanical visual/acceptance block through #234.
+# Snapshot 2 covers the following Product Workflows/Parity and Performance/Correctness blocks.
 #
-# A GitHub retrieval failure by itself is NOT permission to mark the whole goal blocked when a
+# A GitHub retrieval failure by itself is NOT permission to mark the whole goal blocked while a
 # matching snapshot exists. Use the snapshot and continue.
 #
 # ============================================================================
 # EXECUTION RULES
 # ============================================================================
 # - Skip Closed issues.
-# - Resolve Issue acceptance using the live-GitHub -> snapshot -> per-Issue-blocked fallback above.
-# - If full Issue acceptance is already satisfied, add concise evidence, close it, continue.
+# - Resolve acceptance via live GitHub -> snapshot 1/2 -> per-Issue retrieval-blocked.
+# - If full acceptance is already satisfied, add concise evidence, close it, continue.
 # - If PARTIAL/MISSING, implement the smallest production-complete slice that satisfies the Issue.
 # - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
 # - One Issue should normally end in commit/push + focused evidence + close before moving on.
@@ -92,7 +93,7 @@
 # - When the SAME blocker reproduces twice without a proven production-safe fix, stop retrying it,
 #   record the blocker, and continue to the next independent executable Issue.
 # - Do not mark the overall goal blocked solely because live Issue retrieval fails for multiple
-#   Issues if their acceptance snapshot is available.
+#   Issues while a matching acceptance snapshot exists.
 #
 # Definition of useful progress:
 #   - production behavior changed or was verified against current acceptance
@@ -103,41 +104,24 @@
 # ============================================================================
 # SAFE-FIRST EXECUTABLE QUEUE
 # ============================================================================
-# Cross-document clipboard identity safety is a semantic/data-integrity issue and can be fixed
-# without depending on pointer-coordinate gesture behavior.
 314
-
-# Canonical -> Renderer compatibility / ValueSignal conversion policy is primarily semantic/core.
-# Land this before relying on Event/Pulse as fully supported end-to-end types.
 229
-
-# #279 is currently an EVIDENCE-CLOSURE candidate: implementation is substantially present.
-# Collect the missing scale/cache/all-consumer/Save-Open-Undo-Redo evidence before changing production.
 279
-
-# Reference Clock editing/truthfulness. Proceed only through current canonical/geometry owners.
 228
-
-# Clockless documents / deleting current reference Clock. If the known geometry/gesture blocker
-# is encountered, mark this Issue blocked and continue; do not invent a local coordinate workaround.
 246
-
-# Per-Group / per-Signal spacing is independent of the blocked first-class Spacer gesture workflow.
 266
 
 # ============================================================================
 # MECHANICAL VISUAL / ACCEPTANCE INFRASTRUCTURE
 # ============================================================================
-# Prefer mechanical diagnostics and stable scenario coverage first.
 310
 307
 308
-
-# Golden must fail on missing semantics/export instead of evidence-only PASS.
 234
 
 # ============================================================================
 # PRODUCT WORKFLOWS / PARITY — INDEPENDENT CANDIDATES
+# Snapshot fallback exists in ISSUE_ACCEPTANCE_SNAPSHOT_2.md for every Issue in this block.
 # ============================================================================
 173
 209
@@ -158,6 +142,7 @@
 
 # ============================================================================
 # PERFORMANCE / CORRECTNESS ENGINE — INDEPENDENT CANDIDATES
+# Snapshot fallback exists in ISSUE_ACCEPTANCE_SNAPSHOT_2.md for every Issue in this block.
 # ============================================================================
 218
 217
@@ -171,9 +156,10 @@
 
 # ============================================================================
 # GUI / INTERACTION CONSISTENCY — LATER
+# No complete fallback snapshot yet. If live retrieval fails, mark only that Issue retrieval-blocked
+# and continue; do not mark the overall goal blocked because later Issues remain available.
+# If this block becomes active with repeated live 404s, request/refresh the next snapshot batch.
 # ============================================================================
-# These remain executable, but if one reproduces the quarantined geometry/gesture blocker,
-# record it and skip rather than repeatedly modifying production around browser-coordinate drift.
 195
 197
 199
@@ -241,48 +227,33 @@
 # ============================================================================
 # TEMPORARILY BLOCKED — NON-EXECUTABLE UNTIL SHARED BLOCKER IS CLEARED
 # ============================================================================
-# SHARED REAL-BROWSER GEOMETRY / GESTURE BLOCKER
-#
-# Repeated symptom:
-# - production/current browser coordinates and historical E2E gesture expectations drift
-# - the same class reproduced across multiple Issues
-# - no production-safe correction has been proven
-#
-# Do not execute these from the normal burn-down queue:
+# SHARED REAL-BROWSER GEOMETRY / GESTURE BLOCKER:
 #   #313 Range drag authoritative geometry
 #   #221 Clipboard semantics matrix
 #   #222 First-class Spacer Row workflow
 #   #223 Logic/Event/Pulse direct creation paths
-#   #269 Structured diagnostics (current acceptance run reproduced same drift family)
-#   #281 Property/state-machine harness (current acceptance run reproduced same drift family)
+#   #269 Structured diagnostics
+#   #281 Property/state-machine harness
 #
-# These are not closed. Re-enter them only after the shared coordinate/gesture authority problem
-# has a concrete reproduction, current contract, and production-safe fix strategy.
+# Do not execute these from normal burn-down. Re-enter only after the shared coordinate/gesture
+# authority problem has a concrete reproduction, current contract, and production-safe fix strategy.
 #
-# DEPENDENCY-HOLD — blocked by the workflows above:
-#   #264 Event/Pulse end-to-end lifecycle depends on #223 creation-path closure.
-#   #265 Spacer end-to-end lifecycle overlaps/depends on #222 first-class Spacer workflow.
+# DEPENDENCY-HOLD:
+#   #264 Event/Pulse lifecycle depends on #223.
+#   #265 Spacer lifecycle overlaps/depends on #222.
 #   #267 Group Band full closure requires Spacer/layout acceptance that depends on #265.
-#   #309 Interaction before/after/undo visual acceptance is gesture-heavy; defer with the blocker.
+#   #309 Interaction before/after/undo visual acceptance is gesture-heavy.
 #
-# CURRENT UI vs HISTORICAL E2E CONTRACT DRIFT — RECONCILE CONTRACT FIRST:
-#   #180 Virtualization Projection
-#   #219
-#   #255
-#   #275
-#
-# For these, do not change production to satisfy an old test until current Product Spec and current
-# Issue acceptance establish which behavior is authoritative. Update tests only when the current
-# contract proves they are stale; never weaken them merely to obtain green status.
+# CURRENT UI vs HISTORICAL E2E CONTRACT DRIFT — reconcile current contract first:
+#   #180 #219 #255 #275
+# Do not change production to satisfy an old test until current Product Spec / Issue acceptance proves
+# which behavior is authoritative. Update tests only when the current contract proves they are stale.
 #
 # ============================================================================
 # NON-EXECUTABLE / SUPERSEDED ARCHITECTURE ISSUES
 # ============================================================================
-#   #258 [V2][Architecture] Decompose MinimalCycleView monolith
-#   #312 Build parallel 4-way MinimalCycleView replacement and cut over after parity
-#
-# Responsibility refactor was completed by the owner-based implementation and merged to main at
-# d82ccab1aa9b9f2ddee9f2b04cf5e0101ab7635e. Do not execute the obsolete CUT or replacement plans.
-# These Issues may be closed separately with merged-refactor evidence; until then, skip them.
+#   #258 Decompose MinimalCycleView monolith
+#   #312 Parallel 4-way MinimalCycleView replacement
+# Responsibility-owner refactor already superseded these strategies and was merged at d82ccab.
 #
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
