@@ -100,7 +100,7 @@ test("snaps a clockless transaction against the actual non-first TimeAxis owner 
   await openJson(page, base("clockless-owner-row", "Clockless Owner Row", [hiddenFirst, owner], [hiddenFirst.id, owner.id]));
   const host = page.getByTestId("cycle-surface");
   await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Time · No Clock Reference");
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill("Owner snap");
   await editor.getByLabel("New Transaction start").fill("0");
@@ -139,7 +139,7 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
     links: { issue: "ISSUE-1" },
   };
   await openJson(page, { ...base("transaction-clipboard", "Transaction Clipboard", [data], [data.id]), transactions: [transaction] });
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   const lanes = page.getByTestId("transaction-lanes");
   const original = lanes.locator("[data-transaction-id='txn_original']");
   await original.click();
@@ -161,7 +161,7 @@ test("Bottom Transaction editor deletes its displayed stable target", async ({ p
   await page.goto("/");
   const transaction = { id: "txn_delete", name: "Delete me", start: 1, end: 4, laneId: "lane_0" };
   await openJson(page, { ...base("transaction-delete", "Transaction Delete", [data], [data.id]), transactions: [transaction] });
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
   const editor = page.getByTestId("transaction-editor");
   await editor.locator(".transaction-list").getByRole("button", { name: /Delete me/ }).click();
   await expect(editor.getByTestId("delete-bottom-transaction")).toBeVisible();
