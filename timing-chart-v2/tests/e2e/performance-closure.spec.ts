@@ -254,6 +254,28 @@ test("1000x1000 virtualization mounts viewport-scale rows and avoids duplicate b
   await testInfo.attach("phase13-1000-virtualization.json", { body: Buffer.from(JSON.stringify({ fixture: "perf_1000x1000", diagnostic, domNodes: await page.locator("*").count() }, null, 2)), contentType: "application/json" });
 });
 
+test("large valid fixture records Open/Save browser profile evidence", async ({ page }, testInfo) => {
+  await start(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+  const before = await cdpMetrics(cdp);
+  const openStarted = await page.evaluate(() => performance.now());
+  const document = await openFixture(page, { signalCount: 1000, cycleCount: 1000, profile: "transaction-heavy" });
+  const openMs = await page.evaluate((started) => performance.now() - started, openStarted);
+  const afterOpen = await cdpMetrics(cdp);
+  const saveStarted = await page.evaluate(() => performance.now());
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  const saveMs = await page.evaluate((started) => performance.now() - started, saveStarted);
+  const afterSave = await cdpMetrics(cdp);
+  expect(await download.path()).toBeTruthy();
+  expect(openMs).toBeGreaterThan(0);
+  expect(saveMs).toBeGreaterThan(0);
+  await testInfo.attach("large-open-save-profile.json", { body: Buffer.from(JSON.stringify({ fixture: document.document.id, before, afterOpen, afterSave, openMs, saveMs, filename: download.suggestedFilename() }, null, 2)), contentType: "application/json" });
+  console.log(`[large-open-save-profile] ${JSON.stringify({ fixture: document.document.id, openMs, saveMs })}`);
+});
+
 test("viewport-only projection remains bounded at 1k, 5k, and 10k rows", async ({ page }, testInfo) => {
   await start(page);
   const measurements: Array<Record<string, unknown>> = [];
