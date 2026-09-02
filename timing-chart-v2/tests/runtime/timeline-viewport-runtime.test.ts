@@ -18,6 +18,7 @@ describe("TimelineViewportRuntime", () => {
   it("owns bounded zoom and fit calculations without canonical mutation", () => {
     const runtimeContext = context();
     const runtime = createTimelineViewportRuntime(runtimeContext);
+    runtime.attach();
     runtime.setZoom(9);
     expect(runtimeContext.viewport.getZoom()).toBe(2);
     runtime.fitSelection(100, 300);
