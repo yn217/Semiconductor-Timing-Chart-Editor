@@ -25,8 +25,8 @@
 #   Close concrete production gaps that a user can observe in the real browser.
 #
 # Priority order:
-#   1. Verify/close already-mostly-implemented production workflows.
-#   2. Fix P0/P1 correctness where GUI/canonical/renderer can disagree.
+#   1. Fix P0/P1 correctness/data-integrity bugs that can silently change semantic intent.
+#   2. Verify/close already-mostly-implemented production workflows.
 #   3. Complete Reference Clock / clockless timeline / signal type workflows.
 #   4. Complete Spacer/layout/Group Band workflows.
 #   5. Build visual/acceptance infrastructure that prevents regressions.
@@ -42,6 +42,7 @@
 #   #196 Transaction Bottom Editor
 #   #300 Cycle Insert range-overlay geometry
 #   #247 Clock Duty / missing pulse / Edge Counter presentation
+#   #208 File/New/Open production lifecycle
 #
 # Architecture Issues #258 and #312 are NON-EXECUTABLE now.
 # The merged responsibility-owner implementation supersedes both old execution strategies.
@@ -70,10 +71,15 @@
 # - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
 #
 # ============================================================================
-# IMMEDIATE BURN-DOWN — VERIFY/CLOSE CURRENT PRODUCTION WORK FIRST
+# IMMEDIATE BURN-DOWN — DATA INTEGRITY / SEMANTIC AUTHORITY FIRST
 # ============================================================================
-# Refactor added a Document Lifecycle owner and acceptance coverage; verify full #208 criteria first.
-208
+# Cross-document clipboard must never infer identity only from matching stable-ID strings.
+# Prefer explicit provenance + deterministic reject/remap policy; no partial mutation on failure.
+314
+
+# Range drag PointerDown/Move/Up must resolve from one authoritative TimelineGeometry path.
+# Sampled Ruler DOM is presentation only and must not determine canonical range endpoints.
+313
 
 # Reference Clock editing/truthfulness is prerequisite context for clockless-mode behavior.
 228
