@@ -7,8 +7,9 @@ async function ready(page: Page) {
 }
 
 async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill(name);
   await editor.getByLabel("New Transaction start").fill(String(start));
@@ -33,7 +34,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await inspector.getByLabel("Transaction lane").fill("lane_1");
   await inspector.getByRole("button", { name: "Apply Transaction" }).click();
   await linkSignal(inspector, "REQUEST");
-  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
   await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
@@ -118,7 +119,7 @@ test("keeps the Split View surface contract and view mode changes view-only", as
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(1);
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(panel).toHaveAttribute("data-view-mode", "Transaction");
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(0);
   await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(1);
