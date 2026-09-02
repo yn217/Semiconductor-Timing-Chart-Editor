@@ -53,7 +53,7 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
   for (const change of signal.values) {
     if (isData) {
       wave[change.start] = WAVEDROM_DATA_TOKEN;
-      data.push(String(change.value));
+      data.push(change.displayLabel ?? String(change.value));
     } else {
       wave[change.start] = logicToken(signal.type, change.value);
     }

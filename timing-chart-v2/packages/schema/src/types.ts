@@ -77,6 +77,8 @@ export type SignalType = "binary" | "bus" | "state" | "logic" | "event" | "pulse
 export interface SignalValueChange {
   readonly start: number;
   readonly value: string | number;
+  /** Optional presentation label; semantic value remains authoritative. */
+  readonly displayLabel?: string;
   readonly comment?: string;
 }
 

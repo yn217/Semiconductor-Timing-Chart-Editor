@@ -79,6 +79,7 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
       start: roundCycle(source.start, index === 0 ? 0 : index, warnings, `${basePath}[${index}].start`),
       value: typeof source.value === "string" || typeof source.value === "number" ? source.value : fallback,
     };
+    if (typeof source.displayLabel === "string") result.displayLabel = source.displayLabel;
     if (typeof source.comment === "string") result.comment = source.comment;
     return result as unknown as SignalValueChange;
   });

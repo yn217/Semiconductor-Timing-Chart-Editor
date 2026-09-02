@@ -110,6 +110,12 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     expect(new ProductionWaveDromAdapter().metrics()).toEqual({ renderCalls: 0, renderCallsBySignal: {}, cacheHits: 0, cacheMisses: 0, mounts: 0, disposals: 0, geometryBuilds: 0, geometryMatrixReads: 0, activeOwners: 0, allocatedRenderIndices: 0 });
   });
 
+  it("uses displayLabel only for WaveDrom data while retaining semantic values", () => {
+    const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "0x12345678", displayLabel: "READY" }] } as ValueSignal;
+    expect(bus.values[0]?.value).toBe("0x12345678");
+    expect(toWaveJson({ signal: bus, cycleCount: 4 })).toEqual({ wave: "=...", data: ["READY"] });
+  });
+
   it("applies suppressed clock slots relative to a delayed generator start", () => {
     const base = canonicalFixture().signals[0] as ClockSignal;
     const clock = { ...base, generator: { ...base.generator, start: 4, period: 2, suppressedPeriods: [0, 2] } } as ClockSignal;
