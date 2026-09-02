@@ -50,7 +50,7 @@ test("filters treeitems and repairs focus after collapse", async ({ page }) => {
   await filter.fill("REQUEST");
   const request = tree.locator("[role='treeitem'][data-row-id='sig_cycle_request']");
   await expect(request).toBeVisible();
-  await expect(tree.locator("[role='treeitem'][data-row-id='sig_cycle_ready']")).toBeHidden();
+  await expect(tree.locator("[role='treeitem'][data-row-id='sig_cycle_ready']")).toHaveAttribute("hidden", "");
   await request.focus();
   await request.press("ArrowUp");
   await expect(tree.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']")).toBeFocused();
