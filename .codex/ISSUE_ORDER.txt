@@ -3,7 +3,7 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-03 03:05 JST
+# Last reconciled by ChatGPT: 2026-09-03 03:52 JST
 #
 # Codex stays on main and reads these files without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -67,6 +67,16 @@
 # Current GitHub Issue text always wins if available and conflicts with a snapshot.
 # Snapshot 1 covers SAFE-FIRST + first mechanical visual/acceptance block through #234.
 # Snapshot 2 covers the following Product Workflows/Parity and Performance/Correctness blocks.
+#
+# IMPORTANT CURRENT RETRIEVAL OVERRIDE:
+# - Do NOT report "fallback snapshot ends at #234" until SNAPSHOT_2 has been fetched/read.
+# - #173 IS PRESENT in ISSUE_ACCEPTANCE_SNAPSHOT_2.md with Goal, Acceptance and Closure rules.
+# - Before marking #173 or any Product Workflows/Performance candidate retrieval-blocked, run:
+#     git fetch origin codex-control
+#     git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
+# - A stale local codex-control ref is not a product blocker. Refresh the control branch first.
+# - If live GitHub returns 404 but #173 is found in SNAPSHOT_2, continue from the snapshot contract.
+# - The overall Goal must NOT be marked blocked merely because live Issue retrieval is unavailable.
 #
 # A GitHub retrieval failure by itself is NOT permission to mark the whole goal blocked while a
 # matching snapshot exists. Use the snapshot and continue.
