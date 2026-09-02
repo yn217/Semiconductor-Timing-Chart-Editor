@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test";
 test("Transaction Inspector uses a bounded searchable linked-signal picker", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.getByTestId("bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
   const editor = page.getByTestId("transaction-editor");
   await editor.getByLabel("New Transaction name").fill("Picker test");
   await editor.getByLabel("New Transaction start").fill("1");
@@ -36,6 +36,7 @@ test("Transaction Inspector uses a bounded searchable linked-signal picker", asy
   await unlink.press("Enter");
   await expect(linked.getByTestId("linked-signal-list")).toContainText("No linked signals");
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(linked.getByTestId("linked-signal-list")).toContainText("DATA");
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();

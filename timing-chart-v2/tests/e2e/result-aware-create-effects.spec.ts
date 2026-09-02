@@ -27,7 +27,8 @@ test("does not select a transaction when creation is rejected", async ({ page })
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
   const editor = page.getByTestId("transaction-editor");
   const historyBefore = await page.getByTestId("history-status").textContent();
   await editor.getByLabel("New Transaction start").fill("5");
