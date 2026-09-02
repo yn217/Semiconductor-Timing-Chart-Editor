@@ -817,7 +817,7 @@ export function MinimalCycleView() {
       }
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
-      selection.selectSignal(signal.id, event.ctrlKey || event.metaKey);
+      startTransition(() => selection.selectSignal(signal.id, event.ctrlKey || event.metaKey));
       const nextSelected = selection.refs.signalIds.current;
       const primary = selection.refs.signalId.current;
       if (primary) rendererHost.dataset.selectedSignalId = primary;
