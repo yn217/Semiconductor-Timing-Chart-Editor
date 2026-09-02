@@ -35,6 +35,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await inspector.getByRole("button", { name: "Apply Transaction" }).click();
   await linkSignal(inspector, "REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
   await expect(inspector.getByTestId("linked-signal-list").getByRole("button", { name: "Unlink REQUEST" })).toHaveCount(0);
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo" }).click();
