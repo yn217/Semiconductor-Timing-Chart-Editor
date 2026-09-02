@@ -11,6 +11,7 @@ import { ReviewWorkflow } from "./review-workflow.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import { TimelineToolbar } from "./timeline-toolbar.js";
 import { createAnnotation } from "./create-annotation.js";
+import { NEW_DOCUMENT_POLICY_DESCRIPTION } from "./file-document-controller.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 
@@ -172,7 +173,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   </div>, window.document.body) : null;
   return <section className="ribbon" aria-label={`${tab} Ribbon`} data-testid="ribbon">
     {tab === "File" && <div className="ribbon-group file-group">
-      <button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span>New</span></button>
+      <button type="button" className="ribbon-tool" title={NEW_DOCUMENT_POLICY_DESCRIPTION} onClick={onNew}><RibbonIcon name="i-new" /><span>New</span></button>
       <button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span>Open</span></button>
       <button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span>Save</span></button>
       <button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span>Save As</span></button>

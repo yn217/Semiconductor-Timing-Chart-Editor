@@ -15,7 +15,11 @@ describe("file document controller boundaries", () => {
     expect(next.signals).toEqual(base.signals);
     expect(next.signalGroups).toEqual(base.signalGroups);
     expect(next.timeline).toEqual(base.timeline);
+    expect(next.layout).toEqual(base.layout);
+    expect(next.document.header).toEqual(base.document.header);
+    expect(next.document.footer).toEqual(base.document.footer);
     expect(base.document.id).not.toBe(next.document.id);
+    expect(next.document.title).not.toBe(base.document.title);
     expect(base.annotations.length).toBeGreaterThanOrEqual(0);
   });
 

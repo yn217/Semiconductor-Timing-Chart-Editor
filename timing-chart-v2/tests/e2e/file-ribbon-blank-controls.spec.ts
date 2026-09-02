@@ -35,8 +35,8 @@ test("keeps File ribbon controls named and removes no-op blank slots", async ({ 
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   await assertFileRibbon(page);
-
   const ribbon = page.getByTestId("ribbon");
+  await expect(ribbon.getByRole("button", { name: "New", exact: true })).toHaveAttribute("title", /approved product template/);
   await ribbon.getByRole("button", { name: "Save As", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Save As" })).toBeVisible();
   await page.getByRole("dialog", { name: "Save As" }).getByRole("button", { name: "Close Save As" }).click();

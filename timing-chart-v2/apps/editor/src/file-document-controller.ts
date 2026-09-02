@@ -17,7 +17,10 @@ export function serializeSaveDocument(document: CanonicalDocument): string {
   return serializeCanonicalDocument(document);
 }
 
-/** Product New boundary: start from the approved product template, never the current user document. */
+/** The user-visible policy for File > New. */
+export const NEW_DOCUMENT_POLICY_DESCRIPTION = "New starts from the approved product template; Signals, Groups, Timeline, and Layout defaults are retained, while Annotations, Bookmarks, Time Groups, and Transactions are cleared.";
+
+/** Product New boundary: retain product defaults and clear document-scoped content. */
 export function createNewDocumentFromProductTemplate(template: CanonicalDocument, documentId: string): CanonicalDocument {
   return {
     ...template,
