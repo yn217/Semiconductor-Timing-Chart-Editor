@@ -48,7 +48,7 @@ test("measures GUI latency inside Chromium rather than through Playwright RPC ti
     await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   });
   await runMeasured("zoom", async () => {
-    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   });
   await runMeasured("panel-visibility", async () => {
     await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();

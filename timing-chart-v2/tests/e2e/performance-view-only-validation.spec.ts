@@ -50,11 +50,11 @@ test("view-only GUI operations do not validate or semantically rerender the docu
   });
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await observe("Zoom", async () => {
-    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
   });
   await observe("Bottom tab switch", async () => {
-    await page.locator(".bottom-tabs").getByRole("button", { name: "Problems", exact: true }).click();
-    await page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true }).click();
+    await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
+    await page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
   });
   await observe("Inspector visibility", async () => {
     await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
