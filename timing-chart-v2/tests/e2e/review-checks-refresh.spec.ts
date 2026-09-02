@@ -12,7 +12,7 @@ test("Review Refresh Checks is view-only", async ({ page }) => {
     counters: await surface.getAttribute("data-render-counters"),
   };
 
-  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await page.getByRole("button", { name: "Check", exact: true }).click();
   await page.getByTestId("review-refresh-checks").click();
   await expect(page.getByTestId("review-refresh-checks")).toBeVisible();
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);

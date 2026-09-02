@@ -17,7 +17,7 @@ test("Review filters and navigates the shared Problems diagnostics without mutat
     history: await page.getByTestId("history-status").textContent(),
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
-  await page.getByRole("button", { name: "Review", exact: true }).click();
+  await page.getByRole("button", { name: "Check", exact: true }).click();
   const review = page.getByTestId("review-workflow");
   await expect(review).toBeVisible();
   await expect(page.getByTestId("review-summary")).toHaveText("1 of 1 · Errors 1 · Warnings 0 · Info 0");
