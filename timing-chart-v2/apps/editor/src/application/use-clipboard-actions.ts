@@ -20,6 +20,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const annotationRef = useRef<Annotation | undefined>(undefined);
   const transactionRef = useRef<Transaction | undefined>(undefined);
   const spacerRef = useRef<SpacerClipboardItem | undefined>(undefined);
+  const sourceDocumentEpochRef = useRef<number | undefined>(undefined);
   const document = () => application.runtime.session.current().getSnapshot().document;
 
   const selected = () => {
@@ -45,7 +46,26 @@ export function useClipboardActions({ application, selection }: { application: E
     annotationRef.current = annotation;
     transactionRef.current = transaction;
     spacerRef.current = spacer;
+    sourceDocumentEpochRef.current = application.runtime.documentEpoch.current();
     setAvailable(true);
+  };
+
+  const rejectForeignPaste = () => {
+    const diagnostic = {
+      code: "CLIPBOARD_FOREIGN_DOCUMENT",
+      path: "$.clipboard.provenance",
+      message: "Paste rejected: the clipboard payload belongs to another document.",
+      severity: "error" as const,
+      operation: "clipboard.paste",
+      operationLabel: "Paste",
+      source: "clipboard" as const,
+      stage: "commit" as const,
+      detail: "clipboard-failure:foreign-document",
+      recommendation: "Copy the entity again in the current document, then retry Paste.",
+    };
+    setStatus("Paste rejected: clipboard belongs to another document");
+    application.setProblem(diagnostic.message);
+    application.setRuntimeDiagnostics((current) => [...current.filter((item) => item.detail !== diagnostic.detail), diagnostic]);
   };
 
   const copy = () => {
@@ -177,6 +197,10 @@ export function useClipboardActions({ application, selection }: { application: E
   };
 
   const paste = () => {
+    if (sourceDocumentEpochRef.current !== application.runtime.documentEpoch.current()) {
+      rejectForeignPaste();
+      return;
+    }
     if (groupRef.current) createGroup(groupRef.current, "paste");
     else if (annotationRef.current) createAnnotation(annotationRef.current, "paste");
     else if (transactionRef.current) createTransaction(transactionRef.current, "paste");
