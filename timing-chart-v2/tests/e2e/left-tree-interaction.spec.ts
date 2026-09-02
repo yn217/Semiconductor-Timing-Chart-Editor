@@ -65,7 +65,7 @@ test("row and group More commands route to the shared context menu and insertion
   await expect(page.getByRole("menu", { name: "Signal context menu" })).toBeVisible();
   await page.getByRole("menu", { name: "Signal context menu" }).getByRole("menuitem", { name: "Rename" }).click();
   await expect(page.getByTestId("rename-dialog")).toBeVisible();
-  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByTestId("rename-dialog").getByRole("button", { name: "Cancel" }).click();
 
   await host.locator("[data-role='left-group-header'][data-group-name='Internal Control'] [data-role='tree-group-more']").click();
   await expect(page.getByRole("menu", { name: "Group context menu" })).toBeVisible();
