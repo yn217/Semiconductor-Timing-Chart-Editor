@@ -3,7 +3,7 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-01
+# Last reconciled by ChatGPT: 2026-09-02
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -16,18 +16,21 @@
 # ============================================================================
 # CURRENT PRODUCT GOAL
 # ============================================================================
-# Do NOT optimize for architecture cleanliness, file-size reduction, or Issue-count cosmetics.
-# Optimize for a usable, trustworthy semiconductor timing-chart editor.
+# MinimalCycleView responsibility refactor is COMPLETE and merged to main.
+# Refactor merge HEAD: d82ccab1aa9b9f2ddee9f2b04cf5e0101ab7635e
+# Do not restart decomposition or optimize for LOC reduction.
+# Preserve the merged owner architecture while burning down product issues.
 #
 # Primary goal:
 #   Close concrete production gaps that a user can observe in the real browser.
 #
 # Priority order:
-#   1. Finish already-mostly-implemented Issues and CLOSE them with focused evidence.
-#   2. Fix P0/P1 correctness bugs that can make the GUI lie about canonical state.
-#   3. Fix real editing workflows: Clock, Timeline, Signal types, Spacer/layout, File/Open/Export.
-#   4. Build visual/acceptance infrastructure that prevents regressions.
-#   5. Then continue broader performance/parity/architecture closure.
+#   1. Verify/close already-mostly-implemented production workflows.
+#   2. Fix P0/P1 correctness where GUI/canonical/renderer can disagree.
+#   3. Complete Reference Clock / clockless timeline / signal type workflows.
+#   4. Complete Spacer/layout/Group Band workflows.
+#   5. Build visual/acceptance infrastructure that prevents regressions.
+#   6. Then continue broader performance/parity/architecture closure.
 #
 # Definition of useful progress:
 #   - production behavior changed or verified
@@ -35,18 +38,18 @@
 #   - Issue acceptance checked
 #   - Issue closed when acceptance is satisfied
 #
-# Do NOT spend multiple commits only planning/refactoring an owner boundary unless the current
-# production Issue cannot be solved safely without it.
+# Recently completed/closed and removed from executable queue:
+#   #196 Transaction Bottom Editor
+#   #300 Cycle Insert range-overlay geometry
+#   #247 Clock Duty / missing pulse / Edge Counter presentation
 #
-# #258 and #312 are explicitly DEFERRED for now.
-# Do not work on MinimalCycleView decomposition / parallel replacement unless ChatGPT/user
-# explicitly re-enables them in this control file.
-# Old monolith may remain as-is while product issues are burned down.
+# Architecture Issues #258 and #312 are NON-EXECUTABLE now.
+# The merged responsibility-owner implementation supersedes both old execution strategies.
+# Do not resume CUT-A/B/C/D or parallel 4-way replacement work.
+# If these Issues remain Open on GitHub, their state must not block this queue.
 #
 # Future hot-file refactors must follow:
 #   .codex/HOT_FILE_REFACTOR_PLAYBOOK.md
-# The playbook requires responsibility ownership/seams before physical file movement and includes
-# fallback plans/time-box rules to prevent another 10-50-line-per-session refactor stall.
 #
 # ============================================================================
 # EXECUTION RULES
@@ -58,6 +61,7 @@
 # - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
 # - One Issue should normally end in commit/push + focused evidence + close before moving on.
 # - Do not create architecture work just because code is ugly if production behavior is correct.
+# - Preserve merged owner boundaries; no duplicate semantic/selection/geometry/render paths.
 # - Prefer real-browser observable behavior over internal-only completion claims.
 # - Home Ribbon is frozen unless an Issue explicitly authorizes Home changes.
 # - Never change Golden/reference/threshold/mask merely to make tests pass.
@@ -66,33 +70,25 @@
 # - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
 #
 # ============================================================================
-# IMMEDIATE BURN-DOWN — CLOSE USER-VISIBLE WORK FIRST
+# IMMEDIATE BURN-DOWN — VERIFY/CLOSE CURRENT PRODUCTION WORK FIRST
 # ============================================================================
-# #196 is believed mostly implemented. Verify focused browser behavior and close if acceptance holds.
-196
-
-# Correctness: selected range/cycle geometry must identify exactly what Timeline commands will edit.
-300
-
-# Real Clock editing behavior: Duty / missing pulse / Edge Counter must visibly update.
-247
-
-# Production file lifecycle: safe New/Open/Save/unsaved dialog and atomic replacement.
+# Refactor added a Document Lifecycle owner and acceptance coverage; verify full #208 criteria first.
 208
 
-# Reference clock / reference edge must be editable/truthful in GUI.
+# Reference Clock editing/truthfulness is prerequisite context for clockless-mode behavior.
 228
 
-# Clockless documents / removing reference clock.
+# Clockless documents / deleting current reference Clock without fake fallback Clock.
 246
 
-# Canonical values/types accepted by Core must be renderable; conversion policy must be explicit.
+# Canonical -> Renderer compatibility and explicit ValueSignal conversion policy.
+# This should land before relying on Event/Pulse as fully supported product types.
 229
 
-# Event/Pulse production lifecycle.
+# Event/Pulse full production lifecycle after compatibility semantics are authoritative.
 264
 
-# Spacer and vertical layout workflow.
+# Vertical-layout product objects/workflows: Spacer -> per-object spacing -> Group Band.
 265
 266
 267
@@ -220,13 +216,13 @@
 306
 
 # ============================================================================
-# EXPLICITLY DEFERRED — DO NOT EXECUTE UNTIL RE-ENABLED
+# NON-EXECUTABLE / SUPERSEDED ARCHITECTURE ISSUES
 # ============================================================================
 # 258 [V2][Architecture] Decompose MinimalCycleView monolith
 # 312 Build parallel 4-way MinimalCycleView replacement and cut over after parity
 #
-# These remain open on GitHub intentionally. Their open state must not block the queue.
-# If re-enabled, do NOT resume old CUT-A/CUT-B/CUT-C/CUT-D mechanically. Start from
-# `.codex/HOT_FILE_REFACTOR_PLAYBOOK.md` and transfer responsibility ownership first.
+# Responsibility refactor was completed by the owner-based implementation and merged to main at
+# d82ccab1aa9b9f2ddee9f2b04cf5e0101ab7635e. Do not execute the obsolete CUT or replacement plans.
+# These Issues may be closed separately with merged-refactor evidence; until then, skip them.
 #
 # Closed orchestration/control Issues #183, #187 and #298 are intentionally NOT executable work items.
