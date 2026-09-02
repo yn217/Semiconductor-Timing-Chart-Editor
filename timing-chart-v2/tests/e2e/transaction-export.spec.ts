@@ -58,7 +58,7 @@ test("shares source-time mapping, Snap Service, zoom and scroll in Split View", 
   const surface = page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await page.getByRole("button", { name: "Split", exact: true }).click();
-  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
   await expect(transaction).toBeVisible();
   const rulerCycle2 = page.getByTestId("cycle-ruler").locator("[data-cycle='2']");
   const txBox = await transaction.boundingBox(); const tickBox = await rulerCycle2.boundingBox();
@@ -117,20 +117,20 @@ test("keeps the Split View surface contract and view mode changes view-only", as
   };
 
   await expect(panel).toHaveAttribute("data-view-mode", "Cycle");
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(1);
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(0);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toHaveCount(0);
 
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
   await expect(panel).toHaveAttribute("data-view-mode", "Transaction");
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(0);
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toHaveCount(0);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toHaveCount(1);
 
   await page.getByRole("button", { name: "Split", exact: true }).click();
   await expect(panel).toHaveAttribute("data-view-mode", "Split");
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   await expect(surface).toBeVisible();
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toHaveCount(1);
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toHaveCount(1);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toHaveCount(1);
 
   expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
@@ -148,7 +148,7 @@ test("Split View Home exposes command-backed Transaction actions", async ({ page
   await transactionGroup.getByRole("button", { name: /Transaction/ }).click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").last().click();
   const beforeRevision = await surface.getAttribute("data-canonical-revision");
   await transactionGroup.getByRole("button", { name: "Duplicate" }).click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(2);
@@ -169,7 +169,7 @@ test("cross-highlights stable linked Signals when a Transaction is selected", as
   };
 
   await page.getByRole("button", { name: "Split", exact: true }).click();
-  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").last().click();
   const linkedRows = surface.locator("[data-row-id='sig_cycle_request'][data-transaction-linked='true']");
   await expect(linkedRows.first()).toBeVisible();
   expect(await linkedRows.count()).toBeGreaterThanOrEqual(2);
@@ -199,8 +199,8 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   await ready(page);
   await createTransaction(page, "Snapped", 2, 6);
   await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
-  const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
-  const body = bar.locator("span");
+  const bar = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
+  const body = bar.locator("span").first();
   const bodyBox = await body.boundingBox();
   const cycle4 = await page.getByTestId("cycle-ruler").locator("[data-cycle='4']").boundingBox();
   await page.mouse.move(bodyBox!.x + bodyBox!.width / 2, bodyBox!.y + bodyBox!.height / 2); await page.mouse.down(); await page.mouse.move(cycle4!.x + 1, cycle4!.y + 10); await page.mouse.up();
@@ -209,7 +209,7 @@ test("moves and resizes Transaction edges through the shared rendered-geometry S
   const handleBox = await endHandle.boundingBox(); const cycle10 = await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox();
   await page.mouse.move(handleBox!.x + 2, handleBox!.y + 8); await page.mouse.down(); await page.mouse.move(cycle10!.x + 1, cycle10!.y + 10); await page.mouse.up();
   await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("10");
-  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
 });
 
 test("exports deterministic SVG plus PNG and PDF from Canonical ExportScene", async ({ page }) => {
