@@ -56,6 +56,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }),
       ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }),
       ...(tracePoints === undefined ? {} : { tracePoints }),
+      ...(annotation.style === undefined ? {} : { style: annotation.style }),
       surfaceHeight: projection.totalHeight,
     }];
   });

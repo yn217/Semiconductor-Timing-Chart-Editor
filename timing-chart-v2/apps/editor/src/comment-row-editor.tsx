@@ -1,7 +1,8 @@
 import { useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { CommentRow } from "@timing-chart-v2/schema";
+import type { CommentRow, JsonObject } from "@timing-chart-v2/schema";
 import type { EventCommandIdFactory } from "./event-table-components.js";
+import { FontStyleToolbar } from "./font-style-toolbar.js";
 
 export function CommentRowEditor({ signal, onCommand, onCancel, nextCommandId }: {
   readonly signal: CommentRow;
@@ -19,6 +20,7 @@ export function CommentRowEditor({ signal, onCommand, onCancel, nextCommandId }:
   }}>
     <h2>Comment Row</h2>
     <div className="property-row"><span>Scope</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div>
+    <FontStyleToolbar idPrefix="comment-row-font" style={signal.display.style} onChange={(next: JsonObject) => onCommand({ id: nextCommandId("comment_row_font"), type: "commentRow.update", signalId: signal.id, title: signal.title, body: signal.body, displayStyle: next })} />
     <label>Title<input aria-label="Comment Row title" value={title} onChange={(event) => setTitle(event.target.value)} /></label>
     <label>Body<textarea aria-label="Comment Row body" value={body} onChange={(event) => setBody(event.target.value)} rows={4} /></label>
     <label>Spacing Before<input aria-label="Comment Row spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>

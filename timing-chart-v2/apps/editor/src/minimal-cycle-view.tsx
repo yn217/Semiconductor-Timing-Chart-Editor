@@ -1488,6 +1488,8 @@ export function MinimalCycleView() {
       arrowPickStatus={arrowPickStatus}
       selectedSignalId={annotationTargetSignalId}
       selectedGroupId={selectedGroup?.id}
+      selectedAnnotation={selectedAnnotation}
+      selectedCommentRow={selectedSignal?.type === "commentRow" ? selectedSignal : undefined}
       problemsCount={diagnostics.length}
       diagnostics={diagnostics}
       onNavigateProblem={navigateProblem}

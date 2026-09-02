@@ -1,10 +1,12 @@
 import { useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, AnnotationType, CanonicalDocument } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, CanonicalDocument, JsonObject } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
+import { FontStyleToolbar } from "./font-style-toolbar.js";
+import { buildAnnotationStyleCommand } from "./annotation-style-command.js";
 
 export function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
   const [label, setLabel] = useState(annotation.label);
@@ -36,6 +38,10 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       setImportStatus(error instanceof Error ? error.message : "Invalid annotations JSON");
     }
   };
+  // Font toggles apply immediately against the annotation's live (saved)
+  // properties, not the unsaved draft fields below -- clicking Bold should
+  // never accidentally commit an in-progress label/color edit.
+  const applyFontStyle = (style: JsonObject) => onCommand(buildAnnotationStyleCommand(annotation, style, nextCommandId("annotation_font")));
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" data-bottom-target-id={annotation.id} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
@@ -56,6 +62,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       <output data-testid="annotation-import-status">{importStatus}</output>
     </div>
     <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} />
+    <FontStyleToolbar idPrefix="annotation-font" style={annotation.style} onChange={applyFontStyle} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
     <form className="annotation-properties" onSubmit={(event) => {
       event.preventDefault();

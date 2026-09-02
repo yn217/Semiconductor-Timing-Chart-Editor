@@ -50,7 +50,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: "hex" | "binary" | "symbolic"; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number }>
   | Readonly<{ id: CommandId; type: "signal.convertClock"; signalId: SignalId; targetType: "binary" | "bus" | "state" }>
   | Readonly<{ id: CommandId; type: "commentRow.create"; commentRow: CommentRow; targetGroupId: GroupId; index: number }>
-  | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string; spacingBefore?: number; spacingAfter?: number }>
+  | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string; spacingBefore?: number; spacingAfter?: number; displayStyle?: CommentRow["display"]["style"] }>
   | Readonly<{ id: CommandId; type: "commentRow.delete"; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "signal.updateClockGenerator"; signalId: SignalId; generator: ClockGenerator }>
   | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
@@ -94,7 +94,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "annotation.translateOffsets"; annotationId: AnnotationId; delta: PixelOffset }>
   | Readonly<{ id: CommandId; type: "annotation.resetOffsets"; annotationId: AnnotationId }>
   | Readonly<{ id: CommandId; type: "annotation.updateLabelOffset"; annotationId: AnnotationId; labelOffset: PixelOffset }>
-  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"]; sourceSignalId?: SignalId; traceOffsetCycles?: number; opacity?: number }>;
+  | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"]; sourceSignalId?: SignalId; traceOffsetCycles?: number; opacity?: number; style?: Annotation["style"] }>;
 
 export interface ChangeSet {
   readonly fullDocumentReplace?: boolean;

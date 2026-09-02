@@ -45,4 +45,7 @@
   <symbol id="i-align-interval" viewBox="0 0 24 24"><path d="M4 6h16M4 18h16M8 4v4M16 4v4M8 16v4M16 16v4M10 12h4M12 10v4" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
   <symbol id="i-group" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 9h16M9 9v10" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
   <symbol id="i-auto-layout" viewBox="0 0 24 24"><rect x="4" y="4" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="14" y="14" width="6" height="6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10 7h4v10M7 10v4h10" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-bold" viewBox="0 0 24 24"><path d="M7 4h6.5a3.5 3.5 0 0 1 0 7H7zM7 11h7.5a3.5 3.5 0 0 1 0 7H7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-italic" viewBox="0 0 24 24"><path d="M12 4h6M6 20h6M14 4 10 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-underline" viewBox="0 0 24 24"><path d="M6 4v7a6 6 0 0 0 12 0V4M4 20h16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
 </svg>

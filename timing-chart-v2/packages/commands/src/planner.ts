@@ -484,8 +484,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if ((command.spacingBefore !== undefined && (!Number.isFinite(command.spacingBefore) || command.spacingBefore < 0)) || (command.spacingAfter !== undefined && (!Number.isFinite(command.spacingAfter) || command.spacingAfter < 0))) return fail("invalid", "INVALID_COMMENT_ROW_SPACING", "$.spacing", "Comment Row spacing must be finite and non-negative.");
       const nextSpacingBefore = command.spacingBefore ?? row.spacingBefore;
       const nextSpacingAfter = command.spacingAfter ?? row.spacingAfter;
-      if (row.title === title && row.body === command.body && row.spacingBefore === nextSpacingBefore && row.spacingAfter === nextSpacingAfter) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
-      const next: CommentRow = { ...row, title, body: command.body, name: title, display: { ...row.display, name: title }, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
+      const nextDisplayStyle = command.displayStyle ?? row.display.style;
+      if (row.title === title && row.body === command.body && row.spacingBefore === nextSpacingBefore && row.spacingAfter === nextSpacingAfter && JSON.stringify(row.display.style ?? {}) === JSON.stringify(nextDisplayStyle ?? {})) return fail("no-op", "NO_OP", "$", "Comment Row is unchanged.");
+      const next: CommentRow = { ...row, title, body: command.body, name: title, display: { ...row.display, name: title, ...(nextDisplayStyle === undefined ? {} : { style: nextDisplayStyle }) }, ...(nextSpacingBefore === undefined ? {} : { spacingBefore: nextSpacingBefore }), ...(nextSpacingAfter === undefined ? {} : { spacingAfter: nextSpacingAfter }) };
       const spacingChanged = row.spacingBefore !== nextSpacingBefore || row.spacingAfter !== nextSpacingAfter;
       const changeSet: ChangeSet = { rowPresentation: [row.id], ...(spacingChanged ? { geometryScreenY: geometryRowsFrom(document, row.id) } : {}), minimapOverview: true };
       return { ok: true, document: replaceSignal(document, index, next), changeSet, inverseChangeSet: changeSet };
@@ -1033,7 +1034,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
-      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
+      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity, style: command.style }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
       if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };

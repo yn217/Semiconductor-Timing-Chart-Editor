@@ -590,6 +590,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   label.dataset.role = "annotation-label";
   label.dataset.annotationLabel = "true";
   label.textContent = primitive.label;
+  applyTextStyle(label, parseTextStyle(primitive.style));
   label.style.transform = `translate(${(first.x + second.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(first.y + second.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;
   const handles = primitive.anchors.map((anchor) => {
     const handle = document.createElement("span");
@@ -804,22 +805,37 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
   shell.replaceChildren(branch, more);
 }
 
+/** Parses and validates the shared text-style JsonObject shape (used by
+ * Signal/CommentRow display.style and Annotation.style alike) into typed,
+ * safe-to-apply CSS values. One validation pass, reused by every entity
+ * kind that can carry this style -- no second copy of these regexes. */
+function parseTextStyle(style: Record<string, unknown> | undefined): { readonly color?: string | undefined; readonly background?: string | undefined; readonly fontWeight?: string | undefined; readonly fontStyle?: string | undefined; readonly fontFamily?: string | undefined; readonly fontSize?: number | undefined; readonly textDecoration?: string | undefined } {
+  const source = style ?? {};
+  return {
+    color: typeof source.color === "string" && /^#[0-9a-f]{3,8}$/i.test(source.color) ? source.color : undefined,
+    background: typeof source.background === "string" && /^#[0-9a-f]{3,8}$/i.test(source.background) ? source.background : undefined,
+    fontWeight: typeof source.fontWeight === "string" && /^(normal|bold|[1-9]00)$/.test(source.fontWeight) ? source.fontWeight : undefined,
+    fontStyle: source.fontStyle === "italic" || source.fontStyle === "normal" ? source.fontStyle : undefined,
+    fontFamily: typeof source.fontFamily === "string" && source.fontFamily.length <= 120 ? source.fontFamily : undefined,
+    fontSize: typeof source.fontSize === "number" && source.fontSize >= 6 && source.fontSize <= 48 ? source.fontSize : undefined,
+    textDecoration: typeof source.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(source.textDecoration) ? source.textDecoration : undefined,
+  };
+}
+
+/** Applies a parsed text style to an element's inline style + the
+ * color-tracking dataset attribute already used by signal-row shells. */
+function applyTextStyle(element: HTMLElement, parsed: ReturnType<typeof parseTextStyle>): void {
+  if (parsed.color) { element.style.color = parsed.color; element.dataset.signalStyleColor = parsed.color; } else { element.style.removeProperty("color"); delete element.dataset.signalStyleColor; }
+  if (parsed.background) element.style.backgroundColor = parsed.background; else element.style.removeProperty("background-color");
+  if (parsed.fontWeight) element.style.fontWeight = parsed.fontWeight; else element.style.removeProperty("font-weight");
+  if (parsed.fontStyle) element.style.fontStyle = parsed.fontStyle; else element.style.removeProperty("font-style");
+  if (parsed.fontFamily) element.style.fontFamily = parsed.fontFamily; else element.style.removeProperty("font-family");
+  if (parsed.fontSize) element.style.fontSize = `${parsed.fontSize}px`; else element.style.removeProperty("font-size");
+  if (parsed.textDecoration !== undefined) element.style.textDecoration = parsed.textDecoration; else element.style.removeProperty("text-decoration");
+}
+
 function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
-  const style = row.displayStyle ?? {};
-  const color = typeof style.color === "string" && /^#[0-9a-f]{3,8}$/i.test(style.color) ? style.color : undefined;
-  const background = typeof style.background === "string" && /^#[0-9a-f]{3,8}$/i.test(style.background) ? style.background : undefined;
-  const fontWeight = typeof style.fontWeight === "string" && /^(normal|bold|[1-9]00)$/.test(style.fontWeight) ? style.fontWeight : undefined;
-  const fontStyle = style.fontStyle === "italic" || style.fontStyle === "normal" ? style.fontStyle : undefined;
-  const fontFamily = typeof style.fontFamily === "string" && style.fontFamily.length <= 120 ? style.fontFamily : undefined;
-  const fontSize = typeof style.fontSize === "number" && style.fontSize >= 6 && style.fontSize <= 48 ? style.fontSize : undefined;
-  const textDecoration = typeof style.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(style.textDecoration) ? style.textDecoration : undefined;
-  if (color) { shell.style.color = color; shell.dataset.signalStyleColor = color; } else { shell.style.removeProperty("color"); delete shell.dataset.signalStyleColor; }
-  if (background) shell.style.backgroundColor = background; else shell.style.removeProperty("background-color");
-  if (fontWeight) shell.style.fontWeight = fontWeight; else shell.style.removeProperty("font-weight");
-  if (fontStyle) shell.style.fontStyle = fontStyle; else shell.style.removeProperty("font-style");
-  if (fontFamily) shell.style.fontFamily = fontFamily; else shell.style.removeProperty("font-family");
-  if (fontSize) shell.style.fontSize = `${fontSize}px`; else shell.style.removeProperty("font-size");
-  if (textDecoration !== undefined) shell.style.textDecoration = textDecoration; else shell.style.removeProperty("text-decoration");
+  applyTextStyle(shell, parseTextStyle(row.displayStyle));
   if (row.displayAlign) shell.style.textAlign = row.displayAlign; else shell.style.removeProperty("text-align");
   if (row.displayOverflow === "wrap") { shell.style.whiteSpace = "normal"; shell.style.textOverflow = "clip"; } else if (row.displayOverflow === "expand") { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "clip"; } else { shell.style.whiteSpace = "nowrap"; shell.style.textOverflow = "ellipsis"; }
 }
