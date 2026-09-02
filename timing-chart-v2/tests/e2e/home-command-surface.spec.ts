@@ -59,6 +59,28 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await expect(page.getByTestId("history-status")).toHaveText(/History 1 \/ Redo 0/);
 });
 
+test("cross-document clipboard provenance rejects a paste atomically", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const ribbon = page.getByTestId("ribbon");
+  await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(page.getByTestId("clipboard-status")).toHaveText("Copied REQUEST");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await ribbon.getByRole("button", { name: "New", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await page.getByRole("button", { name: "Home", exact: true }).click();
+  const paste = ribbon.getByRole("button", { name: "貼付", exact: true });
+  await expect(paste).toBeEnabled();
+  await paste.click();
+
+  await expect(page.getByTestId("clipboard-status")).toHaveText("Paste rejected: clipboard belongs to another document");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
 test("multi-selection clipboard preserves stable IDs and commits Duplicate/Cut as one operation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
