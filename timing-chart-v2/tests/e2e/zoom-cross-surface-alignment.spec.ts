@@ -10,8 +10,8 @@ test("Annotation and Transaction X positions stay exactly aligned with the Ruler
 
   // Create a Transaction spanning [2, 6).
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" }).click();
+  await tabs.getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
   const txEditor = page.getByTestId("transaction-editor");
   await txEditor.getByLabel("New Transaction name").fill("TX1");
   await txEditor.getByLabel("New Transaction start").fill("2");
