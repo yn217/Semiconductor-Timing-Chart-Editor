@@ -19,8 +19,8 @@ test("Group Band Inspector preserves scope/style, derived spacing, persistence a
   await inspector.getByTestId("apply-group-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(surface.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("opacity", "0.4");
-  await expect(surface.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("background-color", "rgb(18, 52, 86)");
+  await expect(surface.locator("[data-role='frozen-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("opacity", "0.4");
+  await expect(surface.locator("[data-role='frozen-row'][data-group-id='grp_cycle_control']").first()).toHaveCSS("--group-background", "#123456");
   const countersAfter = JSON.parse((await surface.getAttribute("data-render-counters"))!);
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
