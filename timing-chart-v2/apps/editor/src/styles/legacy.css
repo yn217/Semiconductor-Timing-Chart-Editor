@@ -819,7 +819,6 @@ body { min-width: 1100px; }
 }
 .editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects { flex-direction: row; }
 .editor-shell .view-slot-group { box-sizing: border-box; flex: 0 0 auto; }
-.editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: hidden; }
 .editor-shell .view-slot-group[data-major-group="Show"] { width: 280px; }
 .editor-shell .view-slot-group[data-major-group="Panels"] { width: 250px; }
 .editor-shell .view-slot-group[data-major-group="Guides"] { width: 150px; }
