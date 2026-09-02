@@ -3,11 +3,12 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-02 23:22 JST
+# Last reconciled by ChatGPT: 2026-09-03 03:05 JST
 #
-# Codex stays on main and reads this file without checking out/merging this branch:
+# Codex stays on main and reads these files without checking out/merging this branch:
 #   git fetch origin codex-control
 #   git show origin/codex-control:.codex/ISSUE_ORDER.txt
+#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
 # Every executable Issue number appears at most once.
@@ -50,12 +51,30 @@
 # Do not resume CUT-A/B/C/D or parallel 4-way replacement work.
 #
 # ============================================================================
+# ISSUE ACCEPTANCE RETRIEVAL / FALLBACK CONTRACT
+# ============================================================================
+# For each Issue, resolve its contract in this order:
+#
+#   1. Fetch/read the CURRENT GitHub Issue body + Acceptance Criteria.
+#   2. If GitHub retrieval fails with 404 / permission / connector / tooling error,
+#      read origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md.
+#   3. If that snapshot contains the Issue, use the captured Goal / Acceptance / Closure rule
+#      as the fallback contract and continue safe work.
+#   4. If neither current GitHub text nor a snapshot section exists, do NOT guess product behavior.
+#      Mark only that Issue retrieval-blocked and continue to the next executable Issue.
+#
+# Current GitHub Issue text always wins if it is available and conflicts with the snapshot.
+# The snapshot is intentionally scoped to the current SAFE-FIRST + first visual/acceptance block.
+# Do not treat it as a permanent replacement for GitHub Issues.
+#
+# A GitHub retrieval failure by itself is NOT permission to mark the whole goal blocked when a
+# matching snapshot exists. Use the snapshot and continue.
+#
+# ============================================================================
 # EXECUTION RULES
 # ============================================================================
 # - Skip Closed issues.
-# - For the first Open issue, fetch/read the current GitHub Issue body and acceptance criteria first.
-# - If the local environment cannot obtain Issue acceptance text, do NOT guess or patch production;
-#   skip that Issue and report the retrieval failure. GitHub Issue text is the source of truth.
+# - Resolve Issue acceptance using the live-GitHub -> snapshot -> per-Issue-blocked fallback above.
 # - If full Issue acceptance is already satisfied, add concise evidence, close it, continue.
 # - If PARTIAL/MISSING, implement the smallest production-complete slice that satisfies the Issue.
 # - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
@@ -72,6 +91,8 @@
 # - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
 # - When the SAME blocker reproduces twice without a proven production-safe fix, stop retrying it,
 #   record the blocker, and continue to the next independent executable Issue.
+# - Do not mark the overall goal blocked solely because live Issue retrieval fails for multiple
+#   Issues if their acceptance snapshot is available.
 #
 # Definition of useful progress:
 #   - production behavior changed or was verified against current acceptance
