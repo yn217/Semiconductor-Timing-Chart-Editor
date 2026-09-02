@@ -300,6 +300,32 @@ test("repeated Open A/B/A releases old owners and does not stack handlers", asyn
   await testInfo.attach("phase13-open-leak.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
 });
 
+test("Open first-correct-paint has median and p95 evidence across scale fixtures", async ({ page }, testInfo) => {
+  await start(page);
+  const fixtures = [
+    { name: "perf_50x100", spec: { signalCount: 50, cycleCount: 100 } },
+    { name: "perf_100x500", spec: { signalCount: 100, cycleCount: 500, profile: "mixed" as const } },
+    { name: "long-cycle", spec: { signalCount: 100, cycleCount: 1000, profile: "transaction-heavy" as const } },
+  ];
+  const summaries = [];
+  for (const fixture of fixtures) {
+    const samples = [];
+    for (let trial = 0; trial < 3; trial += 1) {
+      const started = await page.evaluate(() => performance.now());
+      await openFixture(page, fixture.spec);
+      samples.push(await page.evaluate((value) => performance.now() - value, started));
+    }
+    const ordered = [...samples].sort((a, b) => a - b);
+    const percentile = (rank: number) => ordered[Math.min(ordered.length - 1, Math.ceil(ordered.length * rank) - 1)];
+    const summary = { fixture: fixture.name, trials: samples.length, samples, medianMs: percentile(0.5), p95Ms: percentile(0.95) };
+    expect(summary.medianMs).toBeGreaterThan(0);
+    expect(summary.p95Ms).toBeGreaterThanOrEqual(summary.medianMs);
+    summaries.push(summary);
+  }
+  await testInfo.attach("open-first-correct-paint.json", { body: Buffer.from(JSON.stringify(summaries, null, 2)), contentType: "application/json" });
+  console.log(`[open-first-correct-paint] ${JSON.stringify(summaries)}`);
+});
+
 test("nightly/manual 500/1000 heavy profiles", async ({ page }, testInfo) => {
   test.skip(process.env.PERF_SCALE !== "nightly", "Run with PERF_SCALE=nightly for heavyweight profiling.");
   await start(page); const results = [];
