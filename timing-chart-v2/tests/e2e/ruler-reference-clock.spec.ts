@@ -31,8 +31,14 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
   const docA = fixture("doc-a", "Document A", "clk_external", 12);
   const docB = fixture("doc-b", "Document B", "clk_other", 8);
 
+  const openDocument = async (name: string, document: unknown) => {
+    await fileInput.setInputFiles({ name, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    const unsaved = page.getByTestId("unsaved-file-dialog");
+    if (await unsaved.isVisible().catch(() => false)) await unsaved.getByTestId("unsaved-discard").click();
+  };
+
   // Open A (referenceClock = clk_external, not the built-in demo clock id)
-  await fileInput.setInputFiles({ name: "a.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(docA)) });
+  await openDocument("a.tcd", docA);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Document A");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const rulerCountA = await ruler.locator("[data-cycle]").count();
@@ -61,7 +67,7 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
   await expect(ruler.locator("[data-cycle]")).toHaveCount(rulerCountA);
 
   // Open B (different reference clock id and cycle count)
-  await fileInput.setInputFiles({ name: "b.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(docB)) });
+  await openDocument("b.tcd", docB);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Document B");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const rulerCountB = await ruler.locator("[data-cycle]").count();
@@ -69,7 +75,7 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
   expect(rulerCountB).not.toBe(rulerCountA);
 
   // Open A again: no stale geometry from B should linger
-  await fileInput.setInputFiles({ name: "a2.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(docA)) });
+  await openDocument("a2.tcd", docA);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Document A");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ruler.locator("[data-cycle]")).toHaveCount(rulerCountA);
