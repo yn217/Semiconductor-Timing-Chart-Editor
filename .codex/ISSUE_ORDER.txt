@@ -3,7 +3,7 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-02
+# Last reconciled by ChatGPT: 2026-09-02 23:22 JST
 #
 # Codex stays on main and reads this file without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -21,22 +21,23 @@
 # Do not restart decomposition or optimize for LOC reduction.
 # Preserve the merged owner architecture while burning down product issues.
 #
+# Current main observed when this queue was reconciled:
+#   391f22539fe4533ba145a52490532539652ab201
+#   test(v2): attach viewport runtime before zoom assertions
+# This commit is useful test maintenance, but does NOT by itself close #279.
+#
 # Primary goal:
-#   Close concrete production gaps that a user can observe in the real browser.
+#   Keep making safe product progress while quarantining repeated shared blockers.
 #
 # Priority order:
-#   1. Fix P0/P1 correctness/data-integrity bugs that can silently change semantic intent.
-#   2. Verify/close already-mostly-implemented production workflows.
-#   3. Complete Reference Clock / clockless timeline / signal type workflows.
-#   4. Complete Spacer/layout/Group Band workflows.
-#   5. Build visual/acceptance infrastructure that prevents regressions.
-#   6. Then continue broader performance/parity/architecture closure.
+#   1. Independent data-integrity / semantic-contract work with low gesture dependence.
+#   2. Evidence-closure work where production behavior is already substantially implemented.
+#   3. Reference Clock / clockless / layout work that can be proven without the blocked gesture path.
+#   4. Mechanical visual/acceptance infrastructure that does not require rewriting Golden to pass.
+#   5. Broader product/performance/GUI closure.
 #
-# Definition of useful progress:
-#   - production behavior changed or verified
-#   - focused test/evidence added
-#   - Issue acceptance checked
-#   - Issue closed when acceptance is satisfied
+# BLOCKED work is deliberately NOT executable in this file until the shared blocker is cleared.
+# Do not repeatedly rediscover the same browser-coordinate/gesture drift issue-by-issue.
 #
 # Recently completed/closed and removed from executable queue:
 #   #196 Transaction Bottom Editor
@@ -47,16 +48,14 @@
 # Architecture Issues #258 and #312 are NON-EXECUTABLE now.
 # The merged responsibility-owner implementation supersedes both old execution strategies.
 # Do not resume CUT-A/B/C/D or parallel 4-way replacement work.
-# If these Issues remain Open on GitHub, their state must not block this queue.
-#
-# Future hot-file refactors must follow:
-#   .codex/HOT_FILE_REFACTOR_PLAYBOOK.md
 #
 # ============================================================================
 # EXECUTION RULES
 # ============================================================================
 # - Skip Closed issues.
-# - For the first Open issue, inspect current main before changing code.
+# - For the first Open issue, fetch/read the current GitHub Issue body and acceptance criteria first.
+# - If the local environment cannot obtain Issue acceptance text, do NOT guess or patch production;
+#   skip that Issue and report the retrieval failure. GitHub Issue text is the source of truth.
 # - If full Issue acceptance is already satisfied, add concise evidence, close it, continue.
 # - If PARTIAL/MISSING, implement the smallest production-complete slice that satisfies the Issue.
 # - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
@@ -64,55 +63,60 @@
 # - Do not create architecture work just because code is ugly if production behavior is correct.
 # - Preserve merged owner boundaries; no duplicate semantic/selection/geometry/render paths.
 # - Prefer real-browser observable behavior over internal-only completion claims.
+# - Never weaken a real-browser assertion merely to match current production behavior.
+# - If current UI and an old E2E contract disagree, reconcile Product Spec/Issue acceptance first.
 # - Home Ribbon is frozen unless an Issue explicitly authorizes Home changes.
 # - Never change Golden/reference/threshold/mask merely to make tests pass.
 # - Preserve unrelated dirty Evidence/work; no reset/stash/clean/delete.
 # - Single-thread sequential execution; no workers/sub-agents.
 # - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
+# - When the SAME blocker reproduces twice without a proven production-safe fix, stop retrying it,
+#   record the blocker, and continue to the next independent executable Issue.
+#
+# Definition of useful progress:
+#   - production behavior changed or was verified against current acceptance
+#   - focused test/evidence exists
+#   - no contract/Golden masking
+#   - issue is closed only when acceptance is actually proven
 #
 # ============================================================================
-# IMMEDIATE BURN-DOWN — DATA INTEGRITY / SEMANTIC AUTHORITY FIRST
+# SAFE-FIRST EXECUTABLE QUEUE
 # ============================================================================
-# Cross-document clipboard must never infer identity only from matching stable-ID strings.
-# Prefer explicit provenance + deterministic reject/remap policy; no partial mutation on failure.
+# Cross-document clipboard identity safety is a semantic/data-integrity issue and can be fixed
+# without depending on pointer-coordinate gesture behavior.
 314
 
-# Range drag PointerDown/Move/Up must resolve from one authoritative TimelineGeometry path.
-# Sampled Ruler DOM is presentation only and must not determine canonical range endpoints.
-313
-
-# Reference Clock editing/truthfulness is prerequisite context for clockless-mode behavior.
-228
-
-# Clockless documents / deleting current reference Clock without fake fallback Clock.
-246
-
-# Canonical -> Renderer compatibility and explicit ValueSignal conversion policy.
-# This should land before relying on Event/Pulse as fully supported product types.
+# Canonical -> Renderer compatibility / ValueSignal conversion policy is primarily semantic/core.
+# Land this before relying on Event/Pulse as fully supported end-to-end types.
 229
 
-# Event/Pulse full production lifecycle after compatibility semantics are authoritative.
-264
+# #279 is currently an EVIDENCE-CLOSURE candidate: implementation is substantially present.
+# Collect the missing scale/cache/all-consumer/Save-Open-Undo-Redo evidence before changing production.
+279
 
-# Vertical-layout product objects/workflows: Spacer -> per-object spacing -> Group Band.
-265
+# Reference Clock editing/truthfulness. Proceed only through current canonical/geometry owners.
+228
+
+# Clockless documents / deleting current reference Clock. If the known geometry/gesture blocker
+# is encountered, mark this Issue blocked and continue; do not invent a local coordinate workaround.
+246
+
+# Per-Group / per-Signal spacing is independent of the blocked first-class Spacer gesture workflow.
 266
-267
 
 # ============================================================================
-# VISUAL / ACCEPTANCE INFRASTRUCTURE
+# MECHANICAL VISUAL / ACCEPTANCE INFRASTRUCTURE
 # ============================================================================
-# Mechanical diagnostics first, then Ribbon, Golden samples, interaction before/after/undo.
+# Prefer mechanical diagnostics and stable scenario coverage first.
 310
 307
 308
-309
 
 # Golden must fail on missing semantics/export instead of evidence-only PASS.
 234
 
 # ============================================================================
-# PRODUCT WORKFLOWS / PARITY WITH HIGH USER VALUE
+# PRODUCT WORKFLOWS / PARITY — INDEPENDENT CANDIDATES
 # ============================================================================
 173
 209
@@ -122,9 +126,6 @@
 201
 206
 207
-221
-222
-223
 224
 226
 230
@@ -132,31 +133,26 @@
 248
 252
 254
-255
 261
-269
 
 # ============================================================================
-# PERFORMANCE / CORRECTNESS ENGINE WORK
+# PERFORMANCE / CORRECTNESS ENGINE — INDEPENDENT CANDIDATES
 # ============================================================================
 218
-219
 217
-180
-279
 257
 256
 276
-275
-281
 282
 283
 284
 285
 
 # ============================================================================
-# GUI / INTERACTION CONSISTENCY
+# GUI / INTERACTION CONSISTENCY — LATER
 # ============================================================================
+# These remain executable, but if one reproduces the quarantined geometry/gesture blocker,
+# record it and skip rather than repeatedly modifying production around browser-coordinate drift.
 195
 197
 199
@@ -222,10 +218,47 @@
 306
 
 # ============================================================================
+# TEMPORARILY BLOCKED — NON-EXECUTABLE UNTIL SHARED BLOCKER IS CLEARED
+# ============================================================================
+# SHARED REAL-BROWSER GEOMETRY / GESTURE BLOCKER
+#
+# Repeated symptom:
+# - production/current browser coordinates and historical E2E gesture expectations drift
+# - the same class reproduced across multiple Issues
+# - no production-safe correction has been proven
+#
+# Do not execute these from the normal burn-down queue:
+#   #313 Range drag authoritative geometry
+#   #221 Clipboard semantics matrix
+#   #222 First-class Spacer Row workflow
+#   #223 Logic/Event/Pulse direct creation paths
+#   #269 Structured diagnostics (current acceptance run reproduced same drift family)
+#   #281 Property/state-machine harness (current acceptance run reproduced same drift family)
+#
+# These are not closed. Re-enter them only after the shared coordinate/gesture authority problem
+# has a concrete reproduction, current contract, and production-safe fix strategy.
+#
+# DEPENDENCY-HOLD — blocked by the workflows above:
+#   #264 Event/Pulse end-to-end lifecycle depends on #223 creation-path closure.
+#   #265 Spacer end-to-end lifecycle overlaps/depends on #222 first-class Spacer workflow.
+#   #267 Group Band full closure requires Spacer/layout acceptance that depends on #265.
+#   #309 Interaction before/after/undo visual acceptance is gesture-heavy; defer with the blocker.
+#
+# CURRENT UI vs HISTORICAL E2E CONTRACT DRIFT — RECONCILE CONTRACT FIRST:
+#   #180 Virtualization Projection
+#   #219
+#   #255
+#   #275
+#
+# For these, do not change production to satisfy an old test until current Product Spec and current
+# Issue acceptance establish which behavior is authoritative. Update tests only when the current
+# contract proves they are stale; never weaken them merely to obtain green status.
+#
+# ============================================================================
 # NON-EXECUTABLE / SUPERSEDED ARCHITECTURE ISSUES
 # ============================================================================
-# 258 [V2][Architecture] Decompose MinimalCycleView monolith
-# 312 Build parallel 4-way MinimalCycleView replacement and cut over after parity
+#   #258 [V2][Architecture] Decompose MinimalCycleView monolith
+#   #312 Build parallel 4-way MinimalCycleView replacement and cut over after parity
 #
 # Responsibility refactor was completed by the owner-based implementation and merged to main at
 # d82ccab1aa9b9f2ddee9f2b04cf5e0101ab7635e. Do not execute the obsolete CUT or replacement plans.
