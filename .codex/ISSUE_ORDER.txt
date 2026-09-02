@@ -3,7 +3,7 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-03 05:05 JST
+# Last reconciled by ChatGPT: 2026-09-03 06:00 JST
 #
 # Codex stays on main and reads these files without checking out/merging this branch:
 #   git fetch origin codex-control
@@ -25,12 +25,10 @@
 # Do not restart decomposition or optimize for LOC reduction.
 # Preserve the merged owner architecture while burning down product issues.
 #
-# Current main observed when this queue was reconciled:
-#   a7f09d91fdf32e3dd8160b6844d8ded14cf7afd2
-#   fix(v2): avoid duplicate Save validation
-#
 # Primary goal:
-#   Keep making safe product progress while quarantining repeated shared blockers.
+#   Keep making safe product progress continuously.
+#   Issue-local blockers are quarantined; they do NOT stop the overall Goal while another
+#   independent contract-backed executable Issue exists.
 #
 # Priority order:
 #   1. Independent data-integrity / semantic-contract work with low gesture dependence.
@@ -39,17 +37,68 @@
 #   4. Mechanical visual/acceptance infrastructure that does not require rewriting Golden to pass.
 #   5. Broader product/performance/GUI closure.
 #
-# BLOCKED work is deliberately NOT executable until the shared blocker is cleared.
-# Do not repeatedly rediscover the same browser-coordinate/gesture drift issue-by-issue.
-#
-# Recently completed/closed and removed from executable queue:
-#   #196 Transaction Bottom Editor
-#   #300 Cycle Insert range-overlay geometry
-#   #247 Clock Duty / missing pulse / Edge Counter presentation
-#   #208 File/New/Open production lifecycle
-#
 # Architecture Issues #258 and #312 are NON-EXECUTABLE now.
 # Do not resume CUT-A/B/C/D or parallel 4-way replacement work.
+#
+# ============================================================================
+# GLOBAL BLOCK POLICY — DEFAULT: DO NOT GLOBAL-BLOCK
+# ============================================================================
+# Normal response to a blocker is:
+#
+#   current Issue encounters a blocker
+#     -> record concise blocker evidence
+#     -> quarantine/skip ONLY that Issue
+#     -> continue immediately to the next independent executable Issue
+#
+# The overall Goal MUST NOT be marked blocked merely because one or several Issues are blocked.
+# Do not stop at a status report when another independent contract-backed Issue is available.
+#
+# The overall Goal may be marked BLOCKED only when at least one of these repository-wide conditions
+# is true:
+#
+#   G1. A safe repository baseline cannot be established or preserved
+#       (for example main/origin-main cannot be synchronized safely, or existing dirty user work
+#       cannot be preserved without destructive reset/stash/clean/delete).
+#
+#   G2. A repository-wide execution/infrastructure failure prevents safe implementation OR required
+#       verification for every remaining independent executable Issue.
+#
+#   G3. Every remaining open executable Issue is currently one of:
+#       - quarantined by a proven shared blocker,
+#       - dependency-held,
+#       - retrieval-blocked with no live Issue text and no snapshot contract,
+#       - or otherwise impossible to execute safely;
+#       and there is no independent contract-backed Issue left to work on.
+#
+#   G4. Continuing would create a credible risk of losing/corrupting unrelated user work or
+#       canonical repository data and no non-destructive path exists.
+#
+# The following are explicitly NOT global blockers while another executable Issue exists:
+#
+#   - GitHub Issue body returns 404 / permission / connector error.
+#   - One or multiple Issues are missing from snapshots.
+#   - One or several E2E tests fail.
+#   - The known browser geometry/gesture blocker reproduces.
+#   - Current UI and an old E2E contract disagree.
+#   - One Issue cannot be safely fixed without further contract clarification.
+#   - An Issue is already satisfied and needs evidence/closure only.
+#   - An Issue requires no production code change.
+#   - A CI/external-hosted gate is blocked while unrelated local/product Issues remain executable.
+#   - GitHub Issue close/comment operations are unavailable; record local evidence and continue.
+#
+# If the SAME blocker reproduces twice without a proven production-safe fix:
+#   1. stop retrying that Issue in this run;
+#   2. record the exact blocker/reproduction and attempted safe approaches;
+#   3. quarantine only that Issue (and explicit dependents if necessary);
+#   4. continue immediately to the next independent executable Issue.
+#
+# If an Issue is fully satisfied with no code change required:
+#   - collect concise acceptance evidence;
+#   - run focused verification required by the contract;
+#   - close the Issue when write access is available;
+#   - if closing is externally unavailable, record that closure is pending externally;
+#   - continue immediately to the next Issue.
+#   A missing production commit is NOT a blocker when no production change is needed.
 #
 # ============================================================================
 # ISSUE ACCEPTANCE RETRIEVAL / FALLBACK CONTRACT
@@ -78,10 +127,8 @@
 # - Always `git fetch origin codex-control` before concluding a snapshot is absent/stale.
 # - A stale local codex-control ref is not a product blocker.
 # - Live GitHub 404 is not a reason to stop when a matching snapshot exists.
-# - Do not mark the overall Goal blocked solely because live Issue retrieval fails for multiple
-#   Issues while matching snapshot contracts exist.
-# - If a later block has neither live text nor a snapshot, skip only those Issues and continue
-#   through any other contract-backed executable work.
+# - Even when no snapshot exists, retrieval-block ONLY that Issue and continue.
+# - Multiple retrieval-blocked Issues do not make the Goal blocked unless G3 is actually true.
 # - Older Phase Issues may mention `rewrite/v2`; do not recreate that historical execution model.
 #   Audit current `main` first and implement only bounded residual acceptance gaps.
 #
@@ -90,10 +137,12 @@
 # ============================================================================
 # - Skip Closed issues.
 # - Resolve acceptance via live GitHub -> snapshots 1/2/3/4 -> per-Issue retrieval-blocked.
-# - If full acceptance is already satisfied, add concise evidence, close it, continue.
+# - If full acceptance is already satisfied, add concise evidence, close it when possible, continue.
 # - If PARTIAL/MISSING, implement the smallest production-complete slice that satisfies the Issue.
 # - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
+# - If BLOCKED, quarantine that Issue and CONTINUE; do not stop the overall Goal unless G1-G4 holds.
 # - One Issue should normally end in commit/push + focused evidence + close before moving on.
+# - If no code change is needed, evidence + closure is sufficient; do not manufacture a commit.
 # - Do not create architecture work just because code is ugly if production behavior is correct.
 # - Preserve merged owner boundaries; no duplicate semantic/selection/geometry/render paths.
 # - Prefer real-browser observable behavior over internal-only completion claims.
@@ -104,18 +153,18 @@
 # - Preserve unrelated dirty Evidence/work; no reset/stash/clean/delete.
 # - Single-thread sequential execution; no workers/sub-agents.
 # - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
-# - When the SAME blocker reproduces twice without a proven production-safe fix, stop retrying it,
-#   record the blocker, and continue to the next independent executable Issue.
 # - If an Issue in Snapshot 3 or 4 reproduces the known shared geometry/gesture blocker, quarantine
 #   that Issue too; do not invent timeout/fixed-pitch/DOM-coordinate workarounds.
 # - Broad/meta/umbrella issues must not force fake production commits. Audit/close when satisfied,
 #   or record remaining child/evidence gaps and continue when no bounded production change exists.
+# - Do not repeatedly stop to restate clean-main status. Verify it when required, then continue work.
 #
 # Definition of useful progress:
-#   - production behavior changed or was verified against current acceptance
+#   - production behavior changed OR was verified against current acceptance
 #   - focused test/evidence exists
 #   - no contract/Golden masking
 #   - issue is closed only when acceptance is actually proven
+#   - a blocked Issue does not prevent work on the next independent Issue
 #
 # ============================================================================
 # SAFE-FIRST EXECUTABLE QUEUE
@@ -173,8 +222,7 @@
 # ============================================================================
 # GUI / INTERACTION CONSISTENCY — LATER
 # Snapshot fallback exists in ISSUE_ACCEPTANCE_SNAPSHOT_3.md for every Issue in this block.
-# If #301 or another interaction Issue reproduces the quarantined shared gesture blocker,
-# record/skip it rather than repeatedly patching browser-coordinate behavior.
+# If an interaction Issue reproduces the quarantined shared gesture blocker, record/skip ONLY it.
 # ============================================================================
 195
 197
@@ -202,6 +250,7 @@
 # ============================================================================
 # CI / CLOSURE GATES
 # Snapshot fallback exists in ISSUE_ACCEPTANCE_SNAPSHOT_3.md for every Issue in this block.
+# An external CI blocker does not stop unrelated product work.
 # ============================================================================
 272
 184
@@ -255,7 +304,8 @@
 #   #269 Structured diagnostics
 #   #281 Property/state-machine harness
 #
-# Do not execute these from normal burn-down. Re-enter only after the shared coordinate/gesture
+# These are Issue-local quarantines, NOT a global Goal blocker.
+# Do not execute them from normal burn-down. Re-enter only after the shared coordinate/gesture
 # authority problem has a concrete reproduction, current contract, and production-safe fix strategy.
 #
 # DEPENDENCY-HOLD:
@@ -267,7 +317,7 @@
 # CURRENT UI vs HISTORICAL E2E CONTRACT DRIFT — reconcile current contract first:
 #   #180 #219 #255 #275
 # Do not change production to satisfy an old test until current Product Spec / Issue acceptance proves
-# which behavior is authoritative. Update tests only when the current contract proves they are stale.
+# which behavior is authoritative. These are also Issue-local holds, not a global Goal blocker.
 #
 # ============================================================================
 # NON-EXECUTABLE / SUPERSEDED ARCHITECTURE ISSUES
