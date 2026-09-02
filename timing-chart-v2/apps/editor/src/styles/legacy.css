@@ -882,6 +882,7 @@ body { min-width: 1100px; }
 }
 @media (max-width: 1100px) {
   body { min-width: 0; }
+  .ribbon { zoom: .8; width: 125%; }
   .home-file-group, .history-group, .clipboard-group, .edit-group, .selection-group, .visibility-group, .arrange-group, .properties-group, .home-review-group, .home-export-group { display: none; }
   .home-overflow-group { display: flex; align-items: center; }
   .editor-shell .ribbon-major-group[data-major-group="File"] { display: none; }
