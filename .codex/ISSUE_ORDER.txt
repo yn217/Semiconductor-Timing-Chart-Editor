@@ -3,13 +3,14 @@
 # AUTHORITATIVE CONTROL FILE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-03 03:52 JST
+# Last reconciled by ChatGPT: 2026-09-03 04:47 JST
 #
 # Codex stays on main and reads these files without checking out/merging this branch:
 #   git fetch origin codex-control
 #   git show origin/codex-control:.codex/ISSUE_ORDER.txt
 #   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md
 #   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
+#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_3.md
 #
 # Parsing: one GitHub Issue number per non-comment line, top to bottom.
 # Every executable Issue number appears at most once.
@@ -24,8 +25,8 @@
 # Preserve the merged owner architecture while burning down product issues.
 #
 # Current main observed when this queue was reconciled:
-#   4bc05310d50d59044c3998e9b35de856387e2f1b
-#   test(v2): cover foreign-document clipboard rejection
+#   a7f09d91fdf32e3dd8160b6844d8ded14cf7afd2
+#   fix(v2): avoid duplicate Save validation
 #
 # Primary goal:
 #   Keep making safe product progress while quarantining repeated shared blockers.
@@ -56,36 +57,34 @@
 #
 #   1. Fetch/read CURRENT GitHub Issue body + Acceptance Criteria.
 #   2. If live retrieval fails with 404 / permission / connector / tooling error,
-#      search BOTH fallback snapshots:
+#      search ALL acceptance snapshots:
 #        origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md
 #        origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
-#   3. If either snapshot contains the Issue, use that captured Goal / Acceptance / Closure rule
+#        origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_3.md
+#   3. If any snapshot contains the Issue, use its captured Goal / Acceptance / Closure rule
 #      as the fallback contract and continue safe work.
-#   4. If neither live GitHub text nor either snapshot contains the Issue, do NOT guess product
+#   4. If neither live GitHub text nor any snapshot contains the Issue, do NOT guess product
 #      behavior. Mark only that Issue retrieval-blocked and continue to the next executable Issue.
 #
 # Current GitHub Issue text always wins if available and conflicts with a snapshot.
 # Snapshot 1 covers SAFE-FIRST + first mechanical visual/acceptance block through #234.
-# Snapshot 2 covers the following Product Workflows/Parity and Performance/Correctness blocks.
+# Snapshot 2 covers Product Workflows/Parity and Performance/Correctness blocks.
+# Snapshot 3 covers GUI/Interaction Consistency and CI/Closure Gate blocks.
 #
-# IMPORTANT CURRENT RETRIEVAL OVERRIDE:
-# - Do NOT report "fallback snapshot ends at #234" until SNAPSHOT_2 has been fetched/read.
-# - #173 IS PRESENT in ISSUE_ACCEPTANCE_SNAPSHOT_2.md with Goal, Acceptance and Closure rules.
-# - Before marking #173 or any Product Workflows/Performance candidate retrieval-blocked, run:
-#     git fetch origin codex-control
-#     git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
-# - A stale local codex-control ref is not a product blocker. Refresh the control branch first.
-# - If live GitHub returns 404 but #173 is found in SNAPSHOT_2, continue from the snapshot contract.
-# - The overall Goal must NOT be marked blocked merely because live Issue retrieval is unavailable.
-#
-# A GitHub retrieval failure by itself is NOT permission to mark the whole goal blocked while a
-# matching snapshot exists. Use the snapshot and continue.
+# IMPORTANT RETRIEVAL RULES:
+# - Always `git fetch origin codex-control` before concluding a snapshot is absent/stale.
+# - A stale local codex-control ref is not a product blocker.
+# - Live GitHub 404 is not a reason to stop when a matching snapshot exists.
+# - Do not mark the overall Goal blocked solely because live Issue retrieval fails for multiple
+#   Issues while matching snapshot contracts exist.
+# - If a later block has neither live text nor a snapshot, skip only those Issues and continue
+#   through any other contract-backed executable work.
 #
 # ============================================================================
 # EXECUTION RULES
 # ============================================================================
 # - Skip Closed issues.
-# - Resolve acceptance via live GitHub -> snapshot 1/2 -> per-Issue retrieval-blocked.
+# - Resolve acceptance via live GitHub -> snapshots 1/2/3 -> per-Issue retrieval-blocked.
 # - If full acceptance is already satisfied, add concise evidence, close it, continue.
 # - If PARTIAL/MISSING, implement the smallest production-complete slice that satisfies the Issue.
 # - Stay on the same Issue until acceptance is satisfied unless BLOCKED/META/EVIDENCE_ONLY.
@@ -102,8 +101,8 @@
 # - Broad regression is deferred unless the Issue requires it; use focused tests + typecheck/diff-check.
 # - When the SAME blocker reproduces twice without a proven production-safe fix, stop retrying it,
 #   record the blocker, and continue to the next independent executable Issue.
-# - Do not mark the overall goal blocked solely because live Issue retrieval fails for multiple
-#   Issues while a matching acceptance snapshot exists.
+# - If an Issue in Snapshot 3 reproduces the known shared geometry/gesture blocker, quarantine that
+#   Issue too; do not invent timeout/fixed-pitch/DOM-coordinate workarounds.
 #
 # Definition of useful progress:
 #   - production behavior changed or was verified against current acceptance
@@ -166,9 +165,9 @@
 
 # ============================================================================
 # GUI / INTERACTION CONSISTENCY — LATER
-# No complete fallback snapshot yet. If live retrieval fails, mark only that Issue retrieval-blocked
-# and continue; do not mark the overall goal blocked because later Issues remain available.
-# If this block becomes active with repeated live 404s, request/refresh the next snapshot batch.
+# Snapshot fallback exists in ISSUE_ACCEPTANCE_SNAPSHOT_3.md for every Issue in this block.
+# If #301 or another interaction Issue reproduces the quarantined shared gesture blocker,
+# record/skip it rather than repeatedly patching browser-coordinate behavior.
 # ============================================================================
 195
 197
@@ -195,6 +194,7 @@
 
 # ============================================================================
 # CI / CLOSURE GATES
+# Snapshot fallback exists in ISSUE_ACCEPTANCE_SNAPSHOT_3.md for every Issue in this block.
 # ============================================================================
 272
 184
@@ -202,6 +202,8 @@
 
 # ============================================================================
 # BROADER PHASE / PARITY / UMBRELLA — LATER
+# No complete fallback snapshot yet. If live retrieval fails, mark only that Issue retrieval-blocked
+# and continue. Do not infer acceptance from titles or neighboring features.
 # ============================================================================
 161
 162
