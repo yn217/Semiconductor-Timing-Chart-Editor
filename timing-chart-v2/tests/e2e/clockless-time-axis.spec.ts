@@ -147,7 +147,7 @@ test("Transaction clipboard preserves semantic fields and uses fresh IDs", async
   const before = await page.getByTestId("history-status").textContent();
   await edit.getByRole("button", { name: "Copy", exact: true }).click();
   expect(await page.getByTestId("history-status").textContent()).toBe(before);
-  await edit.getByRole("button", { name: "複製", exact: true }).click();
+  await edit.getByRole("button", { name: "Duplicate", exact: true }).click();
   await expect(lanes.locator("[data-transaction-id]")).toHaveCount(2);
   const copied = lanes.locator("[data-transaction-id]").filter({ hasText: "Read burst Copy" });
   await expect(copied).toHaveCount(1);
@@ -179,7 +179,7 @@ test("standalone Spacer clipboard preserves height and creates a fresh ID", asyn
   await spacer.click();
   const edit = page.getByTestId("ribbon").locator(".home-edit-group");
   await edit.getByRole("button", { name: "Copy", exact: true }).click();
-  await edit.getByRole("button", { name: "複製", exact: true }).click();
+  await edit.getByRole("button", { name: "Duplicate", exact: true }).click();
   await expect(page.locator("[data-role='left-row'][data-kind='spacer']")).toHaveCount(2);
   const heights = await page.locator("[data-role='left-row'][data-kind='spacer']").evaluateAll((rows) => rows.map((row) => row.getBoundingClientRect().height));
   expect(heights.every((height) => Math.abs(height - 44) <= 1)).toBe(true);

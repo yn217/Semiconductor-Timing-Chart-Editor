@@ -71,7 +71,7 @@ test("cross-document clipboard provenance rejects a paste atomically", async ({ 
   await ribbon.getByRole("button", { name: "New", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await page.getByRole("button", { name: "Home", exact: true }).click();
-  const paste = ribbon.getByRole("button", { name: "貼付", exact: true });
+  const paste = ribbon.getByRole("button", { name: "Paste", exact: true });
   await expect(paste).toBeEnabled();
   await paste.click();
 
@@ -250,7 +250,7 @@ test("Command enablement stays aligned for annotation selection", async ({ page 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
   await expect(ribbon.getByRole("button", { name: "Copy", exact: true })).toBeEnabled();
-  await expect(ribbon.getByRole("button", { name: /Duplicate|複製/, exact: true })).toBeEnabled();
+  await expect(ribbon.getByRole("button", { name: "Duplicate", exact: true })).toBeEnabled();
   await expect(ribbon.getByRole("button", { name: "Delete", exact: true })).toBeEnabled();
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const overflow = page.getByRole("menu", { name: "More Home Commands" });
