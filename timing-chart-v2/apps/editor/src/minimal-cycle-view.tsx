@@ -822,7 +822,10 @@ export function MinimalCycleView() {
       const primary = selection.refs.signalId.current;
       if (primary) rendererHost.dataset.selectedSignalId = primary;
       focusTreeItem(target);
-      publishState();
+      // Selection decoration is synchronous for immediate feedback, while the
+      // diagnostic/status snapshot is observational and can wait until the next
+      // frame so selection input is not held behind JSON serialization.
+      requestAnimationFrame(() => publishState());
     };
     const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
       const cycleCount = session.getSnapshot().document.timeline.cycleCount;
