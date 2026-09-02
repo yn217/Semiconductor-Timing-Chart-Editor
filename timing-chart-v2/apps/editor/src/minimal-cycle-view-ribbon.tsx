@@ -211,21 +211,21 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {homeOverflowMenu}
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
       <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><DsRibbonGroup ariaLabel="Signals" className="insert-signals-group" label="Signals">
-        <DsRibbonButton icon={<RibbonIcon name="i-plus" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-grid" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="pulse" />} onClick={() => insertValueSignal("pulse")}>Pulse</DsRibbonButton>
+        <DsRibbonButton icon={<InsertSemanticIcon kind="signal" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="bus" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="pulse" />} onClick={() => insertValueSignal("pulse")}>Pulse</DsRibbonButton>
       </DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><DsRibbonGroup ariaLabel="Structure" className="insert-structure-group" label="Structure"><DsRibbonButton icon={<RibbonIcon name="i-group" />} onClick={insertGroup}>Group</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-spacing" />} onClick={insertSpacer}>Spacer</DsRibbonButton></DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><DsRibbonGroup ariaLabel="Annotation" className="insert-annotation-group" label="Annotation">
         <DsRibbonButton icon={<RibbonIcon name="i-comment" />} onClick={insertCommentRow}>Comment</DsRibbonButton>
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-more" />} onClick={() => insertAnnotation("marker")}>Marker</DsRibbonButton>
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-select-fit" />} onClick={() => insertAnnotation("range")}>Range</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="marker" />} onClick={() => insertAnnotation("marker")}>Marker</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="range" />} onClick={() => insertAnnotation("range")}>Range</DsRibbonButton>
         <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="text" />} onClick={() => insertAnnotation("text")}>Text</DsRibbonButton>
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-filter" />} onClick={() => insertAnnotation("dependency")}>Dependency</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="dependency" />} onClick={() => insertAnnotation("dependency")}>Dependency</DsRibbonButton>
       </DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="More" aria-label="More Insert commands"><DsRibbonGroup ariaLabel="More" className="insert-more-group" label="More">
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-ruler" />} onClick={() => insertAnnotation("measurement")}>Measurement</DsRibbonButton>
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-grid" />} onClick={() => insertAnnotation("highlight")}>Highlight</DsRibbonButton>
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-gap" />} onClick={() => insertAnnotation("bracket")}>Bracket</DsRibbonButton>
-        <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-ruler" />} onClick={() => insertAnnotation("verticalLine")}>Vertical Line</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="measurement" />} onClick={() => insertAnnotation("measurement")}>Measurement</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="highlight" />} onClick={() => insertAnnotation("highlight")}>Highlight</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="bracket" />} onClick={() => insertAnnotation("bracket")}>Bracket</DsRibbonButton>
+        <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="verticalLine" />} onClick={() => insertAnnotation("verticalLine")}>Vertical Line</DsRibbonButton>
       </DsRibbonGroup></div>
     </div>}
     {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></div>}

@@ -15,10 +15,11 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
       signature: [...icon.querySelectorAll("path")].map((path) => path.getAttribute("d")).join("|"),
       box: [icon.getBoundingClientRect().width, icon.getBoundingClientRect().height],
     })));
-    expect(contract.map((item) => item.kind)).toEqual(["clock", "state", "event", "pulse", "text"]);
+    expect(contract.map((item) => item.kind)).toEqual(["signal", "clock", "bus", "state", "event", "pulse", "marker", "range", "text", "dependency", "measurement", "highlight", "bracket", "verticalLine"]);
     expect(contract.every((item) => item.useCount === 0 && item.textCount === 0 && item.pathCount > 0 && item.box[0] > 0 && item.box[0] === item.box[1])).toBe(true);
     expect(new Set(contract.map((item) => item.box.join("x"))).size).toBe(1);
     const byKind = Object.fromEntries(contract.map((item) => [item.kind, item]));
+    expect(new Set(contract.map((item) => item.signature)).size).toBe(contract.length);
     expect(byKind.clock.signature).not.toContain("a");
     expect(byKind.clock.signature).not.toBe(byKind.pulse.signature);
     expect(byKind.state.signature).not.toBe(byKind.pulse.signature);
