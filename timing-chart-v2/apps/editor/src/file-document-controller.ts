@@ -1,4 +1,4 @@
-import { parseDocument, serializeCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
+import { parseDocument, serializeValidatedCanonicalDocument, type CanonicalDocument, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 
 export const MAX_OPEN_FILE_BYTES = 32 * 1024 * 1024;
 
@@ -12,9 +12,15 @@ export function canonicalDocumentOf(input: CanonicalDocument | ParsedCanonicalDo
   return input as CanonicalDocument;
 }
 
-/** Pure Save boundary: serialization stays independent of the editor shell. */
-export function serializeSaveDocument(document: CanonicalDocument): string {
-  return serializeCanonicalDocument(document);
+/**
+ * Pure Save boundary for a DocumentSession-owned snapshot.
+ *
+ * Construction, Open, and command commits already establish canonical
+ * validity. Re-running the full validator here would duplicate that work;
+ * arbitrary callers must use the schema package's validating serializer.
+ */
+export function serializeSaveDocument(document: Readonly<CanonicalDocument>): string {
+  return serializeValidatedCanonicalDocument(document);
 }
 
 /** The user-visible policy for File > New. */
