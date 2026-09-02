@@ -102,6 +102,7 @@ export function MinimalCycleView() {
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
+  const previousSelectionDecorationRef = useRef<SelectionState | undefined>(undefined);
   const editActions = useClipboardActions({ application, selection });
   const timelineNavigation = useTimelineNavigationOwner();
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId } = selection.state;
@@ -1184,16 +1185,21 @@ export function MinimalCycleView() {
     if (!rendererHost) return;
     if (next.signalId) rendererHost.dataset.selectedSignalId = next.signalId;
     else delete rendererHost.dataset.selectedSignalId;
-    for (const row of rendererHost.querySelectorAll<HTMLElement>("[data-row-id], [data-signal-id]")) {
-      const rowId = row.dataset.rowId ?? row.dataset.signalId;
-      const isSelected = rowId !== undefined && (next.signalIds.has(rowId as SignalId) || rowId === next.spacerId);
+    const previous = previousSelectionDecorationRef.current;
+    const affectedSignalIds = new Set<string>([
+      ...(previous?.signalIds ?? []), ...(next.signalIds ?? []),
+      ...(previous?.spacerId ? [previous.spacerId] : []), ...(next.spacerId ? [next.spacerId] : []),
+    ]);
+    for (const id of affectedSignalIds) for (const row of rendererHost.querySelectorAll<HTMLElement>(`[data-row-id="${CSS.escape(id)}"], [data-signal-id="${CSS.escape(id)}"]`)) {
+      const isSelected = next.signalIds.has(id as SignalId) || id === next.spacerId;
       row.dataset.selected = String(isSelected);
       row.setAttribute("aria-selected", String(isSelected));
     }
-    for (const owner of rendererHost.querySelectorAll<HTMLElement>("[data-annotation-id]")) owner.dataset.selected = String(owner.dataset.annotationId === next.annotationId);
-    for (const treeItem of rendererHost.querySelectorAll<HTMLElement>("[role='treeitem']")) {
-      if (treeItem.dataset.groupHeader === "true") treeItem.setAttribute("aria-selected", String(treeItem.dataset.rowId === `${next.groupId}:header`));
-    }
+    const affectedAnnotationIds = new Set([previous?.annotationId, next.annotationId].filter(Boolean));
+    for (const id of affectedAnnotationIds) for (const owner of rendererHost.querySelectorAll<HTMLElement>(`[data-annotation-id="${CSS.escape(String(id))}"]`)) owner.dataset.selected = String(id === next.annotationId);
+    const affectedGroupIds = new Set([previous?.groupId, next.groupId].filter(Boolean));
+    for (const id of affectedGroupIds) for (const treeItem of rendererHost.querySelectorAll<HTMLElement>(`[role="treeitem"][data-row-id="${CSS.escape(String(id))}:header"]`)) treeItem.setAttribute("aria-selected", String(id === next.groupId));
+    previousSelectionDecorationRef.current = next;
   }
 
   const clearSelection = () => {
