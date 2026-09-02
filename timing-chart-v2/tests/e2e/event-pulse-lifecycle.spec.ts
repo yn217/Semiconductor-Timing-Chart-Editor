@@ -48,7 +48,8 @@ test("creates, edits, undoes, persists and exports Event and Pulse signals", asy
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(host.locator("[data-role='timing-row'][data-name='EVENT_9']")).toHaveCount(1);
-  await expect(host.locator("[data-role='timing-row'][data-name='PULSE_10']")).toHaveCount(1);
+  await page.getByRole("tab", { name: "JSON", exact: true }).click();
+  await expect(page.getByTestId("json-panel").locator("pre")).toContainText("PULSE_10");
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
   const exportDialog = async (format: "svg" | "png" | "pdf") => {
