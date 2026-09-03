@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test, type Page } from "@playwright/test";
 
 const clock = {
@@ -65,3 +66,38 @@ test("active Reference Clock conversion discloses and atomically enters clockles
   await expect(inspector.getByLabel("Inspector signal type")).toHaveValue("binary");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
+
+for (const target of ["binary", "bus", "state"] as const) {
+  test(`converts a Clock to ${target} with exact canonical defaults and Save/Open`, async ({ page }) => {
+    await openDocument(page);
+    const host = page.getByTestId("cycle-surface");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_reference_clk']").click();
+    const inspector = page.getByTestId("inspector");
+    await inspector.getByLabel("Clock conversion target").selectOption(target);
+    await inspector.getByTestId("open-clock-conversion").click();
+    await inspector.getByTestId("confirm-clock-conversion").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(inspector.getByLabel("Inspector signal type")).toHaveValue(target);
+    await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+    const download = page.waitForEvent("download");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+    const savedPath = await (await download).path();
+    const saved = JSON.parse(await readFile(savedPath!, "utf8")) as { signals: Array<Record<string, unknown>>; timeline: Record<string, unknown> };
+    const converted = saved.signals.find((signal) => signal.id === "sig_reference_clk");
+    expect(converted).toMatchObject({ id: "sig_reference_clk", name: "REFERENCE_CLK", type: target, role: "input", source: clock.source });
+    expect(converted).not.toHaveProperty("generator");
+    expect(converted).not.toHaveProperty("edgeCounter");
+    expect(converted).not.toHaveProperty("enable");
+    expect(converted?.values).toEqual([{ start: 0, value: target === "state" ? "IDLE" : target === "bus" ? "00" : 0 }]);
+    if (target === "bus") expect(converted).toMatchObject({ width: 8, displayFormat: "hex" });
+    expect(saved.timeline).not.toHaveProperty("referenceClock");
+
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_reference_clk']").click();
+    await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue(target);
+  });
+}
