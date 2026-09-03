@@ -38,7 +38,7 @@ test("Bottom Pin preserves a selected Group JSON context without view mutation",
   };
 
   await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch'][data-group-id='grp_cycle_control']").first().click();
-  await bottom.getByRole("button", { name: "JSON", exact: true }).click();
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();
   await json.getByLabel("JSON scope").selectOption("selected");
@@ -66,7 +66,7 @@ test("Advanced JSON applies a selected object through one document command", asy
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const bottom = page.getByTestId("bottom-editor");
-  await bottom.getByRole("button", { name: "JSON", exact: true }).click();
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();
   await json.getByLabel("JSON scope").selectOption("selected");
@@ -85,7 +85,7 @@ test("Advanced JSON applies a selected object through one document command", asy
 test("Whole Document JSON stays read-only until Advanced mode and validates before Apply", async ({ page }) => {
   await ready(page);
   const bottom = page.getByTestId("bottom-editor");
-  await bottom.getByRole("button", { name: "JSON", exact: true }).click();
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
   const json = page.getByTestId("json-panel");
   await expect(json.locator("pre")).toBeVisible();
   await expect(json.getByLabel("Advanced JSON")).toHaveCount(0);
@@ -100,7 +100,7 @@ test("Advanced JSON applies a selected Group through one document command", asyn
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch'][data-group-id='grp_cycle_control']").first().click();
   const bottom = page.getByTestId("bottom-editor");
-  await bottom.getByRole("button", { name: "JSON", exact: true }).click();
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
   const json = page.getByTestId("json-panel");
   await json.getByTestId("json-advanced-toggle").click();
   await json.getByLabel("JSON scope").selectOption("selected");
