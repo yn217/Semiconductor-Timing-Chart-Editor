@@ -107,3 +107,18 @@ test("Escape cancels an in-progress Transaction drag without any semantic mutati
   const after = (await transaction.boundingBox())!;
   expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
 });
+
+test("Transaction context menu exposes only transaction-supported capabilities", async ({ page }) => {
+  await ready(page);
+  await createTransaction(page, "Context target", 2, 6);
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
+  await transaction.click({ button: "right" });
+  const menu = page.getByRole("menu", { name: "Transaction context menu" });
+  await expect(menu).toBeVisible();
+  for (const label of ["Copy", "Cut", "Duplicate", "Rename", "Delete"]) {
+    await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeEnabled();
+  }
+  for (const label of ["Move Up", "Move Down", "Show", "Hide"]) {
+    await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeDisabled();
+  }
+});

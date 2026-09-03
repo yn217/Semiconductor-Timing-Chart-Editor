@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 const CONTEXT_MENU_VIEWPORT_MARGIN = 8;
 type ContextMenuAnchor = Readonly<{ x: number; y: number }>;
 
-export function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "signal" | "group" | "annotation" }) {
+export function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "signal" | "group" | "annotation" | "transaction" }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const position = (reveal = true) => {
     const menu = menuRef.current;

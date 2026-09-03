@@ -1,5 +1,5 @@
 import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { RefObject } from "react";
+import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
@@ -1147,6 +1147,10 @@ export function MinimalCycleView() {
   const selectTransaction = (id: TransactionId) => {
     selection.selectTransaction(id);
   };
+  const openTransactionContextMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
+    menuOriginRef.current = event.currentTarget;
+    setContextMenu({ x: event.clientX, y: event.clientY, target: "transaction" });
+  };
   const transactionEditor = <TransactionEditor
     key={`${bottomTransaction?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     transaction={bottomTransaction}
@@ -1451,6 +1455,20 @@ export function MinimalCycleView() {
   const hasSelectedSignal = selectedSignalIds.size > 0 && selectedSignal !== undefined;
   const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selectedSpacer !== undefined;
   const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
+  const selectedSignalGroup = selectedSignal === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.rows.includes(selectedSignal.id));
+  const canMoveUp = selectedSignalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
+    ? selectedSignalGroup.rows.indexOf(selectedSignal.id) > 0
+    : selectedSignalIds.size === 0 && selectedGroup !== undefined && selectedSpacer === undefined
+      ? snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id) > 0
+      : false;
+  const canMoveDown = selectedSignalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
+    ? (() => { const index = selectedSignalGroup.rows.indexOf(selectedSignal.id); return index >= 0 && index < selectedSignalGroup.rows.length - 1; })()
+    : selectedSignalIds.size === 0 && selectedGroup !== undefined && selectedSpacer === undefined
+      ? (() => { const index = snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < snapshot.document.signalGroups.length - 1; })()
+      : false;
+  const canRenameSelection = (selectedSignalIds.size === 1 && selectedSignal !== undefined) || (selectedSignalIds.size === 0 && (selectedGroup !== undefined || selectedTransaction !== undefined));
+  const canShowSelection = selectedSignalIds.size > 0 && selectedSignal !== undefined && snapshot.document.signals.some((signal) => selectedSignalIds.has(signal.id) && signal.display.visible === false);
+  const canHideSelection = selectedSignalIds.size > 0 && selectedSignal !== undefined && snapshot.document.signals.some((signal) => selectedSignalIds.has(signal.id) && signal.display.visible !== false);
   const restorePendingFileFocus = () => {
     const origin = pendingFileOriginRef.current;
     pendingFileOriginRef.current = null;
@@ -1516,6 +1534,11 @@ export function MinimalCycleView() {
       hasSelectedClipboard={hasSelectedClipboard}
       hasSelectedEntity={hasSelectedEntity}
       hasDeletableSelection={hasDeletableSelection}
+      canRenameSelection={canRenameSelection}
+      canMoveUp={canMoveUp}
+      canMoveDown={canMoveDown}
+      canShowSelection={canShowSelection}
+      canHideSelection={canHideSelection}
       onCopy={copySelectedSignal}
       onCut={cutSelectedSignal}
       onPaste={pasteSelectedEntity}
@@ -1586,7 +1609,7 @@ export function MinimalCycleView() {
           timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
         />
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
-          {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />}
+          {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onContextMenu={(event) => openTransactionContextMenu(event)} />}
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}>
             <div className="cycle-ruler-content" ref={ruler} />
@@ -1611,7 +1634,7 @@ export function MinimalCycleView() {
       />}
        {inspectorVisible && <aside className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => setInspectorResetToken((value) => value + 1)} /></aside>}
     </div>
-    <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} />
+    <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} />
     {renameDialogOpen && <RenameDialog dialogRef={renameDialogRef} draft={renameDraft} onDraftChange={(value) => { setRenameDraft(value); setRenameError(""); }} error={renameError} onApply={applyRename} onClose={() => setRenameDialogOpen(false)} />}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => application.executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
