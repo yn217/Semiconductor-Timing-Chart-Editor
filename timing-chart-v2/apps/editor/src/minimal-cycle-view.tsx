@@ -78,6 +78,7 @@ import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { routeGlobalShortcut } from "./runtime/keyboard-shortcut-router.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
+import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-target.js";
 import { buildRuler } from "./runtime/build-ruler.js";
 import { projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
@@ -1310,22 +1311,18 @@ export function MinimalCycleView() {
     }
   };
   const addTreeEntity = (kind: "signal" | "clock" | "bus" | "state" | "logic" | "event" | "pulse" | "group" | "spacer" | "commentRow") => {
-    const selectedSignalGroup = selectedId === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.rows.includes(selectedId));
-    const targetGroup = selectedGroup ?? selectedSignalGroup ?? snapshot.document.signalGroups.at(-1);
     if (kind === "group") {
       const id = groupId(nextEntityId("group", snapshot.document));
-      const selectedGroupIndex = selectedGroup === undefined ? -1 : snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id);
-      const selectedSignalGroupIndex = selectedSignalGroup === undefined ? -1 : snapshot.document.signalGroups.findIndex((group) => group.id === selectedSignalGroup.id);
-      const index = selectedGroupIndex >= 0 ? selectedGroupIndex + 1 : selectedSignalGroupIndex >= 0 ? selectedSignalGroupIndex + 1 : snapshot.document.signalGroups.length;
+      const index = resolveGroupInsertionIndex(snapshot.document, selectedId, selectedGroupId);
       const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index });
       if (result.ok) {
         selection.selectGroup(id);
       }
       return;
     }
-    if (!targetGroup) return;
-    const selectedRowIndex = selectedId === undefined ? -1 : targetGroup.rows.indexOf(selectedId);
-    const index = selectedRowIndex >= 0 ? selectedRowIndex + 1 : targetGroup.rows.length;
+    const target = resolveInsertionTarget(snapshot.document, selectedId, selectedGroupId);
+    if (!target) return;
+    const { group: targetGroup, index } = target;
     if (kind === "spacer") {
       const spacer = { id: spacerId(nextEntityId("spacer", snapshot.document)), height: 24 };
       const result = application.execute({ id: nextCommandId("tree_add_spacer"), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index });
@@ -1517,6 +1514,7 @@ export function MinimalCycleView() {
        bottomVisible={bottomVisible}
       arrowPickStatus={arrowPickStatus}
       selectedSignalId={annotationTargetSignalId}
+      selectedInsertionSignalId={selectedSignal?.id}
       selectedGroupId={selectedGroup?.id}
       problemsCount={diagnostics.length}
       diagnostics={diagnostics}
