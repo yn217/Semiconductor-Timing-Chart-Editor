@@ -81,3 +81,32 @@ test("auto fits a long rendered signal label through one layout command", async 
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 1");
   await expect(page.getByTestId("inspector-layout-editor").getByLabel("Inspector signal name width")).toHaveValue(String(before));
 });
+
+test("renders persisted label columns independently from the transient pane splitter", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const layout = page.getByTestId("inspector-layout-editor");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const renderCounters = await surface.getAttribute("data-render-counters");
+  await layout.getByLabel("Inspector role column width").fill("74");
+  await layout.getByLabel("Inspector signal name width").fill("224");
+  await layout.getByLabel("Inspector signal name alignment").selectOption("center");
+  await layout.getByLabel("Inspector signal name overflow").selectOption("wrap");
+  await layout.getByTestId("apply-inspector-layout").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", "265px 74px 224px 0px 640px");
+  await expect(surface.locator("[data-role='frozen-row']").first()).toHaveCSS("grid-template-columns", "74px 224px");
+  await expect(surface.locator("[data-role='frozen-signal-name']").first()).toHaveCSS("white-space", "normal");
+  await expect(surface.locator("[data-role='frozen-signal-name']").first()).toHaveCSS("text-overflow", "clip");
+  const frozenLeft = await surface.locator("[data-role='frozen-label-rows']").evaluate((element) => Math.round(element.getBoundingClientRect().left));
+  const headingLeft = await page.locator(".column-headings > span").nth(1).evaluate((element) => Math.round(element.getBoundingClientRect().left));
+  expect(frozenLeft).toBe(headingLeft);
+  expect(await surface.getAttribute("data-render-counters")).toBe(renderCounters);
+  await layout.getByTestId("reset-inspector-layout").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(layout.getByLabel("Inspector role column width")).toHaveValue("32");
+  await expect(layout.getByLabel("Inspector signal name width")).toHaveValue("168");
+  await expect(layout.getByLabel("Inspector signal name alignment")).toHaveValue("left");
+  await expect(layout.getByLabel("Inspector signal name overflow")).toHaveValue("ellipsis");
+});

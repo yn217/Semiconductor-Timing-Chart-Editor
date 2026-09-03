@@ -363,7 +363,7 @@ body { min-width: 1100px; }
 .editor-shell .home-zoom-controls .ribbon-tool:has([data-v1-label="選択に合わせる"]) { display: none; }
 .editor-shell .home-display-subgroup { width: 148px; flex: 0 0 148px; }
 .editor-shell .desktop-workspace { grid-template-columns: 265px minmax(0, 1fr) 297px; grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height); }
-.editor-shell .column-headings { height: 37px; grid-template-columns: 265px 61px 148px minmax(640px, 1fr); }
+.editor-shell .column-headings { height: 37px; grid-template-columns: var(--gui-left-width, 265px) var(--gui-role-width, 61px) var(--gui-signal-width, 148px) max(0px, calc(var(--gui-frozen-width, 209px) - var(--gui-role-width, 61px) - var(--gui-signal-width, 148px))) minmax(640px, 1fr); }
 .editor-shell .column-headings .role-column-heading { justify-content: center; padding-inline: 4px; font-size: 10px; text-transform: none; letter-spacing: normal; }
 .editor-shell .column-headings .signal-column-heading { padding-inline: 8px; font-size: 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .editor-shell .cycle-viewport { height: calc(100% - 37px); }
@@ -397,7 +397,7 @@ body { min-width: 1100px; }
 .editor-shell .left-column-heading > .tree-filter-controls input { min-width: 0; }
 .editor-shell .left-column-actions > .tree-add-button { flex-basis: 63px; width: 63px; font-size: 0; }
 .editor-shell .left-column-actions > .tree-add-button::after { content: "Add"; font-size: 11px; }
-.editor-shell .surface-host [data-role="frozen-row"] { grid-template-columns: 61px 148px; padding: 0; }
+.editor-shell .surface-host [data-role="frozen-row"] { width: var(--gui-frozen-width, 209px); grid-template-columns: var(--gui-role-width, 61px) var(--gui-signal-width, 148px); padding: 0; text-align: var(--gui-signal-align, left); }
 .editor-shell .surface-host [data-role="tree-branch"] { display: none; }
 .editor-shell .surface-host [data-role="left-group-header"] { z-index: 3; display: grid; grid-template-columns: minmax(0, 1fr) 27px; align-items: center; padding: 0 5px; background: #f7f8fa; text-transform: none; }
 .editor-shell .surface-host [data-role="left-group-header"] [data-role="tree-branch"] { display: flex; align-items: center; justify-content: flex-start; min-width: 0; overflow: hidden; color: #405875; font-size: 11px; font-weight: 700; text-align: left; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
@@ -419,7 +419,12 @@ body { min-width: 1100px; }
 .editor-shell .surface-host [data-role="signal-role"][data-presentation="output"] { background: #e3f1ff; color: #1b5b96; }
 .editor-shell .surface-host [data-role="tree-signal-role"][data-presentation="comment"],
 .editor-shell .surface-host [data-role="signal-role"][data-presentation="comment"] { border: 1px solid #aa72e6; background: white; color: #8c47d3; }
-.editor-shell .surface-host [data-role="frozen-signal-name"] { padding-left: 8px; }
+.editor-shell .surface-host [data-role="frozen-signal-name"] { min-width: 0; padding-left: 8px; overflow: hidden; white-space: inherit; text-overflow: inherit; }
+.editor-shell .surface-host [data-role="tree-signal-name"] { min-width: 0; white-space: inherit; text-overflow: inherit; }
+.editor-shell[data-layout-overflow="expand"] .surface-host [data-role="frozen-row"] { overflow: visible; }
+.editor-shell[data-layout-overflow="expand"] .surface-host [data-role="frozen-signal-name"] { overflow: visible; }
+.editor-shell[data-layout-overflow="wrap"] .surface-host [data-role="frozen-row"],
+.editor-shell[data-layout-overflow="wrap"] .surface-host [data-role="frozen-signal-name"] { white-space: normal; text-overflow: clip; overflow-wrap: anywhere; }
 .editor-shell .surface-icon { width: 16px; height: 16px; display: block; }
 .editor-shell .surface-host [data-role="tree-visibility"],
 .editor-shell .surface-host [data-role="tree-more"],

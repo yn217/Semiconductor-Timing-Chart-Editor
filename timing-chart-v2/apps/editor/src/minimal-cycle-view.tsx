@@ -138,7 +138,7 @@ export function MinimalCycleView() {
     bottomResetToken, setBottomResetToken,
     bottomVisible, setBottomVisible,
     leftPaneWidth, setLeftPaneWidth, leftPaneResizeRef,
-    frozenPaneWidth, setFrozenPaneWidth, frozenPaneResizeRef,
+    frozenPaneWidth: frozenPaneWidthState, setFrozenPaneWidth, frozenPaneResizeRef,
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter,
@@ -147,6 +147,9 @@ export function MinimalCycleView() {
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
   } = workspace;
+  // Keep the transient splitter independent, but never let it collapse the
+  // persisted Role/Signal columns and break the shared frozen/timing origin.
+  const frozenPaneWidth = Math.max(frozenPaneWidthState, snapshot.document.layout.roleColumnWidth + snapshot.document.layout.signalNameWidth);
   selection.configure({
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
@@ -1472,7 +1475,7 @@ export function MinimalCycleView() {
     else if (preset === "transaction") { setViewMode("Transaction"); setBottomTab("Transaction"); }
     else setBottomTab("Signal");
   };
-  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px` } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-signal-tree-visible={String(signalTreeVisible)} data-show-signal-names={String(showSignalNames)} data-show-roles={String(showRoles)} data-show-annotations={String(showAnnotations)} data-show-transactions={String(showTransactions)} data-show-group-background={String(showGroupBackground)} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth} data-cycle-count={snapshot.document.timeline.cycleCount} data-signal-count={snapshot.document.signals.length} data-transaction-count={snapshot.document.transactions.length}>
+  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-signal-tree-visible={String(signalTreeVisible)} data-show-signal-names={String(showSignalNames)} data-show-roles={String(showRoles)} data-show-annotations={String(showAnnotations)} data-show-transactions={String(showTransactions)} data-show-group-background={String(showGroupBackground)} data-layout-overflow={snapshot.document.layout.overflow} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth} data-cycle-count={snapshot.document.timeline.cycleCount} data-signal-count={snapshot.document.signals.length} data-transaction-count={snapshot.document.transactions.length}>
     <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} />
     <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />
     <Ribbon

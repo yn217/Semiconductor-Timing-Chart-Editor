@@ -200,6 +200,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
     </span>
     <span className="role-column-heading" aria-label="Role">Role</span>
     <span className="signal-column-heading" aria-label="Signal / Annotation">Signal / Annotation</span>
+    <span className="frozen-pane-heading-gutter" aria-hidden="true" />
     <span>{timeScaleLabel}</span>
   </div>;
 }
