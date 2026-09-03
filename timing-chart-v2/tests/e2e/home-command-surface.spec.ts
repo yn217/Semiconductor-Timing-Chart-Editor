@@ -11,6 +11,36 @@ function revisionNumber(value: string | null) {
   return Number(match?.[1]);
 }
 
+const clipboardCollisionSignal = {
+  id: "sig_shared",
+  name: "SHARED",
+  type: "binary",
+  role: "internal",
+  source: { instancePath: [], signalName: "shared" },
+  display: { name: "SHARED" },
+  values: [{ start: 0, value: 0 }, { start: 4, value: 1 }],
+};
+
+function clipboardCollisionDocument(id: string, entities: Record<string, unknown> = {}) {
+  return {
+    formatVersion: 2,
+    document: { id, title: id, header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "V2", text: "" } },
+    timeline: { start: 0, end: 8, cycleCount: 8, timeBase: "cycle", edge: "rising", labelAnchors: [] },
+    signalGroups: [{ id: "grp_main", name: "Main", rows: [clipboardCollisionSignal.id] }],
+    signals: [clipboardCollisionSignal],
+    bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+    legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
+    layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
+    checkSettings: {},
+    ...entities,
+  };
+}
+
+async function openJson(page: Page, value: unknown) {
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "clipboard-collision.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(value)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+}
+
 test("Home exposes grouped command surfaces and provides stable-ID Select All", async ({ page }) => {
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
@@ -79,6 +109,65 @@ test("cross-document clipboard provenance rejects a paste atomically", async ({ 
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
+test("annotation clipboard rejects a colliding foreign Signal ID without retargeting", async ({ page }) => {
+  await page.goto("/");
+  const annotation = {
+    id: "ann_source",
+    type: "ghostTrace",
+    label: "Foreign trace",
+    visible: true,
+    sourceSignalId: clipboardCollisionSignal.id,
+    start: { signalId: clipboardCollisionSignal.id, cycle: 1, point: "cycle-start" },
+    end: { signalId: clipboardCollisionSignal.id, cycle: 3, point: "cycle-end" },
+    traceOffsetCycles: 0,
+    opacity: 0.5,
+  };
+  await openJson(page, clipboardCollisionDocument("doc_a", { annotations: [annotation] }));
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("annotation-list").locator("[data-annotation-list-id='ann_source']").click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  const edit = ribbon.locator(".home-edit-group");
+  await edit.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Copied .* annotation/);
+
+  await openJson(page, clipboardCollisionDocument("doc_b"));
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await edit.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Paste rejected: clipboard belongs to another document");
+  await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 0");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
+  await page.getByLabel("Bottom context panels").getByRole("tab", { name: "Problems", exact: true }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("CLIPBOARD_FOREIGN_DOCUMENT");
+});
+
+test("transaction clipboard rejects a colliding foreign linked Signal ID without retargeting", async ({ page }) => {
+  await page.goto("/");
+  const transaction = { id: "txn_source", name: "Foreign transaction", start: 1, end: 3, laneId: "lane_0", linkedSignals: [clipboardCollisionSignal.id] };
+  await openJson(page, clipboardCollisionDocument("doc_a", { transactions: [transaction] }));
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id='txn_source']").click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+  const edit = ribbon.locator(".home-edit-group");
+  await edit.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Copied .* transaction/);
+
+  await openJson(page, clipboardCollisionDocument("doc_b"));
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await edit.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Paste rejected: clipboard belongs to another document");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "0");
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(page.getByTestId("problems-status")).toHaveText("Problems: 1");
 });
 
 test("multi-selection clipboard preserves stable IDs and commits Duplicate/Cut as one operation", async ({ page }) => {
