@@ -163,3 +163,18 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
 });
+
+test("Event Table valid import uses canonical validation and one history entry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_event']").click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
+  await bottom.getByLabel("Import signal events").setInputFiles({ name: "events.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ values: [{ start: 0, value: "NONE" }, { start: 3, value: "RISE" }] })) });
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
+  await expect(bottom.getByLabel("Value 3")).toHaveValue("RISE");
+});
