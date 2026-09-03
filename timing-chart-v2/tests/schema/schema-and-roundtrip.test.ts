@@ -89,6 +89,15 @@ describe("semantic validation", () => {
     expect(validateDocumentResourceBudget(tooManyCycles)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.timeline.cycleCount", value: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1 })]));
   });
 
+  it("round-trips presentation displayLabel without changing the semantic value", () => {
+    const original = canonicalFixture();
+    const data = original.signals[1]!;
+    const withLabel = { ...original, signals: [original.signals[0]!, { ...data, values: [{ start: 0, value: "0xA5", displayLabel: "READY" }] }] };
+    const reopened = parseDocument(serializeCanonicalDocument(withLabel));
+    expect(reopened.ok).toBe(true);
+    if (reopened.ok) expect(reopened.document.signals[1]).toMatchObject({ values: [{ start: 0, value: "0xA5", displayLabel: "READY" }] });
+  });
+
   it("accepts linked Timing Region/Ghost Trace and rejects a missing Ghost source", () => {
     const document = clone(canonicalFixture());
     const annotations = document.annotations as unknown as Array<Record<string, unknown>>;

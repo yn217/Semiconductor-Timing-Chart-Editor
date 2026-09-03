@@ -8,6 +8,7 @@ import {
   assertSafeWaveDromMarkup,
   renderWaveJsonMarkup,
   toWaveJson,
+  VALUE_LABEL_LAYOUT_POLICY,
   type WaveJsonSignal,
 } from "@timing-chart-v2/wavedrom-adapter";
 import type { ClockSignal, SignalId, ValueSignal } from "@timing-chart-v2/schema";
@@ -114,6 +115,28 @@ describe(`WaveDrom adapter ${WAVEDROM_VERSION} conversion`, () => {
     const bus = { ...canonicalFixture().signals[1]!, values: [{ start: 0, value: "0x12345678", displayLabel: "READY" }] } as ValueSignal;
     expect(bus.values[0]?.value).toBe("0x12345678");
     expect(toWaveJson({ signal: bus, cycleCount: 4 })).toEqual({ wave: "=...", data: ["READY"] });
+  });
+
+  it("defines Auto document defaults and presentation-only SignalValueChange overrides", () => {
+    expect(VALUE_LABEL_LAYOUT_POLICY).toMatchObject({ documentDefault: "auto", signalOverride: "displayLabel", semanticSource: "value", minimumFontPt: 8 });
+  });
+
+  it("fits data labels to actual WaveDrom segment bounds without changing wave geometry", () => {
+    const waveJson: WaveJsonSignal = { wave: "==..=.", data: ["0xDEADBEEF", "LONG_STATE_NAME", "NEXT"] };
+    const markup = renderWaveJsonMarkup(waveJson, 0, ["0xDEADBEEF", "LONG_SYMBOLIC_STATE", "NEXT"]);
+    expect(markup).toContain('data-value-label-segment-start="0" data-value-label-segment-end="40"');
+    expect(markup).toContain('data-value-label-segment-start="40" data-value-label-segment-end="160"');
+    expect(markup).toContain('data-value-label-segment-start="160" data-value-label-segment-end="240"');
+    expect(markup).toContain('data-value-label-mode="ellipsis"');
+    expect(markup).toContain('data-value-label-mode="shrink"');
+    expect(markup).toContain('aria-label="0xDEADBEEF"');
+    expect(markup).toContain("<title>LONG_SYMBOLIC_STATE</title>");
+    expect(markup).toContain('textLength="32" lengthAdjust="spacingAndGlyphs"');
+    expect(markup).toContain('x="20"');
+    expect(markup).toContain('x="100"');
+    expect(markup).toContain('x="200"');
+    expect(markup).toContain('id="gmark_1_0" x1="40"');
+    expect(waveJson).toEqual({ wave: "==..=.", data: ["0xDEADBEEF", "LONG_STATE_NAME", "NEXT"] });
   });
 
   it("applies suppressed clock slots relative to a delayed generator start", () => {

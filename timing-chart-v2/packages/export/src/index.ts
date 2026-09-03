@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { effectiveLegendEntries, type Annotation, type CanonicalDocument, type ClockSignal, type Signal, type SignalId } from "@timing-chart-v2/schema";
+import { effectiveLegendEntries, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -180,15 +180,18 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   const range = rangeFor(document, settings, mapping);
   const signalById = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const signals = document.signalGroups.flatMap((group) => group.rows.map((id) => signalById.get(id))).filter((signal): signal is Signal => signal !== undefined && signal.display.visible !== false);
+  const waveSignals = signals.filter((signal): signal is Exclude<Signal, { readonly type: "commentRow" }> => signal.type !== "commentRow");
   const lanes = [...new Set(document.transactions.map((transaction) => transaction.laneId ?? "lane_0"))].sort();
   const transactionTop = headerHeight + 14;
   const waveTop = transactionTop + lanes.length * TRANSACTION_HEIGHT + 34;
-  const renderedWaves = signals.filter((signal) => signal.type !== "commentRow").map((signal, index) => {
+  const renderedWaves = waveSignals.map((signal, index) => {
+    const displayValues = signal.type === "clock" ? undefined : remapValueChangesToDisplay(signal.values, mapping);
     const displaySignal = signal.type === "clock"
       ? { ...signal, ...(signal.enable ? { enable: remapValueChangesToDisplay(signal.enable, mapping) } : {}) }
-      : { ...signal, values: remapValueChangesToDisplay(signal.values, mapping) };
+      : { ...signal, values: displayValues! };
     const waveJson = toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount });
-    const svgMarkup = renderWaveJsonMarkup(waveJson, index);
+    const semanticValues = signal.type !== "clock" && valueSignalWaveDomain(signal.type) === "data" ? displayValues!.map((change) => String(change.value)) : undefined;
+    const svgMarkup = renderWaveJsonMarkup(waveJson, index, semanticValues);
     return { signal, waveJson, svgMarkup, ...svgDimensions(svgMarkup) };
   });
   const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / mapping.displayCycleCount;

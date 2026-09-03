@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, type CanonicalDocument } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters } from "./edge-counter-projection.js";
@@ -291,11 +291,12 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
           : { ...signal, values: context.mappingCache.remapValueChanges(signal.values, mapping) };
-        return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), error: undefined };
+        const semanticValues = signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? context.mappingCache.remapValueChanges(signal.values, mapping).map((change: { readonly value: string | number }) => String(change.value)) : undefined;
+        return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), semanticValues, error: undefined };
       });
       const renderResults = await Promise.all(prepared.map(async (item) => {
         if (item.error || !item.waveJson) return { ...item, rendered: undefined };
-        try { return { ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner) }; }
+        try { return { ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }; }
         catch (error: unknown) { return { ...item, rendered: undefined, error }; }
       }));
       return renderResults.map((item) => {

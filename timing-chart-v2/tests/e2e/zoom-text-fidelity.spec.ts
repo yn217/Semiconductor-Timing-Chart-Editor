@@ -7,7 +7,7 @@ test("keeps text glyph aspect ratio and X-axis alignment constant across Zoom le
   const surface = host.locator("[data-role='timing-chart-surface']");
   const ruler = page.getByTestId("cycle-ruler");
   const tick0 = ruler.locator("[data-cycle='0']");
-  const busText = surface.locator("[data-signal-id='sig_cycle_data'] > svg text").filter({ hasText: "A5" });
+  const busText = surface.locator("[data-signal-id='sig_cycle_data'] > svg text[data-value-label-index='1']");
   const requestUses = surface.locator("[data-signal-id='sig_cycle_request'] > svg use");
   const tabs = page.locator(".ribbon-tabs");
   const ribbon = page.getByTestId("ribbon");

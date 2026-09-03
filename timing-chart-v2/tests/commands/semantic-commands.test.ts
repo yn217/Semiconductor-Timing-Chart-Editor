@@ -296,7 +296,7 @@ describe("pure Semantic Command planning", () => {
     const source = canonicalFixture();
     const session = new CommandHistorySession(source);
     const before = session.metrics();
-    const values = [{ start: 0, value: "0" }, { start: 2, value: "1", comment: "imported" }, { start: 6, value: "0" }];
+    const values = [{ start: 0, value: "0" }, { start: 2, value: "1", displayLabel: "READY", comment: "imported" }, { start: 6, value: "0" }];
     const result = session.execute({ id: commandId("cmd_replace_values"), type: "signal.replaceValues", signalId: "sig_data" as SignalId, values });
     expect(result.ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
@@ -304,6 +304,8 @@ describe("pure Semantic Command planning", () => {
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(source.signals.find((signal) => signal.id === "sig_data")?.values);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
   });
 });
 
