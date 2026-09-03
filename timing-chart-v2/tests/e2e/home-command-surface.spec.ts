@@ -310,7 +310,7 @@ test("Context Menu exposes shared commands", async ({ page }) => {
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
-for (const viewport of [{ width: 1280, height: 720 }, { width: 1672, height: 941 }]) {
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1366, height: 768 }, { width: 1280, height: 720 }]) {
   test(`clamps the non-Home context menu at every viewport corner (${viewport.width}x${viewport.height})`, async ({ page }) => {
     await page.setViewportSize(viewport);
     await ready(page);
