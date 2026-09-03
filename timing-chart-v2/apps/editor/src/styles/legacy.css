@@ -269,7 +269,7 @@ body { min-width: 1100px; }
 .editor-shell .inspector > header b,
 .editor-shell .inspector-clock-properties button[type="submit"],
 .editor-shell .inspector [data-testid="reveal-in-hierarchy"] { display: none; }
-.editor-shell .clock-context-toolbar::before { margin: 0 2px 0 12px; color: #25384f; content: "Signal: clk    Type: Clock"; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.editor-shell .clock-context-toolbar .clock-context-label { margin: 0 2px 0 12px; color: #25384f; font-size: 11px; font-weight: 700; white-space: nowrap; }
 .editor-shell .surface-host [data-role="left-row"][data-row-id="sig_cycle_clock"],
 .editor-shell .surface-host [data-role="frozen-row"][data-row-id="sig_cycle_clock"] { background: white; }
 .empty-editor { padding: 24px; color: #68768a; }
