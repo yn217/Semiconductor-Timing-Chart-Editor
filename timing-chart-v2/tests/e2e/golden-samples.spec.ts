@@ -1,7 +1,10 @@
 import { readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { expect, test } from "@playwright/test";
 import { assertGoldenSemanticContract, assertGoldenSvgContract } from "../golden/golden-contract.js";
+import { captureScenarioReview } from "../../harness/gui/ai-review-bundle.mjs";
 
 type GoldenSample = {
   readonly file: string;
@@ -36,6 +39,9 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const evidence: Array<Record<string, unknown>> = [];
+  const reviewOutput = testInfo.outputPath("sample-review-bundles");
+  await mkdir(reviewOutput, { recursive: true });
+  const gitHead = execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim();
 
   for (const [index, { meta, path }] of samples.entries()) {
     const source = await readFile(path);
@@ -56,7 +62,23 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     if (meta.transactionCount !== undefined) await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", String(meta.transactionCount));
     if (meta.signalCount !== undefined) await expect(page.getByTestId("signal-count-status")).toHaveText(`Signals: ${meta.signalCount}`);
     expect(await host.locator("[data-role='left-row'][data-row-id]").count()).toBeGreaterThan(0);
-    await page.screenshot({ path: `.tmp_gui_reference/golden-${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.png`, animations: "disabled" });
+    const screenshotPath = `.tmp_gui_reference/golden-${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.png`;
+    await page.screenshot({ path: screenshotPath, animations: "disabled" });
+    const review = await captureScenarioReview({
+      page,
+      scenario: `GOLDEN-SAMPLE-${String(index + 1).padStart(2, "0")}`,
+      gitHead,
+      viewport: [1672, 941],
+      rules: [
+        { selector: ".app-titlebar h1", target: "title" },
+        { selector: "[data-testid='ribbon']", target: "Ribbon" },
+      ],
+      actions: [`open:${meta.file}`, "capture:production-browser"],
+      images: { current: screenshotPath },
+      outputPath: resolve(reviewOutput, `${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.json`),
+    });
+    expect(review.testedCommit).toBe(gitHead);
+    expect(review.diagnostics.findings.filter((finding) => ["CONSOLE_ERROR", "PAGE_ERROR", "RESOURCE_FAILURE"].includes(finding.category))).toEqual([]);
     const title = await page.locator(".app-titlebar h1").textContent();
     const counters = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, unknown>;
     const diagnostics = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, unknown>;
