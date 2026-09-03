@@ -76,8 +76,13 @@ function replaceAttribute(attributes: string, name: string, value: string): stri
  */
 export function applyValueLabelLayout(markup: string, waveJson: WaveJsonSignal, semanticValues: readonly string[] = []): string {
   if (!waveJson.data?.length) return markup;
-  const grid = gridPositions(markup);
   const slots = dataSlots(waveJson.wave);
+  // Large performance fixtures normally hold each bus value for hundreds of
+  // cycles. Their labels cannot reach a segment boundary, so avoid rescanning
+  // the large WaveDrom defs/string when no fitting decision is possible.
+  const minimumSpan = slots.slice(1).reduce((minimum, slot, index) => Math.min(minimum, slot - slots[index]!), Number.POSITIVE_INFINITY);
+  if (waveJson.wave.length > 128 && minimumSpan >= 4 && waveJson.data.every((label) => estimatedWidth(label, BASE_FONT_PT) <= minimumSpan * 40 - SEGMENT_PADDING) && semanticValues.every((value, index) => value === waveJson.data?.[index])) return markup;
+  const grid = gridPositions(markup);
   if (grid.length < waveJson.wave.length + 1 || slots.length === 0) return markup;
   let dataIndex = 0;
   return markup.replace(/<text\b([^>]*\btext-anchor="middle"[^>]*)>(<tspan>)([\s\S]*?)(<\/tspan>[\s\S]*?)<\/text>/g, (whole, rawAttributes: string, prefix: string, rawLabel: string, suffix: string) => {
