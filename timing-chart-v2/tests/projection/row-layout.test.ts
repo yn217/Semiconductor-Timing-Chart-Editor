@@ -66,6 +66,14 @@ describe("RowLayout and projection invariants", () => {
     ]);
     expect(result.totalHeight).toBe(64);
   });
+  it("removes the group header height when showHeader is disabled", () => {
+    const document = canonicalFixture();
+    document.signalGroups = document.signalGroups.map((group, index) => index === 0 ? { ...group, style: { showHeader: false } } : group);
+    const result = calculateRowLayout(document);
+    expect(result.groupHeaders[0]).toMatchObject({ groupId: "grp_main", y: 0, height: 0 });
+    expect(result.visibleRows[0]).toMatchObject({ rowId: "sig_clk", y: 0 });
+    expect(result.totalHeight).toBe(62);
+  });
   it("derives collapsed groups as compact layout without changing canonical row IDs", () => {
     const document = layoutFixture();
     const expanded = calculateRowLayout(document);
