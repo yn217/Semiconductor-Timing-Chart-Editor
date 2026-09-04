@@ -2,6 +2,7 @@ import {
   parseDocument,
   serializeValidatedCanonicalDocument,
   validateCanonicalDocument,
+  validateDocumentResourceBudget,
   type CanonicalDocument,
   type DocumentProblem,
   type MigrationWarning,
@@ -122,7 +123,11 @@ export class DocumentSession implements CanonicalStore, CanonicalMutationPort {
 
   #validate(candidate: Readonly<CanonicalDocument>): readonly DocumentProblem[] {
     this.#validationRuns += 1;
-    return validateCanonicalDocument(candidate);
+    // Keep structural/canonical validation and the product policy as distinct
+    // layers, but require both before a candidate can enter the session. This
+    // is the authoritative boundary shared by commands, batches, history
+    // restoration, and document replacement commands.
+    return [...validateCanonicalDocument(candidate), ...validateDocumentResourceBudget(candidate)];
   }
 
   commit(next: Readonly<CanonicalDocument>, expectedRevision: number): CanonicalSnapshot {

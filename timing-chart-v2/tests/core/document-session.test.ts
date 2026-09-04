@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { DocumentSession } from "@timing-chart-v2/core";
 import { parseDocument } from "@timing-chart-v2/schema";
+import { DOCUMENT_RESOURCE_BUDGET } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("DocumentSession atomic Open/Save", () => {
@@ -59,5 +60,20 @@ describe("DocumentSession atomic Open/Save", () => {
     expect(session.open(first.text).ok).toBe(true);
     const second = session.save();
     expect(second).toEqual(first);
+  });
+
+  it("rejects a product-budget overflow at the canonical commit boundary atomically", () => {
+    const base = canonicalFixture();
+    const session = new DocumentSession({
+      ...base,
+      timeline: { ...base.timeline, cycleCount: DOCUMENT_RESOURCE_BUDGET.cycleCount, end: DOCUMENT_RESOURCE_BUDGET.cycleCount },
+    });
+    const before = session.getSnapshot();
+    expect(() => session.commit({
+      ...before.document,
+      timeline: { ...before.document.timeline, cycleCount: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1, end: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1 },
+    }, before.revision)).toThrowError(/RESOURCE_LIMIT_EXCEEDED/);
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual({ validationRuns: 2, commits: 0 });
   });
 });
