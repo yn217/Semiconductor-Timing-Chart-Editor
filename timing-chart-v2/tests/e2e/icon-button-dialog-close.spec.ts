@@ -113,3 +113,31 @@ test("Home overflow uses the shared menu keyboard behavior and restores its invo
   await expect(menu).toBeHidden();
   await expect(trigger).toBeFocused();
 });
+
+test("Tree menus close on Escape or outside click without selecting the canvas", async ({ page }) => {
+  await page.goto("/");
+  const revision = await page.getByTestId("revision-status").textContent();
+  const history = await page.getByTestId("history-status").textContent();
+  const addTrigger = page.getByRole("button", { name: "Add signal or group", exact: true });
+  await addTrigger.click();
+  const addMenu = page.getByRole("menu", { name: "Add signal or group" });
+  await expect(addMenu).toBeVisible();
+  await expect(addMenu.getByRole("menuitem").first()).toBeFocused();
+  await page.keyboard.press("Escape");
+  await expect(addMenu).toBeHidden();
+  await expect(addTrigger).toBeFocused();
+
+  const moreTrigger = page.getByRole("button", { name: "More tree actions", exact: true });
+  await moreTrigger.click();
+  const moreMenu = page.getByRole("menu", { name: "More tree actions" });
+  await expect(moreMenu).toBeVisible();
+  await expect(moreMenu.getByRole("menuitem").first()).toBeFocused();
+  const viewport = page.getByTestId("cycle-viewport");
+  await viewport.dispatchEvent("pointerdown", { bubbles: true, button: 0, clientX: 600, clientY: 420 });
+  await viewport.dispatchEvent("click", { bubbles: true, clientX: 600, clientY: 420 });
+  await expect(moreMenu).toBeHidden();
+  await expect(moreTrigger).toBeFocused();
+  await expect(page.getByTestId("revision-status")).toHaveText(revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});

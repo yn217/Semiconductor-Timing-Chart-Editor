@@ -8,7 +8,9 @@ export function useDialogFocusLoop<T extends HTMLElement>(dialogRef: RefObject<T
     if (!dialog) return undefined;
     const previous = restoreFocusRef?.current ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const focusable = () => [...dialog.querySelectorAll<HTMLElement>("button, input, select, textarea, [tabindex]:not([tabindex='-1'])")].filter((item) => !item.hasAttribute("disabled") && item.getClientRects().length > 0);
-    focusable()[0]?.focus();
+    const initial = focusable();
+    const preferred = dialog.querySelector<HTMLElement>("[data-dialog-initial-focus]");
+    (preferred !== null && initial.includes(preferred) ? preferred : initial[0])?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Tab") return;
       const items = focusable();

@@ -13,5 +13,5 @@ export function SaveAsDialog({ defaultName, restoreFocusRef, onSave, onClose }: 
     const trimmed = name.trim();
     if (!trimmed || trimmed === "." || trimmed === ".." || /[\\/:*?"<>|]/.test(trimmed)) { setError("Enter a valid filename."); return; }
     if (!onSave(trimmed)) setError("Save failed. The document remains modified.");
-  }}><header><h2>Save As</h2><button type="button" aria-label="Close Save As" onClick={onClose}><EditorIcon name="close" /></button></header><label>Filename<input aria-label="Save As filename" value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoFocus /></label>{error && <output role="alert">{error}</output>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="save-as-submit">Save</button></footer></form></div>;
+  }}><header><h2>Save As</h2><button type="button" aria-label="Close Save As" onClick={onClose}><EditorIcon name="close" /></button></header><label>Filename<input data-dialog-initial-focus aria-label="Save As filename" value={name} onChange={(event) => { setName(event.target.value); setError(""); }} autoFocus /></label>{error && <output role="alert">{error}</output>}<footer><button type="button" onClick={onClose}>Cancel</button><button type="submit" data-testid="save-as-submit">Save</button></footer></form></div>;
 }

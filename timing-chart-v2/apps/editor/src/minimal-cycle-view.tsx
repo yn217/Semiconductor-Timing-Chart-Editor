@@ -192,6 +192,7 @@ export function MinimalCycleView() {
   const pendingFileOriginRef = useRef<HTMLElement | null>(null);
   const unsavedCancelRef = useRef<HTMLButtonElement>(null);
   const renameDialogRef = useRef<HTMLFormElement>(null);
+  const renameDialogOriginRef = useRef<HTMLElement | null>(null);
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
@@ -200,6 +201,7 @@ export function MinimalCycleView() {
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const menuOriginRef = useRef<HTMLElement | null>(null);
+  const suppressCanvasClickRef = useRef(false);
   const restoreMenuFocus = () => {
     const origin = menuOriginRef.current;
     menuOriginRef.current = null;
@@ -216,6 +218,21 @@ export function MinimalCycleView() {
     const menuOpen = contextMenu !== undefined || treeAddMenuOpen || treeMoreMenuOpen;
     if (previousMenuOpenRef.current && !menuOpen) restoreMenuFocus();
     previousMenuOpenRef.current = menuOpen;
+  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
+  useEffect(() => {
+    if (contextMenu === undefined && !treeAddMenuOpen && !treeMoreMenuOpen) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      const target = event.target instanceof Element ? event.target : undefined;
+      if (target?.closest(".context-menu, .tree-add-menu, .tree-header-menu, .tree-add-button, .tree-more-button")) return;
+      const canvasOutside = target !== undefined && target.closest("[data-testid='cycle-viewport'], [data-role='timing-chart-surface'], [data-testid='cycle-ruler']") !== null
+        && target?.closest("[data-row-id], [data-annotation-id], [data-transaction-id]") === null;
+      suppressCanvasClickRef.current = canvasOutside;
+      setContextMenu(undefined);
+      setTreeAddMenuOpen(false);
+      setTreeMoreMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   useEffect(() => {
     return attachDialogOriginCapture(document, dialogOriginRef, dialogOriginLabelRef, menuOriginRef);
@@ -246,7 +263,7 @@ export function MinimalCycleView() {
     menu?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     return attachMenuKeyboardNavigation(document, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu);
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
-  useDialogFocusLoop(renameDialogRef, undefined, renameDialogOpen);
+  useDialogFocusLoop(renameDialogRef, renameDialogOriginRef, renameDialogOpen);
   useDialogFocusLoop(bulkRegistrationDialogRef, dialogOriginRef, bulkRegistrationVisible);
   useDialogFocusLoop(unsavedFileDialogRef, pendingFileOriginRef, pendingFileAction !== undefined);
   useDialogFocusLoop(compatibilityDialogRef, pendingFileOriginRef, compatibilityPreview !== undefined);
@@ -1009,6 +1026,7 @@ export function MinimalCycleView() {
        setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
     };
     const onCanvasClick = (event: MouseEvent) => {
+      if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
       if (rangeInteractions.consumeCanvasClickSuppression()) return;
       const target = event.target instanceof Element ? event.target : undefined;
       // Renderer-owned command controls must win over the time-domain hit
@@ -1019,6 +1037,7 @@ export function MinimalCycleView() {
       if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event);
     };
     const onViewportClick = (event: MouseEvent) => {
+      if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
       const target = event.target instanceof Element ? event.target : undefined;
       if (target && (rendererHost.contains(target) || target.closest("[data-testid='cycle-ruler']"))) return;
       if (rangeInteractions.consumeCanvasClickSuppression()) return;
@@ -1258,6 +1277,11 @@ export function MinimalCycleView() {
   const renameSelection = () => {
     const current = selectedSignal?.display.name ?? selectedGroup?.name ?? selectedTransaction?.name;
     if (current === undefined) return;
+    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const homeOverflowTrigger = active?.closest<HTMLElement>("[role='menu']")?.getAttribute("aria-label") === "More Home Commands"
+      ? [...document.querySelectorAll<HTMLButtonElement>("[data-testid='ribbon'] button")].find((button) => button.textContent?.trim() === "More") ?? null
+      : null;
+    renameDialogOriginRef.current = menuOriginRef.current ?? homeOverflowTrigger ?? active;
     setRenameDraft(current);
     setRenameError("");
     setRenameDialogOpen(true);
