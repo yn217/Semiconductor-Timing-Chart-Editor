@@ -30,6 +30,21 @@
 .bottom-content .editor-tabbar { height: 37px; }
 .bottom-content .editor-tabbar .editor-tab { display: none; }
 
+/* Annotation and shared detail-editor presentation. These selectors are
+   scoped to the Bottom/annotation editing surface rather than the global
+   compatibility cascade. */
+.annotation-properties { display: flex; align-items: end; gap: 10px; padding: 12px; border-bottom: 1px solid #e0e5ec; }
+.annotation-properties label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
+.annotation-properties input:not([type="checkbox"]), .annotation-properties select { width: 150px; height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 3px 7px; }
+.annotation-properties input[type="color"] { width: 46px; padding: 2px; }
+.annotation-properties .check-label { display: flex; align-items: center; height: 27px; }
+.annotation-properties button { height: 27px; border: 1px solid #775a99; border-radius: 3px; background: #76579a; color: white; padding: 3px 10px; }
+
+.annotation-context-toolbar { display: flex; align-items: center; gap: 5px; min-height: 33px; padding: 4px 10px; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
+.annotation-context-toolbar button { height: 25px; padding: 2px 8px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #304761; font-size: 10px; }
+.annotation-context-toolbar button:first-child { border-color: #246aa8; background: #2c78bb; color: white; }
+.annotation-context-toolbar output { margin-left: auto; color: #63758b; font-size: 9px; }
+
 .editor-shell .signal-editor:has(.clock-editor) .editor-tabbar { display: flex; }
 
 .editor-shell .signal-editor:has(.clock-editor) .editor-tabbar .editor-tab,
@@ -124,3 +139,36 @@
 
 .editor-shell .timeline-objects > .timeline-bookmark > button,
 .editor-shell .timeline-objects > .timeline-time-group > button { min-width: 0; max-width: 100%; padding: 1px 3px; font-size: 8px; }
+
+/* Annotation and shared detail-editor presentation. These selectors are
+   scoped to the Bottom/annotation editing surface rather than the global
+   compatibility cascade. */
+.annotation-hint { align-self: center; color: #718097; font-size: 10px; }
+.signal-editor { min-height: 250px; margin: 0; overflow: auto; border: 0; border-radius: 0; background: white; box-shadow: none; }
+.editor-tabbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-bottom: 1px solid #cad3df; background: #f4f7fa; }
+.editor-tabbar button, .editor-tabbar .editor-tab { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
+.editor-tabbar button:disabled { opacity: .45; }
+.editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
+.editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
+.annotation-list { min-width: 880px; overflow: hidden; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
+.annotation-list-row { display: grid; grid-template-columns: 20px 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }
+.annotation-list-header { min-height: 25px; border-bottom: 1px solid #cbd6e2; background: #f0f4f8; color: #607188; font-size: 9px; font-weight: 700; }
+.annotation-list > .annotation-list-row:not(.annotation-list-header) { width: 100%; border: 0; border-bottom: 1px solid #e1e7ee; background: white; color: #304761; cursor: pointer; }
+.annotation-list > .annotation-list-row:not(.annotation-list-header):hover { background: #f3f8fd; }
+.annotation-list > .annotation-list-row[data-selected="true"] { background: #e5f2ff; box-shadow: inset 3px 0 #2b79bf; }
+.annotation-list-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-list-visibility { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: none; background: transparent; color: #607188; }
+.annotation-list-visibility svg { width: 12px; height: 12px; }
+.annotation-list-visibility[aria-pressed="false"] { opacity: .4; }
+.annotation-list-index { color: #7b8999; font-size: 9px; text-align: center; }
+.annotation-list-type { overflow: hidden; color: #65758a; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-list-label { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
+.editor-empty { display: grid; min-height: 160px; place-items: center; color: #728096; font-size: 12px; }
+.editor-problem { padding: 7px 12px; border-bottom: 1px solid #f2c2c2; background: #fff0f0; color: #9a2b2b; font-size: 11px; }
+.signal-properties { display: flex; align-items: end; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #e0e5ec; }
+.signal-properties input { width: 180px; }
+.clock-generator { display: flex; align-items: end; gap: 10px; padding: 10px 12px 14px; }
+.clock-generator h2 { align-self: center; margin: 0 8px 0 0; font-size: 13px; }
+.clock-generator input, .clock-generator select { width: 82px; }
+.quick-values { display: flex; gap: 4px; }
+.quick-values button { min-width: 30px; padding-inline: 6px; }
