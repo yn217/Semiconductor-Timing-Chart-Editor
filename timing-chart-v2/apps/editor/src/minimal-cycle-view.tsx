@@ -1408,14 +1408,20 @@ export function MinimalCycleView() {
     const id = signalId(nextEntityId(kind === "commentRow" ? "commentRow" : "signal", snapshot.document));
     if (kind === "commentRow") {
       const name = `Comment ${snapshot.document.signals.length + 1}`;
-      commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_comment"), type: "commentRow.create", commentRow: { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" }, targetGroupId: targetGroup.id, index });
+      const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_comment"), type: "commentRow.create", commentRow: { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" }, targetGroupId: targetGroup.id, index });
+      // Same "select the thing that was just created" contract as Group and
+      // Spacer just above: without it, adding a row leaves the PREVIOUS
+      // selection in place, so the newly added row isn't immediately
+      // reachable for rename/edit without an extra manual click.
+      if (result.ok) selection.selectSignal(id);
       return;
     }
     const name = `${kind === "clock" ? "CLOCK" : kind.toUpperCase()}_${snapshot.document.signals.length + 1}`;
     const signal = kind === "clock"
       ? { id, name, type: "clock" as const, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0 as 0 | 1, polarity: "positive" as const }, edgeCounter: { show: false, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const, labelEvery: 1, position: "above" as const, offset: { x: 0, y: -6 } } }
       : valueSignal(id, name, "internal", [{ start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : kind === "event" ? "NONE" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "signal" ? "binary" : kind });
-    commandRegistry.current.execute("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
+    const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
+    if (result.ok) selection.selectSignal(id);
   };
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Problems", "JSON"]
@@ -1607,6 +1613,10 @@ export function MinimalCycleView() {
       selectedAnnotation={selectedAnnotation}
       selectedAnnotationIds={selection.state.annotationIds}
       selectedCommentRow={selectedSignal?.type === "commentRow" ? selectedSignal : undefined}
+      onSignalCreated={selection.selectSignal}
+      onGroupCreated={selection.selectGroup}
+      onSpacerCreated={selection.selectSpacer}
+      onTransactionCreated={selection.selectTransaction}
       problemsCount={diagnostics.length}
       diagnostics={diagnostics}
       onNavigateProblem={navigateProblem}
