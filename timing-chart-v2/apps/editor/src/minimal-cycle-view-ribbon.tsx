@@ -233,9 +233,9 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     },
     {
       id: "layout", majorGroup: "Layout", caption: "Layout", items: [
-        { kind: "button", id: "align-interval", icon: "i-align-interval", label: "Align Interval", ariaLabel: "Align interval", onClick: onOpenTimeline },
-        { kind: "button", id: "group", icon: "i-group", label: "Group", ariaLabel: "Group", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
-        { kind: "button", id: "auto-layout", icon: "i-auto-layout", label: "Auto Layout", ariaLabel: "Auto Layout", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
+        { kind: "button", id: "edit-interval", icon: "i-align-interval", label: "Edit Interval", ariaLabel: "Open Timeline interval editor", title: "Open Timeline to edit the selected interval.", onClick: onOpenTimeline },
+        { kind: "button", id: "time-group", icon: "i-group", label: "Create Time Group", ariaLabel: "Create Time Group", title: "Create a Time Group for the selected timeline range.", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
+        { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Normalize Spacing", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
       ],
     },
     {
