@@ -275,6 +275,82 @@ test("moves the whole Annotation by visual offsets and resets offsets independen
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
 });
 
+test("creates standard and Custom Measurement profiles with explicit transition semantics", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("3");
+  await page.getByLabel("Timeline range end").fill("8");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("measurement");
+  const toolbar = page.getByTestId("annotation-toolbar");
+  const profile = toolbar.getByTestId("measurement-profile");
+  for (const [index, [value, start, end]] of [["10-90", "0.1", "0.9"], ["20-80", "0.2", "0.8"], ["50%", "0.5", "0.5"]].entries()) {
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+    await profile.selectOption(value);
+    await page.getByRole("button", { name: "Add annotation" }).click();
+    await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(index + 1);
+    const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+    const displayProfile = value === "10-90" ? "10%→90%" : value === "20-80" ? "20%→80%" : "50%→50%";
+    await expect(owner).toHaveAttribute("aria-label", new RegExp(`${displayProfile}.*threshold`));
+    await expect(owner.locator(`[data-role='annotation-handle'][data-anchor-threshold='${start}']`)).toHaveCount(start === end ? 2 : 1);
+    await expect(owner.locator(`[data-role='annotation-handle'][data-anchor-threshold='${end}']`)).toHaveCount(start === end ? 2 : 1);
+  }
+  await profile.selectOption("custom");
+  await toolbar.getByLabel("Measurement anchor kind").selectOption("ratio");
+  await toolbar.getByLabel("Custom measurement start").fill("17");
+  await toolbar.getByLabel("Custom measurement end").fill("83");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  const custom = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']").last();
+  await expect(custom).toHaveAttribute("aria-label", /17%→83%.*ratio/);
+  await expect(custom.locator("[data-role='annotation-handle'][data-anchor-threshold='0.17']")).toHaveCount(1);
+  await expect(custom.locator("[data-role='annotation-handle'][data-anchor-transition-kind='ratio']")).toHaveCount(2);
+  await profile.selectOption("custom");
+  await toolbar.getByLabel("Custom measurement start").fill("90");
+  await toolbar.getByLabel("Custom measurement end").fill("10");
+  await expect(page.getByRole("button", { name: "Add annotation" })).toBeDisabled();
+  await expect(host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']")).toHaveCount(4);
+});
+
+test("edits Measurement semantics with one history step and preserves them through Undo/Redo and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("3");
+  await page.getByLabel("Timeline range end").fill("8");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const toolbar = page.getByTestId("annotation-toolbar");
+  await toolbar.getByLabel("Annotation type").selectOption("measurement");
+  await toolbar.getByTestId("measurement-profile").selectOption("30-70");
+  await toolbar.getByRole("button", { name: "Add annotation" }).click();
+  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='measurement']");
+  await expect(owner).toHaveCount(1);
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Measurement profile").selectOption("custom");
+  await editor.getByLabel("Measurement anchor kind").selectOption("ratio");
+  await editor.getByLabel("Custom measurement start").fill("17");
+  await editor.getByLabel("Custom measurement end").fill("83");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  await editor.getByTestId("apply-measurement-semantics").click();
+  await expect(owner).toHaveAttribute("aria-label", /17%→83%.*ratio/);
+  await expect(page.getByTestId("history-status")).toHaveText(`History ${Number(historyBefore?.match(/History (\d+)/)?.[1] ?? 0) + 1} / Redo 0`);
+  await editor.getByTestId("editor-undo").click();
+  await expect(owner).toHaveAttribute("aria-label", /30%→70%.*threshold/);
+  await editor.getByTestId("editor-redo").click();
+  await expect(owner).toHaveAttribute("aria-label", /17%→83%.*ratio/);
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles((await (await save).path())!);
+  await expect(owner).toHaveAttribute("aria-label", /17%→83%.*ratio/);
+  await expect(owner.locator("[data-role='annotation-handle'][data-anchor-transition-kind='ratio']")).toHaveCount(2);
+});
+
 test("cancels an active Annotation drag when New replaces the document", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

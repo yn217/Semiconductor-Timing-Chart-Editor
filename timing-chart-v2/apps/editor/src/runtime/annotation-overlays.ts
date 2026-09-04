@@ -1,4 +1,5 @@
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
+import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import type { LocalGeometryMap, Point } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
@@ -6,11 +7,23 @@ import { resolveAnchorPoint } from "../resolve-anchor-point.js";
 
 export const annotationFields = ["anchor", "start", "end", "from", "to"] as const;
 
+function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurement" | "start" | "end">): string {
+  if (!annotation.start || !annotation.end) return annotation.label;
+  const start = anchorTransitionFraction(annotation.start);
+  const end = anchorTransitionFraction(annotation.end);
+  if (start === undefined || end === undefined || annotation.measurement?.profile === "cycle") return `${annotation.label} · cycle anchors · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
+  const profile = annotation.measurement?.profile;
+  const range = profile === "30-70" ? "30%→70%" : profile === "10-90" ? "10%→90%" : profile === "20-80" ? "20%→80%" : profile === "50%" ? "50%→50%" : `${Math.round(start * 100)}%→${Math.round(end * 100)}%`;
+  return `${annotation.label} · ${range} · ${annotation.measurement?.anchorKind ?? "threshold"} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles`;
+}
+
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);
-      return point ? [{ field, ...point, ...(annotation[field]?.threshold === undefined ? {} : { threshold: annotation[field]!.threshold }) }] : [];
+      const fraction = anchorTransitionFraction(annotation[field]);
+      const kind = anchorTransitionKind(annotation[field]);
+      return point ? [{ field, ...point, ...(fraction === undefined ? {} : { threshold: fraction }), ...(kind === undefined ? {} : { transitionKind: kind }) }] : [];
     });
     if (anchors.length === 0) return [];
     const firstAnchor = annotation.start ?? annotation.anchor;
@@ -45,7 +58,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       id: annotation.id,
       type: annotation.type,
       shape,
-      label: annotation.type === "measurement" && annotation.start && annotation.end ? `${annotation.label} · ${annotation.start.threshold === undefined || annotation.end.threshold === undefined ? "cycle anchors" : `${Math.round(annotation.start.threshold * 100)}%→${Math.round(annotation.end.threshold * 100)}%`} · Δ ${Math.abs(annotation.end.cycle - annotation.start.cycle)} cycles` : annotation.label,
+      label: annotation.type === "measurement" ? measurementAnchorLabel(annotation) : annotation.label,
       visible: annotation.visible,
       ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }),
       ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }),

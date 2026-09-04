@@ -10,3 +10,4 @@ export * from "./edge-counter.js";
 export * from "./clock-slots.js";
 export * from "./resource-budget.js";
 export * from "./legend.js";
+export * from "./annotation-semantics.js";

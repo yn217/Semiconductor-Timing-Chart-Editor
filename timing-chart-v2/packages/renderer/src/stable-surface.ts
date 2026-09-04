@@ -627,6 +627,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     handle.dataset.role = "annotation-handle";
     handle.dataset.annotationField = anchor.field;
     if (anchor.threshold !== undefined) handle.dataset.anchorThreshold = String(anchor.threshold);
+    if (anchor.transitionKind !== undefined) handle.dataset.anchorTransitionKind = anchor.transitionKind;
     handle.style.transform = `translate(${anchor.x}px, ${anchor.y}px)`;
     return handle;
   });

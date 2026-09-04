@@ -198,6 +198,11 @@ function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annota
     if (!Number.isFinite(anchor.threshold) || anchor.threshold < 0 || anchor.threshold > 1) problems.push(problem("INVALID_ANCHOR_THRESHOLD", `${path}.threshold`, "Anchor threshold must be a finite fraction between 0 and 1.", annotation.id));
     if (!(anchor.point === "transition-start" || anchor.point === "transition-center" || anchor.point === "transition-end")) problems.push(problem("INVALID_ANCHOR_THRESHOLD_POINT", `${path}.threshold`, "Anchor threshold requires a transition point.", annotation.id));
   }
+  if (anchor.transition !== undefined) {
+    if (!Number.isFinite(anchor.transition.value) || anchor.transition.value < 0 || anchor.transition.value > 1) problems.push(problem("INVALID_ANCHOR_THRESHOLD", `${path}.transition.value`, "Transition anchor value must be a finite fraction between 0 and 1.", annotation.id));
+    if (!(anchor.point === "transition-start" || anchor.point === "transition-center" || anchor.point === "transition-end")) problems.push(problem("INVALID_ANCHOR_THRESHOLD_POINT", `${path}.transition`, "Transition anchor requires a transition point.", annotation.id));
+    if (anchor.threshold !== undefined && anchor.threshold !== anchor.transition.value) problems.push(problem("INVALID_ANCHOR_THRESHOLD", `${path}.threshold`, "Legacy threshold and explicit transition value must agree.", annotation.id));
+  }
   if (anchor.signalId !== undefined) {
     const target = signals.get(anchor.signalId);
    if (target && target.type === "commentRow") problems.push(problem("NON_TIMING_ANCHOR_TARGET", `${path}.signalId`, "Annotations cannot target a non-timing comment row.", annotation.id));
@@ -290,6 +295,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       const anchor = annotation[key];
       if (anchor) validateAnchor(anchor, `$.annotations[${index}].${key}`, annotation, signals, document.timeline.cycleCount, problems);
     }
+    if (annotation.measurement !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurement`, "Measurement semantics are only valid for Measurement annotations.", annotation.id));
     if (annotation.type === "ghostTrace") {
       if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));
 

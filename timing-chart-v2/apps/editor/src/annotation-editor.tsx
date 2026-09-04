@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, AnnotationType, CanonicalDocument, JsonObject } from "@timing-chart-v2/schema";
+import { MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type JsonObject, type MeasurementProfile, type TransitionAnchorKind } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
@@ -18,6 +18,10 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const [labelY, setLabelY] = useState(annotation.labelOffset?.y ?? -14);
   const [opacity, setOpacity] = useState(annotation.opacity ?? (annotation.type === "ghostTrace" ? 0.55 : 0.16));
   const [traceOffsetCycles, setTraceOffsetCycles] = useState(annotation.traceOffsetCycles ?? 0);
+  const [measurementProfile, setMeasurementProfile] = useState<MeasurementProfile>(annotation.measurement?.profile ?? "cycle");
+  const [measurementKind, setMeasurementKind] = useState<TransitionAnchorKind>(annotation.measurement?.anchorKind ?? "threshold");
+  const [measurementStart, setMeasurementStart] = useState(String(Math.round((anchorTransitionFraction(annotation.start) ?? 0.3) * 100)));
+  const [measurementEnd, setMeasurementEnd] = useState(String(Math.round((anchorTransitionFraction(annotation.end) ?? 0.7) * 100)));
   const [previewRevision, setPreviewRevision] = useState(0);
   const [importStatus, setImportStatus] = useState("Import annotations JSON");
   const fileInput = useRef<HTMLInputElement>(null);
@@ -42,6 +46,10 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   // properties, not the unsaved draft fields below -- clicking Bold should
   // never accidentally commit an in-progress label/color edit.
   const applyFontStyle = (style: JsonObject) => onCommand(buildAnnotationStyleCommand(annotation, style, nextCommandId("annotation_font")));
+  const standardMeasurementPair = measurementProfilePair(measurementProfile);
+  const customMeasurementPair = { start: Number(measurementStart) / 100, end: Number(measurementEnd) / 100 };
+  const measurementPair = measurementProfile === "custom" ? customMeasurementPair : standardMeasurementPair ?? { start: 0, end: 1 };
+  const measurementDraftValid = measurementProfile !== "custom" || ([measurementPair.start, measurementPair.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) && measurementPair.start <= measurementPair.end);
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" data-bottom-target-id={annotation.id} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <span className="editor-tab">Signal</span><span className="editor-tab active">Annotation</span>
@@ -78,6 +86,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       <label className="check-label"><input aria-label="Annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Visible</label>
       {(["timingRegion", "ghostTrace"] as const).includes(annotation.type as "timingRegion") && <label>Opacity<input aria-label="Annotation opacity" type="number" min="0" max="1" step="0.05" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} /></label>}
       {annotation.type === "ghostTrace" && <><div className="property-row"><span>Source Signal</span><b data-testid="ghost-source-signal">{annotation.sourceSignalId ?? "Missing"}</b></div><label>Cycle Offset<input aria-label="Ghost Trace cycle offset" type="number" step="1" value={traceOffsetCycles} onChange={(event) => setTraceOffsetCycles(Number(event.target.value))} /></label></>}
+      {annotation.type === "measurement" && <section className="annotation-measurement-editor" aria-label="Measurement semantics"><strong>Transition measurement</strong><label>Profile<select aria-label="Measurement profile" value={measurementProfile} onChange={(event) => setMeasurementProfile(event.target.value as MeasurementProfile)}>{MEASUREMENT_PROFILES.map((profile) => <option key={profile} value={profile}>{profile === "cycle" ? "Cycle anchors" : profile === "custom" ? "Custom" : profile}</option>)}</select></label>{measurementProfile !== "cycle" && <label>Meaning<select aria-label="Measurement anchor kind" value={measurementKind} onChange={(event) => setMeasurementKind(event.target.value as TransitionAnchorKind)}><option value="threshold">Transition threshold</option><option value="ratio">Transition ratio</option></select></label>}{measurementProfile === "custom" && <><label>Start %<input aria-label="Custom measurement start" type="number" min="0" max="100" step="1" value={measurementStart} onChange={(event) => setMeasurementStart(event.target.value)} /></label><label>End %<input aria-label="Custom measurement end" type="number" min="0" max="100" step="1" value={measurementEnd} onChange={(event) => setMeasurementEnd(event.target.value)} /></label></>}<button type="button" data-testid="apply-measurement-semantics" disabled={!measurementDraftValid} onClick={() => onCommand({ id: nextCommandId("annotation_measurement"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: measurementProfile, anchorKind: measurementKind, start: measurementPair.start, end: measurementPair.end })}>Apply measurement</button></section>}
       {annotation.type === "arrow" && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}
       <button type="submit" data-testid="apply-annotation-properties">Apply</button>
       <button type="button" onClick={() => onCommand({ id: nextCommandId("annotation_reset_offsets"), type: "annotation.resetOffsets", annotationId: annotation.id })}>Reset offsets</button>

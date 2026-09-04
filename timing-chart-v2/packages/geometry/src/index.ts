@@ -1,3 +1,4 @@
+import { anchorTransitionFraction } from "@timing-chart-v2/schema";
 import type { AnchorPoint, Annotation, Bookmark, CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
 
 export interface Point { readonly x: number; readonly y: number }
@@ -49,22 +50,32 @@ export interface LocalGeometryEntry {
   readonly position: Point;
 }
 
+export interface TransitionGeometryResolver {
+  readonly cycle: number;
+  readonly point: AnchorPoint;
+  readonly resolve: (fraction: number) => Point;
+}
+
 const keyOf = (cycle: number, point: AnchorPoint, threshold?: number): string => `${cycle}:${point}:${threshold ?? ""}`;
 
 export class ImmutableLocalGeometryMap implements LocalGeometryMap {
   readonly signalId: SignalId;
   readonly #entries: ReadonlyMap<string, Point>;
+  readonly #transitionResolvers: ReadonlyMap<string, (fraction: number) => Point>;
 
-  constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[]) {
+  constructor(signalId: SignalId, entries: readonly LocalGeometryEntry[], transitionResolvers: readonly TransitionGeometryResolver[] = []) {
     this.signalId = signalId;
     this.#entries = new Map(entries.map((entry) => [keyOf(entry.cycle, entry.point, entry.threshold), Object.freeze({ ...entry.position })]));
+    this.#transitionResolvers = new Map(transitionResolvers.map((entry) => [keyOf(entry.cycle, entry.point), entry.resolve]));
   }
 
   find(anchor: SemanticAnchor): LocalAnchorGeometry | undefined {
     if (anchor.signalId !== this.signalId) return undefined;
-    const base = this.#entries.get(keyOf(anchor.cycle, anchor.point, anchor.threshold));
-    if (!base) return undefined;
-    const point = Object.freeze({ x: base.x + (anchor.offset?.x ?? 0), y: base.y + (anchor.offset?.y ?? 0) });
+    const fraction = anchorTransitionFraction(anchor);
+    const base = this.#entries.get(keyOf(anchor.cycle, anchor.point, fraction));
+    const resolved = base ?? (fraction === undefined ? undefined : this.#transitionResolvers.get(keyOf(anchor.cycle, anchor.point))?.(fraction));
+    if (!resolved) return undefined;
+    const point = Object.freeze({ x: resolved.x + (anchor.offset?.x ?? 0), y: resolved.y + (anchor.offset?.y ?? 0) });
     return Object.freeze({ signalId: this.signalId, anchor, point });
   }
 }
