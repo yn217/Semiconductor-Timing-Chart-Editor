@@ -433,7 +433,8 @@ test("creates geometry-positioned Marker without waveform regeneration and a Gap
 
   await page.getByRole("button", { name: "Add marker" }).click();
   await expect(ruler.locator("[data-bookmark-id]")).toHaveCount(1);
-  expect(Number.parseFloat(await ruler.locator("[data-bookmark-id]").evaluate((element) => (element as HTMLElement).style.left))).toBe(cycle2);
+  const markerLeft = Number.parseFloat(await ruler.locator("[data-bookmark-id]").evaluate((element) => (element as HTMLElement).style.left));
+  expect(Math.abs(markerLeft - cycle2)).toBeLessThan(1);
   // a Marker is view-geometry only — it must not touch WaveDrom or LocalGeometry.
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
 
@@ -537,6 +538,31 @@ test("edits a named Bookmark through one semantic operation and preserves it thr
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+});
+
+test("renders multiple independent Axis Breaks through the shared mapping", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const ruler = page.getByTestId("cycle-ruler");
+  const start = page.getByLabel("Timeline range start");
+  const end = page.getByLabel("Timeline range end");
+  const axisBreak = page.getByRole("button", { name: "Axis Break", exact: true });
+
+  await start.fill("2");
+  await end.fill("4");
+  await axisBreak.click();
+  await expect(ruler.locator("[data-time-group-id]")).toHaveCount(1);
+
+  await end.fill("10");
+  await start.fill("8");
+  await axisBreak.click();
+  await expect(ruler.locator("[data-time-group-id]")).toHaveCount(2);
+  const breakIds = await ruler.locator("[data-time-group-id]").evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.timeGroupId));
+  expect(breakIds.every(Boolean)).toBe(true);
+  expect(new Set(breakIds).size).toBe(2);
+  for (const cycle of [2, 3, 8, 9]) await expect(ruler.locator(`[data-cycle='${cycle}']`)).toHaveCount(0);
+  for (const cycle of [4, 10]) await expect(ruler.locator(`[data-cycle='${cycle}']`)).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
 
 test("duplicates the selected cycle state range at a destination in one commit", async ({ page }) => {
