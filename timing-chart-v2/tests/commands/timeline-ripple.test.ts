@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
+import { isStableId } from "@timing-chart-v2/schema";
 import type { AnnotationId, BookmarkId, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -133,37 +134,39 @@ describe("timeline ripple commands", () => {
     expect(session.getSnapshot().document.timeGroups[0]).toEqual(timeGroup);
   });
 
-  it("duplicates cycle states and contained point owners with deterministic stable IDs", () => {
+  it("duplicates cycle states and contained point owners with deterministic opaque IDs", () => {
     const session = new CommandHistorySession(rippleFixture());
     const result = session.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 });
     expect(result.ok).toBe(true);
     const document = session.getSnapshot().document;
     expect(document.timeline.cycleCount).toBe(11);
     expect(document.signals[1]).toMatchObject({ values: [{ start: 0, value: "00" }, { start: 2, value: "A5" }, { start: 4, value: "00" }, { start: 7, value: "A5" }] });
-    expect(document.annotations).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "ann_data.copy.cmd_duplicate", anchor: expect.objectContaining({ cycle: 2 }) }),
-      expect.objectContaining({ id: "ann_data", anchor: expect.objectContaining({ cycle: 7 }) }),
-    ]));
-    expect(document.bookmarks).toEqual(expect.arrayContaining([
-      expect.objectContaining({ id: "bookmark_data.copy.cmd_duplicate", start: 2 }),
-      expect.objectContaining({ id: "bookmark_data", start: 7 }),
-    ]));
+    const clonedAnnotation = document.annotations.find((item) => item.id !== "ann_data");
+    const clonedBookmark = document.bookmarks.find((item) => item.id !== "bookmark_data");
+    expect(clonedAnnotation).toMatchObject({ anchor: { cycle: 2 } });
+    expect(clonedBookmark).toMatchObject({ start: 2 });
+    expect(clonedAnnotation && isStableId(clonedAnnotation.id)).toBe(true);
+    expect(clonedBookmark && isStableId(clonedBookmark.id)).toBe(true);
+    expect(clonedAnnotation?.id).not.toContain(".copy.");
+    expect(clonedBookmark?.id).not.toContain(".copy.");
+    expect(document.annotations).toContainEqual(expect.objectContaining({ id: "ann_data", anchor: { signalId: "sig_data", cycle: 7, point: "value-start" } }));
+    expect(document.bookmarks).toContainEqual(expect.objectContaining({ id: "bookmark_data", start: 7 }));
     expect(session.historyState().undoDepth).toBe(1);
   });
 
-  it("allocates collision-free clone IDs after reload even when a command ID is reused", () => {
+  it("allocates collision-free opaque clone IDs after reload when a command ID is reused", () => {
+    const first = new CommandHistorySession(rippleFixture());
+    expect(first.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 }).ok).toBe(true);
+    const existingClone = first.getSnapshot().document.annotations.find((item) => item.id !== "ann_data")!;
     const reloaded = rippleFixture();
-    reloaded.annotations = [...reloaded.annotations, {
-      id: "ann_data.copy.cmd_duplicate" as AnnotationId,
-      type: "text",
-      label: "Existing clone",
-      visible: true,
-      anchor: { signalId: "sig_data" as SignalId, cycle: 0, point: "value-start" },
-    }];
+    reloaded.annotations = [...reloaded.annotations, existingClone];
     const session = new CommandHistorySession(reloaded);
     const result = session.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 });
     expect(result.ok).toBe(true);
-    expect(session.getSnapshot().document.annotations.map((item) => item.id)).toContain("ann_data.copy.cmd_duplicate.2");
+    const cloneIds = session.getSnapshot().document.annotations.filter((item) => item.id !== "ann_data").map((item) => item.id);
+    expect(cloneIds).toContain(existingClone.id);
+    expect(new Set(cloneIds).size).toBe(2);
+    expect(cloneIds.every((id) => isStableId(id) && !id.includes(".copy."))).toBe(true);
   });
 
   it("moves a cycle range by permutation while preserving owner identity", () => {

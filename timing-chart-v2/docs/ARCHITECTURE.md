@@ -37,6 +37,21 @@ Canonical signal
 The renderer never receives `CanonicalMutationPort`. UI never receives Core
 state mutation APIs. WaveDrom Adapter owns no persistent state.
 
+## Stable IDs and provenance
+
+Stable IDs are opaque identity tokens. Production code must compare IDs for
+identity and references only; it must not parse their spelling to infer entity
+type, ancestry, copy/import origin, or command history. Existing persisted IDs,
+including older IDs containing legacy separators, remain valid and are not
+rewritten for cosmetic normalization.
+
+Derived IDs are allocated through an API that uses an internal deterministic
+seed and collision set, but does not encode that seed in the persisted token.
+Copy/Duplicate therefore creates fresh IDs while reference remapping remains an
+explicit semantic operation. Clipboard document provenance is transient
+application metadata (document identity/epoch); it is not inferred from or
+persisted in an entity ID.
+
 ## Validation and operation-rule layers
 
 Validation responsibilities are intentionally separated into three stable

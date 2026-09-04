@@ -15,7 +15,7 @@ import type {
   Transaction,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { clockSlotCount, isStableId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -284,11 +284,8 @@ function canonicalIds(document: CanonicalDocument): Set<string> {
   ]);
 }
 
-function cloneStableId<T extends string>(id: T, commandId: string, used: Set<string>): T {
-  const base = `${id}.copy.${commandId}`;
-  let candidate = base;
-  let suffix = 2;
-  while (used.has(candidate)) candidate = `${base}.${suffix++}`;
+function cloneStableId<T extends string>(sourceId: T, commandId: string, used: Set<string>): T {
+  const candidate = opaqueDerivedId(`timeline.duplicateRange\u0000${sourceId}\u0000${commandId}`, used);
   used.add(candidate);
   return candidate as T;
 }
