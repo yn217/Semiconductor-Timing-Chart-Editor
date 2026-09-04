@@ -20,6 +20,24 @@ test.describe("status context", () => {
     expect(await surface.getAttribute("data-history-depth")).toBe(history);
   });
 
+  test("titlebar view-title always agrees with the status bar's Mode (#199)", async ({ page }) => {
+    await page.goto("/");
+    const surface = page.locator("[data-role='timing-chart-surface']");
+    const revision = await surface.getAttribute("data-canonical-revision");
+    const history = await surface.getAttribute("data-history-depth");
+    const titleBarView = page.getByTestId("titlebar-view-title");
+    await expect(titleBarView).toHaveText("Cycle View");
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Cycle");
+    await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+    await expect(titleBarView).toHaveText("Transaction View");
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Transaction");
+    await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
+    await expect(titleBarView).toHaveText("Split View");
+    await expect(page.getByTestId("view-mode-status")).toHaveText("Mode: Split");
+    expect(await surface.getAttribute("data-canonical-revision")).toBe(revision);
+    expect(await surface.getAttribute("data-history-depth")).toBe(history);
+  });
+
   test("exposes Bottom pin/follow state and selected hierarchy scope", async ({ page }) => {
     await page.goto("/");
     const host = page.getByTestId("cycle-surface");
