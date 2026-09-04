@@ -150,6 +150,14 @@ describe("semantic validation", () => {
     expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("SCHEMA_MAXIMUM");
   });
 
+  it("round-trips explicit threshold and ratio measurement semantics", () => {
+    const document = clone(canonicalFixture());
+    (document.annotations as unknown as unknown[]).push({ id: "ann_profile", type: "measurement", label: "10-90", visible: true, measurement: { profile: "10-90", anchorKind: "ratio" }, start: { signalId: document.signals[1]!.id, cycle: 1, point: "transition-center", transition: { kind: "ratio", value: 0.1 } }, end: { signalId: document.signals[1]!.id, cycle: 4, point: "transition-center", transition: { kind: "ratio", value: 0.9 } } });
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    const roundTrip = parseDocument(serializeCanonicalDocument(document));
+    expect(roundTrip.document.annotations.at(-1)).toMatchObject({ measurement: { profile: "10-90", anchorKind: "ratio" }, start: { transition: { kind: "ratio", value: 0.1 } }, end: { transition: { kind: "ratio", value: 0.9 } } });
+  });
+
   it.each([
     ["binary width", "binary", "width", 1],
     ["binary display format", "binary", "displayFormat", "binary"],

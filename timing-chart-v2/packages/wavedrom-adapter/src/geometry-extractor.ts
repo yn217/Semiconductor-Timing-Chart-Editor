@@ -1,4 +1,4 @@
-import { ImmutableLocalGeometryMap, type LocalGeometryEntry, type Point } from "@timing-chart-v2/geometry";
+import { ImmutableLocalGeometryMap, type LocalGeometryEntry, type Point, type TransitionGeometryResolver } from "@timing-chart-v2/geometry";
 import type { AnchorPoint } from "@timing-chart-v2/schema";
 import { WaveDromAdapterError, type GeometryExtractionMetrics, type RenderedWave } from "./types.js";
 
@@ -204,6 +204,7 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
 
   const boundaries = gridLines.map((line) => transformPoint(laneMatrix, point(line.x, (line.y1 + line.y2) / 2)));
   const accumulator = createGeometryEntryAccumulator();
+  const transitionResolvers: TransitionGeometryResolver[] = [];
   const add = accumulator.add;
   for (let cycle = 0; cycle < boundaries.length - 1; cycle += 1) {
     const start = boundaries[cycle];
@@ -316,6 +317,10 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
           const transformed = transformPoint(drawMatrix, point(translated.x + thresholdPoint.x, translated.y + thresholdPoint.y));
           add(cycle, "transition-center", transformed, threshold);
         }
+        transitionResolvers.push({ cycle, point: "transition-center", resolve: (fraction) => {
+          const thresholdPoint = interpolateSegment(segment, fraction);
+          return transformPoint(drawMatrix, point(translated.x + thresholdPoint.x, translated.y + thresholdPoint.y));
+        } });
         valueStart = point(end.x, rowY);
         if (!waveJson.clock?.expanded) {
           if (previousToken === "0" && token === "1") add(cycle, "rising-edge", center);
@@ -334,5 +339,5 @@ export function extractLocalGeometry(rendered: RenderedWave, metrics?: { -readon
     metrics.signalId = rendered.signalId;
     metrics.durationMs = (globalThis.performance?.now() ?? Date.now()) - startedAt;
   }
-  return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries());
+  return new ImmutableLocalGeometryMap(rendered.signalId, accumulator.entries(), transitionResolvers);
 }

@@ -31,4 +31,9 @@ describe("Immutable Local Geometry Map", () => {
     expect(map.find({ signalId, cycle: 2, point: "transition-center", threshold: 0.3 })?.point).toEqual({ x: 50, y: 14 });
     expect(map.find({ signalId, cycle: 2, point: "transition-center", threshold: 0.7 })?.point).toEqual({ x: 50, y: 26 });
   });
+
+  it("resolves arbitrary explicit transition values through the geometry-owned resolver", () => {
+    const map = new ImmutableLocalGeometryMap(signalId, [], [{ cycle: 2, point: "transition-center", resolve: (fraction) => ({ x: fraction * 100, y: 20 + fraction * 10 }) }]);
+    expect(map.find({ signalId, cycle: 2, point: "transition-center", transition: { kind: "ratio", value: 0.17 } })?.point).toEqual({ x: 17, y: 21.7 });
+  });
 });

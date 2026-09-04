@@ -98,6 +98,7 @@ export interface OverlayAnchorPoint {
   readonly x: number;
   readonly y: number;
   readonly threshold?: number;
+  readonly transitionKind?: "threshold" | "ratio";
 }
 
 export interface AnnotationOverlayPrimitive {

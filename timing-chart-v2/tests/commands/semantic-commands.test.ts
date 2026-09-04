@@ -577,4 +577,18 @@ describe("command execution and atomic history", () => {
     expect(session.execute({ id: commandId("cmd_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
     expect(session.getSnapshot().document.annotations).toEqual([]);
   });
+
+  it("updates Measurement profile atomically and restores it through Undo/Redo", () => {
+    const source = canonicalFixture();
+    const annotation: Annotation = { id: "ann_measurement_profile" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };
+    const session = new CommandHistorySession({ ...source, annotations: [annotation] });
+    const before = session.getSnapshot().document;
+    const updated = session.execute({ id: commandId("cmd_measurement_profile"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: "custom", anchorKind: "ratio", start: 0.17, end: 0.83 });
+    expect(updated.ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]).toMatchObject({ measurement: { profile: "custom", anchorKind: "ratio" }, start: { point: "transition-center", transition: { kind: "ratio", value: 0.17 } }, end: { point: "transition-center", transition: { kind: "ratio", value: 0.83 } } });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotations[0]?.measurement).toEqual({ profile: "custom", anchorKind: "ratio" });
+  });
 });

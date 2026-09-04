@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type Signal, type SignalId } from "@timing-chart-v2/schema";
+import { anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type MeasurementProfile, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -21,7 +21,7 @@ export interface ExportRequest {
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
 export interface ExportPoint { readonly x: number; readonly y: number }
-export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly tracePoints?: readonly ExportPoint[] }
+export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly transitionKind1?: "threshold" | "ratio"; readonly transitionKind2?: "threshold" | "ratio"; readonly measurementProfile?: MeasurementProfile; readonly tracePoints?: readonly ExportPoint[] }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly fill: string; readonly fillOpacity: number; readonly stroke: string; readonly scope: "label" | "waveform" | "both"; readonly showHeader: boolean }
 export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
@@ -111,7 +111,8 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
   if (!anchor) return undefined;
   const signalId = anchor.signalId ?? document.timeline.referenceClock;
   const displayCycle = toDisplayCycle(mapping, anchor.cycle, "floor");
-  const thresholdOffset = anchor.threshold === undefined ? 0 : Math.max(0, Math.min(1, anchor.threshold));
+  const fraction = anchorTransitionFraction(anchor);
+  const thresholdOffset = fraction === undefined ? 0 : Math.max(0, Math.min(1, fraction));
   return { x: LABEL_WIDTH + (displayCycle + thresholdOffset) * cycleWidth - start * cycleWidth + (anchor.offset?.x ?? 0), y: ((signalId ? rowY.get(signalId) : undefined) ?? 48) + (anchor.offset?.y ?? 0) };
 }
 
@@ -306,7 +307,11 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
       }
       return points.length > 1 ? points : undefined;
     })() : undefined;
-    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(annotation.start?.threshold === undefined ? {} : { threshold1: annotation.start.threshold }), ...(annotation.end?.threshold === undefined ? {} : { threshold2: annotation.end.threshold }), ...(tracePoints === undefined ? {} : { tracePoints }) };
+    const startFraction = anchorTransitionFraction(annotation.start);
+    const endFraction = anchorTransitionFraction(annotation.end);
+    const startKind = anchorTransitionKind(annotation.start);
+    const endKind = anchorTransitionKind(annotation.end);
+    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(tracePoints === undefined ? {} : { tracePoints }) };
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const contentHeight = waveTop + rowLayout.totalHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? effectiveLegendEntries(document).map((entry) => entry.label) : [];
@@ -344,7 +349,7 @@ export function renderExportSvg(scene: ExportScene): string {
   }
   out.push(`</g><g data-layer="annotations" font-family="Segoe UI,Arial,sans-serif" font-size="11" stroke="#dc2626" fill="none">`);
   for (const annotation of scene.annotations) {
-    const metadata = `${annotation.sourceSignalId ? ` data-source-signal-id="${xml(annotation.sourceSignalId)}"` : ""}${annotation.traceOffsetCycles === undefined ? "" : ` data-trace-offset-cycles="${annotation.traceOffsetCycles}"`}${annotation.threshold1 === undefined ? "" : ` data-start-threshold="${annotation.threshold1}"`}${annotation.threshold2 === undefined ? "" : ` data-end-threshold="${annotation.threshold2}"`}`;
+    const metadata = `${annotation.sourceSignalId ? ` data-source-signal-id="${xml(annotation.sourceSignalId)}"` : ""}${annotation.traceOffsetCycles === undefined ? "" : ` data-trace-offset-cycles="${annotation.traceOffsetCycles}"`}${annotation.threshold1 === undefined ? "" : ` data-start-threshold="${annotation.threshold1}"`}${annotation.threshold2 === undefined ? "" : ` data-end-threshold="${annotation.threshold2}"`}${annotation.transitionKind1 === undefined ? "" : ` data-start-transition-kind="${annotation.transitionKind1}"`}${annotation.transitionKind2 === undefined ? "" : ` data-end-transition-kind="${annotation.transitionKind2}"`}${annotation.measurementProfile === undefined ? "" : ` data-measurement-profile="${annotation.measurementProfile}"`}`;
     if (annotation.type === "timingRegion") out.push(`<rect data-annotation-id="${xml(annotation.id)}" data-annotation-type="timingRegion"${metadata} x="${Math.min(annotation.x1, annotation.x2)}" y="0" width="${Math.max(2, Math.abs(annotation.x2 - annotation.x1))}" height="${scene.height}" fill="${xml("#d04a36")}" fill-opacity="${annotation.opacity ?? 0.16}" stroke="none"/>`);
     else if (annotation.type === "ghostTrace") {
       const points = annotation.tracePoints?.map((point) => `${point.x},${point.y}`).join(" ");

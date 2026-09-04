@@ -1027,13 +1027,31 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
+    case "annotation.updateMeasurement": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return fail("invalid", "ANNOTATION_NO_SPAN", "$.annotationId", "Only Measurement annotations with start/end anchors support measurement semantics.");
+      if (!["cycle", "30-70", "10-90", "20-80", "50%", "custom"].includes(command.profile)) return fail("invalid", "INVALID_MEASUREMENT_PROFILE", "$.profile", "Measurement profile is not supported.");
+      if (!["threshold", "ratio"].includes(command.anchorKind)) return fail("invalid", "INVALID_MEASUREMENT_PROFILE", "$.anchorKind", "Measurement anchor kind is not supported.");
+      if (![command.start, command.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) || command.start > command.end) return fail("invalid", "INVALID_MEASUREMENT_ENDPOINT", "$.start", "Measurement endpoints must be finite fractions in ascending order.");
+      const toCycleAnchor = (anchor: NonNullable<Annotation["start"]>, value: number): NonNullable<Annotation["start"]> => {
+        const { threshold: _legacyThreshold, transition: _previousTransition, ...semantic } = anchor;
+        return command.profile === "cycle" ? semantic : { ...semantic, point: "transition-center", transition: { kind: command.anchorKind, value } };
+      };
+      const next = { ...annotation, measurement: { profile: command.profile, anchorKind: command.anchorKind }, start: toCycleAnchor(annotation.start, command.start), end: toCycleAnchor(annotation.end, command.end) };
+      if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Measurement semantics are unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = next;
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
     case "annotation.updateProperties": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];
       const label = command.label.trim();
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
       if (!label) return fail("invalid", "INVALID_LABEL", "$.label", "Annotation label cannot be empty.");
-      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity, style: command.style }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
+      const next = Object.fromEntries(Object.entries({ ...annotation, label, visible: command.visible, color: command.color, lineType: command.lineType, arrowhead: command.arrowhead, sourceSignalId: command.sourceSignalId, traceOffsetCycles: command.traceOffsetCycles, opacity: command.opacity, style: command.style, measurement: command.measurement }).filter(([, value]) => value !== undefined)) as unknown as Annotation;
       if (JSON.stringify(annotation) === JSON.stringify(next)) return fail("no-op", "NO_OP", "$", "Annotation properties are unchanged.");
       const annotations = [...document.annotations]; annotations[index] = next;
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };

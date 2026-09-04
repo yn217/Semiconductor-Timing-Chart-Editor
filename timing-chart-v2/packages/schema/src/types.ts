@@ -19,6 +19,13 @@ export type JsonObject = { readonly [key: string]: JsonValue };
 
 export interface PixelOffset { readonly x: number; readonly y: number }
 
+export type { MeasurementProfile, TransitionAnchorKind } from "./annotation-semantics.js";
+
+export interface TransitionAnchor {
+  readonly kind: "threshold" | "ratio";
+  readonly value: number;
+}
+
 export type AnchorPoint =
   | "cycle-start" | "cycle-center" | "cycle-end"
   | "transition-start" | "transition-center" | "transition-end"
@@ -30,6 +37,8 @@ export interface SemanticAnchor {
   readonly point: AnchorPoint;
   /** Fraction along a rendered transition segment; persisted semantic intent, never screen coordinates. */
   readonly threshold?: number;
+  /** Explicit transition meaning. `threshold` remains accepted for legacy documents. */
+  readonly transition?: TransitionAnchor;
   readonly offset?: PixelOffset;
 }
 
@@ -213,6 +222,11 @@ export interface Annotation {
    * AnnotationInteractionOwner.onPointerDown). Selection and visibility are
    * unaffected -- only position/shape edits are locked. */
   readonly locked?: boolean;
+  /** Explicit datasheet measurement semantics; anchors contain the resolved endpoints. */
+  readonly measurement?: {
+    readonly profile: "cycle" | "30-70" | "10-90" | "20-80" | "50%" | "custom";
+    readonly anchorKind: "threshold" | "ratio";
+  };
 }
 
 /** Groups Annotations for "select together / drag together" -- same shape

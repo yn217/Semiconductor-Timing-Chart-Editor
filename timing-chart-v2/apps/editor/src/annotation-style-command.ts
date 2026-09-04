@@ -33,6 +33,7 @@ export function annotationPropertiesBase(annotation: Annotation) {
     ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }),
     ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }),
     ...(annotation.style === undefined ? {} : { style: annotation.style }),
+    ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }),
   } as const;
 }
 
