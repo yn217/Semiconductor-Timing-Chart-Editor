@@ -9,7 +9,7 @@ const tabGroups: Record<string, string> = {
   File: "file-group",
   Home: "home-file-group",
   Insert: "insert-group",
-  Timeline: "timeline-group",
+  Timeline: "timeline-ribbon",
   Annotation: "annotation-group",
   View: "view-show-group",
   Check: "review-group",

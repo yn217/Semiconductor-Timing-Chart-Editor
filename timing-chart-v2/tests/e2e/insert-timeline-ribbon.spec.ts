@@ -53,7 +53,8 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(timeline.getByLabel("Timeline insert count")).toBeVisible();
     await expect(timeline.getByLabel("Timeline destination")).toBeVisible();
     await expect(timeline.getByTestId("timeline-selected-length")).toHaveText("Length 2");
-    await expect(timeline.getByLabel("Range edit from")).toHaveText("2");
+    // "From" was a read-only duplicate of Range's own "Start cycle" value --
+    // removed rather than shown twice under two different names.
     await expect(timeline.getByRole("button", { name: "Axis Break", exact: true })).toBeVisible();
     await expect(timeline.getByRole("button", { name: "Previous bookmark", exact: true })).toBeVisible();
     await expect(timeline.getByRole("button", { name: "Next bookmark", exact: true })).toBeVisible();
