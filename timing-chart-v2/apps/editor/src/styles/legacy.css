@@ -878,7 +878,7 @@ body { min-width: 1100px; }
 .editor-shell [data-ribbon-home][data-major-group="File"] { order: 1; }
 .editor-shell [data-ribbon-home][data-major-group="Edit"] { order: 2; }
 .editor-shell [data-ribbon-home][data-major-group="Time"] { order: 3; }
-.editor-shell [data-ribbon-home][data-major-group="Zoom"] { order: 4; box-sizing: border-box; width: 320px; }
+.editor-shell [data-ribbon-home][data-major-group="Zoom"] { order: 4; box-sizing: border-box; width: 280px; }
 .editor-shell [data-ribbon-home][data-major-group="Zoom"] > .home-view-group { box-sizing: border-box; width: 100%; }
 .editor-shell [data-ribbon-home][data-major-group="Transaction"] { order: 5; }
 .editor-shell [data-ribbon-home][data-major-group="Layout"] { order: 6; }
