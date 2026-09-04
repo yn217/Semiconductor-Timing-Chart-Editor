@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "75e5c125d1f87d50e465c0c75d44cfc9d3de43ce",
-    "sourceFingerprint": "689c545fff803d7cdd443d8d6b4bf2384a6ef4cd8959c207e267f5a210d3a6d8",
-    "generatedAt": "2026-08-29T06:14:18.115Z",
+    "testedCommit": "70e440c4dfa1ee0c7866b55e8eca41651873a2ad",
+    "sourceFingerprint": "6cf9e9683c72c8d55f90137967d3b32e551ffc9a568d5872a17789cd112016bf",
+    "generatedAt": "2026-09-04T18:46:11.644Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "viewport": {
@@ -55,17 +55,17 @@
     "region": {
       "x": 8,
       "y": 443,
-      "width": 34,
+      "width": 42,
       "height": 20
     },
     "leftFrozenParity": true,
     "goldenPass": false,
-    "goldenDiffPercent": 0.9441176470588235,
+    "goldenDiffPercent": 0.9416666666666667,
     "textWidth": 18.16,
-    "innerPadding": 7.92,
+    "innerPadding": 11.92,
     "goldenStatus": "approved-delta",
     "approvedDelta": true,
-    "width": 34,
+    "width": 42,
     "gap": 5,
     "overlap": 0
   }
