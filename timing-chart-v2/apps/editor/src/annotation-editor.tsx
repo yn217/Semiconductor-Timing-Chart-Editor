@@ -6,7 +6,7 @@ import { nextCommandId } from "./command-id.js";
 import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
-import { buildAnnotationStyleCommand } from "./annotation-style-command.js";
+import { annotationPropertiesBase, buildAnnotationStyleCommand } from "./annotation-style-command.js";
 
 export function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
   const [label, setLabel] = useState(annotation.label);
@@ -66,7 +66,12 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
     <form className="annotation-properties" onSubmit={(event) => {
       event.preventDefault();
-      onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, label, visible, color, ...(annotation.type === "arrow" ? { lineType, arrowhead } : {}), ...(["timingRegion", "ghostTrace"].includes(annotation.type) ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
+      // Spread the shared preserve-everything base FIRST, then override only
+      // the fields this form actually exposes a draft for -- so submitting
+      // (e.g. just to rename) never drops a currently-saved lineType/
+      // arrowhead/opacity/sourceSignalId/traceOffsetCycles/style that this
+      // particular annotation type doesn't happen to show an editor for.
+      onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(annotation.type === "arrow" ? { lineType, arrowhead } : {}), ...(["timingRegion", "ghostTrace"].includes(annotation.type) ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
     }}>
       <label>Label<input aria-label="Annotation label" value={label} onChange={(event) => setLabel(event.target.value)} /></label>
       <label>Color<input aria-label="Annotation color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label>
