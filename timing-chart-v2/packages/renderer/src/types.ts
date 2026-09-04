@@ -125,6 +125,8 @@ export interface AnnotationOverlayPrimitive {
    * for line-shaped overlays. */
   readonly rotation?: number;
   readonly align?: "left" | "center" | "right";
+  readonly measurementLayout?: Readonly<{ readonly startMarker: "none" | "bar" | "arrow"; readonly endMarker: "none" | "bar" | "arrow"; readonly arrowLayout: "inward" | "outward" | "auto"; readonly extensionLines: "none" | "start" | "end" | "both"; readonly lane?: number }>;
+  readonly measurementLane?: number;
 }
 
 export interface Point { readonly x: number; readonly y: number }

@@ -553,6 +553,10 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   owner.dataset.visible = String(primitive.visible);
   owner.dataset.lineType = primitive.lineType ?? "straight";
   owner.dataset.arrowhead = primitive.arrowhead ?? "none";
+  if (primitive.measurementLane !== undefined) owner.dataset.measurementLane = String(primitive.measurementLane);
+  else delete owner.dataset.measurementLane;
+  if (primitive.measurementLayout) owner.dataset.measurementArrowLayout = primitive.measurementLayout.arrowLayout;
+  else delete owner.dataset.measurementArrowLayout;
   if (primitive.sourceSignalId) owner.dataset.sourceSignalId = primitive.sourceSignalId;
   else delete owner.dataset.sourceSignalId;
   if (primitive.traceOffsetCycles !== undefined) owner.dataset.traceOffsetCycles = String(primitive.traceOffsetCycles);
@@ -568,6 +572,13 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   const second = primitive.anchors[1] ?? first;
   const dx = second.x - first.x;
   const dy = second.y - first.y;
+  const dimensionY = primitive.type === "measurement" && primitive.measurementLane !== undefined
+    ? Math.min(first.y, second.y) - 18 * (primitive.measurementLane + 1)
+    : undefined;
+  const lineFirst = dimensionY === undefined ? first : { x: first.x, y: dimensionY };
+  const lineSecond = dimensionY === undefined ? second : { x: second.x, y: dimensionY };
+  const lineDx = lineSecond.x - lineFirst.x;
+  const lineDy = lineSecond.y - lineFirst.y;
   // Additive on top of any anchor-derived angle below -- never replaces it,
   // so line-shaped overlays keep auto-orienting from their two anchors and
   // this only rotates further on top of that.
@@ -605,13 +616,13 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     body.dataset.annotationField = first.field;
   } else {
     if (primitive.lineType === "orthogonal") {
-      body.style.transform = `translate(${Math.min(first.x, second.x)}px, ${Math.min(first.y, second.y)}px)${rotateSuffix}`;
-      body.style.width = `${Math.max(2, Math.abs(dx))}px`;
-      body.style.height = `${Math.max(2, Math.abs(dy))}px`;
-      body.dataset.orthogonalDirection = `${dx < 0 ? "left" : "right"}-${dy < 0 ? "up" : "down"}`;
+      body.style.transform = `translate(${Math.min(lineFirst.x, lineSecond.x)}px, ${Math.min(lineFirst.y, lineSecond.y)}px)${rotateSuffix}`;
+      body.style.width = `${Math.max(2, Math.abs(lineDx))}px`;
+      body.style.height = `${Math.max(2, Math.abs(lineDy))}px`;
+      body.dataset.orthogonalDirection = `${lineDx < 0 ? "left" : "right"}-${lineDy < 0 ? "up" : "down"}`;
     } else {
-      body.style.transform = `translate(${first.x}px, ${first.y}px) rotate(${Math.atan2(dy, dx) * 180 / Math.PI + rotationDeg}deg)`;
-      body.style.width = `${Math.max(2, Math.hypot(dx, dy))}px`;
+      body.style.transform = `translate(${lineFirst.x}px, ${lineFirst.y}px) rotate(${Math.atan2(lineDy, lineDx) * 180 / Math.PI + rotationDeg}deg)`;
+      body.style.width = `${Math.max(2, Math.hypot(lineDx, lineDy))}px`;
     }
     body.dataset.annotationField = first.field;
   }
@@ -621,7 +632,34 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   label.textContent = primitive.label;
   applyTextStyle(label, parseTextStyle(primitive.style));
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
-  label.style.transform = `translate(${(first.x + second.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(first.y + second.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;
+  label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;
+  const dimensionParts: HTMLElement[] = [];
+  if (primitive.type === "measurement" && primitive.measurementLayout && dimensionY !== undefined) {
+    const layout = primitive.measurementLayout;
+    const addMarker = (anchor: typeof first, side: "start" | "end", kind: "none" | "bar" | "arrow") => {
+      if (kind === "none") return;
+      const marker = document.createElement("span");
+      marker.dataset.role = "measurement-marker";
+      marker.dataset.markerSide = side;
+      marker.dataset.markerKind = kind;
+      marker.dataset.arrowLayout = layout.arrowLayout;
+      marker.style.transform = `translate(${anchor.x}px, ${dimensionY}px)`;
+      dimensionParts.push(marker);
+    };
+    const addExtension = (anchor: typeof first, side: "start" | "end") => {
+      if (!(layout.extensionLines === "both" || layout.extensionLines === side)) return;
+      const extension = document.createElement("span");
+      extension.dataset.role = "measurement-extension";
+      extension.dataset.extensionSide = side;
+      extension.style.height = `${Math.abs(dimensionY - anchor.y)}px`;
+      extension.style.transform = `translate(${anchor.x}px, ${Math.min(anchor.y, dimensionY)}px)`;
+      dimensionParts.push(extension);
+    };
+    addMarker(first, "start", layout.startMarker);
+    addMarker(second, "end", layout.endMarker);
+    addExtension(first, "start");
+    addExtension(second, "end");
+  }
   const handles = primitive.anchors.map((anchor) => {
     const handle = document.createElement("span");
     handle.dataset.role = "annotation-handle";
@@ -631,7 +669,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     handle.style.transform = `translate(${anchor.x}px, ${anchor.y}px)`;
     return handle;
   });
-  owner.replaceChildren(body, label, ...handles);
+  owner.replaceChildren(body, label, ...dimensionParts, ...handles);
 }
 
 function element(owner: Document | HTMLElement, tag: "div", role: string): HTMLElement {

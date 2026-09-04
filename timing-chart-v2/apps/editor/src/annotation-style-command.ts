@@ -34,6 +34,7 @@ export function annotationPropertiesBase(annotation: Annotation) {
     ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }),
     ...(annotation.style === undefined ? {} : { style: annotation.style }),
     ...(annotation.measurement === undefined ? {} : { measurement: annotation.measurement }),
+    ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout }),
   } as const;
 }
 

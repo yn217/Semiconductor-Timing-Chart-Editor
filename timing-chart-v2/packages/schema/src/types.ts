@@ -19,7 +19,7 @@ export type JsonObject = { readonly [key: string]: JsonValue };
 
 export interface PixelOffset { readonly x: number; readonly y: number }
 
-export type { MeasurementProfile, TransitionAnchorKind } from "./annotation-semantics.js";
+export type { MeasurementArrowLayout, MeasurementExtensionLines, MeasurementLayout, MeasurementMarker, MeasurementProfile, TransitionAnchorKind } from "./annotation-semantics.js";
 
 export interface TransitionAnchor {
   readonly kind: "threshold" | "ratio";
@@ -227,6 +227,7 @@ export interface Annotation {
     readonly profile: "cycle" | "30-70" | "10-90" | "20-80" | "50%" | "custom";
     readonly anchorKind: "threshold" | "ratio";
   };
+  readonly measurementLayout?: import("./annotation-semantics.js").MeasurementLayout;
 }
 
 /** Groups Annotations for "select together / drag together" -- same shape
