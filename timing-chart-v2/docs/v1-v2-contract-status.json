@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "statusValues": ["NOT_IMPLEMENTED", "PARTIAL", "ACCEPTANCE_ONLY", "BLOCKED_EXTERNAL", "COMPLETE"],
+  "evidenceClassFields": {
+    "production": "implementationEvidence",
+    "unit": "unit",
+    "e2e": "e2e",
+    "visual": "visual",
+    "saveOpen": "saveOpen",
+    "export": "export",
+    "performance": "performance"
+  },
+  "contracts": [
+    {"featureKey":"GUI-SPLIT-VIEW","legacySources":["#14","#148"],"ownerIssues":["#172","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-SIGNAL-SPLIT","legacySources":["#98"],"ownerIssues":["#200"],"implementationStatus":"NOT_IMPLEMENTED"},
+    {"featureKey":"GUI-HIERARCHY-FULL-PATH","legacySources":["#30"],"ownerIssues":["#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-CANVAS-CYCLE","legacySources":["#42","#61","#89","#99"],"ownerIssues":["#167","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-RANGE-SELECTION","legacySources":["#42","#61","#89","#99"],"ownerIssues":["#167","#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-GRID","legacySources":["#59","#143"],"ownerIssues":["#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-SNAP","legacySources":["#59","#143","#147"],"ownerIssues":["#170","#175","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-RULER","legacySources":["#59","#110","#143"],"ownerIssues":["#170","#173","#175"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-MINIMAP","legacySources":["#133","#135"],"ownerIssues":["#167","#175","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-INSPECTOR-CAPABILITY","legacySources":["#11","#30","#172"],"ownerIssues":["#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-BOTTOM-PIN-FOLLOW","legacySources":["#11","#44"],"ownerIssues":["#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-ADVANCED-JSON","legacySources":["#11","#78"],"ownerIssues":["#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-HEADER-FOOTER","legacySources":["#12","#119","#120"],"ownerIssues":["#173","#177"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-EDITABLE-LEGEND","legacySources":["#6","#31","#33"],"ownerIssues":["#162","#172","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-CLOCK-EDGE-COUNTER","legacySources":["#158","#159"],"ownerIssues":["#164","#172"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-AXIS-BREAK","legacySources":["#110","#122","#123"],"ownerIssues":["#170","#173","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-BOOKMARK","legacySources":["#108"],"ownerIssues":["#165","#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-TIME-GROUP","legacySources":["#109"],"ownerIssues":["#165","#173"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-MEASUREMENT","legacySources":["#15","#137"],"ownerIssues":["#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-THRESHOLD-ANCHOR","legacySources":["#137"],"ownerIssues":["#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-TIMING-REGION-GHOST","legacySources":["#133","#135","#137"],"ownerIssues":["#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-CLIPBOARD","legacySources":["#71","#78","#79","#80"],"ownerIssues":["#161","#169","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-GOLDEN-SAMPLES","legacySources":["#17","#16","#174"],"ownerIssues":["#174","#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-EXPORT-COMPLETENESS","legacySources":["#13","#14","#17"],"ownerIssues":["#173","#177"],"implementationStatus":"ACCEPTANCE_ONLY"}
+  ]
+}

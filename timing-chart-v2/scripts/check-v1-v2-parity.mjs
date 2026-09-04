@@ -8,8 +8,10 @@ const argumentValue = (name, fallback) => {
 };
 const matrixPath = argumentValue("--matrix", path.join(root, "docs", "v1-v2-parity.json"));
 const sourceManifestPath = argumentValue("--manifest", path.join(root, "docs", "v1-v2-source-manifest.json"));
+const statusPath = argumentValue("--status", path.join(root, "docs", "v1-v2-contract-status.json"));
 const matrix = JSON.parse(fs.readFileSync(matrixPath, "utf8"));
 const sourceManifest = JSON.parse(fs.readFileSync(sourceManifestPath, "utf8"));
+const statusModel = JSON.parse(fs.readFileSync(statusPath, "utf8"));
 const requiredFields = [
   "v1Source", "requirement", "decision", "v2OwnerIssue", "canonicalOwner",
   "commandOwner", "viewOwner", "exportOwner", "unit", "e2e", "visual",
@@ -51,6 +53,36 @@ if (missingFromMatrix.length || staleMatrixIssues.length) fail(`source-universe 
 if (JSON.stringify(sortedIssues(manifestIssues)) !== JSON.stringify(sortedIssues(coverage))) fail("source-manifest and matrix coverage ordering/content differ");
 const allRows = [...matrix.requirements, ...matrix.independentContracts];
 const rowIds = new Set(allRows.map(({ id }) => id));
+const allowedStatuses = new Set(["NOT_IMPLEMENTED", "PARTIAL", "ACCEPTANCE_ONLY", "BLOCKED_EXTERNAL", "COMPLETE"]);
+if (statusModel.schemaVersion !== 1 || !Array.isArray(statusModel.contracts) || !statusModel.evidenceClassFields) fail("invalid contract status model");
+const statusRows = statusModel.contracts;
+if (statusRows.length !== matrix.independentContracts.length) fail(`contract status count mismatch: ${statusRows.length} != ${matrix.independentContracts.length}`);
+const statusByFeature = new Map();
+for (const statusRow of statusRows) {
+  if (!statusRow.featureKey || statusByFeature.has(statusRow.featureKey)) fail(`duplicate or empty featureKey: ${statusRow.featureKey}`);
+  if (!allowedStatuses.has(statusRow.implementationStatus)) fail(`${statusRow.featureKey} has invalid implementationStatus`);
+  statusByFeature.set(statusRow.featureKey, statusRow);
+}
+const evidenceFields = Object.values(statusModel.evidenceClassFields);
+if (evidenceFields.length !== new Set(evidenceFields).size || !evidenceFields.includes("implementationEvidence")) fail("invalid evidence class field mapping");
+const completeEvidenceFields = ["implementationEvidence", "unit", "e2e", "visual", "export"];
+const concrete = (value) => typeof value === "string" && value.trim().length > 0 && !/^N\/A(?: |$)/.test(value.trim());
+for (const contract of matrix.independentContracts) {
+  const statusRow = statusByFeature.get(contract.id);
+  if (!statusRow) fail(`${contract.id} has no feature identity/status row`);
+  const ownerIssues = String(contract.v2OwnerIssue).split("/");
+  if (JSON.stringify(statusRow.legacySources) !== JSON.stringify(contract.v1Source) || JSON.stringify(statusRow.ownerIssues) !== JSON.stringify(ownerIssues)) fail(`${contract.id} identity/source owner mismatch`);
+  if (!statusRow.legacySources.every((source) => typeof source === "string" && source.startsWith("#"))) fail(`${contract.id} has invalid legacy source identity`);
+  if (statusRow.implementationStatus === "ACCEPTANCE_ONLY" && !concrete(contract.implementationEvidence)) fail(`${contract.id} ACCEPTANCE_ONLY requires concrete production evidence`);
+  if (statusRow.implementationStatus === "BLOCKED_EXTERNAL" && !concrete(statusRow.externalDependency)) fail(`${contract.id} BLOCKED_EXTERNAL requires a named external dependency`);
+  if (statusRow.implementationStatus === "COMPLETE" && completeEvidenceFields.some((field) => !concrete(contract[field]))) fail(`${contract.id} COMPLETE requires ${completeEvidenceFields.join(", ")} evidence`);
+  if (contract.id === "GUI-SIGNAL-SPLIT") {
+    if (statusRow.implementationStatus !== "NOT_IMPLEMENTED" || !contract.v1Source.includes("#98") || contract.v2OwnerIssue !== "#200") fail("GUI-SIGNAL-SPLIT identity/status is not the #98/#200 contract");
+    if (!/^No production Upper\/Lower\/Both Signal Split path is present;/.test(contract.implementationEvidence)) fail("GUI-SIGNAL-SPLIT evidence must not use Cycle/Transaction Split as implementation evidence");
+  }
+}
+const missingStatusRows = matrix.independentContracts.filter(({ id }) => !statusByFeature.has(id));
+if (missingStatusRows.length) fail(`status model has missing feature rows: ${missingStatusRows.map(({ id }) => id).join(",")}`);
 const independentFields = ["v1Source", "requirement", "decision", "v2OwnerIssue", "acceptance", "implementationEvidence", "unit", "e2e", "visual", "export", "status"];
 for (const contract of matrix.independentContracts) {
   for (const field of independentFields) if (!(field in contract)) fail(`${contract.id} is missing ${field}`);
@@ -60,7 +92,8 @@ for (const contract of matrix.independentContracts) {
 }
 if (!Array.isArray(matrix.legacyIssueAssignments)) fail("legacyIssueAssignments is missing");
 const assigned = new Map();
-for (const assignment of matrix.legacyIssueAssignments) {
+const assignments = [...matrix.legacyIssueAssignments, ...(matrix.additionalLegacyIssueAssignments ?? [])];
+for (const assignment of assignments) {
   if (!Number.isInteger(assignment.issue) || !rowIds.has(assignment.contractId)) fail(`invalid issue assignment ${JSON.stringify(assignment)}`);
   assigned.set(assignment.issue, (assigned.get(assignment.issue) ?? 0) + 1);
 }
@@ -88,4 +121,5 @@ if (matrix.decisionPolicy.dropCount !== 0 || matrix.decisionPolicy.deferCount !=
 if (allRows.some(({ decision }) => decision === "DROP" || decision === "DEFER")) fail("inventory contains DROP/DEFER despite zero policy");
 
 const counts = Object.fromEntries(["KEEP", "MERGED", "DEFER", "DROP"].map((decision) => [decision, allRows.filter((row) => row.decision === decision).length]));
-console.log(`V1/V2 parity inventory passed: ${allRows.length} contract rows (${matrix.requirements.length} grouped + ${matrix.independentContracts.length} independent), ${manifestIssues.length} manifest issues == ${coverage.length} matrix issues, UNCLASSIFIED=0, UNMAPPED_LEGACY_ISSUE=0, UNKNOWN_V2_OWNER=0, GUI-01..GUI-16 missing=0, conflicting decision=0, KEEP=${counts.KEEP}, MERGED=${counts.MERGED}, DEFER=${counts.DEFER}, DROP=${counts.DROP}.`);
+const statusCounts = Object.fromEntries([...allowedStatuses].map((status) => [status, statusRows.filter((row) => row.implementationStatus === status).length]));
+console.log(`V1/V2 parity inventory passed: ${allRows.length} contract rows (${matrix.requirements.length} grouped + ${matrix.independentContracts.length} independent), ${manifestIssues.length} manifest issues == ${coverage.length} matrix issues, UNCLASSIFIED=0, UNMAPPED_LEGACY_ISSUE=0, UNKNOWN_V2_OWNER=0, GUI-01..GUI-16 missing=0, conflicting decision=0, KEEP=${counts.KEEP}, MERGED=${counts.MERGED}, DEFER=${counts.DEFER}, DROP=${counts.DROP}, implementationStatus=${JSON.stringify(statusCounts)}.`);
