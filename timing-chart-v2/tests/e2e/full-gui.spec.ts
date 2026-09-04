@@ -6,6 +6,20 @@ async function ready(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
+// The Inspector's default content is its always-mounted Layout panel
+// ("Inspector signal name width/alignment/overflow", etc). Clicking a row
+// switches it to that row's own panel (Signal/Group/Transaction/Clock...),
+// but that switch is a render, not instant -- querying by label right after
+// the click can catch the Layout panel still in the DOM, and since several
+// of its field labels share "Inspector signal name" as a substring, a bare
+// getByLabel("Inspector signal name") is briefly strict-mode-ambiguous
+// (3 Layout matches, real field not yet mounted) instead of simply "not
+// found yet". Waiting for the target panel's own heading first (a locator
+// assertion, which retries) avoids racing that transition.
+async function waitForInspectorPanel(inspector: ReturnType<Page["getByTestId"]>, heading: string) {
+  await expect(inspector.getByRole("heading", { name: heading })).toBeVisible();
+}
+
 async function createTextAnnotation(page: Page) {
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
@@ -27,8 +41,12 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   expect(workspace).toMatchObject({ y: 167 });
   expect(bottom).toMatchObject({ x: 265, height: 240 });
   expect(inspector).toMatchObject({ x: 1375, width: 297 });
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction" })).toHaveCount(0);
-  await expect(page.locator(".ribbon-group")).toHaveCount(7);
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" })).toHaveCount(0);
+  // Renamed from .ribbon-group to .ribbon-major-group by the PowerPoint-style
+  // ribbon redesign; the Home tab also grew an 8th group (Transaction) since
+  // this count was last locked -- both confirmed current/intentional via
+  // live production DOM, not a regression.
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(8);
 });
 
 test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ page }) => {
@@ -39,11 +57,11 @@ test("keeps the V1 Home Ribbon dense without horizontal scrolling", async ({ pag
     clientWidth: element.clientWidth,
     scrollWidth: element.scrollWidth,
     height: element.getBoundingClientRect().height,
-    groupWidths: [...element.querySelectorAll<HTMLElement>(".ribbon-group")].map((group) => Math.round(group.getBoundingClientRect().width)),
+    groupWidths: [...element.querySelectorAll<HTMLElement>(".ribbon-major-group")].map((group) => Math.round(group.getBoundingClientRect().width)),
   }));
   expect(metrics.height).toBe(102);
   expect(metrics.scrollWidth).toBeLessThanOrEqual(metrics.clientWidth + 1);
-  expect(metrics.groupWidths.length).toBe(7);
+  expect(metrics.groupWidths.length).toBe(8);
   await expect(page.locator(".app-titlebar")).toHaveCSS("height", "31px");
   await expect(page.locator(".ribbon-tabs")).toHaveCSS("height", "34px");
   await expect(page.locator(".status-bar")).toHaveCSS("height", "25px");
@@ -182,6 +200,7 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const inspector = page.getByTestId("inspector");
+  await waitForInspectorPanel(inspector, "Signal Properties");
   await inspector.getByLabel("Inspector signal name").fill("REQUEST_EDITED");
   await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -189,9 +208,9 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await inspector.getByLabel("Inspector signal visible").uncheck();
   await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request']")).toHaveCount(0);
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("No validation problems");
-  await page.locator(".bottom-tabs").getByRole("button", { name: "JSON" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "JSON" }).click();
   await expect(page.getByTestId("json-panel")).toContainText('"formatVersion": 2');
   await page.getByTestId("json-panel").getByRole("button", { name: "Validate" }).click();
   await expect(page.getByTestId("json-panel")).toContainText("Valid");
@@ -758,11 +777,15 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   const inspector = page.getByTestId("inspector");
+  await waitForInspectorPanel(inspector, "Signal Properties");
   await inspector.getByLabel("Inspector signal name").fill("DATA_RENAMED");
   await inspector.getByLabel("Inspector signal role").selectOption("output");
   await inspector.getByLabel("Inspector signal type").selectOption("bus");
   await inspector.getByLabel("Inspector signal width").fill("16");
   await inspector.getByLabel("Inspector bus format").selectOption("binary");
+  // "Label Style" is a collapsed accordion section by default -- its fields
+  // aren't interactable until its own heading button is expanded.
+  await inspector.getByRole("button", { name: "Label Style" }).click();
   await inspector.getByLabel("Inspector label align").selectOption("center");
   await inspector.getByLabel("Inspector label overflow").selectOption("wrap");
   await inspector.getByLabel("Inspector waveform row style").fill('{"color":"#114477"}');
@@ -804,6 +827,7 @@ test("Signal Inspector properties survive Undo/Redo and Save/Open", async ({ pag
   const signalRow = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']");
   await signalRow.click();
   const inspector = page.getByTestId("inspector");
+  await waitForInspectorPanel(inspector, "Signal Properties");
   await inspector.getByLabel("Inspector signal name").fill("DATA_PERSISTED");
   await inspector.getByLabel("Inspector signal role").selectOption("output");
   await inspector.getByLabel("Inspector signal type").selectOption("bus");
@@ -832,6 +856,7 @@ test("Signal Inspector properties survive Undo/Redo and Save/Open", async ({ pag
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await signalRow.click();
+  await waitForInspectorPanel(inspector, "Signal Properties");
   await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("DATA_PERSISTED");
   await expect(inspector.getByLabel("Inspector signal role")).toHaveValue("output");
   await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("16");
@@ -860,11 +885,14 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.getByLabel("New Transaction name").fill("Transfer");
   await page.getByLabel("New Transaction start").fill("2");
   await page.getByLabel("New Transaction end").fill("8");
-  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  // Scoped to the transaction editor's own submit button -- an unscoped
+  // page-wide "Create Transaction" is now ambiguous against the Ribbon's
+  // "Create Transaction" button, which shares the same accessible name.
+  await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.getByTestId("inspector").getByLabel("Transaction phases").fill('[{"name":"Address","start":2,"end":4},{"name":"Data","start":4,"end":7}]');
   await page.getByTestId("inspector").getByTestId("apply-transaction-properties").click();
@@ -905,8 +933,17 @@ test("Clock Inspector exposes common Signal Properties, hierarchy and style thro
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await inspector.getByLabel("Inspector signal name").fill("clk_main");
   await inspector.getByLabel("Inspector signal role").selectOption("internal");
+  // "Label Style" is a collapsed accordion section by default -- its fields
+  // aren't interactable until its own heading button is expanded.
+  await inspector.getByRole("button", { name: "Label Style" }).click();
   await inspector.getByLabel("Inspector label align").selectOption("center");
-  await inspector.getByTestId("apply-inspector-clock-properties").click();
+  // apps/editor/src/styles/legacy.css deliberately hides this specific
+  // submit button (`.inspector-clock-properties button[type="submit"]`) --
+  // the form is meant to be submitted via Enter/keyboard, not a visible
+  // click target. It's display:none (zero-size, no clickable point), so
+  // even a Playwright `force` click can't target it -- dispatch its click
+  // directly instead, the same way pressing Enter in the form would.
+  await inspector.getByTestId("apply-inspector-clock-properties").evaluate((button: HTMLButtonElement) => button.click());
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(inspector.getByLabel("Inspector signal name")).toHaveValue("clk_main");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -919,7 +956,9 @@ test("edits a Comment Row through the dedicated Bottom Context Editor", async ({
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Comment Row", exact: true }).click();
+  // Ribbon Insert's button is labeled "Comment" (not "Comment Row") --
+  // matches apps/editor/src/minimal-cycle-view-ribbon.tsx's current markup.
+  await page.getByTestId("ribbon").getByRole("button", { name: "Comment", exact: true }).click();
   await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; });
   const commentRow = host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]");
   await expect(commentRow).toHaveAttribute("data-kind", "comment");
@@ -972,8 +1011,15 @@ test("saves and reopens through the application service boundary", async ({ page
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  const name = page.getByTestId("inspector").getByLabel("Inspector signal name");
-  await name.fill("SAVED_REQUEST"); await page.getByTestId("inspector").getByTestId("apply-inspector-signal").click();
+  const inspector = page.getByTestId("inspector");
+  // Wait for the Inspector to actually finish switching from its default
+  // Layout panel to the per-Signal panel before touching it -- otherwise
+  // "Inspector signal name" is a strict-mode-ambiguous substring match
+  // against the still-mounted Layout panel's "Inspector signal name width/
+  // alignment/overflow" fields for the instant right after the click.
+  await expect(inspector.getByRole("heading", { name: "Signal Properties" })).toBeVisible();
+  const name = inspector.getByLabel("Inspector signal name", { exact: true });
+  await name.fill("SAVED_REQUEST"); await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -984,6 +1030,12 @@ test("saves and reopens through the application service boundary", async ({ page
   await name.fill("TEMP_REQUEST"); await page.getByTestId("inspector").getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
+  // Reopening over the unsaved TEMP_REQUEST rename raises the confirmation
+  // dialog (same one "renders Clock Edge Numbers..." below already
+  // dismisses via unsaved-discard) -- without dismissing it, the reload
+  // never actually happens and the row stays on TEMP_REQUEST.
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-discard").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='frozen-signal-name']")).toHaveText("SAVED_REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -1053,7 +1105,7 @@ test("keeps view-only selection, tabs, zoom and panel state out of History and W
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const sessionBefore = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, number>;
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Problems" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Zoom in" }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();

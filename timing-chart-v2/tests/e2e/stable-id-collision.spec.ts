@@ -36,7 +36,7 @@ test("never generates a colliding Stable ID after a page reload resets the in-me
   // Every signal id in the final document must be unique — no collision with the
   // signal_phase9_1 / signal_phase9_2 ids created before the reload.
   await tabs.getByRole("button", { name: "Insert", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "JSON" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "JSON" }).click();
   const ids = await page.evaluate(() => {
     const pre = document.querySelector(".json-panel pre");
     const doc = JSON.parse(pre!.textContent!);

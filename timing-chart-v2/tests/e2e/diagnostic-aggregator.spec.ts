@@ -17,7 +17,7 @@ test("surfaces a WaveDrom render failure in the Problems panel and status bar, a
   await expect(page.getByTestId("problems-panel")).toContainText("WAVE_RENDER_ERROR");
   await expect(page.getByTestId("problems-panel")).toContainText("phase aligned to a half cycle");
 
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Signal" }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Signal" }).click();
   await editor.getByLabel("Clock phase").fill("0.5");
   await page.getByTestId("apply-clock-generator").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");

@@ -8,11 +8,14 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   const surface = page.getByTestId("cycle-surface");
   await expect(surface).toHaveAttribute("data-cycle-view-ready", "true");
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
-  await page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.getByLabel("New Transaction name").fill("Split View Read");
   await page.getByLabel("New Transaction start").fill("2");
   await page.getByLabel("New Transaction end").fill("7");
-  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  // Scoped to the transaction editor's own submit button -- an unscoped
+  // page-wide "Create Transaction" is now ambiguous against the Ribbon's
+  // "Create Transaction" button, which shares the same accessible name.
+  await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(surface).toHaveAttribute("data-editor-idle", "true");
 
   const before = {
@@ -25,8 +28,8 @@ test("captures the V1 Split View composition with both contexts and zero view mu
   await expect(page.locator(".cycle-panel")).toHaveAttribute("data-view-mode", "Split");
   await expect(page.getByTestId("transaction-lanes")).toBeVisible();
   await expect(surface).toBeVisible();
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Signal", exact: true })).toBeVisible();
-  await expect(page.locator(".bottom-tabs").getByRole("button", { name: "Transaction", exact: true })).toBeVisible();
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction", exact: true })).toBeVisible();
   await mkdir(resolve(process.cwd(), "artifacts", "gui-split-view"), { recursive: true });
   await page.screenshot({ path: resolve(process.cwd(), "artifacts", "gui-split-view", "split-1672x941.png"), animations: "disabled" });
 
