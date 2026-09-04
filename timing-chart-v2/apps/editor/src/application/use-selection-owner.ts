@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import type { AnnotationId, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, GroupId, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 
 export type SelectionState = Readonly<{
   signalId: SignalId | undefined;
@@ -11,6 +11,17 @@ export type SelectionState = Readonly<{
   transactionId: TransactionId | undefined;
 }>;
 type SelectionKind = "signal" | "group" | "spacer" | "annotation" | "transaction" | "none";
+export type SelectionCapabilities = Readonly<{
+  hasSelectedSignal: boolean;
+  hasSelectedEntity: boolean;
+  hasSelectedClipboard: boolean;
+  hasDeletableSelection: boolean;
+  canRename: boolean;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+  canShow: boolean;
+  canHide: boolean;
+}>;
 type SelectionEffects = Readonly<{
   decorateSelection: (state: SelectionState) => void;
   synchronizeContext: (kind: SelectionKind) => void;
@@ -26,6 +37,37 @@ function initialState(signalId: SignalId | undefined): SelectionState {
     annotationIds: new Set(),
     transactionId: undefined,
   };
+}
+
+/**
+ * Derive every cross-surface selection capability from one immutable snapshot.
+ * Ribbon, overflow and context-menu surfaces consume this same result so an
+ * enabled command always describes the command router's current target set.
+ */
+export function deriveSelectionCapabilities(document: CanonicalDocument, selection: SelectionState): SelectionCapabilities {
+  const selectedSignal = selection.signalId === undefined ? undefined : document.signals.find((signal) => signal.id === selection.signalId);
+  const selectedGroup = selection.groupId === undefined ? undefined : document.signalGroups.find((group) => group.id === selection.groupId);
+  const selectedAnnotation = selection.annotationId === undefined ? undefined : document.annotations.find((annotation) => annotation.id === selection.annotationId);
+  const selectedTransaction = selection.transactionId === undefined ? undefined : document.transactions.find((transaction) => transaction.id === selection.transactionId);
+  const hasSelectedSignal = selection.signalIds.size > 0 && selectedSignal !== undefined;
+  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selection.spacerId !== undefined;
+  const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
+  const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
+  const selectedSignalGroup = selectedSignal === undefined ? undefined : document.signalGroups.find((group) => group.rows.includes(selectedSignal.id));
+  const canMoveUp = selection.signalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
+    ? selectedSignalGroup.rows.indexOf(selectedSignal.id) > 0
+    : selection.signalIds.size === 0 && selectedGroup !== undefined && selection.spacerId === undefined
+      ? document.signalGroups.findIndex((group) => group.id === selectedGroup.id) > 0
+      : false;
+  const canMoveDown = selection.signalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
+    ? (() => { const index = selectedSignalGroup.rows.indexOf(selectedSignal.id); return index >= 0 && index < selectedSignalGroup.rows.length - 1; })()
+    : selection.signalIds.size === 0 && selectedGroup !== undefined && selection.spacerId === undefined
+      ? (() => { const index = document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < document.signalGroups.length - 1; })()
+      : false;
+  const canRename = (selection.signalIds.size === 1 && selectedSignal !== undefined) || (selection.signalIds.size === 0 && (selectedGroup !== undefined || selectedTransaction !== undefined));
+  const canShow = selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible === false);
+  const canHide = selection.signalIds.size > 0 && selectedSignal !== undefined && document.signals.some((signal) => selection.signalIds.has(signal.id) && signal.display.visible !== false);
+  return { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canRename, canMoveUp, canMoveDown, canShow, canHide };
 }
 
 /** Single synchronous authority for semantic editor selection and event-handler ref mirrors. */

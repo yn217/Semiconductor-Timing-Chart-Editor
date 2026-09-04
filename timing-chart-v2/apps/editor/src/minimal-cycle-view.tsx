@@ -66,7 +66,7 @@ import { Ribbon } from "./minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
-import { useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
+import { deriveSelectionCapabilities, useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
@@ -1476,23 +1476,11 @@ export function MinimalCycleView() {
     requestAnimationFrame(() => globalThis.document.querySelector<HTMLButtonElement>(`[data-bottom-tab="${next}"]`)?.focus());
   };
 
-  const hasSelectedSignal = selectedSignalIds.size > 0 && selectedSignal !== undefined;
-  const hasSelectedEntity = hasSelectedSignal || selectedGroup !== undefined || selectedTransaction !== undefined || selectedSpacer !== undefined;
-  const hasDeletableSelection = hasSelectedEntity || selectedAnnotation !== undefined;
-  const selectedSignalGroup = selectedSignal === undefined ? undefined : snapshot.document.signalGroups.find((group) => group.rows.includes(selectedSignal.id));
-  const canMoveUp = selectedSignalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
-    ? selectedSignalGroup.rows.indexOf(selectedSignal.id) > 0
-    : selectedSignalIds.size === 0 && selectedGroup !== undefined && selectedSpacer === undefined
-      ? snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id) > 0
-      : false;
-  const canMoveDown = selectedSignalIds.size === 1 && selectedSignal !== undefined && selectedSignalGroup !== undefined
-    ? (() => { const index = selectedSignalGroup.rows.indexOf(selectedSignal.id); return index >= 0 && index < selectedSignalGroup.rows.length - 1; })()
-    : selectedSignalIds.size === 0 && selectedGroup !== undefined && selectedSpacer === undefined
-      ? (() => { const index = snapshot.document.signalGroups.findIndex((group) => group.id === selectedGroup.id); return index >= 0 && index < snapshot.document.signalGroups.length - 1; })()
-      : false;
-  const canRenameSelection = (selectedSignalIds.size === 1 && selectedSignal !== undefined) || (selectedSignalIds.size === 0 && (selectedGroup !== undefined || selectedTransaction !== undefined));
-  const canShowSelection = selectedSignalIds.size > 0 && selectedSignal !== undefined && snapshot.document.signals.some((signal) => selectedSignalIds.has(signal.id) && signal.display.visible === false);
-  const canHideSelection = selectedSignalIds.size > 0 && selectedSignal !== undefined && snapshot.document.signals.some((signal) => selectedSignalIds.has(signal.id) && signal.display.visible !== false);
+  const capabilities = deriveSelectionCapabilities(snapshot.document, selection.state);
+  const { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canMoveUp, canMoveDown } = capabilities;
+  const canRenameSelection = capabilities.canRename;
+  const canShowSelection = capabilities.canShow;
+  const canHideSelection = capabilities.canHide;
   const restorePendingFileFocus = () => {
     const origin = pendingFileOriginRef.current;
     pendingFileOriginRef.current = null;
@@ -1507,7 +1495,6 @@ export function MinimalCycleView() {
     if (documentLifecycle.savePendingAndContinue(`${snapshot.document.document.title || "timing-chart"}.tcd`)) restorePendingFileFocus();
   };
   const requestNewDocument = () => { capturePendingFileOrigin(); documentLifecycle.requestNew(); };
-  const hasSelectedClipboard = hasSelectedEntity || selectedAnnotation !== undefined;
   const applyWorkspacePreset = (preset: WorkspacePreset) => {
     setWorkspacePreset(preset);
     if (preset === "waveform") { setInspectorVisible(false); setBottomVisible(false); return; }
