@@ -31,11 +31,7 @@ describe("user text export trust boundary", () => {
     expect(svg).not.toMatch(/(?:href|xlink:href)=\"\s*javascript:/i);
   });
 
-  it("keeps hostile WaveJSON labels inside text-safe WaveDrom markup", () => {
-    const markup = renderWaveJsonMarkup({ wave: "=", data: [hostile] });
-
-    expect(markup).not.toMatch(/<script\b|<image\b|<foreignObject\b/i);
-    expect(markup).not.toMatch(/\bon[a-z][\\w:-]*\\s*=/i);
-    expect(markup).not.toMatch(/(?:href|xlink:href)=\"\s*javascript:/i);
+  it("rejects hostile WaveJSON before executable markup can be materialized", () => {
+    expect(() => renderWaveJsonMarkup({ wave: "=", data: [hostile] })).toThrowError(expect.objectContaining({ code: "UNSAFE_WAVEDROM_SVG" }));
   });
 });
