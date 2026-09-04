@@ -28,7 +28,7 @@ const noHistory = (operation: "Undo" | "Redo"): CommandResult => ({ ok: false, r
 // serializes, or deep-clones the current or retained documents. Redo needs
 // no separate cap: it can only ever hold entries popped off #undo via
 // undo(), so it is already bounded by the same limit.
-export const HISTORY_RETENTION_LIMIT = 1000;
+export const HISTORY_RETENTION_LIMIT = HISTORY_RETENTION_POLICY.maxEntries;
 
 export class CommandHistorySession implements CanonicalStore, SemanticCommandDispatcher, SemanticBatchDispatcher, HistoryController {
   readonly #documents: DocumentSession;
@@ -134,10 +134,6 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
         inverseChangeSet,
       };
       this.#undo.push(entry);
-      // Drop the oldest entries once the retention horizon is exceeded --
-      // splice() removes array slots, it does not touch or copy the
-      // documents those entries reference.
-      if (this.#undo.length > HISTORY_RETENTION_LIMIT) this.#undo.splice(0, this.#undo.length - HISTORY_RETENTION_LIMIT);
       this.#redo = [];
       this.#historyMetrics = { ...this.#historyMetrics, committedActions: this.#historyMetrics.committedActions + 1 };
       this.#evictOldestEntries();
