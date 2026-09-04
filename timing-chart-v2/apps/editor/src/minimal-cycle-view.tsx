@@ -332,6 +332,26 @@ export function MinimalCycleView() {
     setCollapsedGroups(next);
   };
 
+  // #211: Canonical restoration alone isn't UX parity -- if Undo brings a
+  // deleted Signal back (or Redo removes it again), the selection should
+  // follow rather than silently staying at "None"/pointing at a since-gone
+  // ID. Scoped to Signals for now (signal.create/delete are the only
+  // commands with distinct addedSignals/removedSignals changeSet fields;
+  // Annotation/Group/Spacer create+delete share one symmetric field name,
+  // so telling "added" from "removed" for them needs a different check --
+  // left for a follow-up rather than guessed at here).
+  const repairSelectionAfterHistoryChange = (result: CommandResult) => {
+    if (!result.ok) return;
+    const removedIds = result.changeSet.removedSignals ?? [];
+    const currentSignalId = selection.refs.signalId.current;
+    if (currentSignalId && removedIds.includes(currentSignalId)) {
+      selection.clear();
+      return;
+    }
+    const addedIds = result.changeSet.addedSignals ?? [];
+    const nothingSelected = !selection.refs.signalId.current && !selection.refs.groupId.current && !selection.refs.spacerId.current && !selection.refs.annotationId.current && !selection.refs.transactionId.current;
+    if (nothingSelected && addedIds.length === 1) selection.selectSignal(addedIds[0]!);
+  };
   useEffect(() => {
     const registry = commandRegistry.current;
     const unregister = [
@@ -339,8 +359,8 @@ export function MinimalCycleView() {
       registry.register("selection.delete", editActions.deleteSelection),
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => editActions.rename(name)),
       registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => editActions.setVisibility(visible)),
-      registry.register("history.undo", () => application.undo()),
-      registry.register("history.redo", () => application.redo()),
+      registry.register("history.undo", () => { const result = application.undo(); repairSelectionAfterHistoryChange(result); return result; }),
+      registry.register("history.redo", () => { const result = application.redo(); repairSelectionAfterHistoryChange(result); return result; }),
       registry.register("clipboard.copy", editActions.copy),
       registry.register("clipboard.cut", editActions.cut),
       registry.register("clipboard.paste", editActions.paste),
