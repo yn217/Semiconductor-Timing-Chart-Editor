@@ -66,7 +66,7 @@ test("records approved badge visual evidence", async ({ page }) => {
     report[presentation] = { region, leftFrozenParity: true, goldenPass: presentation === "internal" ? false : result.diffPercent <= 0.05, goldenDiffPercent: result.diffPercent, textWidth, innerPadding: (box!.width - textWidth) / 2, goldenStatus: presentation === "internal" ? "approved-delta" : "golden" };
   }
   const wire = report.internal as { goldenStatus: string };
-  report.wire = { ...(report.internal as object), goldenStatus: wire.goldenStatus, approvedDelta: true, width: 34, gap: 5, overlap: 0 };
+  report.wire = { ...(report.internal as object), goldenStatus: wire.goldenStatus, approvedDelta: true, width: 42, gap: 5, overlap: 0 };
   delete report.internal;
   await writeFile(resolve(outputRoot, "badge-visual-report.json"), `${JSON.stringify(report, null, 2)}\n`);
   console.log(JSON.stringify(report, null, 2));
