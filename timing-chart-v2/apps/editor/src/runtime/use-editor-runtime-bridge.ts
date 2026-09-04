@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import { valueSignalWaveDomain, type CanonicalDocument, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters } from "./edge-counter-projection.js";
@@ -50,6 +50,45 @@ export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, st
       element.dataset.groupStylePreview = style === undefined ? "false" : "true";
     }
   }
+}
+
+/** Applies an Annotation editor's draft Label/Color/Opacity directly to the
+ * mounted overlay (packages/renderer/src/stable-surface.ts's renderOverlay
+ * output -- see its own `[data-role='annotation-label']` text content and
+ * `--annotation-color` custom property), the same DOM-only pattern
+ * refreshGroupStylePreview above already uses: no Canonical/History/Dirty
+ * transition, since nothing here touches Canonical state -- only the
+ * already-mounted, stable overlay element's own text/style. The next real
+ * projection update (any document/selection change, or Apply) reasserts
+ * the canonical presentation; passing `undefined` for a field restores its
+ * live canonical value (used on Cancel/selection change). Anchor-derived
+ * geometry (position, shape) is unaffected -- this only previews the
+ * fields that don't require re-deriving screen geometry from projection/
+ * scale/mapping. */
+export function refreshAnnotationPreview(host: HTMLElement, annotationId: AnnotationId, draft: { readonly label?: string | undefined; readonly color?: string | undefined; readonly opacity?: number | undefined } | undefined, canonical: { readonly label: string; readonly color: string | undefined; readonly opacity: number | undefined }): void {
+  const owner = host.querySelector<HTMLElement>(`[data-role='annotation-owner'][data-annotation-id='${CSS.escape(annotationId)}']`);
+  if (!owner) return;
+  const label = owner.querySelector<HTMLElement>("[data-role='annotation-label']");
+  const nextLabel = draft?.label ?? canonical.label;
+  if (label && label.textContent !== nextLabel) label.textContent = nextLabel;
+  // aria-label is renderer-owned and its format varies by annotation type
+  // (e.g. Measurement includes its threshold percentages) -- this preview
+  // must not clobber that with a generic reconstruction. Only override it
+  // while actively previewing a different label, caching the exact original
+  // string first so reverting (draft undefined) restores it verbatim
+  // instead of guessing a replacement format.
+  if (draft?.label !== undefined) {
+    if (owner.dataset.annotationAriaLabelOriginal === undefined) owner.dataset.annotationAriaLabelOriginal = owner.getAttribute("aria-label") ?? "";
+    owner.setAttribute("aria-label", `${owner.dataset.annotationType}: ${nextLabel}`);
+  } else if (owner.dataset.annotationAriaLabelOriginal !== undefined) {
+    owner.setAttribute("aria-label", owner.dataset.annotationAriaLabelOriginal);
+    delete owner.dataset.annotationAriaLabelOriginal;
+  }
+  const nextColor = draft?.color ?? canonical.color;
+  if (nextColor) owner.style.setProperty("--annotation-color", nextColor); else owner.style.removeProperty("--annotation-color");
+  const nextOpacity = draft?.opacity ?? canonical.opacity;
+  if (nextOpacity !== undefined) owner.style.opacity = String(nextOpacity); else owner.style.removeProperty("opacity");
+  owner.dataset.annotationPreview = draft === undefined ? "false" : "true";
 }
 
 export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | null>, active: boolean, range: { readonly start: number; readonly end: number }): void {

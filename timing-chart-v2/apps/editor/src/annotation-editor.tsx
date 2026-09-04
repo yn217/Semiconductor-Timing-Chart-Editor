@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type JsonObject, type MeasurementProfile, type TransitionAnchorKind } from "@timing-chart-v2/schema";
@@ -8,7 +8,7 @@ import { AnnotationList } from "./annotation-list.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { annotationPropertiesBase, buildAnnotationStyleCommand } from "./annotation-style-command.js";
 
-export function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+export function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel, onPreview }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onPreview: (draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void }) {
   const [label, setLabel] = useState(annotation.label);
   const [color, setColor] = useState(annotation.color ?? "#d04a36");
   const [visible, setVisible] = useState(annotation.visible);
@@ -46,6 +46,16 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   // properties, not the unsaved draft fields below -- clicking Bold should
   // never accidentally commit an in-progress label/color edit.
   const applyFontStyle = (style: JsonObject) => onCommand(buildAnnotationStyleCommand(annotation, style, nextCommandId("annotation_font")));
+  // Preview Update reflects the CURRENT draft Label/Color/Opacity on the
+  // real renderer-owned overlay via a pure DOM-only path (see
+  // refreshAnnotationPreview in runtime/use-editor-runtime-bridge.ts) --
+  // Canonical/History/Dirty stay untouched; nothing here calls onCommand.
+  // Selecting a different annotation (or unmounting this editor for any
+  // other reason -- Cancel, Delete, closing the Bottom panel) always
+  // reverts the preview back to the real Canonical rendering, the same
+  // contract Group Style preview already follows.
+  const applyPreview = () => onPreview({ label, color, ...((["timingRegion", "ghostTrace"] as const).includes(annotation.type as "timingRegion") ? { opacity } : {}) });
+  useEffect(() => () => onPreview(undefined), [annotation.id, onPreview]);
   const standardMeasurementPair = measurementProfilePair(measurementProfile);
   const customMeasurementPair = { start: Number(measurementStart) / 100, end: Number(measurementEnd) / 100 };
   const measurementPair = measurementProfile === "custom" ? customMeasurementPair : standardMeasurementPair ?? { start: 0, end: 1 };
@@ -62,11 +72,11 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       <button type="button" aria-label="Create context annotation" onClick={() => onCreate("text")}>＋ Add Annotation</button>
       <button type="button" onClick={() => onDuplicate(annotation)}>Duplicate</button>
       <button type="button" onClick={onDelete}>Delete</button>
-      <button type="button" onClick={() => setPreviewRevision((value) => value + 1)}>⟳ Preview Update</button>
+      <button type="button" onClick={() => { setPreviewRevision((value) => value + 1); applyPreview(); }}>⟳ Preview Update</button>
       <button type="button" onClick={() => downloadText(JSON.stringify(annotations, null, 2), "annotations.json")}>Export</button>
       <button type="button" onClick={() => fileInput.current?.click()}>Import</button>
       <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import annotations" onChange={(event) => { const file = event.target.files?.[0]; if (file) void importAnnotations(file); event.currentTarget.value = ""; }} />
-      <output data-testid="annotation-preview-status">Preview {previewRevision > 0 ? `updated ${previewRevision}` : "ready"}</output>
+      <output data-testid="annotation-preview-status">{previewRevision > 0 ? `Previewing draft (updated ${previewRevision}) · canonical data unchanged` : "Preview ready"}</output>
       <output data-testid="annotation-import-status">{importStatus}</output>
     </div>
     <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} onCommand={onCommand} />
