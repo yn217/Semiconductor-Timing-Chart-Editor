@@ -26,7 +26,12 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // directly -- see createTimelineNavigationController) rather than
   // something every render silently redoes. `forcedScale` still lets a
   // resolved scale persist across re-renders once established.
-  const scale = actualScreenScale ?? forcedScale ?? 1;
+  // Resolve the screen scale once on the initial mount. Subsequent timeline
+  // edits may change the SVG's intrinsic width; reusing that new browser
+  // matrix would move existing semantic anchors even when their source cycle
+  // is unchanged. The TimelineGeometryOwner's established scale remains the
+  // single presentation-scale authority after initialization.
+  const scale = forcedScale ?? actualScreenScale ?? 1;
   let finalX = 0;
   for (const display of presentationCycles(mapping.displayCycleCount)) {
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
