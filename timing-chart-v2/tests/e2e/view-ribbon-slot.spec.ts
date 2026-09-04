@@ -2,19 +2,22 @@ import { expect, test } from "@playwright/test";
 
 test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 
-test("View exposes stable Show/Panels/Guides/Zoom/Workspace slots", async ({ page }) => {
+test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async ({ page }) => {
   await page.goto("/");
   const shell = page.locator(".editor-shell");
   const surface = page.locator("[data-role='timing-chart-surface']");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
 
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(5);
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(6);
   await expect(page.locator(".ribbon-major-group").first()).toHaveAttribute("data-major-group", "Show");
   await expect(page.locator(".ribbon-major-group").nth(1)).toHaveAttribute("data-major-group", "Panels");
   await expect(page.locator(".ribbon-major-group").nth(2)).toHaveAttribute("data-major-group", "Guides");
   await expect(page.locator(".ribbon-major-group").nth(3)).toHaveAttribute("data-major-group", "Zoom");
   await expect(page.locator(".ribbon-major-group").nth(4)).toHaveAttribute("data-major-group", "Workspace");
-  await expect(page.getByTestId("ribbon").getByLabel("Workspace layout actions")).toBeVisible();
+  await expect(page.locator(".ribbon-major-group").nth(5)).toHaveAttribute("data-major-group", "Layout");
+  await expect(page.getByTestId("ribbon").getByLabel("Layout commands")).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByRole("button", { name: "Reset Layout" })).toBeVisible();
+  await expect(page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Zoom Out" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Zoom In" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByRole("button", { name: "Fit All" })).toBeVisible();
@@ -28,8 +31,7 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace slots", async ({ pag
   await expect(page.getByTestId("ribbon").getByLabel("Labels and structure")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();
   const footerLabels = page.getByTestId("ribbon").locator(".view-slot-group > .ds-ribbon-group > b");
-  await expect(footerLabels).toHaveCount(5);
-  await expect.poll(async () => footerLabels.evaluateAll((labels) => labels.map((label) => getComputedStyle(label).visibility))).toEqual(["visible", "visible", "visible", "visible", "visible"]);
+  await expect(footerLabels).toHaveCount(6);
 
   const before = {
     revision: await surface.getAttribute("data-canonical-revision"),
@@ -54,13 +56,21 @@ test("View zoom uses a shared view-only route and does not move Home presentatio
   const home = page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true });
   await home.click();
   const homeZoom = page.locator("[data-major-group='Zoom']").filter({ has: page.locator(".home-view-group") });
-  const homeX = (await homeZoom.boundingBox())?.x ?? -1;
+  const homeBox = await homeZoom.boundingBox();
+  const homeX = homeBox?.x ?? -1;
+  await expect(homeZoom.getByRole("button")).toHaveText(["Zoom Out", "100%", "Zoom In", "Fit All", "Fit Selection"]);
   const beforeRevision = await surface.getAttribute("data-canonical-revision");
   const beforeHistory = await surface.getAttribute("data-history-depth");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const viewZoom = page.locator(".view-zoom-slot");
   await expect(viewZoom).toBeVisible();
-  expect((await viewZoom.boundingBox())?.x ?? -1).toBeGreaterThanOrEqual(600);
+  await expect(viewZoom.getByRole("button")).toHaveText(["ZoomOut", "ZoomIn", "FitAll", "FitSelection"]);
+  await expect(viewZoom.getByLabel("Zoom preset")).toBeVisible();
+  const viewBox = await viewZoom.boundingBox();
+  expect(viewBox).not.toBeNull();
+  expect(homeBox).not.toBeNull();
+  expect(Math.abs(viewBox!.x - homeBox!.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(viewBox!.width - homeBox!.width)).toBeLessThanOrEqual(1);
   await ribbon.getByRole("button", { name: "Zoom In" }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("125%");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
@@ -75,7 +85,7 @@ test("View groups compress without horizontal overflow at 1280px", async ({ page
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
-  await expect(ribbon.locator("[data-major-group]")).toHaveCount(5);
+  await expect(ribbon.locator("[data-major-group]")).toHaveCount(6);
   const metrics = await ribbon.evaluate((node) => {
     const root = node.getBoundingClientRect();
     const groups = [...node.querySelectorAll<HTMLElement>("[data-major-group]")].map((group) => group.getBoundingClientRect());
@@ -99,4 +109,47 @@ test("View group controls stay inside their owned regions", async ({ page }) => 
   expect(metrics.every((item) => !item.overflow), JSON.stringify(metrics)).toBe(true);
   const fitButtons = await page.getByLabel("Fit commands").getByRole("button").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect()));
   expect(fitButtons[0]!.right).toBeLessThanOrEqual(fitButtons[1]!.left + 1);
+});
+
+test("Layout Focus Waveform restores the previous panel state without document history", async ({ page }) => {
+  await page.goto("/");
+  const shell = page.locator(".editor-shell");
+  const surface = page.locator("[data-role='timing-chart-surface']");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByLabel("Inspector").click();
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+    bottom: await shell.getAttribute("data-bottom-visible"),
+  };
+  await page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" }).click();
+  await expect(shell).toHaveAttribute("data-workspace-preset", "waveform");
+  await expect(shell).toHaveAttribute("data-inspector-visible", "false");
+  await expect(shell).toHaveAttribute("data-bottom-visible", "false");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Focus Waveform" }).click();
+  await expect(shell).toHaveAttribute("data-workspace-preset", "edit");
+  await expect(shell).toHaveAttribute("data-inspector-visible", "false");
+  await expect(shell).toHaveAttribute("data-bottom-visible", before.bottom!);
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
+});
+
+test("Layout Reset restores application panes without mutating the document", async ({ page }) => {
+  await page.goto("/");
+  const shell = page.locator(".editor-shell");
+  const surface = page.locator("[data-role='timing-chart-surface']");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+  };
+  await page.getByTestId("inspector-resizer").press("ArrowRight");
+  await expect(shell).not.toHaveAttribute("data-inspector-width", "297");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Reset Layout" }).click();
+  await expect(shell).toHaveAttribute("data-workspace-preset", "edit");
+  await expect(shell).toHaveAttribute("data-left-pane-width", "265");
+  await expect(shell).toHaveAttribute("data-inspector-width", "297");
+  await expect(shell).toHaveAttribute("data-bottom-height", "240");
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
 });

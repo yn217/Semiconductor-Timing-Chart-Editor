@@ -133,6 +133,7 @@ export function MinimalCycleView() {
     viewMode, setViewMode,
     density, setDensity,
     workspacePreset, setWorkspacePreset,
+    waveformRestoreRef,
     signalTreeVisible, setSignalTreeVisible,
     inspectorVisible, setInspectorVisible,
     inspectorResetToken, setInspectorResetToken,
@@ -1520,13 +1521,40 @@ export function MinimalCycleView() {
   };
   const requestNewDocument = () => { capturePendingFileOrigin(); documentLifecycle.requestNew(); };
   const applyWorkspacePreset = (preset: WorkspacePreset) => {
+    if (preset === "waveform") {
+      if (workspacePreset !== "waveform") waveformRestoreRef.current = { inspectorVisible, bottomVisible };
+      setWorkspacePreset(preset);
+      setInspectorVisible(false);
+      setBottomVisible(false);
+      return;
+    }
     setWorkspacePreset(preset);
-    if (preset === "waveform") { setInspectorVisible(false); setBottomVisible(false); return; }
-    setInspectorVisible(true);
-    setBottomVisible(true);
+    if (workspacePreset === "waveform" && preset === "edit") {
+      const restored = waveformRestoreRef.current;
+      waveformRestoreRef.current = undefined;
+      setInspectorVisible(restored?.inspectorVisible ?? true);
+      setBottomVisible(restored?.bottomVisible ?? true);
+    } else {
+      waveformRestoreRef.current = undefined;
+      setInspectorVisible(true);
+      setBottomVisible(true);
+    }
     if (preset === "review") setBottomTab("Problems");
     else if (preset === "transaction") { setViewMode("Transaction"); setBottomTab("Transaction"); }
     else setBottomTab("Signal");
+  };
+  const resetWorkspaceLayout = () => {
+    waveformRestoreRef.current = undefined;
+    setWorkspacePreset("edit");
+    setViewMode("Cycle");
+    setBottomTab("Signal");
+    setSignalTreeVisible(true);
+    setInspectorVisible(true);
+    setBottomVisible(true);
+    setLeftPaneWidth(LEFT_PANE_MIN_WIDTH);
+    setFrozenPaneWidth(209);
+    setInspectorWidth(297);
+    setBottomHeight(240);
   };
   return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-signal-tree-visible={String(signalTreeVisible)} data-show-signal-names={String(showSignalNames)} data-show-roles={String(showRoles)} data-show-annotations={String(showAnnotations)} data-show-transactions={String(showTransactions)} data-show-group-background={String(showGroupBackground)} data-layout-overflow={snapshot.document.layout.overflow} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth} data-cycle-count={snapshot.document.timeline.cycleCount} data-signal-count={snapshot.document.signals.length} data-transaction-count={snapshot.document.transactions.length}>
     <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />
@@ -1566,6 +1594,7 @@ export function MinimalCycleView() {
        workspacePreset={workspacePreset}
        onDensityChange={setDensity}
        onWorkspacePresetChange={applyWorkspacePreset}
+       onResetLayout={resetWorkspaceLayout}
       selectedTransactionId={selectedTransactionId}
       clipboardStatus={clipboardStatus}
       clipboardAvailable={clipboardAvailable}
