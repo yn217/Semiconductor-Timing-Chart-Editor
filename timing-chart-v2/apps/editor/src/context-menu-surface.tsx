@@ -1,7 +1,7 @@
 import { createPortal } from "react-dom";
 import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
+import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
 
-const CONTEXT_MENU_VIEWPORT_MARGIN = 8;
 type ContextMenuAnchor = Readonly<{ x: number; y: number }>;
 
 export function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "signal" | "group" | "annotation" | "transaction" }) {
@@ -9,25 +9,13 @@ export function ContextMenuSurface({ anchor, children, label, target }: { readon
   const position = (reveal = true) => {
     const menu = menuRef.current;
     if (!menu) return;
-    const viewport = globalThis.visualViewport;
-    const viewportLeft = viewport?.offsetLeft ?? 0;
-    const viewportTop = viewport?.offsetTop ?? 0;
-    const viewportRight = viewportLeft + (viewport?.width ?? globalThis.innerWidth);
-    const viewportBottom = viewportTop + (viewport?.height ?? globalThis.innerHeight);
     const rect = menu.getBoundingClientRect();
-    const preferredRight = anchor.x + rect.width;
-    const preferredBottom = anchor.y + rect.height;
-    const flipX = preferredRight > viewportRight - CONTEXT_MENU_VIEWPORT_MARGIN && anchor.x - rect.width >= viewportLeft + CONTEXT_MENU_VIEWPORT_MARGIN;
-    const flipY = preferredBottom > viewportBottom - CONTEXT_MENU_VIEWPORT_MARGIN && anchor.y - rect.height >= viewportTop + CONTEXT_MENU_VIEWPORT_MARGIN;
-    const preferredX = flipX ? anchor.x - rect.width : anchor.x;
-    const preferredY = flipY ? anchor.y - rect.height : anchor.y;
-    const x = Math.max(viewportLeft + CONTEXT_MENU_VIEWPORT_MARGIN, Math.min(preferredX, viewportRight - rect.width - CONTEXT_MENU_VIEWPORT_MARGIN));
-    const y = Math.max(viewportTop + CONTEXT_MENU_VIEWPORT_MARGIN, Math.min(preferredY, viewportBottom - rect.height - CONTEXT_MENU_VIEWPORT_MARGIN));
+    const { x, y, flippedX, flippedY } = computeViewportSafePosition(anchor, { width: rect.width, height: rect.height }, currentViewportBounds());
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
     menu.dataset.positioned = "true";
-    menu.dataset.flippedX = String(flipX);
-    menu.dataset.flippedY = String(flipY);
+    menu.dataset.flippedX = String(flippedX);
+    menu.dataset.flippedY = String(flippedY);
     if (reveal) menu.style.visibility = "visible";
   };
   useLayoutEffect(() => {

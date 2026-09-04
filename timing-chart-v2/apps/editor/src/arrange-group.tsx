@@ -1,5 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { computeViewportSafePosition, currentViewportBounds } from "./viewport-safe-position.js";
 
 /** PowerPoint-style "Arrange" group for the Annotation ribbon tab: the 3
  * most common operations (Bring to Front / Send to Back / Group) as a
@@ -24,11 +26,13 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
       const target = event.target;
-      if (target instanceof Node && rootRef.current?.contains(target)) return;
+      if (target instanceof Node && (rootRef.current?.contains(target) || menuRef.current?.contains(target))) return;
       setOpen(false);
     };
     const onKeyDown = (event: KeyboardEvent) => {
@@ -41,6 +45,34 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
       window.document.removeEventListener("keydown", onKeyDown, true);
     };
   }, [open]);
+  // #197: this dropdown used to be a plain CSS `position: absolute; left: 0`
+  // box with no viewport-edge awareness at all -- since the Arrange group
+  // sits near the right end of the Annotation ribbon, its 150px-wide menu
+  // could render partly off-screen at narrower viewports. It now goes
+  // through the same viewport-safe positioning helper the Signal/Group/
+  // Annotation context menu uses (computeViewportSafePosition), anchored to
+  // the trigger button's own rect instead of a pointer point.
+  useLayoutEffect(() => {
+    if (!open) return;
+    const position = () => {
+      const trigger = triggerRef.current;
+      const menu = menuRef.current;
+      if (!trigger || !menu) return;
+      const triggerRect = trigger.getBoundingClientRect();
+      const menuRect = menu.getBoundingClientRect();
+      const { x, y } = computeViewportSafePosition({ x: triggerRect.left, y: triggerRect.bottom + 3 }, { width: menuRect.width, height: menuRect.height }, currentViewportBounds());
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      menu.style.visibility = "visible";
+    };
+    position();
+    window.addEventListener("resize", position);
+    window.addEventListener("scroll", position, true);
+    return () => {
+      window.removeEventListener("resize", position);
+      window.removeEventListener("scroll", position, true);
+    };
+  }, [open]);
   const notWired = "Not yet implemented";
   return <div className="arrange-group" ref={rootRef}>
     <div className="arrange-rows">
@@ -49,8 +81,8 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
       <button type="button" className="font-style-button" title={onGroup ? "Group" : notWired} disabled={!onGroup} onClick={onGroup}><RibbonIcon name="i-group" /><span>Group</span></button>
     </div>
     <div className="arrange-dropdown">
-      <button type="button" className="arrange-dropdown-trigger" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}><RibbonIcon name="i-arrange" /><span>Arrange</span><RibbonIcon name="i-chevron-down" /></button>
-      {open && <div className="arrange-menu" role="menu" aria-label="Arrange">
+      <button ref={triggerRef} type="button" className="arrange-dropdown-trigger" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}><RibbonIcon name="i-arrange" /><span>Arrange</span><RibbonIcon name="i-chevron-down" /></button>
+      {open && createPortal(<div ref={menuRef} className="arrange-menu" role="menu" aria-label="Arrange" style={{ position: "fixed", visibility: "hidden" }}>
         <button type="button" role="menuitem" disabled={!onUngroup} title={onUngroup ? undefined : notWired} onClick={() => { onUngroup?.(); setOpen(false); }}><RibbonIcon name="i-ungroup" /><span>Ungroup</span></button>
         <div className="arrange-menu-sep" />
         <button type="button" role="menuitem" disabled={!onRotateRight} title={onRotateRight ? undefined : notWired} onClick={() => { onRotateRight?.(); setOpen(false); }}><RibbonIcon name="i-rotate-right" /><span>Rotate right 90°</span></button>
@@ -61,7 +93,7 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
         <div className="arrange-menu-sep" />
         <button type="button" role="menuitem" disabled={!onLock} title={onLock ? "Lock" : notWired} onClick={() => { onLock?.(); setOpen(false); }}><RibbonIcon name="i-lock" /><span>Lock</span></button>
         <button type="button" role="menuitem" disabled={!onUnlock} title={onUnlock ? "Unlock" : notWired} onClick={() => { onUnlock?.(); setOpen(false); }}><RibbonIcon name="i-unlock" /><span>Unlock</span></button>
-      </div>}
+      </div>, window.document.body)}
     </div>
   </div>;
 }
