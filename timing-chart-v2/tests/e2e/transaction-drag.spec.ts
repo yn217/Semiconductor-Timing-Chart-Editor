@@ -9,8 +9,12 @@ async function ready(page: Page) {
  * sets its exact start/end/name through the selected-Transaction editor. */
 async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
   const host = page.getByTestId("cycle-surface");
-  await page.getByTestId("ribbon").getByRole("button", { name: "Transaction", exact: true }).click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("New Transaction name").fill(name);
+  await page.getByLabel("New Transaction start").fill(String(start));
+  await page.getByLabel("New Transaction end").fill(String(end));
+  await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");
   await lane.locator("[data-transaction-id]").first().click();
