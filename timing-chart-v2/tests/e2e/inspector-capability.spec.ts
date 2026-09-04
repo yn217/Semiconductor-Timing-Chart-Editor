@@ -28,13 +28,15 @@ test("Signal Inspector exposes parity fields and applies one transient draft com
 
   const inspector = page.getByTestId("inspector");
   await expect(inspector).toHaveAttribute("data-inspector-context", "signal");
+  const labelStyle = inspector.getByRole("button", { name: "Label Style", exact: true });
+  if (await labelStyle.getAttribute("aria-expanded") !== "true") await labelStyle.click();
   for (const label of [
     "Inspector signal name", "Inspector signal role", "Inspector signal type",
     "Inspector signal width", "Inspector signal visible", "Inspector text color",
     "Inspector label background", "Inspector label font", "Inspector label size",
     "Inspector label bold", "Inspector label align", "Inspector label overflow",
     "Inspector waveform color", "Inspector waveform background", "Inspector waveform row style",
-  ]) await expect(inspector.getByLabel(label)).toBeVisible();
+  ]) await expect(inspector.getByLabel(label, { exact: true })).toBeVisible();
   await expect(inspector.getByText("Instance Path")).toBeVisible();
   await expect(inspector.getByText("Full Path")).toBeVisible();
 
@@ -48,7 +50,7 @@ test("Signal Inspector exposes parity fields and applies one transient draft com
   };
   const unrelatedClockSvg = await surface.locator("[data-signal-id='sig_cycle_clock'] > svg").elementHandle();
 
-  await inspector.getByLabel("Inspector signal name").fill("DATA_RENAMED");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).fill("DATA_RENAMED");
   await inspector.getByLabel("Inspector signal role").selectOption("output");
   await inspector.getByLabel("Inspector signal width").fill("16");
   await inspector.getByLabel("Inspector label font").fill("Arial");

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { CommandResult } from "@timing-chart-v2/commands";
 
-export function InlineNameInput({ value, ariaLabel, onRename, onCommitted }: { readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void }) {
+export function InlineNameInput({ value, ariaLabel, onRename, onCommitted, onDraftChange }: { readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void; readonly onDraftChange?: (name: string) => void }) {
   const [draft, setDraft] = useState(value);
   const [error, setError] = useState("");
   useEffect(() => { setDraft(value); setError(""); }, [value]);
@@ -16,9 +16,9 @@ export function InlineNameInput({ value, ariaLabel, onRename, onCommitted }: { r
     onCommitted?.(name);
   };
   return <>
-    <input aria-label={ariaLabel} value={draft} data-commit-policy="enter-only" onChange={(event) => { setDraft(event.target.value); setError(""); }} onKeyDown={(event) => {
+    <input aria-label={ariaLabel} value={draft} data-commit-policy="enter-only" onChange={(event) => { setDraft(event.target.value); onDraftChange?.(event.target.value); setError(""); }} onKeyDown={(event) => {
       if (event.key === "Enter") { event.preventDefault(); event.stopPropagation(); commit(); }
-      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDraft(value); setError(""); }
+      if (event.key === "Escape") { event.preventDefault(); event.stopPropagation(); setDraft(value); onDraftChange?.(value); setError(""); }
     }} />
     {error && <span role="alert" className="editor-problem">{error}</span>}
   </>;

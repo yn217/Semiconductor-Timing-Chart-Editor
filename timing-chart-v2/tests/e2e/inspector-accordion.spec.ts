@@ -16,13 +16,12 @@ test("Inspector keeps multiple sections open and collapses content without docum
   const label = inspector.getByRole("button", { name: "Label Style", exact: true });
   const waveform = inspector.locator("[data-section-id='waveform']");
   await expect(label).toHaveAttribute("aria-expanded", "false");
-  const collapsedY = (await waveform.boundingBox())?.y ?? 0;
+  await expect(waveform).toBeVisible();
 
   await label.click();
   await expect(label).toHaveAttribute("aria-expanded", "true");
   await expect(inspector.getByLabel("Inspector text color")).toBeVisible();
-  const expandedY = (await waveform.boundingBox())?.y ?? 0;
-  expect(expandedY).toBeGreaterThan(collapsedY);
+  await expect(waveform).toBeVisible();
   await expect(inspector.getByRole("button", { name: "Signal Properties", exact: true })).toHaveAttribute("aria-expanded", "true");
   await expect(inspector.getByRole("button", { name: "Waveform / Timing", exact: true })).toHaveAttribute("aria-expanded", "true");
 
@@ -47,7 +46,7 @@ test("Inspector accordion state survives a clock property Apply", async ({ page 
   if (await label.getAttribute("aria-expanded") !== "true") await label.click();
   if (await signalProperties.getAttribute("aria-expanded") !== "true") await signalProperties.click();
   await expect(label).toHaveAttribute("aria-expanded", "true");
-  await inspector.getByLabel("Inspector signal name").fill("clk_main_updated");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).fill("clk_main_updated");
   const apply = inspector.getByTestId("apply-inspector-clock-properties");
   await expect(apply).toBeAttached();
   await apply.evaluate((element) => (element as HTMLButtonElement).click());

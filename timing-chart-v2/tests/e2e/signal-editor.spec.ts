@@ -117,7 +117,7 @@ test("Bottom Signal editor exposes editable type and bus width through one seman
   await expect(editor.getByLabel("Signal width")).toHaveValue("8");
 });
 
-test("Bottom Signal event toolbar provides command-backed row operations and view-only preview/export", async ({ page }) => {
+test("Bottom Signal event toolbar provides command-backed row operations and export", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -125,19 +125,17 @@ test("Bottom Signal event toolbar provides command-backed row operations and vie
   const editor = page.getByTestId("signal-editor");
   const toolbar = page.getByTestId("signal-event-toolbar");
   await expect(toolbar).toBeVisible();
-  await expect(toolbar.getByRole("button")).toHaveText(["Presets", "Duplicate", "Import...", "Export...", "Preview", "Add Row", "Duplicate", "Delete", "Import", "Export", "Preview Update"]);
+  await expect(toolbar.getByRole("button")).toHaveText(["Presets", "Duplicate", "Import...", "Export...", "Add Row", "Delete"]);
   const revisionBefore = await page.getByTestId("revision-status").textContent();
   const historyBefore = await page.getByTestId("history-status").textContent();
-  await toolbar.getByTestId("event-preview").click();
-  await expect(page.getByTestId("event-preview-status")).toContainText("canonical data unchanged");
   await expect(page.getByTestId("revision-status")).toHaveText(revisionBefore!);
   await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
   const download = page.waitForEvent("download");
-  await toolbar.getByTestId("event-export").click();
+  await toolbar.getByTestId("event-export-action").click();
   const exported = await download;
   expect((await exported.createReadStream())?.readable).toBe(true);
   await editor.locator("[data-event-start='0']").click();
-  await toolbar.getByTestId("event-duplicate-row").click();
+  await toolbar.getByTestId("event-duplicate").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(editor.locator("form.event-row")).toHaveCount(4);
 });
@@ -149,7 +147,7 @@ test("Bottom Signal event Import replaces the table in one history entry and Und
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const toolbar = page.getByTestId("signal-event-toolbar");
-  await toolbar.getByTestId("event-import").click();
+  await toolbar.getByTestId("event-import-action").click();
   await editor.getByLabel("Import signal events").setInputFiles({ name: "events.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ values: [{ start: 0, value: "0" }, { start: 2, value: "X" }, { start: 5, value: "1" }] })) });
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(editor.locator("form.event-row")).toHaveCount(3);

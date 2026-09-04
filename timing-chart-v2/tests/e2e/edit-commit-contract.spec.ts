@@ -6,7 +6,7 @@ test("Inspector and Bottom expose the documented edit contract surfaces", async 
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const inspector = page.getByTestId("inspector");
-  await expect(inspector.getByLabel("Inspector signal name")).toBeVisible();
+  await expect(inspector.getByLabel("Inspector signal name", { exact: true })).toBeVisible();
   await expect(inspector.getByTestId("apply-inspector-signal")).toBeVisible();
   await expect(inspector.getByLabel("Inspector signal visible")).toBeVisible();
   await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
@@ -29,10 +29,10 @@ test("Inspector Cancel restores signal and clock drafts without a canonical muta
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const signalInspector = page.getByTestId("inspector");
-  const originalName = await signalInspector.getByLabel("Inspector signal name").inputValue();
-  await signalInspector.getByLabel("Inspector signal name").fill("TRANSIENT_CANCELLED");
-  await signalInspector.getByLabel("Inspector signal name").press("Escape");
-  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name")).toHaveValue(originalName);
+  const originalName = await signalInspector.getByLabel("Inspector signal name", { exact: true }).inputValue();
+  await signalInspector.getByLabel("Inspector signal name", { exact: true }).fill("TRANSIENT_CANCELLED");
+  await signalInspector.getByLabel("Inspector signal name", { exact: true }).press("Escape");
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue(originalName);
   await expect(host).toHaveAttribute("data-canonical-revision", revision!);
   await expect(page.getByTestId("history-status")).toHaveText(history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
@@ -143,7 +143,7 @@ test("Signal and Group rename use the same explicit Enter/Escape draft contract"
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  const signalName = page.getByTestId("inspector").getByLabel("Inspector signal name");
+  const signalName = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
   const originalSignalName = await signalName.inputValue();
   const beforeSignal = await host.getAttribute("data-canonical-revision");
   await signalName.fill("TRANSIENT_SIGNAL_NAME");
@@ -164,7 +164,8 @@ test("Signal and Group rename use the same explicit Enter/Escape draft contract"
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText(originalSignalName);
 
-  await page.locator("[data-role='empty-group'][data-group-id='grp_cycle_scratch']").click();
+  await page.getByTestId("cycle-viewport").evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll")); });
+  await page.locator("[data-role='left-group-header'][data-group-id='grp_cycle_scratch'] [data-role='tree-branch']").click();
   const groupName = page.getByTestId("inspector").getByLabel("Inspector group name");
   const originalGroupName = await groupName.inputValue();
   const beforeGroup = await host.getAttribute("data-canonical-revision");
