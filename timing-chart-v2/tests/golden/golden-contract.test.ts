@@ -9,6 +9,11 @@ const coverageMeta: GoldenContractMeta = {
   title: "Coverage sample",
   coverage: ["clock", "annotation", "group band", "spacer row", "legend", "header", "footer", "transaction view", "transaction-to-signal highlight", "SVG export", "PNG export", "PDF export"],
 };
+const visualGate = {
+  id: "v2-gui-visual-acceptance",
+  source: "tests/e2e/gui-visual-acceptance.spec.ts",
+  reference: "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png",
+} as const;
 
 const coverageDocument = {
   formatVersion: 2,
@@ -50,14 +55,14 @@ describe("Golden contract gate", () => {
   });
 
   it("maps every declared feature to an observable check and fails on feature removal", () => {
-    const evidence = assertGoldenCoverageContract(coverageMeta, coverageDocument, { rendered: true, visualGate: true, exportedFormats: ["svg", "png", "pdf"] });
+    const evidence = assertGoldenCoverageContract(coverageMeta, coverageDocument, { rendered: true, visualGate, exportedFormats: ["svg", "png", "pdf"] });
     expect(evidence).toHaveLength(coverageMeta.coverage.length);
     expect(evidence.map((item) => item.check)).toContain("canonical-spacer-row");
     const withoutSpacer = { ...coverageDocument, signalGroups: [{ ...coverageDocument.signalGroups[0], spacers: [] }] } as CanonicalDocument;
-    expect(() => assertGoldenCoverageContract(coverageMeta, withoutSpacer, { rendered: true, visualGate: true, exportedFormats: ["svg", "png", "pdf"] })).toThrow(/spacer row/);
+    expect(() => assertGoldenCoverageContract(coverageMeta, withoutSpacer, { rendered: true, visualGate, exportedFormats: ["svg", "png", "pdf"] })).toThrow(/spacer row/);
   });
 
   it("fails when a declared export was not produced", () => {
-    expect(() => assertGoldenCoverageContract(coverageMeta, coverageDocument, { rendered: true, visualGate: true, exportedFormats: ["svg"] })).toThrow(/export-png/);
+    expect(() => assertGoldenCoverageContract(coverageMeta, coverageDocument, { rendered: true, visualGate, exportedFormats: ["svg"] })).toThrow(/export-png/);
   });
 });

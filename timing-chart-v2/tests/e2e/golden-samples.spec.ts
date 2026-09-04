@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import { resolve } from "node:path";
 import { expect, test, type Locator } from "@playwright/test";
 import { parseDocument, type CanonicalDocument } from "@timing-chart-v2/schema";
-import { assertGoldenCoverageContract, assertGoldenSemanticContract, assertGoldenSvgContract, type GoldenExportFormat } from "../golden/golden-contract.js";
+import { assertGoldenCoverageContract, assertGoldenSemanticContract, assertGoldenSvgContract, type GoldenExportFormat, type GoldenVisualGate } from "../golden/golden-contract.js";
 import { captureScenarioReview } from "../../harness/gui/ai-review-bundle.mjs";
 
 type GoldenSample = {
@@ -27,6 +27,11 @@ const sampleDiagnosticsRules = [
   { selector: ".desktop-workspace", target: "workspace" },
   { selector: "[data-role='timing-chart-surface']", target: "timing surface" },
 ];
+const visualGate: GoldenVisualGate = {
+  id: "v2-gui-visual-acceptance",
+  source: "tests/e2e/gui-visual-acceptance.spec.ts",
+  reference: "references/v2-gui-reference-v8/golden-home-cycle-1672x941.png",
+};
 
 test.setTimeout(120_000);
 
@@ -66,6 +71,7 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   const evidence: Array<Record<string, unknown>> = [];
+  const featureCoverage = new Map<string, { samples: Set<string>; checks: Set<string>; exports: Set<string> }>();
   const reviewOutput = testInfo.outputPath("sample-review-bundles");
   const screenshotOutput = testInfo.outputPath("sample-browser-screenshots");
   await mkdir(reviewOutput, { recursive: true });
@@ -108,7 +114,14 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     });
     expect(review.testedCommit).toBe(gitHead);
     expect(review.diagnostics.findings.filter((finding) => ["CONSOLE_ERROR", "PAGE_ERROR", "RESOURCE_FAILURE"].includes(finding.category))).toEqual([]);
-    const coverageEvidence = assertGoldenCoverageContract(meta, parsed.document, { rendered: true, visualGate: true });
+    const coverageEvidence = assertGoldenCoverageContract(meta, parsed.document, { rendered: true, visualGate });
+    for (const item of coverageEvidence) {
+      const entry = featureCoverage.get(item.coverage) ?? { samples: new Set<string>(), checks: new Set<string>(), exports: new Set<string>() };
+      entry.samples.add(meta.file);
+      entry.checks.add(`${item.check}: ${item.detail}`);
+      if (item.coverage.toLowerCase().endsWith(" export")) entry.exports.add(item.coverage);
+      featureCoverage.set(item.coverage, entry);
+    }
     const title = await page.locator(".app-titlebar h1").textContent();
     const counters = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, unknown>;
     const diagnostics = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-performance-counters") ?? "null") as Record<string, unknown>;
@@ -129,6 +142,15 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
   }
 
   await testInfo.attach("golden-samples-browser-evidence.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
+  const coverageReport = Object.fromEntries([...featureCoverage.entries()].sort(([left], [right]) => left.localeCompare(right)).map(([feature, entry]) => [feature, {
+    samples: [...entry.samples].sort(),
+    unit: "tests/golden/golden-contract.test.ts",
+    e2e: "tests/e2e/golden-samples.spec.ts",
+    visualGate: { id: visualGate.id, source: visualGate.source, reference: visualGate.reference },
+    checks: [...entry.checks].sort(),
+    exports: [...entry.exports].sort(),
+  }]));
+  await testInfo.attach("golden-feature-coverage-report.json", { body: Buffer.from(JSON.stringify({ testedCommit: gitHead, features: coverageReport }, null, 2)), contentType: "application/json" });
   await page.screenshot({ path: resolve(screenshotOutput, "golden-sample-20-browser-1280x720.png"), animations: "disabled" });
 });
 
@@ -209,7 +231,7 @@ test("exports SVG for all 20 immutable Golden Samples without mutating Canonical
       if (format === "pdf") expect(bytes.subarray(0, 5).toString("utf8")).toBe("%PDF-");
       exportedFormats.push(format);
     }
-    const coverageEvidence = assertGoldenCoverageContract(meta, parsed.document, { rendered: true, visualGate: true, exportedFormats });
+    const coverageEvidence = assertGoldenCoverageContract(meta, parsed.document, { rendered: true, visualGate, exportedFormats });
     await dialog.getByRole("button", { name: "Close export" }).click();
     expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
     expect(await host.getAttribute("data-history-depth")).toBe(before.history);

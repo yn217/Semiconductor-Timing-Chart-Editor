@@ -13,14 +13,21 @@ export type GoldenExportFormat = "svg" | "png" | "pdf";
 
 export interface GoldenCoverageOptions {
   readonly rendered: boolean;
-  readonly visualGate: boolean;
+  readonly visualGate: GoldenVisualGate;
   readonly exportedFormats?: readonly GoldenExportFormat[];
+}
+
+export interface GoldenVisualGate {
+  readonly id: string;
+  readonly source: string;
+  readonly reference: string;
 }
 
 export interface GoldenCoverageEvidence {
   readonly coverage: string;
   readonly check: string;
   readonly detail: string;
+  readonly visualGate: string;
 }
 
 export interface GoldenObservedCounts {
@@ -83,7 +90,7 @@ function linkedSignalIds(transaction: CanonicalDocument["transactions"][number])
  */
 export function assertGoldenCoverageContract(meta: GoldenContractMeta, document: CanonicalDocument, options: GoldenCoverageOptions): readonly GoldenCoverageEvidence[] {
   if (!options.rendered) throw new Error(`${meta.file}: coverage requires a production rendered surface.`);
-  if (!options.visualGate) throw new Error(`${meta.file}: coverage requires a linked visual gate.`);
+  if (!options.visualGate.id || !options.visualGate.source || !options.visualGate.reference) throw new Error(`${meta.file}: coverage requires a linked visual gate with id, source, and immutable reference.`);
   const clocks = document.signals.filter(isClock);
   const annotations = document.annotations;
   const transactions = document.transactions;
@@ -92,7 +99,7 @@ export function assertGoldenCoverageContract(meta: GoldenContractMeta, document:
   const evidence: GoldenCoverageEvidence[] = [];
   const check = (coverage: string, name: string, passed: boolean, detail: string): void => {
     if (!passed) throw new Error(`${meta.file}: coverage '${coverage}' failed ${name}: ${detail}`);
-    evidence.push({ coverage, check: name, detail });
+    evidence.push({ coverage, check: name, detail, visualGate: options.visualGate.id });
   };
 
   for (const coverage of meta.coverage) {
