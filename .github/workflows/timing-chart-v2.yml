@@ -8,6 +8,11 @@ on:
         type: choice
         options: [pr, nightly]
         default: pr
+      deliberate_failure:
+        description: Intentionally fail after the full PR gate to verify enforcement
+        type: boolean
+        required: false
+        default: false
   schedule:
     - cron: "23 17 * * *"
   push:
@@ -35,6 +40,11 @@ jobs:
       - run: npm audit --audit-level=high
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
+      - name: Deliberate failure enforcement probe
+        if: inputs.deliberate_failure == true
+        run: |
+          echo "Deliberate failure probe requested; the quality gate must fail."
+          exit 1
       - uses: actions/upload-artifact@v4
         if: failure()
         with:
