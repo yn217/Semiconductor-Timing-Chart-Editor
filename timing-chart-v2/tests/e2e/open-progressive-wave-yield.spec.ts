@@ -51,3 +51,34 @@ test("yields between bounded WaveDrom batches during Open", async ({ page }) => 
   expect(evidence.history).toBe("History 0 / Redo 0");
   expect(evidence.dirty).toBe("Clean");
 });
+
+test("makes the reference ruler usable before all visible waves finish", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.evaluate((element) => {
+    const samples: Array<{ readonly pending: number; readonly rulerTicks: number; readonly batches: number }> = [];
+    const observer = new MutationObserver(() => {
+      const marks = JSON.parse((element as HTMLElement).dataset.openPhaseMarks ?? "{}") as Record<string, number>;
+      if (marks["first-correct-paint"] === undefined || (element as HTMLElement).dataset.editorIdle !== undefined) return;
+      const surface = element.querySelector<HTMLElement>('[data-role="timing-chart-surface"]');
+      const counters = JSON.parse(surface?.dataset.performanceCounters ?? "{}") as { waveBatchPending?: number; waveBatchCount?: number };
+      const viewport = element.closest<HTMLElement>("[data-testid='cycle-viewport']");
+      samples.push({ pending: counters.waveBatchPending ?? 0, rulerTicks: viewport?.querySelectorAll("[data-testid='cycle-ruler'] [data-cycle]").length ?? 0, batches: counters.waveBatchCount ?? 0 });
+    });
+    observer.observe(element, { attributes: true, attributeFilter: ["data-open-phase-marks", "data-editor-idle"] });
+    (globalThis as unknown as { __earlyRulerSamples: typeof samples; __earlyRulerObserver: MutationObserver }).__earlyRulerSamples = samples;
+    (globalThis as unknown as { __earlyRulerObserver: MutationObserver }).__earlyRulerObserver = observer;
+  });
+
+  const document = generatePerformanceDocument({ signalCount: 100, cycleCount: 500 });
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "early-ruler-open.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
+  const evidence = await page.evaluate(() => {
+    const state = globalThis as unknown as { __earlyRulerSamples: Array<{ pending: number; rulerTicks: number; batches: number }>; __earlyRulerObserver: MutationObserver };
+    state.__earlyRulerObserver.disconnect();
+    return state.__earlyRulerSamples;
+  });
+  console.log(`[early-ruler] ${JSON.stringify(evidence)}`);
+  expect(evidence.some((sample) => sample.pending > 0 && sample.rulerTicks > 0)).toBe(true);
+});

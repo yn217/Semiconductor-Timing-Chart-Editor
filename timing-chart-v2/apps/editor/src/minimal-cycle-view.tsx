@@ -377,6 +377,10 @@ export function MinimalCycleView() {
       adapter,
       geometryRegistry,
       markOpenPhase,
+      onReferenceGeometryReady: () => {
+        timelineRuntimeRef.current?.refreshRuler();
+        timelineRuntimeRef.current?.refreshGrid();
+      },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
     });
     const renderCoordinator = runtime.createRenderer(provider);
