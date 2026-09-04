@@ -35,7 +35,11 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
   for (const [tab, groupClass] of Object.entries(tabGroups)) {
     await tabs.getByRole("button", { name: tab, exact: true }).click();
     await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
-    await expect(ribbon.locator(".ribbon-group")).toHaveCount(tab === "Home" ? 7 : 1);
+    // Home renders through the shared ribbon-schema/Ds* primitives (one
+    // .ds-ribbon-group per major group: File/Edit/Time/Transaction/Layout/
+    // Zoom/Display/Options); every other tab still uses the legacy
+    // .ribbon-group markup.
+    await expect(ribbon.locator(tab === "Home" ? ".ds-ribbon-group" : ".ribbon-group")).toHaveCount(tab === "Home" ? 8 : 1);
     await expect(ribbon.locator(`.${groupClass}`)).toHaveCount(1);
     // Ribbon height must never change across tabs, and the waveform workspace must not shift.
     const ribbonBox = await ribbon.boundingBox();

@@ -2,7 +2,7 @@ import type { ImmutableSnapIndex, LocalGeometryMap, Point } from "@timing-chart-
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 import type { TimingChartRenderer } from "@timing-chart-v2/renderer";
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { annotationFields } from "./annotation-overlays.js";
 import { withAddedOffset, withSnapOffset } from "./anchor-offset.js";
 import { preferredSnapKinds } from "./snap-policy.js";
@@ -32,16 +32,24 @@ export type AnnotationInteractionContext = Readonly<{
   getProjection: () => RenderProjection;
   isSnapEnabled: () => boolean;
   execute: (command: SemanticCommand) => void;
+  executeBatch: (commands: readonly SemanticCommand[]) => void;
   publishState: () => void;
+  /** Given the annotation actually picked, returns every annotation id that
+   * should move together with it -- its AnnotationGroup's full membership if
+   * grouped, else the current multi-selection if the pick is part of one,
+   * else just itself. Only consulted for a whole-annotation move (no field/
+   * label drag -- those stay single-annotation, an anchor handle or label
+   * only ever belongs to the one annotation it's dragged from). */
+  getDragTargets: (annotationId: string) => ReadonlySet<string>;
 }>;
 
 type Drag = Readonly<{
-  annotationId: string;
+  annotationIds: ReadonlySet<string>;
   field?: AnnotationField;
   label: boolean;
   startX: number;
   startY: number;
-  owner: HTMLElement;
+  owners: ReadonlyMap<string, HTMLElement>;
   epoch: number;
 }>;
 
@@ -55,16 +63,24 @@ export class AnnotationInteractionOwner {
     if (event.button !== 0 || !(event.target instanceof Element)) return;
     const owner = event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]");
     if (!owner?.dataset.annotationId) return;
+    const primaryId = owner.dataset.annotationId;
+    if (this.context.getDocument().annotations.find((item) => item.id === primaryId)?.locked) return;
     const fieldElement = event.target.closest<HTMLElement>("[data-role='annotation-handle'][data-annotation-field]");
     const label = event.target.closest<HTMLElement>("[data-annotation-label='true']") !== null;
     const field = fieldElement?.dataset.annotationField as AnnotationField | undefined;
+    const dragIds = field || label ? new Set([primaryId]) : this.context.getDragTargets(primaryId);
+    const owners = new Map<string, HTMLElement>();
+    for (const id of dragIds) {
+      const element = id === primaryId ? owner : this.context.rendererHost.querySelector<HTMLElement>(`[data-role='annotation-owner'][data-annotation-id="${id}"]`);
+      if (element) owners.set(id, element);
+    }
     this.#drag = {
-      annotationId: owner.dataset.annotationId,
+      annotationIds: new Set(owners.keys()),
       ...(field ? { field } : {}),
       label,
       startX: event.clientX,
       startY: event.clientY,
-      owner,
+      owners,
       epoch: this.context.documentEpoch.current(),
     };
     this.context.publishState();
@@ -79,10 +95,10 @@ export class AnnotationInteractionOwner {
     const screenDx = Math.round(event.clientX - drag.startX);
     const currentZoom = this.context.getZoom();
     const dy = Math.round(event.clientY - drag.startY);
-    drag.owner.style.translate = `${screenDx}px ${dy}px`;
+    for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`;
     if (!drag.field || drag.label) return;
     const document = this.context.getDocument();
-    const annotation = document.annotations.find((item) => item.id === drag.annotationId);
+    const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
     const anchor = annotation?.[drag.field];
     const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
     if (!annotation || !anchor || !point) return;
@@ -111,18 +127,24 @@ export class AnnotationInteractionOwner {
     const currentZoom = this.context.getZoom();
     const dx = Math.round(this.context.timelineGeometry.screenToLocal({ x: rawScreenDx, y: 0 }, currentZoom).x);
     const dy = Math.round(event.clientY - drag.startY);
-    drag.owner.style.translate = "";
+    for (const owner of drag.owners.values()) owner.style.translate = "";
     this.#drag = undefined;
     this.context.renderer.updateSnapGuide();
     if (dx === 0 && dy === 0) return;
-    const annotation = this.context.getDocument().annotations.find((item) => item.id === drag.annotationId);
+    const document = this.context.getDocument();
+    if (!drag.field && !drag.label) {
+      // Whole-annotation move: every dragged id (a single annotation, or a
+      // whole AnnotationGroup / multi-selection moving together) gets the
+      // same delta as one command each, submitted as a single batch so
+      // Undo restores the whole group's position in one step.
+      const commands: SemanticCommand[] = [...drag.annotationIds].flatMap((id) => document.annotations.some((item) => item.id === id) ? [{ id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: id as AnnotationId, delta: { x: dx, y: dy } } satisfies SemanticCommand] : []);
+      if (commands.length > 0) this.context.executeBatch(commands);
+      return;
+    }
+    const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
     if (!annotation) return;
     if (drag.label) {
       this.context.execute({ id: nextCommandId("annotation_label_drag"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: (annotation.labelOffset?.x ?? 0) + dx, y: (annotation.labelOffset?.y ?? -14) + dy } });
-      return;
-    }
-    if (!drag.field) {
-      this.context.execute({ id: nextCommandId("annotation_move"), type: "annotation.translateOffsets", annotationId: annotation.id, delta: { x: dx, y: dy } });
       return;
     }
     const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
@@ -156,14 +178,14 @@ export class AnnotationInteractionOwner {
     const annotation = this.context.getDocument().annotations.find((item) => item.id === owner.dataset.annotationId);
     const field = annotation && annotationFields.find((key) => annotation[key] !== undefined);
     const anchor = field && annotation ? annotation[field] : undefined;
-    if (!annotation || !field || !anchor) return false;
+    if (!annotation || !field || !anchor || annotation.locked) return false;
     event.preventDefault();
     this.context.execute({ id: nextCommandId("annotation_nudge"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: withAddedOffset(anchor, movement.x, movement.y) });
     return true;
   };
 
   cancel = (): void => {
-    if (this.#drag) this.#drag.owner.style.translate = "";
+    if (this.#drag) for (const owner of this.#drag.owners.values()) owner.style.translate = "";
     this.#drag = undefined;
     this.context.renderer.updateSnapGuide();
     delete this.context.rendererHost.dataset.snapKind;

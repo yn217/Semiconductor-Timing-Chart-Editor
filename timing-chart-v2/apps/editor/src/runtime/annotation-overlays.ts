@@ -38,9 +38,9 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       })()
       : undefined;
     const shape: AnnotationOverlayPrimitive["shape"] = annotation.type === "verticalLine" ? "vertical"
-      : ["range", "highlight", "timingRegion"].includes(annotation.type) ? "range"
+      : ["range", "highlight", "timingRegion", "rectangle", "ellipse"].includes(annotation.type) ? "range"
       : annotation.type === "ghostTrace" ? "trace"
-      : ["arrow", "dependency", "measurement", "bracket"].includes(annotation.type) ? "line" : "point";
+      : ["arrow", "dependency", "measurement", "bracket", "connector"].includes(annotation.type) ? "line" : "point";
     return [{
       id: annotation.id,
       type: annotation.type,
@@ -56,6 +56,9 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }),
       ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }),
       ...(tracePoints === undefined ? {} : { tracePoints }),
+      ...(annotation.style === undefined ? {} : { style: annotation.style }),
+      ...(annotation.rotation === undefined ? {} : { rotation: annotation.rotation }),
+      ...(annotation.align === undefined ? {} : { align: annotation.align }),
       surfaceHeight: projection.totalHeight,
     }];
   });

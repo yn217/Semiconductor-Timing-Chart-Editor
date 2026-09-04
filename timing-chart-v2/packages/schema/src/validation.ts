@@ -47,6 +47,8 @@ const canonicalRule = (code: CanonicalProblemCode, title: string, pathPattern: s
 // invariant without parsing human-readable messages.
 const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("ANCHOR_SIGNAL_REQUIRED", "Anchor requires a timing signal", "$.annotations[*].anchor.signalId"),
+  canonicalRule("ANNOTATION_GROUP_DUPLICATE_MEMBER", "An Annotation can belong to at most one group", "$.annotationGroups[*].annotationIds[*]"),
+  canonicalRule("ANNOTATION_GROUP_MEMBER_NOT_FOUND", "Annotation Group members must reference existing Annotations", "$.annotationGroups[*].annotationIds[*]"),
   canonicalRule("BUS_WIDTH_OVERFLOW", "Bus values must fit the declared width", "$.signals[*].values[*].value"),
   canonicalRule("CHANGE_POINTS_NOT_STRICTLY_SORTED", "Change points must be strictly increasing", "$.signals[*].values[*].start", "required"),
   canonicalRule("DUPLICATE_ID", "Canonical entity identifiers must be unique", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
@@ -235,6 +237,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     group.spacers?.forEach((spacer, spacerIndex) => registerId(spacer.id, `$.signalGroups[${index}].spacers[${spacerIndex}].id`, "spacer"));
   });
   document.annotations.forEach((item, index) => registerId(item.id, `$.annotations[${index}].id`, "annotation"));
+  (document.annotationGroups ?? []).forEach((item, index) => registerId(item.id, `$.annotationGroups[${index}].id`, "annotationGroup"));
   document.transactions.forEach((item, index) => registerId(item.id, `$.transactions[${index}].id`, "transaction"));
   document.bookmarks.forEach((item, index) => registerId(item.id, `$.bookmarks[${index}].id`, "bookmark"));
   document.timeGroups.forEach((item, index) => registerId(item.id, `$.timeGroups[${index}].id`, "time-group"));
@@ -276,8 +279,8 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   });
 
   document.annotations.forEach((annotation, index) => {
-    const required = (["text", "callout", "verticalLine", "marker"] as const).includes(annotation.type as "text") ? ["anchor"]
-      : (["range", "bracket", "highlight", "measurement", "timingRegion", "ghostTrace"] as const).includes(annotation.type as "range") ? ["start", "end"]
+    const required = (["text", "callout", "verticalLine", "marker", "textbox"] as const).includes(annotation.type as "text") ? ["anchor"]
+      : (["range", "bracket", "highlight", "measurement", "timingRegion", "ghostTrace", "rectangle", "ellipse"] as const).includes(annotation.type as "range") ? ["start", "end"]
       : ["from", "to"];
     for (const field of required) if (!annotation[field as keyof Annotation]) problems.push(problem("MISSING_ANNOTATION_ANCHOR", `$.annotations[${index}].${field}`, `Annotation type '${annotation.type}' requires '${field}'.`, annotation.id));
     for (const key of ["anchor", "start", "end", "from", "to"] as const) {
@@ -290,6 +293,18 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       if (annotation.traceOffsetCycles !== undefined && !Number.isFinite(annotation.traceOffsetCycles)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].traceOffsetCycles`, "Ghost Trace cycle offset must be finite.", annotation.id));
     }
     if ((annotation.type === "timingRegion" || annotation.type === "ghostTrace") && annotation.opacity !== undefined && (!Number.isFinite(annotation.opacity) || annotation.opacity < 0 || annotation.opacity > 1)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].opacity`, "Overlay opacity must be between 0 and 1.", annotation.id));
+  });
+
+  const annotationIds = new Set<string>(document.annotations.map((item) => item.id));
+  const annotationGroupMembership = new Map<string, string>();
+  (document.annotationGroups ?? []).forEach((group, groupIndex) => {
+    group.annotationIds.forEach((annotationId, memberIndex) => {
+      const path = `$.annotationGroups[${groupIndex}].annotationIds[${memberIndex}]`;
+      if (!annotationIds.has(annotationId)) problems.push(problem("ANNOTATION_GROUP_MEMBER_NOT_FOUND", path, `Annotation '${annotationId}' does not exist.`, group.id));
+      const owner = annotationGroupMembership.get(annotationId);
+      if (owner) problems.push(problem("ANNOTATION_GROUP_DUPLICATE_MEMBER", path, `Annotation '${annotationId}' already belongs to group '${owner}'.`, group.id));
+      else annotationGroupMembership.set(annotationId, group.id);
+    });
   });
 
   const timeGroups = new Map<string, TimeGroup>(document.timeGroups.map((group) => [group.id, group]));

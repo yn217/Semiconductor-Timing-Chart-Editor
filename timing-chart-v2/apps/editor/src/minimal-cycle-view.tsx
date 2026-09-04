@@ -783,7 +783,7 @@ export function MinimalCycleView() {
       const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
       if (annotationOwner?.dataset.annotationId) {
         const id = annotationOwner.dataset.annotationId as AnnotationId;
-        selection.selectAnnotation(id);
+        selection.selectAnnotation(id, event.ctrlKey || event.metaKey);
         return;
       }
       if (pendingArrow && event.target instanceof Element && event.target.closest("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface']")) {
@@ -963,6 +963,15 @@ export function MinimalCycleView() {
       getProjection: () => projection,
       isSnapEnabled: () => snapEnabledRef.current,
       execute: (command) => { commandRegistry.current.execute<SemanticCommand>("semantic.execute", command); },
+      executeBatch: (commands) => { application.executeBatch(nextCommandId("annotation_group_move"), commands); },
+      getDragTargets: (annotationId) => {
+        const document = session.getSnapshot().document;
+        const group = (document.annotationGroups ?? []).find((candidate) => candidate.annotationIds.includes(annotationId as AnnotationId));
+        if (group) return new Set(group.annotationIds);
+        const multi = selection.refs.annotationIds.current;
+        if (multi.size > 1 && multi.has(annotationId as AnnotationId)) return new Set(multi);
+        return new Set([annotationId]);
+      },
       publishState,
     });
     const clearAnnotationPreview = annotationInteraction.cancel;
@@ -1148,7 +1157,7 @@ export function MinimalCycleView() {
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onDelete={deleteBottomAnnotation}
     onCancel={() => setBottomResetToken((value) => value + 1)}
-  /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} /><div className="empty-editor">Select or create an Annotation.</div></>;
+  /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const selectTransaction = (id: TransactionId) => {
     selection.selectTransaction(id);
   };
@@ -1210,8 +1219,14 @@ export function MinimalCycleView() {
       row.dataset.selected = String(isSelected);
       row.setAttribute("aria-selected", String(isSelected));
     }
-    const affectedAnnotationIds = new Set([previous?.annotationId, next.annotationId].filter(Boolean));
-    for (const id of affectedAnnotationIds) for (const owner of rendererHost.querySelectorAll<HTMLElement>(`[data-annotation-id="${CSS.escape(String(id))}"]`)) owner.dataset.selected = String(id === next.annotationId);
+    // Multi-select-aware version of the upstream perf fix: diff against the
+    // previous decoration (previous U next, not every [data-annotation-id]
+    // in the document) so only actually-changed rows get touched, same as
+    // upstream, but membership in `next.annotationIds` (not equality to a
+    // single `next.annotationId`) decides selected state so a multi-select
+    // Arrange target set still decorates correctly.
+    const affectedAnnotationIds = new Set([...(previous?.annotationIds ?? []), ...next.annotationIds]);
+    for (const id of affectedAnnotationIds) for (const owner of rendererHost.querySelectorAll<HTMLElement>(`[data-annotation-id="${CSS.escape(String(id))}"]`)) owner.dataset.selected = String(next.annotationIds.has(id));
     const affectedGroupIds = new Set([previous?.groupId, next.groupId].filter(Boolean));
     for (const id of affectedGroupIds) for (const treeItem of rendererHost.querySelectorAll<HTMLElement>(`[role="treeitem"][data-row-id="${CSS.escape(String(id))}:header"]`)) treeItem.setAttribute("aria-selected", String(id === next.groupId));
     previousSelectionDecorationRef.current = next;
@@ -1520,6 +1535,9 @@ export function MinimalCycleView() {
       selectedSignalId={annotationTargetSignalId}
       selectedInsertionSignalId={selectedSignal?.id}
       selectedGroupId={selectedGroup?.id}
+      selectedAnnotation={selectedAnnotation}
+      selectedAnnotationIds={selection.state.annotationIds}
+      selectedCommentRow={selectedSignal?.type === "commentRow" ? selectedSignal : undefined}
       problemsCount={diagnostics.length}
       diagnostics={diagnostics}
       onNavigateProblem={navigateProblem}
@@ -1553,6 +1571,7 @@ export function MinimalCycleView() {
       onVisibility={setSelectionVisibility}
       onRange={(range) => { setRangeSelectionActive(true); setTimelineRange(range); }}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+      onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
       onCreateAnnotation={createSelectedAnnotation}
       onArrowPick={() => armArrowPick.current()}
       onZoom={timelineNavigation.zoomBy}

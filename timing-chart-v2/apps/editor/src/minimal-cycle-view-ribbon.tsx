@@ -1,10 +1,16 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { Annotation, AnnotationType, CanonicalDocument, ClockSignal, CommentRow, GroupId, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, CanonicalDocument, ClockSignal, CommentRow, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import { FontStyleToolbar } from "./font-style-toolbar.js";
+import { ArrangeGroup } from "./arrange-group.js";
+import { FindReplacePanel } from "./find-replace-panel.js";
+import { buildAnnotationStyleCommand } from "./annotation-style-command.js";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
-import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
+import { DsIconBox, DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { RibbonIcon } from "./ribbon-icon.js";
+import { RibbonGroup } from "./ribbon-group.js";
+import type { RibbonGroupSpec } from "./ribbon-schema.js";
 import { InsertSemanticIcon } from "./insert-semantic-icon.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { ReviewWorkflow } from "./review-workflow.js";
@@ -27,10 +33,10 @@ function valueSignal(id: string, name: string, role: SignalRole, values: ValueSi
 
 export { Ribbon };
 
-function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, arrowPickStatus, selectedSignalId, selectedInsertionSignalId, selectedGroupId, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, viewMode, density, workspacePreset, onDensityChange, onWorkspacePresetChange, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, onRange, onCommand, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties }: {
-  readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly showSignalNames: boolean; readonly showRoles: boolean; readonly showAnnotations: boolean; readonly showTransactions: boolean; readonly showGroupBackground: boolean; readonly signalTreeVisible: boolean; readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly selectedInsertionSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly problemsCount: number; readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigateProblem: (path: string) => void; readonly onRefreshChecks: () => void; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly density: DensityMode; readonly workspacePreset: WorkspacePreset; readonly onDensityChange: (density: DensityMode) => void; readonly onWorkspacePresetChange: (preset: WorkspacePreset) => void; readonly selectedTransactionId: TransactionId | undefined;
+function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, arrowPickStatus, selectedSignalId, selectedInsertionSignalId, selectedGroupId, selectedAnnotation, selectedAnnotationIds, selectedCommentRow, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, viewMode, density, workspacePreset, onDensityChange, onWorkspacePresetChange, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, onRange, onCommand, onCommandBatch, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties }: {
+  readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly showSignalNames: boolean; readonly showRoles: boolean; readonly showAnnotations: boolean; readonly showTransactions: boolean; readonly showGroupBackground: boolean; readonly signalTreeVisible: boolean; readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly selectedInsertionSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedAnnotationIds: ReadonlySet<AnnotationId>; readonly selectedCommentRow: CommentRow | undefined; readonly problemsCount: number; readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigateProblem: (path: string) => void; readonly onRefreshChecks: () => void; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly density: DensityMode; readonly workspacePreset: WorkspacePreset; readonly onDensityChange: (density: DensityMode) => void; readonly onWorkspacePresetChange: (preset: WorkspacePreset) => void; readonly selectedTransactionId: TransactionId | undefined;
   readonly clipboardStatus: string; readonly clipboardAvailable: boolean; readonly hasSelectedSignal: boolean; readonly hasSelectedClipboard: boolean; readonly hasSelectedEntity: boolean; readonly hasDeletableSelection: boolean; readonly canRenameSelection: boolean; readonly canMoveUp: boolean; readonly canMoveDown: boolean; readonly canShowSelection: boolean; readonly canHideSelection: boolean;
-  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onFitAll: () => void; readonly onSetZoom: (zoom: number) => void; readonly onNavigateBookmark: (cycle: number) => void;
+  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: () => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onFitAll: () => void; readonly onSetZoom: (zoom: number) => void; readonly onNavigateBookmark: (cycle: number) => void;
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void; readonly onToggleSignalNames: () => void; readonly onToggleRoles: () => void; readonly onToggleAnnotations: () => void; readonly onToggleTransactions: () => void; readonly onToggleGroupBackground: () => void; readonly onToggleSignalTree: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onSaveAs: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onSelectAll: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void; readonly onOpenTimeline: () => void; readonly onOpenProperties: () => void;
 }) {
   const [homeOverflowOpen, setHomeOverflowOpen] = useState(false);
@@ -99,21 +105,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     const frame = requestAnimationFrame(() => homeOverflowMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
     return () => cancelAnimationFrame(frame);
   }, [homeOverflowOpen]);
-  useLayoutEffect(() => {
-    if (tab !== "Home") return;
-    const root = window.document.querySelector<HTMLElement>("[data-testid='ribbon']");
-    if (!root) return;
-    const labels: Record<string, string> = { New: "新規", Open: "開く", Save: "保存", "Save As": "名前を付けて保存", Undo: "元に戻す", Redo: "やり直し", Copy: "コピー", Cut: "切取", Paste: "貼付", Duplicate: "複製", Delete: "削除", Rename: "名前変更", Clear: "クリア", "Select All": "すべて選択", Show: "表示", Hide: "非表示", "Move Up": "上へ", "Move Down": "下へ", "Zoom −": "ズーム－", "Zoom +": "ズーム＋", "Fit Selection": "選択に合わせる" };
-    for (const button of root.querySelectorAll<HTMLButtonElement>(".ribbon-tool")) {
-      const span = button.querySelector("span");
-      const label = span?.textContent?.trim();
-      const v1Label = label === undefined ? undefined : labels[label];
-      if (label && v1Label) {
-        button.setAttribute("aria-label", label);
-        span?.setAttribute("data-v1-label", v1Label);
-      }
-    }
-  });
   const insertValueSignal = (type: "binary" | "bus" | "state" | "logic" | "event" | "pulse") => {
     const target = resolveInsertionTarget(document, selectedInsertionSignalId, selectedGroupId);
     if (!target) return;
@@ -154,6 +145,14 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     if (!selectedSignalId) return;
     onCreateAnnotation(createAnnotation(type, selectedSignalId, range, document));
   };
+  // Same "range" annotation type/anchors as the plain Range/Bracket buttons,
+  // just with a bidirectional arrowhead instead of none -- a <----> span
+  // indicator, no new schema field needed (Annotation.arrowhead already
+  // supports "bidirectional").
+  const insertRangeArrow = () => {
+    if (!selectedSignalId) return;
+    onCreateAnnotation(createAnnotation("arrow", selectedSignalId, range, document, undefined, "bidirectional"));
+  };
   const addTransaction = () => {
     const id = nextEntityId("transaction", document) as TransactionId;
     onCommand({ id: nextCommandId("home_transaction_create"), type: "transaction.create", transaction: { id, name: `Transaction ${document.transactions.length + 1}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), laneId: "lane_0" } });
@@ -172,6 +171,107 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     <strong>View</strong><button type="button" onClick={() => { onZoom(-0.25); setHomeOverflowOpen(false); }}>Zoom −</button><button type="button" onClick={() => { onZoom(0.25); setHomeOverflowOpen(false); }}>Zoom +</button><button type="button" onClick={() => { onSetZoom(0.5); setHomeOverflowOpen(false); }}>Zoom 50%</button><button type="button" onClick={() => { onSetZoom(1); setHomeOverflowOpen(false); }}>Zoom 100%</button><button type="button" onClick={() => { onSetZoom(1.5); setHomeOverflowOpen(false); }}>Zoom 150%</button><button type="button" onClick={() => { onSetZoom(2); setHomeOverflowOpen(false); }}>Zoom 200%</button><button type="button" onClick={() => { onFitSelection(); setHomeOverflowOpen(false); }}>Fit Selection</button><button type="button" onClick={() => { onFitAll(); setHomeOverflowOpen(false); }}>Fit All</button><button type="button" onClick={() => { onToggleGrid(); setHomeOverflowOpen(false); }}>Grid</button><button type="button" onClick={() => { onToggleSnap(); setHomeOverflowOpen(false); }}>Snap</button><button type="button" onClick={() => { onToggleRuler(); setHomeOverflowOpen(false); }}>Ruler</button><button type="button" onClick={() => { onToggleMinimap(); setHomeOverflowOpen(false); }}>MiniMap</button>
     <strong>Document</strong><button type="button" role="menuitem" onClick={() => { onProperties(); setHomeOverflowOpen(false); }}>Document Properties</button><button type="button" role="menuitem" onClick={() => { onShowProblems(); setHomeOverflowOpen(false); }}>Problems</button><button type="button" role="menuitem" onClick={() => { onExport(); setHomeOverflowOpen(false); }}>SVG / PNG / PDF</button><strong>Timeline</strong><button type="button" role="menuitem" onClick={() => { onOpenTimeline(); setHomeOverflowOpen(false); }}>Timeline Editor</button>
   </div>, window.document.body) : null;
+  const homeGroups: readonly RibbonGroupSpec[] = [
+    {
+      id: "file", majorGroup: "File", caption: "File", items: [
+        { kind: "button", id: "new", icon: "i-new", label: "New", v1Label: "新規", onClick: onNew },
+        { kind: "button", id: "open", icon: "i-open", label: "Open", v1Label: "開く", onClick: onOpen },
+        { kind: "button", id: "save", icon: "i-save", label: "Save", v1Label: "保存", onClick: onSave },
+        { kind: "button", id: "save-as", icon: "i-save", label: "Save As", v1Label: "名前を付けて保存", onClick: onSaveAs },
+      ],
+    },
+    {
+      id: "edit", majorGroup: "Edit", caption: "Edit", items: [
+        { kind: "button", id: "undo", icon: "i-undo", label: "Undo", v1Label: "元に戻す", onClick: onUndo, disabled: !history.canUndo },
+        { kind: "button", id: "redo", icon: "i-redo", label: "Redo", v1Label: "やり直し", onClick: onRedo, disabled: !history.canRedo },
+        { kind: "button", id: "cut", icon: "i-cut", label: "Cut", v1Label: "切取", onClick: onCut, disabled: !hasSelectedSignal },
+        { kind: "button", id: "copy", icon: "i-copy", label: "Copy", v1Label: "コピー", onClick: onCopy, disabled: !hasSelectedClipboard, title: "Copy is view-only" },
+        { kind: "button", id: "paste", icon: "i-paste", label: "Paste", v1Label: "貼付", onClick: onPaste, disabled: !clipboardAvailable, title: clipboardStatus },
+        { kind: "button", id: "delete", icon: "i-delete", label: "Delete", v1Label: "削除", onClick: onDelete, disabled: !hasDeletableSelection },
+        { kind: "button", id: "duplicate", icon: "i-duplicate", label: "Duplicate", v1Label: "複製", onClick: onDuplicate, disabled: !hasSelectedClipboard },
+        { kind: "button", id: "select-all", icon: "i-select-all", label: "Select All", onClick: onSelectAll, disabled: document.signals.every((signal) => signal.type === "commentRow") },
+        { kind: "custom", id: "find-replace", render: () => <FindReplacePanel key="find-replace" document={document} onCommandBatch={onCommandBatch} /> },
+        { kind: "custom", id: "clipboard-status", render: () => <small key="clipboard-status" data-testid="clipboard-status">{clipboardStatus}</small> },
+      ],
+    },
+    {
+      id: "timeline", majorGroup: "Time", caption: "Time", items: [
+        { kind: "button", id: "row-up", icon: "i-up", label: "Up", ariaLabel: "Move selected row up", onClick: onMoveUp, disabled: !canMoveUp },
+        { kind: "button", id: "row-down", icon: "i-down", label: "Down", ariaLabel: "Move selected row down", onClick: onMoveDown, disabled: !canMoveDown },
+        { kind: "button", id: "cycle-insert", icon: "i-plus", label: "Cycle Insert", ariaLabel: "Insert one cycle", onClick: () => onCommand({ id: nextCommandId("timeline_insert_one"), type: "timeline.insert", at: range.start, count: 1 }) },
+        { kind: "button", id: "cycle-delete", icon: "i-delete", label: "Cycle Delete", ariaLabel: "Delete one cycle", onClick: () => onCommand({ id: nextCommandId("timeline_delete_one"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + 1) }) },
+        { kind: "button", id: "n-cycle-insert", icon: "i-plus", label: "N Cycle Insert", ariaLabel: `Insert ${compactCycleCount} cycles`, onClick: () => onCommand({ id: nextCommandId("timeline_insert_many"), type: "timeline.insert", at: range.start, count: compactCycleCount }) },
+        { kind: "button", id: "n-cycle-delete", icon: "i-delete", label: "N Cycle Delete", ariaLabel: `Delete ${compactCycleCount} cycles`, onClick: () => onCommand({ id: nextCommandId("timeline_delete_many"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + compactCycleCount) }) },
+      ],
+    },
+    {
+      id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
+        { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
+        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", onClick: duplicateTransaction, disabled: !selectedTransactionId },
+      ],
+    },
+    {
+      id: "layout", majorGroup: "Layout", caption: "Layout", items: [
+        { kind: "button", id: "align-interval", icon: "i-align-interval", label: "Align Interval", ariaLabel: "Align interval", onClick: onOpenTimeline },
+        { kind: "button", id: "group", icon: "i-group", label: "Group", ariaLabel: "Group", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
+        { kind: "button", id: "auto-layout", icon: "i-auto-layout", label: "Auto Layout", ariaLabel: "Auto Layout", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
+      ],
+    },
+    {
+      id: "view", majorGroup: "Zoom", caption: "Zoom", items: [
+        { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", v1Label: "ズーム−", onClick: () => onZoom(-0.25) },
+        { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", v1Label: "ズーム＋", onClick: () => onZoom(0.25) },
+        { kind: "button", id: "zoom-reset", icon: "i-zoom-reset", label: "100%", ariaLabel: "Reset zoom to 100%", onClick: () => onSetZoom(1) },
+        { kind: "button", id: "fit-all", icon: "i-fit", label: "Fit All", v1Label: "全体表示", onClick: onFitAll },
+        { kind: "button", id: "fit-selection", icon: "i-select-fit", label: "Fit Selection", onClick: onFitSelection },
+      ],
+    },
+    {
+      id: "display", majorGroup: "Display", caption: "Display", items: [
+        { kind: "toggle", id: "grid", label: "Grid", testId: "home-grid-toggle", checked: gridEnabled, onChange: onToggleGrid },
+        { kind: "toggle", id: "minimap", label: "MiniMap", testId: "home-minimap-toggle", checked: minimapEnabled, onChange: onToggleMinimap },
+        { kind: "toggle", id: "snap", label: "Snap", testId: "home-snap-toggle", checked: snapEnabled, onChange: onToggleSnap },
+        { kind: "toggle", id: "ruler", label: "Ruler", testId: "home-ruler-toggle", checked: rulerEnabled, onChange: onToggleRuler },
+      ],
+    },
+  ];
+  // Arrange group targets: the current multi-selection if there is one,
+  // otherwise the single selected Annotation, otherwise nothing (every
+  // Arrange handler stays undefined -> ArrangeGroup renders disabled).
+  const arrangeTargetIds: readonly AnnotationId[] = selectedAnnotationIds.size > 0 ? [...selectedAnnotationIds] : selectedAnnotation ? [selectedAnnotation.id] : [];
+  const arrangeGroup = arrangeTargetIds.length > 0 ? (document.annotationGroups ?? []).find((group) => group.annotationIds.includes(arrangeTargetIds[0]!)) : undefined;
+  const arrangeHandlers = arrangeTargetIds.length === 0 ? {} : {
+    onBringToFront: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_bring_front"), type: "annotation.bringToFront" as const, annotationId }))),
+    onSendToBack: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_send_back"), type: "annotation.sendToBack" as const, annotationId }))),
+    onRotateRight: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_rotate"), type: "annotation.setRotation" as const, annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) + 90) % 360 + 360) % 360 }))),
+    onRotateLeft: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_rotate"), type: "annotation.setRotation" as const, annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) - 90) % 360 + 360) % 360 }))),
+    ...(arrangeTargetIds.length >= 2 && !arrangeGroup ? { onGroup: () => onCommand({ id: nextCommandId("annotation_group_create"), type: "annotationGroup.create", group: { id: nextEntityId("annotationGroup", document) as AnnotationGroupId, annotationIds: arrangeTargetIds } satisfies AnnotationGroup }) } : {}),
+    ...(arrangeGroup ? { onUngroup: () => onCommand({ id: nextCommandId("annotation_group_delete"), type: "annotationGroup.delete", groupId: arrangeGroup.id }) } : {}),
+    // Align brings every selected Annotation's label onto the same row
+    // (matches the first selected id's labelOffset.y) -- reuses the
+    // existing single-annotation annotation.updateLabelOffset command,
+    // just batched, rather than inventing a new command type for it.
+    ...(arrangeTargetIds.length >= 2 ? { onAlign: () => {
+      const targets = arrangeTargetIds.flatMap((id) => { const found = document.annotations.find((item) => item.id === id); return found ? [found] : []; });
+      const reference = targets[0];
+      if (targets.length < 2 || !reference) return;
+      const referenceY = reference.labelOffset?.y ?? -14;
+      onCommandBatch(targets.map((annotation) => ({ id: nextCommandId("annotation_align"), type: "annotation.updateLabelOffset" as const, annotationId: annotation.id, labelOffset: { x: annotation.labelOffset?.x ?? 0, y: referenceY } })));
+    } } : {}),
+    onLock: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_lock"), type: "annotation.setLocked" as const, annotationId, locked: true }))),
+    onUnlock: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_unlock"), type: "annotation.setLocked" as const, annotationId, locked: false }))),
+    // Same width: match every OTHER selected annotation's start-end cycle
+    // span to the first selected one's. Types without start/end (arrow,
+    // callout, marker, ...) are silently skipped rather than failing the
+    // whole batch, since a mixed selection is common.
+    ...(arrangeTargetIds.length >= 2 ? (() => {
+      const targets = arrangeTargetIds.flatMap((id) => { const found = document.annotations.find((item) => item.id === id); return found ? [found] : []; });
+      const reference = targets.find((item) => item.start && item.end);
+      const spanCycles = reference?.start && reference.end ? reference.end.cycle - reference.start.cycle : undefined;
+      const rest = spanCycles === undefined ? [] : targets.filter((item) => item.id !== reference?.id && item.start && item.end);
+      return spanCycles === undefined || rest.length === 0 ? {} : { onMatchSpan: () => onCommandBatch(rest.map((annotation) => ({ id: nextCommandId("annotation_match_span"), type: "annotation.matchSpan" as const, annotationId: annotation.id, spanCycles }))) };
+    })() : {}),
+  };
   return <section className="ribbon" aria-label={`${tab} Ribbon`} data-testid="ribbon">
     {tab === "File" && <div className="ribbon-group file-group">
       <button type="button" className="ribbon-tool" title={NEW_DOCUMENT_POLICY_DESCRIPTION} onClick={onNew}><RibbonIcon name="i-new" /><span>New</span></button>
@@ -181,33 +281,12 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       <div className="ribbon-toggles"><button type="button" onClick={onRecent} title="Open the most recently saved document">Recent</button><button type="button" onClick={onProperties} title={`${document.document.title} · ${document.signals.length} signals`}>Properties</button><button type="button" onClick={onExport}>Export</button></div><b>File</b>
     </div>}
       {tab === "Home" && <>
-      <div className="ribbon-major-group" data-major-group="File" aria-label="File commands">
-       <div className="ribbon-group home-file-group" aria-label="File"><button type="button" className="ribbon-tool" onClick={onNew}><RibbonIcon name="i-new" /><span data-v1-label="新規">New</span></button><button type="button" className="ribbon-tool" onClick={onOpen}><RibbonIcon name="i-open" /><span data-v1-label="開く">Open</span></button><button type="button" className="ribbon-tool" onClick={onSave}><RibbonIcon name="i-save" /><span data-v1-label="保存">Save</span></button><button type="button" className="ribbon-tool" onClick={onSaveAs}><RibbonIcon name="i-save" /><span data-v1-label="名前を付けて保存">Save As</span></button><b>File</b></div>
+      {homeGroups.map((group) => <RibbonGroup key={group.id} spec={group} />)}
+      <div className="ribbon-major-group" data-major-group="Options" data-ribbon-home aria-label="Options commands">
+        <DsRibbonGroup ariaLabel="Options" className="home-options-group" label="Options">
+          <button ref={homeOverflowTriggerRef} type="button" className="ds-ribbon-button home-overflow-trigger" aria-expanded={homeOverflowOpen} aria-controls={homeOverflowOpen ? "home-overflow-menu" : undefined} onClick={() => setHomeOverflowOpen((value) => !value)}><DsIconBox><RibbonIcon name="i-more" /></DsIconBox><span className="ds-ribbon-label">More</span></button>
+        </DsRibbonGroup>
       </div>
-       <div className="ribbon-major-group" data-major-group="Edit" aria-label="Edit commands">
-       <div className="ribbon-group home-edit-group" aria-label="Edit"><button type="button" className="ribbon-tool" onClick={onUndo} disabled={!history.canUndo}><RibbonIcon name="i-undo" /><span data-v1-label="元に戻す">Undo</span></button><button type="button" className="ribbon-tool" onClick={onRedo} disabled={!history.canRedo}><RibbonIcon name="i-redo" /><span data-v1-label="やり直し">Redo</span></button><button type="button" className="ribbon-tool" onClick={onCut} disabled={!hasSelectedClipboard}><RibbonIcon name="i-cut" /><span data-v1-label="切取">Cut</span></button><button type="button" className="ribbon-tool" onClick={onCopy} disabled={!hasSelectedClipboard} title="Copy is view-only"><RibbonIcon name="i-copy" /><span data-v1-label="コピー">Copy</span></button><button type="button" className="ribbon-tool" onClick={onPaste} disabled={!clipboardAvailable} title={clipboardStatus}><RibbonIcon name="i-paste" /><span data-v1-label="貼付">Paste</span></button><button type="button" className="ribbon-tool" onClick={onDelete} disabled={!hasDeletableSelection}><RibbonIcon name="i-delete" /><span data-v1-label="削除">Delete</span></button><button type="button" className="ribbon-tool" onClick={onDuplicate} disabled={!hasSelectedClipboard}><RibbonIcon name="i-duplicate" /><span data-v1-label="複製">Duplicate</span></button><small data-testid="clipboard-status">{clipboardStatus}</small><b>Edit</b></div>
-       </div>
-       <div className="ribbon-major-group" data-major-group="Time" aria-label="Time commands">
-       <div className="ribbon-group home-timeline-group" aria-label="Timeline"><button type="button" className="ribbon-tool" aria-label="Move selected row up" onClick={onMoveUp} disabled={!canMoveUp}><RibbonIcon name="i-up" /><span>Up</span></button><button type="button" className="ribbon-tool" aria-label="Move selected row down" onClick={onMoveDown} disabled={!canMoveDown}><RibbonIcon name="i-down" /><span>Down</span></button><button type="button" className="ribbon-tool" aria-label="Insert one cycle" onClick={() => onCommand({ id: nextCommandId("timeline_insert_one"), type: "timeline.insert", at: range.start, count: 1 })}><RibbonIcon name="i-plus" /><span>Cycle<br />Insert</span></button><button type="button" className="ribbon-tool" aria-label="Delete one cycle" onClick={() => onCommand({ id: nextCommandId("timeline_delete_one"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + 1) })}><RibbonIcon name="i-delete" /><span>Cycle<br />Delete</span></button><button type="button" className="ribbon-tool" aria-label={`Insert ${compactCycleCount} cycles`} onClick={() => onCommand({ id: nextCommandId("timeline_insert_many"), type: "timeline.insert", at: range.start, count: compactCycleCount })}><RibbonIcon name="i-plus" /><span>N Cycle<br />Insert</span></button><button type="button" className="ribbon-tool" aria-label={`Delete ${compactCycleCount} cycles`} onClick={() => onCommand({ id: nextCommandId("timeline_delete_many"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + compactCycleCount) })}><RibbonIcon name="i-delete" /><span>N Cycle<br />Delete</span></button><b>Time</b></div>
-       </div>
-       <div className="ribbon-major-group" data-major-group="Transaction" aria-label="Transaction commands">
-        <div className="ribbon-group transaction-home-group" aria-label="Transaction"><button type="button" className="ribbon-tool" aria-label="Transaction" onClick={addTransaction}><RibbonIcon name="i-plus" /><span>Transaction<br />Create</span></button><button type="button" className="ribbon-tool" aria-label="Duplicate" onClick={duplicateTransaction} disabled={!selectedTransactionId}><RibbonIcon name="i-duplicate" /><span>Transaction<br />Duplicate</span></button><b>Transaction</b></div>
-       </div>
-       <div className="ribbon-major-group" data-major-group="Layout" aria-label="Layout commands">
-         <div className="ribbon-group v8-compact-time-group home-layout-group" aria-label="Layout"><button type="button" className="ribbon-tool" aria-label="Align interval" onClick={onOpenTimeline}><RibbonIcon name="i-align-interval" /><span>Align<br />Interval</span></button><button type="button" className="ribbon-tool" aria-label="Group" onClick={() => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } })}><RibbonIcon name="i-group" /><span>Group</span></button><button type="button" className="ribbon-tool" aria-label="Auto Layout" onClick={() => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } })}><RibbonIcon name="i-auto-layout" /><span>Auto<br />Layout</span></button><b>Layout</b></div>
-       </div>
-      <div className="ribbon-major-group" data-major-group="Zoom" aria-label="Zoom commands">
-       <div className="ribbon-group home-view-group" aria-label="Zoom"><div className="home-zoom-controls"><button type="button" className="ribbon-tool" onClick={() => onZoom(-0.25)}><RibbonIcon name="i-zoom-out" /><span data-v1-label="ズーム−">Zoom<br />Out</span></button><output data-testid="home-zoom-status">{Math.round(zoom * 100)}%</output><button type="button" className="ribbon-tool" onClick={() => onZoom(0.25)}><RibbonIcon name="i-zoom-in" /><span data-v1-label="ズーム＋">Zoom<br />In</span></button><button type="button" className="ribbon-tool" onClick={onFitAll}><RibbonIcon name="i-fit" /><span data-v1-label="全体表示">Fit<br />All</span></button></div><b>Zoom</b></div>
-       </div>
-       <div className="ribbon-major-group" data-major-group="Display" aria-label="Display commands">
-        <div className="ribbon-group home-display-group" aria-label="Display"><div className="home-display-toggles"><label className="home-toggle"><input data-testid="home-grid-toggle" type="checkbox" checked={gridEnabled} onChange={onToggleGrid} /> Grid</label><label className="home-toggle"><input data-testid="home-minimap-toggle" type="checkbox" checked={minimapEnabled} onChange={onToggleMinimap} /> MiniMap</label><label className="home-toggle"><input data-testid="home-snap-toggle" type="checkbox" checked={snapEnabled} onChange={onToggleSnap} /> Snap</label><label className="home-toggle"><input data-testid="home-ruler-toggle" type="checkbox" checked={rulerEnabled} onChange={onToggleRuler} /> Ruler</label></div><b>Display</b></div>
-       </div>
-       <div className="ribbon-major-group" data-major-group="Options" aria-label="Options commands">
-        <div className="ribbon-group home-overflow-group" aria-label="More Home Commands">
-        <button ref={homeOverflowTriggerRef} type="button" className="ribbon-tool home-overflow-trigger" aria-expanded={homeOverflowOpen} aria-controls={homeOverflowOpen ? "home-overflow-menu" : undefined} onClick={() => setHomeOverflowOpen((value) => !value)}><RibbonIcon name="i-more" /><span>More</span></button>
-         <b>Options</b>
-        </div>
-       </div>
     </>}
     {homeOverflowMenu}
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
@@ -230,7 +309,46 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       </DsRibbonGroup></div>
     </div>}
     {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></div>}
-    {tab === "Annotation" && <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>}
+    {tab === "Annotation" && <>
+      <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
+      <div className="ribbon-major-group" data-major-group="Font" aria-label="Font commands">
+        <DsRibbonGroup ariaLabel="Font" className="annotation-font-group" label="Font">
+          <FontStyleToolbar
+            idPrefix="ribbon-annotation-font"
+            disabled={!selectedAnnotation && !selectedCommentRow}
+            style={selectedAnnotation?.style ?? selectedCommentRow?.display.style}
+            onChange={(style: JsonObject) => {
+              if (selectedAnnotation) onCommand(buildAnnotationStyleCommand(selectedAnnotation, style, nextCommandId("ribbon_annotation_font")));
+              else if (selectedCommentRow) onCommand({ id: nextCommandId("ribbon_comment_row_font"), type: "commentRow.update", signalId: selectedCommentRow.id, title: selectedCommentRow.title, body: selectedCommentRow.body, displayStyle: style });
+            }}
+          />
+        </DsRibbonGroup>
+      </div>
+      <div className="ribbon-major-group" data-major-group="Shapes" aria-label="Shape commands">
+        <DsRibbonGroup ariaLabel="Shapes" className="annotation-shapes-group" label="Shapes">
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-arrow-annotation" />} onClick={() => insertAnnotation("arrow")}>Arrow</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-range-arrow" />} onClick={insertRangeArrow}>Range</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-brace" />} onClick={() => insertAnnotation("bracket")}>Brace</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-callout" />} onClick={() => insertAnnotation("callout")}>Callout</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-rectangle" />} onClick={() => insertAnnotation("rectangle")}>Rectangle</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-ellipse" />} onClick={() => insertAnnotation("ellipse")}>Ellipse</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-connector" />} onClick={() => insertAnnotation("connector")}>Connector</DsRibbonButton>
+          <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-textbox" />} onClick={() => insertAnnotation("textbox")}>Text Box</DsRibbonButton>
+        </DsRibbonGroup>
+      </div>
+      <div className="ribbon-major-group" data-major-group="Paragraph" aria-label="Paragraph commands">
+        <DsRibbonGroup ariaLabel="Paragraph" className="annotation-paragraph-group" label="Paragraph">
+          <DsRibbonButton ariaLabel="Align left" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-left" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "left" })}>Left</DsRibbonButton>
+          <DsRibbonButton ariaLabel="Align center" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-center" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "center" })}>Center</DsRibbonButton>
+          <DsRibbonButton ariaLabel="Align right" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-right" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "right" })}>Right</DsRibbonButton>
+        </DsRibbonGroup>
+      </div>
+      <div className="ribbon-major-group" data-major-group="Arrange" aria-label="Arrange commands">
+        <DsRibbonGroup ariaLabel="Arrange" className="annotation-arrange-group" label="Arrange">
+          <ArrangeGroup {...arrangeHandlers} />
+        </DsRibbonGroup>
+      </div>
+    </>}
     {tab === "View" && <>
       <div className="ribbon-major-group view-slot-group" data-major-group="Show" aria-label="Show commands"><DsRibbonGroup ariaLabel="Show" className="view-show-group" label="Show"><div className="view-display-subgroup" data-display-kind="labels" aria-label="Labels and structure"><span>Labels / Structure</span><DsRibbonToggle dataTestId="view-show-signal-names" checked={showSignalNames} label="Signal Names" onChange={onToggleSignalNames} /><DsRibbonToggle dataTestId="view-show-roles" checked={showRoles} label="Roles" onChange={onToggleRoles} /><DsRibbonToggle dataTestId="view-show-group-background" checked={showGroupBackground} label="Group Background" onChange={onToggleGroupBackground} /></div><div className="view-display-subgroup" data-display-kind="overlays" aria-label="Overlays"><span>Overlays</span><DsRibbonToggle dataTestId="view-show-annotations" checked={showAnnotations} label="Annotations" onChange={onToggleAnnotations} /><DsRibbonToggle dataTestId="view-show-transactions" checked={showTransactions} label="Transactions" onChange={onToggleTransactions} /></div></DsRibbonGroup></div>
        <div className="ribbon-major-group view-slot-group" data-major-group="Panels" aria-label="Panels commands"><DsRibbonGroup ariaLabel="Panels" className="view-panels-group" label="Panels"><DsRibbonToggleButton className="view-mini-tool" ariaLabel="Inspector" checked={inspectorVisible} icon={<RibbonIcon name="i-settings" />} onClick={onToggleInspector}>Inspector</DsRibbonToggleButton><DsRibbonToggleButton className="view-mini-tool" ariaLabel="Bottom Editor" checked={bottomVisible} icon={<RibbonIcon name="i-preview" />} onClick={onToggleBottom}><span>Bottom</span><span>Editor</span></DsRibbonToggleButton><DsRibbonToggleButton dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton><DsRibbonToggleButton dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-preview" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton></DsRibbonGroup></div>

@@ -413,6 +413,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
       bookmarks: bookmarks as unknown as CanonicalDocument["bookmarks"],
       timeGroups: timeGroups as unknown as readonly TimeGroup[],
       annotations,
+      annotationGroups: [],
       legend: {
         show: bool(legendSource.show, true),
         orientation: legendSource.orientation === "vertical" ? "vertical" : "horizontal",

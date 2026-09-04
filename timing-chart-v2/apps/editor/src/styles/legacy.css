@@ -94,6 +94,12 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .surface-host [data-annotation-shape="line"][data-line-type="curve"] [data-role="annotation-body"] { height: 10px; border-radius: 50%; border-top-width: 2px; }
 .surface-host [data-arrowhead="end"] [data-role="annotation-body"]::after, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::after { content: ""; position: absolute; right: -1px; top: -5px; border-width: 4px 0 4px 7px; border-style: solid; border-color: transparent transparent transparent var(--annotation-color); }
 .surface-host [data-arrowhead="start"] [data-role="annotation-body"]::before, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::before { content: ""; position: absolute; left: -1px; top: -5px; border-width: 4px 7px 4px 0; border-style: solid; border-color: transparent var(--annotation-color) transparent transparent; }
+/* Ellipse/rectangle share the "range" shape's rect body; ellipse just
+   rounds it. Textbox shares the "point" shape's plain label box -- it just
+   drops the point-shape's dot marker since the label itself already reads
+   as a bordered box (see annotation-label rule below). */
+.surface-host [data-annotation-type="ellipse"] [data-role="annotation-body"] { border-radius: 50%; }
+.surface-host [data-annotation-type="textbox"] [data-role="annotation-body"] { display: none; }
 .surface-host [data-role="annotation-label"] { z-index: 4; width: max-content; max-width: 180px; padding: 2px 5px; border: 1px solid color-mix(in srgb, var(--annotation-color) 55%, white); border-radius: 3px; background: #fffffff2; color: #25334a; font-size: 10px; cursor: move; }
 .surface-host [data-role="annotation-handle"] { z-index: 5; width: 8px; height: 8px; margin: -4px; border: 1px solid white; border-radius: 50%; background: var(--annotation-color); cursor: crosshair; opacity: 0; }
 .surface-host [data-role="annotation-owner"]:focus [data-role="annotation-handle"], .surface-host [data-role="annotation-owner"][data-selected="true"] [data-role="annotation-handle"] { opacity: 1; }
@@ -131,7 +137,8 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .timeline-toolbar label { display: flex; align-items: center; gap: 4px; }
 .timeline-toolbar input { width: 52px; height: 26px; border: 1px solid #b6c2d0; border-radius: 3px; padding: 2px 5px; }
 .timeline-actions, .timeline-objects { display: flex; gap: 4px; }
-.timeline-toolbar button { height: 26px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #29425e; padding: 3px 7px; }
+.timeline-toolbar button { display: inline-flex; align-items: center; gap: 4px; height: 26px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #29425e; padding: 3px 7px; }
+.timeline-toolbar button svg { width: 12px; height: 12px; flex: 0 0 auto; }
 .timeline-actions button:nth-child(3) { border-color: #d0a4a4; color: #8a3030; }
 .timeline-objects { min-width: 0; overflow-x: auto; }
 .timeline-objects button { max-width: 130px; overflow: hidden; background: #f2f5f9; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -143,6 +150,45 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .view-toolbar { display: flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 10px; border-bottom: 1px solid #ccd5e0; background: #f7fafc; color: #405269; font-size: 10px; }
 .view-toolbar button { height: 23px; border: 1px solid #b5c2d0; border-radius: 3px; background: white; color: #29425e; }
 .view-toolbar output { min-width: 38px; text-align: center; }
+.font-style-toolbar { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid #e0e5ec; }
+/* Bold/Italic/Underline stacked 3 rows tall (PowerPoint Clipboard-group
+   packing) instead of spread horizontally -- keeps the toolbar narrow. */
+.font-style-toggles { display: flex; flex-direction: column; gap: 0; }
+.font-style-fields { display: flex; flex-direction: column; gap: 2px; }
+/* Small, flat icon+label rows -- same icon scale as the app's Undo/Redo
+   quick-access icons, not full-size PowerPoint ribbon buttons. The label
+   is always visible here (there's no room to hide it and still read as a
+   row), title still gives the native hover tooltip. */
+.font-style-button { display: inline-flex; align-items: center; gap: 4px; width: 84px; height: 16px; padding-inline: 3px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #29425e; font-size: 9px; line-height: 1; text-align: left; }
+.font-style-button svg { width: 11px; height: 11px; flex: 0 0 auto; }
+.font-style-button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.font-style-button:hover { background: #eaf3fc; }
+.font-style-button[aria-pressed="true"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
+.font-style-button:disabled, .font-style-family:disabled, .font-style-size:disabled { opacity: .4; }
+.font-style-color { cursor: pointer; }
+.font-style-color input[type="color"] { width: 12px; height: 12px; padding: 0; border: none; margin-left: auto; cursor: pointer; }
+.font-style-family { width: 90px; height: 18px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+.font-style-size { width: 60px; height: 18px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 1px 3px; font-size: 10px; }
+.editor-shell .home-annotation-font-group, .editor-shell .annotation-font-group { display: flex; align-items: center; padding-inline: 6px; }
+.editor-shell .annotation-shapes-group { display: flex; align-items: center; gap: 3px; padding-inline: 6px; }
+.editor-shell .annotation-paragraph-group { display: flex; align-items: center; gap: 3px; padding-inline: 6px; }
+/* Arrange group: the 3 most-used ops as a stacked icon-row column (reusing
+   FontStyleToolbar's row styling) plus a dropdown for the rest -- both
+   patterns side by side, per the chosen mockup. */
+.editor-shell .annotation-arrange-group { display: flex; align-items: center; padding-inline: 6px; }
+.arrange-group { display: flex; align-items: center; gap: 6px; }
+.arrange-rows { display: flex; flex-direction: column; }
+.arrange-dropdown { position: relative; }
+.arrange-dropdown-trigger { display: flex; align-items: center; gap: 3px; height: 36px; padding: 0 6px; border: 1px solid #b9c5d3; border-radius: 4px; background: white; color: #29425e; font-size: 9px; }
+.arrange-dropdown-trigger:hover { background: #eaf3fc; }
+.arrange-dropdown-trigger svg:first-child { width: 15px; height: 15px; }
+.arrange-dropdown-trigger svg:last-child { width: 9px; height: 9px; opacity: .6; }
+.arrange-menu { position: absolute; top: calc(100% + 3px); left: 0; z-index: 20; display: flex; flex-direction: column; width: 150px; padding: 4px 0; border: 1px solid #b9c5d3; border-radius: 4px; background: white; box-shadow: 0 3px 10px rgba(30, 41, 59, .18); }
+.arrange-menu button { display: flex; align-items: center; gap: 7px; padding: 5px 10px; border: none; background: transparent; color: #29425e; font-size: 11px; text-align: left; }
+.arrange-menu button svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.arrange-menu button:hover:not(:disabled) { background: #eaf3fc; }
+.arrange-menu button:disabled { opacity: .4; }
+.arrange-menu-sep { height: 1px; margin: 3px 0; background: #e0e5ec; }
 .annotation-properties { display: flex; align-items: end; gap: 10px; padding: 12px; border-bottom: 1px solid #e0e5ec; }
 .annotation-properties label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
 .annotation-properties input:not([type="checkbox"]), .annotation-properties select { width: 150px; height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 3px 7px; }
@@ -176,18 +222,23 @@ body { min-width: 1100px; }
 .ribbon-major-group::after { position: absolute; right: 0; bottom: 3px; left: 0; color: #637083; content: attr(data-major-group); font-size: 10px; font-weight: 500; text-align: center; pointer-events: none; }
 .ribbon-major-group > .ribbon-group > b { visibility: hidden; }
 .file-group { width: 310px; }.history-group { width: 152px; }.timeline-group { width: 484px; }.annotation-group { width: 375px; }.view-group { width: 310px; }
-.home-file-group { width: 168px; }.history-group { width: 90px; }.clipboard-group { width: 168px; }.edit-group, .selection-group, .visibility-group, .arrange-group { width: 88px; }.home-timeline-group { width: 300px; }.home-view-group { width: 220px; }.home-zoom-controls { display: flex; align-items: center; gap: 2px; }.home-display-subgroup { position: relative; display: flex; align-items: center; }.home-display-subgroup::after { position: absolute; right: 0; bottom: -14px; left: 0; color: #637083; content: "Display"; font-size: 9px; text-align: center; }.properties-group, .home-review-group { width: 88px; }.home-export-group { width: 105px; }.home-toggle { display: grid; grid-template-columns: 14px auto; align-items: center; gap: 3px; color: #445b73; font-size: 10px; white-space: nowrap; }.home-file-group .ribbon-tool, .history-group .ribbon-tool, .clipboard-group .ribbon-tool, .edit-group .ribbon-tool, .selection-group .ribbon-tool, .visibility-group .ribbon-tool, .arrange-group .ribbon-tool { min-width: 34px; padding-inline: 2px; font-size: 9px; gap: 3px; }.home-file-group .ribbon-tool svg, .history-group .ribbon-tool svg, .clipboard-group .ribbon-tool svg, .edit-group .ribbon-tool svg, .selection-group .ribbon-tool svg, .visibility-group .ribbon-tool svg, .arrange-group .ribbon-tool svg { width: 22px; height: 22px; }.home-file-group, .history-group, .clipboard-group, .edit-group, .selection-group, .visibility-group, .arrange-group { gap: 4px; padding-inline: 6px; }
 .home-overflow-group { position: relative; display: none; width: 88px; height: 146px; padding: 7px 8px 22px; border-right: 1px solid #d4dbe4; }
 .home-overflow-menu { position: fixed; z-index: 1000; display: grid; grid-template-columns: repeat(2, minmax(108px, 1fr)); gap: 3px 5px; width: 300px; max-width: calc(100vw - 16px); padding: 8px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; overflow: auto; }
 .home-overflow-menu strong { grid-column: 1 / -1; margin-top: 3px; color: #405875; font-size: 10px; }
 .home-overflow-menu button { min-height: 26px; padding: 3px 7px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; text-align: left; }
 .home-overflow-menu button:hover { background: var(--gui-hover-bg); }.home-overflow-menu button:disabled { opacity: .4; }
-/* V1 display vocabulary for tabs and group captions; keep the English
-   command names used by routing and tests unchanged. */
-.home-file-group > b, .history-group > b, .clipboard-group > b, .edit-group > b, .selection-group > b, .visibility-group > b, .arrange-group > b, .home-timeline-group > b, .home-view-group > b, .properties-group > b, .home-review-group > b, .home-export-group > b { color: transparent; }
-.home-file-group > b::after { content: "ファイル"; color: #637083; font-size: 10px; }.history-group > b::after { content: "編集履歴"; color: #637083; font-size: 10px; }.clipboard-group > b::after { content: "クリップボード"; color: #637083; font-size: 10px; }.edit-group > b::after { content: "編集"; color: #637083; font-size: 10px; }.selection-group > b::after { content: "選択"; color: #637083; font-size: 10px; }.visibility-group > b::after { content: "表示"; color: #637083; font-size: 10px; }.arrange-group > b::after { content: "行操作"; color: #637083; font-size: 10px; }.home-timeline-group > b::after { content: "時間軸"; color: #637083; font-size: 10px; }.home-view-group > b::after { content: "表示"; color: #637083; font-size: 10px; }.properties-group > b::after { content: "設定"; color: #637083; font-size: 10px; }.home-review-group > b::after { content: "チェック"; color: #637083; font-size: 10px; }.home-export-group > b::after { content: "出力"; color: #637083; font-size: 10px; }
-.home-file-group .ribbon-tool span[data-v1-label], .history-group .ribbon-tool span[data-v1-label], .clipboard-group .ribbon-tool span[data-v1-label], .edit-group .ribbon-tool span[data-v1-label], .selection-group .ribbon-tool span[data-v1-label], .visibility-group .ribbon-tool span[data-v1-label], .arrange-group .ribbon-tool span[data-v1-label], .home-view-group .ribbon-tool span[data-v1-label], .view-group .ribbon-tool span[data-v1-label], .properties-group .ribbon-tool span[data-v1-label], .home-review-group .ribbon-tool span[data-v1-label], .home-export-group .ribbon-tool span[data-v1-label] { position: relative; display: block; width: 100%; min-width: 0; color: #25384f; font-size: 0; }
-.home-file-group .ribbon-tool span[data-v1-label]::after, .history-group .ribbon-tool span[data-v1-label]::after, .clipboard-group .ribbon-tool span[data-v1-label]::after, .edit-group .ribbon-tool span[data-v1-label]::after, .selection-group .ribbon-tool span[data-v1-label]::after, .visibility-group .ribbon-tool span[data-v1-label]::after, .arrange-group .ribbon-tool span[data-v1-label]::after, .home-view-group .ribbon-tool span[data-v1-label]::after, .view-group .ribbon-tool span[data-v1-label]::after, .properties-group .ribbon-tool span[data-v1-label]::after, .home-review-group .ribbon-tool span[data-v1-label]::after, .home-export-group .ribbon-tool span[data-v1-label]::after { position: absolute; top: 0; left: 0; display: block; width: 100%; max-height: 3.3em; overflow: hidden; color: #25384f; content: attr(data-v1-label); font-size: 9px; line-height: 1.1; text-align: center; white-space: normal; overflow-wrap: anywhere; }
+.find-replace-panel { position: fixed; z-index: 1000; display: flex; flex-direction: column; gap: 6px; width: 300px; max-width: calc(100vw - 16px); padding: 10px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; overflow: auto; font-size: 11px; }
+.find-replace-panel label { display: flex; flex-direction: column; gap: 2px; color: #405875; font-size: 10px; font-weight: 650; }
+.find-replace-panel input { height: 26px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; font-size: 11px; }
+.find-replace-panel output { color: #607188; font-size: 10px; }
+.find-replace-preview { display: flex; flex-direction: column; gap: 2px; max-height: 140px; margin: 0; padding: 4px 6px; overflow-y: auto; border: 1px solid #e1e7ee; border-radius: 3px; background: #fbfcfe; list-style: none; }
+.find-replace-preview li { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #304761; }
+.find-replace-preview li svg { width: 10px; height: 10px; flex: 0 0 auto; color: #90a0b3; }
+.find-replace-preview .find-replace-more { color: #90a0b3; font-style: italic; }
+.find-replace-actions { display: flex; gap: 6px; }
+.find-replace-actions button { height: 26px; padding: 3px 10px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; }
+.find-replace-actions button:disabled { opacity: .4; }
+.find-replace-actions button[data-testid="find-replace-apply"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
 .ribbon-tool { min-width: 47px; height: 86px; padding: 5px 4px; border: 0; border-radius: 4px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #25384f; font-size: 10px; }
 .ribbon-tool:hover { background: #eaf3fc; }.ribbon-tool:disabled { opacity: .4; }
 .ribbon-tool svg { width: 28px; height: 28px; }
@@ -355,8 +406,8 @@ body { min-width: 1100px; }
 .editor-shell .ribbon-group { height: 101px; padding: 5px 7px 17px; }
 .editor-shell .ribbon-tool { height: 66px; min-width: 51px; padding: 3px; gap: 4px; }
 .editor-shell .ribbon-tool svg { width: 19px; height: 19px; }
-.editor-shell .home-view-group { width: 148px; }
-.editor-shell .ribbon-major-group[data-major-group="Zoom"]::after { right: auto; width: 148px; }
+.editor-shell .home-view-group { width: 250px; }
+.editor-shell .ribbon-major-group[data-major-group="Zoom"]::after { right: auto; width: 250px; }
 .editor-shell .home-zoom-controls { min-width: 0; flex: 1 1 auto; }
 .editor-shell .home-zoom-controls .ribbon-tool { min-width: 31px; }
 .editor-shell .home-zoom-controls .ribbon-tool:has([data-v1-label="選択に合わせる"]) { display: none; }
@@ -575,12 +626,15 @@ body { min-width: 1100px; }
 .editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
 .annotation-list { min-width: 880px; overflow: hidden; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
-.annotation-list-row { display: grid; grid-template-columns: 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }
+.annotation-list-row { display: grid; grid-template-columns: 20px 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }
 .annotation-list-header { min-height: 25px; border-bottom: 1px solid #cbd6e2; background: #f0f4f8; color: #607188; font-size: 9px; font-weight: 700; }
-.annotation-list > button { width: 100%; border: 0; border-bottom: 1px solid #e1e7ee; background: white; color: #304761; text-align: left; }
-.annotation-list > button:hover { background: #f3f8fd; }
-.annotation-list > button[data-selected="true"] { background: #e5f2ff; box-shadow: inset 3px 0 #2b79bf; }
-.annotation-list > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-list > .annotation-list-row:not(.annotation-list-header) { width: 100%; border: 0; border-bottom: 1px solid #e1e7ee; background: white; color: #304761; cursor: pointer; }
+.annotation-list > .annotation-list-row:not(.annotation-list-header):hover { background: #f3f8fd; }
+.annotation-list > .annotation-list-row[data-selected="true"] { background: #e5f2ff; box-shadow: inset 3px 0 #2b79bf; }
+.annotation-list-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-list-visibility { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: none; background: transparent; color: #607188; }
+.annotation-list-visibility svg { width: 12px; height: 12px; }
+.annotation-list-visibility[aria-pressed="false"] { opacity: .4; }
 .annotation-list-index { color: #7b8999; font-size: 9px; text-align: center; }
 .annotation-list-type { overflow: hidden; color: #65758a; text-overflow: ellipsis; white-space: nowrap; }
 .annotation-list-label { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
@@ -652,7 +706,10 @@ body { min-width: 1100px; }
    prevents the four view toggles from competing with the zoom commands. */
 .home-display-group { width: 174px; }
 .home-display-group .home-display-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-.editor-shell .home-view-group { width: 220px; }
+/* 5 items live here (Zoom Out/Zoom In/100%/Fit All/Fit Selection) -- width
+   must track that count or "Fit Selection" overflows the box and visually
+   overlaps the neighboring Display group's toggles. */
+.editor-shell .home-view-group { width: 250px; }
 .editor-shell .home-display-group { width: 174px; }
 .editor-shell .home-zoom-controls .ribbon-tool { min-width: 39px; }
 .editor-shell .home-display-group .home-toggle { min-width: 0; }
@@ -689,48 +746,11 @@ body { min-width: 1100px; }
 .editor-shell .ribbon-tool { overflow: hidden; }
 .editor-shell .ribbon-tool > svg { flex: 0 0 19px; width: 19px; height: 19px; }
 .editor-shell .ribbon-tool > span { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 100%; min-width: 0; min-height: 20px; max-height: 2.2em; overflow: hidden; line-height: 1.05; text-align: center; white-space: normal; overflow-wrap: normal; word-break: normal; }
-.editor-shell .home-timeline-group > .ribbon-tool { flex: 0 0 43px; min-width: 43px; }
-.editor-shell .home-timeline-group { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 2px; overflow: hidden; }
-.editor-shell .home-timeline-group > .timeline-toolbar { flex: 1 0 100%; display: flex; align-items: center; gap: 3px; width: 100%; height: 28px; min-height: 28px; max-height: 28px; padding: 0; overflow: hidden; }
-.editor-shell .home-timeline-group > .timeline-toolbar > label { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 2px; min-width: 0; font-size: 8px; }
-.editor-shell .home-timeline-group > .timeline-toolbar > label input { width: 31px; min-width: 0; height: 22px; padding: 1px 3px; }
-.editor-shell .home-timeline-group > .timeline-toolbar .timeline-actions { display: flex; flex: 1 1 auto; min-width: 0; gap: 2px; overflow: hidden; }
-.editor-shell .home-timeline-group > .timeline-toolbar .timeline-actions button { flex: 1 1 0; min-width: 0; overflow: hidden; padding: 2px 3px; text-overflow: ellipsis; white-space: nowrap; }
-.editor-shell .home-timeline-group > .timeline-toolbar .timeline-objects { display: none; }
-.editor-shell .home-timeline-group > .ribbon-tool { height: 48px; }
-.editor-shell .home-view-group .home-zoom-controls { align-items: center; gap: 2px; min-width: 0; }
-.editor-shell .home-view-group .home-zoom-controls > .ribbon-tool { flex: 0 0 39px; min-width: 39px; }
-.editor-shell .home-display-subgroup { overflow: visible; }
-/* Golden v8 Home surface: seven stable desktop groups.  Secondary commands
-   stay in More/route surfaces; the visible strip owns only the compact
-   task-oriented command set. */
-.editor-shell .ribbon-major-group[data-major-group="File"] { width: 216px; }
-.editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 323px; }
-.editor-shell .ribbon-major-group[data-major-group="Time"] { width: 332px; }
-.editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 182px; }
-.editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 220px; }
-.editor-shell .ribbon-major-group[data-major-group="Display"] { width: 162px; }
-.editor-shell .ribbon-major-group[data-major-group="Options"] { width: 64px; }
-.editor-shell .home-edit-group,
-.editor-shell .home-timeline-group,
-.editor-shell .home-layout-group,
-.editor-shell .home-view-group,
-.editor-shell .home-display-group,
-.editor-shell .home-overflow-group { box-sizing: border-box; width: 100%; min-width: 0; }
-.editor-shell .home-edit-group,
-.editor-shell .home-timeline-group,
-.editor-shell .home-layout-group { display: flex; align-items: flex-start; gap: 2px; padding-inline: 5px; }
-.editor-shell .home-edit-group .ribbon-tool,
-.editor-shell .home-timeline-group .ribbon-tool { flex: 1 1 0; min-width: 0; }
-.editor-shell .home-layout-group .ribbon-tool { flex: 1 1 0; min-width: 0; }
-.editor-shell .home-view-group { padding-inline: 7px; }
-.editor-shell .home-zoom-controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; width: 100%; }
-.editor-shell .home-zoom-controls .ribbon-tool { flex: none; min-width: 0; width: auto; }
-.editor-shell .home-display-group { padding: 7px; }
-.editor-shell .home-display-group .home-display-toggles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 7px; width: 100%; }
-.editor-shell .home-display-group .home-toggle { min-width: 0; grid-template-columns: 13px minmax(0, 1fr); gap: 2px; font-size: 9px; }
-.editor-shell .home-overflow-group { display: flex; align-items: flex-start; justify-content: center; padding-inline: 5px; }
-.editor-shell .home-overflow-group .home-overflow-trigger { width: 100%; min-width: 0; }
+/* Home's ribbon groups now render through the shared Ds* ribbon
+   primitives (see ribbon-schema.ts / ribbon-group.tsx) -- the
+   .ribbon-tool / .home-*-group-specific width and alignment overrides
+   that used to live here have been removed; Home now gets its sizing
+   from the same tokens.css/ribbon.css rules Insert/View already use. */
 
 /* Insert and Timeline own their non-Home composition.  Each command remains
    backed by the existing SemanticCommand callback; these rules only make the
@@ -823,6 +843,23 @@ body { min-width: 1100px; }
 }
 .editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects { flex-direction: row; }
 .editor-shell .view-slot-group { box-sizing: border-box; flex: 0 0 auto; }
+.editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: hidden; }
+.editor-shell [data-ribbon-home] > .ds-ribbon-group > b { visibility: hidden; }
+/* Home packs more buttons per group than Insert/View -- one shared compact
+   density rule (not a per-group override list) keeps every Home button the
+   same tighter size instead of drifting group by group. */
+.editor-shell [data-ribbon-home] .ds-ribbon-button { width: 44px; min-width: 44px; padding-inline: 3px; font-size: 9px; }
+.editor-shell [data-ribbon-home] > .ds-ribbon-group { gap: 3px; padding-inline: 4px; }
+/* Auto-wrap long labels instead of forcing single-line buttons wide (or
+   requiring callers to hand-split labels into multiple <span> children,
+   the fragile pattern View/Insert use today). */
+.editor-shell [data-ribbon-home] .ds-ribbon-label { white-space: normal; overflow-wrap: anywhere; text-align: center; }
+.editor-shell [data-ribbon-home] .ds-icon-box, .editor-shell [data-ribbon-home] .ds-icon-box > svg { width: 16px; height: 16px; }
+.editor-shell .home-display-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
+/* Checkbox to the left of its label, packed tight -- same row layout the
+   View tab's Guides/Show toggles already use, applied here for consistency. */
+.editor-shell .home-display-group .ds-ribbon-toggle { display: flex; min-width: 0; flex-direction: row; align-items: center; justify-content: flex-start; gap: 3px; padding: 2px 3px; text-align: left; }
+.editor-shell .home-display-group .ds-ribbon-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-shell .view-slot-group[data-major-group="Show"] { width: 280px; }
 .editor-shell .view-slot-group[data-major-group="Panels"] { width: 250px; }
 .editor-shell .view-slot-group[data-major-group="Guides"] { width: 150px; }
@@ -892,7 +929,7 @@ body { min-width: 1100px; }
   .editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 240px; }
   .editor-shell .ribbon-major-group[data-major-group="Time"] { width: 230px; }
   .editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 140px; }
-  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 170px; }
+  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 250px; }
   .editor-shell .ribbon-major-group[data-major-group="Display"] { width: 130px; }
   .editor-shell .ribbon-major-group[data-major-group="Options"] { width: 64px; }
   .desktop-workspace { grid-template-columns: 250px minmax(0, 1fr) 240px; }
@@ -902,7 +939,7 @@ body { min-width: 1100px; }
   .editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 210px; }
   .editor-shell .ribbon-major-group[data-major-group="Time"] { width: 200px; }
   .editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 120px; }
-  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 145px; }
+  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 250px; }
   .editor-shell .ribbon-major-group[data-major-group="Display"] { width: 120px; }
 }
 @media (max-width: 1100px) {

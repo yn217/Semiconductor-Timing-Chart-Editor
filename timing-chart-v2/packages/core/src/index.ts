@@ -167,6 +167,7 @@ export function createEmptyDocument(): CanonicalDocument {
     bookmarks: [],
     timeGroups: [],
     annotations: [],
+    annotationGroups: [],
     legend: { show: true, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
     layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: "left", rowHeight: 28, signalSpacing: 6, overflow: "ellipsis" },
     transactions: [],
