@@ -44,7 +44,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const applyFontStyle = (style: JsonObject) => onCommand(buildAnnotationStyleCommand(annotation, style, nextCommandId("annotation_font")));
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" data-bottom-target-id={annotation.id} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
-      <button type="button" className="editor-tab">Signal</button><button type="button" className="editor-tab active">Annotation</button>
+      <span className="editor-tab">Signal</span><span className="editor-tab active">Annotation</span>
       <span className="editor-selection">{annotation.label} · {annotation.type}</span>
       <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>

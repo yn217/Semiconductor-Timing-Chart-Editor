@@ -17,7 +17,7 @@ export function SignalEditor({ signal, cycleCount, history, groups, problem, onC
   const [spacingAfter, setSpacingAfter] = useState(signal?.spacingAfter ?? 0);
   return <section className="signal-editor" aria-label="Signal Editor" data-testid="signal-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
-      <button type="button" className="editor-tab active">Signal</button>
+      <span className="editor-tab active">Signal</span>
       <span className="editor-selection">{signal ? `${signal.display.name} · ${signal.type}` : "Select a signal to edit"}</span>
       <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>

@@ -623,7 +623,7 @@ body { min-width: 1100px; }
 .annotation-context-toolbar output { margin-left: auto; color: #63758b; font-size: 9px; }
 .signal-editor { min-height: 250px; margin: 0; overflow: auto; border: 0; border-radius: 0; background: white; box-shadow: none; }
 .editor-tabbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-bottom: 1px solid #cad3df; background: #f4f7fa; }
-.editor-tabbar button { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
+.editor-tabbar button, .editor-tabbar .editor-tab { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
 .editor-tabbar button:disabled { opacity: .45; }
 .editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
