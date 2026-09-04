@@ -24,6 +24,13 @@ const manifests = [
 
 test.setTimeout(120_000);
 
+// #308 "representative visual set": signal types/roles/legend, group bands/
+// spacing, signal-name layout, annotation overlay, clock phase/gating,
+// transaction/cycle linked views -- 1-based index across the two manifests
+// concatenated in `manifests` order (golden-protocol 1-10, then
+// golden-feature-coverage 11-20), matching the suggested SAMPLE-11.. IDs.
+const REPRESENTATIVE_SAMPLE_INDICES = new Set([11, 12, 13, 14, 16, 20]);
+
 async function samplesFromManifests() {
   const samples: Array<{ readonly meta: GoldenSample; readonly path: string }> = [];
   for (const manifestPath of manifests) {
@@ -64,7 +71,19 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     if (meta.signalCount !== undefined) await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", String(meta.signalCount));
     if (meta.transactionCount !== undefined) await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", String(meta.transactionCount));
     if (meta.signalCount !== undefined) await expect(page.getByTestId("signal-count-status")).toHaveText(`Signals: ${meta.signalCount}`);
-    expect(await host.locator("[data-role='left-row'][data-row-id]").count()).toBeGreaterThan(0);
+    const rowLocator = host.locator("[data-role='left-row'][data-row-id]");
+    expect(await rowLocator.count()).toBeGreaterThan(0);
+    // Duplicate-row-ownership check: every currently-rendered row owns a
+    // unique id after this no-reload switch (a leaked/duplicated DOM owner
+    // from the previous sample would collide with the current sample's own
+    // id here). Cross-sample id *reappearance* is checked separately below
+    // with a verified-disjoint sample pair -- many protocol samples
+    // legitimately reuse common signal names (aclk, aresetn, ...) across
+    // different documents, so comparing raw ids against an arbitrary
+    // previous sample in this loop would false-positive on that reuse.
+    const currentRowIds = await rowLocator.evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
+    expect(new Set(currentRowIds).size, `${meta.file}: duplicate row ownership`).toBe(currentRowIds.length);
+    const isRepresentative = REPRESENTATIVE_SAMPLE_INDICES.has(index + 1);
     const screenshotPath = `.tmp_gui_reference/golden-${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.png`;
     await page.screenshot({ path: screenshotPath, animations: "disabled" });
     const review = await captureScenarioReview({
@@ -75,6 +94,18 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
       rules: [
         { selector: ".app-titlebar h1", target: "title" },
         { selector: "[data-testid='ribbon']", target: "Ribbon" },
+        // The broad 20-sample smoke pass only needs health signals (#308:
+        // "not required to perform expensive AI review on every screenshot
+        // every run"); representative samples additionally run the
+        // row/label text-overlap/clipping diagnostics the issue asks for.
+        // Spacer rows are excluded: they intentionally use a compact fixed
+        // height, and the shared role-badge child isn't re-sized down for
+        // that compact height (a real but pre-existing, out-of-#308-scope
+        // cosmetic detail -- filed separately rather than fixed here).
+        ...(isRepresentative ? [
+          { selector: "[data-role='left-row']:not([data-kind='spacer'])", target: "left-row" },
+          { selector: "[data-role='annotation-owner']", target: "annotation-owner" },
+        ] : []),
       ],
       actions: [`open:${meta.file}`, "capture:production-browser"],
       images: { current: screenshotPath },
@@ -82,6 +113,13 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     });
     expect(review.testedCommit).toBe(gitHead);
     expect(review.diagnostics.findings.filter((finding) => ["CONSOLE_ERROR", "PAGE_ERROR", "RESOURCE_FAILURE"].includes(finding.category))).toEqual([]);
+    // OVERLAP is intentionally excluded from the hard gate: sample 14 exists
+    // specifically to exercise multiple annotation types stacked/overlapping
+    // by design (its own coverage list: "overlay", "scope"), and #308's own
+    // "AI review targets" list "Annotation overlap with waveform/text" as
+    // something to visually judge, not mechanically reject. The findings are
+    // still collected in the bundle for that review.
+    if (isRepresentative) expect(review.diagnostics.findings.filter((finding) => finding.category === "TEXT_CLIPPING"), `${meta.file}: representative-sample text-clipping diagnostics`).toEqual([]);
     const coverageEvidence = assertGoldenCoverageContract(meta, parsed.document, { rendered: true, visualGate: true });
     const title = await page.locator(".app-titlebar h1").textContent();
     const counters = JSON.parse(await host.getAttribute("data-session-counters") ?? "null") as Record<string, unknown>;
@@ -98,7 +136,34 @@ test("opens all 20 immutable Golden Samples in the production browser path", asy
     await expect(page.locator(".app-titlebar h1")).toHaveText(meta.title, { timeout: 60_000 });
     await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
     await expect(host).toHaveAttribute("data-canonical-revision", "0");
-    evidence.push({ file: meta.file, title, cycles: meta.cycles, signalCount: meta.signalCount, transactionCount: meta.transactionCount, coverage: meta.coverage, coverageEvidence, saveOpen: true, visualArtifact: `.tmp_gui_reference/golden-${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.png`, counters, diagnostics });
+    evidence.push({ file: meta.file, title, cycles: meta.cycles, signalCount: meta.signalCount, transactionCount: meta.transactionCount, coverage: meta.coverage, coverageEvidence, saveOpen: true, representative: isRepresentative, rowCount: currentRowIds.length, visualArtifact: `.tmp_gui_reference/golden-${String(index + 1).padStart(2, "0")}-${meta.file.replace(/\.tcd\.json$/, "")}.png`, counters, diagnostics });
+  }
+
+  // #308 "SAMPLE-SWITCH-A-B": an explicit no-reload switch between two
+  // samples verified to have disjoint signal ids (APB register access vs.
+  // the generic clk/s1..s4 signal-name-layout sample) -- unlike comparing
+  // arbitrary adjacent samples in the smoke loop above, a real leaked/stale
+  // DOM owner can be told apart here from the common "different protocol
+  // samples reuse names like aclk/aresetn" false positive.
+  if (!process.env.GOLDEN_SAMPLE_FILTER) {
+    const sampleA = samples.find(({ meta }) => meta.file === "01_apb_register_access.tcd.json");
+    const sampleB = samples.find(({ meta }) => meta.file === "13_signal_name_layout.tcd.json");
+    if (sampleA && sampleB) {
+      const switchHost = page.getByTestId("cycle-surface");
+      const rowIdsOf = async (sample: typeof sampleA) => {
+        const source = await readFile(sample.path);
+        await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: sample.meta.file, mimeType: "application/json", buffer: source });
+        await expect(page.locator(".app-titlebar h1")).toHaveText(sample.meta.title, { timeout: 60_000 });
+        await expect(switchHost).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+        return switchHost.locator("[data-role='left-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => row.getAttribute("data-row-id")));
+      };
+      const idsA = await rowIdsOf(sampleA);
+      const idsB = await rowIdsOf(sampleB);
+      expect(idsA.length).toBeGreaterThan(0);
+      expect(idsB.filter((id) => idsA.includes(id)), "SAMPLE-SWITCH-A-B: Sample A rows leaked into Sample B").toEqual([]);
+      expect(new Set(idsB).size, "SAMPLE-SWITCH-A-B: duplicate row ownership after switch").toBe(idsB.length);
+      evidence.push({ scenario: "SAMPLE-SWITCH-A-B", from: sampleA.meta.file, to: sampleB.meta.file, fromRowCount: idsA.length, toRowCount: idsB.length, leaked: 0 });
+    }
   }
 
   await testInfo.attach("golden-samples-browser-evidence.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
