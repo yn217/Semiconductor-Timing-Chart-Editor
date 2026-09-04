@@ -1,34 +1,55 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
-import { nextCommandId } from "./command-id.js";
+import { planCommand } from "@timing-chart-v2/commands";
+import { validateCanonicalDocument, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
+import { deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider } from "./ai-proposal-provider.js";
 
-export function AIOperationPanel({ document, revision, selectedSignalId, onCommand, icon }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly icon: ReactNode }) {
+function validationMessage(document: CanonicalDocument, proposal: AIProposal): string | undefined {
+  if (proposal.kind !== "semantic-command") return "This proposal kind is reserved and cannot be applied yet.";
+  let candidate = document;
+  for (const command of proposal.commands) {
+    const planned = planCommand(candidate, command);
+    if (!planned.ok) return planned.problems.map((problem) => `${problem.code}: ${problem.message}`).join(" ");
+    candidate = planned.document;
+  }
+  const documentProblems = validateCanonicalDocument(candidate);
+  return documentProblems.length === 0 ? undefined : documentProblems.map((problem) => `${problem.code}: ${problem.message}`).join(" ");
+}
+
+export function AIOperationPanel({ document, revision, selectedSignalId, onCommand, onCommandBatch, icon, provider = deterministicMockAIProposalProvider }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly icon: ReactNode; readonly provider?: AIProposalProvider }) {
   const [query, setQuery] = useState("");
-  const [preview, setPreview] = useState<{ readonly baseRevision: number; readonly command: SemanticCommand; readonly summary: string }>();
+  const [preview, setPreview] = useState<AIProposal>();
+  const [validatedRevision, setValidatedRevision] = useState<number>();
   const [status, setStatus] = useState("Ready");
-  const selected = document.signals.find((signal) => signal.id === selectedSignalId && signal.type !== "commentRow");
   const buildPreview = () => {
-    const text = query.trim();
-    if (!selected) { setPreview(undefined); setStatus("Select a timing Signal first."); return; }
-    const rename = /^rename(?: selected)?(?: signal)? to (.+)$/i.exec(text);
-    const command: SemanticCommand | undefined = rename
-      ? { id: nextCommandId("ai_rename"), type: "signal.rename", signalId: selected.id, name: rename[1]!.trim() }
-      : /^(hide|show)(?: selected)?(?: signal)?$/i.test(text)
-        ? { id: nextCommandId("ai_visibility"), type: "signal.setVisibility", signalId: selected.id, visible: text.toLowerCase().startsWith("show") }
-        : undefined;
-    if (!command) { setPreview(undefined); setStatus("Supported intents: rename selected signal to <name>, hide selected signal, show selected signal."); return; }
-    setPreview({ baseRevision: revision, command, summary: command.type === "signal.rename" ? `Rename ${selected.display.name} to ${(command as Extract<SemanticCommand, { type: "signal.rename" }>).name}` : `${(command as Extract<SemanticCommand, { type: "signal.setVisibility" }>).visible ? "Show" : "Hide"} ${selected.display.name}` });
+    const result = provider.propose({ document, revision, query, selectedSignalId });
+    if (!result.ok) { setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); return; }
+    setPreview(result.proposal);
+    setValidatedRevision(undefined);
     setStatus("Preview ready · no document mutation");
+  };
+  const validatePreview = () => {
+    if (!preview) { setStatus("Create a preview first."); return; }
+    if (preview.baseRevision !== revision) { setPreview(undefined); setValidatedRevision(undefined); setStatus(`Conflict · preview revision ${preview.baseRevision}, current revision ${revision}`); return; }
+    const message = validationMessage(document, preview);
+    if (message) { setValidatedRevision(undefined); setStatus(`Validation failed · ${message}`); return; }
+    setValidatedRevision(revision);
+    setStatus("Validated · deterministic local checks passed");
   };
   const applyPreview = () => {
     if (!preview) { setStatus("Create a preview first."); return; }
     if (preview.baseRevision !== revision) { setPreview(undefined); setStatus(`Conflict · preview revision ${preview.baseRevision}, current revision ${revision}`); return; }
-    const result = onCommand(preview.command);
+    if (validatedRevision !== revision) { setStatus("Validate the proposal before applying it."); return; }
+    const message = validationMessage(document, preview);
+    if (message) { setValidatedRevision(undefined); setStatus(`Validation failed · ${message}`); return; }
+    const result = preview.commands.length === 1
+      ? onCommand(preview.commands[0]!)
+      : onCommandBatch?.(preview.commands) ?? { ok: false as const, reason: "invalid" as const, problems: [] };
     if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
     setPreview(undefined);
-    setStatus("Applied · one SemanticCommand");
+    setValidatedRevision(undefined);
+    setStatus("Applied · one atomic SemanticCommand transaction");
   };
-  return <section className="ai-operation-panel" data-testid="ai-operation-panel"><div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={buildPreview}>Preview</button></div><div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>{preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span><button type="button" onClick={applyPreview}>Apply Preview</button><button type="button" onClick={() => { setPreview(undefined); setStatus("Preview cancelled · no document mutation"); }}>Cancel</button></div>}<output role="status" data-testid="ai-status">{status}</output></section>;
+  return <section className="ai-operation-panel" data-testid="ai-operation-panel"><div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={buildPreview}>Preview</button></div><div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>{preview && <div className="ai-preview" data-testid="ai-preview"><strong>{preview.summary}</strong><span>Base revision {preview.baseRevision}</span><button type="button" data-testid="ai-validate" onClick={validatePreview}>Validate Proposal</button><button type="button" data-testid="ai-apply" onClick={applyPreview}>Apply Preview</button><button type="button" onClick={() => { setPreview(undefined); setValidatedRevision(undefined); setStatus("Preview cancelled · no document mutation"); }}>Cancel</button></div>}<output role="status" data-testid="ai-status">{status}</output></section>;
 }
