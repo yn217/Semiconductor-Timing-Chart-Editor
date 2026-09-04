@@ -8,7 +8,9 @@
 {"formatVersion":2,"document":{},"timeline":{"labelAnchors":[]},"signalGroups":[],"signals":[],"bookmarks":[],"timeGroups":[],"annotations":[],"legend":{},"layout":{},"transactions":[],"constraints":[],"checkSettings":{}}
 ```
 
-`formatVersion: 1` remains readable. On Open it is deterministically normalized to v2; the first successful Save writes v2. Unknown future versions produce a blocking compatibility preview without replacing the current document. An explicit Compatibility Mode open is read-only/protected until a compatible target is established; newer fields are never silently dropped. WaveJSON, SVG geometry, DOM/view state, scroll/zoom/selection, Problems results, and generated edge lists are never persisted.
+`formatVersion: 1` remains readable. On Open it is deterministically normalized to v2 through the `MIGRATION_REGISTRY`; each registered step declares whether it is lossless or lossy and a lossy step must emit a structured warning (or reject explicitly). The first successful Save writes v2. Unknown future versions produce a blocking compatibility preview without replacing the current document. An explicit Compatibility Mode open is read-only/protected until a compatible target is established; newer fields are never silently dropped. WaveJSON, SVG geometry, DOM/view state, scroll/zoom/selection, Problems results, and generated edge lists are never persisted.
+
+Migration tests use immutable regression inputs and separately cover chained registry order, V1-to-V2 compatibility, structured lossy warnings, and current-version Save/Open round trips. A future format step must be added to the registry with an explicit loss policy and fixture before it can be selected; scattered `formatVersion` switches and silent field dropping are not supported.
 
 ### v2 persisted additions
 
