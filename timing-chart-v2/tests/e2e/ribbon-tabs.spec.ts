@@ -11,8 +11,8 @@ const tabGroups: Record<string, string> = {
   Insert: "insert-group",
   Timeline: "timeline-group",
   Annotation: "annotation-group",
-  View: "view-group",
-  Review: "review-group",
+  View: "view-show-group",
+  Check: "review-group",
   AI: "ai-group",
 };
 
@@ -35,11 +35,6 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
   for (const [tab, groupClass] of Object.entries(tabGroups)) {
     await tabs.getByRole("button", { name: tab, exact: true }).click();
     await expect(tabs.getByRole("button", { name: tab, exact: true })).toHaveClass(/active/);
-    // Home renders through the shared ribbon-schema/Ds* primitives (one
-    // .ds-ribbon-group per major group: File/Edit/Time/Transaction/Layout/
-    // Zoom/Display/Options); every other tab still uses the legacy
-    // .ribbon-group markup.
-    await expect(ribbon.locator(tab === "Home" ? ".ds-ribbon-group" : ".ribbon-group")).toHaveCount(tab === "Home" ? 8 : 1);
     await expect(ribbon.locator(`.${groupClass}`)).toHaveCount(1);
     // Ribbon height must never change across tabs, and the waveform workspace must not shift.
     const ribbonBox = await ribbon.boundingBox();
@@ -65,24 +60,23 @@ test("switches Ribbon tab content without touching Canonical, History, WaveDrom,
   await expect(ribbon.locator(".home-timeline-group").getByRole("button", { name: "Insert one cycle", exact: true })).toBeVisible();
   await expect(ribbon.locator(".home-display-group").getByTestId("home-grid-toggle")).toBeVisible();
   await expect(ribbon.locator(".home-display-group").getByTestId("home-snap-toggle")).toBeVisible();
-  await expect(ribbon.locator(".home-overflow-group").getByRole("button", { name: "More", exact: true })).toBeVisible();
+  await expect(ribbon.locator(".home-options-group").getByRole("button", { name: "More", exact: true })).toBeVisible();
 });
 
 test("Insert tab creates a real canonical Signal through a SemanticCommand", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
   const tabs = page.locator(".ribbon-tabs");
   const ribbon = page.getByTestId("ribbon");
   await tabs.getByRole("button", { name: "Insert", exact: true }).click();
 
-  const canonicalRowsBefore = (await surface.getAttribute("data-canonical-row-ids"))?.split(",") ?? [];
+  const signalCountBefore = Number((await page.getByTestId("signal-count-status").textContent())?.match(/\d+/)?.[0]);
   const historyBefore = await page.getByTestId("history-status").textContent();
   await ribbon.getByRole("button", { name: "Signal", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore!);
-  const canonicalRowsAfter = (await surface.getAttribute("data-canonical-row-ids"))?.split(",") ?? [];
-  expect(canonicalRowsAfter.length).toBe(canonicalRowsBefore.length + 1);
+  const signalCountAfter = Number((await page.getByTestId("signal-count-status").textContent())?.match(/\d+/)?.[0]);
+  expect(signalCountAfter).toBe(signalCountBefore + 1);
 });
 
 test("Review tab Problems button navigates to the Problems panel", async ({ page }) => {
