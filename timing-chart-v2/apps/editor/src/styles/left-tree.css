@@ -133,7 +133,7 @@
 .editor-shell .surface-host [data-role="annotation-overlay-surface"],
 .editor-shell .surface-host [data-role="interactive-overlay-surface"] { transform: translateY(9px); }
 
-.editor-shell .surface-host [data-role="left-row"] { grid-template-columns: 34px minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
+.editor-shell .surface-host [data-role="left-row"] { grid-template-columns: var(--gui-token-wire-badge-width) minmax(0, 1fr) 27px 22px 0; gap: 5px; padding: 0 4px 0 8px; }
 
 .editor-shell .left-column-heading { align-items: flex-start; padding-top: 9px; }
 
