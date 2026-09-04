@@ -76,7 +76,7 @@ test("keeps invalid Group Band opacity draft-only", async ({ page }) => {
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
 });
 
-test("keeps valid Group Band previews out of Canonical and restores them on Cancel", async ({ page }) => {
+test("previews valid Group Band drafts without mutating Canonical and restores them on Cancel", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -91,10 +91,13 @@ test("keeps valid Group Band previews out of Canonical and restores them on Canc
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
-  await expect(timingRow).not.toHaveCSS("opacity", "0.6");
+  await expect(timingRow).toHaveCSS("opacity", "0.6");
+  await expect(timingRow).toHaveCSS("--group-background", "#eef5fc");
+  await expect(host.locator("[data-role='timing-group-header'][data-group-id='grp_cycle_control']").first()).toHaveJSProperty("offsetHeight", 0);
   await inspector.getByTestId("cancel-inspector-draft").click();
   await expect(inspector.getByLabel("Group extend")).toHaveValue("both");
   await expect(inspector.getByLabel("Group show header")).toBeChecked();
+  await expect(timingRow).not.toHaveCSS("opacity", "0.6");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");

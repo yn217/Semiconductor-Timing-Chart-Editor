@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import { valueSignalWaveDomain, type CanonicalDocument } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, type CanonicalDocument, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters } from "./edge-counter-projection.js";
@@ -22,6 +22,35 @@ import type { ImmutableSnapIndex } from "@timing-chart-v2/geometry";
 export type RendererHostSizingContext = { readonly host: RefObject<HTMLDivElement | null>; readonly viewport: RefObject<HTMLDivElement | null>; readonly metrics: { readonly viewportWidth: number; readonly leftPaneWidth: number; readonly inspectorWidth: number; readonly frozenPaneWidth: number; readonly zoom: number } };
 export function applyRendererHostSizing({ host, viewport, metrics }: RendererHostSizingContext): void { const rendererHost = host.current; const viewportElement = viewport.current; if (!rendererHost || !viewportElement) return; const availableWidth = metrics.viewportWidth > 0 ? metrics.viewportWidth : globalThis.innerWidth; // viewportWidth is the cycle viewport; the Inspector is outside it.
   const baseWidth = Math.max(160, availableWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth); const width = metrics.leftPaneWidth + metrics.frozenPaneWidth + baseWidth * metrics.zoom; rendererHost.style.width = `${width}px`; const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']"); timingSurface?.style.setProperty("width", `${width}px`); timingSurface?.style.setProperty("grid-template-columns", `${metrics.leftPaneWidth}px ${metrics.frozenPaneWidth}px var(--wave-width, 640px)`); rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important"); }
+
+function groupStyleAppliesToSurface(style: SignalGroupStyle | undefined, surface: "left" | "frozen" | "timing"): boolean {
+  const scope = style?.extend ?? "both";
+  return scope === "both" || (scope === "waveform" ? surface === "timing" : surface !== "timing");
+}
+
+/** Applies an Inspector-only Group style draft directly to the mounted shells.
+ * This is intentionally DOM-only: preview input must not create a Canonical,
+ * History, or Dirty transition. The next projection update reasserts the
+ * canonical style after Apply, while Cancel passes the canonical style back. */
+export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, style: SignalGroupStyle | undefined): void {
+  const surfaces = [
+    ["left", "left-row", "left-group-header"],
+    ["frozen", "frozen-row", "frozen-group-header"],
+    ["timing", "timing-row", "timing-group-header"],
+  ] as const;
+  for (const [surface, rowRole, headerRole] of surfaces) {
+    const applies = groupStyleAppliesToSurface(style, surface);
+    for (const element of host.querySelectorAll<HTMLElement>(`[data-role='${rowRole}'][data-group-id='${CSS.escape(groupId)}'], [data-role='${headerRole}'][data-group-id='${CSS.escape(groupId)}']`)) {
+      if (applies && style?.showBackground && style.background) element.style.setProperty("--group-background", style.background);
+      else element.style.removeProperty("--group-background");
+      if (applies && style?.opacity !== undefined) element.style.opacity = String(style.opacity);
+      else element.style.removeProperty("opacity");
+      if (applies && style?.border) element.style.setProperty("--group-border", style.border);
+      else element.style.removeProperty("--group-border");
+      element.dataset.groupStylePreview = style === undefined ? "false" : "true";
+    }
+  }
+}
 
 export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | null>, active: boolean, range: { readonly start: number; readonly end: number }): void {
   const rulerElement = ruler.current;
