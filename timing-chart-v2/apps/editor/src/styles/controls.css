@@ -1,0 +1,58 @@
+/* Shared non-Home CAD control primitives. Region files provide layout and
+   semantic states; this file owns the common focus and typography contract. */
+:where(.ds-control,
+  .left-column-actions > button,
+  .tree-add-menu button,
+  .tree-header-menu button,
+  .context-menu button,
+  .inspector button,
+  .inspector-section-toggle,
+  .bottom-tabs button,
+  .event-toolbar button,
+  .signal-properties button,
+  .clock-generator button,
+  .clock-edge-counter button,
+  .event-add button,
+  .event-actions button,
+  .quick-values button,
+  .transaction-editor button) {
+  font-family: var(--ds-font-family);
+}
+
+:where(.ds-control,
+  .left-column-actions > button,
+  .tree-add-menu button,
+  .tree-header-menu button,
+  .context-menu button,
+  .inspector button,
+  .inspector-section-toggle,
+  .bottom-tabs button,
+  .event-toolbar button,
+  .signal-properties button,
+  .clock-generator button,
+  .clock-edge-counter button,
+  .event-add button,
+  .event-actions button,
+  .quick-values button,
+  .transaction-editor button):focus-visible {
+  outline: var(--ds-focus-width) solid var(--ds-focus-color);
+  outline-offset: var(--ds-focus-offset);
+}
+
+:where(.ds-control,
+  .left-column-actions > button,
+  .tree-add-menu button,
+  .tree-header-menu button,
+  .context-menu button,
+  .inspector button,
+  .bottom-tabs button,
+  .event-toolbar button,
+  .signal-properties button,
+  .clock-generator button,
+  .clock-edge-counter button,
+  .event-add button,
+  .event-actions button,
+  .quick-values button,
+  .transaction-editor button):disabled {
+  opacity: var(--ds-disabled-opacity);
+}

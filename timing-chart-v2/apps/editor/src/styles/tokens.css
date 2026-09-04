@@ -31,6 +31,8 @@
   --ds-border-color: #cbd4df;
   --ds-divider-color: #d4dbe4;
   --ds-focus-color: #2678bc;
+  --ds-focus-width: 2px;
+  --ds-focus-offset: 2px;
   --ds-hover-background: #edf6ff;
   --ds-pressed-background: #dbeeff;
   --ds-selected-background: #e8f2fd;
@@ -42,7 +44,11 @@
   --ds-layer-dialog: 100;
   --ds-layer-overlay: 200;
   --ds-density-compact-control: 24px;
-  --ds-density-comfortable-control: 30px;
+  --ds-density-comfortable-control: 28px;
+  --ds-density-compact-row: 27px;
+  --ds-density-comfortable-row: 31px;
+  --ds-density-compact-panel-padding: 6px;
+  --ds-density-comfortable-panel-padding: 9px;
   --ds-radius-sm: 3px;
   --ds-radius-md: 4px;
   --ds-panel-header-height: 34px;
