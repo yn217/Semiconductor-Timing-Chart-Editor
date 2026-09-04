@@ -8,9 +8,19 @@ export interface DisplayTimeMapping {
   readonly labelFor: (displayCycle: number) => number;
 }
 
-const identityMapping = (cycleCount: number): DisplayTimeMapping => {
-  const displayToSource = Array.from({ length: cycleCount }, (_, index) => index);
-  return { displayCycleCount: cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => displayCycle };
+function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCycle: number): number {
+  const anchors = [...timeline.labelAnchors].sort((left, right) => left.source - right.source);
+  let active = undefined as (typeof anchors)[number] | undefined;
+  for (const anchor of anchors) {
+    if (anchor.source > sourceCycle) break;
+    active = anchor;
+  }
+  return active === undefined ? sourceCycle : active.display + (sourceCycle - active.source);
+}
+
+const identityMapping = (timeline: Pick<Timeline, "cycleCount" | "labelAnchors">): DisplayTimeMapping => {
+  const displayToSource = Array.from({ length: timeline.cycleCount }, (_, index) => index);
+  return { displayCycleCount: timeline.cycleCount, isIdentity: true, sourceToDisplay: displayToSource, displayToSource, labelFor: (displayCycle) => labelForSourceCycle(timeline, displayCycle) };
 };
 
 export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | "labelAnchors">, timeGroups: readonly TimeGroup[]): DisplayTimeMapping {
@@ -23,7 +33,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     if (previous && group[0] <= previous[1]) previous[1] = Math.max(previous[1], group[1]);
     else collapsedRanges.push([group[0], group[1]]);
   }
-  if (collapsedRanges.length === 0) return identityMapping(timeline.cycleCount);
+  if (collapsedRanges.length === 0) return identityMapping(timeline);
 
   const sourceToDisplay: (number | undefined)[] = [];
   const displayToSource: number[] = [];
@@ -41,7 +51,6 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
 
   // LabelAnchor.source is a source-timeline boundary; its display value is
   // the ruler label shown at the corresponding rendered boundary.
-  const labelOverrides = new Map(timeline.labelAnchors.map((anchor) => [anchor.source, anchor.display]));
   return {
     displayCycleCount: display,
     isIdentity: false,
@@ -53,7 +62,7 @@ export function buildDisplayTimeMapping(timeline: Pick<Timeline, "cycleCount" | 
     // the last visible source cycle (or an arbitrary display index).
     labelFor: (displayCycle) => {
       const sourceCycle = displayCycle === display ? timeline.cycleCount : displayToSource[displayCycle];
-      return labelOverrides.get(sourceCycle ?? -1) ?? sourceCycle ?? displayCycle;
+      return sourceCycle === undefined ? displayCycle : labelForSourceCycle(timeline, sourceCycle);
     },
   };
 }

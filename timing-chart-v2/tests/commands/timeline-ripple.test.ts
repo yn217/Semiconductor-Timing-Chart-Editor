@@ -66,6 +66,21 @@ describe("timeline ripple commands", () => {
     expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
   });
 
+  it("rejects a delete that would collapse distinct LabelAnchor sources", () => {
+    const initial = rippleFixture();
+    initial.timeline.labelAnchors = [
+      { id: "label_first" as LabelAnchorId, source: 3, display: 30 },
+      { id: "label_second" as LabelAnchorId, source: 4, display: 40 },
+    ];
+    initial.timeGroups = [];
+    const session = new CommandHistorySession(initial);
+    const before = session.getSnapshot();
+    const result = session.execute({ id: commandId("cmd_delete_label_collision"), type: "timeline.delete", start: 2, end: 5 });
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "LABEL_ANCHOR_COLLISION", path: "$.timeline.labelAnchors" })] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
   it("removes fully deleted ranges and reports their IDs in the ChangeSet", () => {
     const initial = rippleFixture();
     initial.timeGroups[0] = { ...initial.timeGroups[0]!, start: 2, end: 4 };

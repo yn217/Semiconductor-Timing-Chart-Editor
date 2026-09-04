@@ -384,7 +384,7 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
     return [clone];
   });
   const sourceGroups = document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end);
-  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source <= command.end);
+  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source < command.end);
   const groupIds = new Map(sourceGroups.map((group) => [group.id, cloneId(group.id)]));
   const labelIds = new Map(sourceLabels.map((anchor) => [anchor.id, cloneId(anchor.id)]));
   const clonedGroups = sourceGroups.map((group) => ({
@@ -1169,6 +1169,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "timeline.delete": {
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount || document.timeline.cycleCount - (command.end - command.start) < 1) return fail("invalid", "INVALID_TIMELINE_DELETE", "$", "Delete requires a non-empty integer half-open range and must retain at least one cycle.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline ripple is blocked while untyped constraints exist.");
+      const mappedLabelSources = document.timeline.labelAnchors.map((anchor) => mapDeleteBoundary(anchor.source, command.start, command.end));
+      if (new Set(mappedLabelSources).size !== mappedLabelSources.length) return fail("invalid", "LABEL_ANCHOR_COLLISION", "$.timeline.labelAnchors", "Timeline delete would collapse multiple LabelAnchor sources; the deletion is rejected atomically.");
       const next = deleteTimeline(document, command.start, command.end);
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };

@@ -53,7 +53,25 @@ describe("buildDisplayTimeMapping", () => {
   it("uses source as the canonical anchor position and display as its ruler label", () => {
     const mapping = buildDisplayTimeMapping(timeline(20, [{ id: "la1" as never, source: 15, display: 1000 }]), [collapsedGroup("g1", 5, 15)]);
     expect(mapping.labelFor(5)).toBe(1000);
+    expect(mapping.labelFor(6)).toBe(1001);
     expect(mapping.labelFor(4)).toBe(4);
+  });
+
+  it("honors source-to-display LabelAnchors on the no-fold identity geometry path", () => {
+    const mapping = buildDisplayTimeMapping(timeline(10, [{ id: "la1" as never, source: 5, display: 100 }]), []);
+    expect(mapping.isIdentity).toBe(true);
+    expect(mapping.labelFor(4)).toBe(4);
+    expect(mapping.labelFor(5)).toBe(100);
+    expect(mapping.labelFor(6)).toBe(101);
+    expect(mapping.labelFor(10)).toBe(105);
+  });
+
+  it("uses the latest source anchor for each piecewise label segment", () => {
+    const mapping = buildDisplayTimeMapping(timeline(10, [
+      { id: "la1" as never, source: 3, display: 100 },
+      { id: "la2" as never, source: 7, display: 200 },
+    ]), []);
+    expect([3, 4, 6, 7, 8].map((cycle) => mapping.labelFor(cycle))).toEqual([100, 101, 103, 200, 201]);
   });
 });
 
