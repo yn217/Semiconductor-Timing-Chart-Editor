@@ -19,6 +19,17 @@ import type { HistoryController, HistoryEntry, HistoryMetrics, HistoryState, Rec
 
 const noHistory = (operation: "Undo" | "Redo"): CommandResult => ({ ok: false, reason: "no-op", problems: [{ code: "NO_HISTORY", path: "$", message: `${operation} history is empty.` }] });
 
+// #275: a professional editor session must not retain unbounded Undo
+// history forever -- an open-ended array of HistoryEntry (each holding a
+// full before/after CanonicalSnapshot) is the actual unbounded-memory risk,
+// not per-command copying (commits already preserve structural sharing).
+// This horizon only trims the *array*, dropping the oldest entry
+// references so they become garbage-collectible; it never touches,
+// serializes, or deep-clones the current or retained documents. Redo needs
+// no separate cap: it can only ever hold entries popped off #undo via
+// undo(), so it is already bounded by the same limit.
+export const HISTORY_RETENTION_LIMIT = 1000;
+
 export class CommandHistorySession implements CanonicalStore, SemanticCommandDispatcher, SemanticBatchDispatcher, HistoryController {
   readonly #documents: DocumentSession;
   #undo: HistoryEntry[] = [];
@@ -97,6 +108,10 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
         inverseChangeSet,
       };
       this.#undo.push(entry);
+      // Drop the oldest entries once the retention horizon is exceeded --
+      // splice() removes array slots, it does not touch or copy the
+      // documents those entries reference.
+      if (this.#undo.length > HISTORY_RETENTION_LIMIT) this.#undo.splice(0, this.#undo.length - HISTORY_RETENTION_LIMIT);
       this.#redo = [];
       this.#historyMetrics = { ...this.#historyMetrics, committedActions: this.#historyMetrics.committedActions + 1 };
       return { ok: true, snapshot: after, changeSet };
