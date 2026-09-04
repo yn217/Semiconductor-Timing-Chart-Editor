@@ -1,0 +1,92 @@
+import { useEffect, useRef } from "react";
+import { ProductionWaveDromAdapter, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
+import type { ClockSignal, SignalId, ValueSignal } from "@timing-chart-v2/schema";
+
+// Phase 4 Local Geometry acceptance probe (#277). This is test/dev-only
+// harness code, not part of normal production bootstrap -- see main.tsx,
+// which loads this module only behind an explicit `?probe=geometry` query
+// string, via a dynamic import so it never lands in the normal editor's
+// eagerly-loaded startup chunk. It exercises the real production
+// ProductionWaveDromAdapter (the same package the editor itself uses),
+// never a duplicate/alternative implementation.
+
+const probeSignal: ValueSignal = {
+  id: "sig_phase3_probe" as SignalId,
+  name: "PROBE",
+  type: "logic",
+  role: "internal",
+  source: { instancePath: [], signalName: "PROBE" },
+  display: { name: "PROBE" },
+  values: [{ start: 0, value: 0 }, { start: 2, value: 1 }, { start: 5, value: 0 }],
+};
+
+const clockProbe: ClockSignal = {
+  id: "sig_phase4_clock" as SignalId, name: "CLOCK", type: "clock", role: "input",
+  source: { instancePath: [], signalName: "CLOCK" }, display: { name: "CLOCK" },
+  generator: { start: 0, period: 2, duty: 0.5, phase: 0.5, initial: 0, polarity: "positive" },
+  edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } },
+};
+
+const busProbe: ValueSignal = {
+  id: "sig_phase4_bus" as SignalId, name: "BUS", type: "bus", role: "internal", width: 8, displayFormat: "hex",
+  source: { instancePath: [], signalName: "BUS" }, display: { name: "BUS" },
+  values: [{ start: 0, value: "00" }, { start: 3, value: "A5" }],
+};
+
+export function ArchitectureProbe() {
+  const mount = useRef<HTMLDivElement>(null);
+  const clockMount = useRef<HTMLDivElement>(null);
+  const busMount = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const owner = mount.current;
+    const clockOwner = clockMount.current;
+    const busOwner = busMount.current;
+    if (!owner || !clockOwner || !busOwner) return;
+    const adapter = new ProductionWaveDromAdapter();
+    const waveJson = adapter.toWaveJson({ signal: probeSignal, cycleCount: 8 });
+    void adapter.renderWave(probeSignal.id, waveJson, owner).then((rendered) => {
+      const geometry = adapter.extractLocalGeometry(rendered);
+      const read = (cycle: number, point: "cycle-start" | "cycle-center" | "transition-start" | "transition-center" | "transition-end" | "rising-edge" | "falling-edge" | "value-start") =>
+        geometry.find({ signalId: probeSignal.id, cycle, point })?.point;
+      const selected = {
+        cycleStart: read(2, "cycle-start"),
+        cycleCenter: read(2, "cycle-center"),
+        transitionStart: read(2, "transition-start"),
+        transitionCenter: read(2, "transition-center"),
+        transitionEnd: read(2, "transition-end"),
+        valueStart: read(2, "value-start"),
+        rising: read(2, "rising-edge"),
+        falling: read(5, "falling-edge"),
+      };
+      owner.setAttribute("data-local-geometry", JSON.stringify(selected));
+      owner.setAttribute("data-geometry-builds", String(adapter.metrics().geometryBuilds));
+      owner.setAttribute("data-geometry-matrix-reads", String(adapter.metrics().geometryMatrixReads));
+    }).catch((error: unknown) => {
+      owner.setAttribute("data-wave-error", error instanceof Error ? error.message : "Unknown WaveDrom render failure");
+    });
+    const clockJson = adapter.toWaveJson({ signal: clockProbe, cycleCount: 8 });
+    void adapter.renderWave(clockProbe.id, clockJson, clockOwner).then((rendered) => {
+      const geometry = adapter.extractLocalGeometry(rendered);
+      clockOwner.setAttribute("data-local-geometry", JSON.stringify({
+        rising: geometry.find({ signalId: clockProbe.id, cycle: 2, point: "rising-edge" })?.point,
+        falling: geometry.find({ signalId: clockProbe.id, cycle: 1, point: "falling-edge" })?.point,
+        cycleStart: geometry.find({ signalId: clockProbe.id, cycle: 2, point: "cycle-start" })?.point,
+      }));
+    }).catch((error: unknown) => clockOwner.setAttribute("data-wave-error", error instanceof Error ? error.message : "Unknown WaveDrom render failure"));
+    const busJson = adapter.toWaveJson({ signal: busProbe, cycleCount: 8 });
+    void adapter.renderWave(busProbe.id, busJson, busOwner).then((rendered) => {
+      const geometry = adapter.extractLocalGeometry(rendered);
+      busOwner.setAttribute("data-local-geometry", JSON.stringify({
+        transitionStart: geometry.find({ signalId: busProbe.id, cycle: 3, point: "transition-start" })?.point,
+        transitionEnd: geometry.find({ signalId: busProbe.id, cycle: 3, point: "transition-end" })?.point,
+        valueStart: geometry.find({ signalId: busProbe.id, cycle: 3, point: "value-start" })?.point,
+      }));
+    }).catch((error: unknown) => busOwner.setAttribute("data-wave-error", error instanceof Error ? error.message : "Unknown WaveDrom render failure"));
+    return () => {
+      adapter.dispose(probeSignal.id);
+      adapter.dispose(clockProbe.id);
+      adapter.dispose(busProbe.id);
+    };
+  }, []);
+  return <main><h1>Timing Chart Editor V2</h1><p>Phase 4 Local Geometry probe — WaveDrom {WAVEDROM_VERSION}</p><div ref={mount} data-testid="wave-mount" /><div ref={clockMount} data-testid="clock-mount" /><div ref={busMount} data-testid="bus-mount" /></main>;
+}
