@@ -51,13 +51,13 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
   };
   return <div className="timeline-toolbar" aria-label="Timeline Editor" data-testid="timeline-editor">
     <div className="timeline-subgroup timeline-range-group" data-timeline-group="Range" aria-label="Range commands">
-      <label>Start cycle<input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
-      <label>End cycle<input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
+      <label><span className="timeline-field-label">Start cycle</span><input aria-label="Timeline range start" type="number" min="0" max={document.timeline.cycleCount - 1} value={range.start} onChange={(event) => setBoundary("start", Number(event.target.value))} /></label>
+      <label><span className="timeline-field-label">End cycle</span><input aria-label="Timeline range end" type="number" min="1" max={document.timeline.cycleCount} value={range.end} onChange={(event) => setBoundary("end", Number(event.target.value))} /></label>
       <output className="timeline-range-length" data-testid="timeline-selected-length">Length {Math.max(0, range.end - range.start)}</output>
       <b>Range</b>
     </div>
     <div className="timeline-subgroup timeline-insert-group" data-timeline-group="Insert" aria-label="Insert timeline commands">
-      <label>Count<input aria-label="Timeline insert count" type="number" min="1" step="1" value={count} onChange={(event) => setCount(Math.max(1, Number(event.target.value)))} /></label>
+      <label><span className="timeline-field-label">Count</span><input aria-label="Timeline insert count" type="number" min="1" step="1" value={count} onChange={(event) => setCount(Math.max(1, Number(event.target.value)))} /></label>
       <button type="button" aria-label="Add one cycle" data-testid="timeline-cycle-add" onClick={() => onCommand({ id: nextCommandId("timeline_add_one"), type: "timeline.insert", at: range.end, count: 1 })}><RibbonIcon name="i-plus" />Cycle Add</button>
       <button type="button" aria-label="Add N cycles" data-testid="timeline-cycle-add-many" onClick={() => onCommand({ id: nextCommandId("timeline_add_many"), type: "timeline.insert", at: range.end, count })}><RibbonIcon name="i-plus" />N Cycle Add</button>
       <button type="button" data-v1-label="サイクル挿入" onClick={() => onCommand({ id: nextCommandId("timeline_before"), type: "timeline.insert", at: range.start, count })}><RibbonIcon name="i-plus" />Insert before</button>
@@ -66,8 +66,8 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
       <b>Insert</b>
     </div>
     <div className="timeline-subgroup timeline-range-edit-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
-      <label>From<output aria-label="Range edit from">{range.start}</output></label>
-      <label>To<input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
+      <label><span className="timeline-field-label">From</span><output aria-label="Range edit from">{range.start}</output></label>
+      <label><span className="timeline-field-label">To</span><input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
       <button type="button" data-v1-label="範囲複製" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}><RibbonIcon name="i-duplicate" />Duplicate to</button>
       <button type="button" data-v1-label="範囲移動" onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })}><RibbonIcon name="i-move-to" />Move to</button>
       <b>Range Edit</b>
