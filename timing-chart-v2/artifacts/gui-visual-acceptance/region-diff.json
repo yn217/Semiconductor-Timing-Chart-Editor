@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "75e5c125d1f87d50e465c0c75d44cfc9d3de43ce",
-    "sourceFingerprint": "689c545fff803d7cdd443d8d6b4bf2384a6ef4cd8959c207e267f5a210d3a6d8",
-    "generatedAt": "2026-08-29T06:15:07.879Z",
+    "testedCommit": "fee6c2be13175b092d563512dcd75b7eace27cad",
+    "sourceFingerprint": "3a5e728dc1ebc0cf2103887858151780a1d696fd82b8be07dc176279fff18c3d",
+    "generatedAt": "2026-09-04T18:49:23.261Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "viewport": {
@@ -26,81 +26,81 @@
       "y": 31,
       "width": 1672,
       "height": 34,
-      "changedPixels": 1682,
+      "changedPixels": 1914,
       "comparedPixels": 56848,
-      "diffPercent": 0.029587672389529973
+      "diffPercent": 0.0336687306501548
     },
     "Ribbon": {
       "x": 0,
       "y": 65,
       "width": 1672,
       "height": 102,
-      "changedPixels": 17071,
+      "changedPixels": 20859,
       "comparedPixels": 170544,
-      "diffPercent": 0.10009733558495168
+      "diffPercent": 0.1223086124401914
     },
     "Left Tree": {
       "x": 0,
       "y": 167,
       "width": 265,
       "height": 749,
-      "changedPixels": 24167,
+      "changedPixels": 23650,
       "comparedPixels": 198485,
-      "diffPercent": 0.12175731163563998
+      "diffPercent": 0.11915258079955664
     },
     "Role": {
       "x": 265,
       "y": 167,
       "width": 61,
       "height": 509,
-      "changedPixels": 7607,
+      "changedPixels": 7748,
       "comparedPixels": 31049,
-      "diffPercent": 0.24499983896421784
+      "diffPercent": 0.24954104802087024
     },
     "Signal": {
       "x": 326,
       "y": 167,
       "width": 148,
       "height": 509,
-      "changedPixels": 11088,
+      "changedPixels": 11186,
       "comparedPixels": 75332,
-      "diffPercent": 0.14718844581320023
+      "diffPercent": 0.14848935379387246
     },
     "Ruler": {
       "x": 474,
       "y": 167,
       "width": 901,
       "height": 36,
-      "changedPixels": 1506,
+      "changedPixels": 1628,
       "comparedPixels": 32436,
-      "diffPercent": 0.0464298927118017
+      "diffPercent": 0.050191145640646195
     },
     "Waveform": {
       "x": 474,
       "y": 203,
       "width": 901,
       "height": 473,
-      "changedPixels": 66244,
+      "changedPixels": 58913,
       "comparedPixels": 426173,
-      "diffPercent": 0.1554392230385313
+      "diffPercent": 0.13823728861284032
     },
     "Inspector": {
       "x": 1375,
       "y": 167,
       "width": 297,
       "height": 749,
-      "changedPixels": 43282,
+      "changedPixels": 57139,
       "comparedPixels": 222453,
-      "diffPercent": 0.19456694223049364
+      "diffPercent": 0.25685875218585497
     },
     "Bottom": {
       "x": 265,
       "y": 676,
       "width": 1110,
       "height": 240,
-      "changedPixels": 31571,
+      "changedPixels": 32449,
       "comparedPixels": 266400,
-      "diffPercent": 0.11850975975975976
+      "diffPercent": 0.12180555555555556
     },
     "MiniMap": {
       "x": 1375,
@@ -116,9 +116,9 @@
       "y": 916,
       "width": 1672,
       "height": 25,
-      "changedPixels": 6126,
+      "changedPixels": 6787,
       "comparedPixels": 41800,
-      "diffPercent": 0.14655502392344497
+      "diffPercent": 0.16236842105263158
     }
   }
 }
