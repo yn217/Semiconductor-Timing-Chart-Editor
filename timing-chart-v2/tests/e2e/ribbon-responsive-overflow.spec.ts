@@ -16,14 +16,14 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 720
       await overflow.click();
       const menu = page.getByRole("menu", { name: "More Home Commands" });
       await expect(menu).toBeVisible();
-      for (const label of ["New", "Open", "Save", "Save As", "Recent", "Undo", "Copy", "Paste", "Delete", "Select All", "Hide", "Move Down", "Zoom −", "Zoom +", "Zoom 50%", "Zoom 100%", "Zoom 150%", "Zoom 200%", "Fit Selection", "Fit All", "Grid", "Snap", "Ruler", "MiniMap"]) {
+      for (const label of ["New", "Open", "Save", "Save As", "Recent", "Undo", "Copy", "Paste", "Delete", "Select All Signals", "Hide", "Move Down", "Zoom −", "Zoom +", "Zoom 50%", "Zoom 100%", "Zoom 150%", "Zoom 200%", "Fit Selection", "Fit All", "Grid", "Snap", "Ruler", "MiniMap"]) {
         await expect(menu.getByRole("button", { name: label, exact: true })).toBeVisible();
       }
       for (const label of ["Document Properties", "Problems", "SVG / PNG / PDF"]) {
         await expect(menu.getByRole("menuitem", { name: label, exact: true })).toBeVisible();
       }
       const revision = await page.getByTestId("revision-status").textContent();
-      await menu.getByRole("button", { name: "Select All", exact: true }).click();
+      await menu.getByRole("button", { name: "Select All Signals", exact: true }).click();
       await expect(page.getByTestId("selection-status")).toHaveText("8 signals");
       await expect(page.getByTestId("revision-status")).toHaveText(revision!);
     } else {

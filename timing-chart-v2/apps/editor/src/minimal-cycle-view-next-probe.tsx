@@ -15,7 +15,7 @@ export function MinimalCycleViewNextProbe() {
   const session = useMemo(() => createMinimalCycleApplicationSession(cycleDocument), []);
   const [, refresh] = useState(0);
   const [ribbonTab, setRibbonTab] = useState("Home");
-  const [viewMode, setViewMode] = useState("Cycle");
+  const [viewMode, setViewMode] = useState<"Cycle" | "Transaction" | "Split">("Cycle");
   const [bottomTab, setBottomTab] = useState("Signal");
   const [zoom, setZoom] = useState(1);
   const [selectedCycle, setSelectedCycle] = useState(0);
@@ -65,7 +65,7 @@ export function MinimalCycleViewNextProbe() {
     fitSelection: () => setZoom(1.5), navigateToCycle: (cycle: number) => setSelectedCycle(Math.max(0, Math.min(snapshot.document.timeline.cycleCount - 1, cycle))),
     transactionBoundaryX: (cycle: number) => { const signal = snapshot.document.signals[0]; return signal === undefined ? undefined : localGeometryRef.current?.find({ signalId: signal.id, cycle, point: "cycle-start" })?.point.x; }, snapTransactionCycle: () => undefined,
     executeTimelineCommand: (command: SemanticCommand) => session.execute(command),
-    titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} />,
+    titleBarUi: <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={session.historyState().dirty} viewMode={viewMode} />,
     ribbonTabsUi: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
     ribbonUi: null,
     signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} selectedSignalId={nextSelectedSignalId} onSelect={setNextSelectedSignalId} surfaceHostRef={surfaceHostRef} rulerRef={rulerRef} gridLayerRef={gridLayerRef} />,

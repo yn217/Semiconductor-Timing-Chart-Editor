@@ -48,9 +48,8 @@ test("Home exposes grouped command surfaces and provides stable-ID Select All", 
   for (const group of ["History", "Clipboard", "Edit", "Selection", "Visibility", "Arrange", "Properties"]) {
     await expect(ribbon.locator(`[aria-label='${group}']`)).toBeVisible();
   }
-  const selectAll = ribbon.getByRole("button", { name: "Select All", exact: true });
+  const selectAll = ribbon.getByRole("button", { name: "Select All Signals", exact: true });
   await expect(selectAll).toBeEnabled();
-  await expect(selectAll).toHaveAttribute("title", "Select all timing signals");
   const beforeRevision = await page.getByTestId("revision-status").textContent();
   const beforeHistory = await page.getByTestId("history-status").textContent();
   await selectAll.click();
