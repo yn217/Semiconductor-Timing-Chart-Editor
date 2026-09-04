@@ -772,10 +772,16 @@ body { min-width: 1100px; }
 .editor-shell .insert-ribbon .ds-ribbon-button { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
 .editor-shell .insert-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
 .editor-shell .insert-ribbon .ds-ribbon-button:disabled { opacity: .42; }
-.editor-shell .timeline-group { width: 760px; }
+/* 760px / the old 5-track ratio below predate the current Range/Insert/Range
+   Edit content (2 inputs + an output in Range; 3 buttons + 2 fields in Range
+   Edit) and left every column narrower than its own content needs -- Range
+   was crushed to ~115px against a ~150px minimum, and Range Edit's "Move to"
+   button clipped even at a wide viewport. Widened to the real per-column
+   minimums (measured against actual rendered content) plus headroom. */
+.editor-shell .timeline-group { width: 992px; }
 .editor-shell .timeline-group .timeline-toolbar {
   display: grid;
-  grid-template-columns: minmax(78px, .8fr) minmax(98px, 1fr) minmax(138px, 1.35fr) minmax(104px, 1fr) minmax(96px, .95fr);
+  grid-template-columns: minmax(155px, 1fr) minmax(200px, 1fr) minmax(310px, 1fr) minmax(150px, 1fr) minmax(140px, 1fr);
   align-items: stretch;
   gap: 2px;
   height: 92px;
@@ -788,7 +794,14 @@ body { min-width: 1100px; }
   position: relative;
   display: flex;
   min-width: 0;
-  align-items: center;
+  /* flex-start, not center: some subgroups mix a stacked label+input control
+     (tall) with plain buttons (short) in the same row. Centering each row on
+     its own tallest child pushed those plain buttons down by however much
+     taller the label was, so button tops drifted between subgroups even
+     though every one of them uses the same 24px button height. Starting
+     every child at the row's top keeps that top edge -- and so the visible
+     button row -- level across all five Timeline subgroups. */
+  align-items: flex-start;
   gap: 3px;
   padding: 3px 4px 16px;
   border-right: 1px solid #d4dbe4;
