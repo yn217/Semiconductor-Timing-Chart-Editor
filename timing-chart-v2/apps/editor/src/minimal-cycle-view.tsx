@@ -1642,6 +1642,7 @@ export function MinimalCycleView() {
       onRange={(range) => { setRangeSelectionActive(true); setTimelineRange(range); }}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
       onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
+      onViewIntent={(intent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); }}
       onCreateAnnotation={createSelectedAnnotation}
       onArrowPick={() => armArrowPick.current()}
       onZoom={timelineNavigation.zoomBy}
