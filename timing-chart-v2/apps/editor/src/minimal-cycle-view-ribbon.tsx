@@ -339,7 +339,15 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
             disabled={!selectedAnnotation && !selectedCommentRow}
             style={selectedAnnotation?.style ?? selectedCommentRow?.display.style}
             onChange={(style: JsonObject) => {
-              if (selectedAnnotation) onCommand(buildAnnotationStyleCommand(selectedAnnotation, style, nextCommandId("ribbon_annotation_font")));
+              // Multi-selection Font editing: apply the same style change to
+              // every selected Annotation as one atomic batch (the same
+              // selectedAnnotationIds set Arrange already batches against),
+              // each preserving its OWN other properties via
+              // buildAnnotationStyleCommand's live per-annotation lookup --
+              // not just the primary/first selected one.
+              if (selectedAnnotationIds.size > 1) {
+                onCommandBatch(document.annotations.filter((item) => selectedAnnotationIds.has(item.id)).map((item) => buildAnnotationStyleCommand(item, style, nextCommandId("ribbon_annotation_font_multi"))));
+              } else if (selectedAnnotation) onCommand(buildAnnotationStyleCommand(selectedAnnotation, style, nextCommandId("ribbon_annotation_font")));
               else if (selectedCommentRow) onCommand({ id: nextCommandId("ribbon_comment_row_font"), type: "commentRow.update", signalId: selectedCommentRow.id, title: selectedCommentRow.title, body: selectedCommentRow.body, displayStyle: style });
             }}
           />
