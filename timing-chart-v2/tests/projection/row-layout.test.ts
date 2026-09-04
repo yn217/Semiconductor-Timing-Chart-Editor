@@ -20,6 +20,14 @@ function layoutFixture(): CanonicalDocument {
   } as CanonicalDocument;
 }
 
+function linearMountedRowIds(layout: ReturnType<typeof calculateRowLayout>, viewport: { readonly viewportStartY: number; readonly viewportEndY: number; readonly overscanBefore: number; readonly overscanAfter: number; readonly pinnedRowIds: readonly RowId[] }): readonly RowId[] {
+  const start = viewport.viewportStartY - viewport.overscanBefore;
+  const end = viewport.viewportEndY + viewport.overscanAfter + (layout.groupHeaders[0]?.height ?? 0);
+  const ids = new Set(layout.navigationRows.filter((row) => row.y + row.height >= start && row.y <= end).map((row) => row.rowId));
+  for (const rowId of viewport.pinnedRowIds) if (layout.navigationRows.some((row) => row.rowId === rowId)) ids.add(rowId);
+  return [...ids].sort((left, right) => layout.navigationRows.findIndex((row) => row.rowId === left) - layout.navigationRows.findIndex((row) => row.rowId === right));
+}
+
 describe("RowLayout and projection invariants", () => {
   it("derives stable hierarchy entries without changing group placement semantics", () => {
     const document = canonicalFixture();
@@ -239,5 +247,30 @@ describe("RowLayout and projection invariants", () => {
     expect(after.viewportRowsVisited - before.viewportRowsVisited).toBeLessThan(40);
     expect(after.groupHeadersVisited - before.groupHeadersVisited).toBeLessThan(40);
     expect(after.viewportBinarySearchSteps - before.viewportBinarySearchSteps).toBeLessThan(100);
+  });
+
+  it("matches a linear reference across variable rows, overscan, and pinned rows", () => {
+    const base = layoutFixture();
+    const comment = {
+      id: "comment_row" as SignalId,
+      type: "commentRow" as const,
+      name: "Comment",
+      role: "internal" as const,
+      source: { instancePath: [], signalName: "comment" },
+      display: { name: "Comment" },
+      title: "Note",
+      body: "Reference row",
+    };
+    const document = { ...base, signals: [...base.signals, comment], signalGroups: [{ ...base.signalGroups[0]!, rows: [...base.signalGroups[0]!.rows, comment.id] }] } as CanonicalDocument;
+    const layout = calculateRowLayout(document);
+    const viewports = [
+      { viewportStartY: -20, viewportEndY: 0, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] as RowId[] },
+      { viewportStartY: 48, viewportEndY: 62, overscanBefore: 7, overscanAfter: 9, pinnedRowIds: ["comment_row" as RowId] },
+      { viewportStartY: 10_000, viewportEndY: 10_020, overscanBefore: 13, overscanAfter: 17, pinnedRowIds: ["sig_clk" as RowId] },
+    ];
+    for (const viewport of viewports) {
+      const projection = new DefaultProjectionService().project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+      expect(projection.mountedRowIds).toEqual(linearMountedRowIds(layout, viewport));
+    }
   });
 });

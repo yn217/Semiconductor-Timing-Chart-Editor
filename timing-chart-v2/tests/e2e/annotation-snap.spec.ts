@@ -335,9 +335,18 @@ test("edits Measurement semantics with one history step and preserves them throu
   await editor.getByLabel("Measurement anchor kind").selectOption("ratio");
   await editor.getByLabel("Custom measurement start").fill("17");
   await editor.getByLabel("Custom measurement end").fill("83");
+  await editor.getByLabel("Measurement start marker").selectOption("arrow");
+  await editor.getByLabel("Measurement end marker").selectOption("arrow");
+  await editor.getByLabel("Measurement arrow layout").selectOption("inward");
+  await editor.getByLabel("Measurement extension lines").selectOption("both");
+  await editor.getByLabel("Measurement lane").fill("1");
   const historyBefore = await page.getByTestId("history-status").textContent();
   await editor.getByTestId("apply-measurement-semantics").click();
   await expect(owner).toHaveAttribute("aria-label", /17%→83%.*ratio/);
+  await expect(owner).toHaveAttribute("data-measurement-lane", "1");
+  await expect(owner).toHaveAttribute("data-measurement-arrow-layout", "inward");
+  await expect(owner.locator("[data-role='measurement-marker'][data-marker-kind='arrow']")).toHaveCount(2);
+  await expect(owner.locator("[data-role='measurement-extension']")).toHaveCount(2);
   await expect(page.getByTestId("history-status")).toHaveText(`History ${Number(historyBefore?.match(/History (\d+)/)?.[1] ?? 0) + 1} / Redo 0`);
   await editor.getByTestId("editor-undo").click();
   await expect(owner).toHaveAttribute("aria-label", /30%→70%.*threshold/);

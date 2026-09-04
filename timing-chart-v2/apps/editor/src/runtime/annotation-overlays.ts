@@ -18,6 +18,18 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
 }
 
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
+  const measurementLaneById = new Map<string, number>();
+  const laneEnds: number[] = [];
+  for (const annotation of document.annotations) {
+    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) continue;
+    const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale);
+    const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale);
+    if (!first || !second) continue;
+    const explicitLane = annotation.measurementLayout?.lane;
+    const lane = explicitLane ?? Math.max(0, laneEnds.findIndex((end) => end <= Math.min(first.x, second.x)));
+    measurementLaneById.set(annotation.id, lane);
+    laneEnds[lane] = Math.max(laneEnds[lane] ?? Number.NEGATIVE_INFINITY, Math.max(first.x, second.x));
+  }
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);
@@ -68,6 +80,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       ...(annotation.labelOffset === undefined ? {} : { labelOffset: annotation.labelOffset }),
       ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }),
       ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }),
+      ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }),
       ...(tracePoints === undefined ? {} : { tracePoints }),
       ...(annotation.style === undefined ? {} : { style: annotation.style }),
       ...(annotation.rotation === undefined ? {} : { rotation: annotation.rotation }),

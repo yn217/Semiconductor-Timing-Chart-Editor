@@ -81,7 +81,7 @@ function utf8ByteLength(value: string): number {
 }
 
 export function serializeCanonicalDocument(document: CanonicalDocument, indent = 2): string {
-  const problems = validateCanonicalDocument(document);
+  const problems = [...validateCanonicalDocument(document), ...validateDocumentResourceBudget(document)];
   if (problems.length > 0) {
     const error = new Error(`Cannot serialize invalid canonical document (${problems.length} problem(s)).`);
     Object.assign(error, { name: "CanonicalSerializationError", problems });

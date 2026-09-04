@@ -87,6 +87,12 @@ describe("semantic validation", () => {
     expect(validateDocumentResourceBudget(tooManySignals)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals", value: DOCUMENT_RESOURCE_BUDGET.signalCount + 1 })]));
     const tooManyCycles = { ...base, timeline: { ...base.timeline, cycleCount: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1, end: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1 } } as CanonicalDocument;
     expect(validateDocumentResourceBudget(tooManyCycles)).toEqual(expect.arrayContaining([expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.timeline.cycleCount", value: DOCUMENT_RESOURCE_BUDGET.cycleCount + 1 })]));
+    try {
+      serializeCanonicalDocument(tooManyCycles);
+      throw new Error("Expected over-budget serialization to be rejected.");
+    } catch (error) {
+      expect(error).toMatchObject({ problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.timeline.cycleCount" })] });
+    }
   });
 
   it("round-trips presentation displayLabel without changing the semantic value", () => {

@@ -2,6 +2,19 @@ import type { SemanticAnchor } from "./types.js";
 
 export type TransitionAnchorKind = "threshold" | "ratio";
 export type MeasurementProfile = "cycle" | "30-70" | "10-90" | "20-80" | "50%" | "custom";
+export type MeasurementMarker = "none" | "bar" | "arrow";
+export type MeasurementArrowLayout = "inward" | "outward" | "auto";
+export type MeasurementExtensionLines = "none" | "start" | "end" | "both";
+
+export interface MeasurementLayout {
+  readonly startMarker: MeasurementMarker;
+  readonly endMarker: MeasurementMarker;
+  readonly arrowLayout: MeasurementArrowLayout;
+  readonly extensionLines: MeasurementExtensionLines;
+  readonly lane?: number;
+}
+
+export const DEFAULT_MEASUREMENT_LAYOUT: MeasurementLayout = Object.freeze({ startMarker: "bar", endMarker: "bar", arrowLayout: "auto", extensionLines: "both" });
 
 export const MEASUREMENT_PROFILES = ["cycle", "30-70", "10-90", "20-80", "50%", "custom"] as const satisfies readonly MeasurementProfile[];
 

@@ -192,6 +192,20 @@ describe("deterministic document export", () => {
     expect(svg).toContain('stroke-dasharray="6 4"');
   });
 
+  it("exports datasheet Measurement dimension markers, extensions, and lane metadata deterministically", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const document = { ...base, annotations: [{ id: "ann_dimension" as AnnotationId, type: "measurement" as const, label: "tPLH", visible: true, measurement: { profile: "custom" as const, anchorKind: "threshold" as const }, measurementLayout: { startMarker: "arrow" as const, endMarker: "bar" as const, arrowLayout: "outward" as const, extensionLines: "both" as const, lane: 2 }, start: { signalId: signal.id, cycle: 3, point: "transition-center" as const, transition: { kind: "threshold" as const, value: 0.17 } }, end: { signalId: signal.id, cycle: 7, point: "transition-center" as const, transition: { kind: "threshold" as const, value: 0.83 } } }] };
+    const first = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    const second = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    expect(first).toBe(second);
+    expect(first).toContain('data-annotation-type="measurement"');
+    expect(first).toContain('data-role="measurement-dimension-line"');
+    expect(first).toContain('data-role="measurement-marker" data-marker-side="start" data-marker-kind="arrow"');
+    expect(first).toContain('data-role="measurement-extension" data-extension-side="start"');
+    expect(first).toContain('data-measurement-profile="custom"');
+  });
+
   it("exports clock edge counters from the same scene cycle mapping", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;
