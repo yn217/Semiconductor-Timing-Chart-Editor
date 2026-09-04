@@ -425,8 +425,17 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await page.getByTestId("hierarchy-open").click();
   const hierarchy = page.getByTestId("hierarchy-browser");
   await expect(hierarchy).toBeVisible();
+  await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut");
+  await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("data[7:0]");
+  const displayMode = hierarchy.getByLabel("Hierarchy display mode");
+  for (const mode of ["signal", "relative", "full", "split"]) {
+    await displayMode.selectOption(mode);
+    await expect(hierarchy.locator(`table[data-hierarchy-display-mode='${mode}']`)).toHaveCount(1);
+    await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toHaveCount(1);
+  }
+  await displayMode.selectOption("full");
   await expect(hierarchy.locator("[data-hierarchy-row-id='sig_cycle_data']")).toContainText("dut.data[7:0]");
-  await expect(hierarchy.locator("thead")).toContainText("Relative Path");
+  await displayMode.selectOption("split");
   await hierarchy.getByTestId("hierarchy-path-view").click();
   await expect(hierarchy.getByTestId("hierarchy-path-view")).toHaveAttribute("aria-pressed", "true");
   await hierarchy.getByLabel("Hierarchy scope").selectOption("dut");
