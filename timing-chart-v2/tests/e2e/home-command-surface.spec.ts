@@ -72,7 +72,7 @@ test("Copy is view-only and Duplicate/Paste use one canonical command with fresh
   await expect(ribbon.getByTestId("clipboard-status")).toHaveText("Copied REQUEST");
   await expect(page.getByTestId("revision-status")).toHaveText(beforeRevision!);
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
-  await ribbon.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await ribbon.locator(".home-edit-group").getByRole("button", { name: "Duplicate", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("selection-status")).toHaveText("REQUEST_duplicate");
   expect(revisionNumber(await page.getByTestId("revision-status").textContent())).toBe(initialRevision + 1);

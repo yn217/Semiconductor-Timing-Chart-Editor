@@ -65,6 +65,8 @@ test("Comment Row clipboard preserves content, uses fresh IDs, and supports Cut 
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(host.locator(`[data-role='frozen-row'][data-row-id='${pastedId}']`)).toHaveCount(0);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(commentSavedPath!);
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-discard").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 10");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
@@ -127,6 +129,8 @@ test("Annotation clipboard is view-only on Copy, creates a fresh entity on Paste
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(annotationList.locator("[data-annotation-list-id]")).toHaveCount(1);
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(annotationSavedPath!);
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-discard").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 2");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
