@@ -76,5 +76,5 @@ export interface ProjectionRequest {
 
 export interface ProjectionService {
   project(request: ProjectionRequest): RenderProjection;
-  diagnostics(): Readonly<{ projectionBuilds: number; rowLayoutBuilds: number; lastMountedRange: readonly [number, number] }>;
+  diagnostics(): Readonly<{ projectionBuilds: number; rowLayoutBuilds: number; lastMountedRange: readonly [number, number]; groupHeadersVisited: number }>;
 }
