@@ -97,6 +97,7 @@ test("selects Cycle 0 and the terminal boundary from the rendered waveform", asy
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const wave = host.locator("[data-role='stable-waveform-surface']");
   const owner = wave.locator("[data-signal-id='sig_cycle_request']");
   const ownerBox = await owner.boundingBox();
@@ -211,7 +212,7 @@ test("positions a transaction ending at cycleCount on the actual terminal ruler 
   await page.getByLabel("New Transaction name").fill("Terminal transfer");
   await page.getByLabel("New Transaction start").fill("20");
   await page.getByLabel("New Transaction end").fill("24");
-  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
   const terminal = await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox();
   const transactionBox = await transaction.boundingBox();
@@ -235,7 +236,7 @@ test("keeps transaction source-cycle edges aligned after a collapsed TimeGroup",
   await page.getByLabel("New Transaction name").fill("Folded transfer");
   await page.getByLabel("New Transaction start").fill("4");
   await page.getByLabel("New Transaction end").fill("8");
-  await page.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(transaction).toHaveCount(1);
@@ -248,6 +249,7 @@ test("drag-selects a geometry-backed half-open range directly on the cycle ruler
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const ruler = page.getByTestId("cycle-ruler");
   const start = await ruler.locator("[data-cycle='2']").boundingBox();
   const end = await ruler.locator("[data-cycle='6']").boundingBox();
@@ -270,7 +272,7 @@ test("drag-selects a geometry-backed half-open range directly on the cycle ruler
   await page.mouse.down();
   await page.mouse.move(end!.x, y);
   await expect(host).toHaveAttribute("data-range-drag", "active");
-  await expect(ruler.locator("[data-role='range-preview']")).toBeVisible();
+  await expect(ruler.getByTestId("range-preview")).toBeVisible();
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
@@ -278,7 +280,11 @@ test("drag-selects a geometry-backed half-open range directly on the cycle ruler
   await page.mouse.up();
   await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("6");
-  await expect(ruler.locator("[data-role='range-preview']")).toHaveCount(0);
+  // The ruler band now shows the persisted, committed selection -- not a
+  // transient drag preview -- so it correctly stays visible.
+  await expect(ruler.getByTestId("range-preview")).toBeVisible();
+  await expect(ruler.getByTestId("range-preview")).toHaveAttribute("data-range-start", "2");
+  await expect(ruler.getByTestId("range-preview")).toHaveAttribute("data-range-end", "6");
 
   await page.mouse.move(reverseStart!.x, y);
   await page.mouse.down();
@@ -299,7 +305,11 @@ test("drag-selects a geometry-backed half-open range directly on the cycle ruler
   await page.mouse.move(end!.x, y);
   await page.keyboard.press("Escape");
   await expect(host).not.toHaveAttribute("data-range-drag", "active");
-  await expect(ruler.locator("[data-role='range-preview']")).toHaveCount(0);
+  // The cancelled drag's own preview is gone, but the previously committed
+  // [2, 24) selection is still active, so the band correctly still shows it.
+  await expect(ruler.getByTestId("range-preview")).toBeVisible();
+  await expect(ruler.getByTestId("range-preview")).toHaveAttribute("data-range-start", "2");
+  await expect(ruler.getByTestId("range-preview")).toHaveAttribute("data-range-end", "24");
   await page.mouse.up();
   await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("24");
@@ -318,6 +328,7 @@ test("ruler range drag cancels without mutation and remains semantic after scrol
   const ruler = page.getByTestId("cycle-ruler");
   const viewport = page.getByTestId("cycle-viewport");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const tick2 = await ruler.locator("[data-cycle='2']").boundingBox();
   const tick6 = await ruler.locator("[data-cycle='6']").boundingBox();
   expect(tick2).not.toBeNull();
@@ -326,9 +337,9 @@ test("ruler range drag cancels without mutation and remains semantic after scrol
   await page.mouse.move(tick2!.x, y);
   await page.mouse.down();
   await page.mouse.move(tick6!.x, y);
-  await expect(ruler.locator("[data-role='range-preview']")).toBeVisible();
+  await expect(ruler.getByTestId("range-preview")).toBeVisible();
   await ruler.dispatchEvent("pointercancel", { pointerId: 1, button: 0, clientX: tick6!.x, clientY: y });
-  await expect(ruler.locator("[data-role='range-preview']")).toHaveCount(0);
+  await expect(ruler.getByTestId("range-preview")).not.toBeVisible();
   await page.mouse.up();
   await expect(page.getByLabel("Timeline range start")).toHaveValue("2");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("4");
