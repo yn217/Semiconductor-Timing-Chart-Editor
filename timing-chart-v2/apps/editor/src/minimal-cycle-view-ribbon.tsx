@@ -332,7 +332,14 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {tab === "Timeline" && <TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onCommandBatch={onCommandBatch} onNavigateBookmark={onNavigateBookmark} />}
     {tab === "Annotation" && <>
       <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
-      <div className="ribbon-major-group" data-major-group="Font" aria-label="Font commands">
+      {/* Scope decision (#331): Ribbon Font intentionally edits only the
+          selected Annotation, Comment Row, or multi-Annotation selection --
+          it does NOT reach normal Signal labels (those already have their
+          own dedicated styling route through the Signal Inspector's Label
+          Style section). The title below states that scope explicitly
+          rather than leaving an unstyled Signal selection's disabled Font
+          group looking like an unexplained bug. */}
+      <div className="ribbon-major-group" data-major-group="Font" aria-label="Font commands" title={selectedAnnotation || selectedCommentRow ? undefined : "Font applies to a selected Annotation or Comment Row (not Signal labels, which have their own styling in the Inspector)."}>
         <DsRibbonGroup ariaLabel="Font" className="annotation-font-group" label="Font">
           <FontStyleToolbar
             idPrefix="ribbon-annotation-font"
