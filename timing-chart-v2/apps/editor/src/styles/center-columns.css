@@ -214,3 +214,10 @@
 .editor-shell[data-show-transactions="false"] .transaction-lanes { visibility: hidden; }
 
 .editor-shell[data-show-group-background="false"] .surface-host [data-role$="-row"]:not([data-selected="true"]):not([data-transaction-linked="true"]) { background-color: transparent !important; }
+
+/* Transaction presentation belongs to the center timing surface. */
+.transaction-track { position: absolute; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
+.transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
+.transaction-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap: 6px; }
+.transaction-list > button { height: 34px; display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; border: 1px solid #c2cfdd; border-radius: 4px; background: white; text-align: left; }
+.transaction-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; }
