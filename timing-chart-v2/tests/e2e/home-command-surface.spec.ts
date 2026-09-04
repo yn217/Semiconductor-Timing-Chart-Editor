@@ -414,6 +414,43 @@ test("Command enablement stays aligned for annotation selection", async ({ page 
   await expect(overflow.getByRole("button", { name: "Rename", exact: true })).toBeDisabled();
 });
 
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1366, height: 768 }, { width: 1280, height: 720 }]) {
+  test(`Annotation ribbon's Arrange dropdown stays inside the viewport at ${viewport.width}x${viewport.height} (#197)`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await ready(page);
+    const host = page.getByTestId("cycle-surface");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+    await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation" }).click();
+    await expect(host.locator("[data-role='annotation-owner'][data-annotation-id]")).toHaveCount(1);
+    const before = await Promise.all([
+      page.getByTestId("revision-status").textContent(),
+      page.getByTestId("history-status").textContent(),
+      page.getByTestId("dirty-status").textContent(),
+    ]);
+    const trigger = page.getByTestId("ribbon").locator(".arrange-dropdown-trigger");
+    await trigger.click();
+    const menu = page.locator(".arrange-menu");
+    await expect(menu).toBeVisible();
+    const bounds = await menu.evaluate((element) => {
+      const rect = element.getBoundingClientRect();
+      return { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom, viewportWidth: window.innerWidth, viewportHeight: window.innerHeight };
+    });
+    expect(bounds.left, JSON.stringify(bounds)).toBeGreaterThanOrEqual(0);
+    expect(bounds.top).toBeGreaterThanOrEqual(0);
+    expect(bounds.right).toBeLessThanOrEqual(bounds.viewportWidth);
+    expect(bounds.bottom).toBeLessThanOrEqual(bounds.viewportHeight);
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
+    const after = await Promise.all([
+      page.getByTestId("revision-status").textContent(),
+      page.getByTestId("history-status").textContent(),
+      page.getByTestId("dirty-status").textContent(),
+    ]);
+    expect(after).toEqual(before);
+  });
+}
+
 test("Rename uses the shared app-owned dialog with atomic Apply and view-only Cancel", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
