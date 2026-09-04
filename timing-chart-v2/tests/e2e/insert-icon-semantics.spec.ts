@@ -33,3 +33,24 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     expect(layout).toEqual({ overflow: false, buttonsInside: true });
   });
 }
+
+test("keeps semantic Insert icons crisp at higher device scale", async ({ browser }, testInfo) => {
+  const context = await browser.newContext({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 2 });
+  try {
+    const page = await context.newPage();
+    await page.goto("/");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Insert", exact: true }).click();
+    const insert = page.getByTestId("insert-ribbon");
+    expect(await page.evaluate(() => window.devicePixelRatio)).toBe(2);
+    const boxes = await insert.locator("[data-insert-icon]").evaluateAll((icons) => icons.map((icon) => {
+      const box = icon.getBoundingClientRect();
+      return { width: box.width, height: box.height, clipped: icon.scrollWidth < icon.clientWidth || icon.scrollHeight < icon.clientHeight };
+    }));
+    expect(boxes.length).toBe(14);
+    expect(boxes.every((box) => box.width === 18 && box.height === 18 && !box.clipped)).toBe(true);
+    await testInfo.attach("insert-ribbon-dpr2.png", { body: await insert.screenshot(), contentType: "image/png" });
+  } finally {
+    await context.close();
+  }
+});
