@@ -416,8 +416,10 @@ export function MinimalCycleView() {
       geometryRegistry,
       markOpenPhase,
       onReferenceGeometryReady: () => {
-        timelineRuntimeRef.current?.refreshRuler();
-        timelineRuntimeRef.current?.refreshGrid();
+        if (!rulerInitialized) {
+          timelineRuntimeRef.current?.refreshRuler();
+          timelineRuntimeRef.current?.refreshGrid();
+        }
       },
       invalidateSnapIndex: () => timelineGeometry.invalidateSnapIndex(),
     });
@@ -612,7 +614,7 @@ export function MinimalCycleView() {
       publishState();
       void renderer.whenIdle().then(() => {
         if (!rendererHost.isConnected) return;
-        if (refreshRuler) {
+        if (refreshRuler && (!changed.fullDocumentReplace || !rulerInitialized)) {
           timelineRuntime.refreshRuler();
           timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
         }
