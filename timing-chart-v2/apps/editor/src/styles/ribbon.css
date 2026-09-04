@@ -340,47 +340,62 @@
 
 .editor-shell .insert-ribbon .ds-ribbon-button:disabled { opacity: .42; }
 
-/* Column widths track each subgroup's actual current content (re-measured
-   whenever Timeline toolbar buttons are added/moved -- Insert grew from 3
-   buttons to 5 (Cycle Add / N Cycle Add / Insert before / Insert after /
-   Delete range moved in from Range Edit) and Fold/Break grew from 1 button
-   to 3 (Create / Break / Expand), which is exactly the kind of drift that
-   crushed labels into unreadable, bleeding-together fragments last time.
-   Buttons also now carry their own min-width + overflow:hidden (below) so
-   a future content change degrades to legible 2-line wrapping or a clipped
-   single button instead of bleeding into its neighbor again. */
-.editor-shell .timeline-group { width: 1060px; }
-
-.editor-shell .timeline-group .timeline-toolbar {
-  display: grid;
-  grid-template-columns: minmax(155px, 1fr) minmax(320px, 1fr) minmax(206px, 1fr) minmax(150px, 1fr) minmax(190px, 1fr);
-  align-items: stretch;
-  gap: 2px;
-  height: 92px;
-  padding: 3px;
-  position: relative;
-  z-index: 5;
-  overflow: visible;
+/* Timeline now renders through the exact same Ds* ribbon primitives Insert
+   uses (DsRibbonGroup/DsRibbonButton/DsIconBox/DsRibbonNumberInput) instead
+   of ad-hoc per-button geometry -- no button-level margin-top/transform/
+   position hacks left to fight the shared button contract; only per-group
+   width and column count live here, same as Insert's own subgroup rules
+   above. Column counts: Range 3 (Start/End/Length), Insert 1 field + 4
+   buttons, Range Edit 1 field + 2 buttons, Bookmark 4 buttons, Fold/Break 3
+   buttons. */
+.editor-shell .timeline-ribbon {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 101px;
+  overflow: hidden;
 }
 
-/* Insert/Range Edit mix label+input controls with plain buttons in the
-   same row; a label's caption text pushes its input down further than a
-   button's icon sits by default (the caption text needs its own line
-   height that a compact icon doesn't), so the icon and the input box
-   didn't line up even with both boxes' own tops matching. Nudge only
-   these two groups' icons down to the input's actual position -- Bookmark
-   and Fold/Break are all-button rows with nothing to line up against, so
-   their icons stay at the tighter default offset. */
-.editor-shell .timeline-insert-group > button svg,
-.editor-shell .timeline-range-edit-group > button svg { margin-top: 9px; }
+.editor-shell .timeline-slot-group { flex: 0 1 auto; min-width: 0; }
 
-.editor-shell .timeline-group .timeline-subgroup button[data-v1-label] {
-  font-size: 9px;
-}
+/* align-items: start (not center) -- some groups mix a full-height button
+   row with an auto-sized single row (Range/Insert/Range Edit) while others
+   declare an explicit two-row template for a secondary object list
+   (Bookmark/Fold Break); centering would let the taller/auto row's slack
+   push its content down relative to the fixed-row groups. Starting every
+   item at its row's own top edge keeps every group's icon/control row at
+   the same absolute Y regardless of which row-sizing shape it uses. */
+.editor-shell .timeline-slot-group > .ds-ribbon-group { position: relative; display: grid; align-items: start; height: 101px; min-width: 0; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
 
-.editor-shell .timeline-group .timeline-subgroup button[data-v1-label]::after {
-  content: none;
-}
+.editor-shell .timeline-ribbon .ds-ribbon-group > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
+
+.editor-shell .timeline-range-group { width: 180px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .timeline-insert-group { width: 320px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .timeline-range-edit-group { width: 240px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .timeline-bookmark-group { width: 220px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .timeline-fold-group { width: 190px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .timeline-ribbon .ds-ribbon-button,
+.editor-shell .timeline-ribbon .ds-ribbon-number-input { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
+
+.editor-shell .timeline-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
+
+.editor-shell .timeline-ribbon .ds-ribbon-button:disabled { opacity: .42; }
+
+/* Existing Bookmark/Time Group object lists (jump/edit/delete rows for
+   already-created bookmarks and fold groups) sit below the command-button
+   row inside the same group, same as they always have -- only their
+   container's own geometry changed (from an absolutely-positioned overlay
+   to a normal grid row) to fit the shared group layout. */
+.editor-shell .timeline-bookmark-group,
+.editor-shell .timeline-fold-group { grid-template-rows: 66px 1fr; }
+
+.editor-shell .timeline-bookmark-group .timeline-objects,
+.editor-shell .timeline-fold-group .timeline-objects { grid-column: 1 / -1; grid-row: 2; min-height: 0; overflow: auto; }
 
 .editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: visible; }
 
@@ -443,3 +458,54 @@
 .editor-shell .view-zoom-group .ds-ribbon-select { width: 62px; min-width: 0; height: 27px; padding: 0 2px; font-size: 9px; }
 
 .editor-shell .home-edit-group > [data-testid="clipboard-status"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
+
+/* DsRibbonNumberInput: the field-input counterpart to DsRibbonButton --
+   same column shape (caption, then value), same active button height, so
+   a field and a button sitting in the same group row share one top edge
+   and one baseline instead of needing a per-field position nudge. */
+.ds-ribbon-number-input {
+  display: inline-flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  min-width: 48px;
+  min-height: 54px;
+  padding: 4px 5px 3px;
+  color: #263d58;
+  cursor: default;
+}
+
+.ds-ribbon-number-input__caption {
+  display: flex;
+  min-height: 14px;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.ds-ribbon-number-input input,
+.ds-ribbon-number-input output {
+  display: inline-flex;
+  width: 100%;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  border: 1px solid #b6c2d0;
+  border-radius: 3px;
+  background: #fff;
+  color: #19243a;
+  font: 400 11px/1 var(--ds-font-family, inherit);
+  text-align: center;
+}
+
+.ds-ribbon-number-input output { background: #f5f7fa; color: #29425e; }
+
+.ds-ribbon-number-input input:focus-visible { outline: var(--ds-focus-width, 2px) solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
+
+.ds-ribbon-number-input input:disabled { opacity: .45; }

@@ -25,3 +25,18 @@ export function DsRibbonToggle({ checked, className, dataTestId, label, onChange
 export function DsRibbonGroup({ ariaLabel, children, className, label }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly label: string }) {
   return <div className={`ds-ribbon-group${className ? ` ${className}` : ""}`} aria-label={ariaLabel}>{children}<b>{label}</b></div>;
 }
+
+/** Compact captioned numeric field for a ribbon group -- the field-input
+ * counterpart to DsRibbonButton, styled off the same shared ds-control
+ * contract (height/border/focus) instead of a plain web form input. Also
+ * accepts a read-only `output` rendering (value display with no input)
+ * for fields that mirror another field's value rather than accepting
+ * their own edits. */
+export function DsRibbonNumberInput({ ariaLabel, className, dataTestId, disabled, label, max, min, onChange, readOnly, step, title, value }: { readonly ariaLabel: string; readonly className?: ClassName; readonly dataTestId?: string | undefined; readonly disabled?: boolean | undefined; readonly label: string; readonly max?: number | undefined; readonly min?: number | undefined; readonly onChange?: ((value: number) => void) | undefined; readonly readOnly?: boolean | undefined; readonly step?: number | undefined; readonly title?: string | undefined; readonly value: number }) {
+  return <label className={`ds-control ds-ribbon-number-input${className ? ` ${className}` : ""}`} title={title}>
+    <span className="ds-ribbon-number-input__caption">{label}</span>
+    {readOnly
+      ? <output aria-label={ariaLabel} data-testid={dataTestId}>{value}</output>
+      : <input aria-label={ariaLabel} data-testid={dataTestId} type="number" min={min} max={max} step={step ?? 1} value={value} disabled={disabled} onChange={(event) => onChange?.(Number(event.target.value))} />}
+  </label>;
+}
