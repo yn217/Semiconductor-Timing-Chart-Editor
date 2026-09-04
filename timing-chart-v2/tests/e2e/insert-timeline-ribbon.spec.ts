@@ -182,3 +182,48 @@ test("Timeline workflow groups keep explicit cycle semantics and aligned control
   expect(new Set(metrics.groups.map((group) => group.top)).size).toBe(1);
   expect(new Set(metrics.groups.map((group) => group.bottom)).size).toBe(1);
 });
+
+// #262 (GUI/UX closure gate, Interaction/State-feedback axes): creating a new
+// row must select it, the same way Group/Spacer already did from the Left
+// Tree's own +Add button -- otherwise the newly added row isn't immediately
+// reachable for rename/edit without an extra manual click, and the two
+// "add a row" entry points (Tree +Add, Ribbon Insert) behave inconsistently
+// for the exact same mutation.
+test("Left Tree +Add and Ribbon Insert both select the row they just created (#262)", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const status = page.getByTestId("selection-status");
+  const ribbon = page.getByTestId("ribbon");
+  const tabs = page.locator(".ribbon-tabs");
+
+  // Establish an unrelated prior selection so a false pass (status just
+  // happens to already show the right value) is impossible.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await expect(status).toHaveText("CLOCK");
+
+  // Tree +Add -> Signal.
+  await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
+  await page.getByRole("menu", { name: "Add signal or group" }).getByRole("menuitem", { name: "Signal", exact: true }).click();
+  await expect(status).toHaveText(/^SIGNAL_\d+$/);
+
+  // Ribbon Insert -> Group selects the new Group.
+  await tabs.getByRole("button", { name: "Insert", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Group", exact: true }).click();
+  await expect(status).toHaveText(/^Group \d+$/);
+  const groupName = await status.textContent();
+
+  // Ribbon Insert -> Comment selects the new Comment row (inserted into the
+  // still-selected, still-empty Group above).
+  await ribbon.getByRole("button", { name: "Comment", exact: true }).click();
+  await expect(status).toHaveText(/^Comment \d+$/);
+
+  // Ribbon Insert -> Spacer: spacers have no name of their own, so the
+  // status bar truthfully falls back to the owning Group's name (the same
+  // fallback selecting a Spacer from the Tree already used) -- assert the
+  // spacer itself carries the actual selection rather than expecting its
+  // own name in the status text.
+  await ribbon.getByRole("button", { name: "Spacer", exact: true }).click();
+  await expect(status).toHaveText(groupName ?? "");
+  await expect(host.locator("[data-role='frozen-row'][data-kind='spacer']").last()).toHaveAttribute("aria-selected", "true");
+});
