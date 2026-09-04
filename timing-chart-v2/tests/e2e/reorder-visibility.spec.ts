@@ -1,7 +1,14 @@
 import { expect, test } from "@playwright/test";
 
+// The surface no longer carries a serialized "data-canonical-row-ids"
+// attribute (stable-surface.spec.ts asserts its absence -- it was removed
+// as part of the Stable Waveform Surface architecture, which favors
+// reading order directly off the stable, individually-identified row
+// shells over serializing the whole order into one attribute). Read the
+// frozen-label rows' DOM order instead, the same technique already used
+// by every currently-passing row-order assertion in this suite.
 const signalOrder = async (surface: Locator) =>
-  (await surface.getAttribute("data-canonical-row-ids") ?? "").split(",").filter(Boolean);
+  surface.locator("[data-role='frozen-row'][data-row-id]").evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
 
 test("creates an empty Signal Group from the tree through one group.create command", async ({ page }) => {
   await page.goto("/");
@@ -10,16 +17,19 @@ test("creates an empty Signal Group from the tree through one group.create comma
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   const groupsBefore = await surface.locator("[data-role='tree-branch'][data-group-id]").count();
-  const emptyGroupsBefore = await page.locator("[data-role='empty-group'][data-group-id]").count();
+  const emptyGroupsBefore = await page.locator("[data-group-target]").count();
+  // "Group" is a menuitem inside the Left Tree's "+Add" dropdown -- it has
+  // to be opened before the item is visible/clickable.
+  await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
   await page.getByTestId("create-group").click();
-  await expect(page.locator("[data-role='empty-group'][data-group-id]")).toHaveCount(emptyGroupsBefore + 1);
+  await expect(page.locator("[data-group-target]")).toHaveCount(emptyGroupsBefore + 1);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByLabel("Inspector group name")).toHaveValue("Group 4");
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
-  await expect(page.locator("[data-role='empty-group'][data-group-id]")).toHaveCount(emptyGroupsBefore);
+  await expect(page.locator("[data-group-target]")).toHaveCount(emptyGroupsBefore);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
 });
 

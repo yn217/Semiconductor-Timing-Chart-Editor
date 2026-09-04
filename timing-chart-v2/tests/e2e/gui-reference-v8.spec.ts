@@ -5,7 +5,9 @@ test.use({ viewport: { width: 1672, height: 941 }, deviceScaleFactor: 1 });
 test("matches the v8 shell contract without mutating canonical state", async ({ page }, testInfo) => {
   await page.goto("/?visual-reference");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  await expect(page.locator(".ribbon-tabs > button:not(.compatibility-tab)")).toHaveText(["File", "Home", "Insert", "Edit", "View", "Check", "AI"]);
+  // #270 replaced the generic "Edit" tab with dedicated "Insert"/"Timeline"/
+  // "Annotation" workflow tabs.
+  await expect(page.locator(".ribbon-tabs > button:not(.compatibility-tab)")).toHaveText(["File", "Home", "Insert", "Timeline", "Annotation", "View", "Check", "AI"]);
   const before = await page.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");
   const metrics = await page.evaluate(() => {
     const rect = (selector: string) => {
@@ -125,6 +127,9 @@ test("applies the v8 Signal Inspector style controls as one semantic operation",
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   const inspector = page.getByTestId("inspector");
+  // "Label Style" is a collapsed accordion section by default -- its fields
+  // aren't interactable until its own heading button is expanded.
+  await inspector.getByRole("button", { name: "Label Style" }).click();
   await inspector.getByLabel("Inspector text color").fill("#224466");
   await inspector.getByLabel("Inspector label background").fill("#eef5ff");
   await inspector.getByLabel("Inspector label font").fill("Arial");
@@ -161,6 +166,6 @@ test("V8 Home secondary actions stay connected to real navigation and semantic c
   await expect(more.getByRole("menuitem", { name: "Document Properties" })).toBeVisible();
   await expect(more.getByRole("menuitem", { name: "Problems" })).toBeVisible();
   await more.getByRole("menuitem", { name: "Problems" }).click();
-  await expect(page.getByTestId("bottom-tabs").getByRole("button", { name: "Problems" })).toHaveClass(/active/);
+  await expect(page.getByTestId("bottom-tabs").getByRole("tab", { name: "Problems" })).toHaveClass(/active/);
   await expect(page.getByTestId("bottom-editor")).toBeVisible();
 });
