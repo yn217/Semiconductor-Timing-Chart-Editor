@@ -80,6 +80,70 @@ test("incompatible State to Binary conversion is rejected before canonical commi
   expect(await page.getByTestId("dirty-status").textContent()).toBe(beforeDirty);
 });
 
+test("compatible Logic to Pulse conversion supports Cancel, Apply, Undo/Redo, and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
+  const inspector = page.getByTestId("inspector");
+  const type = inspector.getByLabel("Inspector signal type");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  await type.selectOption("pulse");
+  await inspector.getByTestId("cancel-inspector-draft").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("logic");
+
+  const nextInspector = page.getByTestId("inspector");
+  await nextInspector.getByLabel("Inspector signal type").selectOption("pulse");
+  await nextInspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("logic");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("pulse");
+
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).first().click();
+  const savedPath = await (await save).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("pulse");
+  await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
+test("Bus to Binary conversion rejects non-logic values without mutation", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
+  const inspector = page.getByTestId("inspector");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
+  await inspector.getByLabel("Inspector signal type").selectOption("binary");
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems", exact: true }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("Cannot convert bus to binary");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(beforeDirty);
+});
+
 test("Event Table exposes one action route and visibly rejects invalid imports", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
@@ -98,4 +162,19 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);
+});
+
+test("Event Table valid import uses canonical validation and one history entry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_event']").click();
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
+  await bottom.getByLabel("Import signal events").setInputFiles({ name: "events.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ values: [{ start: 0, value: "NONE" }, { start: 3, value: "RISE" }] })) });
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
+  await expect(bottom.getByLabel("Value 3")).toHaveValue("RISE");
 });

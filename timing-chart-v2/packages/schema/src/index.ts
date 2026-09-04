@@ -8,3 +8,4 @@ export * from "./json-syntax.js";
 export * from "./reference-registry.js";
 export * from "./clock-slots.js";
 export * from "./resource-budget.js";
+export * from "./legend.js";

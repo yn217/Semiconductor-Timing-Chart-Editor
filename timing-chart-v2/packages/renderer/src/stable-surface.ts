@@ -454,8 +454,16 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   async #flushWaveBatch(): Promise<void> {
-    const requests = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version }));
-    for (const request of requests) this.#waveQueue.delete(request.signalId);
+    const queued = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version }));
+    for (const request of queued) this.#waveQueue.delete(request.signalId);
+    const requests = queued.filter((request) => {
+      if (request.owner.isConnected) return true;
+      // Virtualized owners can leave the viewport after they were queued but
+      // before their frame runs. Keep the signal dirty so a later remount can
+      // render it, but never spend WaveDrom/geometry work on a detached owner.
+      this.#wavePending.delete(request.signalId);
+      return false;
+    });
     if (requests.length === 0) return;
     const batchId = String(++this.#waveBatchSequence);
     this.#diagnostics = {

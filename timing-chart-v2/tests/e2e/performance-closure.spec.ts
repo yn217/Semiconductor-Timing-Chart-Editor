@@ -254,6 +254,28 @@ test("1000x1000 virtualization mounts viewport-scale rows and avoids duplicate b
   await testInfo.attach("phase13-1000-virtualization.json", { body: Buffer.from(JSON.stringify({ fixture: "perf_1000x1000", diagnostic, domNodes: await page.locator("*").count() }, null, 2)), contentType: "application/json" });
 });
 
+test("large valid fixture records Open/Save browser profile evidence", async ({ page }, testInfo) => {
+  await start(page);
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Performance.enable");
+  const before = await cdpMetrics(cdp);
+  const openStarted = await page.evaluate(() => performance.now());
+  const document = await openFixture(page, { signalCount: 1000, cycleCount: 1000, profile: "transaction-heavy" });
+  const openMs = await page.evaluate((started) => performance.now() - started, openStarted);
+  const afterOpen = await cdpMetrics(cdp);
+  const saveStarted = await page.evaluate(() => performance.now());
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const download = await downloadPromise;
+  const saveMs = await page.evaluate((started) => performance.now() - started, saveStarted);
+  const afterSave = await cdpMetrics(cdp);
+  expect(await download.path()).toBeTruthy();
+  expect(openMs).toBeGreaterThan(0);
+  expect(saveMs).toBeGreaterThan(0);
+  await testInfo.attach("large-open-save-profile.json", { body: Buffer.from(JSON.stringify({ fixture: document.document.id, before, afterOpen, afterSave, openMs, saveMs, filename: download.suggestedFilename() }, null, 2)), contentType: "application/json" });
+  console.log(`[large-open-save-profile] ${JSON.stringify({ fixture: document.document.id, openMs, saveMs })}`);
+});
+
 test("viewport-only projection remains bounded at 1k, 5k, and 10k rows", async ({ page }, testInfo) => {
   await start(page);
   const measurements: Array<Record<string, unknown>> = [];
@@ -298,6 +320,32 @@ test("repeated Open A/B/A releases old owners and does not stack handlers", asyn
   await page.getByTestId("cycle-surface").locator("[data-role='frozen-row'][data-row-id='sig_perf_1']").click(); const inspector = page.getByTestId("inspector"); const name = inspector.getByLabel("Inspector signal name", { exact: true }); await name.fill("RENAMED_ONCE"); await inspector.getByTestId("apply-inspector-signal").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await testInfo.attach("phase13-open-leak.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
+});
+
+test("Open first-correct-paint has median and p95 evidence across scale fixtures", async ({ page }, testInfo) => {
+  await start(page);
+  const fixtures = [
+    { name: "perf_50x100", spec: { signalCount: 50, cycleCount: 100 } },
+    { name: "perf_100x500", spec: { signalCount: 100, cycleCount: 500, profile: "mixed" as const } },
+    { name: "long-cycle", spec: { signalCount: 100, cycleCount: 1000, profile: "transaction-heavy" as const } },
+  ];
+  const summaries = [];
+  for (const fixture of fixtures) {
+    const samples = [];
+    for (let trial = 0; trial < 3; trial += 1) {
+      const started = await page.evaluate(() => performance.now());
+      await openFixture(page, fixture.spec);
+      samples.push(await page.evaluate((value) => performance.now() - value, started));
+    }
+    const ordered = [...samples].sort((a, b) => a - b);
+    const percentile = (rank: number) => ordered[Math.min(ordered.length - 1, Math.ceil(ordered.length * rank) - 1)];
+    const summary = { fixture: fixture.name, trials: samples.length, samples, medianMs: percentile(0.5), p95Ms: percentile(0.95) };
+    expect(summary.medianMs).toBeGreaterThan(0);
+    expect(summary.p95Ms).toBeGreaterThanOrEqual(summary.medianMs);
+    summaries.push(summary);
+  }
+  await testInfo.attach("open-first-correct-paint.json", { body: Buffer.from(JSON.stringify(summaries, null, 2)), contentType: "application/json" });
+  console.log(`[open-first-correct-paint] ${JSON.stringify(summaries)}`);
 });
 
 test("nightly/manual 500/1000 heavy profiles", async ({ page }, testInfo) => {

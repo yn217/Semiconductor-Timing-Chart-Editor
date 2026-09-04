@@ -3,6 +3,7 @@ import type { SignalId } from "@timing-chart-v2/schema";
 import WaveDrom from "wavedrom";
 import { toWaveJson } from "./conversion.js";
 import { extractLocalGeometry } from "./geometry-extractor.js";
+import { applyValueLabelLayout } from "./value-label-layout.js";
 import {
   WAVEDROM_VERSION,
   WaveDromAdapterError,
@@ -18,10 +19,10 @@ if (WaveDrom.version !== WAVEDROM_VERSION) {
   throw new WaveDromAdapterError("WAVEDROM_VERSION_MISMATCH", `Expected WaveDrom ${WAVEDROM_VERSION}, received ${WaveDrom.version}.`);
 }
 
-export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0): string {
+export function renderWaveJsonMarkup(waveJson: WaveJsonSignal, renderIndex = 0, semanticValues: readonly string[] = []): string {
   try {
     const tree = WaveDrom.renderAny(renderIndex, { signal: [waveJson] }, WaveDrom.waveSkin);
-    return assertSafeWaveDromMarkup(WaveDrom.onml.stringify(tree));
+    return assertSafeWaveDromMarkup(applyValueLabelLayout(WaveDrom.onml.stringify(tree), waveJson, semanticValues));
   } catch (error) {
     if (error instanceof WaveDromAdapterError) throw error;
     throw new WaveDromAdapterError("WAVEDROM_RENDER_FAILED", "Pinned WaveDrom failed to render the generated WaveJSON.", { cause: error });
@@ -103,7 +104,7 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     return toWaveJson(source);
   }
 
-  async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element): Promise<RenderedWave> {
+  async renderWave(signalId: SignalId, waveJson: WaveJsonSignal, mount: Element, semanticValues: readonly string[] = []): Promise<RenderedWave> {
     const existing = this.#active.get(signalId);
     if (existing && existing.mount !== mount) this.#clearOwner(existing);
     let renderIndex = this.#renderIndices.get(signalId);
@@ -114,14 +115,14 @@ export class ProductionWaveDromAdapter implements WaveDromAdapter {
     }
     this.#renderCalls += 1;
     this.#renderCallsBySignal.set(signalId, (this.#renderCallsBySignal.get(signalId) ?? 0) + 1);
-    const cacheKey = `${WAVEDROM_VERSION}\u0000${JSON.stringify(waveJson)}`;
+    const cacheKey = `${WAVEDROM_VERSION}\u0000${JSON.stringify(waveJson)}\u0000${JSON.stringify(semanticValues)}`;
     const cached = this.#markupCache.get(signalId);
     let markup: string;
     if (cached?.key === cacheKey) {
       markup = cached.markup;
       this.#cacheHits += 1;
     } else {
-      markup = renderWaveJsonMarkup(waveJson, renderIndex);
+      markup = renderWaveJsonMarkup(waveJson, renderIndex, semanticValues);
       this.#markupCache.set(signalId, { key: cacheKey, markup });
       this.#cacheMisses += 1;
     }

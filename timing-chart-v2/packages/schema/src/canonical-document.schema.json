@@ -129,7 +129,7 @@
     },
     "change": {
       "type": "object", "additionalProperties": false, "required": ["start", "value"],
-      "properties": { "start": { "type": "number", "minimum": 0 }, "value": { "type": ["string", "number"] }, "comment": { "type": "string" } }
+      "properties": { "start": { "type": "number", "minimum": 0 }, "value": { "type": ["string", "number"] }, "displayLabel": { "type": "string" }, "comment": { "type": "string" } }
     },
     "generator": {
       "type": "object", "additionalProperties": false, "required": ["start", "period", "duty", "phase", "initial", "polarity"],

@@ -5,7 +5,7 @@ async function ready(page: import("@playwright/test").Page): Promise<void> {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
-test("keeps the left tree footer compact and actions discoverable in primary menus", async ({ page }) => {
+async function verifyCompactFooter(page: import("@playwright/test").Page): Promise<void> {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const footer = page.locator(".left-panel-tail");
@@ -45,4 +45,14 @@ test("keeps the left tree footer compact and actions discoverable in primary men
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(host).toHaveAttribute("data-history-depth", before.history!);
   expect(await host.getAttribute("data-dirty")).toBe(before.dirty);
+}
+
+test("keeps the left tree footer compact at laptop viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await verifyCompactFooter(page);
+});
+
+test("keeps the left tree footer compact at the Golden viewport", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await verifyCompactFooter(page);
 });

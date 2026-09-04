@@ -81,3 +81,52 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     }))).toEqual(homeBefore);
   });
 }
+
+test("Tree Add and Insert Ribbon share the selected row and group insertion target", async ({ page }) => {
+  await page.goto("/?visual-reference");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const payloadRows = host.locator("[data-role='left-row'][data-group-id='grp_cycle_payload']");
+  const ready = host.locator("[data-role='left-row'][data-row-id='sig_cycle_ready']");
+  await ready.click();
+  const beforeRowIds = await payloadRows.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+
+  await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
+  await page.getByRole("menu", { name: "Add signal or group" }).getByRole("menuitem", { name: "Signal", exact: true }).click();
+  await expect.poll(async () => payloadRows.count()).toBe(beforeRowIds.length + 1);
+  const afterTreeIds = await payloadRows.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  const treeInserted = afterTreeIds.find((id) => id !== undefined && !beforeRowIds.includes(id));
+  expect(treeInserted).toBeDefined();
+  expect(afterTreeIds[afterTreeIds.indexOf("sig_cycle_ready") + 1]).toBe(treeInserted);
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect.poll(async () => payloadRows.count()).toBe(beforeRowIds.length);
+  expect(await payloadRows.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId))).toEqual(beforeRowIds);
+
+  await ready.click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Insert", exact: true }).click();
+  await page.getByTestId("insert-ribbon").getByRole("button", { name: "Signal", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect.poll(async () => payloadRows.count()).toBe(beforeRowIds.length + 1);
+  const afterRibbonIds = await payloadRows.evaluateAll((rows) => rows.map((row) => (row as HTMLElement).dataset.rowId));
+  const ribbonInserted = afterRibbonIds.find((id) => id !== undefined && !beforeRowIds.includes(id));
+  expect(ribbonInserted).toBeDefined();
+  expect(afterRibbonIds[afterRibbonIds.indexOf("sig_cycle_ready") + 1]).toBe(ribbonInserted);
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect.poll(async () => payloadRows.count()).toBe(beforeRowIds.length);
+
+  const group = host.locator("[data-role='left-group-header'][data-group-name='Input'] [data-role='tree-branch']");
+  await group.click();
+  const internalRows = host.locator("[data-role='left-row'][data-group-id='grp_cycle_control']");
+  const beforeGroupCount = await internalRows.count();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Insert", exact: true }).click();
+  await page.getByTestId("insert-ribbon").getByRole("button", { name: "Signal", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect.poll(async () => internalRows.count()).toBe(beforeGroupCount + 1);
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect.poll(async () => internalRows.count()).toBe(beforeGroupCount);
+});

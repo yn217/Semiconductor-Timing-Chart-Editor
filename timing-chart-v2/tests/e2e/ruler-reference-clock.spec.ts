@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import { expect, test } from "@playwright/test";
 
 function fixture(id: string, title: string, clockId: string, cycleCount: number) {
@@ -79,4 +80,45 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
   await expect(page.locator(".app-titlebar h1")).toHaveText("Document A");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ruler.locator("[data-cycle]")).toHaveCount(rulerCountA);
+});
+
+test("derives the reference Clock label and edge from canonical state across Save/Open", async ({ page }) => {
+  const base = fixture("two-clocks", "Two Clocks", "clk_a", 12);
+  const clockA = base.signals[0]!;
+  const clockB = { ...clockA, id: "clk_b", name: "Clock B", source: { ...clockA.source, signalName: "clock_b" }, display: { name: "Clock B" } };
+  const document = {
+    ...base,
+    timeline: { ...base.timeline, referenceClock: "clk_a", edge: "rising" },
+    signalGroups: [{ ...base.signalGroups[0]!, rows: ["clk_a", "clk_b", "sig_data"] }],
+    signals: [clockA, clockB, base.signals[1]!],
+  };
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  const fileInput = page.locator("input[type='file'][accept='.json,.tcd']");
+  await fileInput.setInputFiles({ name: "two-clocks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='clk_b']").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByTestId("set-reference-clock").click();
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · Clock B");
+  await expect(page.locator(".clock-context-label")).toHaveText("Signal: Clock B    Type: Clock");
+  await inspector.getByLabel("Reference Edge").selectOption("falling");
+  await inspector.getByTestId("apply-reference-edge").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await inspector.getByLabel("Inspector signal name").fill("Clock B Renamed");
+  await inspector.getByLabel("Inspector signal name").press("Enter");
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · Clock B Renamed");
+  await expect(page.locator(".clock-context-label")).toHaveText("Signal: Clock B Renamed    Type: Clock");
+
+  const download = page.waitForEvent("download");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await download).path();
+  const saved = JSON.parse(await readFile(savedPath!, "utf8")) as { timeline: { referenceClock?: string; edge?: string } };
+  expect(saved.timeline).toMatchObject({ referenceClock: "clk_b", edge: "falling" });
+  await fileInput.setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='clk_b']").click();
+  await expect(page.getByTestId("time-axis-status")).toHaveText("Time Axis: Clock · Clock B Renamed");
+  await expect(page.locator(".clock-context-label")).toHaveText("Signal: Clock B Renamed    Type: Clock");
 });

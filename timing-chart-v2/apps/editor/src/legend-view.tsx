@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import { effectiveLegendEntries, type CanonicalDocument } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 
 export function LegendView({ document, onCommand }: { readonly document: CanonicalDocument; readonly onCommand: (command: SemanticCommand) => void }) {
@@ -9,8 +9,7 @@ export function LegendView({ document, onCommand }: { readonly document: Canonic
   const dragRef = useRef<{ readonly offsetX: number; readonly offsetY: number } | undefined>(undefined);
   useEffect(() => setPosition(document.legend.position), [document.legend.position.x, document.legend.position.y]);
   if (!document.legend.show) return null;
-  const defaultRoles = document.legend.usedRolesOnly ? [...new Set(document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.role))] : ["input", "output", "internal"];
-  const entries = document.legend.items?.length ? [...document.legend.items].filter((entry) => entry.visible).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map((entry) => ({ id: entry.id, role: entry.role, label: entry.label })) : defaultRoles.map((role) => ({ id: `legend_${role}`, role, label: role }));
+  const entries = effectiveLegendEntries(document);
   const commitPosition = (next: { readonly x: number; readonly y: number }) => {
     if (next.x === document.legend.position.x && next.y === document.legend.position.y) return;
     onCommand({ id: nextCommandId("legend_position"), type: "legend.update", legend: { ...document.legend, position: next } });

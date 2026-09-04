@@ -89,7 +89,7 @@ test("Review tab Problems button navigates to the Problems panel", async ({ page
   await ready(page);
   const tabs = page.locator(".ribbon-tabs");
   const ribbon = page.getByTestId("ribbon");
-  await tabs.getByRole("button", { name: "Review", exact: true }).click();
+  await tabs.getByRole("button", { name: "Check", exact: true }).click();
   await ribbon.getByRole("button", { name: "Problems", exact: true }).click();
   await expect(page.getByTestId("problems-panel")).toBeVisible();
 });

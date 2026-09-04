@@ -157,7 +157,8 @@ export function remapValueChangesToDisplay(values: readonly SignalValueChange[],
     const active = values[cursor]?.value;
     if (active === undefined) continue;
     if (active !== lastValue) {
-      result.push({ start: display, value: active });
+      const sourceChange = values[cursor];
+      if (sourceChange) result.push({ ...sourceChange, start: display });
       lastValue = active;
     }
   }

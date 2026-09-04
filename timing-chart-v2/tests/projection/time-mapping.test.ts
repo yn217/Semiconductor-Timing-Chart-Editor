@@ -101,15 +101,18 @@ describe("DisplayTimeMappingCache", () => {
 
   it("records bounded scale evidence for 100k cycles and 1k folds", () => {
     const cache = new DisplayTimeMappingCache();
+    const identity = cache.get(timeline(100_000), []);
     const folds = Array.from({ length: 1000 }, (_, index) => collapsedGroup(`fold-${index}`, index * 100, index * 100 + 1));
     const mapping = cache.get(timeline(100_000), folds);
     const metrics = cache.metrics();
 
+    expect(identity.isIdentity).toBe(true);
     expect(mapping.displayCycleCount).toBe(99_000);
-    expect(metrics.builds).toBe(1);
-    expect(metrics.sourceCyclesVisited).toBe(100_000);
+    expect(metrics.builds).toBe(2);
+    expect(metrics.sourceCyclesVisited).toBe(200_000);
     expect(metrics.foldRangesVisited).toBe(1_000);
     expect(Number.isFinite(metrics.buildDurationMs)).toBe(true);
+    expect(metrics.buildDurationP95Ms).toBeGreaterThanOrEqual(metrics.buildDurationMedianMs);
   });
 });
 

@@ -63,6 +63,20 @@ describe("deterministic document export", () => {
     expect(first).not.toMatch(/Inspector|Ribbon|selection-handle|snap-guide/);
   });
 
+  it("uses the same bounded value-label policy in SVG export and keeps semantic values in title metadata", () => {
+    const base = canonicalFixture();
+    const data = base.signals[1]!;
+    const document = {
+      ...base,
+      signals: [{ ...base.signals[0]! }, { ...data, values: [{ start: 0, value: "0xDEADBEEF" }, { start: 1, value: "LONG_SYMBOLIC_STATE" }, { start: 2, value: "NEXT" }] }],
+    };
+    const svg = renderExportSvg(buildExportScene(document, { format: "svg", scope: "document" }));
+    expect(svg).toContain('data-value-label-mode="ellipsis"');
+    expect(svg).toContain('aria-label="0xDEADBEEF"');
+    expect(svg).toContain("<title>0xDEADBEEF</title>");
+    expect(svg).toContain('lengthAdjust="spacingAndGlyphs"');
+  });
+
   it("exports the canonical editable Legend position", () => {
     const document = { ...canonicalFixture(), legend: { ...canonicalFixture().legend, show: true, position: { x: 36, y: 48 } } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });

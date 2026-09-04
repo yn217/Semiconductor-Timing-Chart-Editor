@@ -12,6 +12,7 @@ test("Signal/Group pane splitter resizes the derived columns without mutation", 
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
   const initialWidth = Number(await shell.getAttribute("data-left-pane-width"));
+  const initialColumns = await page.locator(".column-headings").evaluate((element) => getComputedStyle(element).gridTemplateColumns.split(" ").slice(1));
   const resizer = page.getByTestId("left-pane-resizer");
   await expect(resizer).toHaveAttribute("aria-valuenow", String(initialWidth));
   const box = await resizer.boundingBox();
@@ -24,7 +25,7 @@ test("Signal/Group pane splitter resizes the derived columns without mutation", 
   expect(resizedWidth).toBeGreaterThan(initialWidth);
   expect(resizedWidth).toBeLessThanOrEqual(420);
   await expect(resizer).toHaveAttribute("aria-valuenow", String(resizedWidth));
-  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${resizedWidth}px 210px 640px`);
+  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${resizedWidth}px ${initialColumns.join(" ")}`);
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await host.getAttribute("data-history-depth")).toBe(before.history);
   expect(await host.getAttribute("data-session-counters")).toBe(before.session);
@@ -56,17 +57,14 @@ test("Signal label and timing splitter resizes shared geometry columns without m
   expect(resizedWidth).toBeGreaterThan(initialWidth);
   expect(resizedWidth).toBeLessThanOrEqual(360);
   await expect(resizer).toHaveAttribute("aria-valuenow", String(resizedWidth));
-  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${Number(await shell.getAttribute("data-left-pane-width"))}px ${resizedWidth}px 640px`);
+  await expect(page.locator(".column-headings")).toHaveCSS("grid-template-columns", `${Number(await shell.getAttribute("data-left-pane-width"))}px 62px 178px ${resizedWidth - 240}px 640px`);
   await expect(page.getByTestId("cycle-ruler")).toHaveCSS("left", `${Number(await shell.getAttribute("data-left-pane-width")) + resizedWidth}px`);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Zoom preset").selectOption("150");
   await expect(page.getByTestId("zoom-status")).toHaveText("150%");
-  const resizedOffset = Number(await shell.getAttribute("data-left-pane-width")) + resizedWidth;
-  const geometry = await host.evaluate((element) => ({
-    surfaceWidth: Number.parseFloat(getComputedStyle(element).width),
-    waveWidth: Number.parseFloat(getComputedStyle(element).getPropertyValue("--wave-width")),
-  }));
-  expect(geometry.surfaceWidth).toBe(resizedOffset + geometry.waveWidth * 1.5);
+  const waveformLeft = await host.locator("[data-role='stable-waveform-surface']").evaluate((element) => Math.round(element.getBoundingClientRect().left));
+  const headingWaveLeft = await page.locator(".column-headings > span").nth(4).evaluate((element) => Math.round(element.getBoundingClientRect().left));
+  expect(Math.abs(waveformLeft - headingWaveLeft)).toBeLessThanOrEqual(1);
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await host.getAttribute("data-history-depth")).toBe(before.history);
   expect(await host.getAttribute("data-session-counters")).toBe(before.session);

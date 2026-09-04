@@ -25,6 +25,7 @@ export function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { reado
   const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
+      <span className="clock-context-label">Signal: {signal.display.name}    Type: Clock</span>
       <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="clock-presets"><RibbonIcon name="i-settings" /><span>Presets</span></button>
       <button type="button" className="bottom-action" onClick={() => onDuplicate(signal.id)} data-testid="clock-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
       <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="clock-import"><RibbonIcon name="i-import" /><span>Import...</span></button>

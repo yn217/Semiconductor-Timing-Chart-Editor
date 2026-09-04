@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { BulkSignalDefinition } from "../bulk-signal-parser.js";
 
-export type ContextMenuState = { readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" };
+export type ContextMenuState = { readonly x: number; readonly y: number; readonly target: "signal" | "group" | "annotation" | "transaction" };
 
 export type BulkRegistrationPreviewState<GroupId> = {
   readonly sourceText: string;

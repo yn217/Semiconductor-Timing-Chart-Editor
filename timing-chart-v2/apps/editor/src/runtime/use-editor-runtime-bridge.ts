@@ -1,19 +1,27 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, type CanonicalDocument } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters } from "./edge-counter-projection.js";
 import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { renderGeometryGrid } from "../render-geometry-grid.js";
 import { buildRuler } from "./build-ruler.js";
+
+function nextBrowserFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(() => resolve());
+    else globalThis.setTimeout(resolve, 0);
+  });
+}
 import { referenceSvgScreenScale } from "./screen-scale.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { ImmutableSnapIndex } from "@timing-chart-v2/geometry";
 
 export type RendererHostSizingContext = { readonly host: RefObject<HTMLDivElement | null>; readonly viewport: RefObject<HTMLDivElement | null>; readonly metrics: { readonly viewportWidth: number; readonly leftPaneWidth: number; readonly inspectorWidth: number; readonly frozenPaneWidth: number; readonly zoom: number } };
-export function applyRendererHostSizing({ host, viewport, metrics }: RendererHostSizingContext): void { const rendererHost = host.current; const viewportElement = viewport.current; if (!rendererHost || !viewportElement) return; const availableWidth = metrics.viewportWidth > 0 ? metrics.viewportWidth : globalThis.innerWidth; const baseWidth = Math.max(160, availableWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth); const width = metrics.leftPaneWidth + metrics.frozenPaneWidth + baseWidth * metrics.zoom; rendererHost.style.width = `${width}px`; const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']"); timingSurface?.style.setProperty("width", `${width}px`); timingSurface?.style.setProperty("grid-template-columns", `${metrics.leftPaneWidth}px ${metrics.frozenPaneWidth}px var(--wave-width, 640px)`); rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important"); }
+export function applyRendererHostSizing({ host, viewport, metrics }: RendererHostSizingContext): void { const rendererHost = host.current; const viewportElement = viewport.current; if (!rendererHost || !viewportElement) return; const availableWidth = metrics.viewportWidth > 0 ? metrics.viewportWidth : globalThis.innerWidth; // viewportWidth is the cycle viewport; the Inspector is outside it.
+  const baseWidth = Math.max(160, availableWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth); const width = metrics.leftPaneWidth + metrics.frozenPaneWidth + baseWidth * metrics.zoom; rendererHost.style.width = `${width}px`; const timingSurface = rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']"); timingSurface?.style.setProperty("width", `${width}px`); timingSurface?.style.setProperty("grid-template-columns", `${metrics.leftPaneWidth}px ${metrics.frozenPaneWidth}px var(--wave-width, 640px)`); rendererHost.querySelector<HTMLElement>("[data-role='frozen-label-rows']")?.style.setProperty("left", `${metrics.leftPaneWidth}px`, "important"); }
 
 export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | null>, active: boolean, range: { readonly start: number; readonly end: number }): void {
   const rulerElement = ruler.current;
@@ -267,6 +275,7 @@ export type WaveformProviderContext = Readonly<{
   adapter: any;
   geometryRegistry: { readonly maps: Map<string, any>; readonly svgs: Map<string, SVGSVGElement>; remove: (id: any) => void };
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
+  onReferenceGeometryReady?: () => void;
   invalidateSnapIndex: () => void;
 }>;
 
@@ -279,6 +288,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
+      const yieldBetweenOwners = document.signals.length * mapping.displayCycleCount >= 250_000;
+      let referenceGeometryReady = false;
       if (signalIndexDocument !== document || signalIndexRevision !== currentSnapshot.revision) {
         signalById = new Map(document.signals.map((signal) => [signal.id, signal]));
         signalIndexDocument = document;
@@ -287,24 +298,38 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       const prepared = requests.map((request) => {
         const signal = signalById.get(request.signalId);
         if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
+        let remappedValues: any;
         const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
-          : { ...signal, values: context.mappingCache.remapValueChanges(signal.values, mapping) };
-        return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), error: undefined };
+          : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
+        const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
+        return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), semanticValues, error: undefined };
       });
-      const renderResults = await Promise.all(prepared.map(async (item) => {
-        if (item.error || !item.waveJson) return { ...item, rendered: undefined };
-        try { return { ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner) }; }
-        catch (error: unknown) { return { ...item, rendered: undefined, error }; }
-      }));
-      return renderResults.map((item) => {
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: any; readonly semanticValues?: readonly string[]; readonly error: Error | undefined; readonly rendered: any }> = [];
+      for (const item of prepared) {
+        if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
+        else {
+          try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
+          catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
+        }
+        // WaveDrom markup creation and SVG mounting are synchronous inside the
+        // adapter. On genuinely large documents, yield after each owner so the
+        // browser can paint and answer input without interleaving geometry
+        // reads with DOM writes. Smaller documents retain the lower-latency
+        // batch path; the renderer still yields between every batch.
+        if (yieldBetweenOwners) await nextBrowserFrame();
+      }
+      const results = renderResults.map((item) => {
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {
           if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
-          if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-geometry-ready");
+          if (item.request.signalId === document.timeline.referenceClock) {
+            context.markOpenPhase("reference-geometry-ready");
+            referenceGeometryReady = true;
+          }
           context.markOpenPhase("first-visible-wave-painted");
           context.invalidateSnapIndex();
           return { signalId: item.request.signalId, result: { waveDromRenders: 1, localGeometryBuilds: 1 } };
@@ -314,6 +339,8 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
           return { signalId: item.request.signalId, error };
         }
       });
+      if (referenceGeometryReady) context.onReferenceGeometryReady?.();
+      return results;
     },
     async mountWave(id, owner) {
       const item = (await this.mountWaveBatch?.([{ signalId: id, owner }]))?.[0];

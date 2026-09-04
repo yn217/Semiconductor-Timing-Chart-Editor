@@ -296,7 +296,7 @@ describe("pure Semantic Command planning", () => {
     const source = canonicalFixture();
     const session = new CommandHistorySession(source);
     const before = session.metrics();
-    const values = [{ start: 0, value: "0" }, { start: 2, value: "1", comment: "imported" }, { start: 6, value: "0" }];
+    const values = [{ start: 0, value: "0" }, { start: 2, value: "1", displayLabel: "READY", comment: "imported" }, { start: 6, value: "0" }];
     const result = session.execute({ id: commandId("cmd_replace_values"), type: "signal.replaceValues", signalId: "sig_data" as SignalId, values });
     expect(result.ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
@@ -304,6 +304,8 @@ describe("pure Semantic Command planning", () => {
     expect(session.historyState().undoDepth).toBe(1);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(source.signals.find((signal) => signal.id === "sig_data")?.values);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_data")?.values).toEqual(values);
   });
 });
 
@@ -413,6 +415,25 @@ describe("command execution and atomic history", () => {
     expect(session.execute({ id: commandId("cmd_group_move"), type: "group.move", groupId: group.id, index: 0 }).ok).toBe(true);
     expect(session.execute({ id: commandId("cmd_group_delete"), type: "group.delete", groupId: group.id }).ok).toBe(true);
     expect(session.getSnapshot().document.signalGroups.map((item) => item.id)).toEqual(["grp_main"]);
+  });
+
+  it("preserves signal source hierarchy and role when moving its group", () => {
+    const source = canonicalFixture();
+    const signal = { ...source.signals[1]!, role: "output" as const, source: { instancePath: ["dut", "core"], signalName: "payload" } };
+    const document = {
+      ...source,
+      signals: [source.signals[0]!, signal],
+      signalGroups: [
+        { ...source.signalGroups[0]!, rows: [signal.id] },
+        { id: "grp_tail" as GroupId, name: "Tail", rows: [source.signals[0]!.id] },
+      ],
+    };
+    const session = new CommandHistorySession(document);
+    expect(session.execute({ id: commandId("cmd_move_hierarchy_group"), type: "group.move", groupId: "grp_main" as GroupId, index: 1 })).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals.find((item) => item.id === signal.id)).toMatchObject({
+      role: "output",
+      source: { instancePath: ["dut", "core"], signalName: "payload" },
+    });
   });
 
   it("supports Signal create/delete and resets the clean and Redo baselines correctly", () => {

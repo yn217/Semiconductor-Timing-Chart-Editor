@@ -75,3 +75,27 @@ test("keeps invalid Group Band opacity draft-only", async ({ page }) => {
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
 });
+
+test("keeps valid Group Band previews out of Canonical and restores them on Cancel", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const groupHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']");
+  await groupHeader.locator("[data-role='tree-branch']").click();
+  const inspector = page.getByTestId("inspector");
+  const timingRow = host.locator("[data-role='timing-row'][data-group-id='grp_cycle_control']").first();
+  await inspector.getByLabel("Group show background").check();
+  await inspector.getByLabel("Group opacity").fill("0.6");
+  await inspector.getByLabel("Group extend").selectOption("waveform");
+  await inspector.getByLabel("Group show header").uncheck();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(timingRow).not.toHaveCSS("opacity", "0.6");
+  await inspector.getByTestId("cancel-inspector-draft").click();
+  await expect(inspector.getByLabel("Group extend")).toHaveValue("both");
+  await expect(inspector.getByLabel("Group show header")).toBeChecked();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+});

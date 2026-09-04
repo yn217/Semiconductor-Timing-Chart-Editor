@@ -73,7 +73,7 @@ export function useClipboardActions({ application, selection }: { application: E
     if (value.spacer && value.group) {
       setClipboard({ spacer: { spacer: value.spacer, groupId: value.group.id, index: value.group.rows.indexOf(value.spacer.id) } });
       setStatus(`Copied spacer ${value.spacer.id}`);
-    } else if (value.group) {
+    } else if (value.group && !value.spacer) {
       const rows = value.group.rows.flatMap((rowId) => value.document.signals.find((signal) => signal.id === rowId) ?? []);
       setClipboard({ group: { group: value.group, rows, sourceIndex: value.document.signalGroups.indexOf(value.group) } });
       setStatus(`Copied ${value.group.name} group`);
@@ -234,16 +234,20 @@ export function useClipboardActions({ application, selection }: { application: E
   };
   const setVisibility = (visible: boolean) => {
     const value = selected();
-    if (value.state.signalId) return application.execute({ id: nextCommandId("route_visibility"), type: "signal.setVisibility", signalId: value.state.signalId, visible });
+    const commands = value.signals
+      .filter(({ signal }) => (signal.display.visible !== false) !== visible)
+      .map(({ signal }) => ({ id: nextCommandId("route_visibility"), type: "signal.setVisibility" as const, signalId: signal.id, visible }));
+    if (commands.length > 1) return application.executeBatch(nextCommandId("route_visibility_selection"), commands);
+    if (commands.length === 1) return application.execute(commands[0]!);
     return undefined;
   };
   const move = (direction: -1 | 1) => {
     const value = selected();
-    if (value.state.signalId) {
+    if (value.signals.length === 1 && value.state.signalId) {
       const group = value.document.signalGroups.find((item) => item.rows.includes(value.state.signalId!));
       const index = group?.rows.indexOf(value.state.signalId) ?? -1;
       if (group && index >= 0 && index + direction >= 0 && index + direction < group.rows.length) return application.execute({ id: nextCommandId("home_move_signal"), type: "signal.move", signalId: value.state.signalId, targetGroupId: group.id, index: index + direction });
-    } else if (value.group) {
+    } else if (value.group && !value.spacer) {
       const index = value.document.signalGroups.findIndex((item) => item.id === value.group!.id);
       if (index >= 0 && index + direction >= 0 && index + direction < value.document.signalGroups.length) return application.execute({ id: nextCommandId("home_move_group"), type: "group.move", groupId: value.group.id, index: index + direction });
     }

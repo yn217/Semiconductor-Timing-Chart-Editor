@@ -5,7 +5,7 @@ import { defaultEventValue, EventRow, QuickValues } from "./event-table-componen
 import { nextCommandId } from "./command-id.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
-export function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => void }) {
+export function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
@@ -14,7 +14,7 @@ export function EventTable({ signal, cycleCount, onCommand }: { readonly signal:
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = signal.values.find((change) => change.start === selectedStart);
   const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
-  const emitValue = (nextValues: readonly ValueSignal["values"][number][]) => onCommand({ id: nextCommandId("replace_values"), type: "signal.replaceValues", signalId: signal.id, values: nextValues });
+  const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => onCommand({ id: nextCommandId("replace_values"), type: "signal.replaceValues", signalId: signal.id, values: nextValues });
   const addRow = () => onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start: nextStart, value });
   const duplicateRow = () => {
     if (!selected) return;
@@ -41,8 +41,9 @@ export function EventTable({ signal, cycleCount, onCommand }: { readonly signal:
           setImportStatus("Import rejected: expected a non-empty event values array.");
           return;
         }
-        emitValue(values as ValueSignal["values"]);
-        setImportStatus(`Imported ${values.length} event${values.length === 1 ? "" : "s"}`);
+        const result = emitValue(values as ValueSignal["values"]);
+        if (result.ok) setImportStatus(`Imported ${values.length} event${values.length === 1 ? "" : "s"}`);
+        else setImportStatus(`Import rejected: ${result.problems[0]?.message ?? "values failed canonical validation."}`);
       } catch {
         setImportStatus("Import rejected: invalid JSON.");
       }
