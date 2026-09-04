@@ -7,7 +7,7 @@ async function ready(page: Page) {
 }
 
 async function createTransaction(page: Page, name = "DMA Read", start = 2, end = 6) {
-  await page.getByTestId("ribbon").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
   const editor = page.getByTestId("transaction-editor");
@@ -142,10 +142,10 @@ test("Split View Home exposes command-backed Transaction actions", async ({ page
   await ready(page);
   await page.getByRole("button", { name: "Split", exact: true }).click();
   const home = page.getByTestId("ribbon");
-  const transactionGroup = home.locator(".transaction-home-group");
+  const transactionGroup = home.locator("[data-major-group='Transaction']");
   await expect(transactionGroup).toBeVisible();
   const surface = page.getByTestId("cycle-surface");
-  await transactionGroup.getByRole("button", { name: /Transaction/ }).click();
+  await transactionGroup.getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").last().click();
@@ -282,8 +282,8 @@ test("exports canonical Header/Footer through browser SVG, PNG and PDF", async (
 });
 
 test("copies deterministic SVG and PNG through browser Clipboard export", async ({ page }) => {
-  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: "http://127.0.0.1:4198" });
   await ready(page);
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
   await createTransaction(page, "Clipboard DMA", 2, 6);
   const surface = page.getByTestId("cycle-surface");
   const before = {
