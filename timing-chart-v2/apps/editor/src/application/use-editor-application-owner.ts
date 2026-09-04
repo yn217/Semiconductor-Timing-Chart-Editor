@@ -65,8 +65,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
 
   const execute = useCallback((command: SemanticCommand) => dispatchResult(runtime.session.execute(command), { operation: command.type, command }), [dispatchResult, runtime]);
   const executeBatch = useCallback((id: CommandId, commands: readonly SemanticCommand[]) => dispatchResult(runtime.session.executeBatch(id, commands), { operation: `batch:${id}`, batchId: id }), [dispatchResult, runtime]);
-  const undo = useCallback(() => { dispatchResult(runtime.session.undo(), { operation: "history.undo" }); }, [dispatchResult, runtime]);
-  const redo = useCallback(() => { dispatchResult(runtime.session.redo(), { operation: "history.redo" }); }, [dispatchResult, runtime]);
+  const undo = useCallback(() => dispatchResult(runtime.session.undo(), { operation: "history.undo" }), [dispatchResult, runtime]);
+  const redo = useCallback(() => dispatchResult(runtime.session.redo(), { operation: "history.redo" }), [dispatchResult, runtime]);
   const attachAcceptedHandler = useCallback((handler: AcceptedHandler) => {
     acceptedHandlerRef.current = handler;
     return () => { if (acceptedHandlerRef.current === handler) acceptedHandlerRef.current = undefined; };
