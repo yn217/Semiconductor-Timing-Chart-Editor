@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import type { AnnotationId, CanonicalDocument, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, ClockSignal, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -222,6 +222,25 @@ describe("deterministic document export", () => {
     };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
     expect(scene.edgeCounters.map((edge) => edge.cycle)).toEqual([0, 1]);
+  });
+
+  it("keeps edge counters independent for multiple Clock Signal IDs", () => {
+    const base = canonicalFixture();
+    const sourceClock = base.signals.find((signal): signal is ClockSignal => signal.type === "clock")!;
+    const firstClock: ClockSignal = { ...sourceClock, id: "sig_clk_a" as SignalId, name: "CLK_A", display: { ...sourceClock.display, name: "CLK_A" }, source: { ...sourceClock.source, signalName: "CLK_A" }, edgeCounter: { ...sourceClock.edgeCounter, show: true, mode: "rising", startNumber: 10, labelEvery: 1 } };
+    const secondClock: ClockSignal = { ...sourceClock, id: "sig_clk_b" as SignalId, name: "CLK_B", display: { ...sourceClock.display, name: "CLK_B" }, source: { ...sourceClock.source, signalName: "CLK_B" }, generator: { ...sourceClock.generator, start: 0, period: 4, phase: 1 }, edgeCounter: { ...sourceClock.edgeCounter, show: true, mode: "falling", startNumber: 40, labelEvery: 1 } };
+    const document = { ...base, timeline: { ...base.timeline, referenceClock: firstClock.id }, signals: [firstClock, secondClock, base.signals[1]!], signalGroups: [{ ...base.signalGroups[0]!, rows: [firstClock.id, secondClock.id, base.signals[1]!.id] }] };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const firstEdges = scene.edgeCounters.filter((edge) => edge.signalId === firstClock.id);
+    const secondEdges = scene.edgeCounters.filter((edge) => edge.signalId === secondClock.id);
+    expect(firstEdges.length).toBeGreaterThan(0);
+    expect(secondEdges.length).toBeGreaterThan(0);
+    expect(new Set(firstEdges.map((edge) => edge.label))).toContain("10");
+    expect(new Set(secondEdges.map((edge) => edge.label))).toContain("40");
+    expect(firstEdges.every((edge) => edge.kind === "rising")).toBe(true);
+    expect(secondEdges.every((edge) => edge.kind === "falling")).toBe(true);
+    expect(firstEdges.every((edge) => edge.signalId !== secondClock.id)).toBe(true);
+    expect(secondEdges.every((edge) => edge.signalId !== firstClock.id)).toBe(true);
   });
 
   it("compresses a collapsed TimeGroup into a shorter deterministic export when respecting folds", () => {
