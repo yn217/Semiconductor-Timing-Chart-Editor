@@ -538,6 +538,31 @@ test("edits a named Bookmark through one semantic operation and preserves it thr
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+  await page.getByRole("button", { name: "Delete Review Point", exact: true }).click();
+  await expect(page.getByTestId(/bookmark-jump-/)).toHaveCount(0);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+});
+
+test("saves and reopens an edited Time Group presentation exactly", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click();
+  await page.getByTestId(/time-group-edit-/).click();
+  const editor = page.getByTestId("time-group-editor");
+  await editor.getByLabel("Time Group name").fill("Saved Fold");
+  await editor.getByLabel("Time Group comment").fill("persisted");
+  await editor.getByLabel("Time Group fold label").fill("SAVED");
+  await editor.getByTestId("apply-time-group").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Recent", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByRole("button", { name: "// Saved Fold", exact: true })).toBeVisible();
+  await expect(page.getByTestId("cycle-ruler").locator("[data-time-group-id]")).toHaveCount(1);
 });
 
 test("renders multiple independent Axis Breaks through the shared mapping", async ({ page }) => {
