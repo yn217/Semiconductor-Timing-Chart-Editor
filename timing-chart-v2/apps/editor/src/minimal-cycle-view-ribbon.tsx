@@ -314,7 +314,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="verticalLine" />} onClick={() => insertAnnotation("verticalLine")}>Vertical Line</DsRibbonButton>
       </DsRibbonGroup></div>
     </div>}
-    {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></div>}
+    {tab === "Timeline" && <div className="ribbon-group timeline-group"><TimelineToolbar document={document} range={range} onRange={onRange} onCommand={onCommand} onCommandBatch={onCommandBatch} onNavigateBookmark={onNavigateBookmark} /><b>Timeline</b></div>}
     {tab === "Annotation" && <>
       <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
       <div className="ribbon-major-group" data-major-group="Font" aria-label="Font commands">

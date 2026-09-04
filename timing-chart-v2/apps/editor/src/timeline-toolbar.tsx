@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { BookmarkId, CanonicalDocument, GroupId, Signal, SignalGroup, SignalId, TimeGroupId } from "@timing-chart-v2/schema";
+import type { BookmarkId, CanonicalDocument, GroupId, Signal, SignalGroup, SignalId, TimeGroup, TimeGroupId } from "@timing-chart-v2/schema";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { nextCommandId } from "./command-id.js";
@@ -8,7 +8,7 @@ import { nextEntityId } from "./entity-id.js";
 import { EditorIconButton } from "./editor-icon.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
-export function TimelineToolbar({ document, range, onRange, onCommand, onNavigateBookmark }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onNavigateBookmark: (cycle: number) => void }) {
+export function TimelineToolbar({ document, range, onRange, onCommand, onCommandBatch, onNavigateBookmark }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => void; readonly onNavigateBookmark: (cycle: number) => void }) {
   const [count, setCount] = useState(1);
   const [destination, setDestination] = useState(8);
   const [editingGroupId, setEditingGroupId] = useState<TimeGroupId>();
@@ -43,6 +43,8 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onNavigat
     onCommand({ id: nextCommandId("time_group_update"), type: "timeGroup.update", timeGroupId: editingGroup.id, name: groupName, start: groupStart, end: groupEnd, comment: groupComment, presentation: { ...(editingGroup.presentation ?? {}), collapsed: groupCollapsed, foldStyle: groupCollapsed ? "axis-break" : "none", foldLabel: groupFoldLabel || groupName } });
     setEditingGroupId(undefined);
   };
+  const setTimeGroupCollapsed = (group: TimeGroup, collapsed: boolean) => onCommand({ id: nextCommandId(collapsed ? "time_group_collapse" : "time_group_expand"), type: "timeGroup.updatePresentation", timeGroupId: group.id, presentation: { ...(group.presentation ?? {}), collapsed, foldStyle: collapsed ? "axis-break" : "none", foldLabel: group.presentation?.foldLabel || group.name } });
+  const expandAllTimeGroups = () => onCommandBatch(document.timeGroups.filter((group) => group.presentation?.collapsed).map((group) => ({ id: nextCommandId("time_group_expand_all"), type: "timeGroup.updatePresentation" as const, timeGroupId: group.id, presentation: { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none" as const, foldLabel: group.presentation?.foldLabel || group.name } })));
   const setBoundary = (key: "start" | "end", value: number) => {
     if (key === "start") onRange({ start: Math.max(0, Math.min(value, range.end - 1)), end: range.end });
     else onRange({ start: range.start, end: Math.min(document.timeline.cycleCount, Math.max(value, range.start + 1)) });
@@ -56,13 +58,15 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onNavigat
     </div>
     <div className="timeline-subgroup timeline-insert-group" data-timeline-group="Insert" aria-label="Insert timeline commands">
       <label>Count<input aria-label="Timeline insert count" type="number" min="1" step="1" value={count} onChange={(event) => setCount(Math.max(1, Number(event.target.value)))} /></label>
+      <button type="button" aria-label="Add one cycle" data-testid="timeline-cycle-add" onClick={() => onCommand({ id: nextCommandId("timeline_add_one"), type: "timeline.insert", at: range.end, count: 1 })}><RibbonIcon name="i-plus" />Cycle Add</button>
+      <button type="button" aria-label="Add N cycles" data-testid="timeline-cycle-add-many" onClick={() => onCommand({ id: nextCommandId("timeline_add_many"), type: "timeline.insert", at: range.end, count })}><RibbonIcon name="i-plus" />N Cycle Add</button>
       <button type="button" data-v1-label="サイクル挿入" onClick={() => onCommand({ id: nextCommandId("timeline_before"), type: "timeline.insert", at: range.start, count })}><RibbonIcon name="i-plus" />Insert before</button>
       <button type="button" data-v1-label="後に挿入" onClick={() => onCommand({ id: nextCommandId("timeline_after"), type: "timeline.insert", at: range.end, count })}><RibbonIcon name="i-plus" />Insert after</button>
+      <button type="button" data-v1-label="範囲削除" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}><RibbonIcon name="i-delete" />Delete range</button>
       <b>Insert</b>
     </div>
     <div className="timeline-subgroup timeline-range-edit-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
       <label>From<output aria-label="Range edit from">{range.start}</output></label>
-      <button type="button" data-v1-label="範囲削除" onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })}><RibbonIcon name="i-delete" />Delete range</button>
       <label>To<input aria-label="Timeline destination" type="number" min="0" max={document.timeline.cycleCount} step="1" value={destination} onChange={(event) => setDestination(Math.max(0, Number(event.target.value)))} /></label>
       <button type="button" data-v1-label="範囲複製" onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })}><RibbonIcon name="i-duplicate" />Duplicate to</button>
       <button type="button" data-v1-label="範囲移動" onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })}><RibbonIcon name="i-move-to" />Move to</button>
@@ -79,9 +83,11 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onNavigat
       <b>Bookmark</b>
     </div>
     <div className="timeline-subgroup timeline-fold-group" data-timeline-group="Fold / Break" aria-label="Fold and break commands">
-      <button type="button" data-v1-label="軸ブレーク" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}><RibbonIcon name="i-gap" />Axis Break</button>
-      <div className="timeline-objects timeline-time-groups">
-        {document.timeGroups.map((group) => <span className="timeline-time-group" key={group.id} data-time-group-id={group.id}><button type="button" data-testid={`time-group-edit-${group.id}`} onClick={() => { setEditingGroupId(group.id); setGroupName(group.name); setGroupStart(group.start); setGroupEnd(group.end); setGroupComment(group.comment ?? ""); setGroupFoldLabel(group.presentation?.foldLabel ?? ""); setGroupCollapsed(group.presentation?.collapsed ?? false); }} title={`Edit ${group.name}`}>// {group.name}</button><EditorIconButton label={`Delete ${group.name}`} icon="close" onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })} /></span>)}
+      <div className="timeline-actions" aria-label="Time Group actions" style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 2, left: 3, pointerEvents: "auto", position: "absolute", right: 3, top: 3 }}><button type="button" aria-label="Create Time Group" data-testid="time-group-create" onClick={() => onCommand({ id: nextCommandId("time_group_create"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: false, foldStyle: "none" } } })}><RibbonIcon name="i-plus" />Create</button>
+      <button type="button" aria-label="Axis Break" data-v1-label="軸ブレーク" onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })}><RibbonIcon name="i-gap" />Break</button>
+      <button type="button" aria-label="Expand All" data-testid="time-group-expand-all" onClick={expandAllTimeGroups} disabled={!document.timeGroups.some((group) => group.presentation?.collapsed)}><RibbonIcon name="i-expand" />Expand</button></div>
+      <div className="timeline-objects timeline-time-groups" style={{ bottom: 18, height: 22, left: 3, overflow: "auto", position: "absolute", right: 3 }}>
+        {document.timeGroups.map((group) => <span className="timeline-time-group" key={group.id} data-time-group-id={group.id}><button type="button" data-testid={`time-group-edit-${group.id}`} onClick={() => { setEditingGroupId(group.id); setGroupName(group.name); setGroupStart(group.start); setGroupEnd(group.end); setGroupComment(group.comment ?? ""); setGroupFoldLabel(group.presentation?.foldLabel ?? ""); setGroupCollapsed(group.presentation?.collapsed ?? false); }} title={`Edit ${group.name}`}>// {group.name}</button><button type="button" data-testid={`time-group-${group.presentation?.collapsed ? "expand" : "collapse"}-${group.id}`} aria-label={`${group.presentation?.collapsed ? "Expand" : "Collapse"} ${group.name}`} onClick={() => setTimeGroupCollapsed(group, !group.presentation?.collapsed)}>{group.presentation?.collapsed ? "Expand" : "Collapse"}</button><EditorIconButton label={`Delete ${group.name}`} icon="close" onClick={() => onCommand({ id: nextCommandId("gap_delete"), type: "timeGroup.delete", timeGroupId: group.id })} /></span>)}
       </div>
       <b>Fold / Break</b>
     </div>

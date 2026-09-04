@@ -130,3 +130,27 @@ test("Tree Add and Insert Ribbon share the selected row and group insertion targ
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect.poll(async () => internalRows.count()).toBe(beforeGroupCount);
 });
+
+test("Timeline exposes shared N-cycle and Time Group presentation commands", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const timeline = page.getByTestId("timeline-editor");
+
+  await expect(timeline.getByRole("button", { name: "Add one cycle", exact: true })).toBeVisible();
+  await expect(timeline.getByRole("button", { name: "Add N cycles", exact: true })).toBeVisible();
+  await expect(timeline.getByRole("button", { name: "Create Time Group", exact: true })).toBeVisible();
+  await expect(timeline.getByRole("button", { name: "Axis Break", exact: true })).toBeVisible();
+  await expect(timeline.getByRole("button", { name: "Expand All", exact: true })).toBeDisabled();
+
+  await timeline.getByTestId("time-group-create").click();
+  await expect(timeline.getByRole("button", { name: "Collapse Group 2-4", exact: true })).toBeVisible();
+  await timeline.getByRole("button", { name: "Collapse Group 2-4", exact: true }).click();
+  await expect(timeline.getByRole("button", { name: "Expand Group 2-4", exact: true })).toBeVisible();
+  await expect(timeline.getByRole("button", { name: "Expand All", exact: true })).toBeEnabled();
+  await timeline.getByRole("button", { name: "Expand All", exact: true }).click();
+  await expect(timeline.getByRole("button", { name: "Collapse Group 2-4", exact: true })).toBeVisible();
+  await expect(timeline.getByRole("button", { name: "Expand All", exact: true })).toBeDisabled();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+});
