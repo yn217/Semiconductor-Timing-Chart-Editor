@@ -776,10 +776,10 @@ body { min-width: 1100px; }
    Buttons also now carry their own min-width + overflow:hidden (below) so
    a future content change degrades to legible 2-line wrapping or a clipped
    single button instead of bleeding into its neighbor again. */
-.editor-shell .timeline-group { width: 1010px; }
+.editor-shell .timeline-group { width: 1060px; }
 .editor-shell .timeline-group .timeline-toolbar {
   display: grid;
-  grid-template-columns: minmax(155px, 1fr) minmax(280px, 1fr) minmax(190px, 1fr) minmax(150px, 1fr) minmax(190px, 1fr);
+  grid-template-columns: minmax(155px, 1fr) minmax(320px, 1fr) minmax(206px, 1fr) minmax(150px, 1fr) minmax(190px, 1fr);
   align-items: stretch;
   gap: 2px;
   height: 92px;
@@ -816,7 +816,12 @@ body { min-width: 1100px; }
   text-align: center;
   pointer-events: none;
 }
-.editor-shell .timeline-subgroup > label { min-width: 0; flex-direction: column; gap: 2px; font-size: 8px; }
+.editor-shell .timeline-subgroup > label { flex: 0 0 auto; flex-direction: column; gap: 1px; font-size: 8px; padding-top: 3px; }
+/* Matches the button's own padding-top (3px) before its icon, and shrinks
+   the caption row + gap as far as the text stays legible -- so the
+   input/output box's top sits close to where a sibling button's icon
+   starts, instead of ~10px lower. */
+.editor-shell .timeline-subgroup > label > .timeline-field-label { display: flex; align-items: center; height: 9px; line-height: 1; }
 .editor-shell .timeline-subgroup > label > output { display: inline-flex; min-width: 42px; height: 22px; align-items: center; justify-content: center; border: 1px solid #b6c2d0; border-radius: 3px; background: #f5f7fa; color: #29425e; font-size: 10px; }
 .editor-shell .timeline-range-length { display: inline-flex; min-width: 52px; align-items: center; justify-content: center; color: #29425e; font-size: 8px; white-space: nowrap; }
 .editor-shell .timeline-subgroup input { width: 42px; min-width: 0; height: 22px; padding: 1px 3px; }
@@ -826,7 +831,27 @@ body { min-width: 1100px; }
    height:auto (overriding the fixed 24px from the shared .timeline-toolbar
    button rule above): a fixed height clipped the wrapped 2nd/3rd line
    vertically instead of letting the button grow to fit its own label. */
-.editor-shell .timeline-subgroup > button { min-width: 40px; height: auto; min-height: 24px; flex: 1 1 0; padding: 2px 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.05; text-align: center; }
+/* flex-direction: column (icon on top, label below), not the shared
+   .timeline-toolbar button's row layout (icon beside the label): a row
+   layout only leaves the label a sliver of width next to the icon, which
+   forced multi-word labels like "Cycle Add" to break mid-word ("Cycl"/
+   "e"/"Add") even once the whole button had plenty of width. Column
+   layout -- the same shape Home ribbon's DsRibbonButton already uses --
+   gives the label the button's full width to wrap into, at normal word
+   boundaries (overflow-wrap: anywhere -> break-word, so a break is only
+   forced when a single word still doesn't fit the full button width). */
+.editor-shell .timeline-subgroup > button { display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; min-width: 50px; height: auto; min-height: 24px; flex: 1 1 0; padding: 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: break-word; line-height: 1.05; text-align: center; }
+.editor-shell .timeline-subgroup > button svg { flex: 0 0 auto; }
+/* Insert/Range Edit mix label+input controls with plain buttons in the
+   same row; a label's caption text pushes its input down further than a
+   button's icon sits by default (the caption text needs its own line
+   height that a compact icon doesn't), so the icon and the input box
+   didn't line up even with both boxes' own tops matching. Nudge only
+   these two groups' icons down to the input's actual position -- Bookmark
+   and Fold/Break are all-button rows with nothing to line up against, so
+   their icons stay at the tighter default offset. */
+.editor-shell .timeline-insert-group > button svg,
+.editor-shell .timeline-range-edit-group > button svg { margin-top: 9px; }
 .editor-shell .timeline-subgroup .timeline-objects { min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; overflow: auto; }
 .editor-shell .timeline-subgroup .timeline-objects { position: relative; z-index: 2; }
 .editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
