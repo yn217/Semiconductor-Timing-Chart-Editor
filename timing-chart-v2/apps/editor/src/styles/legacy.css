@@ -858,7 +858,8 @@ body { min-width: 1100px; }
 }
 .editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects { flex-direction: row; }
 .editor-shell .view-slot-group { box-sizing: border-box; flex: 0 0 auto; }
-.editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: hidden; }
+.editor-shell .view-slot-group::after { content: none; }
+.editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: visible; }
 .editor-shell [data-ribbon-home] > .ds-ribbon-group > b { visibility: hidden; }
 /* Home packs more buttons per group than Insert/View -- one shared compact
    density rule (not a per-group override list) keeps every Home button the

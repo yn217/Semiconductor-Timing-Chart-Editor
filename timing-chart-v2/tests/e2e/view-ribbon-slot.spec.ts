@@ -32,6 +32,11 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async
   await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();
   const footerLabels = page.getByTestId("ribbon").locator(".view-slot-group > .ds-ribbon-group > b");
   await expect(footerLabels).toHaveCount(6);
+  await expect.poll(async () => footerLabels.evaluateAll((labels) => labels.map((label) => getComputedStyle(label).visibility))).toEqual(["visible", "visible", "visible", "visible", "visible", "visible"]);
+  expect(await page.getByTestId("ribbon").locator(".view-slot-group").evaluateAll((groups) => groups.map((group) => ({ labels: group.querySelectorAll(".ds-ribbon-group > b").length, pseudo: getComputedStyle(group, "::after").content })))).toEqual([
+    { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" },
+    { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" },
+  ]);
 
   const before = {
     revision: await surface.getAttribute("data-canonical-revision"),
