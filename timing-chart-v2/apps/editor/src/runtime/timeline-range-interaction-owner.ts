@@ -45,6 +45,11 @@ export class TimelineRangeInteractionOwner {
     const target = event.target instanceof Element ? event.target : undefined;
     const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
     if (event.button !== 0 || !this.context.isTimeDomainPointerTarget(event)) return;
+    // A click landing exactly on a rendered Ruler tick unambiguously means
+    // "this boundary" -- including the terminal (exclusive, cycleCount)
+    // tick, which the complete-geometry resolver does not always resolve
+    // correctly since it sits past the last rendered cycle. Only fall back
+    // to geometry when the pointer isn't over a rendered tick at all.
     const tick = onRuler ? target?.closest<HTMLElement>("[data-cycle]") : null;
     const rulerCycle = () => [...this.context.ruler.querySelectorAll<HTMLElement>("[data-cycle]")]
       .map((item) => ({ cycle: Number(item.dataset.sourceCycle ?? item.dataset.cycle), distance: Math.abs(item.getBoundingClientRect().x - event.clientX) }))
@@ -74,9 +79,6 @@ export class TimelineRangeInteractionOwner {
   pointerUp = (event: PointerEvent): void => {
     const drag = this.#drag.current;
     if (!drag) return;
-    const cycle = [...this.context.ruler.querySelectorAll<HTMLElement>("[data-cycle]")]
-      .map((item) => ({ cycle: Number(item.dataset.sourceCycle ?? item.dataset.cycle), distance: Math.abs(item.getBoundingClientRect().x - event.clientX) }))
-      .sort((left, right) => left.distance - right.distance)[0]?.cycle ?? this.context.cycleBoundaryAtX(event.clientX) ?? drag.start;
     if (!drag.moved) {
       this.context.setSelectedCyclePreview(drag.selectedCycle);
       this.clearPreview();
@@ -86,6 +88,14 @@ export class TimelineRangeInteractionOwner {
       event.preventDefault();
       return;
     }
+    // The drag PREVIEW (PointerMove) resolves the released boundary from
+    // the complete timeline geometry (cycleBoundaryAtX), never the Ruler's
+    // DOM ticks -- those are a bounded presentation sample on long
+    // timelines and can omit the boundary the preview showed. PointerUp
+    // must commit through that same authority, or the committed range
+    // endpoint can silently differ from the one the user watched during
+    // the drag (#313).
+    const cycle = this.context.cycleBoundaryAtX(event.clientX) ?? drag.start;
     const cycleCount = this.context.getCycleCount();
     const next = rangeFromBoundaries(drag.anchor, cycle, cycleCount);
     const selectedCycle = Math.min(next.start, cycleCount);
