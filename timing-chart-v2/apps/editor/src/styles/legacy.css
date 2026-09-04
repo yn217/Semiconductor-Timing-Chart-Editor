@@ -767,16 +767,19 @@ body { min-width: 1100px; }
 .editor-shell .insert-ribbon .ds-ribbon-button { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
 .editor-shell .insert-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
 .editor-shell .insert-ribbon .ds-ribbon-button:disabled { opacity: .42; }
-/* 760px / the old 5-track ratio below predate the current Range/Insert/Range
-   Edit content (2 inputs + an output in Range; 3 buttons + 2 fields in Range
-   Edit) and left every column narrower than its own content needs -- Range
-   was crushed to ~115px against a ~150px minimum, and Range Edit's "Move to"
-   button clipped even at a wide viewport. Widened to the real per-column
-   minimums (measured against actual rendered content) plus headroom. */
-.editor-shell .timeline-group { width: 992px; }
+/* Column widths track each subgroup's actual current content (re-measured
+   whenever Timeline toolbar buttons are added/moved -- Insert grew from 3
+   buttons to 5 (Cycle Add / N Cycle Add / Insert before / Insert after /
+   Delete range moved in from Range Edit) and Fold/Break grew from 1 button
+   to 3 (Create / Break / Expand), which is exactly the kind of drift that
+   crushed labels into unreadable, bleeding-together fragments last time.
+   Buttons also now carry their own min-width + overflow:hidden (below) so
+   a future content change degrades to legible 2-line wrapping or a clipped
+   single button instead of bleeding into its neighbor again. */
+.editor-shell .timeline-group { width: 1010px; }
 .editor-shell .timeline-group .timeline-toolbar {
   display: grid;
-  grid-template-columns: minmax(155px, 1fr) minmax(200px, 1fr) minmax(310px, 1fr) minmax(150px, 1fr) minmax(140px, 1fr);
+  grid-template-columns: minmax(155px, 1fr) minmax(280px, 1fr) minmax(190px, 1fr) minmax(150px, 1fr) minmax(190px, 1fr);
   align-items: stretch;
   gap: 2px;
   height: 92px;
@@ -817,7 +820,13 @@ body { min-width: 1100px; }
 .editor-shell .timeline-subgroup > label > output { display: inline-flex; min-width: 42px; height: 22px; align-items: center; justify-content: center; border: 1px solid #b6c2d0; border-radius: 3px; background: #f5f7fa; color: #29425e; font-size: 10px; }
 .editor-shell .timeline-range-length { display: inline-flex; min-width: 52px; align-items: center; justify-content: center; color: #29425e; font-size: 8px; white-space: nowrap; }
 .editor-shell .timeline-subgroup input { width: 42px; min-width: 0; height: 22px; padding: 1px 3px; }
-.editor-shell .timeline-subgroup > button { min-width: 0; flex: 1 1 0; padding: 2px 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.05; text-align: center; }
+/* min-width floor (not 0): a button that's allowed to shrink to nothing
+   lets its wrapped text visually bleed into the next button's box instead
+   of just clipping within its own -- overflow:hidden here contains that.
+   height:auto (overriding the fixed 24px from the shared .timeline-toolbar
+   button rule above): a fixed height clipped the wrapped 2nd/3rd line
+   vertically instead of letting the button grow to fit its own label. */
+.editor-shell .timeline-subgroup > button { min-width: 40px; height: auto; min-height: 24px; flex: 1 1 0; padding: 2px 3px; overflow: hidden; text-overflow: clip; white-space: normal; overflow-wrap: anywhere; line-height: 1.05; text-align: center; }
 .editor-shell .timeline-subgroup .timeline-objects { min-width: 0; flex: 1 1 auto; flex-direction: column; gap: 2px; overflow: auto; }
 .editor-shell .timeline-subgroup .timeline-objects { position: relative; z-index: 2; }
 .editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
@@ -829,7 +838,15 @@ body { min-width: 1100px; }
 .editor-shell .timeline-subgroup .timeline-objects button { min-width: 0; max-width: 100%; padding: 1px 3px; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group,
 .editor-shell .timeline-subgroup.timeline-fold-group { flex-direction: column; align-items: stretch; justify-content: center; }
-.editor-shell .timeline-subgroup.timeline-bookmark-group { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 19px minmax(0, 1fr); align-content: stretch; }
+/* row 1 32px, not 19px: "Add marker" wraps to 2 lines at this column width
+   (Previous/Next/List are single words and fit one line) -- the shorter
+   fixed row was clipping that second line. */
+/* align-items: stretch, not the flex-start every other .timeline-subgroup
+   uses (that rule is for mixed label+button rows; this grid row is all
+   buttons) -- flex-start let each button size to its own content instead
+   of filling the 42px row, which was clipping "Add marker"'s wrapped
+   third line regardless of how tall the row track itself was. */
+.editor-shell .timeline-subgroup.timeline-bookmark-group { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 56px minmax(0, 1fr); align-content: stretch; align-items: stretch; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group > button { grid-row: 1; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects { grid-column: 1 / -1; grid-row: 2; }
 .editor-shell .timeline-subgroup.timeline-bookmark-group,
@@ -840,7 +857,7 @@ body { min-width: 1100px; }
 .editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects,
 .editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects button,
 .editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects button { pointer-events: auto; }
-.editor-shell .timeline-subgroup.timeline-bookmark-group > button { flex: 0 0 19px; min-width: 0; padding-inline: 1px; font-size: 8px; }
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button { min-width: 0; padding-inline: 1px; font-size: 8px; }
 .editor-shell .timeline-subgroup.timeline-fold-group { grid-column: 5; }
 .editor-shell .timeline-subgroup.timeline-fold-group > button { flex: 0 0 auto; }
 .editor-shell .timeline-group .timeline-subgroup button[data-v1-label] {
