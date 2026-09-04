@@ -1,2 +1,61 @@
-/* Responsive ownership boundary. Existing media rules remain in legacy.css
-   until serial migration; no values are changed in B0.5. */
+/* Responsive ownership is kept after the compatibility cascade so these
+   rules retain the precedence they had at legacy.css EOF. */
+@media (max-width: 720px) {
+  .clock-edge-counter { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+}
+@media (max-width: 430px) {
+  .clock-edge-counter { grid-template-columns: minmax(0, 1fr); }
+  .clock-edge-counter h2, .clock-edge-counter button[type="submit"] { grid-column: 1; }
+}
+@media (max-width: 1300px) {
+  .editor-shell .view-slot-group[data-major-group="Show"] { width: 360px; }
+  .editor-shell .view-slot-group[data-major-group="Panels"] { width: 330px; }
+  .editor-shell .view-slot-group[data-major-group="Guides"] { width: 224px; }
+  .editor-shell .view-slot-group[data-major-group="Zoom"] { width: 320px; }
+  .editor-shell .view-slot-group[data-major-group="Workspace"] { width: 235px; }
+  .editor-shell .view-slot-group[data-major-group="Layout"] { width: 130px; }
+  .editor-shell .view-show-group { width: 100%; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); }
+  .editor-shell .view-panels-group { width: 100%; }
+  .editor-shell .view-guides-group { width: 100%; }
+  .editor-shell .view-zoom-group { width: 100%; grid-template-columns: 40px 52px 40px 40px minmax(0, 1fr); }
+  .editor-shell .view-workspace-settings .ds-ribbon-select { width: 108px; max-width: 108px; }
+  .editor-shell .view-workspace-group { width: 100%; gap: 4px; }
+  .editor-shell .view-layout-group { width: 100%; }
+}
+@media (min-width: 1101px) and (max-width: 1300px) {
+  .ribbon { zoom: .8; width: 125%; }
+}
+@media (min-width: 1301px) and (max-width: 1500px) {
+  .ribbon { zoom: .9; width: 111.111%; }
+}
+@media (max-width: 1100px) {
+  body { min-width: 0; }
+  .ribbon { zoom: .8; width: 125%; }
+  .home-file-group, .history-group, .clipboard-group, .edit-group, .selection-group, .visibility-group, .arrange-group, .properties-group, .home-review-group, .home-export-group { display: none; }
+  .home-overflow-group { display: flex; align-items: center; }
+  .editor-shell .ribbon-major-group[data-major-group="File"] { display: none; }
+  .editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 240px; }
+  .editor-shell .ribbon-major-group[data-major-group="Time"] { width: 230px; }
+  .editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 140px; }
+  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 250px; }
+  .editor-shell .ribbon-major-group[data-major-group="Display"] { width: 130px; }
+  .editor-shell .ribbon-major-group[data-major-group="Options"] { width: 64px; }
+  .desktop-workspace { grid-template-columns: 250px minmax(0, 1fr) 240px; }
+  :root { --gui-left-width: 250px; --gui-inspector-width: 240px; }
+}
+@media (max-width: 950px) {
+  .editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 210px; }
+  .editor-shell .ribbon-major-group[data-major-group="Time"] { width: 200px; }
+  .editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 120px; }
+  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 250px; }
+  .editor-shell .ribbon-major-group[data-major-group="Display"] { width: 120px; }
+}
+@media (max-width: 1100px) {
+  .desktop-workspace { grid-template-columns: 250px minmax(0, 1fr) 240px; }
+  .column-headings { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 170px) minmax(420px, 1fr); }
+  .surface-host [data-role="timing-chart-surface"] { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 170px) var(--wave-width, 640px); }
+  .surface-host [data-role="frozen-label-rows"] { left: var(--gui-left-width) !important; }
+  .cycle-ruler { --time-domain-left: calc(var(--gui-left-width) + var(--gui-frozen-width, 170px)); }
+  .geometry-grid { left: calc(var(--gui-left-width) + var(--gui-frozen-width, 170px)); }
+}
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; } }
