@@ -995,9 +995,17 @@ export function MinimalCycleView() {
     const onContextMenu = (event: MouseEvent) => {
       if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")) return;
        event.preventDefault();
-       menuOriginRef.current = event.target.closest<HTMLElement>("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")
-         ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-       onSelect(event);
+       const menuTarget = event.target.closest<HTMLElement>("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']");
+       menuOriginRef.current = menuTarget ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+       // #195: right-clicking a member that is already part of the current
+       // multi-selection must not collapse it down to just that member --
+       // only rebuild the selection when the target isn't already selected,
+       // so Context Menu commands keep operating on the full preserved set.
+       const rowId = menuTarget?.dataset.rowId;
+       const annotationId = menuTarget?.dataset.annotationId;
+       const alreadySelected = (rowId !== undefined && selection.refs.signalIds.current.has(rowId as SignalId))
+         || (annotationId !== undefined && selection.refs.annotationIds.current.has(annotationId as AnnotationId));
+       if (!alreadySelected) onSelect(event);
        setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
     };
     const onCanvasClick = (event: MouseEvent) => {

@@ -9,7 +9,7 @@ test("Comment Row clipboard preserves content, uses fresh IDs, and supports Cut 
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   await page.getByRole("button", { name: "Insert", exact: true }).click();
-  await page.getByTestId("ribbon").getByRole("button", { name: "Comment Row", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Comment", exact: true }).click();
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 9");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 

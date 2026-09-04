@@ -310,6 +310,38 @@ test("Context Menu exposes shared commands", async ({ page }) => {
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+test("right-click on an already-selected member of a multi-selection preserves it (#195)", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const request = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  const readyRow = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']");
+  const validRow = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']");
+  await request.click();
+  await readyRow.click({ modifiers: ["Control"] });
+  await validRow.click({ modifiers: ["Control"] });
+  await expect(page.getByTestId("selection-status")).toHaveText("3 signals");
+  // Right-clicking a member already inside the 3-signal selection must not
+  // collapse it down to that one member.
+  await readyRow.locator("[data-role='frozen-signal-name']").click({ button: "right" });
+  const menu = page.getByTestId("signal-context-menu");
+  await expect(menu).toBeVisible();
+  await expect(page.getByTestId("selection-status")).toHaveText("3 signals");
+  await menu.getByRole("menuitem", { name: "Copy", exact: true }).click();
+  await expect(page.getByTestId("ribbon").getByTestId("clipboard-status")).toHaveText("Copied 3 signals");
+  await page.keyboard.press("Escape");
+  // Right-clicking an unselected row switches the context target to it, as
+  // a fresh single selection (the other documented deterministic policy).
+  const requestOnly = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']");
+  const validOnly = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']");
+  await requestOnly.click();
+  await validOnly.click({ modifiers: ["Control"] });
+  await expect(page.getByTestId("selection-status")).toHaveText("2 signals");
+  const unselected = host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']");
+  await unselected.locator("[data-role='frozen-signal-name']").click({ button: "right" });
+  await expect(page.getByTestId("signal-context-menu")).toBeVisible();
+  await expect(page.getByTestId("selection-status")).toHaveText("READY");
+});
+
 for (const viewport of [{ width: 1672, height: 941 }, { width: 1366, height: 768 }, { width: 1280, height: 720 }]) {
   test(`clamps the non-Home context menu at every viewport corner (${viewport.width}x${viewport.height})`, async ({ page }) => {
     await page.setViewportSize(viewport);
