@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { generatePerformanceDocument, summarizePerformance, type PerformanceProfile } from "@timing-chart-v2/testing";
 import { validateCanonicalDocument } from "@timing-chart-v2/schema";
 import type { CommandId, SignalId } from "@timing-chart-v2/schema";
-import { CommandHistorySession } from "@timing-chart-v2/history";
+import { CommandHistorySession, HISTORY_RETENTION_POLICY } from "@timing-chart-v2/history";
 
 describe("Phase 13 performance fixtures and statistics", () => {
   it.each([
@@ -36,7 +36,42 @@ describe("large-document edit history", () => {
     for (let index = 0; index < 100; index += 1) expect(session.undo().ok).toBe(true);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 100, dirty: false });
     for (let index = 0; index < 100; index += 1) expect(session.redo().ok).toBe(true);
-    expect(session.historyMetrics()).toEqual({ commandAttempts: 100, committedActions: 100, undoOperations: 100, redoOperations: 100 });
+    expect(session.historyMetrics()).toEqual({ commandAttempts: 100, committedActions: 100, undoOperations: 100, redoOperations: 100, evictedEntries: 0, retainedEntryCount: 100, retainedSnapshotEstimate: 200 });
     expect(session.getSnapshot().document.signals[999]).toBe(unchanged);
   });
+
+  it("bounds a 10k-action session without changing the current document or cloning for eviction", () => {
+    const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 50, cycleCount: 100 }));
+    const initial = session.getSnapshot();
+    const untouched = initial.document.signals[49];
+    session.markClean();
+
+    for (let index = 0; index < 10_000; index += 1) {
+      expect(session.execute({ id: `cmd_retention_rename_${index}` as CommandId, type: "signal.rename", signalId: "sig_perf_1" as SignalId, name: `RETENTION_${index}` }).ok).toBe(true);
+    }
+
+    expect(session.historyState()).toMatchObject({
+      undoDepth: HISTORY_RETENTION_POLICY.maxEntries,
+      redoDepth: 0,
+      dirty: true,
+    });
+    expect(session.historyMetrics()).toMatchObject({
+      commandAttempts: 10_000,
+      committedActions: 10_000,
+      evictedEntries: 9_000,
+      retainedEntryCount: HISTORY_RETENTION_POLICY.maxEntries,
+      retainedSnapshotEstimate: HISTORY_RETENTION_POLICY.maxEntries * 2,
+    });
+    expect(session.getSnapshot().document.signals[49]).toBe(untouched);
+
+    for (let index = 0; index < HISTORY_RETENTION_POLICY.maxEntries; index += 1) expect(session.undo().ok).toBe(true);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: HISTORY_RETENTION_POLICY.maxEntries, dirty: true });
+    expect(session.undo()).toMatchObject({ ok: false, reason: "no-op" });
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.signals.find((signal) => signal.id === "sig_perf_1")?.name).toBe("RETENTION_9000");
+
+    expect(session.execute({ id: "cmd_retention_branch" as CommandId, type: "signal.rename", signalId: "sig_perf_1" as SignalId, name: "BRANCHED" }).ok).toBe(true);
+    expect(session.historyState()).toMatchObject({ canRedo: false, redoDepth: 0, dirty: true });
+    expect(session.historyMetrics()).toMatchObject({ retainedEntryCount: 2, retainedSnapshotEstimate: 4 });
+  }, 30_000);
 });

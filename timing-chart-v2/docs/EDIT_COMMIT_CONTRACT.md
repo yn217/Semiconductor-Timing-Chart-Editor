@@ -39,3 +39,18 @@ history entry.
 - Undo restores the same prior Canonical snapshot regardless of entry point.
 - View-only Bottom operations never change Canonical, History, Dirty, or
   validation counters.
+
+## History retention policy
+
+`CommandHistorySession` retains at most 1,000 committed actions across the
+combined Undo and Redo stacks.  A normal command remains one history step;
+coalescing is currently disabled.  When the limit is exceeded, only the
+oldest retained Undo entry is evicted.  Eviction removes a history reference
+and never mutates the current Canonical document or creates a new entry.
+
+History entries continue to use structurally shared canonical snapshot
+references.  Retention accounting reports entry count and a lightweight
+two-snapshot-reference estimate; it never serializes, hashes, deep-clones, or
+stringifies the document.  The clean marker remains a document reference, so
+Save/Mark Clean stays correct even when the saved state is older than the
+retained Undo horizon.

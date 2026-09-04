@@ -15,7 +15,7 @@ import {
   type CanonicalStore,
 } from "@timing-chart-v2/core";
 import { isStableId, type CanonicalDocument, type CommandId, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
-import type { HistoryController, HistoryEntry, HistoryMetrics, HistoryState, RecordedAction } from "./types.js";
+import { HISTORY_RETENTION_POLICY, type HistoryController, type HistoryEntry, type HistoryMetrics, type HistoryState, type RecordedAction } from "./types.js";
 
 const noHistory = (operation: "Undo" | "Redo"): CommandResult => ({ ok: false, reason: "no-op", problems: [{ code: "NO_HISTORY", path: "$", message: `${operation} history is empty.` }] });
 
@@ -35,7 +35,15 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
   #undo: HistoryEntry[] = [];
   #redo: HistoryEntry[] = [];
   #cleanDocument: Readonly<CanonicalDocument>;
-  #historyMetrics: HistoryMetrics = { commandAttempts: 0, committedActions: 0, undoOperations: 0, redoOperations: 0 };
+  #historyMetrics: HistoryMetrics = {
+    commandAttempts: 0,
+    committedActions: 0,
+    undoOperations: 0,
+    redoOperations: 0,
+    evictedEntries: 0,
+    retainedEntryCount: 0,
+    retainedSnapshotEstimate: 0,
+  };
 
   constructor(initial: CanonicalDocument | ParsedCanonicalDocument) {
     this.#documents = new DocumentSession(initial);
@@ -66,6 +74,24 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
 
   historyMetrics(): HistoryMetrics {
     return Object.freeze({ ...this.#historyMetrics });
+  }
+
+  #syncRetentionMetrics(): void {
+    const retainedEntryCount = this.#undo.length + this.#redo.length;
+    this.#historyMetrics = {
+      ...this.#historyMetrics,
+      retainedEntryCount,
+      retainedSnapshotEstimate: retainedEntryCount * 2,
+    };
+  }
+
+  #evictOldestEntries(): void {
+    while (this.#undo.length + this.#redo.length > HISTORY_RETENTION_POLICY.maxEntries) {
+      if (this.#undo.length > 0) this.#undo.shift();
+      else this.#redo.shift();
+      this.#historyMetrics = { ...this.#historyMetrics, evictedEntries: this.#historyMetrics.evictedEntries + 1 };
+    }
+    this.#syncRetentionMetrics();
   }
 
   execute(command: SemanticCommand): CommandResult {
@@ -114,6 +140,7 @@ export class CommandHistorySession implements CanonicalStore, SemanticCommandDis
       if (this.#undo.length > HISTORY_RETENTION_LIMIT) this.#undo.splice(0, this.#undo.length - HISTORY_RETENTION_LIMIT);
       this.#redo = [];
       this.#historyMetrics = { ...this.#historyMetrics, committedActions: this.#historyMetrics.committedActions + 1 };
+      this.#evictOldestEntries();
       return { ok: true, snapshot: after, changeSet };
     } catch (error) {
       if (error instanceof CanonicalCommitError) return { ok: false, reason: error.reason === "stale" ? "stale" : "invalid", problems: error.problems.length > 0 ? error.problems : [{ code: "STALE_REVISION", path: "$", message: error.message }] };
