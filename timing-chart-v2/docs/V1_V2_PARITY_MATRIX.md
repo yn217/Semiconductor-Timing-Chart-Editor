@@ -18,9 +18,12 @@ The machine-readable source of truth is
 `Command Owner`, `View Owner`, `Export Owner`, `Unit`, `E2E`, `Visual`,
 `Save/Open`, `Performance`, and `Notes`.
 
-The independent pre-V2 source universe is recorded in
-[`v1-v2-source-manifest.json`](./v1-v2-source-manifest.json). The parity
-checker compares that manifest with both the matrix coverage and the contract
+The complete pre-V2 GitHub Issue universe is recorded in
+[`v1-v2-source-manifest.json`](./v1-v2-source-manifest.json). It was enumerated
+from all repository Issues (`state=all`, filtered to issue number `< 161`),
+including closed, superseded, canceled and umbrella Issues; PR-only numbers
+are excluded. The current capture contains 155 Issues. The parity checker
+compares that manifest with both the matrix coverage and the contract
 assignments; an Issue cannot be silently removed from both the inventory and
 its assignment list.
 
