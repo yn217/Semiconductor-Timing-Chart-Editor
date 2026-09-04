@@ -154,3 +154,31 @@ test("Timeline exposes shared N-cycle and Time Group presentation commands", asy
   await expect(timeline.getByRole("button", { name: "Expand All", exact: true })).toBeDisabled();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
 });
+
+test("Timeline workflow groups keep explicit cycle semantics and aligned controls", async ({ page }) => {
+  await page.setViewportSize({ width: 1672, height: 941 });
+  await page.goto("/");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const timeline = page.getByTestId("timeline-editor");
+  const groups = timeline.locator("[data-timeline-group]");
+  await expect(groups).toHaveCount(5);
+  await expect(timeline.locator("[data-timeline-group='Range']")).toContainText("Start cycle");
+  await expect(timeline.locator("[data-timeline-group='Range']")).toContainText("End cycle");
+  await expect(timeline.getByTestId("timeline-selected-length")).toHaveText("Length 2");
+  await expect(timeline.locator("[data-timeline-group='Insert']")).toContainText("Count");
+  for (const label of ["Insert before", "Insert after", "Delete range", "Duplicate to", "Move to", "Previous bookmark", "Next bookmark", "List bookmarks", "Axis Break"]) {
+    await expect(timeline.getByRole("button", { name: label, exact: true })).toBeVisible();
+  }
+  const metrics = await timeline.evaluate((root) => {
+    const rootBox = root.getBoundingClientRect();
+    const groupBoxes = [...root.querySelectorAll<HTMLElement>("[data-timeline-group]")].map((group) => {
+      const box = group.getBoundingClientRect();
+      const children = [...group.querySelectorAll<HTMLElement>("input, output, button, label")].filter((item) => getComputedStyle(item).display !== "none");
+      return { top: box.top, bottom: box.bottom, overflow: children.some((child) => { const childBox = child.getBoundingClientRect(); return childBox.left < box.left - 1 || childBox.right > box.right + 1 || childBox.top < box.top - 1 || childBox.bottom > box.bottom + 1; }) };
+    });
+    return { root: { top: rootBox.top, bottom: rootBox.bottom }, groups: groupBoxes };
+  });
+  expect(metrics.groups.every((group) => !group.overflow), JSON.stringify(metrics)).toBe(true);
+  expect(new Set(metrics.groups.map((group) => group.top)).size).toBe(1);
+  expect(new Set(metrics.groups.map((group) => group.bottom)).size).toBe(1);
+});
