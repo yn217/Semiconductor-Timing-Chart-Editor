@@ -48,8 +48,8 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   }
   const timeGroup = page.locator(".v8-compact-time-group");
   await expect(timeGroup).toBeVisible();
-  await expect(timeGroup.getByRole("button", { name: "Align interval" })).toBeVisible();
-  await expect(timeGroup.getByRole("button", { name: "Auto Layout" })).toBeVisible();
+  await expect(timeGroup.getByRole("button", { name: "Open Timeline interval editor" })).toBeVisible();
+  await expect(timeGroup.getByRole("button", { name: "Normalize row spacing" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Display commands")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
   const treeSearch = page.getByTestId("signal-tree-search-top");
@@ -154,10 +154,10 @@ test("applies the v8 Signal Inspector style controls as one semantic operation",
 test("V8 Home secondary actions stay connected to real navigation and semantic commands", async ({ page }) => {
   await page.goto("/?visual-reference");
   const ribbon = page.getByTestId("ribbon");
-  await ribbon.getByRole("button", { name: "Align interval" }).click();
+  await ribbon.getByRole("button", { name: "Open Timeline interval editor" }).click();
   await expect(page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true })).toHaveClass(/active/);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await ribbon.getByRole("button", { name: "Group" }).click();
+  await ribbon.getByRole("button", { name: "Create Time Group" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");

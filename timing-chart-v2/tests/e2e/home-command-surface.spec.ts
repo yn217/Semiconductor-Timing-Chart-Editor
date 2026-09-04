@@ -58,6 +58,20 @@ test("Home exposes grouped command surfaces and provides stable-ID Select All", 
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
 });
 
+test("Home command labels describe their observable action", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const layout = page.getByTestId("ribbon").locator(".home-layout-group");
+  await expect(layout.getByRole("button", { name: "Open Timeline interval editor", exact: true })).toHaveAttribute("title", "Open Timeline to edit the selected interval.");
+  await expect(layout.getByRole("button", { name: "Create Time Group", exact: true })).toHaveAttribute("title", "Create a Time Group for the selected timeline range.");
+  await expect(layout.getByRole("button", { name: "Normalize row spacing", exact: true })).toHaveAttribute("title", "Normalize row height and signal spacing to the supported minimums.");
+  await expect(layout.getByRole("button", { name: "Align interval", exact: true })).toHaveCount(0);
+  await expect(layout.getByRole("button", { name: "Group", exact: true })).toHaveCount(0);
+  await expect(layout.getByRole("button", { name: "Auto Layout", exact: true })).toHaveCount(0);
+  await layout.getByRole("button", { name: "Open Timeline interval editor", exact: true }).click();
+  await expect(page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true })).toHaveClass(/active/);
+});
+
 test("Copy is view-only and Duplicate/Paste use one canonical command with fresh stable IDs", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

@@ -225,4 +225,19 @@ describe("RowLayout and projection invariants", () => {
     expect(after.viewportRowsVisited).toBeLessThan(100);
     expect(after.viewportBinarySearchSteps).toBeLessThan(100);
   });
+
+  it("uses absolute-Y binary ranges for many small groups", () => {
+    const document = generatePerformanceDocument({ signalCount: 1000, cycleCount: 100 });
+    document.signalGroups = document.signals.map((signal, index) => ({ id: `grp_small_${index}` as GroupId, name: `Group ${index}`, rows: [signal.id], spacingAfter: 0 }));
+    const service = new DefaultProjectionService();
+    const first = service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport: { viewportStartY: 0, viewportEndY: 500, overscanBefore: 48, overscanAfter: 48, pinnedRowIds: [] } });
+    const before = service.diagnostics();
+    const middle = Math.floor(first.totalHeight / 2);
+    service.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport: { viewportStartY: middle, viewportEndY: middle + 500, overscanBefore: 48, overscanAfter: 48, pinnedRowIds: [] }, previous: first });
+    const after = service.diagnostics();
+    expect(after.fullVisibleRowScans).toBe(before.fullVisibleRowScans);
+    expect(after.viewportRowsVisited - before.viewportRowsVisited).toBeLessThan(40);
+    expect(after.groupHeadersVisited - before.groupHeadersVisited).toBeLessThan(40);
+    expect(after.viewportBinarySearchSteps - before.viewportBinarySearchSteps).toBeLessThan(100);
+  });
 });
