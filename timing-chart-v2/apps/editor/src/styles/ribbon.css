@@ -543,6 +543,14 @@
 .font-style-button:disabled, .font-style-family:disabled, .font-style-size:disabled { opacity: .4; }
 .font-style-color { cursor: pointer; }
 .font-style-color input[type="color"] { width: 12px; height: 12px; padding: 0; border: none; margin-left: auto; cursor: pointer; }
+/* `:disabled` only ever matches the actual form control (the color
+   <input> inside), never the wrapping <label> -- so a disabled Color
+   control still showed a pointer cursor and full-opacity label text even
+   though the input itself couldn't be interacted with. This class (set
+   whenever the caller's `disabled` prop is true) disables the whole
+   control's appearance, matching every other disabled font-style-button. */
+.font-style-color-disabled { cursor: not-allowed; opacity: .4; }
+.font-style-color-disabled input[type="color"] { cursor: not-allowed; }
 .font-style-family { width: 90px; height: 18px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 1px 5px; font-size: 10px; }
 .font-style-size { width: 60px; height: 18px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 1px 3px; font-size: 10px; }
 .editor-shell .annotation-shapes-group { display: flex; align-items: center; gap: 3px; padding-inline: 6px; }
