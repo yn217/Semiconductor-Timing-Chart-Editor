@@ -120,6 +120,10 @@ export interface AnnotationOverlayPrimitive {
    * structural here (not imported from @timing-chart-v2/schema) -- renderer
    * intentionally has no dependency on the canonical schema package. */
   readonly style?: Readonly<Record<string, unknown>>;
+  /** Degrees, additive on top of any anchor-derived angle already computed
+   * for line-shaped overlays. */
+  readonly rotation?: number;
+  readonly align?: "left" | "center" | "right";
 }
 
 export interface Point { readonly x: number; readonly y: number }

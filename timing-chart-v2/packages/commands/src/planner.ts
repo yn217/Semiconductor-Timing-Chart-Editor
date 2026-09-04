@@ -1040,6 +1040,88 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
+    case "annotation.bringToFront": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (index === document.annotations.length - 1) return fail("no-op", "NO_OP", "$", "Annotation is already at the front.");
+      const annotations = document.annotations.filter((item) => item.id !== annotation.id);
+      annotations.push(annotation);
+      const changeSet: ChangeSet = { annotationOrder: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.sendToBack": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (index === 0) return fail("no-op", "NO_OP", "$", "Annotation is already at the back.");
+      const annotations = document.annotations.filter((item) => item.id !== annotation.id);
+      annotations.unshift(annotation);
+      const changeSet: ChangeSet = { annotationOrder: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.setRotation": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (!Number.isFinite(command.rotation)) return fail("invalid", "NON_FINITE_OFFSET", "$.rotation", "Annotation rotation must be finite.");
+      if ((annotation.rotation ?? 0) === command.rotation) return fail("no-op", "NO_OP", "$", "Annotation rotation is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, rotation: command.rotation };
+      const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.setAlign": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (annotation.align === command.align) return fail("no-op", "NO_OP", "$", "Annotation alignment is unchanged.");
+      const { align: _previousAlign, ...withoutAlign } = annotation;
+      const annotations = [...document.annotations]; annotations[index] = command.align === undefined ? withoutAlign : { ...withoutAlign, align: command.align };
+      const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.setLocked": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if ((annotation.locked ?? false) === command.locked) return fail("no-op", "NO_OP", "$", "Annotation lock state is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, locked: command.locked };
+      const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.matchSpan": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (!annotation.start || !annotation.end) return fail("invalid", "ANNOTATION_NO_SPAN", "$.annotationId", `Annotation type '${annotation.type}' has no start/end span to match.`);
+      if (!Number.isFinite(command.spanCycles) || command.spanCycles <= 0) return fail("invalid", "NON_FINITE_OFFSET", "$.spanCycles", "Span must be a positive, finite cycle count.");
+      const currentSpan = annotation.end.cycle - annotation.start.cycle;
+      if (currentSpan === command.spanCycles) return fail("no-op", "NO_OP", "$", "Annotation span already matches.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, end: { ...annotation.end, cycle: annotation.start.cycle + command.spanCycles } };
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotationGroup.create": {
+      if (!isStableId(command.group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.group.id", "Annotation Group ID must be stable.");
+      const existingGroups = document.annotationGroups ?? [];
+      if (existingGroups.some((group) => group.id === command.group.id)) return fail("invalid", "DUPLICATE_ID", "$.group.id", `Annotation Group '${command.group.id}' already exists.`);
+      if (command.group.annotationIds.length < 2) return fail("invalid", "ANNOTATION_GROUP_MEMBERS_REQUIRED", "$.group.annotationIds", "An Annotation Group needs at least 2 members.");
+      const knownAnnotationIds = new Set(document.annotations.map((item) => item.id));
+      const missing = command.group.annotationIds.find((memberId) => !knownAnnotationIds.has(memberId));
+      if (missing) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.group.annotationIds", `Annotation '${missing}' does not exist.`);
+      const alreadyGrouped = new Set(existingGroups.flatMap((group) => group.annotationIds));
+      const grouped = command.group.annotationIds.find((memberId) => alreadyGrouped.has(memberId));
+      if (grouped) return fail("invalid", "ANNOTATION_ALREADY_GROUPED", "$.group.annotationIds", `Annotation '${grouped}' already belongs to a group.`);
+      const changeSet: ChangeSet = { annotationGroups: [command.group.id], annotationStyle: command.group.annotationIds };
+      return { ok: true, document: { ...document, annotationGroups: [...existingGroups, command.group] }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotationGroup.delete": {
+      const existingGroups = document.annotationGroups ?? [];
+      const group = existingGroups.find((item) => item.id === command.groupId);
+      if (!group) return fail("invalid", "ANNOTATION_GROUP_NOT_FOUND", "$.groupId", `Annotation Group '${command.groupId}' does not exist.`);
+      const changeSet: ChangeSet = { annotationGroups: [group.id], annotationStyle: group.annotationIds };
+      return { ok: true, document: { ...document, annotationGroups: existingGroups.filter((item) => item.id !== group.id) }, changeSet, inverseChangeSet: changeSet };
+    }
     case "timeline.setReferenceClock": {
       const referenceClock = command.referenceClock;
       if (referenceClock !== undefined) {

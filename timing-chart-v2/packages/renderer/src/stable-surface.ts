@@ -314,6 +314,21 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       renderOverlay(owner, primitive);
       changes += 1;
     }
+    // Z-order = DOM order = paint order (plain stacking, no z-index used).
+    // Owners are otherwise only ever appended once on creation and never
+    // touched again, so a caller that reorders `primitives` (bring to
+    // front / send to back) needs this reconciliation or the visible
+    // stacking never changes. Only reorder when it actually differs --
+    // appendChild-to-move is cheap, but comparing first avoids doing it on
+    // every routine update for documents with many overlays.
+    const desiredOrder = primitives.map((primitive) => primitive.id);
+    const currentOrder = Array.from(layers.overlays.children, (child) => (child as HTMLElement).dataset.annotationId);
+    if (desiredOrder.length === currentOrder.length && desiredOrder.some((id, index) => id !== currentOrder[index])) {
+      for (const id of desiredOrder) {
+        const owner = this.#overlayOwners.get(id);
+        if (owner) layers.overlays.append(owner);
+      }
+    }
     if (changes > 0) this.#counters = { ...this.#counters, overlayUpdates: this.#counters.overlayUpdates + changes };
     this.#publishCounters();
   }
@@ -545,15 +560,20 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   const second = primitive.anchors[1] ?? first;
   const dx = second.x - first.x;
   const dy = second.y - first.y;
+  // Additive on top of any anchor-derived angle below -- never replaces it,
+  // so line-shaped overlays keep auto-orienting from their two anchors and
+  // this only rotates further on top of that.
+  const rotationDeg = primitive.rotation ?? 0;
+  const rotateSuffix = rotationDeg === 0 ? "" : ` rotate(${rotationDeg}deg)`;
   if (primitive.shape === "point") {
-    body.style.transform = `translate(${first.x}px, ${first.y}px)`;
+    body.style.transform = `translate(${first.x}px, ${first.y}px)${rotateSuffix}`;
     body.dataset.annotationField = first.field;
   } else if (primitive.shape === "vertical") {
-    body.style.transform = `translateX(${first.x}px)`;
+    body.style.transform = `translateX(${first.x}px)${rotateSuffix}`;
     body.style.height = `${primitive.surfaceHeight}px`;
     body.dataset.annotationField = first.field;
   } else if (primitive.shape === "range") {
-    body.style.transform = `translate(${Math.min(first.x, second.x)}px, 0px)`;
+    body.style.transform = `translate(${Math.min(first.x, second.x)}px, 0px)${rotateSuffix}`;
     body.style.width = `${Math.max(2, Math.abs(dx))}px`;
     body.style.height = `${primitive.surfaceHeight}px`;
     body.dataset.annotationField = first.field;
@@ -573,15 +593,16 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     polyline.setAttribute("opacity", String(primitive.opacity ?? 0.55));
     svg.append(polyline);
     body.append(svg);
+    if (rotationDeg !== 0) body.style.transform = `rotate(${rotationDeg}deg)`;
     body.dataset.annotationField = first.field;
   } else {
     if (primitive.lineType === "orthogonal") {
-      body.style.transform = `translate(${Math.min(first.x, second.x)}px, ${Math.min(first.y, second.y)}px)`;
+      body.style.transform = `translate(${Math.min(first.x, second.x)}px, ${Math.min(first.y, second.y)}px)${rotateSuffix}`;
       body.style.width = `${Math.max(2, Math.abs(dx))}px`;
       body.style.height = `${Math.max(2, Math.abs(dy))}px`;
       body.dataset.orthogonalDirection = `${dx < 0 ? "left" : "right"}-${dy < 0 ? "up" : "down"}`;
     } else {
-      body.style.transform = `translate(${first.x}px, ${first.y}px) rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
+      body.style.transform = `translate(${first.x}px, ${first.y}px) rotate(${Math.atan2(dy, dx) * 180 / Math.PI + rotationDeg}deg)`;
       body.style.width = `${Math.max(2, Math.hypot(dx, dy))}px`;
     }
     body.dataset.annotationField = first.field;
@@ -591,6 +612,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   label.dataset.annotationLabel = "true";
   label.textContent = primitive.label;
   applyTextStyle(label, parseTextStyle(primitive.style));
+  if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
   label.style.transform = `translate(${(first.x + second.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(first.y + second.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;
   const handles = primitive.anchors.map((anchor) => {
     const handle = document.createElement("span");
@@ -809,7 +831,7 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
  * Signal/CommentRow display.style and Annotation.style alike) into typed,
  * safe-to-apply CSS values. One validation pass, reused by every entity
  * kind that can carry this style -- no second copy of these regexes. */
-function parseTextStyle(style: Record<string, unknown> | undefined): { readonly color?: string | undefined; readonly background?: string | undefined; readonly fontWeight?: string | undefined; readonly fontStyle?: string | undefined; readonly fontFamily?: string | undefined; readonly fontSize?: number | undefined; readonly textDecoration?: string | undefined } {
+function parseTextStyle(style: Record<string, unknown> | undefined): { readonly color?: string | undefined; readonly background?: string | undefined; readonly fontWeight?: string | undefined; readonly fontStyle?: string | undefined; readonly fontFamily?: string | undefined; readonly fontSize?: number | undefined; readonly textDecoration?: string | undefined; readonly lineHeight?: number | undefined } {
   const source = style ?? {};
   return {
     color: typeof source.color === "string" && /^#[0-9a-f]{3,8}$/i.test(source.color) ? source.color : undefined,
@@ -819,6 +841,7 @@ function parseTextStyle(style: Record<string, unknown> | undefined): { readonly 
     fontFamily: typeof source.fontFamily === "string" && source.fontFamily.length <= 120 ? source.fontFamily : undefined,
     fontSize: typeof source.fontSize === "number" && source.fontSize >= 6 && source.fontSize <= 48 ? source.fontSize : undefined,
     textDecoration: typeof source.textDecoration === "string" && /^(|underline|line-through|underline line-through)$/.test(source.textDecoration) ? source.textDecoration : undefined,
+    lineHeight: typeof source.lineHeight === "number" && source.lineHeight >= 1 && source.lineHeight <= 3 ? source.lineHeight : undefined,
   };
 }
 
@@ -832,6 +855,7 @@ function applyTextStyle(element: HTMLElement, parsed: ReturnType<typeof parseTex
   if (parsed.fontFamily) element.style.fontFamily = parsed.fontFamily; else element.style.removeProperty("font-family");
   if (parsed.fontSize) element.style.fontSize = `${parsed.fontSize}px`; else element.style.removeProperty("font-size");
   if (parsed.textDecoration !== undefined) element.style.textDecoration = parsed.textDecoration; else element.style.removeProperty("text-decoration");
+  if (parsed.lineHeight) element.style.lineHeight = String(parsed.lineHeight); else element.style.removeProperty("line-height");
 }
 
 function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {

@@ -4,7 +4,7 @@ import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, screenWidth?: number, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -20,8 +20,13 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   rangeBand.setAttribute("aria-hidden", "true");
   rangeBand.hidden = true;
   const ticks: HTMLElement[] = [];
-  const terminalPoint = geometry.find({ signalId: axisOwnerSignalId, cycle: mapping.displayCycleCount, point: "cycle-start" })?.point;
-  const scale = actualScreenScale ?? forcedScale ?? (screenWidth === undefined || terminalPoint === undefined ? 1 : screenWidth / Math.max(1, terminalPoint.x + 24));
+  // Fixed pixel-per-cycle by default: 1 local-geometry unit = 1px at 100%
+  // zoom, independent of the visible pane's width. Any shrink-to-fit is an
+  // explicit, on-demand action (Fit All / Fit Selection, which set zoom
+  // directly -- see createTimelineNavigationController) rather than
+  // something every render silently redoes. `forcedScale` still lets a
+  // resolved scale persist across re-renders once established.
+  const scale = actualScreenScale ?? forcedScale ?? 1;
   let finalX = 0;
   for (const display of presentationCycles(mapping.displayCycleCount)) {
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
@@ -65,7 +70,7 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   element.replaceChildren(rangeBand, ...ticks, ...overlays);
   element.dataset.source = "local-geometry";
   element.parentElement?.setAttribute("data-source", "local-geometry");
-  const targetWidth = forcedScale === undefined && screenWidth !== undefined ? Math.ceil(screenWidth) : Math.ceil((finalX + 24) * scale);
+  const targetWidth = Math.ceil((finalX + 24) * scale);
   element.style.width = `${targetWidth}px`;
   const widthOwner = element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
   widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);

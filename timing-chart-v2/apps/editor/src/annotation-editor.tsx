@@ -61,7 +61,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       <output data-testid="annotation-preview-status">Preview {previewRevision > 0 ? `updated ${previewRevision}` : "ready"}</output>
       <output data-testid="annotation-import-status">{importStatus}</output>
     </div>
-    <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} />
+    <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} onCommand={onCommand} />
     <FontStyleToolbar idPrefix="annotation-font" style={annotation.style} onChange={applyFontStyle} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
     <form className="annotation-properties" onSubmit={(event) => {

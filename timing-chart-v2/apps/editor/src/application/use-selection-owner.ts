@@ -7,6 +7,7 @@ export type SelectionState = Readonly<{
   groupId: GroupId | undefined;
   spacerId: SpacerId | undefined;
   annotationId: AnnotationId | undefined;
+  annotationIds: ReadonlySet<AnnotationId>;
   transactionId: TransactionId | undefined;
 }>;
 type SelectionKind = "signal" | "group" | "spacer" | "annotation" | "transaction" | "none";
@@ -22,6 +23,7 @@ function initialState(signalId: SignalId | undefined): SelectionState {
     groupId: undefined,
     spacerId: undefined,
     annotationId: undefined,
+    annotationIds: new Set(),
     transactionId: undefined,
   };
 }
@@ -47,6 +49,11 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
     const signalId = primary && ids.has(primary) ? primary : [...ids][0];
     commit({ ...initialState(signalId), signalIds: ids }, signalId === undefined ? "none" : "signal");
   };
+  const selectAnnotations = (annotationIds: ReadonlySet<AnnotationId>, primary?: AnnotationId) => {
+    const ids = new Set(annotationIds);
+    const annotationId = primary && ids.has(primary) ? primary : [...ids][0];
+    commit({ ...initialState(undefined), annotationId, annotationIds: ids }, annotationId === undefined ? "none" : "annotation");
+  };
 
   return {
     state,
@@ -57,6 +64,7 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
       groupId: { get current() { return stateRef.current.groupId; } },
       spacerId: { get current() { return stateRef.current.spacerId; } },
       annotationId: { get current() { return stateRef.current.annotationId; } },
+      annotationIds: { get current() { return stateRef.current.annotationIds; } },
       transactionId: { get current() { return stateRef.current.transactionId; } },
     },
     configure: (effects: SelectionEffects) => { effectsRef.current = effects; },
@@ -69,10 +77,16 @@ export function useSelectionOwner(initialSignalId?: SignalId) {
     selectSignals,
     selectGroup: (groupId: GroupId) => commit({ ...initialState(undefined), groupId }, "group"),
     selectSpacer: (groupId: GroupId, spacerId: SpacerId) => commit({ ...initialState(undefined), groupId, spacerId }, "spacer"),
-    selectAnnotation: (annotationId: AnnotationId) => commit({ ...initialState(undefined), annotationId }, "annotation"),
+    selectAnnotation: (annotationId: AnnotationId, additive = false) => {
+      const ids = additive ? new Set(stateRef.current.annotationIds) : new Set<AnnotationId>();
+      if (ids.has(annotationId)) ids.delete(annotationId); else ids.add(annotationId);
+      if (ids.size === 0) ids.add(annotationId);
+      selectAnnotations(ids, annotationId);
+    },
+    selectAnnotations,
     selectTransaction: (transactionId: TransactionId) => commit({ ...initialState(undefined), transactionId }, "transaction"),
-    selectTarget: (target: Partial<Omit<SelectionState, "signalIds">> & { signalIds?: ReadonlySet<SignalId> }) => {
-      const next = { ...initialState(undefined), ...target, signalIds: new Set(target.signalIds ?? []) };
+    selectTarget: (target: Partial<Omit<SelectionState, "signalIds" | "annotationIds">> & { signalIds?: ReadonlySet<SignalId>; annotationIds?: ReadonlySet<AnnotationId> }) => {
+      const next = { ...initialState(undefined), ...target, signalIds: new Set(target.signalIds ?? []), annotationIds: new Set(target.annotationIds ?? (target.annotationId ? [target.annotationId] : [])) };
       const kind: SelectionKind = next.signalId ? "signal" : next.groupId ? "group" : next.spacerId ? "spacer" : next.annotationId ? "annotation" : next.transactionId ? "transaction" : "none";
       commit(next, kind);
     },

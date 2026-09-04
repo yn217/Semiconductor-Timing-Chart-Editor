@@ -32,6 +32,7 @@ export function createNewDocumentFromProductTemplate(template: CanonicalDocument
     ...template,
     document: { ...template.document, id: documentId, title: "Untitled Timing Chart" },
     annotations: [],
+    annotationGroups: [],
     bookmarks: [],
     timeGroups: [],
     transactions: [],

@@ -33,7 +33,7 @@ export const cycleDocument: CanonicalDocument = {
     { id: groupId("grp_cycle_scratch"), name: "Scratch", rows: [] },
   ],
   signals,
-  bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+  bookmarks: [], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
   checkSettings: {},

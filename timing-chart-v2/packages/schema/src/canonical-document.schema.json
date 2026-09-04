@@ -37,6 +37,7 @@
     "bookmarks": { "type": "array", "items": { "$ref": "#/$defs/bookmark" } },
     "timeGroups": { "type": "array", "items": { "$ref": "#/$defs/timeGroup" } },
     "annotations": { "type": "array", "items": { "$ref": "#/$defs/annotation" } },
+    "annotationGroups": { "type": "array", "items": { "$ref": "#/$defs/annotationGroup" } },
     "legend": { "$ref": "#/$defs/legend" },
     "layout": { "$ref": "#/$defs/layout" },
     "transactions": { "type": "array", "items": { "$ref": "#/$defs/transaction" } },
@@ -97,6 +98,15 @@
         "style": { "$ref": "#/$defs/groupStyle" }
       }
     },
+    "annotationGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "annotationIds"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stableId" }, "name": { "type": "string", "minLength": 1 },
+        "annotationIds": { "type": "array", "items": { "$ref": "#/$defs/stableId" } }
+      }
+    },
     "groupStyle": {
       "type": "object",
       "additionalProperties": false,
@@ -155,7 +165,7 @@
     },
     "annotation": {
       "type": "object", "additionalProperties": false, "required": ["id", "type", "label", "visible"],
-      "properties": { "id": { "$ref": "#/$defs/stableId" }, "type": { "enum": ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace"] }, "label": { "type": "string" }, "visible": { "type": "boolean" }, "color": { "type": "string" }, "comment": { "type": "string" }, "anchor": { "$ref": "#/$defs/anchor" }, "start": { "$ref": "#/$defs/anchor" }, "end": { "$ref": "#/$defs/anchor" }, "from": { "$ref": "#/$defs/anchor" }, "to": { "$ref": "#/$defs/anchor" }, "labelOffset": { "$ref": "#/$defs/offset" }, "style": { "$ref": "#/$defs/jsonObject" }, "lineType": { "enum": ["straight", "orthogonal", "curve", "diagonal"] }, "arrowhead": { "enum": ["end", "start", "bidirectional", "none"] }, "sourceSignalId": { "$ref": "#/$defs/stableId" }, "traceOffsetCycles": { "type": "number" }, "opacity": { "type": "number", "minimum": 0, "maximum": 1 } }
+      "properties": { "id": { "$ref": "#/$defs/stableId" }, "type": { "enum": ["text", "callout", "verticalLine", "range", "bracket", "highlight", "marker", "measurement", "arrow", "dependency", "timingRegion", "ghostTrace", "rectangle", "ellipse", "connector", "textbox"] }, "label": { "type": "string" }, "visible": { "type": "boolean" }, "color": { "type": "string" }, "comment": { "type": "string" }, "anchor": { "$ref": "#/$defs/anchor" }, "start": { "$ref": "#/$defs/anchor" }, "end": { "$ref": "#/$defs/anchor" }, "from": { "$ref": "#/$defs/anchor" }, "to": { "$ref": "#/$defs/anchor" }, "labelOffset": { "$ref": "#/$defs/offset" }, "style": { "$ref": "#/$defs/jsonObject" }, "lineType": { "enum": ["straight", "orthogonal", "curve", "diagonal"] }, "arrowhead": { "enum": ["end", "start", "bidirectional", "none"] }, "sourceSignalId": { "$ref": "#/$defs/stableId" }, "traceOffsetCycles": { "type": "number" }, "opacity": { "type": "number", "minimum": 0, "maximum": 1 }, "rotation": { "type": "number" }, "align": { "enum": ["left", "center", "right"] }, "locked": { "type": "boolean" } }
     },
     "bookmark": { "type": "object", "additionalProperties": false, "required": ["id", "name", "start"], "properties": { "id": { "$ref": "#/$defs/stableId" }, "name": { "type": "string", "minLength": 1 }, "start": { "type": "number", "minimum": 0 }, "comment": { "type": "string" } } },
     "timeGroup": { "type": "object", "additionalProperties": false, "required": ["id", "name", "start", "end"], "properties": { "id": { "$ref": "#/$defs/stableId" }, "name": { "type": "string", "minLength": 1 }, "category": { "type": "string" }, "start": { "type": "number", "minimum": 0 }, "end": { "type": "number", "exclusiveMinimum": 0 }, "comment": { "type": "string" }, "presentation": { "type": "object", "additionalProperties": false, "properties": { "collapsed": { "type": "boolean" }, "foldStyle": { "enum": ["none", "compact", "axis-break"] }, "foldLabel": { "type": "string" }, "resumeLabelAnchorId": { "$ref": "#/$defs/stableId" } } } } },

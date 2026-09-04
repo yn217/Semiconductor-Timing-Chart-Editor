@@ -94,6 +94,12 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .surface-host [data-annotation-shape="line"][data-line-type="curve"] [data-role="annotation-body"] { height: 10px; border-radius: 50%; border-top-width: 2px; }
 .surface-host [data-arrowhead="end"] [data-role="annotation-body"]::after, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::after { content: ""; position: absolute; right: -1px; top: -5px; border-width: 4px 0 4px 7px; border-style: solid; border-color: transparent transparent transparent var(--annotation-color); }
 .surface-host [data-arrowhead="start"] [data-role="annotation-body"]::before, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::before { content: ""; position: absolute; left: -1px; top: -5px; border-width: 4px 7px 4px 0; border-style: solid; border-color: transparent var(--annotation-color) transparent transparent; }
+/* Ellipse/rectangle share the "range" shape's rect body; ellipse just
+   rounds it. Textbox shares the "point" shape's plain label box -- it just
+   drops the point-shape's dot marker since the label itself already reads
+   as a bordered box (see annotation-label rule below). */
+.surface-host [data-annotation-type="ellipse"] [data-role="annotation-body"] { border-radius: 50%; }
+.surface-host [data-annotation-type="textbox"] [data-role="annotation-body"] { display: none; }
 .surface-host [data-role="annotation-label"] { z-index: 4; width: max-content; max-width: 180px; padding: 2px 5px; border: 1px solid color-mix(in srgb, var(--annotation-color) 55%, white); border-radius: 3px; background: #fffffff2; color: #25334a; font-size: 10px; cursor: move; }
 .surface-host [data-role="annotation-handle"] { z-index: 5; width: 8px; height: 8px; margin: -4px; border: 1px solid white; border-radius: 50%; background: var(--annotation-color); cursor: crosshair; opacity: 0; }
 .surface-host [data-role="annotation-owner"]:focus [data-role="annotation-handle"], .surface-host [data-role="annotation-owner"][data-selected="true"] [data-role="annotation-handle"] { opacity: 1; }
@@ -131,7 +137,8 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .timeline-toolbar label { display: flex; align-items: center; gap: 4px; }
 .timeline-toolbar input { width: 52px; height: 26px; border: 1px solid #b6c2d0; border-radius: 3px; padding: 2px 5px; }
 .timeline-actions, .timeline-objects { display: flex; gap: 4px; }
-.timeline-toolbar button { height: 26px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #29425e; padding: 3px 7px; }
+.timeline-toolbar button { display: inline-flex; align-items: center; gap: 4px; height: 26px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #29425e; padding: 3px 7px; }
+.timeline-toolbar button svg { width: 12px; height: 12px; flex: 0 0 auto; }
 .timeline-actions button:nth-child(3) { border-color: #d0a4a4; color: #8a3030; }
 .timeline-objects { min-width: 0; overflow-x: auto; }
 .timeline-objects button { max-width: 130px; overflow: hidden; background: #f2f5f9; font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
@@ -143,15 +150,45 @@ button, input, select { font: inherit; font-size: var(--font-ui); }
 .view-toolbar { display: flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 10px; border-bottom: 1px solid #ccd5e0; background: #f7fafc; color: #405269; font-size: 10px; }
 .view-toolbar button { height: 23px; border: 1px solid #b5c2d0; border-radius: 3px; background: white; color: #29425e; }
 .view-toolbar output { min-width: 38px; text-align: center; }
-.font-style-toolbar { display: flex; align-items: center; gap: 5px; padding: 8px 12px; border-bottom: 1px solid #e0e5ec; }
-.font-style-button { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #29425e; }
-.font-style-button svg { width: 15px; height: 15px; }
+.font-style-toolbar { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-bottom: 1px solid #e0e5ec; }
+/* Bold/Italic/Underline stacked 3 rows tall (PowerPoint Clipboard-group
+   packing) instead of spread horizontally -- keeps the toolbar narrow. */
+.font-style-toggles { display: flex; flex-direction: column; gap: 0; }
+.font-style-fields { display: flex; flex-direction: column; gap: 2px; }
+/* Small, flat icon+label rows -- same icon scale as the app's Undo/Redo
+   quick-access icons, not full-size PowerPoint ribbon buttons. The label
+   is always visible here (there's no room to hide it and still read as a
+   row), title still gives the native hover tooltip. */
+.font-style-button { display: inline-flex; align-items: center; gap: 4px; width: 84px; height: 16px; padding-inline: 3px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #29425e; font-size: 9px; line-height: 1; text-align: left; }
+.font-style-button svg { width: 11px; height: 11px; flex: 0 0 auto; }
+.font-style-button span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .font-style-button:hover { background: #eaf3fc; }
 .font-style-button[aria-pressed="true"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
 .font-style-button:disabled, .font-style-family:disabled, .font-style-size:disabled { opacity: .4; }
-.font-style-family { width: 110px; height: 26px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 2px 6px; font-size: 11px; }
-.font-style-size { width: 48px; height: 26px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 2px 4px; font-size: 11px; }
+.font-style-color { cursor: pointer; }
+.font-style-color input[type="color"] { width: 12px; height: 12px; padding: 0; border: none; margin-left: auto; cursor: pointer; }
+.font-style-family { width: 90px; height: 18px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 1px 5px; font-size: 10px; }
+.font-style-size { width: 60px; height: 18px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 1px 3px; font-size: 10px; }
 .editor-shell .home-annotation-font-group, .editor-shell .annotation-font-group { display: flex; align-items: center; padding-inline: 6px; }
+.editor-shell .annotation-shapes-group { display: flex; align-items: center; gap: 3px; padding-inline: 6px; }
+.editor-shell .annotation-paragraph-group { display: flex; align-items: center; gap: 3px; padding-inline: 6px; }
+/* Arrange group: the 3 most-used ops as a stacked icon-row column (reusing
+   FontStyleToolbar's row styling) plus a dropdown for the rest -- both
+   patterns side by side, per the chosen mockup. */
+.editor-shell .annotation-arrange-group { display: flex; align-items: center; padding-inline: 6px; }
+.arrange-group { display: flex; align-items: center; gap: 6px; }
+.arrange-rows { display: flex; flex-direction: column; }
+.arrange-dropdown { position: relative; }
+.arrange-dropdown-trigger { display: flex; align-items: center; gap: 3px; height: 36px; padding: 0 6px; border: 1px solid #b9c5d3; border-radius: 4px; background: white; color: #29425e; font-size: 9px; }
+.arrange-dropdown-trigger:hover { background: #eaf3fc; }
+.arrange-dropdown-trigger svg:first-child { width: 15px; height: 15px; }
+.arrange-dropdown-trigger svg:last-child { width: 9px; height: 9px; opacity: .6; }
+.arrange-menu { position: absolute; top: calc(100% + 3px); left: 0; z-index: 20; display: flex; flex-direction: column; width: 150px; padding: 4px 0; border: 1px solid #b9c5d3; border-radius: 4px; background: white; box-shadow: 0 3px 10px rgba(30, 41, 59, .18); }
+.arrange-menu button { display: flex; align-items: center; gap: 7px; padding: 5px 10px; border: none; background: transparent; color: #29425e; font-size: 11px; text-align: left; }
+.arrange-menu button svg { width: 13px; height: 13px; flex: 0 0 auto; }
+.arrange-menu button:hover:not(:disabled) { background: #eaf3fc; }
+.arrange-menu button:disabled { opacity: .4; }
+.arrange-menu-sep { height: 1px; margin: 3px 0; background: #e0e5ec; }
 .annotation-properties { display: flex; align-items: end; gap: 10px; padding: 12px; border-bottom: 1px solid #e0e5ec; }
 .annotation-properties label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
 .annotation-properties input:not([type="checkbox"]), .annotation-properties select { width: 150px; height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 3px 7px; }
@@ -190,6 +227,18 @@ body { min-width: 1100px; }
 .home-overflow-menu strong { grid-column: 1 / -1; margin-top: 3px; color: #405875; font-size: 10px; }
 .home-overflow-menu button { min-height: 26px; padding: 3px 7px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; text-align: left; }
 .home-overflow-menu button:hover { background: var(--gui-hover-bg); }.home-overflow-menu button:disabled { opacity: .4; }
+.find-replace-panel { position: fixed; z-index: 1000; display: flex; flex-direction: column; gap: 6px; width: 300px; max-width: calc(100vw - 16px); padding: 10px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; overflow: auto; font-size: 11px; }
+.find-replace-panel label { display: flex; flex-direction: column; gap: 2px; color: #405875; font-size: 10px; font-weight: 650; }
+.find-replace-panel input { height: 26px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; font-size: 11px; }
+.find-replace-panel output { color: #607188; font-size: 10px; }
+.find-replace-preview { display: flex; flex-direction: column; gap: 2px; max-height: 140px; margin: 0; padding: 4px 6px; overflow-y: auto; border: 1px solid #e1e7ee; border-radius: 3px; background: #fbfcfe; list-style: none; }
+.find-replace-preview li { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #304761; }
+.find-replace-preview li svg { width: 10px; height: 10px; flex: 0 0 auto; color: #90a0b3; }
+.find-replace-preview .find-replace-more { color: #90a0b3; font-style: italic; }
+.find-replace-actions { display: flex; gap: 6px; }
+.find-replace-actions button { height: 26px; padding: 3px 10px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; }
+.find-replace-actions button:disabled { opacity: .4; }
+.find-replace-actions button[data-testid="find-replace-apply"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
 .ribbon-tool { min-width: 47px; height: 86px; padding: 5px 4px; border: 0; border-radius: 4px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #25384f; font-size: 10px; }
 .ribbon-tool:hover { background: #eaf3fc; }.ribbon-tool:disabled { opacity: .4; }
 .ribbon-tool svg { width: 28px; height: 28px; }
@@ -358,8 +407,8 @@ body { min-width: 1100px; }
 .editor-shell .ribbon-group { height: 101px; padding: 5px 7px 17px; }
 .editor-shell .ribbon-tool { height: 66px; min-width: 51px; padding: 3px; gap: 4px; }
 .editor-shell .ribbon-tool svg { width: 19px; height: 19px; }
-.editor-shell .home-view-group { width: 148px; }
-.editor-shell .ribbon-major-group[data-major-group="Zoom"]::after { right: auto; width: 148px; }
+.editor-shell .home-view-group { width: 250px; }
+.editor-shell .ribbon-major-group[data-major-group="Zoom"]::after { right: auto; width: 250px; }
 .editor-shell .home-zoom-controls { min-width: 0; flex: 1 1 auto; }
 .editor-shell .home-zoom-controls .ribbon-tool { min-width: 31px; }
 .editor-shell .home-zoom-controls .ribbon-tool:has([data-v1-label="選択に合わせる"]) { display: none; }
@@ -573,12 +622,15 @@ body { min-width: 1100px; }
 .editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
 .annotation-list { min-width: 880px; overflow: hidden; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
-.annotation-list-row { display: grid; grid-template-columns: 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }
+.annotation-list-row { display: grid; grid-template-columns: 20px 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }
 .annotation-list-header { min-height: 25px; border-bottom: 1px solid #cbd6e2; background: #f0f4f8; color: #607188; font-size: 9px; font-weight: 700; }
-.annotation-list > button { width: 100%; border: 0; border-bottom: 1px solid #e1e7ee; background: white; color: #304761; text-align: left; }
-.annotation-list > button:hover { background: #f3f8fd; }
-.annotation-list > button[data-selected="true"] { background: #e5f2ff; box-shadow: inset 3px 0 #2b79bf; }
-.annotation-list > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-list > .annotation-list-row:not(.annotation-list-header) { width: 100%; border: 0; border-bottom: 1px solid #e1e7ee; background: white; color: #304761; cursor: pointer; }
+.annotation-list > .annotation-list-row:not(.annotation-list-header):hover { background: #f3f8fd; }
+.annotation-list > .annotation-list-row[data-selected="true"] { background: #e5f2ff; box-shadow: inset 3px 0 #2b79bf; }
+.annotation-list-row > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.annotation-list-visibility { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; padding: 0; border: none; background: transparent; color: #607188; }
+.annotation-list-visibility svg { width: 12px; height: 12px; }
+.annotation-list-visibility[aria-pressed="false"] { opacity: .4; }
 .annotation-list-index { color: #7b8999; font-size: 9px; text-align: center; }
 .annotation-list-type { overflow: hidden; color: #65758a; text-overflow: ellipsis; white-space: nowrap; }
 .annotation-list-label { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
@@ -650,7 +702,10 @@ body { min-width: 1100px; }
    prevents the four view toggles from competing with the zoom commands. */
 .home-display-group { width: 174px; }
 .home-display-group .home-display-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
-.editor-shell .home-view-group { width: 220px; }
+/* 5 items live here (Zoom Out/Zoom In/100%/Fit All/Fit Selection) -- width
+   must track that count or "Fit Selection" overflows the box and visually
+   overlaps the neighboring Display group's toggles. */
+.editor-shell .home-view-group { width: 250px; }
 .editor-shell .home-display-group { width: 174px; }
 .editor-shell .home-zoom-controls .ribbon-tool { min-width: 39px; }
 .editor-shell .home-display-group .home-toggle { min-width: 0; }
@@ -797,7 +852,10 @@ body { min-width: 1100px; }
 .editor-shell [data-ribbon-home] .ds-ribbon-label { white-space: normal; overflow-wrap: anywhere; text-align: center; }
 .editor-shell [data-ribbon-home] .ds-icon-box, .editor-shell [data-ribbon-home] .ds-icon-box > svg { width: 16px; height: 16px; }
 .editor-shell .home-display-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
-.editor-shell .home-display-group .ds-ribbon-toggle { min-width: 0; }
+/* Checkbox to the left of its label, packed tight -- same row layout the
+   View tab's Guides/Show toggles already use, applied here for consistency. */
+.editor-shell .home-display-group .ds-ribbon-toggle { display: flex; min-width: 0; flex-direction: row; align-items: center; justify-content: flex-start; gap: 3px; padding: 2px 3px; text-align: left; }
+.editor-shell .home-display-group .ds-ribbon-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .editor-shell .view-slot-group[data-major-group="Show"] { width: 280px; }
 .editor-shell .view-slot-group[data-major-group="Panels"] { width: 250px; }
 .editor-shell .view-slot-group[data-major-group="Guides"] { width: 150px; }
@@ -867,7 +925,7 @@ body { min-width: 1100px; }
   .editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 240px; }
   .editor-shell .ribbon-major-group[data-major-group="Time"] { width: 230px; }
   .editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 140px; }
-  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 170px; }
+  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 250px; }
   .editor-shell .ribbon-major-group[data-major-group="Display"] { width: 130px; }
   .editor-shell .ribbon-major-group[data-major-group="Options"] { width: 64px; }
   .desktop-workspace { grid-template-columns: 250px minmax(0, 1fr) 240px; }
@@ -877,7 +935,7 @@ body { min-width: 1100px; }
   .editor-shell .ribbon-major-group[data-major-group="Edit"] { width: 210px; }
   .editor-shell .ribbon-major-group[data-major-group="Time"] { width: 200px; }
   .editor-shell .ribbon-major-group[data-major-group="Layout"] { width: 120px; }
-  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 145px; }
+  .editor-shell .ribbon-major-group[data-major-group="Zoom"] { width: 250px; }
   .editor-shell .ribbon-major-group[data-major-group="Display"] { width: 120px; }
 }
 @media (max-width: 1100px) {

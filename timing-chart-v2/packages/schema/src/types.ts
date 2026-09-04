@@ -5,6 +5,7 @@ export type GroupId = StableId<"group">;
 export type SpacerId = StableId<"spacer">;
 export type RowId = SignalId | SpacerId;
 export type AnnotationId = StableId<"annotation">;
+export type AnnotationGroupId = StableId<"annotationGroup">;
 export type TransactionId = StableId<"transaction">;
 export type BookmarkId = StableId<"bookmark">;
 export type TimeGroupId = StableId<"time-group">;
@@ -176,7 +177,7 @@ export interface SignalGroup {
   readonly style?: SignalGroupStyle;
 }
 
-export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency" | "timingRegion" | "ghostTrace";
+export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency" | "timingRegion" | "ghostTrace" | "rectangle" | "ellipse" | "connector" | "textbox";
 
 export interface Annotation {
   readonly id: AnnotationId;
@@ -200,6 +201,26 @@ export interface Annotation {
   readonly traceOffsetCycles?: number;
   /** Overlay opacity for Timing Region/Ghost Trace, constrained by canonical validation. */
   readonly opacity?: number;
+  /** Degrees, additive on top of any anchor-derived angle (line-shaped types
+   * already auto-orient from their two anchors -- this rotates further on
+   * top of that, it never replaces it). Meaningful for every AnnotationType. */
+  readonly rotation?: number;
+  /** Label text alignment, same vocabulary as Signal.display.align. */
+  readonly align?: "left" | "center" | "right";
+  /** When true, drag/nudge/anchor-edit interactions are blocked (see
+   * AnnotationInteractionOwner.onPointerDown). Selection and visibility are
+   * unaffected -- only position/shape edits are locked. */
+  readonly locked?: boolean;
+}
+
+/** Groups Annotations for "select together / drag together" -- same shape
+ * as SignalGroup/rows (a separate entity holding member ids), not a
+ * groupId field on Annotation, so membership stays a single source of
+ * truth and an Annotation never needs to know which group it's in. */
+export interface AnnotationGroup {
+  readonly id: AnnotationGroupId;
+  readonly name?: string;
+  readonly annotationIds: readonly AnnotationId[];
 }
 
 export interface Bookmark { readonly id: BookmarkId; readonly name: string; readonly start: number; readonly comment?: string }
@@ -272,6 +293,7 @@ export interface CanonicalDocument {
   readonly bookmarks: readonly Bookmark[];
   readonly timeGroups: readonly TimeGroup[];
   readonly annotations: readonly Annotation[];
+  readonly annotationGroups: readonly AnnotationGroup[];
   readonly legend: Legend;
   readonly layout: Layout;
   readonly transactions: readonly Transaction[];
@@ -280,7 +302,8 @@ export interface CanonicalDocument {
 }
 
 export const CANONICAL_PROBLEM_CODES = [
-  "ANCHOR_SIGNAL_REQUIRED", "BUS_WIDTH_OVERFLOW", "CHANGE_POINTS_NOT_STRICTLY_SORTED", "DUPLICATE_ID",
+  "ANCHOR_SIGNAL_REQUIRED", "ANNOTATION_GROUP_DUPLICATE_MEMBER", "ANNOTATION_GROUP_MEMBER_NOT_FOUND",
+  "BUS_WIDTH_OVERFLOW", "CHANGE_POINTS_NOT_STRICTLY_SORTED", "DUPLICATE_ID",
   "DUPLICATE_LABEL_ANCHOR_SOURCE", "DUPLICATE_ROW_MEMBERSHIP", "INVALID_ANCHOR_POINT", "INVALID_ANCHOR_THRESHOLD",
   "INVALID_ANCHOR_THRESHOLD_POINT", "INVALID_ANNOTATION_STYLE", "INVALID_BUS_LITERAL", "INVALID_LEGEND_ENTRY",
   "INVALID_REFERENCE_CLOCK", "INVALID_STABLE_ID", "INVALID_TIME_GROUP_RANGE", "INVALID_TRANSACTION_PHASE",

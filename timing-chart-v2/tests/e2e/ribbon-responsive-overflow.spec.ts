@@ -45,7 +45,7 @@ test("Home overflow zoom presets remain view-only at compact width", async ({ pa
   await ribbon.getByRole("button", { name: "More", exact: true }).click();
   const menu = page.getByRole("menu", { name: "More Home Commands" });
   await menu.getByRole("button", { name: "Zoom 150%", exact: true }).click();
-  await expect(page.getByTestId("home-zoom-status")).toHaveText("150%");
+  await expect(page.getByTestId("zoom-status-bar")).toHaveText("Zoom: 150%");
   await expect(page.getByTestId("revision-status")).toHaveText(beforeRevision!);
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
   await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);

@@ -100,7 +100,7 @@ const stableDocument: CanonicalDocument = {
   timeline: { start: 0, end: 8, cycleCount: 8, timeBase: "cycle", referenceClock: clockProbe.id, edge: "rising", labelAnchors: [] },
   signalGroups: [{ id: "grp_phase5" as GroupId, name: "Signals", rows: [clockProbe.id, probeSignal.id] }],
   signals: [clockProbe, probeSignal],
-  bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+  bookmarks: [], timeGroups: [], annotations: [], annotationGroups: [], transactions: [], constraints: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
   layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: "left", rowHeight: 28, signalSpacing: 6, overflow: "ellipsis" },
   checkSettings: {},
