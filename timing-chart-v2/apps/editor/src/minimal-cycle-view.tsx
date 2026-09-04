@@ -1157,6 +1157,7 @@ export function MinimalCycleView() {
     key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     signal={bottomSignal}
     cycleCount={snapshot.document.timeline.cycleCount}
+    bookmarks={snapshot.document.bookmarks}
     history={history}
     groups={snapshot.document.signalGroups}
     problem={problem}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { canonicalReferences, referencesToSignal, referencesToTimeGroup, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import type { AnnotationId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, BookmarkId, CanonicalDocument, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 describe("canonical stable-ID reference registry", () => {
@@ -62,6 +62,24 @@ describe("canonical stable-ID reference registry", () => {
         message: "Signal 'sig_missing' does not exist.",
       }),
     ]);
+  });
+
+  it("registers an Edge Counter marker by explicit Bookmark identity", () => {
+    const base = canonicalFixture();
+    const markerA = { id: "bookmark_a" as BookmarkId, name: "A", start: 1 };
+    const markerB = { id: "bookmark_b" as BookmarkId, name: "B", start: 6 };
+    const clock = base.signals[0]!;
+    const document: CanonicalDocument = {
+      ...base,
+      bookmarks: [markerA, markerB],
+      signals: [{ ...clock, type: "clock", edgeCounter: { ...clock.edgeCounter, countFrom: "marker", anchorId: markerB.id } }, ...base.signals.slice(1)],
+    };
+
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    expect(canonicalReferences(document)).toContainEqual({ kind: "signal.edgeCounter.marker", ownerId: clock.id, targetId: markerB.id, targetType: "bookmark", path: "$.signals[0].edgeCounter.anchorId" });
+
+    const missing = { ...document, signals: [{ ...document.signals[0]!, type: "clock", edgeCounter: { ...clock.edgeCounter, countFrom: "marker", anchorId: "bookmark_missing" } }, ...document.signals.slice(1)] };
+    expect(validateCanonicalDocument(missing)).toContainEqual(expect.objectContaining({ code: "MISSING_CROSS_REFERENCE", path: "$.signals[0].edgeCounter.anchorId", message: "Bookmark 'bookmark_missing' does not exist." }));
   });
 
   it("registers group row membership and spacer ownership as canonical relationships", () => {

@@ -1,7 +1,7 @@
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { RenderProjection } from "@timing-chart-v2/projection";
 import type { EdgeCounterOverlayPrimitive } from "@timing-chart-v2/renderer";
-import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
+import { resolveEdgeCounterMarker, type CanonicalDocument, type SignalId } from "@timing-chart-v2/schema";
 
 export function projectEdgeCounters(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, visibleRange: Readonly<{ start: number; end: number }>, selectedCycle: number, xScale = 1): EdgeCounterOverlayPrimitive[] {
   return document.signals.flatMap((signal) => {
@@ -18,11 +18,12 @@ export function projectEdgeCounters(document: CanonicalDocument, projection: Ren
       }
     }
     edges.sort((left, right) => left.x - right.x || left.kind.localeCompare(right.kind));
+    const marker = resolveEdgeCounterMarker(document, signal.edgeCounter);
     const countFrom = signal.edgeCounter.countFrom === "visible-range-start" ? visibleRange.start
       : signal.edgeCounter.countFrom === "selected-edge" ? selectedCycle
-        : signal.edgeCounter.countFrom === "marker" ? Math.min(...document.bookmarks.map((bookmark) => bookmark.start), Number.POSITIVE_INFINITY)
+        : signal.edgeCounter.countFrom === "marker" ? marker?.start
           : Number.NEGATIVE_INFINITY;
-    const counted = edges.filter((edge) => edge.cycle >= countFrom);
+    const counted = countFrom === undefined ? [] : edges.filter((edge) => edge.cycle >= countFrom);
     return counted.flatMap((edge, index) => index % Math.max(1, signal.edgeCounter.labelEvery) === 0 ? [{ id: `edge:${signal.id}:${edge.kind}:${edge.cycle}`, signalId: signal.id, x: edge.x + signal.edgeCounter.offset.x, y: edge.y + signal.edgeCounter.offset.y + (signal.edgeCounter.position === "above" ? -6 : 10), label: String(signal.edgeCounter.startNumber + index) }] : []);
   });
 }

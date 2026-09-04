@@ -1,9 +1,10 @@
 import type { CanonicalDocument } from "./types.js";
 
-export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spacer";
+export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spacer" | "bookmark";
 
 export type CanonicalReferenceKind =
   | "timeline.referenceClock"
+  | "signal.edgeCounter.marker"
   | "annotation.anchor"
   | "annotation.ghostTraceSource"
   | "transaction.linkedSignal"
@@ -37,6 +38,16 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
       path: "$.timeline.referenceClock",
     });
   }
+  document.signals.forEach((signal, index) => {
+    if (signal.type !== "clock" || signal.edgeCounter.countFrom !== "marker" || signal.edgeCounter.anchorId === undefined) return;
+    references.push({
+      kind: "signal.edgeCounter.marker",
+      ownerId: signal.id,
+      targetId: signal.edgeCounter.anchorId,
+      targetType: "bookmark",
+      path: `$.signals[${index}].edgeCounter.anchorId`,
+    });
+  });
   document.annotations.forEach((annotation, index) => {
     for (const field of ["anchor", "start", "end", "from", "to"] as const) {
       const signalId = annotation[field]?.signalId;

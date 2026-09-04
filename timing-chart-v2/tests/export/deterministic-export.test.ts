@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildExportScene, DeterministicExportService, renderExportSvg } from "@timing-chart-v2/export";
-import type { AnnotationId, CanonicalDocument, ClockSignal, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, GroupId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function scaleFixture(signalCount: number): CanonicalDocument {
@@ -211,6 +211,22 @@ describe("deterministic document export", () => {
     const visibleRange = buildExportScene({ ...document, signals: [{ ...document.signals[0]!, edgeCounter: { ...document.signals[0]!.edgeCounter, countFrom: "visible-range-start" as const } }, document.signals[1]!] }, { format: "svg", scope: "selected-range", range: { start: 4, end: 7 } });
     expect(visibleRange.edgeCounters[0]?.cycle).toBeGreaterThanOrEqual(4);
     expect(visibleRange.edgeCounters[0]?.label).toBe("10");
+  });
+
+  it("uses the configured Bookmark rather than the earliest Bookmark for export", () => {
+    const base = canonicalFixture();
+    const markerA = { id: "bookmark_a" as BookmarkId, name: "A", start: 1 };
+    const markerB = { id: "bookmark_b" as BookmarkId, name: "B", start: 6 };
+    const clock = base.signals[0]!;
+    const document = {
+      ...base,
+      bookmarks: [markerA, markerB],
+      signals: [{ ...clock, edgeCounter: { ...clock.edgeCounter, show: true, countFrom: "marker" as const, anchorId: markerB.id } }, base.signals[1]!],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.edgeCounters.length).toBeGreaterThan(0);
+    expect(scene.edgeCounters.every((edge) => edge.cycle >= markerB.start)).toBe(true);
+    expect(scene.edgeCounters.some((edge) => edge.cycle < markerB.start)).toBe(false);
   });
 
   it("uses effective duty and suppression when exporting clock edge counters", () => {

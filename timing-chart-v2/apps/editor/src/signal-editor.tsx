@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { SignalRole, Signal, ValueSignal } from "@timing-chart-v2/schema";
+import type { Bookmark, SignalRole, Signal, ValueSignal } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { InlineNameInput } from "./inline-name-input.js";
 import { ClockGeneratorEditor } from "./clock-generator-editor.js";
@@ -7,7 +7,7 @@ import { CommentRowEditor } from "./comment-row-editor.js";
 import { EventTable } from "./event-table.js";
 import { type SignalEditorProps } from "./timeline-toolbar.js";
 
-export function SignalEditor({ signal, cycleCount, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel }: SignalEditorProps) {
+export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel }: SignalEditorProps) {
   const [name, setName] = useState(signal?.display.name ?? "");
   const [role, setRole] = useState<SignalRole>(signal?.role ?? "internal");
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal?.type === "clock" || signal?.type === "commentRow" ? "binary" : signal?.type ?? "binary");
@@ -55,7 +55,7 @@ export function SignalEditor({ signal, cycleCount, history, groups, problem, onC
         {signal.type !== "commentRow" && <><label>Spacing Before<input aria-label="Signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label></>}
         <button type="submit" data-testid="save-signal-properties">Apply properties</button>
       </form>
-      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} onCommand={onCommand} onDuplicate={onDuplicate} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
     </>}
   </section>;
 }

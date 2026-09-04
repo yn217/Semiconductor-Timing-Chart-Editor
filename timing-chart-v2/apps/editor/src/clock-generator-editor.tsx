@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { ClockGenerator, ClockSignal, EdgeCounterSettings, SignalId } from "@timing-chart-v2/schema";
+import type { Bookmark, ClockGenerator, ClockSignal, EdgeCounterSettings, SignalId } from "@timing-chart-v2/schema";
 import { parseSuppressedPeriods } from "./runtime/clock-input.js";
 import { nextCommandId } from "./command-id.js";
 import { serializeClockSettings } from "./runtime/clock-settings.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
-export function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void }) {
+export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const [suppressedPeriods, setSuppressedPeriods] = useState((signal.generator.suppressedPeriods ?? []).join(", "));
@@ -23,6 +23,21 @@ export function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { reado
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const exportSettings = () => { const blob = new Blob([serializeClockSettings(signal.id, signal.name, generator, edgeCounter)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
   const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
+  const setCountFrom = (countFrom: EdgeCounterSettings["countFrom"]) => setEdgeCounter((current) => {
+    const anchorId = countFrom === "marker" ? current.anchorId ?? bookmarks[0]?.id : current.anchorId;
+    if (anchorId === undefined) {
+      const { anchorId: _anchorId, ...withoutAnchor } = current;
+      return { ...withoutAnchor, countFrom };
+    }
+    return { ...current, countFrom, anchorId };
+  });
+  const setAnchorId = (anchorId: string | undefined) => setEdgeCounter((current) => {
+    if (anchorId === undefined) {
+      const { anchorId: _previousAnchorId, ...withoutAnchor } = current;
+      return withoutAnchor;
+    }
+    return { ...current, anchorId };
+  });
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
       <span className="clock-context-label">Signal: {signal.display.name}    Type: Clock</span>
@@ -67,7 +82,8 @@ export function ClockGeneratorEditor({ signal, onCommand, onDuplicate }: { reado
       <label className="check-label">Show<input aria-label="Clock edge counter show" type="checkbox" checked={edgeCounter.show} onChange={(event) => setEdgeCounter({ ...edgeCounter, show: event.target.checked })} /></label>
       <label>Mode<select aria-label="Clock edge counter mode" value={edgeCounter.mode} onChange={(event) => setEdgeCounter({ ...edgeCounter, mode: event.target.value as EdgeCounterSettings["mode"] })}><option value="rising">Rising</option><option value="falling">Falling</option><option value="both">Both</option></select></label>
       <label>Start Number<input aria-label="Clock edge counter start" type="number" value={edgeCounter.startNumber} onChange={(event) => setEdgeCounter({ ...edgeCounter, startNumber: Number(event.target.value) })} /></label>
-      <label>Count From<select aria-label="Clock edge counter count from" value={edgeCounter.countFrom} onChange={(event) => setEdgeCounter({ ...edgeCounter, countFrom: event.target.value as EdgeCounterSettings["countFrom"] })}><option value="signal-start">Signal start</option><option value="selected-edge">Selected edge</option><option value="marker">Marker</option><option value="visible-range-start">Visible range start</option></select></label>
+      <label>Count From<select aria-label="Clock edge counter count from" value={edgeCounter.countFrom} onChange={(event) => setCountFrom(event.target.value as EdgeCounterSettings["countFrom"])}><option value="signal-start">Signal start</option><option value="selected-edge">Selected edge</option><option value="marker" disabled={bookmarks.length === 0}>Marker</option><option value="visible-range-start">Visible range start</option></select></label>
+      {edgeCounter.countFrom === "marker" && <label>Marker<select aria-label="Clock edge counter marker" value={edgeCounter.anchorId ?? ""} onChange={(event) => setAnchorId(event.target.value || undefined)} disabled={bookmarks.length === 0}><option value="">Select Bookmark</option>{bookmarks.map((bookmark) => <option key={bookmark.id} value={bookmark.id}>{bookmark.name} · cycle {bookmark.start}</option>)}</select></label>}
       <label>Every N<input aria-label="Clock edge counter every" type="number" min="1" value={edgeCounter.labelEvery} onChange={(event) => setEdgeCounter({ ...edgeCounter, labelEvery: Number(event.target.value) })} /></label>
       <label>Position<select aria-label="Clock edge counter position" value={edgeCounter.position} onChange={(event) => setEdgeCounter({ ...edgeCounter, position: event.target.value as EdgeCounterSettings["position"] })}><option value="above">Above</option><option value="below">Below</option></select></label>
       <label>X Offset<input aria-label="Clock edge counter X offset" type="number" value={edgeCounter.offset.x} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, x: Number(event.target.value) } })} /></label>

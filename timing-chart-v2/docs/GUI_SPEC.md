@@ -69,7 +69,7 @@ Controls:
 - Show ON/OFF
 - Count mode: Rising / Falling / Both
 - Start number
-- Count from: Signal start / Selected edge / Marker / Visible range start
+- Count from: Signal start / Selected edge / Marker / Visible range start. When Marker is selected, the editor exposes an explicit Bookmark selector; the selected stable Bookmark ID is persisted as `edgeCounter.anchorId`.
 - Show every N edges
 - Position: Above / Below
 - X offset px

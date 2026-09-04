@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { effectiveLegendEntries, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type Signal, type SignalId } from "@timing-chart-v2/schema";
+import { effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -221,8 +221,9 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     }
     const selected = edges.filter((edge) => signal.edgeCounter.mode === "both" || signal.edgeCounter.mode === edge.kind);
     selected.sort((left, right) => left.cycle - right.cycle || left.kind.localeCompare(right.kind));
+    const marker = resolveEdgeCounterMarker(document, signal.edgeCounter);
     const countFromDisplay = signal.edgeCounter.countFrom === "visible-range-start" || signal.edgeCounter.countFrom === "selected-edge" ? range.start
-      : signal.edgeCounter.countFrom === "marker" ? Math.min(...document.bookmarks.map((bookmark) => toDisplayPosition(mapping, bookmark.start)), Number.POSITIVE_INFINITY)
+      : signal.edgeCounter.countFrom === "marker" ? (marker === undefined ? Number.POSITIVE_INFINITY : toDisplayPosition(mapping, marker.start))
         : Number.NEGATIVE_INFINITY;
     selected.filter((edge) => toDisplayPosition(mapping, edge.cycle) >= countFromDisplay).forEach((edge, index) => {
       if (index % Math.max(1, signal.edgeCounter.labelEvery) !== 0) return;

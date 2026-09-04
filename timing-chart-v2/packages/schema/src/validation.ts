@@ -67,7 +67,7 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("LABEL_ANCHOR_BOUNDARY_MISMATCH", "Resume label anchor must match group boundary", "$.timeline.labelAnchors[*].source"),
   canonicalRule("LABEL_ANCHOR_OWNER_MISMATCH", "Label anchor owner must reciprocate", "$.timeline.labelAnchors[*].ownerTimeGroupId"),
   canonicalRule("MISSING_ANNOTATION_ANCHOR", "Annotation must provide its required anchor", "$.annotations[*]"),
-  canonicalRule("MISSING_CROSS_REFERENCE", "Referenced canonical entity must exist", "$.timeline.referenceClock | $.annotations[*] | $.transactions[*] | $.timeGroups[*]"),
+  canonicalRule("MISSING_CROSS_REFERENCE", "Referenced canonical entity must exist", "$.timeline.referenceClock | $.signals[*].edgeCounter.anchorId | $.annotations[*] | $.transactions[*] | $.timeGroups[*]"),
   canonicalRule("NON_FINITE_NUMBER", "Canonical numbers must be finite", "$", "optional"),
   canonicalRule("NON_PERSISTENT_FIELD", "Derived or transient fields cannot be persisted", "$", "optional"),
   canonicalRule("NON_TIMING_ANCHOR_TARGET", "Annotations must target timing signals", "$.annotations[*].anchor.signalId"),
@@ -271,6 +271,9 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
 
   document.signals.forEach((signal, index) => {
     if (signal.type === "clock") {
+      if (signal.edgeCounter.countFrom === "marker" && signal.edgeCounter.anchorId === undefined) {
+        problems.push(problem("MISSING_CROSS_REFERENCE", `$.signals[${index}].edgeCounter.anchorId`, "Marker count-from requires an explicit Bookmark anchor.", signal.id));
+      }
       if (!Number.isInteger(signal.generator.start) || signal.generator.start < 0 || signal.generator.start >= document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.signals[${index}].generator.start`, "Clock generator start must be an integer cycle inside the timeline.", signal.id));
       if (signal.enable) validateChanges(signal, signal.enable, `$.signals[${index}].enable`, document.timeline.cycleCount, problems);
     } else if (signal.type !== "commentRow") {
@@ -308,17 +311,18 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   });
 
   const timeGroups = new Map<string, TimeGroup>(document.timeGroups.map((group) => [group.id, group]));
+  const bookmarks = new Set<string>(document.bookmarks.map((bookmark) => bookmark.id));
   const labelAnchors = new Map(document.timeline.labelAnchors.map((anchor) => [anchor.id, anchor]));
   const groups = new Set<string>(document.signalGroups.map((group) => group.id));
   for (const reference of canonicalReferences(document)) {
     const targetExists = reference.targetType === "signal" ? signals.has(reference.targetId)
       : reference.targetType === "time-group" ? timeGroups.has(reference.targetId)
       : reference.targetType === "group" ? groups.has(reference.targetId)
-      : spacers.has(reference.targetId);
+      : reference.targetType === "spacer" ? spacers.has(reference.targetId) : bookmarks.has(reference.targetId);
     if (!targetExists) {
       const targetLabel = reference.targetType === "signal" ? "Signal"
         : reference.targetType === "time-group" ? "Time Group"
-        : reference.targetType === "group" ? "Signal Group" : "Spacer";
+        : reference.targetType === "group" ? "Signal Group" : reference.targetType === "spacer" ? "Spacer" : "Bookmark";
       problems.push(problem("MISSING_CROSS_REFERENCE", reference.path, targetLabel + " '" + reference.targetId + "' does not exist.", reference.ownerId));
     }
   }

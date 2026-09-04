@@ -115,6 +115,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
 export interface SignalEditorProps {
   readonly signal: Signal | undefined;
   readonly cycleCount: number;
+  readonly bookmarks: CanonicalDocument["bookmarks"];
   readonly history: HistoryState;
   readonly groups: readonly SignalGroup[];
   readonly problem: string;

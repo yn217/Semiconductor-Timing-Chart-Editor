@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, ClockSignal, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, BookmarkId, ClockSignal, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -529,6 +529,23 @@ describe("command execution and atomic history", () => {
     expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
     expect(session.getSnapshot().document).toEqual(before);
     expect(session.historyState().undoDepth).toBe(0);
+  });
+
+  it("requires an existing explicit Bookmark for marker count-from", () => {
+    const base = canonicalFixture();
+    const bookmark = { id: "bookmark_edge" as BookmarkId, name: "Edge origin", start: 4 };
+    const session = new CommandHistorySession({ ...base, bookmarks: [bookmark] });
+    const before = session.getSnapshot().document;
+    const missing = session.execute({ id: commandId("cmd_edge_marker_missing"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { ...before.signals[0]!.edgeCounter, show: true, countFrom: "marker" } });
+    expect(missing).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE", path: "$.edgeCounter.anchorId" }] });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState().undoDepth).toBe(0);
+
+    const accepted = session.execute({ id: commandId("cmd_edge_marker_valid"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { ...before.signals[0]!.edgeCounter, show: true, countFrom: "marker", anchorId: bookmark.id } });
+    expect(accepted.ok).toBe(true);
+    expect(session.getSnapshot().document.signals[0]).toMatchObject({ edgeCounter: { countFrom: "marker", anchorId: bookmark.id } });
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(before);
   });
 
   it("supports Annotation lifecycle, anchors, label offsets, and style domains", () => {
