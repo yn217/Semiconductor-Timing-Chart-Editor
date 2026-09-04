@@ -546,6 +546,12 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.signals[0]).toMatchObject({ edgeCounter: { countFrom: "marker", anchorId: bookmark.id } });
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document).toEqual(before);
+
+    const restored = session.execute({ id: commandId("cmd_edge_marker_restore"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { ...before.signals[0]!.edgeCounter, show: true, countFrom: "marker", anchorId: bookmark.id } });
+    expect(restored.ok).toBe(true);
+    const deleteReferenced = session.execute({ id: commandId("cmd_edge_marker_delete_referenced"), type: "bookmark.delete", bookmarkId: bookmark.id });
+    expect(deleteReferenced).toMatchObject({ ok: false, reason: "invalid", problems: [{ code: "MISSING_CROSS_REFERENCE" }] });
+    expect(session.getSnapshot().document.bookmarks).toEqual([bookmark]);
   });
 
   it("supports Annotation lifecycle, anchors, label offsets, and style domains", () => {
