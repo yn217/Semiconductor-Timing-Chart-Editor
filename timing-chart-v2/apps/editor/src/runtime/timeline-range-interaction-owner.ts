@@ -113,8 +113,19 @@ export class TimelineRangeInteractionOwner {
   keyDown = (event: KeyboardEvent): void => { if (event.key === "Escape" && this.#drag.current) this.cancel(); };
 
   private cancel(): void {
+    const surface = this.#drag.current!.surface;
     this.context.setSelectedCyclePreview(this.#drag.current!.selectedCycle);
     this.clearPreview();
+    // Escape/PointerCancel can fire while the pointer is still physically
+    // down (Escape) or the OS otherwise interrupts the gesture; the
+    // eventual mouseup/pointerup still lands on the same target and the
+    // browser fires its trailing "click" there regardless. Without
+    // suppressing it, that click re-resolves a brand-new single-cycle
+    // selection at the release position, silently reintroducing the
+    // selection this cancel was supposed to discard. Unlike the normal
+    // PointerUp paths, that trailing click is not guaranteed within one
+    // animation frame -- give it a generous grace window instead.
+    this.suppressClicks(surface, 2000);
   }
 
   private clearPreview(): void {
@@ -126,10 +137,20 @@ export class TimelineRangeInteractionOwner {
     this.context.refreshPlayhead();
   }
 
-  private suppressClicks(surface: "ruler" | "waveform"): void {
+  // `graceMs` controls how the suppression flag expires if no click ever
+  // consumes it. The normal PointerUp paths call this synchronously as
+  // part of the exact same native event chain the browser's trailing
+  // "click" fires in, so a single animation frame is already generous.
+  // Escape/PointerCancel (see #cancel) can fire well before the pointer is
+  // actually released -- the mouse button may still be physically held --
+  // so their trailing click can arrive much later than one frame; those
+  // callers pass a longer grace window instead so the suppression is
+  // still armed when that click actually lands.
+  private suppressClicks(surface: "ruler" | "waveform", graceMs?: number): void {
     this.#suppressCanvasClick = true;
     this.#suppressRulerClick = surface === "ruler";
-    requestAnimationFrame(() => { this.#suppressCanvasClick = false; });
-    if (this.#suppressRulerClick) requestAnimationFrame(() => { this.#suppressRulerClick = false; });
+    const schedule = graceMs === undefined ? requestAnimationFrame : (callback: () => void) => setTimeout(callback, graceMs);
+    schedule(() => { this.#suppressCanvasClick = false; });
+    if (this.#suppressRulerClick) schedule(() => { this.#suppressRulerClick = false; });
   }
 }
