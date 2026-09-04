@@ -1,1 +1,54 @@
 /* MiniMap ownership boundary. */
+
+
+/* Migrated from legacy.css; 25 complete rule blocks retain their declarations. */
+
+.minimap { position: relative; flex: 0 0 38px; height: 58px; margin-left: auto; overflow: hidden; border: 1px solid #aebed0; border-radius: 3px; background: #edf3f9; cursor: crosshair; }
+
+.minimap-rows { position: absolute; inset: 3px; display: flex; flex-direction: column; gap: 1px; }
+
+.minimap-rows span { position: relative; flex: 1; min-height: 1px; background: #dbe6f0; opacity: .82; }
+
+.minimap-segment { position: absolute; top: 0; bottom: 0; min-width: 1px; background: #527fa6; }
+
+.minimap-segment-low { background: #9bb2c8; }
+
+.minimap-segment-high { background: #3e709a; }
+
+.minimap-segment-clock { top: -1px; bottom: -1px; background: #314f70; }
+
+.minimap-segment-comment { background: #9a67c2; }
+
+.minimap-rows > [data-testid="minimap-viewport"] { position: absolute; top: var(--minimap-top, 0%); left: var(--minimap-left, 0%); width: var(--minimap-width, 100%); height: var(--minimap-height, 100%); box-sizing: border-box; min-width: 4px; min-height: 4px; border: 1px solid #126bc0; background: #75b8ef66; pointer-events: none; }
+
+.minimap-overview-frame { display: contents; }
+
+.inspector > .minimap { flex: 0 0 104px; width: auto; height: 104px; margin: 0; padding: 10px 12px 12px; border: 0; border-top: 1px solid #dbe3ee; border-radius: 0; background: #fbfcfe; cursor: crosshair; }
+
+.inspector > .minimap::before { content: "MiniMap"; display: block; height: 18px; color: #52677d; font-size: 11px; font-weight: 650; }
+
+.inspector > .minimap .minimap-rows { inset: 29px 12px 12px; }
+
+.inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"] { border-color: #367cf6; background: #f7faff; }
+
+.editor-shell .inspector > .minimap .minimap-overview-frame { position: absolute; top: -2px; left: 9px; width: 279px; height: 107px; display: block; border: 1px solid #ccd5e2; background: #fff; }
+
+.editor-shell .inspector > .minimap .minimap-overview-frame .minimap-rows { inset: 7px 5px 8px; }
+
+.editor-shell .inspector > .minimap { height: 115px; flex: 0 0 115px; margin-top: auto; }
+
+.editor-shell .inspector > .minimap::before { position: absolute; top: 4px; left: 10px; z-index: 2; height: 16px; }
+
+.editor-shell .inspector > .minimap { background: #fff; }
+
+.editor-shell .inspector > .minimap .minimap-rows { inset: 8px 15px 16px; display: block; background: #fff; }
+
+.editor-shell .inspector > .minimap .minimap-rows > span { position: absolute; top: calc(var(--minimap-row-index) * 8px); right: 0; left: 0; height: 4px; min-height: 4px; background: #dceafe; opacity: 1; }
+
+.editor-shell .inspector > .minimap .minimap-segment { background: #dceafe; }
+
+.editor-shell .inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"] { border-width: 2px; }
+
+.editor-shell .inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"][data-viewport-full="true"] { background: transparent; }
+
+.editor-shell[data-minimap-enabled="false"] .inspector > .minimap { display: none; }

@@ -69,3 +69,377 @@
   border-radius: var(--ds-radius-sm);
   font: 400 var(--ds-font-size) / 1.1 var(--ds-font-family);
 }
+
+
+/* Migrated from legacy.css; 158 complete rule blocks retain their declarations. */
+
+.timeline-toolbar { display: flex; align-items: center; gap: 8px; min-height: 42px; overflow-x: auto; padding: 5px 10px; border-bottom: 1px solid #c6d0dc; background: #f8fafc; color: #49576d; font-size: 10px; white-space: nowrap; }
+
+.ai-operation-panel { display: grid; grid-template-columns: auto minmax(260px, 1fr) auto; align-items: center; gap: 6px 8px; min-width: 560px; font-size: 10px; }
+
+.ai-query-row { display: contents; }
+
+.ai-query-row label { display: flex; align-items: center; gap: 5px; }
+
+.ai-query-row input { width: 230px; }
+
+.ai-scope, .ai-preview, .ai-operation-panel > output { grid-column: 1 / -1; }
+
+.ai-scope { color: #5c6b7e; }
+
+.ai-preview { display: flex; align-items: center; gap: 8px; padding: 3px 5px; border: 1px solid #9ebbd8; background: #eef7ff; }
+
+.ai-preview span { color: #5c6b7e; }
+
+.timeline-toolbar > strong { margin-right: 3px; color: #233a59; font-size: 12px; }
+
+.timeline-toolbar label { display: flex; align-items: center; gap: 4px; }
+
+.timeline-toolbar input { width: 52px; height: 26px; border: 1px solid #b6c2d0; border-radius: 3px; padding: 2px 5px; }
+
+.timeline-toolbar button { display: inline-flex; align-items: center; gap: 4px; height: 26px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #29425e; padding: 3px 7px; }
+
+.timeline-toolbar button svg { width: 12px; height: 12px; flex: 0 0 auto; }
+
+.annotation-toolbar { display: flex; align-items: center; gap: 8px; min-height: 34px; padding: 4px 10px; border-bottom: 1px solid #ccd5e0; background: #faf8fd; color: #5f5572; font-size: 10px; }
+
+.annotation-toolbar strong { color: #3f3159; font-size: 11px; }
+
+.annotation-toolbar select, .annotation-toolbar button { height: 25px; border: 1px solid #b9afc8; border-radius: 3px; background: white; color: #493b60; padding: 2px 7px; }
+
+.annotation-toolbar button.active { border-color: #7b4ca7; background: #eee2fa; box-shadow: 0 0 0 2px #8a5eb733; }
+
+.annotation-toolbar b { color: #704299; }
+
+.view-toolbar { display: flex; align-items: center; gap: 6px; min-height: 30px; padding: 3px 10px; border-bottom: 1px solid #ccd5e0; background: #f7fafc; color: #405269; font-size: 10px; }
+
+.view-toolbar button { height: 23px; border: 1px solid #b5c2d0; border-radius: 3px; background: white; color: #29425e; }
+
+.view-toolbar output { min-width: 38px; text-align: center; }
+
+.editor-shell .home-annotation-font-group, .editor-shell .annotation-font-group { display: flex; align-items: center; padding-inline: 6px; }
+
+.ribbon-tabs { display: flex; align-items: end; gap: 2px; padding: 0 10px; border-bottom: 1px solid #d5dde7; background: #fff; }
+
+.ribbon-tabs > button { height: 31px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #30425a; }
+
+.ribbon-tabs > button.active { border-bottom-color: #1477e6; color: #086dcc; }
+
+.ribbon { display: flex; min-width: 0; height: 147px; overflow-x: hidden; overflow-y: hidden; border-bottom: 1px solid #b9c4d1; background: #fbfcfe; }
+
+.ribbon-group { position: relative; flex: 0 0 auto; height: 146px; padding: 7px 8px 22px; border-right: 1px solid #d4dbe4; display: flex; align-items: center; gap: 5px; }
+
+.ribbon-group > b { position: absolute; right: 0; bottom: 3px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
+
+.ribbon-major-group { position: relative; display: flex; flex: 0 0 auto; align-items: stretch; height: 147px; border-right: 1px solid #d4dbe4; }
+
+.ribbon-major-group > .ribbon-group { border-right: 0; }
+
+.ribbon-major-group::after { position: absolute; right: 0; bottom: 3px; left: 0; color: #637083; content: attr(data-major-group); font-size: 10px; font-weight: 500; text-align: center; pointer-events: none; }
+
+.ribbon-major-group > .ribbon-group > b { visibility: hidden; }
+
+.file-group { width: 310px; }
+.history-group { width: 152px; }
+.timeline-group { width: 484px; }
+.annotation-group { width: 375px; }
+.view-group { width: 310px; }
+
+.home-overflow-group { position: relative; display: none; width: 88px; height: 146px; padding: 7px 8px 22px; border-right: 1px solid #d4dbe4; }
+
+.home-overflow-menu { position: fixed; z-index: 1000; display: grid; grid-template-columns: repeat(2, minmax(108px, 1fr)); gap: 3px 5px; width: 300px; max-width: calc(100vw - 16px); padding: 8px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; overflow: auto; }
+
+.home-overflow-menu strong { grid-column: 1 / -1; margin-top: 3px; color: #405875; font-size: 10px; }
+
+.home-overflow-menu button { min-height: 26px; padding: 3px 7px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; text-align: left; }
+
+.home-overflow-menu button:hover { background: var(--gui-hover-bg); }
+.home-overflow-menu button:disabled { opacity: .4; }
+
+.ribbon-tool { min-width: 47px; height: 86px; padding: 5px 4px; border: 0; border-radius: 4px; background: transparent; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; color: #25384f; font-size: 10px; }
+
+.ribbon-tool:hover { background: #eaf3fc; }
+.ribbon-tool:disabled { opacity: .4; }
+
+.ribbon-tool svg { width: 28px; height: 28px; }
+
+.ribbon-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; font-size: 10px; }
+
+.ribbon-toggles button { border: 1px solid #bac6d3; border-radius: 3px; background: white; }
+
+.timeline-group .timeline-toolbar, .annotation-group .annotation-toolbar { width: 100%; min-height: 0; height: 112px; padding: 2px; border: 0; background: transparent; display: flex; align-content: center; flex-wrap: wrap; overflow: hidden; }
+
+.timeline-group .timeline-toolbar > strong, .annotation-group .annotation-toolbar > strong { display: none; }
+
+.timeline-group .timeline-actions { display: flex; flex-wrap: wrap; }
+.timeline-group .timeline-objects { display: flex; flex: 1 0 100%; height: 22px; overflow: visible; }
+
+.timeline-group .timeline-toolbar button, .annotation-group .annotation-toolbar button { height: 24px; padding: 2px 5px; font-size: 9px; }
+
+.home-timeline-group .timeline-toolbar button[data-v1-label], .timeline-group .timeline-toolbar button[data-v1-label] { position: relative; font-size: 0; }
+
+.home-timeline-group .timeline-toolbar button[data-v1-label]::after, .timeline-group .timeline-toolbar button[data-v1-label]::after { content: attr(data-v1-label); font-size: 9px; white-space: nowrap; }
+
+.timeline-group .timeline-toolbar input { width: 43px; height: 24px; }
+.annotation-group .annotation-toolbar > span { display: none; }
+
+.ds-ribbon-group { display: flex; min-width: 0; align-items: stretch; gap: 5px; padding: 4px 6px 21px; position: relative; border-right: 1px solid #cfd8e4; }
+
+.ds-ribbon-group > b { position: absolute; right: 6px; bottom: 3px; left: 6px; color: #53677e; font-size: 10px; font-weight: 700; line-height: 14px; text-align: center; pointer-events: none; }
+
+.ds-ribbon-button { display: inline-flex; min-width: 48px; min-height: 54px; flex: 0 0 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 4px 5px 3px; border: 1px solid transparent; border-radius: 3px; background: transparent; color: #263d58; cursor: pointer; line-height: 14px; }
+
+.ds-ribbon-button:hover, .ds-ribbon-button:focus-visible { border-color: #a8c8e6; background: #edf6ff; }
+
+.ds-ribbon-toggle-button[aria-pressed="true"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
+
+.ds-ribbon-button:disabled { color: #8a98a8; cursor: not-allowed; }
+
+.ds-ribbon-label { display: flex; min-height: 28px; flex-direction: column; align-items: center; justify-content: flex-start; white-space: nowrap; font-size: 10px; font-weight: 650; }
+
+.ds-ribbon-toggle { display: flex; min-width: 56px; flex: 0 1 auto; flex-direction: column; align-items: center; justify-content: flex-start; gap: 2px; padding: 5px 4px 3px; color: #344b65; font-size: 10px; line-height: 13px; text-align: center; }
+
+.ds-ribbon-toggle input { flex: 0 0 auto; margin: 0; }
+
+.ds-ribbon-toggle span { white-space: nowrap; }
+
+.view-zoom-group .ds-ribbon-button { min-width: 50px; }
+
+.view-zoom-group > .ds-ribbon-select { align-self: flex-start; width: 48px; height: 24px; margin-top: 27px; }
+
+.view-workspace-group > label > .ds-ribbon-select { height: 24px; min-width: 0; }
+
+.editor-shell .ribbon-tabs { height: 34px; }
+
+.editor-shell .ribbon { height: 102px; }
+
+.editor-shell .ribbon-major-group { height: 101px; }
+
+.editor-shell .ribbon-major-group::after { bottom: 2px; }
+
+.editor-shell .ribbon-group { height: 101px; padding: 5px 7px 17px; }
+
+.editor-shell .ribbon-tool { height: 66px; min-width: 51px; padding: 3px; gap: 4px; }
+
+.editor-shell .ribbon-tool svg { width: 19px; height: 19px; }
+
+.editor-shell .home-view-group { width: 250px; }
+
+.editor-shell .ribbon-major-group[data-major-group="Zoom"]::after { right: auto; width: 250px; }
+
+.editor-shell .home-zoom-controls { min-width: 0; flex: 1 1 auto; }
+
+.editor-shell .home-zoom-controls .ribbon-tool { min-width: 31px; }
+
+.editor-shell .home-zoom-controls .ribbon-tool:has([data-v1-label="選択に合わせる"]) { display: none; }
+
+.editor-shell .home-display-subgroup { width: 148px; flex: 0 0 148px; }
+
+.editor-shell .ribbon-tabs { position: relative; }
+
+.editor-shell .ribbon-tabs > button.compatibility-tab { position: absolute; top: 0; left: 0; width: 1px; height: 1px; margin: 0; padding: 0; overflow: hidden; opacity: 0; pointer-events: auto; }
+
+.editor-shell .ribbon-tabs .view-mode { position: fixed; top: 0; right: 10px; z-index: 26; height: 31px; margin-left: 0; }
+
+.editor-shell .ribbon-tabs .view-mode span { color: #172033; font-size: 11px; font-weight: 600; }
+
+.editor-shell .ribbon-tabs .view-mode button { height: 24px; padding: 0 10px; }
+
+.editor-shell .ribbon-tabs .view-mode button.active { background: #3478f6; color: #fff; }
+
+.editor-shell .home-display-toggles { display: grid; grid-template-columns: 65px 76px; grid-template-rows: 28px 28px; gap: 4px 7px; align-self: center; }
+
+.editor-shell .home-display-toggles .home-toggle { display: flex; align-items: center; gap: 4px; height: 28px; padding: 0 3px; }
+
+.editor-shell .home-display-toggles .home-toggle:nth-child(1) { grid-column: 1; grid-row: 1; }
+
+.editor-shell .home-display-toggles .home-toggle:nth-child(2) { grid-column: 2; grid-row: 1; }
+
+.editor-shell .home-display-toggles .home-toggle:nth-child(3) { grid-column: 1; grid-row: 2; }
+
+.editor-shell .home-display-toggles .home-toggle:nth-child(4) { grid-column: 2; grid-row: 2; }
+
+/* The approved V8 Golden uses the English reference vocabulary.  Keep the
+   normal product's localized V1 labels, but do not let the compatibility
+   pseudo-labels obscure the deterministic visual-reference state. */
+.editor-shell .ribbon-tool span[data-v1-label] { font-size: 9px; }
+
+.editor-shell .ribbon-tool span[data-v1-label]::after { display: none; }
+
+.editor-shell .ribbon-major-group > .ribbon-group > b::after { content: none; }
+
+.editor-shell .home-file-group > b::after { content: "File"; }
+
+.editor-shell .history-group > b::after { content: "History"; }
+
+.editor-shell .home-timeline-group > b::after { content: "Time"; }
+
+.editor-shell .home-view-group > b::after { content: "Zoom"; }
+
+.editor-shell .home-review-group > b::after { content: "Options"; }
+
+.editor-shell .home-export-group > b::after { content: "Options"; }
+
+/* The V8 Home surface keeps Zoom and Display as separate stable groups. This
+   prevents the four view toggles from competing with the zoom commands. */
+.home-display-group { width: 174px; }
+
+.home-display-group .home-display-toggles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+
+/* 5 items live here (Zoom Out/Zoom In/100%/Fit All/Fit Selection) -- width
+   must track that count or "Fit Selection" overflows the box and visually
+   overlaps the neighboring Display group's toggles. */
+.editor-shell .home-view-group { width: 250px; }
+
+.editor-shell .home-display-group { width: 174px; }
+
+.editor-shell .home-zoom-controls .ribbon-tool { min-width: 39px; }
+
+.editor-shell .home-display-group .home-toggle { min-width: 0; }
+
+.editor-shell .ribbon-tool { overflow: hidden; }
+
+.editor-shell .ribbon-tool > svg { flex: 0 0 19px; width: 19px; height: 19px; }
+
+.editor-shell .ribbon-tool > span { display: flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 100%; min-width: 0; min-height: 20px; max-height: 2.2em; overflow: hidden; line-height: 1.05; text-align: center; white-space: normal; overflow-wrap: normal; word-break: normal; }
+
+/* Home's ribbon groups now render through the shared Ds* ribbon
+   primitives (see ribbon-schema.ts / ribbon-group.tsx) -- the
+   .ribbon-tool / .home-*-group-specific width and alignment overrides
+   that used to live here have been removed; Home now gets its sizing
+   from the same tokens.css/ribbon.css rules Insert/View already use. */
+
+/* Insert and Timeline own their non-Home composition.  Each command remains
+   backed by the existing SemanticCommand callback; these rules only make the
+   command families legible and deterministic at desktop widths. */
+.editor-shell .insert-ribbon {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 101px;
+  overflow: hidden;
+}
+
+.editor-shell .insert-slot-group { flex: 0 1 auto; min-width: 0; }
+
+.editor-shell .insert-slot-group > .ds-ribbon-group { position: relative; display: grid; align-items: center; height: 101px; min-width: 0; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
+
+.editor-shell .insert-ribbon .ds-ribbon-group > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
+
+.editor-shell .insert-signals-group { width: 390px; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .insert-structure-group { width: 140px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .insert-annotation-group { width: 300px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .insert-more-group { width: 250px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+
+.editor-shell .insert-ribbon .ds-ribbon-button { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
+
+.editor-shell .insert-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
+
+.editor-shell .insert-ribbon .ds-ribbon-button:disabled { opacity: .42; }
+
+/* Column widths track each subgroup's actual current content (re-measured
+   whenever Timeline toolbar buttons are added/moved -- Insert grew from 3
+   buttons to 5 (Cycle Add / N Cycle Add / Insert before / Insert after /
+   Delete range moved in from Range Edit) and Fold/Break grew from 1 button
+   to 3 (Create / Break / Expand), which is exactly the kind of drift that
+   crushed labels into unreadable, bleeding-together fragments last time.
+   Buttons also now carry their own min-width + overflow:hidden (below) so
+   a future content change degrades to legible 2-line wrapping or a clipped
+   single button instead of bleeding into its neighbor again. */
+.editor-shell .timeline-group { width: 1060px; }
+
+.editor-shell .timeline-group .timeline-toolbar {
+  display: grid;
+  grid-template-columns: minmax(155px, 1fr) minmax(320px, 1fr) minmax(206px, 1fr) minmax(150px, 1fr) minmax(190px, 1fr);
+  align-items: stretch;
+  gap: 2px;
+  height: 92px;
+  padding: 3px;
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+}
+
+/* Insert/Range Edit mix label+input controls with plain buttons in the
+   same row; a label's caption text pushes its input down further than a
+   button's icon sits by default (the caption text needs its own line
+   height that a compact icon doesn't), so the icon and the input box
+   didn't line up even with both boxes' own tops matching. Nudge only
+   these two groups' icons down to the input's actual position -- Bookmark
+   and Fold/Break are all-button rows with nothing to line up against, so
+   their icons stay at the tighter default offset. */
+.editor-shell .timeline-insert-group > button svg,
+.editor-shell .timeline-range-edit-group > button svg { margin-top: 9px; }
+
+.editor-shell .timeline-group .timeline-subgroup button[data-v1-label] {
+  font-size: 9px;
+}
+
+.editor-shell .timeline-group .timeline-subgroup button[data-v1-label]::after {
+  content: none;
+}
+
+.editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: visible; }
+
+.editor-shell [data-ribbon-home] > .ds-ribbon-group > b { visibility: hidden; }
+
+/* Home packs more buttons per group than Insert/View -- one shared compact
+   density rule (not a per-group override list) keeps every Home button the
+   same tighter size instead of drifting group by group. */
+.editor-shell [data-ribbon-home] .ds-ribbon-button { width: 44px; min-width: 44px; padding-inline: 3px; font-size: 9px; }
+
+.editor-shell [data-ribbon-home] > .ds-ribbon-group { gap: 3px; padding-inline: 4px; }
+
+/* Auto-wrap long labels instead of forcing single-line buttons wide (or
+   requiring callers to hand-split labels into multiple <span> children,
+   the fragile pattern View/Insert use today). */
+.editor-shell [data-ribbon-home] .ds-ribbon-label { white-space: normal; overflow-wrap: anywhere; text-align: center; }
+
+.editor-shell [data-ribbon-home] .ds-icon-box, .editor-shell [data-ribbon-home] .ds-icon-box > svg { width: 16px; height: 16px; }
+
+.editor-shell .home-display-group { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 8px; }
+
+/* Checkbox to the left of its label, packed tight -- same row layout the
+   View tab's Guides/Show toggles already use, applied here for consistency. */
+.editor-shell .home-display-group .ds-ribbon-toggle { display: flex; min-width: 0; flex-direction: row; align-items: center; justify-content: flex-start; gap: 3px; padding: 2px 3px; text-align: left; }
+
+.editor-shell .home-display-group .ds-ribbon-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.editor-shell [data-ribbon-home][data-major-group="File"] { order: 1; }
+
+.editor-shell [data-ribbon-home][data-major-group="Edit"] { order: 2; }
+
+.editor-shell [data-ribbon-home][data-major-group="Time"] { order: 3; }
+
+.editor-shell [data-ribbon-home][data-major-group="Zoom"] { order: 4; box-sizing: border-box; width: 280px; }
+
+.editor-shell [data-ribbon-home][data-major-group="Zoom"] > .home-view-group { box-sizing: border-box; width: 100%; }
+
+.editor-shell [data-ribbon-home][data-major-group="Transaction"] { order: 5; }
+
+.editor-shell [data-ribbon-home][data-major-group="Layout"] { order: 6; }
+
+.editor-shell [data-ribbon-home][data-major-group="Display"] { order: 7; }
+
+.editor-shell [data-ribbon-home][data-major-group="Options"] { order: 8; }
+
+.editor-shell .view-slot-group > .ribbon-group { box-sizing: border-box; width: 100%; min-width: 0; }
+
+.editor-shell .view-display-subgroup .ds-ribbon-toggle { min-width: 0; min-height: 0; height: 20px; flex-direction: row; justify-content: flex-start; gap: 3px; padding: 2px 3px; text-align: left; }
+
+.editor-shell .view-display-subgroup .ds-ribbon-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.editor-shell .view-panels-group .ds-ribbon-button { min-height: 0; height: 40px; }
+
+.editor-shell .view-panels-group .ds-ribbon-label { min-height: 18px; font-size: 8px; line-height: 9px; }
+
+.editor-shell .view-guides-group .ds-ribbon-toggle { min-width: 0; padding-inline: 1px; }
+
+.editor-shell .view-workspace-settings .ds-ribbon-select { width: 111px; max-width: 111px; height: 27px; padding: 0 3px; font-size: 9px; }
+
+.editor-shell .view-zoom-group .ds-ribbon-select { width: 62px; min-width: 0; height: 27px; padding: 0 2px; font-size: 9px; }
+
+.editor-shell .home-edit-group > [data-testid="clipboard-status"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }

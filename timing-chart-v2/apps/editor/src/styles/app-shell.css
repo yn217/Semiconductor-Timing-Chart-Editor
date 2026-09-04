@@ -1,1 +1,83 @@
 /* Reserved for Title/Tabs/Workspace region ownership. */
+
+
+/* Migrated from legacy.css; 21 complete rule blocks retain their declarations. */
+:root { font-family: var(--gui-font-family); color: #172033; background: #eef2f6; font-synthesis: none; --gui-font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; --gui-font-size: 13px; --gui-font-compact: 11px; --gui-icon-size: 25px; --gui-control-height: 30px; --gui-row-height: 36px; --gui-ribbon-height: 146px; --gui-panel-header-height: 42px; --gui-left-width: 330px; --gui-inspector-width: 300px; --gui-bottom-height: 270px; --gui-border: #dbe3ee; --gui-border-strong: #cbd6e4; --gui-panel-bg: #fff; --gui-selected-bg: #eef6ff; --gui-hover-bg: #f1f6fc; --font-ui: 11px; --font-small: 10px; --font-section: 13px; --control-height: 26px; --button-height: 26px; --table-row-height: 28px; --space-xs: 4px; --space-sm: 7px; --space-md: 10px; --panel-padding: 12px; }
+
+body { margin: 0; min-width: 920px; min-height: 100vh; }
+
+.app-header { display: flex; align-items: center; justify-content: space-between; padding: 0 24px; color: white; background: linear-gradient(110deg, #15233c, #244a78); box-shadow: 0 2px 12px #10213a33; }
+
+.app-header h1 { margin: 1px 0 0; font-size: 22px; font-weight: 620; letter-spacing: .01em; }
+
+.eyebrow { margin: 0; color: #a9d2ff; font-size: 10px; font-weight: 700; letter-spacing: .16em; }
+
+.view-chip { padding: 6px 12px; border: 1px solid #8bc5ff88; border-radius: 999px; background: #76b7fa1c; font-size: 12px; }
+
+.cycle-panel { align-self: start; margin: 14px 22px 10px; overflow: hidden; border: 1px solid #c7d0dd; border-radius: 8px; background: white; box-shadow: 0 8px 25px #20365214; }
+
+
+/* Phase 11 locked desktop composition */
+html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+
+body { min-width: 1100px; }
+
+.app-titlebar { display: flex; align-items: center; gap: 9px; padding: 0 10px; border-bottom: 1px solid #d8e0e9; background: linear-gradient(#fbfdff, #f2f6fa); font-size: 13px; }
+
+.app-titlebar h1 { margin: 0; font-size: 13px; }
+
+.cycle-panel { position: relative; grid-column: 1 / 3; grid-row: 1; align-self: stretch; min-width: 0; min-height: 0; margin: 0; border: 0; border-right: 1px solid #c7d0dd; border-bottom: 1px solid #bfc8d4; border-radius: 0; box-shadow: none; }
+
+.editor-shell .app-titlebar { position: relative; z-index: 25; }
+
+.editor-shell .app-titlebar { gap: 6px; padding-inline: 10px; }
+
+.editor-shell .app-titlebar .appmark { width: 18px; height: 18px; font-size: 14px; }
+
+.editor-shell .app-titlebar .save-state,
+.editor-shell .app-titlebar .view-title,
+.editor-shell .app-titlebar .window-controls { display: none; }
+
+.editor-shell .workspace-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 8px;
+  font-size: 11px;
+}
+
+.editor-shell[data-density="compact"] .workspace-controls {
+  gap: 6px;
+  margin-left: 6px;
+  font-size: 10px;
+}
+
+.editor-shell .workspace-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.editor-shell .workspace-controls select {
+  min-width: 92px;
+  height: var(--ui-control-height);
+  padding-inline: 5px;
+}
+
+.editor-shell[data-density="compact"] .workspace-controls select {
+  min-width: 84px;
+}
+
+/* Density is a view-only shell concern. The shared tokens keep compact and
+   comfortable values in one place while preserving the approved dimensions. */
+.editor-shell[data-density="comfortable"] {
+  --ui-control-height: var(--ds-density-comfortable-control);
+  --ui-row-height: var(--ds-density-comfortable-row);
+  --ui-panel-padding: var(--ds-density-comfortable-panel-padding);
+}
+.editor-shell[data-density="compact"] {
+  --ui-control-height: var(--ds-density-compact-control);
+  --ui-row-height: var(--ds-density-compact-row);
+  --ui-panel-padding: var(--ds-density-compact-panel-padding);
+}

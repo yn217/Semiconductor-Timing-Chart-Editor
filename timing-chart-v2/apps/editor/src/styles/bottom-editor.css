@@ -1,1 +1,154 @@
 /* Bottom Editor ownership boundary. */
+
+
+/* Migrated from legacy.css; 71 complete rule blocks retain their declarations. */
+
+.bottom-editor { position: relative; grid-column: 2; grid-row: 3; min-width: 0; min-height: 0; display: flex; flex-direction: column; overflow: hidden; border-right: 1px solid #c7d0dd; background: var(--gui-panel-bg); }
+
+.bottom-resize-track { position: relative; z-index: 25; grid-column: 2; grid-row: 2; min-width: 0; height: 10px; cursor: ns-resize; touch-action: none; border-top: 1px solid #bfc8d4; border-bottom: 1px solid #d7dfe9; background: #eef2f7; }
+
+.bottom-resize-track::after { content: ""; position: absolute; top: 3px; left: 50%; width: 42px; height: 2px; transform: translateX(-50%); border-radius: 2px; background: #9aaabd; opacity: .75; }
+
+.bottom-resize-track:hover::after, .bottom-resize-track:focus-visible::after { background: #2678bc; opacity: 1; }
+
+.bottom-tabs { flex: 0 0 38px; display: flex; align-items: end; padding: 0 9px; border-bottom: 1px solid #cbd3dd; }
+
+.bottom-tabs button { height: 37px; padding: 0 15px; border: 0; background: transparent; }
+
+.bottom-tabs button.active { margin-bottom: -1px; border: 1px solid #599df0; border-bottom: 2px solid white; border-radius: 4px 4px 0 0; color: #086fd2; }
+
+.bottom-pin-label[data-v1-label] { position: relative; color: transparent; }
+
+.bottom-pin-label[data-v1-label]::after { position: absolute; inset: 0; color: #25384f; content: attr(data-v1-label); white-space: nowrap; }
+
+.bottom-tabs > span { flex: 1; }
+.bottom-tabs label { align-self: center; font-size: 10px; }
+
+.bottom-content { flex: 1; min-height: 0; overflow: auto; }
+
+.bottom-content > .signal-editor { min-height: 100%; display: block; }
+.bottom-content .editor-tabbar { height: 37px; }
+.bottom-content .editor-tabbar .editor-tab { display: none; }
+
+.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar { display: flex; }
+
+.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar .editor-tab,
+.editor-shell .signal-editor:has(.clock-editor) .editor-tabbar .editor-selection { display: none; }
+
+.editor-shell .signal-editor:has(.clock-editor) .clock-editor .event-toolbar { border-top: 0; }
+
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator h2 { display: none; }
+
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); align-items: end; gap: 10px; padding: 10px 12px 14px; }
+
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator input,
+.editor-shell .signal-editor:has(.clock-editor) .clock-generator select { width: 100%; }
+
+.editor-shell .bottom-tabs { height: 38px; }
+
+.event-toolbar .bottom-action { display: inline-flex; align-items: center; gap: 4px; }
+
+.event-toolbar .bottom-action svg { width: 15px; height: 15px; }
+
+.event-presets { display: inline-flex; align-items: center; margin-left: 4px; }
+
+.editor-shell .bottom-pin-label { font-size: 0; }
+
+.editor-shell .bottom-pin-label::after { content: "Pin"; font-size: 9px; }
+
+.editor-shell [data-testid="bottom-pin"][aria-pressed="true"] .bottom-pin-label::after { content: "Unpin"; }
+
+.transaction-editor { min-height: 100%; padding: 8px 12px; }
+.transaction-editor > header { display: flex; align-items: center; gap: 7px; }
+.transaction-editor > header strong { margin-right: auto; }
+.transaction-editor form { display: flex; align-items: end; gap: 9px; padding: 9px 0; }
+.transaction-editor label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; }
+.transaction-editor input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
+.transaction-editor form button, .transaction-editor header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }
+.transaction-editor form button { border-color: #246aa8; background: #2c78bb; color: white; }
+.editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: minmax(0, 1fr) 0 0; }
+.editor-shell[data-bottom-visible="false"] .bottom-resize-track { display: none; }
+
+.signal-properties label, .clock-generator label, .clock-edge-counter label, .event-add label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
+
+.signal-properties input, .signal-properties select, .clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-add input, .event-row input { height: var(--control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
+
+.signal-properties button, .clock-generator button, .clock-edge-counter button, .event-add button, .event-actions button, .quick-values button { height: var(--button-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; }
+
+.signal-properties button[type="submit"], .clock-generator button[type="submit"], .clock-edge-counter button[type="submit"], .event-add > button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
+
+.event-editor { padding: 8px 12px 12px; }
+
+.event-heading { display: flex; align-items: baseline; gap: 12px; }
+
+.event-heading h2 { margin: 0 0 7px; font-size: 13px; }
+
+.event-heading span { color: #758197; font-size: 10px; }
+
+.event-toolbar { display: flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 0 7px; border-top: 1px solid #d5dde7; border-bottom: 1px solid #d5dde7; }
+
+.event-toolbar button { height: var(--button-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
+
+.event-toolbar button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
+
+.event-toolbar button:disabled { opacity: .45; cursor: not-allowed; }
+
+.event-preview { margin-left: auto; color: #246aa8; font-size: 10px; }
+
+.event-table { min-width: 850px; border: 1px solid #d0d8e2; border-radius: 4px; overflow: hidden; }
+
+.event-row { display: grid; grid-template-columns: 90px 160px 72px 72px minmax(160px, 1fr) 140px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
+
+.event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
+
+.event-row:last-child { border-bottom: 0; }
+
+.event-row > * { margin: 2px 5px; }
+
+.event-columns { min-height: 25px; background: #f0f4f8; color: #526177; font-size: 10px; font-weight: 700; text-transform: uppercase; }
+
+.event-row output { font: 11px Consolas, monospace; color: #4f5e73; }
+
+.event-actions { display: flex; gap: 5px; }
+
+.event-add { display: flex; align-items: end; gap: 8px; padding-top: 9px; }
+
+.event-add input { width: 110px; }
+
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group { min-width: 0; display: flex; gap: 2px; }
+
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark,
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group { position: relative; z-index: 3; pointer-events: auto; }
+
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-bookmark > button,
+.editor-shell .timeline-subgroup .timeline-objects > .timeline-time-group > button { position: relative; z-index: 4; pointer-events: auto; }
+
+.editor-shell .timeline-subgroup.timeline-bookmark-group,
+.editor-shell .timeline-subgroup.timeline-fold-group { flex-direction: column; align-items: stretch; justify-content: center; }
+
+/* row 1 32px, not 19px: "Add marker" wraps to 2 lines at this column width
+   (Previous/Next/List are single words and fit one line) -- the shorter
+   fixed row was clipping that second line. */
+/* align-items: stretch, not the flex-start every other .timeline-subgroup
+   uses (that rule is for mixed label+button rows; this grid row is all
+   buttons) -- flex-start let each button size to its own content instead
+   of filling the 42px row, which was clipping "Add marker"'s wrapped
+   third line regardless of how tall the row track itself was. */
+.editor-shell .timeline-subgroup.timeline-bookmark-group { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 56px minmax(0, 1fr); align-content: stretch; align-items: stretch; }
+
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button { grid-row: 1; }
+
+.editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects { grid-column: 1 / -1; grid-row: 2; }
+
+.editor-shell .timeline-subgroup.timeline-bookmark-group,
+.editor-shell .timeline-subgroup.timeline-fold-group { pointer-events: none; }
+
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button,
+.editor-shell .timeline-subgroup.timeline-fold-group > button,
+.editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects,
+.editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects,
+.editor-shell .timeline-subgroup.timeline-bookmark-group .timeline-objects button,
+.editor-shell .timeline-subgroup.timeline-fold-group .timeline-objects button { pointer-events: auto; }
+
+.editor-shell .timeline-subgroup.timeline-bookmark-group > button { min-width: 0; padding-inline: 1px; font-size: 8px; }

@@ -1,6 +1,7 @@
-/* Stable CSS entrypoint. Region ownership files are explicit imports; legacy.css
-   preserves the existing cascade byte-for-byte during the ownership migration. */
+/* Stable CSS entrypoint. Region files own migrated production selectors; legacy.css
+   is a bounded compatibility layer for the remaining global/cross-region rules. */
 @import "./styles/tokens.css";
+@import "./styles/controls.css";
 @import "./styles/app-shell.css";
 @import "./styles/ribbon.css";
 @import "./styles/role-badge.css";

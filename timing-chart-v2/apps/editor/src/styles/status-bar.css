@@ -1,1 +1,23 @@
 /* Status Bar ownership boundary. */
+
+
+/* Migrated from legacy.css; 11 complete rule blocks retain their declarations. */
+
+.editor-shell .status-bar { height: 25px; min-height: 25px; }
+
+.editor-shell .status-bar { gap: 15px; padding: 0 10px; background: #fff; color: #5e6879; font-size: 10px; }
+
+.editor-shell .status-bar .status-detail-hidden { display: none; }
+
+.editor-shell .status-bar [data-testid="zoom-status-bar"] { margin-left: auto; }
+
+.status-bar { min-height: 0; height: 27px; display: flex; align-items: center; gap: 14px; padding: 0 12px; border-top: 1px solid #cbd4df; background: #f6f8fb; color: #52647a; font-size: 11px; overflow: hidden; white-space: nowrap; }
+.status-bar strong { color: #213a59; font-weight: 650; }
+.status-bar [data-testid="revision-status"], .status-bar [data-testid="history-status"] { color: #304b6b; }
+.status-bar [data-testid="dirty-status"] { color: #2f6d4f; font-weight: 650; }
+
+.editor-shell .status-bar .status-context { min-width: 0; overflow: hidden; color: #405a76; text-overflow: ellipsis; white-space: nowrap; }
+
+.status-bar { display: flex; align-items: center; gap: 28px; padding: 0 22px; border-top: 1px solid #cbd3dd; background: #f8fafc; color: #566278; font-size: 11px; }
+
+.status-bar span:last-child { margin-left: auto; }
