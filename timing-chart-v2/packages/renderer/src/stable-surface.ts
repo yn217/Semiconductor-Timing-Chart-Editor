@@ -740,10 +740,22 @@ function linePath(lineType: NonNullable<AnnotationOverlayPrimitive["lineType"]>,
     const control = { x: midpoint.x + normal.x, y: midpoint.y + normal.y };
     return { d: `M ${first.x} ${first.y} Q ${control.x} ${control.y} ${second.x} ${second.y}`, points: [first, control, second] };
   }
-  // A diagonal is a direct segment with an explicit dashed connector style;
-  // unlike the solid straight connector, the distinction remains observable
-  // without inventing a second semantic coordinate system.
-  return { d: `M ${first.x} ${first.y} L ${second.x} ${second.y}`, points: [first, second], ...(lineType === "diagonal" ? { dash: "7 4" } : {}) };
+  if (lineType === "diagonal") {
+    // #375: Diagonal must have genuinely distinct path geometry from
+    // Straight, not merely a different stroke pattern on an identical
+    // path -- a route bent through a single 45-degree elbow (unlike
+    // Orthogonal's axis-aligned 90-degree bend, and unlike Straight's
+    // single direct segment at whatever angle the two anchors happen to
+    // form). Runs diagonally for min(|dx|, |dy|), then finishes straight
+    // along whichever axis has the remaining distance.
+    const dx = second.x - first.x;
+    const dy = second.y - first.y;
+    const run = Math.min(Math.abs(dx), Math.abs(dy));
+    const bend = { x: first.x + Math.sign(dx || 1) * run, y: first.y + Math.sign(dy || 1) * run };
+    return { d: `M ${first.x} ${first.y} L ${bend.x} ${bend.y} L ${second.x} ${second.y}`, points: [first, bend, second], dash: "7 4" };
+  }
+  // Straight is a direct single segment between the two anchors.
+  return { d: `M ${first.x} ${first.y} L ${second.x} ${second.y}`, points: [first, second] };
 }
 
 function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive, first: LinePoint, second: LinePoint, rotationDeg: number): void {
@@ -762,7 +774,11 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
     ? `M ${localPoints[0]!.x} ${localPoints[0]!.y} L ${localPoints[1]!.x} ${localPoints[1]!.y} L ${localPoints[2]!.x} ${localPoints[2]!.y} L ${localPoints[3]!.x} ${localPoints[3]!.y}`
     : lineType === "curve"
       ? `M ${localFirst.x} ${localFirst.y} Q ${localPoints[1]!.x} ${localPoints[1]!.y} ${localSecond.x} ${localSecond.y}`
-      : `M ${localFirst.x} ${localFirst.y} L ${localSecond.x} ${localSecond.y}`;
+      // #375: Diagonal's 45-degree elbow (see linePath above) is a 3-point,
+      // 2-segment path -- localPoints[1] is the bend point.
+      : lineType === "diagonal"
+        ? `M ${localFirst.x} ${localFirst.y} L ${localPoints[1]!.x} ${localPoints[1]!.y} L ${localSecond.x} ${localSecond.y}`
+        : `M ${localFirst.x} ${localFirst.y} L ${localSecond.x} ${localSecond.y}`;
   const svgDocument = body.ownerDocument;
   const svg = svgDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
   const pathElement = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");

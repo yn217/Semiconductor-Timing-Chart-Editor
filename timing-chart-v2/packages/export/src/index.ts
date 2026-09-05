@@ -451,7 +451,19 @@ function linePathForExport(lineType: NonNullable<ExportAnnotation["lineType"]>, 
     const controlY = (y1 + y2) / 2 + normal.y;
     return { d: `M ${x1} ${y1} Q ${controlX} ${controlY} ${x2} ${y2}` };
   }
-  return { d: `M ${x1} ${y1} L ${x2} ${y2}`, ...(lineType === "diagonal" ? { dash: "7 4" } : {}) };
+  if (lineType === "diagonal") {
+    // #375: matches the live-DOM renderer's own 45-degree-elbow geometry
+    // (packages/renderer/src/stable-surface.ts's `linePath`) -- genuinely
+    // distinct from Straight's single direct segment, not merely a
+    // different stroke pattern on the same path.
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const run = Math.min(Math.abs(dx), Math.abs(dy));
+    const bendX = x1 + Math.sign(dx || 1) * run;
+    const bendY = y1 + Math.sign(dy || 1) * run;
+    return { d: `M ${x1} ${y1} L ${bendX} ${bendY} L ${x2} ${y2}`, dash: "7 4" };
+  }
+  return { d: `M ${x1} ${y1} L ${x2} ${y2}` };
 }
 
 function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string): string {
