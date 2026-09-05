@@ -585,8 +585,6 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     : undefined;
   const lineFirst = dimensionY === undefined ? first : { x: first.x, y: dimensionY };
   const lineSecond = dimensionY === undefined ? second : { x: second.x, y: dimensionY };
-  const lineDx = lineSecond.x - lineFirst.x;
-  const lineDy = lineSecond.y - lineFirst.y;
   // Additive on top of any anchor-derived angle below -- never replaces it,
   // so line-shaped overlays keep auto-orienting from their two anchors and
   // this only rotates further on top of that.
@@ -623,15 +621,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     if (rotationDeg !== 0) body.style.transform = `rotate(${rotationDeg}deg)`;
     body.dataset.annotationField = first.field;
   } else {
-    if (primitive.lineType === "orthogonal") {
-      body.style.transform = `translate(${Math.min(lineFirst.x, lineSecond.x)}px, ${Math.min(lineFirst.y, lineSecond.y)}px)${rotateSuffix}`;
-      body.style.width = `${Math.max(2, Math.abs(lineDx))}px`;
-      body.style.height = `${Math.max(2, Math.abs(lineDy))}px`;
-      body.dataset.orthogonalDirection = `${lineDx < 0 ? "left" : "right"}-${lineDy < 0 ? "up" : "down"}`;
-    } else {
-      body.style.transform = `translate(${lineFirst.x}px, ${lineFirst.y}px) rotate(${Math.atan2(lineDy, lineDx) * 180 / Math.PI + rotationDeg}deg)`;
-      body.style.width = `${Math.max(2, Math.hypot(lineDx, lineDy))}px`;
-    }
+    renderLineBody(body, primitive, lineFirst, lineSecond, rotationDeg);
     body.dataset.annotationField = first.field;
   }
   const label = document.createElement("span");
@@ -678,6 +668,105 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     return handle;
   });
   owner.replaceChildren(body, label, ...dimensionParts, ...handles);
+}
+
+type LinePoint = Readonly<{ x: number; y: number }>;
+
+function svgFragmentId(id: string): string {
+  // Stable IDs are opaque. Encode every code point rather than assuming an
+  // identifier grammar or allowing two different IDs to sanitize alike.
+  return Array.from(id, (character) => (character.codePointAt(0) ?? 0).toString(16).padStart(4, "0")).join("_");
+}
+
+function linePath(lineType: NonNullable<AnnotationOverlayPrimitive["lineType"]>, first: LinePoint, second: LinePoint): { readonly d: string; readonly points: readonly LinePoint[]; readonly dash?: string } {
+  if (lineType === "orthogonal") {
+    const bendX = (first.x + second.x) / 2;
+    const bends = [{ x: bendX, y: first.y }, { x: bendX, y: second.y }];
+    const firstBend = bends[0]!;
+    const secondBend = bends[1]!;
+    return { d: `M ${first.x} ${first.y} L ${firstBend.x} ${firstBend.y} L ${secondBend.x} ${secondBend.y} L ${second.x} ${second.y}`, points: [first, firstBend, secondBend, second] };
+  }
+  if (lineType === "curve") {
+    const dx = second.x - first.x;
+    const dy = second.y - first.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const offset = Math.max(14, length * 0.24);
+    const normal = { x: -dy / length * offset, y: dx / length * offset };
+    const midpoint = { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+    const control = { x: midpoint.x + normal.x, y: midpoint.y + normal.y };
+    return { d: `M ${first.x} ${first.y} Q ${control.x} ${control.y} ${second.x} ${second.y}`, points: [first, control, second] };
+  }
+  // A diagonal is a direct segment with an explicit dashed connector style;
+  // unlike the solid straight connector, the distinction remains observable
+  // without inventing a second semantic coordinate system.
+  return { d: `M ${first.x} ${first.y} L ${second.x} ${second.y}`, points: [first, second], ...(lineType === "diagonal" ? { dash: "7 4" } : {}) };
+}
+
+function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive, first: LinePoint, second: LinePoint, rotationDeg: number): void {
+  const lineType = primitive.lineType ?? "straight";
+  const path = linePath(lineType, first, second);
+  const padding = 10;
+  const minX = Math.min(...path.points.map((point) => point.x)) - padding;
+  const minY = Math.min(...path.points.map((point) => point.y)) - padding;
+  const width = Math.max(20, Math.max(...path.points.map((point) => point.x)) - minX + padding);
+  const height = Math.max(20, Math.max(...path.points.map((point) => point.y)) - minY + padding);
+  const toLocal = (point: LinePoint): LinePoint => ({ x: point.x - minX, y: point.y - minY });
+  const localFirst = toLocal(first);
+  const localSecond = toLocal(second);
+  const localPoints = path.points.map(toLocal);
+  const localPath = lineType === "orthogonal"
+    ? `M ${localPoints[0]!.x} ${localPoints[0]!.y} L ${localPoints[1]!.x} ${localPoints[1]!.y} L ${localPoints[2]!.x} ${localPoints[2]!.y} L ${localPoints[3]!.x} ${localPoints[3]!.y}`
+    : lineType === "curve"
+      ? `M ${localFirst.x} ${localFirst.y} Q ${localPoints[1]!.x} ${localPoints[1]!.y} ${localSecond.x} ${localSecond.y}`
+      : `M ${localFirst.x} ${localFirst.y} L ${localSecond.x} ${localSecond.y}`;
+  const svgDocument = body.ownerDocument;
+  const svg = svgDocument.createElementNS("http://www.w3.org/2000/svg", "svg");
+  const pathElement = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
+  const defs = svgDocument.createElementNS("http://www.w3.org/2000/svg", "defs");
+  const markerId = `annotation-arrow-${svgFragmentId(primitive.id)}`;
+  const marker = (suffix: string, reverse: boolean) => {
+    const result = svgDocument.createElementNS("http://www.w3.org/2000/svg", "marker");
+    result.setAttribute("id", `${markerId}-${suffix}`);
+    result.setAttribute("markerWidth", "8");
+    result.setAttribute("markerHeight", "8");
+    result.setAttribute("refX", reverse ? "1" : "7");
+    result.setAttribute("refY", "4");
+    result.setAttribute("orient", "auto-start-reverse");
+    result.setAttribute("markerUnits", "strokeWidth");
+    const head = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
+    head.setAttribute("d", reverse ? "M 8 0 L 0 4 L 8 8 Z" : "M 0 0 L 8 4 L 0 8 Z");
+    head.setAttribute("fill", primitive.color ?? "#d04a36");
+    result.append(head);
+    return result;
+  };
+  const arrowhead = primitive.arrowhead ?? "none";
+  if (arrowhead === "start" || arrowhead === "bidirectional") defs.append(marker("start", true));
+  if (arrowhead === "end" || arrowhead === "bidirectional") defs.append(marker("end", false));
+  svg.append(defs);
+  svg.dataset.role = "annotation-line";
+  svg.setAttribute("width", String(width));
+  svg.setAttribute("height", String(height));
+  svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  svg.setAttribute("aria-hidden", "true");
+  pathElement.dataset.role = "annotation-path";
+  pathElement.dataset.lineType = lineType;
+  pathElement.setAttribute("d", localPath);
+  pathElement.setAttribute("fill", "none");
+  pathElement.setAttribute("stroke", primitive.color ?? "#d04a36");
+  pathElement.setAttribute("stroke-width", "2");
+  pathElement.setAttribute("stroke-linecap", "round");
+  pathElement.setAttribute("stroke-linejoin", "round");
+  if (path.dash) pathElement.setAttribute("stroke-dasharray", path.dash);
+  if (arrowhead === "start" || arrowhead === "bidirectional") pathElement.setAttribute("marker-start", `url(#${markerId}-start)`);
+  if (arrowhead === "end" || arrowhead === "bidirectional") pathElement.setAttribute("marker-end", `url(#${markerId}-end)`);
+  if (rotationDeg !== 0) pathElement.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
+  svg.append(pathElement);
+  body.dataset.lineRenderer = "svg";
+  body.dataset.orthogonalDirection = `${second.x - first.x < 0 ? "left" : "right"}-${second.y - first.y < 0 ? "up" : "down"}`;
+  body.style.transform = `translate(${minX}px, ${minY}px)`;
+  body.style.width = `${width}px`;
+  body.style.height = `${height}px`;
+  body.replaceChildren(svg);
 }
 
 function element(owner: Document | HTMLElement, tag: "div", role: string): HTMLElement {

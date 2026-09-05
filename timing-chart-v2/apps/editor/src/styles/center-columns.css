@@ -73,6 +73,11 @@
 
 .surface-host [data-annotation-shape="line"][data-line-type="curve"] [data-role="annotation-body"] { height: 10px; border-radius: 50%; border-top-width: 2px; }
 
+.surface-host [data-annotation-shape="line"] [data-role="annotation-body"][data-line-renderer="svg"] { height: auto; border: 0; overflow: visible; }
+.surface-host [data-annotation-shape="line"] [data-role="annotation-line"] { display: block; overflow: visible; pointer-events: none; }
+.surface-host [data-annotation-shape="line"] [data-role="annotation-body"][data-line-renderer="svg"]::before,
+.surface-host [data-annotation-shape="line"] [data-role="annotation-body"][data-line-renderer="svg"]::after { display: none; }
+
 .surface-host [data-arrowhead="end"] [data-role="annotation-body"]::after, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::after { content: ""; position: absolute; right: -1px; top: -5px; border-width: 4px 0 4px 7px; border-style: solid; border-color: transparent transparent transparent var(--annotation-color); }
 
 .surface-host [data-arrowhead="start"] [data-role="annotation-body"]::before, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::before { content: ""; position: absolute; left: -1px; top: -5px; border-width: 4px 7px 4px 0; border-style: solid; border-color: transparent var(--annotation-color) transparent transparent; }
