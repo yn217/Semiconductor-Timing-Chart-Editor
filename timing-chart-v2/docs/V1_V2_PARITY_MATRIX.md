@@ -69,6 +69,12 @@ Canonical/History/Dirty/render state, Selected Object JSON uses one command,
 and Whole Document JSON remains read-only until Advanced mode and validation.
 The complete V1 visual matrix remains open.
 
+The Header/Footer export refresh is covered by the current-main Chromium
+checks in `timing-chart-v2/tests/e2e/transaction-export.spec.ts`: canonical
+metadata is preserved through Save/Open and emitted in SVG, PNG and PDF, and
+long metadata remains present under A4 portrait Fit Page and landscape Fit
+Width. The full V1 reference-layout comparison remains open.
+
 ## Non-GUI V1 contract sections
 
 The JSON inventory also covers the full product contract, including:
