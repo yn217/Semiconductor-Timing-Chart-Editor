@@ -157,7 +157,11 @@ test("AI Settings default to Always require approval, and every Preview/Validate
   const settings = ai.getByTestId("ai-settings");
   await expect(settings.getByLabel("Always require approval")).toBeChecked();
   await expect(settings.getByLabel("Auto-apply view-only operations")).not.toBeChecked();
-  await expect(settings).toContainText("not implemented yet");
+  // #395 PR3: Agent Connection is a real control surface now (see
+  // tests/e2e/ai-bridge.spec.ts for the actual connected-bridge case) --
+  // off by default, and truthfully "Disconnected" until enabled.
+  await expect(settings.getByLabel("Enable external agents")).not.toBeChecked();
+  await expect(settings).toContainText("Status: Disconnected");
   await ai.getByTestId("ai-settings-toggle").click();
 
   await ai.getByLabel("AI semantic query").fill("rename selected signal to AI_LOGGED");

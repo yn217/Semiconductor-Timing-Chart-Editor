@@ -44,6 +44,8 @@ import { AnnotationList } from "./annotation-list.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
+import type { AIViewIntent } from "./ai-proposal-provider.js";
+import { useAIBridgeClient } from "./ai-bridge-client.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
 import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon.js";
@@ -1638,6 +1640,26 @@ export function MinimalCycleView() {
     onDelete={deleteBottomBookmark}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
+  // #395 PR3: the local Agent Bridge connection itself -- owned here
+  // (not inside AIOperationPanel) so the Ribbon's Provider status can
+  // show the same real, live connection state the Bottom AI Assistant's
+  // Settings section manages. Off by default; see ai-bridge-client.ts
+  // and scripts/ai-bridge-server.mjs for exactly what it can and cannot
+  // do (three named tools, localhost-only, token-gated, no arbitrary
+  // Canonical JSON patch path).
+  const aiBridgeHost = "127.0.0.1";
+  const aiBridgePort = 4610;
+  const [aiBridgeEnabled, setAiBridgeEnabled] = useState(false);
+  const [aiBridgeToken, setAiBridgeToken] = useState("");
+  const aiBridgeOnViewIntent = (intent: AIViewIntent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); };
+  const aiBridgeStatus = useAIBridgeClient(aiBridgeEnabled, aiBridgeHost, aiBridgePort, aiBridgeToken, {
+    document: snapshot.document,
+    selectedSignalId: annotationTargetSignalId,
+    selectedGroupId: selectedGroup?.id,
+    selectedAnnotationId: selectedAnnotation?.id,
+    selectedTransactionId,
+    onViewIntent: aiBridgeOnViewIntent,
+  });
   // #395 PR1: the AI Ribbon tab used to host the entire query/preview/
   // apply surface directly -- a narrow control competing for space with
   // every other Ribbon tab's icon-button rows. It now lives here, as the
@@ -1657,7 +1679,14 @@ export function MinimalCycleView() {
     range={timelineRange}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
-    onViewIntent={(intent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); }}
+    onViewIntent={aiBridgeOnViewIntent}
+    bridgeHost={aiBridgeHost}
+    bridgePort={aiBridgePort}
+    bridgeEnabled={aiBridgeEnabled}
+    onBridgeEnabledChange={setAiBridgeEnabled}
+    bridgeToken={aiBridgeToken}
+    onBridgeTokenChange={setAiBridgeToken}
+    bridgeStatus={aiBridgeStatus}
     onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
     icon={null}
   />;
@@ -2162,6 +2191,7 @@ export function MinimalCycleView() {
       onOpenTimeline={() => setRibbonTab("Timeline")}
       onOpenBookmarks={() => { setBottomTab("Bookmarks"); setBottomVisible(true); }}
       onOpenAIAssistant={() => { setBottomTab("AI"); setBottomVisible(true); }}
+      aiBridgeStatus={aiBridgeStatus}
       onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
     <MinimalCycleViewPanels>

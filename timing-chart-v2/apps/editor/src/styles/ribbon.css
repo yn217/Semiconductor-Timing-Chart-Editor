@@ -118,7 +118,11 @@
 .ai-settings legend { padding: 0; color: #43536a; font-weight: 650; }
 .ai-settings .checkline { display: flex; align-items: center; justify-content: flex-start; gap: 6px; color: #43536a; }
 .ai-settings .checkline input { width: auto; }
-.ai-settings-section { display: flex; flex-direction: column; gap: 2px; }
+.ai-settings-section { display: flex; flex-direction: column; gap: 4px; }
+.ai-settings-section label { display: flex; flex-direction: column; gap: 2px; color: #43536a; }
+.ai-settings-section input[type="text"], .ai-settings-section input:not([type]) { height: 24px; border: 1px solid #c3ceda; border-radius: 3px; padding: 0 6px; font-size: 10px; }
+.ai-settings-section code { padding: 1px 4px; border-radius: 2px; background: #e7ecf2; font-family: Consolas, monospace; }
+.ai-settings-section output { color: #304761; font-weight: 650; }
 
 .ai-activity-log { color: #5c6b7e; font-size: 10px; }
 .ai-activity-log summary { cursor: pointer; color: #334a64; font-weight: 650; }
