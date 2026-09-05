@@ -1,9 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, RefObject } from "react";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, Signal } from "@timing-chart-v2/schema";
 import { buildMiniMapOverview } from "@timing-chart-v2/projection";
 import { calculateMiniMapViewportMetrics } from "./runtime/minimap-viewport.js";
 import { MiniMapOverviewRows } from "./minimap-overview-rows.js";
+
+type MiniMapSource = Pick<CanonicalDocument, "signalGroups" | "signals" | "timeline">;
+type MiniMapOverview = ReturnType<typeof buildMiniMapOverview>;
+type SignalOverviewFingerprint = Readonly<{
+  id: Signal["id"];
+  type: Signal["type"];
+  values: readonly unknown[] | undefined;
+}>;
+type MiniMapOverviewCache = Readonly<{
+  signalGroups: MiniMapSource["signalGroups"];
+  cycleCount: number;
+  signals: readonly SignalOverviewFingerprint[];
+  overview: MiniMapOverview;
+}>;
+
+function overviewValues(signal: Signal): readonly unknown[] | undefined {
+  return signal.type === "clock" || signal.type === "commentRow" ? undefined : signal.values;
+}
+
+function fingerprintSignals(signals: readonly Signal[]): readonly SignalOverviewFingerprint[] {
+  return signals.map((signal) => ({ id: signal.id, type: signal.type, values: overviewValues(signal) }));
+}
+
+function canReuseOverview(cache: MiniMapOverviewCache, document: MiniMapSource, cycleCount: number): boolean {
+  if (cache.signalGroups !== document.signalGroups || cache.cycleCount !== cycleCount || cache.signals.length !== document.signals.length) return false;
+  return document.signals.every((signal, index) => {
+    const previous = cache.signals[index];
+    return previous?.id === signal.id && previous.type === signal.type && previous.values === overviewValues(signal);
+  });
+}
 
 export function pointerRatio(client: number, start: number, size: number): number {
   if (!Number.isFinite(size) || size <= 0) return 0;
@@ -24,7 +54,16 @@ export function MiniMap({ document, viewport }: { readonly document: Readonly<Ca
   const [metrics, setMetrics] = useState({ top: 0, ratio: 1, left: 0, width: 1 });
   const dragging = useRef(false);
   const overviewBuilds = useRef(0);
-  const overview = useMemo(() => { overviewBuilds.current += 1; return buildMiniMapOverview(document); }, [document]);
+  const overviewCache = useRef<MiniMapOverviewCache | undefined>(undefined);
+  const overview = useMemo(() => {
+    const cycleCount = Math.max(1, document.timeline.cycleCount);
+    const cached = overviewCache.current;
+    if (cached && canReuseOverview(cached, document, cycleCount)) return cached.overview;
+    const next = buildMiniMapOverview(document);
+    overviewBuilds.current += 1;
+    overviewCache.current = { signalGroups: document.signalGroups, cycleCount, signals: fingerprintSignals(document.signals), overview: next };
+    return next;
+  }, [document]);
   const sync = () => { const element = viewport.current; if (element) setMetrics(calculateMiniMapViewportMetrics(element)); };
   useEffect(() => {
     const element = viewport.current;
