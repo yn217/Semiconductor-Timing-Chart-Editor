@@ -8,6 +8,8 @@ import type {
   AnnotationGroupId,
   Bookmark,
   BookmarkId,
+  TimelineLabelAnchor,
+  LabelAnchorId,
   CommandId,
   GroupId,
   RowId,
@@ -74,6 +76,15 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "bookmark.move"; bookmarkId: BookmarkId; start: number }>
   | Readonly<{ id: CommandId; type: "bookmark.update"; bookmarkId: BookmarkId; name: string; start: number; comment?: string }>
   | Readonly<{ id: CommandId; type: "bookmark.delete"; bookmarkId: BookmarkId }>
+  // #376: a standalone ruler-number restart, independent of any Time
+  // Group/Axis Break fold. Reuses the same canonical TimelineLabelAnchor
+  // model a Time Group's own fold-resume anchor already uses (#202);
+  // `labelAnchor.create` here always produces one with no
+  // `ownerTimeGroupId`, since a Time-Group-owned anchor's lifecycle stays
+  // owned by the Time Group commands instead.
+  | Readonly<{ id: CommandId; type: "labelAnchor.create"; labelAnchor: TimelineLabelAnchor }>
+  | Readonly<{ id: CommandId; type: "labelAnchor.update"; labelAnchorId: LabelAnchorId; source: number; display: number }>
+  | Readonly<{ id: CommandId; type: "labelAnchor.delete"; labelAnchorId: LabelAnchorId }>
   | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
   | Readonly<{ id: CommandId; type: "timeGroup.update"; timeGroupId: TimeGroupId; name: string; start: number; end: number; category?: string; comment?: string; presentation?: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>

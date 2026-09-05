@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { BookmarkId, CanonicalDocument, ClockGenerator, GroupId, Signal, SignalGroup, SignalId, TimeGroup, TimeGroupId } from "@timing-chart-v2/schema";
+import type { BookmarkId, CanonicalDocument, ClockGenerator, GroupId, LabelAnchorId, Signal, SignalGroup, SignalId, TimeGroup, TimeGroupId } from "@timing-chart-v2/schema";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { nextCommandId } from "./command-id.js";
@@ -34,6 +34,22 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
   const [bookmarkStart, setBookmarkStart] = useState(0);
   const [bookmarkComment, setBookmarkComment] = useState("");
   const bookmarkListRef = useRef<HTMLDivElement>(null);
+  // #376: a standalone Label Anchor (ruler-number restart with no owning
+  // Time Group/fold) -- same list/edit/delete UI pattern as Bookmark above,
+  // filtered to labelAnchors with no ownerTimeGroupId so a Time Group's own
+  // fold-resume anchor never appears here and can't be edited/deleted
+  // through this path (its lifecycle stays owned by the Time Group).
+  const standaloneLabelAnchors = document.timeline.labelAnchors.filter((anchor) => anchor.ownerTimeGroupId === undefined);
+  const [editingLabelAnchorId, setEditingLabelAnchorId] = useState<LabelAnchorId>();
+  const editingLabelAnchor = standaloneLabelAnchors.find((anchor) => anchor.id === editingLabelAnchorId);
+  const [labelAnchorSource, setLabelAnchorSource] = useState(0);
+  const [labelAnchorDisplay, setLabelAnchorDisplay] = useState(0);
+  const labelAnchorListRef = useRef<HTMLDivElement>(null);
+  const applyLabelAnchor = () => {
+    if (!editingLabelAnchor) return;
+    onCommand({ id: nextCommandId("label_anchor_update"), type: "labelAnchor.update", labelAnchorId: editingLabelAnchor.id, source: labelAnchorSource, display: labelAnchorDisplay });
+    setEditingLabelAnchorId(undefined);
+  };
   const navigateBookmark = (direction: -1 | 1) => {
     const ordered = [...document.bookmarks].sort((left, right) => left.start - right.start);
     if (ordered.length === 0) return;
@@ -98,6 +114,15 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
         </div>
       </DsRibbonGroup>
     </div>
+    <div className="timeline-slot-group" data-timeline-group="Label Anchor" aria-label="Label Anchor commands">
+      <DsRibbonGroup ariaLabel="Label Anchor" className="timeline-label-anchor-group" density="compact-grid" label="Label Anchor">
+        <DsRibbonButton ariaLabel="Add Label Anchor" dataTestId="label-anchor-create" icon={<RibbonIcon name="i-bookmark" />} onClick={() => onCommand({ id: nextCommandId("label_anchor_create"), type: "labelAnchor.create", labelAnchor: { id: nextEntityId("labelAnchor", document) as LabelAnchorId, source: range.start, display: 0 } })} title="Restart the ruler's displayed number at the selected range's start, without folding any time">Add</DsRibbonButton>
+        <DsRibbonButton ariaLabel="List Label Anchors" icon={<RibbonIcon name="i-list" />} onClick={() => labelAnchorListRef.current?.focus()} title="Focus the Label Anchor list below">List</DsRibbonButton>
+        <div className="timeline-objects" ref={labelAnchorListRef} tabIndex={-1}>
+        {standaloneLabelAnchors.map((anchor) => <span className="timeline-label-anchor" key={anchor.id} data-label-anchor-id={anchor.id}><span data-testid={`label-anchor-summary-${anchor.id}`} title={`Source cycle ${anchor.source} displays as ${anchor.display}`}>⟲ {anchor.source}→{anchor.display}</span><button type="button" data-testid={`label-anchor-edit-${anchor.id}`} aria-label={`Edit Label Anchor at source ${anchor.source}`} onClick={() => { setEditingLabelAnchorId(anchor.id); setLabelAnchorSource(anchor.source); setLabelAnchorDisplay(anchor.display); }}>Edit</button><EditorIconButton label={`Delete Label Anchor at source ${anchor.source}`} icon="close" onClick={() => onCommand({ id: nextCommandId("label_anchor_delete"), type: "labelAnchor.delete", labelAnchorId: anchor.id })} /></span>)}
+        </div>
+      </DsRibbonGroup>
+    </div>
     <div className="timeline-slot-group" data-timeline-group="Fold / Break" aria-label="Fold and break commands">
       <DsRibbonGroup ariaLabel="Fold / Break" className="timeline-fold-group" density="compact-grid" label="Fold / Break">
         <DsRibbonButton ariaLabel="Create Time Group" dataTestId="time-group-create" icon={<RibbonIcon name="i-plus" />} onClick={() => onCommand({ id: nextCommandId("time_group_create"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: false, foldStyle: "none" } } })} title="Create a Time Group from the selected range">Create</DsRibbonButton>
@@ -110,6 +135,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
     </div>
     {editingGroup && <form className="time-group-editor" aria-label="Time Group Editor" data-testid="time-group-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Time Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} /></label><label>Start<input aria-label="Time Group start" type="number" min="0" max={document.timeline.cycleCount - 1} value={groupStart} onChange={(event) => setGroupStart(Number(event.target.value))} /></label><label>End<input aria-label="Time Group end" type="number" min="1" max={document.timeline.cycleCount} value={groupEnd} onChange={(event) => setGroupEnd(Number(event.target.value))} /></label><label>Comment<input aria-label="Time Group comment" value={groupComment} onChange={(event) => setGroupComment(event.target.value)} /></label><label>Fold label<input aria-label="Time Group fold label" value={groupFoldLabel} onChange={(event) => setGroupFoldLabel(event.target.value)} /></label><label className="check-label"><input aria-label="Time Group collapsed" type="checkbox" checked={groupCollapsed} onChange={(event) => setGroupCollapsed(event.target.checked)} />Collapsed</label><button type="button" data-testid="apply-time-group" onClick={applyTimeGroup}>Apply</button><button type="button" onClick={() => setEditingGroupId(undefined)}>Cancel</button></form>}
     {editingBookmark && <form className="bookmark-editor" aria-label="Bookmark Editor" data-testid="bookmark-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Bookmark name" value={bookmarkName} onChange={(event) => setBookmarkName(event.target.value)} /></label><label>Cycle<input aria-label="Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={bookmarkStart} onChange={(event) => setBookmarkStart(Number(event.target.value))} /></label><label>Comment<input aria-label="Bookmark comment" value={bookmarkComment} onChange={(event) => setBookmarkComment(event.target.value)} /></label><button type="button" data-testid="apply-bookmark" onClick={applyBookmark}>Apply</button><button type="button" onClick={() => setEditingBookmarkId(undefined)}>Cancel</button></form>}
+    {editingLabelAnchor && <form className="label-anchor-editor" aria-label="Label Anchor Editor" data-testid="label-anchor-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Source cycle<input aria-label="Label Anchor source" type="number" min="0" max={document.timeline.cycleCount - 1} value={labelAnchorSource} onChange={(event) => setLabelAnchorSource(Number(event.target.value))} /></label><label>Display value<input aria-label="Label Anchor display" type="number" value={labelAnchorDisplay} onChange={(event) => setLabelAnchorDisplay(Number(event.target.value))} /></label><button type="button" data-testid="apply-label-anchor" onClick={applyLabelAnchor}>Apply</button><button type="button" onClick={() => setEditingLabelAnchorId(undefined)}>Cancel</button></form>}
   </div>;
 }
 export interface SignalEditorProps {

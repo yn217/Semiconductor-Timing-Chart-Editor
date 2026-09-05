@@ -2,7 +2,7 @@ import type { CanonicalDocument } from "@timing-chart-v2/schema";
 
 let entitySequence = 0;
 
-export function nextEntityId(scope: "bookmark" | "time" | "annotation" | "annotationGroup" | "transaction" | "signal" | "group" | "commentRow" | "spacer", document: CanonicalDocument): string {
+export function nextEntityId(scope: "bookmark" | "time" | "labelAnchor" | "annotation" | "annotationGroup" | "transaction" | "signal" | "group" | "commentRow" | "spacer", document: CanonicalDocument): string {
   const used = new Set<string>([
     ...document.signals.map((item) => item.id),
     ...document.signalGroups.map((item) => item.id),
