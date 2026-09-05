@@ -199,7 +199,19 @@
 
 .ds-ribbon-button:hover, .ds-ribbon-button:focus-visible { border-color: #a8c8e6; background: #edf6ff; }
 
-.ds-ribbon-toggle-button[aria-pressed="true"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
+/* #389: this used to share the exact same border+solid-fill treatment as
+   .ds-ribbon-button's own :hover state above -- reasonable for a
+   *transient* hover, but Inspector/Bottom Editor/Signal Tree start
+   checked=true, so in View's normal (untouched, not-hovering) state that
+   became a permanently-lit blue tile with no Home Ribbon counterpart
+   (Home has no persistently-toggled buttons at all, only this transient
+   hover). Home's own idiom for a persistent selected/active state is a
+   border accent + text color with no background fill (see
+   .ribbon-tabs > button.active) -- reused here instead of inventing a new
+   one, so View's checked state reads as "selected", not as a stuck hover. */
+.ds-ribbon-toggle-button[aria-pressed="true"] { border-color: #6aa5d8; background: transparent; color: #174d7c; font-weight: 700; }
+
+.ds-ribbon-toggle-button[aria-pressed="true"]:hover { background: #edf6ff; }
 
 .ds-ribbon-button:disabled { color: #8a98a8; cursor: not-allowed; }
 

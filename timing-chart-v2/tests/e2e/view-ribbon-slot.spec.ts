@@ -139,6 +139,38 @@ test("Layout Focus Waveform restores the previous panel state without document h
   expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
 });
 
+// #389: Inspector/Bottom Editor/Signal Tree start checked=true, so their
+// normal (not-hovering) state used to permanently show the exact same
+// solid border+fill treatment .ds-ribbon-button only otherwise applies on
+// a transient :hover -- a persistently-lit blue tile with no Home Ribbon
+// counterpart (Home has no persistently-toggled buttons at all). Checked
+// state must now read as "selected" (border + text color, matching
+// Home's own persistent-active idiom on .ribbon-tabs > button.active)
+// rather than a stuck hover fill.
+test("View Panels toggle buttons show a selected border/color accent, not a persistent blue-tile fill (#389)", async ({ page }) => {
+  await page.goto("/");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const ribbon = page.getByTestId("ribbon");
+
+  const checked = ["Inspector", "Bottom Editor", "Signal Tree"];
+  for (const label of checked) {
+    const button = ribbon.getByRole("button", { name: label });
+    await expect(button).toHaveAttribute("aria-pressed", "true");
+    const style = await button.evaluate((el) => { const cs = getComputedStyle(el); return { background: cs.backgroundColor, border: cs.borderTopColor }; });
+    // Transparent/no-fill background -- not the old solid #dceeff tile.
+    expect(style.background, `${label}: ${JSON.stringify(style)}`).toMatch(/^rgba\(0,\s*0,\s*0,\s*0\)$/);
+    // Still visually distinct from an unchecked button via a real border accent.
+    expect(style.border, label).not.toBe("rgba(0, 0, 0, 0)");
+  }
+
+  const inspector = ribbon.getByRole("button", { name: "Inspector" });
+  const checkedStyle = await inspector.evaluate((el) => getComputedStyle(el).borderTopColor);
+  await inspector.click();
+  await expect(inspector).toHaveAttribute("aria-pressed", "false");
+  const uncheckedStyle = await inspector.evaluate((el) => getComputedStyle(el).borderTopColor);
+  expect(uncheckedStyle).not.toBe(checkedStyle);
+});
+
 test("Layout Reset restores application panes without mutating the document", async ({ page }) => {
   await page.goto("/");
   const shell = page.locator(".editor-shell");
