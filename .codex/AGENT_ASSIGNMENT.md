@@ -1,9 +1,9 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-05 13:12 JST
+Last reconciled: 2026-09-05 13:19 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main at reconciliation: `cc7e0a35fe842572507c40f38a18cd12e9e46ae1`
+Observed main at reconciliation: `fec3566d96cf73cdb87d1e0b5437bdc4530dfb28`
 Open Issues observed: 32
 
 This file is the authoritative agent-ownership split. One Issue has one implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
@@ -130,6 +130,7 @@ These older Phase/Umbrella Issues are audited against current `main`. Do not rec
 
 - `#260`: legacy CSS relocation is DONE; keep open only for the residual token-contract, hard anti-regression guard, and final visual/current-contract evidence after #357.
 - `#181`: accepted Collapse/Visibility semantics, Role badge geometry and focused MiniMap evidence must not be redone; remaining full-v8 visual/E2E closure waits for #357.
+- `#175`: current `main@fec3566` removes `zoom` from the pane/host resize effect dependency, eliminating one redundant resize-render path on view-only Zoom. This is partial progress only; retain the full performance/latency/invalidation closure contract.
 - `#313`: core fixes from PR #338/#341 are merged; do not restart broad gesture implementation without a failing acceptance case.
 - `#357`: new P0 current-main runtime blocker; fix this before interpreting visual-reference test failures as GUI/Golden regressions.
 
