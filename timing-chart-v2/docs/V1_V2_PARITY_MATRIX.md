@@ -75,6 +75,12 @@ metadata is preserved through Save/Open and emitted in SVG, PNG and PDF, and
 long metadata remains present under A4 portrait Fit Page and landscape Fit
 Width. The full V1 reference-layout comparison remains open.
 
+The editable Legend refresh is covered by the current-main `full-gui.spec.ts`
+browser flow: stable entry label, visibility and ordering changes survive
+Save/Open, the SVG contains the ordered visible labels, and the shared
+ExportScene also produces valid PNG and PDF outputs. The complete V1 legend
+style/fit reference matrix remains open.
+
 ## Non-GUI V1 contract sections
 
 The JSON inventory also covers the full product contract, including:

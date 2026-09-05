@@ -451,6 +451,17 @@ test("edits Legend entry labels, visibility and order, then preserves them throu
   const exported = await readFile((await (await pending).path())!);
   expect(exported.toString("utf8")).toContain(">Outputs<");
   expect(exported.toString("utf8")).not.toContain(">input<");
+  await exportDialog.getByLabel("Export format").selectOption("png");
+  const pngPending = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Export PNG" }).click();
+  const png = await readFile((await (await pngPending).path())!);
+  expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  await exportDialog.getByLabel("Export format").selectOption("pdf");
+  const pdfPending = page.waitForEvent("download");
+  await exportDialog.getByRole("button", { name: "Export PDF" }).click();
+  const pdf = await readFile((await (await pdfPending).path())!);
+  expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+  expect(pdf.length).toBeGreaterThan(1_000);
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
 });
 
