@@ -57,3 +57,23 @@ test("MiniMap viewport updates do not rebuild the static overview", async ({ pag
   expect(afterPan.history).toBe(before.history);
   expect(afterPan.dirty).toBe(before.dirty);
 });
+
+test("non-overview Signal property commits reuse the static MiniMap overview", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const minimap = page.getByTestId("minimap");
+  const before = await readState(page);
+  await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").fill("REQUEST_RENAMED");
+  await page.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  const after = await readState(page);
+  expect(after.overviewBuilds).toBe(before.overviewBuilds);
+  expect(after.signalLookups).toBe(before.signalLookups);
+  expect(after.overviewRows).toBe(before.overviewRows);
+  expect(after.revision).not.toBe(before.revision);
+  expect(after.history).not.toBe(before.history);
+  expect(after.dirty).not.toBe(before.dirty);
+  await expect(minimap).toHaveAttribute("data-overview-builds", before.overviewBuilds!);
+});
