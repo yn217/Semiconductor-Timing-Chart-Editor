@@ -26,6 +26,17 @@ describe("TimelineViewportRuntime", () => {
     expect(runtimeContext.render.requestRender).toHaveBeenCalled();
   });
 
+  it("does not schedule a second presentation pass for the same zoom", () => {
+    const runtimeContext = context();
+    const runtime = createTimelineViewportRuntime(runtimeContext);
+    runtime.attach();
+
+    runtime.setZoom(1);
+    runtime.setZoom(1);
+
+    expect(runtimeContext.render.requestRender).toHaveBeenCalledTimes(1);
+  });
+
   it("drops refresh requests from a stale document epoch", () => {
     let current = 1;
     const runtimeContext = context();

@@ -74,6 +74,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
   let disposed = false;
   let documentEpoch = context.document.getDocumentEpoch();
   let resizeObserver: ResizeObserver | undefined;
+  let zoomPresentationApplied = false;
 
   const assertActive = () => {
     if (disposed) throw new Error("TimelineViewportRuntime is disposed");
@@ -108,7 +109,19 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     onDocumentEpochChanged: (epoch) => { assertActive(); documentEpoch = epoch; },
     zoomIn: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampZoom(context.viewport.getZoom() + 0.1)); render("zoom-in"); },
     zoomOut: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampZoom(context.viewport.getZoom() - 0.1)); render("zoom-out"); },
-    setZoom: (zoom) => { assertActive(); if (!attached) return; context.viewport.setZoom(clampZoom(zoom)); render("zoom"); },
+    setZoom: (zoom) => {
+      assertActive();
+      if (!attached) return;
+      const nextZoom = clampZoom(zoom);
+      // Accepted semantic commands call this synchronizer after the renderer
+      // becomes idle. Once the initial presentation is applied, reapplying
+      // the same zoom only schedules another scroll-layout/render pass (most
+      // notably on Inspector property commits) without changing the view.
+      if (zoomPresentationApplied && context.viewport.getZoom() === nextZoom) return;
+      zoomPresentationApplied = true;
+      context.viewport.setZoom(nextZoom);
+      render("zoom");
+    },
     fitAll: (contentWidth) => { assertActive(); if (!attached) return; context.viewport.setZoom(fit(0, contentWidth)); context.viewport.setScrollState({ left: 0 }); render("fit-all"); },
     fitSelection: (startLocalX, endLocalX) => { assertActive(); if (!attached) return; const zoom = fit(startLocalX, endLocalX); context.viewport.setZoom(zoom); context.viewport.setScrollState({ left: Math.max(0, Math.round(startLocalX * zoom - context.viewport.getMetrics().leftInset)) }); render("fit-selection"); },
     navigateToCycle: (cycle) => { assertActive(); if (!attached) return; const localX = context.geometry.sourceBoundaryToLocalX(context.document.getSnapshot(), cycle); if (localX === undefined) return; context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) }); render("navigate-cycle"); },
