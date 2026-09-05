@@ -328,6 +328,31 @@ function unsupportedClockRipple(document: CanonicalDocument, _operation: Timelin
   return fail("invalid", "UNSUPPORTED_CLOCK_RIPPLE", `$.signals[${clockIndex}]`, "Timeline editing is rejected while this generated Clock needs segmented ripple semantics.");
 }
 
+/**
+ * Timeline transforms must not commit a Clock generator that the production
+ * WaveDrom adapter cannot render.  In particular, shifting a periodic
+ * generator's start by a non-period-aligned amount is otherwise accepted by
+ * the generic Canonical validator and only fails later during rendering.
+ */
+function transformedClockProblem(document: CanonicalDocument): CommandPlanResult | undefined {
+  for (const [index, signal] of document.signals.entries()) {
+    if (signal.type !== "clock") continue;
+    const { generator } = signal;
+    if (generator.start % generator.period !== 0) {
+      return fail("invalid", "UNALIGNED_CLOCK_START", `$.signals[${index}].generator.start`, "Timeline editing would leave the Clock start unaligned with its period.");
+    }
+    if ((signal.enable ?? []).some((change) => change.start % generator.period !== 0)) {
+      return fail("invalid", "UNALIGNED_CLOCK_ENABLE", `$.signals[${index}].enable`, "Timeline editing would leave a Clock enable change unaligned with its period.");
+    }
+    const slotCount = clockSlotCount(generator, document.timeline.cycleCount);
+    const suppressed = generator.suppressedPeriods ?? [];
+    if (suppressed.some((slot) => !Number.isInteger(slot) || slot < 0 || slot >= slotCount) || new Set(suppressed).size !== suppressed.length) {
+      return fail("invalid", "INVALID_SUPPRESSED_PERIODS", `$.signals[${index}].generator.suppressedPeriods`, "Timeline editing would leave a Clock suppression slot outside the transformed timeline.");
+    }
+  }
+  return undefined;
+}
+
 function canonicalIds(document: CanonicalDocument): Set<string> {
   return new Set([
     ...document.signals.map((item) => item.id),
@@ -1226,6 +1251,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const clockPolicy = unsupportedClockRipple(document, { kind: "insert", at: command.at, count: command.count });
       if (clockPolicy) return clockPolicy;
       const next = insertTimeline(document, command.at, command.count);
+      const transformedClock = transformedClockProblem(next);
+      if (transformedClock) return transformedClock;
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }
@@ -1237,6 +1264,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const mappedLabelSources = document.timeline.labelAnchors.map((anchor) => mapDeleteBoundary(anchor.source, command.start, command.end));
       if (new Set(mappedLabelSources).size !== mappedLabelSources.length) return fail("invalid", "LABEL_ANCHOR_COLLISION", "$.timeline.labelAnchors", "Timeline delete would collapse multiple LabelAnchor sources; the deletion is rejected atomically.");
       const next = deleteTimeline(document, command.start, command.end);
+      const transformedClock = transformedClockProblem(next);
+      if (transformedClock) return transformedClock;
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }
@@ -1246,6 +1275,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const clockPolicy = unsupportedClockRipple(document, { kind: "duplicate", at: command.at });
       if (clockPolicy) return clockPolicy;
       const next = duplicateTimelineRange(document, command);
+      const transformedClock = transformedClockProblem(next);
+      if (transformedClock) return transformedClock;
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }
@@ -1258,6 +1289,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (clockPolicy) return clockPolicy;
       const next = moveTimelineRange(document, command.start, command.end, command.to);
       if (!next) return fail("invalid", "NON_CONTIGUOUS_RANGE_MOVE", "$", "Move would split a semantic range or includes non-periodic Clock controls.");
+      const transformedClock = transformedClockProblem(next);
+      if (transformedClock) return transformedClock;
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
     }

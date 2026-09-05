@@ -106,6 +106,27 @@ describe("timeline ripple commands", () => {
     }
   });
 
+  it("rejects a timeline transform that would make a Clock generator unrenderable", () => {
+    const initial = canonicalFixture();
+    const clock = initial.signals[0] as ClockSignal;
+    initial.signals[0] = { ...clock, generator: { ...clock.generator, start: 4, period: 2 } };
+    const commands = [
+      { id: commandId("cmd_unaligned_insert"), type: "timeline.insert" as const, at: 0, count: 1 },
+      { id: commandId("cmd_unaligned_delete"), type: "timeline.delete" as const, start: 0, end: 1 },
+      { id: commandId("cmd_unaligned_duplicate"), type: "timeline.duplicateRange" as const, start: 0, end: 1, at: 0 },
+    ];
+    for (const command of commands) {
+      const session = new CommandHistorySession(initial);
+      const before = session.getSnapshot();
+      const metrics = session.metrics();
+      const result = session.execute(command);
+      expect(result).toMatchObject({ reason: "invalid", problems: [expect.objectContaining({ code: "UNALIGNED_CLOCK_START" })] });
+      expect(session.getSnapshot()).toBe(before);
+      expect(session.metrics()).toEqual(metrics);
+      expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+    }
+  });
+
   it("keeps representable period-one and terminal append edits available", () => {
     const initial = rippleFixture();
     const clock = initial.signals[0] as ClockSignal;
