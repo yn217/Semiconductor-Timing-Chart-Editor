@@ -513,7 +513,11 @@ function moveTimelineRange(document: CanonicalDocument, start: number, end: numb
   if (timeGroups.some((group) => group === undefined) || transactions.some((transaction) => transaction === undefined)) return undefined;
   return {
     ...document,
-    signals: document.signals.map((signal): Signal => signal.type === "clock" || signal.type === "commentRow" ? signal : { ...signal, values: moveChanges(signal.values, document.timeline.cycleCount, start, end, to) }),
+    signals: document.signals.map((signal): Signal => {
+      if (signal.type === "commentRow") return signal;
+      if (signal.type === "clock") return { ...signal, generator: { ...signal.generator, start: moveCycleIndex(signal.generator.start, start, end, to) } };
+      return { ...signal, values: moveChanges(signal.values, document.timeline.cycleCount, start, end, to) };
+    }),
     annotations: document.annotations.map((annotation) => ({ ...annotation, anchor: moveAnchor(annotation.anchor, start, end, to), start: moveAnchor(annotation.start, start, end, to), end: moveAnchor(annotation.end, start, end, to), from: moveAnchor(annotation.from, start, end, to), to: moveAnchor(annotation.to, start, end, to) })).map((annotation) => Object.fromEntries(Object.entries(annotation).filter(([, value]) => value !== undefined)) as unknown as Annotation),
     bookmarks: document.bookmarks.map((bookmark) => ({ ...bookmark, start: moveCycleIndex(bookmark.start, start, end, to) })),
     timeGroups: timeGroups as TimeGroup[],

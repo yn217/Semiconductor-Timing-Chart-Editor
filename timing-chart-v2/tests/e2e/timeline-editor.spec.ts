@@ -455,6 +455,28 @@ test("allows all ordinary timeline transforms with the default uncontrolled peri
   }
 });
 
+test("moves an uncontrolled Clock generator start with its source-time range", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("0");
+  await page.getByLabel("Timeline range end").fill("2");
+  await page.getByLabel("Timeline destination").fill("4");
+  await page.getByRole("button", { name: "Move to", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  const editor = page.getByTestId("signal-editor");
+  await expect(editor.getByLabel("Clock start")).toHaveValue("4");
+  await editor.getByTestId("editor-undo").click();
+  await expect(editor.getByLabel("Clock start")).toHaveValue("0");
+  await editor.getByTestId("editor-redo").click();
+  await expect(editor.getByLabel("Clock start")).toHaveValue("4");
+});
+
 test("preserves a timeline transform exactly through Save/Open", async ({ page }) => {
   await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
