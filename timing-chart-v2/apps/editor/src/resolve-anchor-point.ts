@@ -12,7 +12,11 @@ export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document:
   const local = maps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
   if (!local) return undefined;
   const row = anchor.signalId ? projection.rowLayout.find((item) => item.rowId === anchor.signalId) : undefined;
-  if (anchor.signalId && !row) return undefined;
+  // Navigation keeps hidden rows addressable for selection and stable layout
+  // identity, but a hidden timing row has no visible geometry owner. Do not
+  // project an annotation onto that retained navigation slot; this also keeps
+  // hidden-target behavior consistent with the snap-index visibility policy.
+  if (anchor.signalId && (!row || !row.visible)) return undefined;
   const rowY = row?.y ?? 0;
   const sharedBoundary = anchor.point === "cycle-start" && axisOwnerSignalId !== undefined
     ? maps.get(axisOwnerSignalId)?.find({ ...anchor, signalId: axisOwnerSignalId, cycle: renderedCycle })?.point

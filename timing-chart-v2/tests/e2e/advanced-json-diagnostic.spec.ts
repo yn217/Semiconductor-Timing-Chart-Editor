@@ -92,3 +92,33 @@ test("Advanced JSON keeps the draft open when Apply rejects a selected-object ID
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
+
+test("Advanced JSON reports clipboard rejection without mutating the document", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.getByRole("tab", { name: "JSON", exact: true }).click();
+  const json = page.getByTestId("json-panel");
+  const before = {
+    revision: await page.getByTestId("revision-status").textContent(),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await page.evaluate(() => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async () => { throw new Error("permission denied"); } },
+    });
+  });
+  await json.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(json).toContainText("Copy failed: permission denied");
+  await expect(page.getByTestId("revision-status")).toHaveText(before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await bottom.getByRole("tab", { name: "Problems", exact: true }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems).toContainText("CLIPBOARD_FAILED");
+  await expect(problems).toContainText("Copy JSON");
+  await expect(problems).toContainText("Allow clipboard access or retry the copy operation");
+});

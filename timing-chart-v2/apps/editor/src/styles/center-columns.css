@@ -78,6 +78,19 @@
 .surface-host [data-annotation-shape="line"] [data-role="annotation-body"][data-line-renderer="svg"]::before,
 .surface-host [data-annotation-shape="line"] [data-role="annotation-body"][data-line-renderer="svg"]::after { display: none; }
 
+/* Annotation product types retain the shared semantic projection but use
+   distinct visual grammar. These selectors are presentation-only: anchor
+   coordinates, shape ownership, and interaction routing remain unchanged. */
+.surface-host [data-annotation-type="text"] [data-role="annotation-body"] { display: none; }
+.surface-host [data-annotation-type="text"] [data-role="annotation-label"] { padding: 0; border: 0; border-radius: 0; background: transparent; color: var(--annotation-color); font-weight: 600; }
+.surface-host [data-annotation-type="callout"] [data-role="annotation-label"] { padding: 3px 7px; border-radius: 8px; box-shadow: 0 1px 3px #20354a33; }
+.surface-host [data-annotation-type="callout"] [data-role="annotation-label"]::after { content: ""; position: absolute; left: 9px; bottom: -5px; width: 8px; height: 8px; border-right: 1px solid color-mix(in srgb, var(--annotation-color) 55%, white); border-bottom: 1px solid color-mix(in srgb, var(--annotation-color) 55%, white); background: #fffffff2; transform: rotate(45deg); }
+.surface-host [data-annotation-type="marker"] [data-role="annotation-body"] { width: 3px; height: 28px; margin: -14px 0 0 -1px; border: 0; border-left: 3px solid var(--annotation-color); border-radius: 0; background: transparent; }
+.surface-host [data-annotation-type="marker"] [data-role="annotation-label"] { border-left: 3px solid var(--annotation-color); border-radius: 0 3px 3px 0; }
+.surface-host [data-annotation-type="range"] [data-role="annotation-body"] { border-style: solid; border-radius: 2px; background: color-mix(in srgb, var(--annotation-color) 12%, transparent); }
+.surface-host [data-annotation-type="highlight"] [data-role="annotation-body"] { border-style: dashed; border-radius: 0; background: color-mix(in srgb, var(--annotation-color) 32%, transparent); }
+.surface-host [data-annotation-type="bracket"] [data-role="annotation-label"] { border-radius: 0; border-top: 2px solid var(--annotation-color); border-bottom: 0; }
+
 .surface-host [data-arrowhead="end"] [data-role="annotation-body"]::after, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::after { content: ""; position: absolute; right: -1px; top: -5px; border-width: 4px 0 4px 7px; border-style: solid; border-color: transparent transparent transparent var(--annotation-color); }
 
 .surface-host [data-arrowhead="start"] [data-role="annotation-body"]::before, .surface-host [data-arrowhead="bidirectional"] [data-role="annotation-body"]::before { content: ""; position: absolute; left: -1px; top: -5px; border-width: 4px 7px 4px 0; border-style: solid; border-color: transparent var(--annotation-color) transparent transparent; }

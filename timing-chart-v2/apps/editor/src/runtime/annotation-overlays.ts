@@ -43,8 +43,9 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     const tracePoints = annotation.type === "ghostTrace" && annotation.sourceSignalId && firstAnchor && lastAnchor
       ? (() => {
         const sourceMap = maps.get(annotation.sourceSignalId);
-        const sourceRowY = projection.rowLayout.find((row) => row.rowId === annotation.sourceSignalId)?.y;
-        if (!sourceMap || sourceRowY === undefined) return [];
+        const sourceRow = projection.rowLayout.find((row) => row.rowId === annotation.sourceSignalId);
+        if (!sourceMap || !sourceRow?.visible) return [];
+        const sourceRowY = sourceRow.y;
         const offset = annotation.traceOffsetCycles ?? 0;
         const points: Point[] = [];
         const start = Math.max(0, Math.floor(Math.min(firstAnchor.cycle, lastAnchor.cycle)));

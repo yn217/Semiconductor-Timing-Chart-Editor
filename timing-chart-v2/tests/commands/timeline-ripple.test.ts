@@ -137,6 +137,25 @@ describe("timeline ripple commands", () => {
     expect(session.getSnapshot().document.timeline.cycleCount).toBe(initial.timeline.cycleCount + 1);
   });
 
+  it("ripples LabelAnchor source without shifting its display label", () => {
+    const commands = [
+      { id: commandId("cmd_label_insert"), type: "timeline.insert" as const, at: 3, count: 2 },
+      { id: commandId("cmd_label_delete"), type: "timeline.delete" as const, start: 2, end: 4 },
+      { id: commandId("cmd_label_duplicate"), type: "timeline.duplicateRange" as const, start: 4, end: 6, at: 1 },
+      { id: commandId("cmd_label_move"), type: "timeline.moveRange" as const, start: 0, end: 1, to: 7 },
+    ];
+    for (const command of commands) {
+      const initial = rippleFixture();
+      const before = initial.timeline.labelAnchors[0]!;
+      const session = new CommandHistorySession(initial);
+      const result = session.execute(command);
+      expect(result.ok).toBe(true);
+      const labels = session.getSnapshot().document.timeline.labelAnchors;
+      expect(labels.find((label) => label.id === before.id)).toMatchObject({ display: before.display });
+      expect(labels.filter((label) => label.display === before.display)).not.toHaveLength(0);
+    }
+  });
+
   it("rejects a delete that would collapse distinct LabelAnchor sources", () => {
     const initial = rippleFixture();
     initial.timeline.labelAnchors = [
