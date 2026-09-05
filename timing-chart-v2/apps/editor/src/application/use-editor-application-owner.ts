@@ -10,6 +10,11 @@ type AcceptedCommandResult = Extract<CommandResult, { readonly ok: true }>;
 type AcceptedContext = Readonly<{ operation: string; command?: SemanticCommand; batchId?: CommandId }>;
 type AcceptedHandler = (result: AcceptedCommandResult, context: AcceptedContext) => void;
 
+function withoutCommandRejectionDiagnostics(current: readonly DocumentProblem[]): readonly DocumentProblem[] {
+  const next = current.filter((item) => !item.detail?.startsWith("command-rejection:"));
+  return next.length === current.length ? current : next;
+}
+
 function commandDiagnosticTarget(command: SemanticCommand | undefined): Pick<DocumentProblem, "objectType" | "objectId"> {
   if (!command) return {};
   if ("signalId" in command) return { objectType: "signal", objectId: command.signalId };
@@ -58,7 +63,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     setHistory(runtime.session.current().historyState());
     setValidationDiagnostics([]);
     setProblem("");
-    setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("command-rejection:")));
+    setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
     acceptedHandlerRef.current?.(result, context);
     return result;
   }, [runtime]);
