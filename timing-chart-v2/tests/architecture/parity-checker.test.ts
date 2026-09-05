@@ -50,3 +50,40 @@ it("rejects Cycle/Transaction evidence from satisfying Signal Split", () => {
   }
   expect(output).toContain("GUI-SIGNAL-SPLIT evidence must not use Cycle/Transaction Split as implementation evidence");
 });
+
+it("keeps the dedicated V2 parity children mapped to their parent and Golden feature", () => {
+  const parsed = JSON.parse(readFileSync(matrixSource, "utf8")) as { independentContracts: Array<{ id: string; parentContract?: string; v2OwnerIssue: string; v1Source: string[]; goldenSamples?: number[] }> };
+  const expected = [
+    ["GUI-TRANSITION-ARROW", "#375", "ANNOT-01", ["#10", "#68"], [15]],
+    ["GUI-RULER-LABEL-ANCHOR", "#376", "TIME-01", ["#111"], [16]],
+    ["GUI-ANNOTATION-PRIMITIVES", "#377", "ANNOT-01", ["#40", "#69"], [14]],
+    ["GUI-ANNOTATION-PRESENTATION", "#378", "ANNOT-01", ["#40", "#69"], [14]],
+  ] as const;
+  for (const [id, owner, parent, sources, samples] of expected) {
+    const child = parsed.independentContracts.find((contract) => contract.id === id);
+    expect(child).toMatchObject({ id, v2OwnerIssue: owner, parentContract: parent, v1Source: sources, goldenSamples: samples });
+  }
+});
+
+it("rejects a dedicated parity child whose Golden mapping is removed", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-child-"));
+  const matrix = path.join(directory, "matrix.json");
+  const manifest = path.join(directory, "manifest.json");
+  const status = path.join(directory, "status.json");
+  cpSync(manifestSource, manifest);
+  cpSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), status);
+  const parsed = JSON.parse(readFileSync(matrixSource, "utf8")) as { independentContracts: Array<{ id: string; goldenSamples?: number[] }> };
+  const child = parsed.independentContracts.find((contract) => contract.id === "GUI-ANNOTATION-PRIMITIVES");
+  if (!child) throw new Error("dedicated parity child fixture is missing");
+  delete child.goldenSamples;
+  writeFileSync(matrix, JSON.stringify(parsed));
+
+  let output = "";
+  try {
+    execFileSync(process.execPath, [checker, "--matrix", matrix, "--manifest", manifest, "--status", status], { cwd: workspace, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const result = error as { stdout?: string; stderr?: string };
+    output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  }
+  expect(output).toContain("GUI-ANNOTATION-PRIMITIVES must map exactly to Golden Sample 14");
+});

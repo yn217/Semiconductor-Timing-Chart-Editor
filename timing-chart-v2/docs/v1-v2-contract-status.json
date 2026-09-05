@@ -34,6 +34,10 @@
     {"featureKey":"GUI-TIMING-REGION-GHOST","legacySources":["#133","#135","#137"],"ownerIssues":["#170","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-CLIPBOARD","legacySources":["#71","#78","#79","#80"],"ownerIssues":["#161","#169","#176"],"implementationStatus":"ACCEPTANCE_ONLY"},
     {"featureKey":"GUI-GOLDEN-SAMPLES","legacySources":["#17","#16","#174"],"ownerIssues":["#174","#177","#178"],"implementationStatus":"ACCEPTANCE_ONLY"},
-    {"featureKey":"GUI-EXPORT-COMPLETENESS","legacySources":["#13","#14","#17"],"ownerIssues":["#173","#177"],"implementationStatus":"ACCEPTANCE_ONLY"}
+    {"featureKey":"GUI-EXPORT-COMPLETENESS","legacySources":["#13","#14","#17"],"ownerIssues":["#173","#177"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-TRANSITION-ARROW","legacySources":["#10","#68"],"ownerIssues":["#375"],"implementationStatus":"ACCEPTANCE_ONLY"},
+    {"featureKey":"GUI-RULER-LABEL-ANCHOR","legacySources":["#111"],"ownerIssues":["#376"],"implementationStatus":"NOT_IMPLEMENTED"},
+    {"featureKey":"GUI-ANNOTATION-PRIMITIVES","legacySources":["#40","#69"],"ownerIssues":["#377"],"implementationStatus":"PARTIAL"},
+    {"featureKey":"GUI-ANNOTATION-PRESENTATION","legacySources":["#40","#69"],"ownerIssues":["#378"],"implementationStatus":"PARTIAL"}
   ]
 }
