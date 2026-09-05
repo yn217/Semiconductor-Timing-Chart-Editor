@@ -110,6 +110,45 @@ test("exports both synchronized signal and transaction layers from Split View", 
   expect(await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
 });
 
+test("exports SVG, PNG and PDF from Split View through the shared ExportScene", async ({ page }) => {
+  await ready(page);
+  await createTransaction(page, "Split All Formats", 2, 6);
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes")).toBeVisible();
+
+  const surface = page.getByTestId("cycle-surface");
+  const before = {
+    revision: await surface.getAttribute("data-canonical-revision"),
+    history: await surface.getAttribute("data-history-depth"),
+    counters: await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters"),
+  };
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const download = async (format: "svg" | "png" | "pdf") => {
+    await dialog.getByLabel("Export format").selectOption(format);
+    const pending = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: `Export ${format.toUpperCase()}` }).click();
+    return readFile((await (await pending).path())!);
+  };
+
+  const svg = await download("svg");
+  const svgText = svg.toString("utf8");
+  expect(svgText).toContain('data-signal-id="sig_cycle_clock"');
+  expect(svgText).toContain('data-transaction-id=');
+  expect(svgText).toContain("Split All Formats");
+  const png = await download("png");
+  expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  const pdf = await download("pdf");
+  expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+  expect(pdf.length).toBeGreaterThan(1_000);
+
+  expect(await surface.getAttribute("data-canonical-revision")).toBe(before.revision);
+  expect(await surface.getAttribute("data-history-depth")).toBe(before.history);
+  expect(await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
+});
+
 test("keeps the Split View surface contract and view mode changes view-only", async ({ page }) => {
   await ready(page);
   const panel = page.locator(".cycle-panel");
