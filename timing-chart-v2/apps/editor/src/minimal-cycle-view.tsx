@@ -69,6 +69,7 @@ import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
+import type { SelectedClockEdge } from "./runtime/edge-counter-projection.js";
 import { TimelineGeometryOwner } from "./runtime/timeline-geometry-owner.js";
 import { TimelineRangeInteractionOwner } from "./runtime/timeline-range-interaction-owner.js";
 import { AnnotationInteractionOwner } from "./runtime/timeline-annotation-interaction-owner.js";
@@ -278,6 +279,7 @@ export function MinimalCycleView() {
   const [selectedCycle, setSelectedCycle] = useState(() => visualReference ? 0 : 2);
   const selectedCycleRef = useRef(selectedCycle);
   selectedCycleRef.current = selectedCycle;
+  const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
   const refreshPlayhead = useRef<() => void>(() => undefined);
   const refreshRangeSelectionBand = useRef<() => void>(() => undefined);
   const timelineRangeRef = useRef(timelineRange);
@@ -467,7 +469,7 @@ export function MinimalCycleView() {
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererOverlays(renderer, host, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererOverlays(renderer, host, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
@@ -878,6 +880,7 @@ export function MinimalCycleView() {
     const applyCanvasCycleSelection = (cycle: number, shiftKey: boolean) => {
       const cycleCount = session.getSnapshot().document.timeline.cycleCount;
       if (cycle < 0 || cycle > cycleCount) return false;
+      selectedEdgeRef.current = undefined;
       setRangeSelectionActive(true);
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
@@ -892,10 +895,29 @@ export function MinimalCycleView() {
       publishState();
       return true;
     };
+    const selectedClockEdgeAtPointer = (event: MouseEvent): SelectedClockEdge | undefined => {
+      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+      if (!waveLayer) return undefined;
+      const bounds = waveLayer.getBoundingClientRect();
+      const currentZoom = timelineNavigation.getZoom();
+      const localPointer = timelineGeometry.screenToLocal({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, currentZoom);
+      const snap = timelineGeometry.currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 14 / currentZoom, ["clock-edge"]);
+      const signalId = snap?.anchor.signalId;
+      const point = snap?.anchor.point;
+      if (!signalId || (point !== "rising-edge" && point !== "falling-edge")) return undefined;
+      return { signalId, cycle: snap.anchor.cycle, kind: point === "rising-edge" ? "rising" : "falling" };
+    };
     const selectCanvasCycle = (event: MouseEvent) => {
       if (!isTimeDomainPointerTarget(event)) return false;
       const cycle = cycleBoundaryAtX(event.clientX);
-      return cycle === undefined ? false : applyCanvasCycleSelection(cycle, event.shiftKey);
+      if (cycle === undefined) return false;
+      const selectedEdge = selectedClockEdgeAtPointer(event);
+      const accepted = applyCanvasCycleSelection(cycle, event.shiftKey);
+      if (accepted) {
+        selectedEdgeRef.current = selectedEdge;
+        timelineRuntime.refreshOverlays();
+      }
+      return accepted;
     };
     const onRulerSelect = (event: MouseEvent) => {
       if (rangeInteractions.consumeRulerClickSuppression()) return;
@@ -903,6 +925,7 @@ export function MinimalCycleView() {
       if (!tick) return;
       const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
       if (!Number.isInteger(cycle) || cycle > session.getSnapshot().document.timeline.cycleCount) return;
+      selectedEdgeRef.current = undefined;
       setRangeSelectionActive(true);
       setSelectedCycle(cycle);
       rendererHost.dataset.selectedCycle = String(cycle);
@@ -914,6 +937,7 @@ export function MinimalCycleView() {
         const anchor = timelineRangeRef.current.start;
         setTimelineRange({ start: Math.min(anchor, cycle), end: Math.max(anchor, cycle) + 1 });
       } else setTimelineRange({ start: cycle, end: cycle + 1 });
+      timelineRuntime.refreshOverlays();
     };
     let rangeInteractions!: TimelineRangeInteractionOwner;
     const cycleBoundaryAtX = (clientX: number): number | undefined => {
