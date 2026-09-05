@@ -235,6 +235,7 @@ export function MinimalCycleView() {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [treePresentationRevision, setTreePresentationRevision] = useState(0);
   const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
+  const [transactionPresentationRevision, setTransactionPresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
@@ -690,6 +691,9 @@ export function MinimalCycleView() {
       const changed = result.changeSet;
       if (changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined) {
         setTreePresentationRevision((value) => value + 1);
+      }
+      if (changed.fullDocumentReplace === true || changed.transactionSemantics !== undefined) {
+        setTransactionPresentationRevision((value) => value + 1);
       }
       if (changed.fullDocumentReplace === true) {
         timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
@@ -1440,7 +1444,7 @@ export function MinimalCycleView() {
 
   useEffect(() => {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
-  }, [selectedTransactionId, snapshot.revision]);
+  }, [selectedTransactionId, transactionPresentationRevision]);
 
   const createSelectedAnnotation = (annotation: Annotation) => {
     const result = application.execute({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
