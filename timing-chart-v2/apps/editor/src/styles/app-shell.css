@@ -2,7 +2,7 @@
 
 
 /* Migrated from legacy.css; 21 complete rule blocks retain their declarations. */
-:root { font-family: var(--gui-font-family); color: #172033; background: #eef2f6; font-synthesis: none; --gui-font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; --gui-font-size: 13px; --gui-font-compact: 11px; --gui-icon-size: 25px; --gui-control-height: 30px; --gui-row-height: 36px; --gui-ribbon-height: 146px; --gui-panel-header-height: 42px; --gui-left-width: 330px; --gui-inspector-width: 300px; --gui-bottom-height: 270px; --gui-border: #dbe3ee; --gui-border-strong: #cbd6e4; --gui-panel-bg: #fff; --gui-selected-bg: #eef6ff; --gui-hover-bg: #f1f6fc; --font-ui: 11px; --font-small: 10px; --font-section: 13px; --control-height: 26px; --button-height: 26px; --table-row-height: 28px; --space-xs: 4px; --space-sm: 7px; --space-md: 10px; --panel-padding: 12px; }
+:root { font-family: var(--gui-font-family); color: #172033; background: #eef2f6; font-synthesis: none; --gui-font-family: "Segoe UI", "Yu Gothic UI", Meiryo, sans-serif; --gui-font-size: 13px; --gui-font-compact: 11px; --gui-icon-size: 25px; --gui-control-height: 30px; --gui-row-height: 36px; --gui-ribbon-height: 146px; --gui-panel-header-height: 42px; --gui-left-width: 330px; --gui-inspector-width: 300px; --gui-bottom-height: 270px; --gui-border: #dbe3ee; --gui-border-strong: #cbd6e4; --gui-panel-bg: #fff; --gui-selected-bg: #eef6ff; --gui-hover-bg: #f1f6fc; --table-row-height: 28px; }
 
 body { margin: 0; min-width: 920px; min-height: 100vh; }
 
@@ -87,7 +87,7 @@ body { min-width: 1100px; }
    every region sits inside -- this is the one genuinely cross-region
    layout concern app-shell.css is the documented single owner of. */
 * { box-sizing: border-box; }
-button, input, select { font: inherit; font-size: var(--font-ui); }
+button, input, select { font: inherit; font-size: var(--ds-font-size); }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 .editor-shell { min-height: 100vh; display: grid; grid-template-rows: 76px auto minmax(250px, 1fr) 32px; }
 .editor-shell { --gui-frozen-width: 160px; --wave-width: calc(100vw - var(--gui-left-width) - var(--gui-inspector-width) - var(--gui-frozen-width)); }

@@ -9,7 +9,7 @@
 
 .bottom-resize-track::after { content: ""; position: absolute; top: 3px; left: 50%; width: 42px; height: 2px; transform: translateX(-50%); border-radius: 2px; background: #9aaabd; opacity: .75; }
 
-.bottom-resize-track:hover::after, .bottom-resize-track:focus-visible::after { background: #2678bc; opacity: 1; }
+.bottom-resize-track:hover::after, .bottom-resize-track:focus-visible::after { background: var(--ds-focus-color); opacity: 1; }
 
 .bottom-tabs { flex: 0 0 38px; display: flex; align-items: end; padding: 0 9px; border-bottom: 1px solid #cbd3dd; }
 
@@ -86,9 +86,9 @@
 
 .signal-properties label, .clock-generator label, .clock-edge-counter label, .event-add label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
 
-.signal-properties input, .signal-properties select, .clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-add input, .event-row input { height: var(--control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
+.signal-properties input, .signal-properties select, .clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-add input, .event-row input { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
 
-.signal-properties button, .clock-generator button, .clock-edge-counter button, .event-add button, .event-actions button, .quick-values button { height: var(--button-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; }
+.signal-properties button, .clock-generator button, .clock-edge-counter button, .event-add button, .event-actions button, .quick-values button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; }
 
 .signal-properties button[type="submit"], .clock-generator button[type="submit"], .clock-edge-counter button[type="submit"], .event-add > button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
 
@@ -102,11 +102,11 @@
 
 .event-toolbar { display: flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 0 7px; border-top: 1px solid #d5dde7; border-bottom: 1px solid #d5dde7; }
 
-.event-toolbar button { height: var(--button-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
+.event-toolbar button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
 
 .event-toolbar button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
 
-.event-toolbar button:disabled { opacity: .45; cursor: not-allowed; }
+.event-toolbar button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
 
 .event-preview { margin-left: auto; color: #246aa8; font-size: 10px; }
 
@@ -147,7 +147,7 @@
 .signal-editor { min-height: 250px; margin: 0; overflow: auto; border: 0; border-radius: 0; background: white; box-shadow: none; }
 .editor-tabbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-bottom: 1px solid #cad3df; background: #f4f7fa; }
 .editor-tabbar button, .editor-tabbar .editor-tab { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
-.editor-tabbar button:disabled { opacity: .45; }
+.editor-tabbar button:disabled { opacity: var(--ds-disabled-opacity); }
 .editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
 .annotation-list { min-width: 880px; overflow: hidden; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
