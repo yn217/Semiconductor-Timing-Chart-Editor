@@ -248,7 +248,7 @@ available.
 | Contract | V2 owner | Parent | V1 source | Golden Sample | Current state |
 |---|---|---|---|---:|---|
 | `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | partial production route/marker evidence; full lifecycle/export closure open |
-| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | canonical mapping exists; standalone production GUI lifecycle not implemented |
+| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | standalone create/edit/list/delete lifecycle landed; complete coexistence, export and closure evidence remains open |
 | `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | type-specific presentation exists; direct lifecycle/persistence/export matrix open |
 | `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | shared style/offset paths exist; full capability matrix and lock/z-order/multiline closure open |
 
