@@ -624,23 +624,30 @@ export type TimelineZoomSurfaceContext = {
 
 export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceContext): number {
   const zoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
-  for (const element of context.scalable) {
-    // The origin is stable for the lifetime of the mounted surface. Avoid
-    // invalidating style on every view-only Zoom operation; the scale itself
-    // is the only value that changes per operation.
-    if (element.style.transformOrigin !== "0px 0px" && element.style.transformOrigin !== "0 0") element.style.transformOrigin = "0 0";
-    element.style.scale = `${zoom} 1`;
-  }
-  if (context.ruler.style.transformOrigin !== "0px 0px" && context.ruler.style.transformOrigin !== "0 0") context.ruler.style.transformOrigin = "0 0";
-  syncRulerScroll(context.ruler, context.viewport, zoom);
-  context.viewport.style.setProperty("--zoom-x", String(zoom));
-  context.onPresentationScale(zoom);
   const baseWidth = Math.max(160, context.viewportWidth - context.leftPaneWidth - context.inspectorWidth - context.frozenPaneWidth);
   const width = context.timelineOffset + baseWidth * zoom;
-  context.rendererHost.style.width = `${width}px`;
-  context.timingSurface.style.setProperty("width", `${width}px`);
+  const applyPresentation = () => {
+    if (context.rendererHost.isConnected === false) return;
+    for (const element of context.scalable) {
+      if (element.style.transformOrigin !== "0px 0px" && element.style.transformOrigin !== "0 0") element.style.transformOrigin = "0 0";
+      element.style.scale = `${zoom} 1`;
+    }
+    if (context.ruler.style.transformOrigin !== "0px 0px" && context.ruler.style.transformOrigin !== "0 0") context.ruler.style.transformOrigin = "0 0";
+    syncRulerScroll(context.ruler, context.viewport, zoom);
+    context.viewport.style.setProperty("--zoom-x", String(zoom));
+    context.onPresentationScale(zoom);
+    context.rendererHost.style.width = `${width}px`;
+    context.timingSurface.style.setProperty("width", `${width}px`);
+    context.onSyncFrozenColumns();
+  };
+  // Scale and width writes can invalidate the whole scroll-layout tree. Keep
+  // the controller's value synchronous for input/geometry consumers, but
+  // publish the DOM presentation in the next frame so the input frame remains
+  // responsive. The synchronous fallback keeps this helper deterministic in
+  // non-browser callers and focused unit tests.
+  if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(applyPresentation);
+  else applyPresentation();
   context.rendererHost.dataset.zoom = String(zoom);
-  context.onSyncFrozenColumns();
   context.onZoom(zoom);
   return zoom;
 }
