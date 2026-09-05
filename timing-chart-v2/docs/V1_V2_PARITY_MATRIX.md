@@ -273,3 +273,20 @@ required V2 visual/export review are recorded, the relevant parity row remains
 `ACCEPTANCE_ONLY` or `PARTIAL`; the existence of a V1 image must not be treated
 as proof of V2 closure, and its absence must not be treated as a production
 implementation gap.
+
+### Replacement Pack and the current V2 executable reference
+
+The legacy V1 workspace also has a `references/gui-replacement-pack/` with
+locked overall and Bottom/Left-panel captures plus its production HTML/CSS/SVG
+assets. Its V1 regression script compares that pack with V1's `gui-mockup` and
+`ui-reference-v2` routes; it does not capture or exercise a V2 production DUT.
+The pack is not a tracked asset under the current V2 `references/` directory,
+so its existence cannot by itself provide a V2 Reference-vs-DUT result.
+
+For V2, the executable comparison input is the approved
+`references/v2-gui-reference-v8/` fixture and its production-browser tests.
+The explicit v8 overrides therefore take precedence where the older V1 pack
+differs. A V1-pack comparison can close a V2 parity row only after a mapped
+V2 fixture/state, route, and unchanged-reference diff are recorded; otherwise
+the row remains `ACCEPTANCE_ONLY` or `PARTIAL` pending the product decision or
+evidence that the row itself requires.
