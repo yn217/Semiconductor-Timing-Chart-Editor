@@ -139,3 +139,27 @@ it("requires every independent parity contract to declare Save/Open evidence", (
   }
   expect(output).toContain("GUI-SPLIT-VIEW is missing saveOpen");
 });
+
+it("requires every independent parity contract to declare a performance invariant", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-performance-field-"));
+  const matrix = path.join(directory, "matrix.json");
+  const manifest = path.join(directory, "manifest.json");
+  const status = path.join(directory, "status.json");
+  cpSync(matrixSource, matrix);
+  cpSync(manifestSource, manifest);
+  cpSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), status);
+  const parsed = JSON.parse(readFileSync(matrix, "utf8")) as { independentContracts: Array<Record<string, unknown>> };
+  const contract = parsed.independentContracts.find((candidate) => candidate.id === "GUI-SPLIT-VIEW");
+  if (!contract) throw new Error("GUI-SPLIT-VIEW fixture is missing");
+  delete contract.performance;
+  writeFileSync(matrix, JSON.stringify(parsed));
+
+  let output = "";
+  try {
+    execFileSync(process.execPath, [checker, "--matrix", matrix, "--manifest", manifest, "--status", status], { cwd: workspace, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const result = error as { stdout?: string; stderr?: string };
+    output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  }
+  expect(output).toContain("GUI-SPLIT-VIEW is missing performance");
+});
