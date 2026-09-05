@@ -53,6 +53,20 @@ if (missingFromMatrix.length || staleMatrixIssues.length) fail(`source-universe 
 if (JSON.stringify(sortedIssues(manifestIssues)) !== JSON.stringify(sortedIssues(coverage))) fail("source-manifest and matrix coverage ordering/content differ");
 const allRows = [...matrix.requirements, ...matrix.independentContracts];
 const rowIds = new Set(allRows.map(({ id }) => id));
+const dedicatedParityChildren = [
+  { id: "GUI-TRANSITION-ARROW", owner: "#375", parent: "ANNOT-01", legacySources: ["#10", "#68"], goldenSamples: [15] },
+  { id: "GUI-RULER-LABEL-ANCHOR", owner: "#376", parent: "TIME-01", legacySources: ["#111"], goldenSamples: [16] },
+  { id: "GUI-ANNOTATION-PRIMITIVES", owner: "#377", parent: "ANNOT-01", legacySources: ["#40", "#69"], goldenSamples: [14] },
+  { id: "GUI-ANNOTATION-PRESENTATION", owner: "#378", parent: "ANNOT-01", legacySources: ["#40", "#69"], goldenSamples: [14] }
+];
+for (const expected of dedicatedParityChildren) {
+  const child = matrix.independentContracts.find(({ id }) => id === expected.id);
+  if (!child) fail(`missing dedicated parity child ${expected.id}`);
+  if (child.v2OwnerIssue !== expected.owner || child.parentContract !== expected.parent) fail(`${expected.id} has an incorrect owner/parent mapping`);
+  if (JSON.stringify(child.v1Source) !== JSON.stringify(expected.legacySources)) fail(`${expected.id} has an incorrect V1 source mapping`);
+  if (JSON.stringify(child.goldenSamples) !== JSON.stringify(expected.goldenSamples)) fail(`${expected.id} must map exactly to Golden Sample ${expected.goldenSamples.join(",")}`);
+  if (!child.goldenSamples.every((sample) => Number.isInteger(sample) && sample >= 1 && sample <= 20)) fail(`${expected.id} has an invalid Golden Sample mapping`);
+}
 const allowedStatuses = new Set(["NOT_IMPLEMENTED", "PARTIAL", "ACCEPTANCE_ONLY", "BLOCKED_EXTERNAL", "COMPLETE"]);
 if (statusModel.schemaVersion !== 1 || !Array.isArray(statusModel.contracts) || !statusModel.evidenceClassFields) fail("invalid contract status model");
 const statusRows = statusModel.contracts;

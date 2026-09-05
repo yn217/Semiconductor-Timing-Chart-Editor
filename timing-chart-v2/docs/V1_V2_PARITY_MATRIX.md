@@ -235,3 +235,24 @@ PNG and PDF share the same scoped fill, opacity and stroke semantics. Unit
 coverage is in `timing-chart-v2/tests/export/deterministic-export.test.ts`;
 browser coverage is in `timing-chart-v2/tests/e2e/group-band.spec.ts`.
 Full V1 visual parity remains open.
+
+## Dedicated parity children from the 2026-09-05 specification-leak audit
+
+The broad annotation and timeline rows remain in the inventory, but they do
+not absorb the following narrower V2 contracts. These are independent
+machine-readable rows in `v1-v2-parity.json`, each with an explicit parent,
+legacy source and immutable Golden Sample mapping. Their status is deliberately
+open until the child Issue's complete production and acceptance evidence is
+available.
+
+| Contract | V2 owner | Parent | V1 source | Golden Sample | Current state |
+|---|---|---|---|---:|---|
+| `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | partial production route/marker evidence; full lifecycle/export closure open |
+| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | canonical mapping exists; standalone production GUI lifecycle not implemented |
+| `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | type-specific presentation exists; direct lifecycle/persistence/export matrix open |
+| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | shared style/offset paths exist; full capability matrix and lock/z-order/multiline closure open |
+
+The parity checker requires these four child rows, verifies their parent/V1
+source/Golden mappings, and keeps their status rows synchronized with
+`v1-v2-contract-status.json`. This prevents a later broad row or a neighboring
+annotation type from silently satisfying a newly identified contract.
