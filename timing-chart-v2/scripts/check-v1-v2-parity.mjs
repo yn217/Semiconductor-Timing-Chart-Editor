@@ -85,6 +85,8 @@ const declaredText = (value) => typeof value === "string" && value.trim().length
 // map so a row cannot become COMPLETE while silently omitting Save/Open.
 const completeEvidenceFields = ["implementationEvidence", "unit", "e2e", "visual", "saveOpen", "export"];
 const concrete = (value) => typeof value === "string" && value.trim().length > 0 && !/^N\/A(?: |$)/.test(value.trim());
+const unresolvedEvidence = /\b(?:partial|pending|open\s+gap|remains?\s+open|unresolved|not\s+(?:yet\s+)?closed)\b/i;
+const completeEvidence = (value) => concrete(value) && !unresolvedEvidence.test(value);
 for (const contract of matrix.independentContracts) {
   const statusRow = statusByFeature.get(contract.id);
   if (!statusRow) fail(`${contract.id} has no feature identity/status row`);
@@ -93,7 +95,7 @@ for (const contract of matrix.independentContracts) {
   if (!statusRow.legacySources.every((source) => typeof source === "string" && source.startsWith("#"))) fail(`${contract.id} has invalid legacy source identity`);
   if (statusRow.implementationStatus === "ACCEPTANCE_ONLY" && !concrete(contract.implementationEvidence)) fail(`${contract.id} ACCEPTANCE_ONLY requires concrete production evidence`);
   if (statusRow.implementationStatus === "BLOCKED_EXTERNAL" && !concrete(statusRow.externalDependency)) fail(`${contract.id} BLOCKED_EXTERNAL requires a named external dependency`);
-  if (statusRow.implementationStatus === "COMPLETE" && completeEvidenceFields.some((field) => !concrete(contract[field]))) fail(`${contract.id} COMPLETE requires ${completeEvidenceFields.join(", ")} evidence`);
+  if (statusRow.implementationStatus === "COMPLETE" && completeEvidenceFields.some((field) => !completeEvidence(contract[field]))) fail(`${contract.id} COMPLETE requires resolved ${completeEvidenceFields.join(", ")} evidence`);
   if (contract.id === "GUI-SIGNAL-SPLIT") {
     if (statusRow.implementationStatus === "NOT_IMPLEMENTED" || !contract.v1Source.includes("#98") || contract.v2OwnerIssue !== "#200") fail("GUI-SIGNAL-SPLIT identity/status must reflect the current #98/#200 production contract");
     if (/^No production Upper\/Lower\/Both Signal Split path is present;/.test(contract.implementationEvidence) || /Cycle\/Transaction Split.*(?:therefore satisfies Signal Split|different feature and cannot satisfy this contract)/.test(contract.implementationEvidence)) fail("GUI-SIGNAL-SPLIT evidence must not use Cycle/Transaction Split as implementation evidence");
