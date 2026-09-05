@@ -91,8 +91,8 @@ for (const contract of matrix.independentContracts) {
   if (statusRow.implementationStatus === "BLOCKED_EXTERNAL" && !concrete(statusRow.externalDependency)) fail(`${contract.id} BLOCKED_EXTERNAL requires a named external dependency`);
   if (statusRow.implementationStatus === "COMPLETE" && completeEvidenceFields.some((field) => !concrete(contract[field]))) fail(`${contract.id} COMPLETE requires ${completeEvidenceFields.join(", ")} evidence`);
   if (contract.id === "GUI-SIGNAL-SPLIT") {
-    if (statusRow.implementationStatus !== "NOT_IMPLEMENTED" || !contract.v1Source.includes("#98") || contract.v2OwnerIssue !== "#200") fail("GUI-SIGNAL-SPLIT identity/status is not the #98/#200 contract");
-    if (!/^No production Upper\/Lower\/Both Signal Split path is present;/.test(contract.implementationEvidence)) fail("GUI-SIGNAL-SPLIT evidence must not use Cycle/Transaction Split as implementation evidence");
+    if (statusRow.implementationStatus === "NOT_IMPLEMENTED" || !contract.v1Source.includes("#98") || contract.v2OwnerIssue !== "#200") fail("GUI-SIGNAL-SPLIT identity/status must reflect the current #98/#200 production contract");
+    if (/^No production Upper\/Lower\/Both Signal Split path is present;/.test(contract.implementationEvidence) || /Cycle\/Transaction Split.*(?:therefore satisfies Signal Split|different feature and cannot satisfy this contract)/.test(contract.implementationEvidence)) fail("GUI-SIGNAL-SPLIT evidence must not use Cycle/Transaction Split as implementation evidence");
   }
 }
 const missingStatusRows = matrix.independentContracts.filter(({ id }) => !statusByFeature.has(id));
