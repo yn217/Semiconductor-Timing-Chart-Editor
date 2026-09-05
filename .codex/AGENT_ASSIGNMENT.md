@@ -1,10 +1,10 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-05 12:34 JST
+Last reconciled: 2026-09-05 12:36 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
 Observed main at reconciliation: `ebe2850fddd418c924dc260d45ab596eaf4be82b`
-Open Issues observed: 33
+Open Issues observed: 32
 
 This file is the authoritative agent-ownership split. One Issue has one implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
 
@@ -50,7 +50,7 @@ Claude owns GUI composition, Ribbon/Inspector/Bottom/Tree interaction presentati
 
 ### Claude must not independently implement
 
-Current Core/data/performance/geometry/history/clipboard/resource-policy work assigned to Codex includes `#170 #175 #200 #210 #221 #222 #223 #250 #264 #265 #269 #281 #313` plus Codex broad closure/audit Issues listed below.
+Current Core/data/performance/geometry/history/clipboard/resource-policy work assigned to Codex includes `#170 #175 #200 #221 #222 #223 #250 #264 #265 #269 #281 #313` plus Codex broad closure/audit Issues listed below.
 
 If a Claude GUI fix discovers a core defect in a Codex-owned Issue, record the concrete defect and stop at the ownership boundary unless the user explicitly reassigns it.
 
@@ -61,13 +61,12 @@ Codex owns Canonical/data integrity, Semantic Command behavior, clipboard policy
 ### Immediate Codex queue
 
 1. `#200` Signal Split View core projection/time-domain architecture
-2. `#210` Clock / Edge Counter exact rendered-edge semantics
-3. `#221` clipboard semantics matrix
-4. `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation
-5. `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation
-6. `#250` AI semantic operation gateway
-7. `#269` structured diagnostics model and command/IO error propagation
-8. `#281` property/state-machine correctness harness
+2. `#221` clipboard semantics matrix
+3. `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation
+4. `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation
+5. `#250` AI semantic operation gateway
+6. `#269` structured diagnostics model and command/IO error propagation
+7. `#281` property/state-machine correctness harness
 
 ### Codex closure-only / no-parallel-implementation lane
 
@@ -90,6 +89,7 @@ These older Phase/Umbrella Issues are audited against current `main`. Do not rec
 - `#166` RowLayout + Stable Waveform Surface — closed.
 - `#169` Reorder / Visibility / D&D — closed.
 - `#180` bounded virtualization projection — closed.
+- `#210` Clock Editor / Edge Counter parity — closed.
 - `#219` renderer/runtime scaling — closed.
 - `#259` production query-routable architecture probes — closed.
 - `#328` Product Resource Budget enforcement — closed.
