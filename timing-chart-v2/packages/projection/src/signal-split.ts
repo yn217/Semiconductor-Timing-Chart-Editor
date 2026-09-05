@@ -1,49 +1,47 @@
-import type { SignalId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 
 /** Presentation-only placement for the Signal Split View. */
 export type SignalSplitPane = "upper" | "lower" | "both";
 
-export interface SignalSplitAssignment {
-  readonly signalId: SignalId;
-  readonly pane: SignalSplitPane;
-}
-
 export interface SignalSplitRows {
-  /** Canonical order, with each Signal ID appearing at most once. */
+  /** Canonical row order, with each Signal ID appearing at most once. */
   readonly upper: readonly SignalId[];
-  /** Canonical order, with each Signal ID appearing at most once. */
+  /** Canonical row order, with each Signal ID appearing at most once. */
   readonly lower: readonly SignalId[];
   /** IDs intentionally presented in both panes, never duplicated in Canonical. */
   readonly both: readonly SignalId[];
 }
 
 /**
- * Projects canonical Signal IDs into the two Signal Split panes.  Assignment
- * is presentation state: unknown IDs are ignored and every canonical ID is
- * considered at most once, so a `both` placement never creates a second
- * semantic Signal identity or a second canonical export item.
+ * Projects the canonical Signal rows into the two Signal Split panes.
+ *
+ * `signal.display.splitPane` is the only assignment source. An omitted
+ * assignment means `both`, preserving the existing single-pane behavior for
+ * documents that predate Signal Split. Row order and membership come from
+ * the canonical document, so a second standalone assignment list cannot drift
+ * from the Signal identity or introduce a second semantic export item.
  */
-export function projectSignalSplitRows(canonicalSignalIds: readonly SignalId[], assignments: readonly SignalSplitAssignment[]): SignalSplitRows {
-  const assignmentById = new Map<SignalId, SignalSplitPane>();
-  for (const assignment of assignments) if (!assignmentById.has(assignment.signalId)) assignmentById.set(assignment.signalId, assignment.pane);
-  const canonical = new Set(canonicalSignalIds);
+export function projectSignalSplitRows(document: CanonicalDocument): SignalSplitRows {
+  const signalById = new Map<SignalId, CanonicalDocument["signals"][number]>(document.signals.map((signal) => [signal.id, signal]));
+  const seen = new Set<SignalId>();
   const upper: SignalId[] = [];
   const lower: SignalId[] = [];
   const both: SignalId[] = [];
-  for (const signalId of canonicalSignalIds) {
-    // An omitted assignment preserves the pre-Signal-Split single-pane
-    // behavior: the canonical Signal is available in both presentation
-    // panes. This matches RowLayout's `display.splitPane ?? "both"` rule.
-    const pane = assignmentById.get(signalId) ?? "both";
+
+  for (const rowId of document.signalGroups.flatMap((group) => group.rows)) {
+    const signalId = rowId as SignalId;
+    const signal = signalById.get(signalId);
+    if (!signal || seen.has(signalId)) continue;
+    seen.add(signalId);
+    const pane: SignalSplitPane = signal.display.splitPane ?? "both";
     if (pane === "upper" || pane === "both") upper.push(signalId);
     if (pane === "lower" || pane === "both") lower.push(signalId);
     if (pane === "both") both.push(signalId);
   }
-  // The canonical Set is intentionally used as a final guard if this helper
-  // is ever fed a malformed duplicate-ID projection source.
-  const uniqueCanonicalOrder = (ids: readonly SignalId[]): readonly SignalId[] => {
-    const seen = new Set<SignalId>();
-    return Object.freeze(ids.filter((id) => canonical.has(id) && !seen.has(id) && seen.add(id)));
+
+  return {
+    upper: Object.freeze(upper),
+    lower: Object.freeze(lower),
+    both: Object.freeze(both),
   };
-  return { upper: uniqueCanonicalOrder(upper), lower: uniqueCanonicalOrder(lower), both: uniqueCanonicalOrder(both) };
 }
