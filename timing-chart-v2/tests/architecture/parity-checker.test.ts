@@ -87,3 +87,26 @@ it("rejects a dedicated parity child whose Golden mapping is removed", () => {
   }
   expect(output).toContain("GUI-ANNOTATION-PRIMITIVES must map exactly to Golden Sample 14");
 });
+
+it("requires Save/Open evidence before an independent contract can be COMPLETE", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-complete-evidence-"));
+  const matrix = path.join(directory, "matrix.json");
+  const manifest = path.join(directory, "manifest.json");
+  const status = path.join(directory, "status.json");
+  cpSync(matrixSource, matrix);
+  cpSync(manifestSource, manifest);
+  const statusModel = JSON.parse(readFileSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), "utf8")) as { contracts: Array<{ featureKey: string; implementationStatus: string }> };
+  const split = statusModel.contracts.find((contract) => contract.featureKey === "GUI-SPLIT-VIEW");
+  if (!split) throw new Error("GUI-SPLIT-VIEW status row is missing");
+  split.implementationStatus = "COMPLETE";
+  writeFileSync(status, JSON.stringify(statusModel));
+
+  let output = "";
+  try {
+    execFileSync(process.execPath, [checker, "--matrix", matrix, "--manifest", manifest, "--status", status], { cwd: workspace, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const result = error as { stdout?: string; stderr?: string };
+    output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  }
+  expect(output).toContain("GUI-SPLIT-VIEW COMPLETE requires implementationEvidence, unit, e2e, visual, saveOpen, export evidence");
+});
