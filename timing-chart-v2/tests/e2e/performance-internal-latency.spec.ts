@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 type LatencySummary = { samples: number[]; median: number; p95: number; max: number };
 type LatencyEvidence = { interactions: Record<string, LatencySummary>; longTasks: { count: number; duration: number } };
 
-test("measures GUI latency inside Chromium rather than through Playwright RPC time", async ({ page }) => {
+test("measures GUI latency inside Chromium rather than through Playwright RPC time", async ({ page }, testInfo) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -36,18 +36,22 @@ test("measures GUI latency inside Chromium rather than through Playwright RPC ti
     }
   });
 
-  const runMeasured = async (name: string, action: () => Promise<void>) => {
-    const before = await page.evaluate((key) => ((window as typeof window & { __v2Latency?: Record<string, number[]> }).__v2Latency?.[key] ?? []).length, name);
-    await page.evaluate((key) => { (window as typeof window & { __v2LatencyNext?: string }).__v2LatencyNext = key; }, name);
-    await action();
-    await expect.poll(async () => await page.evaluate((key) => ((window as typeof window & { __v2Latency?: Record<string, number[]> }).__v2Latency?.[key] ?? []).length, name)).toBeGreaterThan(before);
+  const runMeasured = async (name: string, action: (trial: number) => Promise<void>) => {
+    for (let trial = 0; trial < 5; trial += 1) {
+      const before = await page.evaluate((key) => ((window as typeof window & { __v2Latency?: Record<string, number[]> }).__v2Latency?.[key] ?? []).length, name);
+      await page.evaluate((key) => { (window as typeof window & { __v2LatencyNext?: string }).__v2LatencyNext = key; }, name);
+      await action(trial);
+      await expect.poll(async () => await page.evaluate((key) => ((window as typeof window & { __v2Latency?: Record<string, number[]> }).__v2Latency?.[key] ?? []).length, name)).toBeGreaterThan(before);
+    }
   };
 
-  await runMeasured("signal-selection", async () => {
-    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await runMeasured("signal-selection", async (trial) => {
+    const signalId = trial % 2 === 0 ? "sig_cycle_request" : "sig_cycle_ready";
+    await host.locator(`[data-role='frozen-row'][data-row-id='${signalId}']`).click();
   });
-  await runMeasured("ribbon-tab", async () => {
-    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await runMeasured("ribbon-tab", async (trial) => {
+    const tab = trial % 2 === 0 ? "View" : "Home";
+    await page.locator(".ribbon-tabs").getByRole("button", { name: tab, exact: true }).click();
   });
   await runMeasured("zoom", async () => {
     await page.getByTestId("ribbon").getByRole("button", { name: "Zoom In", exact: true }).click();
@@ -79,4 +83,5 @@ test("measures GUI latency inside Chromium rather than through Playwright RPC ti
     expect(summary.max, name).toBeLessThan(50);
   }
   expect(evidence.longTasks.count).toBeGreaterThanOrEqual(0);
+  await testInfo.attach("v2-internal-latency.json", { body: Buffer.from(JSON.stringify(evidence, null, 2)), contentType: "application/json" });
 });
