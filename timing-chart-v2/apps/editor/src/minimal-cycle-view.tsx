@@ -163,7 +163,15 @@ export function MinimalCycleView() {
   } = workspace;
   // Keep the transient splitter independent, but never let it collapse the
   // persisted Role/Signal columns and break the shared frozen/timing origin.
-  const frozenPaneWidth = Math.max(frozenPaneWidthState, snapshot.document.layout.roleColumnWidth + snapshot.document.layout.signalNameWidth);
+  // `frozenPaneMinWidth` is the actual achievable floor for the loaded
+  // document (161px..360px static bounds are meaningless once a document's
+  // own Role+Signal columns need more room) -- both the resize handle's own
+  // aria-valuemin and the keyboard/pointer resize clamps must agree with it,
+  // or the control silently ignores input (drag/keyboard "resize" attempts
+  // that can never move the effective width) while still advertising a
+  // smaller, unreachable minimum via ARIA.
+  const frozenPaneMinWidth = Math.max(160, snapshot.document.layout.roleColumnWidth + snapshot.document.layout.signalNameWidth);
+  const frozenPaneWidth = Math.max(frozenPaneWidthState, frozenPaneMinWidth);
   selection.configure({
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
@@ -1596,7 +1604,7 @@ export function MinimalCycleView() {
   const moveFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
     const resize = frozenPaneResizeRef.current;
     if (!resize) return;
-    const nextWidth = Math.max(160, Math.min(360, resize.startWidth + (event.clientX - resize.startX)));
+    const nextWidth = Math.max(frozenPaneMinWidth, Math.min(360, resize.startWidth + (event.clientX - resize.startX)));
     if (nextWidth !== frozenPaneWidth) setFrozenPaneWidth(nextWidth);
   };
   const finishFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
@@ -1609,7 +1617,17 @@ export function MinimalCycleView() {
     const delta = event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0;
     if (delta === 0) return;
     event.preventDefault();
-    setFrozenPaneWidth((current) => Math.max(160, Math.min(360, current + delta)));
+    // Base the delta on `frozenPaneWidth` (the derived, displayed value --
+    // Math.max(frozenPaneWidthState, layout.roleColumnWidth +
+    // layout.signalNameWidth), same as aria-valuenow), not the raw
+    // frozenPaneWidthState alone. Otherwise, whenever the document's own
+    // layout floor exceeds the raw resize state (the common case for the
+    // default demo document, where that floor is 240px against a 209px
+    // initial state), incrementing the raw state by the arrow-key step
+    // still resolves to the same effective/displayed width -- the key
+    // press silently does nothing, with no feedback that anything
+    // happened at all.
+    setFrozenPaneWidth(Math.max(frozenPaneMinWidth, Math.min(360, frozenPaneWidth + delta)));
   };
   const selectBottomTab = (tab: typeof bottomTabs[number]) => setBottomTab(tab);
   const onBottomTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, tab: typeof bottomTabs[number]) => {
@@ -1786,7 +1804,7 @@ export function MinimalCycleView() {
     <div className="desktop-workspace">
       <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
          <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={resizeLeftPaneByKeyboard} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
-          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={resizeFrozenPaneByKeyboard} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
+          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={resizeFrozenPaneByKeyboard} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
         <SignalTreeColumnHeader
           treeTypeFilter={treeTypeFilter}
           onTreeTypeFilterChange={(value) => setTreeTypeFilter(value as TreeTypeFilter)}
