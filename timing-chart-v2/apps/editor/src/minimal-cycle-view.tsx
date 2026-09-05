@@ -122,7 +122,7 @@ export function MinimalCycleView() {
   // renderer/projection closures outside that effect.
   const forceUpperReprojectRef = useRef<() => void>(() => undefined);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
-  const armArrowPick = useRef<() => void>(() => undefined);
+  const armArrowPick = useRef<(annotationType: "arrow" | "dependency") => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
   const snapTransactionCycle = useRef<(clientX: number) => number | undefined>(() => undefined);
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
@@ -802,8 +802,14 @@ export function MinimalCycleView() {
       viewportElement.scrollBy({ ...(left === undefined ? {} : { left }), ...(top === undefined ? {} : { top }), behavior: "auto" });
     };
     let pendingArrow: "armed" | SemanticAnchor | undefined;
-    armArrowPick.current = () => {
+    // #375: the picked-transitions workflow is shared by both line-shaped
+    // types that need real geometry-anchored endpoints -- Arrow and
+    // Dependency -- so it must produce whichever type the Annotation type
+    // dropdown currently has selected, not a type hardcoded to "arrow".
+    let pendingArrowAnnotationType: "arrow" | "dependency" = "arrow";
+    armArrowPick.current = (annotationType) => {
       pendingArrow = "armed";
+      pendingArrowAnnotationType = annotationType;
       setArrowPickStatus("from");
       rendererHost.dataset.arrowPick = "from";
     };
@@ -938,7 +944,7 @@ export function MinimalCycleView() {
           rendererHost.dataset.snapKind = snap.kind;
           return;
         }
-        const annotation: Annotation = { id: nextEntityId("annotation", session.getSnapshot().document) as AnnotationId, type: "arrow", label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
+        const annotation: Annotation = { id: nextEntityId("annotation", session.getSnapshot().document) as AnnotationId, type: pendingArrowAnnotationType, label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
         const result = application.execute({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
         if (result.ok) selectAnnotation(annotation.id);
         pendingArrow = undefined;
@@ -1994,7 +2000,7 @@ export function MinimalCycleView() {
       onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
       onViewIntent={(intent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); }}
       onCreateAnnotation={createSelectedAnnotation}
-      onArrowPick={() => armArrowPick.current()}
+      onArrowPick={(annotationType) => armArrowPick.current(annotationType)}
       onZoom={timelineNavigation.zoomBy}
       onFitSelection={timelineNavigation.fitSelection}
       onNavigateBookmark={timelineNavigation.navigateToCycle}
