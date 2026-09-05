@@ -141,6 +141,72 @@ test("assigns Signals to Upper/Lower/Both and routes real rows to each pane's ow
   await expect(reopenedLowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(1);
 });
 
+test("mirrors grid, playhead and range-selection band into Lower from the one shared time mapping, and assigning a Split Pane never regenerates any waveform", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+
+  // Select a real range first, in the ordinary single-pane layout (an
+  // existing, unrelated ruler/geometry click-target concern makes the drag
+  // itself unreliable once the shorter split-mode viewport potentially
+  // virtualizes the click target's row out of view -- select the range
+  // before Split is even on, then verify Lower correctly mirrors it once
+  // Split turns on).
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  const wave = host.locator("[data-role='stable-waveform-surface']");
+  const owner = wave.locator("[data-signal-id='sig_cycle_request']");
+  const ownerBox = (await owner.boundingBox())!;
+  const startBox = (await page.getByTestId("cycle-ruler").locator("[data-cycle='1']").boundingBox())!;
+  const endBox = (await page.getByTestId("cycle-ruler").locator("[data-cycle='20']").boundingBox())!;
+  const y = ownerBox.y + ownerBox.height / 2;
+  const countersBefore = await surface.getAttribute("data-render-counters");
+  await page.mouse.move(startBox.x, y);
+  await page.mouse.down();
+  await page.mouse.move(endBox.x, y, { steps: 10 });
+  await page.mouse.up();
+  // The exact snapped boundary is an existing ruler/geometry concern (not
+  // #200's), so only require a real, non-empty range was selected.
+  await expect(page.getByLabel("Timeline range start")).not.toHaveValue("");
+  await expect(page.getByTestId("range-selection-band")).not.toBeHidden();
+  // A pure range selection is view-only and must not regenerate any
+  // WaveDrom row.
+  const countersAfter = await surface.getAttribute("data-render-counters");
+  expect(JSON.parse(countersAfter!).waveDromRenders).toBe(JSON.parse(countersBefore!).waveDromRenders);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-signal-split").click();
+  const lowerHost = page.getByTestId("cycle-surface-lower");
+  await expect(lowerHost).toBeVisible();
+
+  // Grid: same cycle-boundary lines in both panes (one shared time mapping).
+  const gridUpperLines = await page.getByTestId("geometry-grid").locator("[data-role='geometry-grid-line']").count();
+  const gridLowerLines = await page.getByTestId("geometry-grid-lower").locator("[data-role='geometry-grid-line']").count();
+  expect(gridLowerLines).toBe(gridUpperLines);
+  expect(gridLowerLines).toBeGreaterThan(0);
+
+  // Playhead: mirrored into Lower's own ruler.
+  await expect(page.getByTestId("cycle-ruler-lower").locator("[data-role='playhead']")).toHaveCount(1);
+
+  // Range-selection band: same horizontal extent (shared mapping) on both
+  // panes, mirrored the instant Split turns on.
+  const bandUpper = page.getByTestId("range-selection-band");
+  const bandLower = page.getByTestId("range-selection-band-lower");
+  await expect(bandUpper).not.toBeHidden();
+  await expect(bandLower).not.toBeHidden();
+  const upperStyle = await bandUpper.evaluate((el: HTMLElement) => ({ left: el.style.left, width: el.style.width }));
+  const lowerStyle = await bandLower.evaluate((el: HTMLElement) => ({ left: el.style.left, width: el.style.width }));
+  expect(lowerStyle).toEqual(upperStyle);
+
+  // Assigning a Split Pane is a rowPresentation-bucket change, not
+  // waveSemantics -- it must never regenerate any Signal's WaveDrom row,
+  // Both-assigned or otherwise (no unnecessary double WaveDrom generation).
+  const countersBeforeAssign = await surface.getAttribute("data-render-counters");
+  await assignSplitPane(page, host, "sig_cycle_data", "lower", "signal");
+  const countersAfterAssign = await surface.getAttribute("data-render-counters");
+  expect(JSON.parse(countersAfterAssign!).waveDromRenders).toBe(JSON.parse(countersBeforeAssign!).waveDromRenders);
+});
+
 test("default full-document export contains one row per Signal even when a Signal is assigned to Both panes", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

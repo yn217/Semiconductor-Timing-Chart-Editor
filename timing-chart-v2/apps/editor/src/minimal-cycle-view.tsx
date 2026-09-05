@@ -107,6 +107,7 @@ export function MinimalCycleView() {
   const viewportLower = useRef<HTMLDivElement>(null);
   const rulerLower = useRef<HTMLDivElement>(null);
   const hostLower = useRef<HTMLDivElement>(null);
+  const gridLayerLower = useRef<HTMLDivElement>(null);
   // Signal Split View (#200) PR 4: the Lower pane's own renderer/adapter/
   // geometry/projection pipeline, owned by the effect below (keyed on
   // signalSplitEnabled) and consumed by the primary mount effect's document-
@@ -114,7 +115,7 @@ export function MinimalCycleView() {
   // one single source of truth. `null` whenever Split is off -- every
   // existing document-change path is then a no-op for Lower, unchanged from
   // pre-#200 behavior.
-  const signalSplitRuntimeRef = useRef<null | { onDocumentChanged: (result: { readonly snapshot: Extract<CommandResult, { readonly ok: true }>["snapshot"]; readonly changeSet: Extract<CommandResult, { readonly ok: true }>["changeSet"] }) => void; onDocumentReplaced: () => void; onViewportResize: () => void; dispose: () => void }>(null);
+  const signalSplitRuntimeRef = useRef<null | { onDocumentChanged: (result: { readonly snapshot: Extract<CommandResult, { readonly ok: true }>["snapshot"]; readonly changeSet: Extract<CommandResult, { readonly ok: true }>["changeSet"] }) => void; onDocumentReplaced: () => void; onViewportResize: () => void; getTotalHeight: () => number; dispose: () => void }>(null);
   // Lets the signalSplitEnabled effect force the Upper pane (owned by the
   // primary mount effect) to reproject/re-render after switching its shared
   // `projection.setPane()` filter, without exposing Upper's internal
@@ -503,9 +504,22 @@ export function MinimalCycleView() {
     let edgeCounterResolvePasses = 0;
     let rulerInitialized = false;
     refreshPlayhead.current = () => {
-      refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle));
+      const boundaryToLocalX = (cycle: number) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
+      refreshPlayheadPresentation(rulerElement, selectedCycleRef.current, boundaryToLocalX);
+      // Signal Split View (#200): the playhead is a pure x-position marker
+      // inside the ruler (ruler height is fixed regardless of pane row
+      // count), so it mirrors safely onto Lower's own ruler using the same
+      // one authoritative horizontal mapping -- no second playhead owner.
+      if (rulerLower.current) refreshPlayheadPresentation(rulerLower.current, selectedCycleRef.current, boundaryToLocalX);
     };
-    const refreshRangeSelectionBandNow = () => refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), projection.totalHeight);
+    const refreshRangeSelectionBandNow = () => {
+      refreshRangeBandPresentation(viewportElement, rulerElement, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), projection.totalHeight);
+      // Signal Split View (#200): the range band's horizontal extent comes
+      // from the one shared time mapping, but its vertical extent must span
+      // Lower's OWN row content, not Upper's -- reusing Upper's totalHeight
+      // here would stretch/shrink the band to the wrong pane's height.
+      if (viewportLower.current && rulerLower.current && signalSplitRuntimeRef.current) refreshRangeBandPresentation(viewportLower.current, rulerLower.current, rendererHost, rangeSelectionActiveRef.current, rendererHost.dataset.rangePreview, timelineRangeRef.current, (cycle) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle), timelineNavigation.getZoom(), timelineOffset(), signalSplitRuntimeRef.current.getTotalHeight());
+    };
     refreshRangeSelectionBand.current = refreshRangeSelectionBandNow;
     const refreshRangePreview = () => {
       timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
@@ -587,6 +601,16 @@ export function MinimalCycleView() {
       // Timeline presentation refreshes are view-only. The canonical command path
       // already submits the changed projection once; replaying that projection for
       // ruler/grid/zoom refreshes would regenerate the same WaveDrom rows.
+      // Signal Split View (#200): grid lines mark shared cycle-boundary
+      // x-positions from the one authoritative geometryMaps/mappingCache
+      // (Upper's), same for every pane -- but each pane's grid must span
+      // its OWN row content height, not Upper's, so this reuses Upper's
+      // inputs with Lower's own totalHeight rather than cloning Upper's
+      // grid DOM outright.
+      if (reason === "grid" && gridLayerLower.current && signalSplitRuntimeRef.current) {
+        const metrics = viewMetricsOwner.snapshot();
+        refreshGridPresentation(gridLayerLower.current, document, geometryMaps, mappingCache, gridEnabledRef.current, signalSplitRuntimeRef.current.getTotalHeight(), globalThis.innerWidth - metrics.leftPaneWidth - metrics.inspectorWidth - metrics.frozenPaneWidth, presentation.screenGeometryScale);
+      }
     };
     timelineRuntime.attach();
     transactionBoundaryX.current = (cycle) => timelineGeometry.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
@@ -1299,6 +1323,7 @@ export function MinimalCycleView() {
         lowerProjection = projectionCoordinatorLower.project({ snapshot: replacedSnapshot, changeSet: { fullDocumentReplace: true }, viewport: lowerWindow, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
         rendererLower.update(lowerProjection);
       },
+      getTotalHeight: () => lowerProjection.totalHeight,
       dispose: () => { renderCoordinatorLower.dispose(); },
     };
     // Upper must now show only its own pane's Signals too -- switch the
@@ -1307,6 +1332,12 @@ export function MinimalCycleView() {
     // history/dirty/canonical delta).
     runtime.projection.setPane("upper");
     forceUpperReprojectRef.current();
+    // Paint Lower's initial grid/playhead/range presentation immediately --
+    // otherwise it would stay blank until the next unrelated grid/playhead/
+    // range-triggering event happened to fire.
+    timelineRuntimeRef.current?.refreshGrid();
+    refreshPlayhead.current();
+    refreshRangeSelectionBand.current();
     return () => {
       active = false;
       viewportLowerElement.removeEventListener("scroll", reprojectLowerViewportOnly);
@@ -2032,10 +2063,12 @@ export function MinimalCycleView() {
         {signalSplitEnabled && viewMode === "Cycle" && <>
           <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={resizeSignalSplitByKeyboard} onPointerDown={startSignalSplitResize} onPointerMove={moveSignalSplitResize} onPointerUp={finishSignalSplitResize} onPointerCancel={finishSignalSplitResize} />
           <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation">
+            <div className="geometry-grid" ref={gridLayerLower} data-testid="geometry-grid-lower" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
             <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}>
               <div className="cycle-ruler-content" ref={rulerLower} />
             </div>
-            <div className="surface-host" ref={hostLower} data-testid="cycle-surface-lower" aria-label="Signal Split Lower pane (not yet populated)" />
+            <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band-lower" aria-hidden="true" hidden />
+            <div className="surface-host" ref={hostLower} data-testid="cycle-surface-lower" />
           </div>
         </>}
       </section>
