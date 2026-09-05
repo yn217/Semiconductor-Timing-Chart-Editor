@@ -57,6 +57,18 @@
 
 .surface-host [data-role="left-row"] { grid-template-columns: 74px minmax(0, 1fr) 24px 22px 20px; }
 
+/* refreshTreeFilterPresentation (minimal-cycle-view-ui.tsx) sets the native
+   `hidden` attribute on a filtered-out left-row/left-group-header. The
+   author rules above set `display: grid` on these same roles with the
+   exact same specificity as the browser's built-in `[hidden] { display:
+   none }` rule -- author styles apply after the UA stylesheet, so the
+   `display: grid` here was silently winning and hidden rows never
+   actually disappeared. Adding `[hidden]` to the selector raises its
+   specificity just enough to win regardless of source order. */
+.surface-host [data-role="left-row"][hidden],
+.surface-host [data-role="frozen-row"][hidden],
+.editor-shell .surface-host [data-role="left-group-header"][hidden] { display: none; }
+
 .surface-host [data-role="tree-branch"] { overflow: hidden; color: #55708e; font-size: 10px; font-weight: 700; text-transform: uppercase; text-overflow: ellipsis; white-space: nowrap; }
 
 .surface-host [data-role="tree-signal-name"], .surface-host [data-role="frozen-signal-name"] { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
