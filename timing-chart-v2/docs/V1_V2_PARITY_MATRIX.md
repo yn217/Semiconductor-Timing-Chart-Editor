@@ -182,6 +182,14 @@ evidence and the no-scroll assertion are in
 `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts` and the Ribbon tab and
 responsive tests.
 
+The current-main Clipboard audit is browser verified by four focused
+`home-command-surface.spec.ts` cases (4/4, 2026-09-06): same-document Copy is
+view-only and Duplicate/Paste allocate fresh IDs through one command; opening
+another document rejects the foreign clipboard atomically; and Annotation and
+Transaction payloads with colliding foreign Signal IDs report the structured
+`CLIPBOARD_FOREIGN_DOCUMENT` diagnostic without retargeting or mutation. The
+full V1 clipboard Save/Open and large-selection matrix remains open.
+
 The Group Inspector now reflects the selected Group's derived collapse state
 and can toggle that state from the Inspector. This is intentionally a
 view-only layout operation: the browser test
