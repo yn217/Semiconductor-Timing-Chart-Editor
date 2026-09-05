@@ -346,7 +346,7 @@ available.
 | `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | `timing-chart-v1/artifacts/issue10/dependency-arrows.png`; `timing-chart-v1/artifacts/issue68/issue68-1672x941.png` | partial production route/marker evidence; full lifecycle/export closure open |
 | `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | `timing-chart-v1/artifacts/issue111/issue111-1672x941.png` | standalone create/edit/list/delete lifecycle landed; complete coexistence, export and closure evidence remains open |
 | `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | type-specific presentation exists; direct lifecycle/persistence/export matrix open |
-| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | shared style/offset paths exist; full capability matrix and lock/z-order/multiline closure open |
+| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | capability matrix + Lock/Stroke/Fill/z-order/visibility landed, incl. Lock's real Save/Open round trip; full Golden Sample 14 visual/performance matrix remains open |
 
 The parity checker requires these four child rows, verifies their parent/V1
 source/Golden mappings, and keeps their status rows synchronized with

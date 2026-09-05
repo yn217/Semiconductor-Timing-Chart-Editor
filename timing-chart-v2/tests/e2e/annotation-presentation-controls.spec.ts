@@ -167,6 +167,53 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   expect(secondId).not.toBeNull();
 });
 
+// #378 parity evidence: the contract's own Save/Open evidence field said
+// only "selected presentation persistence is covered" for Lock -- there was
+// no test proving the canonical `locked` field itself actually survives a
+// real Save/Open round trip (as opposed to just an in-session Undo/Redo).
+test("Lock state survives a real Save/Open round trip", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const annotation = await addAnnotation(page, "text");
+  const annotationId = await annotation.getAttribute("data-annotation-id");
+  await annotation.locator("[data-role='annotation-label']").click();
+  const openMenu = async () => {
+    const trigger = page.locator(".arrange-dropdown-trigger");
+    if ((await trigger.getAttribute("aria-expanded")) !== "true") await trigger.click();
+  };
+  const menu = page.locator(".arrange-menu");
+  await openMenu();
+  await menu.getByRole("menuitem", { name: "Lock", exact: true }).click();
+  await expect(annotation).toHaveAttribute("data-locked", "true");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await saveDownload).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  const reopened = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  await expect(reopened).toHaveAttribute("data-locked", "true");
+  await expect(reopened.locator("[data-role='annotation-lock-glyph']")).toHaveCount(1);
+
+  // The persisted lock still actually blocks drag after reload -- not just
+  // a cosmetic attribute that survived serialization.
+  const handleBefore = await reopened.locator("[data-role='annotation-handle']").first().boundingBox();
+  await reopened.locator("[data-role='annotation-label']").hover();
+  await page.mouse.down();
+  await page.mouse.move((handleBefore!.x) + 60, handleBefore!.y + 20, { steps: 5 });
+  await page.mouse.up();
+  const handleAfter = await reopened.locator("[data-role='annotation-handle']").first().boundingBox();
+  expect(Math.abs(handleAfter!.x - handleBefore!.x)).toBeLessThan(2);
+});
+
 // #390: Font/Shapes/Paragraph/Arrange must each show their group name
 // exactly once (the outer ribbon-major-group caption and the inner
 // DsRibbonGroup footer label previously both rendered, for any group built
