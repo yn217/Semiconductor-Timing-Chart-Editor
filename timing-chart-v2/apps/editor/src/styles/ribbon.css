@@ -203,8 +203,6 @@
 
 .ds-ribbon-toggle span { white-space: nowrap; }
 
-.view-zoom-group .ds-ribbon-button { min-width: 50px; }
-
 .view-zoom-group > .ds-ribbon-select { align-self: flex-start; width: 48px; height: 24px; margin-top: 27px; }
 
 .view-workspace-group > label > .ds-ribbon-select { height: 24px; min-width: 0; }
@@ -334,11 +332,14 @@
 
 .editor-shell .insert-more-group { width: 250px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
 
-.editor-shell .insert-ribbon .ds-ribbon-button { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
+/* #293: compact-grid density is a documented DsRibbonGroup contract (see
+   design-system.tsx) owned by the Group primitive, not a Tab (.insert-ribbon)
+   reaching into DsRibbonButton's own internal geometry. */
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
 
-.editor-shell .insert-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
 
-.editor-shell .insert-ribbon .ds-ribbon-button:disabled { opacity: .42; }
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button:disabled { opacity: .42; }
 
 /* Timeline now renders through the exact same Ds* ribbon primitives Insert
    uses (DsRibbonGroup/DsRibbonButton/DsIconBox/DsRibbonNumberInput) instead
@@ -379,12 +380,14 @@
 
 .editor-shell .timeline-fold-group { width: 190px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
 
-.editor-shell .timeline-ribbon .ds-ribbon-button,
-.editor-shell .timeline-ribbon .ds-ribbon-number-input { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
+/* #293: same compact-grid density contract as Insert (see design-system.tsx) --
+   owned by the Group primitive via `data-density`, not by the Timeline Tab. */
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button,
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-number-input { min-width: 0; width: 100%; min-height: 66px; padding-inline: 2px; font-size: 9px; }
 
-.editor-shell .timeline-ribbon .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button > .ds-ribbon-label { max-width: 100%; font-size: 9px; }
 
-.editor-shell .timeline-ribbon .ds-ribbon-button:disabled { opacity: .42; }
+.editor-shell .ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button:disabled { opacity: .42; }
 
 /* Existing Bookmark/Time Group object lists (jump/edit/delete rows for
    already-created bookmarks and fold groups) sit below the command-button
@@ -447,9 +450,11 @@
 
 .editor-shell .view-display-subgroup .ds-ribbon-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-.editor-shell .view-panels-group .ds-ribbon-button { min-height: 0; height: 40px; }
+/* #293: compact-toggle density is a documented DsRibbonGroup contract
+   (design-system.tsx) owned by the Group primitive, not the View Tab. */
+.editor-shell .ds-ribbon-group[data-density="compact-toggle"] .ds-ribbon-button { min-height: 0; height: 40px; }
 
-.editor-shell .view-panels-group .ds-ribbon-label { min-height: 18px; font-size: 8px; line-height: 9px; }
+.editor-shell .ds-ribbon-group[data-density="compact-toggle"] .ds-ribbon-label { min-height: 18px; font-size: 8px; line-height: 9px; }
 
 .editor-shell .view-guides-group .ds-ribbon-toggle { min-width: 0; padding-inline: 1px; }
 
