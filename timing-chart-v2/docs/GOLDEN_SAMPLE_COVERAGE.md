@@ -13,3 +13,5 @@ The production-browser Golden harness reads both immutable sample manifests and 
 The immutable Golden image, sample inputs, threshold, and masks are not modified by this harness.
 
 Current-main evidence: on 2026-09-06 at commit `80615a4`, the isolated Chromium production-browser run of `tests/e2e/golden-samples.spec.ts` passed all 3 scenarios: all 20 samples opened and Save/Open round-tripped, the representative A→B switch had no stale row ownership, and all 20 samples exported SVG, PNG, and PDF with unchanged Canonical/session counters. The run used a temporary port-4199 server configuration, which was removed after verification.
+
+The fixed visual gate also passed on current main `273a21d` at 1672×941: geometry matched within the 2px contract, visual diff was 3.1649% against the 5% threshold, the mask had zero area, and the Ribbon had no horizontal overflow. The gate generated evidence only; the checked-in Golden/reference/threshold/mask inputs were unchanged.
