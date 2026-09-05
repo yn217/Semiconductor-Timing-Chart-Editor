@@ -184,6 +184,77 @@ test("Timeline workflow groups keep explicit cycle semantics and aligned control
   expect(new Set(metrics.groups.map((group) => group.bottom)).size).toBe(1);
 });
 
+// Timeline Ribbon group-boundary visual clarity: a shared vertical separator
+// must appear between every pair of adjacent Timeline groups (never after the
+// last group), with 12-16px group spacing around it, never overlapping any
+// button/input/select/output/label/span in either neighboring group, and
+// every group's footer caption baseline must align within 1px across the
+// whole Ribbon. Verified at the acceptance viewport (1672x941) and re-checked
+// at a narrower/responsive width for the same no-overlap guarantee.
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Timeline group boundaries show a non-overlapping separator with aligned captions at ${viewport.width}px`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    const timeline = page.getByTestId("timeline-editor");
+    const groups = timeline.locator("[data-timeline-group]");
+    await expect(groups).toHaveCount(7);
+
+    const report = await timeline.evaluate((root) => {
+      const slots = [...root.querySelectorAll<HTMLElement>(".timeline-slot-group")];
+      const overlaps = (a: DOMRect, b: DOMRect) => a.left < b.right - 0.5 && a.right > b.left + 0.5 && a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5;
+      const captionBottoms: number[] = [];
+      const gaps: number[] = [];
+      const separatorOverlaps: boolean[] = [];
+      const separatorPresent: boolean[] = [];
+      for (let index = 0; index < slots.length; index += 1) {
+        const slot = slots[index];
+        const caption = slot.querySelector<HTMLElement>(".ds-ribbon-group > b");
+        if (caption) captionBottoms.push(caption.getBoundingClientRect().bottom);
+        const style = getComputedStyle(slot, "::after");
+        const hasSeparator = style.content !== "none" && style.content !== "";
+        separatorPresent.push(hasSeparator);
+        if (index < slots.length - 1) {
+          const box = slot.getBoundingClientRect();
+          const nextBox = slots[index + 1].getBoundingClientRect();
+          gaps.push(nextBox.left - box.right);
+          const interactive = [...slot.querySelectorAll<HTMLElement>("input, output, button, select, label, span")].filter((el) => getComputedStyle(el).display !== "none");
+          const nextInteractive = [...slots[index + 1].querySelectorAll<HTMLElement>("input, output, button, select, label, span")].filter((el) => getComputedStyle(el).display !== "none");
+          // Separator band: `right:-7px; width:1px` relative to the slot box -- approximate its screen rect directly.
+          const sepRect = new DOMRect(box.right + 6.5, box.top, 1.5, box.height);
+          const overlapsAny = [...interactive, ...nextInteractive].some((el) => overlaps(sepRect, el.getBoundingClientRect()));
+          separatorOverlaps.push(overlapsAny);
+        }
+      }
+      return { captionBottoms, gaps, separatorOverlaps, separatorPresent };
+    });
+
+    // Separator present after every group except the last (Fold / Break).
+    expect(report.separatorPresent.slice(0, -1).every(Boolean), JSON.stringify(report.separatorPresent)).toBe(true);
+    expect(report.separatorPresent[report.separatorPresent.length - 1]).toBe(false);
+
+    // 12-16px group spacing between adjacent groups at the acceptance
+    // viewport. Narrower widths fall under the pre-existing `.ribbon { zoom:
+    // .8 }` responsive breakpoint (responsive.css), which uniformly shrinks
+    // the whole Ribbon including this gap -- the acceptance criterion there
+    // is "no separator overlap", not an absolute pixel range, so the gap
+    // range is only enforced at the unzoomed 1672px width.
+    if (viewport.width === 1672) {
+      for (const gap of report.gaps) expect(gap, JSON.stringify(report.gaps)).toBeGreaterThanOrEqual(12);
+      for (const gap of report.gaps) expect(gap, JSON.stringify(report.gaps)).toBeLessThanOrEqual(16);
+    } else {
+      for (const gap of report.gaps) expect(gap, JSON.stringify(report.gaps)).toBeGreaterThan(0);
+    }
+
+    // Separator band never overlaps any button/icon/text in either neighbor.
+    expect(report.separatorOverlaps.every((overlap) => !overlap), JSON.stringify(report.separatorOverlaps)).toBe(true);
+
+    // Footer caption baselines align within 1px across the whole Ribbon.
+    const baselineSpread = Math.max(...report.captionBottoms) - Math.min(...report.captionBottoms);
+    expect(baselineSpread, JSON.stringify(report.captionBottoms)).toBeLessThanOrEqual(1);
+  });
+}
+
 // #262 (GUI/UX closure gate, Interaction/State-feedback axes): creating a new
 // row must select it, the same way Group/Spacer already did from the Left
 // Tree's own +Add button -- otherwise the newly added row isn't immediately

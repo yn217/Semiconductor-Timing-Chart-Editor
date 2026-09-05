@@ -355,9 +355,34 @@
   min-width: 0;
   height: 101px;
   overflow: hidden;
+  /* Group boundary clarity: 14px is the exact before/after spacing this
+     produces around each group's own separator line below (Range Edit /
+     Bookmark / Label Anchor / Fold-Break previously read as one continuous
+     command row, separated only by incidental whitespace). Home Ribbon is
+     untouched -- this gap and the separator below are scoped to
+     `.timeline-ribbon` only. */
+  gap: 14px;
 }
 
-.editor-shell .timeline-slot-group { flex: 0 1 auto; min-width: 0; }
+.editor-shell .timeline-slot-group { flex: 0 1 auto; min-width: 0; position: relative; }
+
+/* One shared vertical separator per Group boundary (not between individual
+   buttons within a Group -- `:not(:last-child)` keeps the final group
+   trailing-line-free). Sits centered in the 14px flex `gap` above, so it
+   never touches a neighboring button/icon/label on either side. Spans from
+   just inside the Ribbon's own top edge to just before the Footer caption
+   text (matching `.ds-ribbon-group`'s own `padding: 5px 5px 17px` box
+   inset), never crossing into the caption line itself. */
+.editor-shell .timeline-slot-group:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  bottom: 15px;
+  right: -7px;
+  width: 1px;
+  background: #c3cddb;
+  pointer-events: none;
+}
 
 /* align-items: start (not center) -- some groups mix a full-height button
    row with an auto-sized single row (Range/Insert/Range Edit) while others
@@ -366,9 +391,26 @@
    push its content down relative to the fixed-row groups. Starting every
    item at its row's own top edge keeps every group's icon/control row at
    the same absolute Y regardless of which row-sizing shape it uses. */
-.editor-shell .timeline-slot-group > .ds-ribbon-group { position: relative; display: grid; align-items: start; height: 101px; min-width: 0; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
+/* max-width: 100% (not just min-width: 0) matters once the new inter-group
+   `gap` above takes width out of the shared flex budget: each group's own
+   `width: XXXpx` (below, per timeline-*-group class) is a *preferred* size
+   that only ever applied when there was slack to spare. With no slack left,
+   `.timeline-slot-group`'s flex-shrink now legitimately shrinks the outer
+   slot below that preferred width -- without this cap the fixed-width grid
+   here would keep its full size regardless and spill past the shrunk slot
+   into the 14px gap and the next group/floating editor beyond it (a real,
+   confirmed regression: a Fold/Break Expand-All button intercepting clicks
+   meant for the Time Group editor's checkbox at the ~1280px responsive
+   breakpoint). Capping it here means the grid compresses together with its
+   slot instead, which only ever engages under this genuine width pressure. */
+.editor-shell .timeline-slot-group > .ds-ribbon-group { position: relative; display: grid; align-items: start; height: 101px; min-width: 0; max-width: 100%; box-sizing: border-box; padding: 5px 5px 17px; border-right: 0; }
 
-.editor-shell .timeline-ribbon .ds-ribbon-group > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
+/* Footer caption: same box (height: 101px, bottom: 2px) for every Timeline
+   group keeps every caption's baseline aligned regardless of that group's
+   own internal row layout (single button row vs. button-row-plus-object-
+   list) -- only the color/weight below changed, for #388's "slightly
+   increase caption visibility" request. */
+.editor-shell .timeline-ribbon .ds-ribbon-group > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #46586c; font-size: 10px; font-weight: 600; text-align: center; }
 
 /* #388: Timeline's own History group (Undo/Redo) -- same fixed-width
    convention as every other Timeline group below. */
