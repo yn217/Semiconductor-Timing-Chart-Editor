@@ -612,7 +612,11 @@ test("edits a Time Group through one semantic editor operation and supports Undo
   await expect(page.getByTestId("cycle-ruler").locator("[data-time-group-id]")).toHaveCount(1);
 });
 
-test("bookmark list jumps to its geometry-backed cycle without changing the document", async ({ page }) => {
+// #388: Bookmark navigation ("jump") now happens through the Timeline
+// Ribbon's fixed Previous/Add/Next commands (never a per-Bookmark button
+// rendered into the Ribbon) or a double-click on the canvas/ruler marker;
+// persistent Bookmark management moved to the Bottom "Bookmarks" panel.
+test("Previous/Next Bookmark navigation jumps to its geometry-backed cycle without changing the document", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -622,30 +626,40 @@ test("bookmark list jumps to its geometry-backed cycle without changing the docu
   await page.getByRole("button", { name: "Add marker" }).click();
   const bookmark = page.locator("[data-bookmark-id]").first();
   await expect(bookmark).toBeVisible();
+  await page.getByLabel("Timeline range end").fill("2");
+  await page.getByLabel("Timeline range start").fill("0");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   const beforeHistory = await page.getByTestId("history-status").textContent();
-  await page.getByTestId(/bookmark-jump-/).click();
+  await page.getByRole("button", { name: "Next bookmark", exact: true }).click();
   await expect(host).toHaveAttribute("data-selected-cycle", "6");
   await expect(page.getByLabel("Timeline range start")).toHaveValue("6");
   await expect(page.getByLabel("Timeline range end")).toHaveValue("7");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+
+  // Clicking the canvas/ruler marker selects the same Bottom Bookmark row.
+  const bookmarkId = await bookmark.getAttribute("data-bookmark-id");
+  await bookmark.click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  await expect(page.getByTestId(`bookmark-row-${bookmarkId}`)).toHaveAttribute("data-selected", "true");
 });
 
-test("edits a named Bookmark through one semantic operation and preserves it through Save/Open", async ({ page }) => {
+test("edits a named Bookmark through the Bottom Bookmarks panel and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await page.getByRole("button", { name: "Add marker" }).click();
-  await page.getByTestId(/bookmark-edit-/).click();
-  const editor = page.getByTestId("bookmark-editor");
-  await editor.getByLabel("Bookmark name").fill("Review Point");
-  await editor.getByLabel("Bookmark cycle").fill("9");
-  await editor.getByLabel("Bookmark comment").fill("approved");
-  await editor.getByTestId("apply-bookmark").click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  await expect(panel).toBeVisible();
+  await panel.getByTestId(/bookmark-row-/).click();
+  await panel.getByLabel("Bottom Bookmark name").fill("Review Point");
+  await panel.getByLabel("Bottom Bookmark cycle").fill("9");
+  await panel.getByLabel("Bottom Bookmark comment").fill("approved");
+  await panel.getByTestId("apply-bottom-bookmark").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+  await expect(panel.getByTestId(/bookmark-row-/)).toContainText("Review Point");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", "2");
 
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -653,14 +667,71 @@ test("edits a named Bookmark through one semantic operation and preserves it thr
   await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Recent", exact: true }).click();
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
-  await page.getByRole("button", { name: "Delete Review Point", exact: true }).click();
-  await expect(page.getByTestId(/bookmark-jump-/)).toHaveCount(0);
+  // Bottom Panel state (tab selection) survives Open like other workspace
+  // chrome (bottomVisible/inspectorVisible), so the Bookmarks panel is
+  // already showing the reopened document's Bookmark with no re-navigation.
+  await expect(panel).toBeVisible();
+  await expect(panel.getByTestId(/bookmark-row-/)).toContainText("Review Point");
+  await panel.getByTestId(/bookmark-row-/).click();
+  await panel.getByRole("button", { name: "Delete Bookmark", exact: true }).click();
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(0);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(panel.getByTestId(/bookmark-row-/)).toContainText("Review Point");
+});
+
+// #388: the Timeline tab's own History group must reuse the exact same
+// History/Command owner as Home -- no second Undo implementation -- and
+// the Bookmark Ribbon group must stay a fixed command surface whose height/
+// control count never changes with document Bookmark count.
+test("Timeline's History group reuses the global Undo/Redo owner, and the Bookmark Ribbon group never grows with Bookmark count", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
-  await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
+  const timeline = page.getByTestId("timeline-editor");
+  const bookmarkGroup = timeline.locator("[data-timeline-group='Bookmark']");
+  const boxBefore = await bookmarkGroup.evaluate((element) => element.getBoundingClientRect().toJSON());
+  const buttonCountBefore = await bookmarkGroup.locator("button").count();
+
+  // Create several Bookmarks -- the fixed group's own box and control count
+  // must not change.
+  for (let cycle = 0; cycle < 5; cycle += 1) {
+    await page.getByLabel("Timeline range start").fill(String(cycle));
+    await page.getByLabel("Timeline range end").fill(String(cycle + 1));
+    await timeline.getByRole("button", { name: "Add marker" }).click();
+  }
+  const boxAfter = await bookmarkGroup.evaluate((element) => element.getBoundingClientRect().toJSON());
+  const buttonCountAfter = await bookmarkGroup.locator("button").count();
+  expect(boxAfter).toEqual(boxBefore);
+  expect(buttonCountAfter).toBe(buttonCountBefore);
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+
+  // Timeline's own Undo/Redo commits through the identical global History
+  // owner Home uses -- reflected immediately in the shared history-status,
+  // and Home's own Undo/Redo stay in lockstep with it.
+  await timeline.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 1");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(timeline.getByRole("button", { name: "Undo", exact: true })).toBeEnabled();
+  await expect(timeline.getByRole("button", { name: "Redo", exact: true })).toBeDisabled();
+
+  // The Bottom Bookmarks panel's own Duplicate creates a fresh stable ID.
+  await timeline.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(5);
+  const firstRow = panel.getByTestId(/bookmark-row-/).first();
+  const firstId = await firstRow.getAttribute("data-testid");
+  await firstRow.click();
+  await panel.getByRole("button", { name: "Duplicate", exact: true }).click();
+  await expect(panel.getByTestId(/bookmark-row-/)).toHaveCount(6);
+  await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
+  const duplicatedIds = await panel.getByTestId(/bookmark-row-/).evaluateAll((rows) => rows.map((row) => row.getAttribute("data-testid")));
+  expect(new Set(duplicatedIds).size).toBe(duplicatedIds.length);
+  expect(duplicatedIds).toContain(firstId);
 });
 
 // #376: a standalone Label Anchor restarts the ruler's displayed number at

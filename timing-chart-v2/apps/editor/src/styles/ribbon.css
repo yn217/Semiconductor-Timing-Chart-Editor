@@ -370,13 +370,28 @@
 
 .editor-shell .timeline-ribbon .ds-ribbon-group > b { position: absolute; right: 0; bottom: 2px; left: 0; color: #637083; font-size: 10px; font-weight: 500; text-align: center; }
 
+/* #388: Timeline's own History group (Undo/Redo) -- same fixed-width
+   convention as every other Timeline group below. */
+.editor-shell .timeline-history-group { width: 130px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; }
+
 .editor-shell .timeline-range-group { width: 180px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
 
 .editor-shell .timeline-insert-group { width: 320px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
 
-.editor-shell .timeline-range-edit-group { width: 240px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+/* #388: widened from 240px (4 columns) to fit the new Destination/Preview
+   pair alongside Delete/Duplicate/Move (5 columns; Preview's <output> spans
+   the row's remaining width via its own min-width: 0). */
+.editor-shell .timeline-range-edit-group { width: 290px; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; }
 
 .editor-shell .timeline-bookmark-group { width: 220px; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; }
+
+/* #388: Label Anchor never had its own width/row rule -- it happened not to
+   visibly overflow only because the Timeline ribbon had enough slack before
+   the History group above was added. Same fixed-width + list-row convention
+   as Bookmark/Fold below (it renders the same button-row + `.timeline-objects`
+   list shape). */
+.editor-shell .timeline-label-anchor-group { width: 150px; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px; grid-template-rows: 66px 1fr; }
+.editor-shell .timeline-label-anchor-group .timeline-objects { grid-column: 1 / -1; grid-row: 2; min-height: 0; overflow: auto; }
 
 .editor-shell .timeline-fold-group { width: 190px; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 2px; }
 

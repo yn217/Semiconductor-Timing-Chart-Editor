@@ -55,7 +55,7 @@ test.describe("Edge Counter compact layout", () => {
     await page.getByLabel("Timeline range end").fill("7");
     await page.getByLabel("Timeline range start").fill("6");
     await timeline.getByRole("button", { name: "Add marker" }).click();
-    const markerOptions = timeline.locator("[data-bookmark-id]");
+    const markerOptions = page.getByTestId("cycle-ruler").locator("[data-bookmark-id]");
     await expect(markerOptions).toHaveCount(2);
 
     await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();

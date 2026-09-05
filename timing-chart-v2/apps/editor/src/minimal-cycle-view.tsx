@@ -7,7 +7,7 @@ import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
@@ -79,6 +79,7 @@ import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { routeGlobalShortcut } from "./runtime/keyboard-shortcut-router.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
+import { BookmarkEditor } from "./bookmark-editor.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-target.js";
 import { buildRuler } from "./runtime/build-ruler.js";
 import { projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
@@ -1536,6 +1537,59 @@ export function MinimalCycleView() {
   const selectTransaction = (id: TransactionId) => {
     selection.selectTransaction(id);
   };
+  // #388: Bookmark selection is its own lightweight view-only piece of
+  // state (not folded into the shared SelectionOwner, which drives
+  // clipboard/rename/delete-selection routing that Bookmark never
+  // participates in -- Bookmark already has its own dedicated
+  // bookmark.create/update/delete commands). One owner across Ribbon
+  // Previous/Next, the Bottom Bookmark list, and canvas ruler marker
+  // clicks -- never a second Bookmark collection copy (the list itself
+  // always reads live from `snapshot.document.bookmarks`).
+  const [selectedBookmarkId, setSelectedBookmarkId] = useState<BookmarkId | undefined>(undefined);
+  const selectedBookmark = selectedBookmarkId === undefined ? undefined : snapshot.document.bookmarks.find((item) => item.id === selectedBookmarkId);
+  const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const revealBookmark = (start: number) => timelineNavigation.navigateToCycle(start);
+  const bookmarksRef = useRef(snapshot.document.bookmarks);
+  bookmarksRef.current = snapshot.document.bookmarks;
+  const deleteBottomBookmark = () => {
+    if (!selectedBookmark) return;
+    const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("bookmark_delete"), type: "bookmark.delete", bookmarkId: selectedBookmark.id });
+    if (result.ok) setSelectedBookmarkId(undefined);
+  };
+  // #388: clicking a Bookmark marker on the ruler selects the same Bottom
+  // row -- a small, independent listener (not folded into the primary
+  // mount effect above) so it never touches the existing pointer-based
+  // range-selection/drag gesture owner. A marker click still resolves an
+  // ordinary cycle selection through that owner too (the marker has no
+  // `data-cycle`, so `rulerCycleAtTarget` falls through to the geometry-
+  // based boundary at that x position) -- both effects composing is
+  // intentional, not a conflict: selecting the cycle under a Bookmark
+  // while also selecting the Bookmark itself is the expected behavior.
+  useEffect(() => {
+    const rulerElement = ruler.current;
+    if (!rulerElement) return;
+    const markerAt = (event: MouseEvent) => event.target instanceof Element ? event.target.closest<HTMLElement>("[data-bookmark-id]") : null;
+    const onRulerClick = (event: MouseEvent) => {
+      const id = markerAt(event)?.dataset.bookmarkId;
+      if (id) setSelectedBookmarkId(id as BookmarkId);
+    };
+    // A double-click on the marker also reveals it (same Reveal contract as
+    // the Bottom Bookmark list's own row double-click), matching the single
+    // gesture the removed Ribbon "jump" button used to offer.
+    const onRulerDoubleClick = (event: MouseEvent) => {
+      const marker = markerAt(event);
+      const id = marker?.dataset.bookmarkId;
+      if (!id) return;
+      const bookmark = bookmarksRef.current.find((item) => item.id === id);
+      if (bookmark) timelineNavigation.navigateToCycle(bookmark.start);
+    };
+    rulerElement.addEventListener("click", onRulerClick);
+    rulerElement.addEventListener("dblclick", onRulerDoubleClick);
+    return () => {
+      rulerElement.removeEventListener("click", onRulerClick);
+      rulerElement.removeEventListener("dblclick", onRulerDoubleClick);
+    };
+  }, []);
   const openTransactionContextMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
     menuOriginRef.current = event.currentTarget;
     setContextMenu({ x: event.clientX, y: event.clientY, target: "transaction" });
@@ -1550,6 +1604,19 @@ export function MinimalCycleView() {
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
     onDelete={deleteBottomTransaction}
+    onCancel={() => setBottomResetToken((value) => value + 1)}
+  />;
+  const bookmarkEditor = <BookmarkEditor
+    key={`${selectedBookmark?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
+    bookmark={selectedBookmark}
+    document={snapshot.document}
+    history={history}
+    onSelect={selectBookmark}
+    onReveal={revealBookmark}
+    onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+    onUndo={() => commandRegistry.current.execute("history.undo")}
+    onRedo={() => commandRegistry.current.execute("history.redo")}
+    onDelete={deleteBottomBookmark}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
   const navigateProblem = (path: string) => {
@@ -1748,12 +1815,12 @@ export function MinimalCycleView() {
     const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
     if (result.ok) selection.selectSignal(id);
   };
-  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Problems" | "JSON")[] = viewMode === "Cycle"
-    ? ["Signal", "Annotation", "Problems", "JSON"]
+  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "Problems" | "JSON")[] = viewMode === "Cycle"
+    ? ["Signal", "Annotation", "Bookmarks", "Problems", "JSON"]
     : viewMode === "Transaction"
-      ? ["Transaction", "Annotation", "Problems", "JSON"]
-      : ["Signal", "Transaction", "Annotation", "Problems", "JSON"];
-  const bottomTabLabels: Readonly<Record<typeof bottomTabs[number], string>> = { Signal: "Signal Editor", Annotation: "Annotations", Transaction: "Transactions", Problems: "Checks", JSON: "JSON" };
+      ? ["Transaction", "Annotation", "Bookmarks", "Problems", "JSON"]
+      : ["Signal", "Transaction", "Annotation", "Bookmarks", "Problems", "JSON"];
+  const bottomTabLabels: Readonly<Record<typeof bottomTabs[number], string>> = { Signal: "Signal Editor", Annotation: "Annotations", Transaction: "Transactions", Bookmarks: "Bookmarks", Problems: "Checks", JSON: "JSON" };
   const startBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     bottomResizeRef.current = { startY: event.clientY, startHeight: bottomHeight };
@@ -2024,7 +2091,7 @@ export function MinimalCycleView() {
       onArrowPick={(annotationType) => armArrowPick.current(annotationType)}
       onZoom={timelineNavigation.zoomBy}
       onFitSelection={timelineNavigation.fitSelection}
-      onNavigateBookmark={timelineNavigation.navigateToCycle}
+      onNavigateBookmark={(cycle, bookmarkId) => { timelineNavigation.navigateToCycle(cycle); if (bookmarkId) selectBookmark(bookmarkId); }}
       onFitAll={timelineNavigation.fitAll}
       onSetZoom={timelineNavigation.setZoom}
       onToggleGrid={() => setGridEnabled((value) => !value)}
@@ -2051,6 +2118,7 @@ export function MinimalCycleView() {
       onToggleBottom={() => startTransition(() => setBottomVisible((value) => !value))}
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
       onOpenTimeline={() => setRibbonTab("Timeline")}
+      onOpenBookmarks={() => { setBottomTab("Bookmarks"); setBottomVisible(true); }}
       onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
     <MinimalCycleViewPanels>
@@ -2110,7 +2178,7 @@ export function MinimalCycleView() {
         onFollowSelectionChange={setFollowSelection}
         pinned={bottomPinned}
         onTogglePinned={toggleBottomPin}
-        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
+        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
       />}
        <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={selectedSignal?.id ?? `${selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => { if (selectedGroup) refreshGroupStylePreview(host.current!, selectedGroup.id, selectedGroup.style); setInspectorResetToken((value) => value + 1); }} onGroupPreview={(groupId, style) => refreshGroupStylePreview(host.current!, groupId, style ?? snapshot.document.signalGroups.find((group) => group.id === groupId)?.style)} /></aside>
     </div>

@@ -81,6 +81,16 @@
 .transaction-editor input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
 .transaction-editor form button, .transaction-editor header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }
 .transaction-editor form button { border-color: #246aa8; background: #2c78bb; color: white; }
+/* #388: Bookmark's own Bottom Panel editor -- same shape as the
+   Transaction editor above (header/form/list), see bookmark-editor.tsx. */
+.bookmark-editor-panel { min-height: 100%; padding: 8px 12px; }
+.bookmark-editor-panel > header { display: flex; align-items: center; gap: 7px; }
+.bookmark-editor-panel > header strong { margin-right: auto; }
+.bookmark-editor-panel form { display: flex; align-items: end; gap: 9px; padding: 9px 0; }
+.bookmark-editor-panel label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; }
+.bookmark-editor-panel input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
+.bookmark-editor-panel form button, .bookmark-editor-panel header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }
+.bookmark-editor-panel form button { border-color: #246aa8; background: #2c78bb; color: white; }
 .editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: minmax(0, 1fr) 0 0; }
 .editor-shell[data-bottom-visible="false"] .bottom-resize-track { display: none; }
 

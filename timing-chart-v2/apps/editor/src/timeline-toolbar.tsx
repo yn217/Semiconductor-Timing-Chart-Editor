@@ -9,6 +9,17 @@ import { EditorIconButton } from "./editor-icon.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonNumberInput } from "./design-system.js";
 
+/** #388: this file's own destination/range-edit summary + tooltip helpers.
+ * `destinationSummary` covers the Duplicate/Move sentence shown next to the
+ * destination field; the per-button explanations reflect the actual shared
+ * #170 timeline-transform contract (packages/commands/src/planner.ts's
+ * timeline.delete/duplicateRange/moveRange handlers) rather than repeating
+ * the command name. */
+function destinationSummary(range: { readonly start: number; readonly end: number }, destination: number): string {
+  const length = Math.max(0, range.end - range.start);
+  return `Selected [${range.start},${range.end}) → Target [${destination},${destination + length})`;
+}
+
 /** Timeline renders through the exact same Ds* ribbon primitives Insert and
  * Home use (DsRibbonGroup/DsRibbonButton/DsRibbonNumberInput) instead of
  * ad-hoc per-button markup -- see apps/editor/src/styles/ribbon.css's
@@ -17,7 +28,7 @@ import { DsRibbonButton, DsRibbonGroup, DsRibbonNumberInput } from "./design-sys
  * coverage and the V1-compatibility overlay) even where its visible label
  * text is now shorter -- only the on-screen wording changed, not the
  * accessible name or the underlying SemanticCommand. */
-export function TimelineToolbar({ document, range, onRange, onCommand, onCommandBatch, onNavigateBookmark }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => void; readonly onNavigateBookmark: (cycle: number) => void }) {
+export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRange, onCommand, onCommandBatch, onNavigateBookmark, onOpenBookmarks }: { readonly document: CanonicalDocument; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly onUndo: () => void; readonly onRedo: () => void; readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => void; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly onOpenBookmarks: () => void }) {
   const [count, setCount] = useState(1);
   const [destination, setDestination] = useState(8);
   const [editingGroupId, setEditingGroupId] = useState<TimeGroupId>();
@@ -28,12 +39,6 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
   const [groupComment, setGroupComment] = useState("");
   const [groupFoldLabel, setGroupFoldLabel] = useState("");
   const [groupCollapsed, setGroupCollapsed] = useState(true);
-  const [editingBookmarkId, setEditingBookmarkId] = useState<BookmarkId>();
-  const editingBookmark = document.bookmarks.find((bookmark) => bookmark.id === editingBookmarkId);
-  const [bookmarkName, setBookmarkName] = useState("");
-  const [bookmarkStart, setBookmarkStart] = useState(0);
-  const [bookmarkComment, setBookmarkComment] = useState("");
-  const bookmarkListRef = useRef<HTMLDivElement>(null);
   // #376: a standalone Label Anchor (ruler-number restart with no owning
   // Time Group/fold) -- same list/edit/delete UI pattern as Bookmark above,
   // filtered to labelAnchors with no ownerTimeGroupId so a Time Group's own
@@ -56,12 +61,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
     const next = direction < 0
       ? [...ordered].reverse().find((bookmark) => bookmark.start < range.start) ?? ordered.at(-1)
       : ordered.find((bookmark) => bookmark.start >= range.end) ?? ordered[0];
-    if (next) onNavigateBookmark(next.start);
-  };
-  const applyBookmark = () => {
-    if (!editingBookmark) return;
-    onCommand({ id: nextCommandId("bookmark_update"), type: "bookmark.update", bookmarkId: editingBookmark.id, name: bookmarkName, start: bookmarkStart, comment: bookmarkComment });
-    setEditingBookmarkId(undefined);
+    if (next) onNavigateBookmark(next.start, next.id);
   };
   const applyTimeGroup = () => {
     if (!editingGroup) return;
@@ -76,6 +76,18 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
   };
   const rangeLength = Math.max(0, range.end - range.start);
   return <div className="timeline-ribbon" aria-label="Timeline Editor" data-testid="timeline-editor">
+    <div className="timeline-slot-group" data-timeline-group="History" aria-label="History commands">
+      {/* #388: reuses the exact same History/Undo/Redo owner as Home's
+          History group -- no second Undo implementation. Every Timeline
+          edit already commits as one SemanticCommand/History entry
+          through that shared owner; this group only makes it reachable
+          without switching back to Home while working on the Timeline
+          tab. */}
+      <DsRibbonGroup ariaLabel="History" className="timeline-history-group" density="compact-grid" label="History">
+        <DsRibbonButton ariaLabel="Undo" icon={<RibbonIcon name="i-undo" />} disabled={!history.canUndo} onClick={onUndo} title="Undo the last completed operation">Undo</DsRibbonButton>
+        <DsRibbonButton ariaLabel="Redo" icon={<RibbonIcon name="i-redo" />} disabled={!history.canRedo} onClick={onRedo} title="Redo the next undone operation">Redo</DsRibbonButton>
+      </DsRibbonGroup>
+    </div>
     <div className="timeline-slot-group" data-timeline-group="Range" aria-label="Range commands">
       <DsRibbonGroup ariaLabel="Range" className="timeline-range-group" density="compact-grid" label="Range">
         <DsRibbonNumberInput ariaLabel="Timeline range start" label="Start cycle" min={0} max={document.timeline.cycleCount - 1} value={range.start} onChange={(value) => setBoundary("start", value)} title={`Selected range start cycle (inclusive), 0-${document.timeline.cycleCount - 1}`} />
@@ -97,21 +109,28 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
     </div>
     <div className="timeline-slot-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
       <DsRibbonGroup ariaLabel="Range Edit" className="timeline-range-edit-group" density="compact-grid" label="Range Edit">
-        <DsRibbonNumberInput ariaLabel="Timeline destination" label="To" min={0} max={document.timeline.cycleCount} step={1} value={destination} onChange={(value) => setDestination(Math.max(0, value))} title="Destination cycle used by Duplicate / Move" />
-        <DsRibbonButton ariaLabel="Delete range" icon={<RibbonIcon name="i-delete" />} onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })} title="Delete the selected range" v1Label="範囲削除">Delete</DsRibbonButton>
-        <DsRibbonButton ariaLabel="Duplicate to" icon={<RibbonIcon name="i-duplicate" />} onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })} title="Duplicate the selected range starting at To" v1Label="範囲複製">Duplicate</DsRibbonButton>
-        <DsRibbonButton ariaLabel="Move to" icon={<RibbonIcon name="i-move-to" />} onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })} title="Move the selected range to start at To" v1Label="範囲移動">Move</DsRibbonButton>
+        <DsRibbonNumberInput ariaLabel="Timeline destination" label="Destination" min={0} max={document.timeline.cycleCount} step={1} value={destination} onChange={(value) => setDestination(Math.max(0, value))} title="Start cycle used by Duplicate / Move -- has no effect on Delete" />
+        <label className="ds-control ds-ribbon-number-input" title="What Duplicate/Move will do with the current Destination value">
+          <span className="ds-ribbon-number-input__caption">Preview</span>
+          <output data-testid="timeline-destination-summary">{destinationSummary(range, destination)}</output>
+        </label>
+        <DsRibbonButton ariaLabel="Delete range" icon={<RibbonIcon name="i-delete" />} onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })} title={`Delete [${range.start},${range.end}). Later Signal change points, Annotation anchors, Bookmarks, Label Anchors, Time Groups and Transactions shift earlier by ${rangeLength} cycles (the shared #170 timeline-transform ripple). Destination is not used.`} v1Label="範囲削除">Delete</DsRibbonButton>
+        <DsRibbonButton ariaLabel="Duplicate to" icon={<RibbonIcon name="i-duplicate" />} onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })} title={`Copy [${range.start},${range.end}) → [${destination},${destination + rangeLength}). The original range remains; Signal change points and Annotation anchors inside the source range are duplicated into the new location.`} v1Label="範囲複製">Duplicate</DsRibbonButton>
+        <DsRibbonButton ariaLabel="Move to" icon={<RibbonIcon name="i-move-to" />} onClick={() => onCommand({ id: nextCommandId("timeline_move"), type: "timeline.moveRange", start: range.start, end: range.end, to: destination })} title={`Move [${range.start},${range.end}) to start at ${destination}. Destination is a POST-REMOVAL boundary (numbered as if the source range were already gone). The selected range relocates with its Signal change points and Annotation anchors intact; Bookmarks/Label Anchors/Time Groups/Transactions elsewhere ripple through the shared #170 timeline transform.`} v1Label="範囲移動">Move</DsRibbonButton>
       </DsRibbonGroup>
     </div>
+    {/* #388: Bookmark stays a FIXED command surface -- Previous/Add/Next/
+        Bookmarks only, never a per-Bookmark list rendered into the Ribbon
+        (that used to make the Ribbon grow with document data; Bookmark
+        count must never change Ribbon height/control count/layout).
+        Persistent Bookmark management (create/edit/delete/list) lives in
+        the dedicated Bottom "Bookmarks" panel -- see bookmark-editor.tsx. */}
     <div className="timeline-slot-group" data-timeline-group="Bookmark" aria-label="Bookmark commands">
       <DsRibbonGroup ariaLabel="Bookmark" className="timeline-bookmark-group" density="compact-grid" label="Bookmark">
-        <DsRibbonButton ariaLabel="Previous bookmark" icon={<RibbonIcon name="i-chevron-left" />} disabled={document.bookmarks.length === 0} onClick={() => navigateBookmark(-1)} title="Jump to the previous Bookmark">Previous</DsRibbonButton>
+        <DsRibbonButton ariaLabel="Previous bookmark" icon={<RibbonIcon name="i-chevron-left" />} disabled={document.bookmarks.length === 0} onClick={() => navigateBookmark(-1)} title="Jump to the previous Bookmark relative to the current selected range">Previous</DsRibbonButton>
         <DsRibbonButton ariaLabel="Add marker" icon={<RibbonIcon name="i-bookmark" />} onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark", document) as BookmarkId, name: `Marker ${range.start}`, start: range.start } })} title="Add a Bookmark at the selected range's start" v1Label="ブックマーク">Add</DsRibbonButton>
-        <DsRibbonButton ariaLabel="Next bookmark" icon={<RibbonIcon name="i-chevron-right" />} disabled={document.bookmarks.length === 0} onClick={() => navigateBookmark(1)} title="Jump to the next Bookmark">Next</DsRibbonButton>
-        <DsRibbonButton ariaLabel="List bookmarks" icon={<RibbonIcon name="i-list" />} onClick={() => bookmarkListRef.current?.focus()} title="Focus the Bookmark list below">List</DsRibbonButton>
-        <div className="timeline-objects" ref={bookmarkListRef} tabIndex={-1}>
-        {document.bookmarks.map((bookmark) => <span className="timeline-bookmark" key={bookmark.id} data-bookmark-id={bookmark.id}><button type="button" data-testid={`bookmark-jump-${bookmark.id}`} onClick={() => onNavigateBookmark(bookmark.start)} title={`Jump to cycle ${bookmark.start}`}>◆ {bookmark.name}</button><button type="button" data-testid={`bookmark-edit-${bookmark.id}`} aria-label={`Edit ${bookmark.name}`} onClick={() => { setEditingBookmarkId(bookmark.id); setBookmarkName(bookmark.name); setBookmarkStart(bookmark.start); setBookmarkComment(bookmark.comment ?? ""); }}>Edit</button><EditorIconButton label={`Delete ${bookmark.name}`} icon="close" onClick={() => onCommand({ id: nextCommandId("marker_delete"), type: "bookmark.delete", bookmarkId: bookmark.id })} /></span>)}
-        </div>
+        <DsRibbonButton ariaLabel="Next bookmark" icon={<RibbonIcon name="i-chevron-right" />} disabled={document.bookmarks.length === 0} onClick={() => navigateBookmark(1)} title="Jump to the next Bookmark relative to the current selected range">Next</DsRibbonButton>
+        <DsRibbonButton ariaLabel="Open Bookmarks panel" dataTestId="open-bookmarks-panel" icon={<RibbonIcon name="i-list" />} onClick={onOpenBookmarks} title="Open the Bookmarks list in the Bottom Panel to create, edit or delete Bookmarks">Bookmarks</DsRibbonButton>
       </DsRibbonGroup>
     </div>
     <div className="timeline-slot-group" data-timeline-group="Label Anchor" aria-label="Label Anchor commands">
@@ -134,7 +153,6 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
       </DsRibbonGroup>
     </div>
     {editingGroup && <form className="time-group-editor" aria-label="Time Group Editor" data-testid="time-group-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Time Group name" value={groupName} onChange={(event) => setGroupName(event.target.value)} /></label><label>Start<input aria-label="Time Group start" type="number" min="0" max={document.timeline.cycleCount - 1} value={groupStart} onChange={(event) => setGroupStart(Number(event.target.value))} /></label><label>End<input aria-label="Time Group end" type="number" min="1" max={document.timeline.cycleCount} value={groupEnd} onChange={(event) => setGroupEnd(Number(event.target.value))} /></label><label>Comment<input aria-label="Time Group comment" value={groupComment} onChange={(event) => setGroupComment(event.target.value)} /></label><label>Fold label<input aria-label="Time Group fold label" value={groupFoldLabel} onChange={(event) => setGroupFoldLabel(event.target.value)} /></label><label className="check-label"><input aria-label="Time Group collapsed" type="checkbox" checked={groupCollapsed} onChange={(event) => setGroupCollapsed(event.target.checked)} />Collapsed</label><button type="button" data-testid="apply-time-group" onClick={applyTimeGroup}>Apply</button><button type="button" onClick={() => setEditingGroupId(undefined)}>Cancel</button></form>}
-    {editingBookmark && <form className="bookmark-editor" aria-label="Bookmark Editor" data-testid="bookmark-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Name<input aria-label="Bookmark name" value={bookmarkName} onChange={(event) => setBookmarkName(event.target.value)} /></label><label>Cycle<input aria-label="Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={bookmarkStart} onChange={(event) => setBookmarkStart(Number(event.target.value))} /></label><label>Comment<input aria-label="Bookmark comment" value={bookmarkComment} onChange={(event) => setBookmarkComment(event.target.value)} /></label><button type="button" data-testid="apply-bookmark" onClick={applyBookmark}>Apply</button><button type="button" onClick={() => setEditingBookmarkId(undefined)}>Cancel</button></form>}
     {editingLabelAnchor && <form className="label-anchor-editor" aria-label="Label Anchor Editor" data-testid="label-anchor-editor" onSubmit={(event) => { event.preventDefault(); }}><label>Source cycle<input aria-label="Label Anchor source" type="number" min="0" max={document.timeline.cycleCount - 1} value={labelAnchorSource} onChange={(event) => setLabelAnchorSource(Number(event.target.value))} /></label><label>Display value<input aria-label="Label Anchor display" type="number" value={labelAnchorDisplay} onChange={(event) => setLabelAnchorDisplay(Number(event.target.value))} /></label><button type="button" data-testid="apply-label-anchor" onClick={applyLabelAnchor}>Apply</button><button type="button" onClick={() => setEditingLabelAnchorId(undefined)}>Cancel</button></form>}
   </div>;
 }

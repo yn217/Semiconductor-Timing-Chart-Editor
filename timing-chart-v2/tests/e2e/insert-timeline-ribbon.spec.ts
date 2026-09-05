@@ -58,7 +58,7 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     await expect(timeline.getByRole("button", { name: "Axis Break", exact: true })).toBeVisible();
     await expect(timeline.getByRole("button", { name: "Previous bookmark", exact: true })).toBeVisible();
     await expect(timeline.getByRole("button", { name: "Next bookmark", exact: true })).toBeVisible();
-    await expect(timeline.getByRole("button", { name: "List bookmarks", exact: true })).toBeVisible();
+    await expect(timeline.getByRole("button", { name: "Open Bookmarks panel", exact: true })).toBeVisible();
     const timelineGeometry = await timeline.evaluate((root) => {
       const box = root.getBoundingClientRect();
       const groups = [...root.querySelectorAll<HTMLElement>("[data-timeline-group]")].map((element) => element.getBoundingClientRect());
@@ -162,12 +162,12 @@ test("Timeline workflow groups keep explicit cycle semantics and aligned control
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   const timeline = page.getByTestId("timeline-editor");
   const groups = timeline.locator("[data-timeline-group]");
-  await expect(groups).toHaveCount(5);
+  await expect(groups).toHaveCount(7);
   await expect(timeline.locator("[data-timeline-group='Range']")).toContainText("Start cycle");
   await expect(timeline.locator("[data-timeline-group='Range']")).toContainText("End cycle");
   await expect(timeline.getByTestId("timeline-selected-length")).toHaveText("Length 2");
   await expect(timeline.locator("[data-timeline-group='Insert']")).toContainText("Count");
-  for (const label of ["Insert before", "Insert after", "Delete range", "Duplicate to", "Move to", "Previous bookmark", "Next bookmark", "List bookmarks", "Axis Break"]) {
+  for (const label of ["Undo", "Redo", "Insert before", "Insert after", "Delete range", "Duplicate to", "Move to", "Previous bookmark", "Next bookmark", "Open Bookmarks panel", "Axis Break"]) {
     await expect(timeline.getByRole("button", { name: label, exact: true })).toBeVisible();
   }
   const metrics = await timeline.evaluate((root) => {

@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 export type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
-export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Problems" | "JSON";
+export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Bookmarks" | "Problems" | "JSON";
 export type ViewMode = "Cycle" | "Transaction" | "Split";
 
 export const LEFT_PANE_MIN_WIDTH = 265;
