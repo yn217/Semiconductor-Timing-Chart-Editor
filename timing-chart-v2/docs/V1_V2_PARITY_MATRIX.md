@@ -256,3 +256,20 @@ The parity checker requires these four child rows, verifies their parent/V1
 source/Golden mappings, and keeps their status rows synchronized with
 `v1-v2-contract-status.json`. This prevents a later broad row or a neighboring
 annotation type from silently satisfying a newly identified contract.
+
+## Historical V1 visual artifact boundary
+
+The repository also contains Git-managed historical V1 issue artifacts under
+`timing-chart-v1/artifacts/`. A read-only inventory of the current parity
+source universe found artifacts for 116 of 155 legacy Issue numbers. These
+artifacts include issue-level acceptance JSON, screenshots, references and
+diffs for the V1 workflows, and remain immutable.
+
+They are historical V1 evidence, not an automatically approved one-to-one
+pixel baseline for the V2 Feature Coverage samples 11–20. A V1 artifact may be
+cited as a legacy reference input only after its fixture/state is explicitly
+mapped to the corresponding V2 production route. Until that mapping and the
+required V2 visual/export review are recorded, the relevant parity row remains
+`ACCEPTANCE_ONLY` or `PARTIAL`; the existence of a V1 image must not be treated
+as proof of V2 closure, and its absence must not be treated as a production
+implementation gap.
