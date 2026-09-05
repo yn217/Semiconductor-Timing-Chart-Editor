@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-05 12:36 JST
+# Last reconciled by ChatGPT: 2026-09-05 13:12 JST
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
@@ -18,27 +18,28 @@
 #   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_4.md
 #
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line, top to bottom.
-# Claude-owned, external-hold, blocked, closure-only and superseded issues MUST remain comments only.
+# Claude-owned, external-hold, blocked and superseded issues MUST remain comments only.
 # Never merge/cherry-pick codex-control into main.
 #
 # Observed product state at reconciliation:
-#   main = ebe2850fddd418c924dc260d45ab596eaf4be82b
+#   main = cc7e0a35fe842572507c40f38a18cd12e9e46ae1
 #   open Issues = 32
-#   Claude PR #354 merged (#332 item D)
-#   #210 Clock/Edge Counter parity is closed
-#   #352 fixed/closed by Codex real core fix; earlier period=1 test-only workaround is superseded
+#   #332 closed after PR #355 capability/effect audit
+#   PR #356 merged: legacy.css = 449 bytes / 0 selectors; #260 remains residual-only
+#   new P0 #357: clean /?visual-reference route fails before app mount
 #
 # ============================================================================
 # AGENT OWNERSHIP — HARD RULE
 # ============================================================================
-# Codex owns Core / Data / Geometry / Performance / Architecture.
+# Codex owns Core / Data / Geometry / Performance / Architecture / runtime lifecycle.
 # Claude owns GUI / UX / Visual / Editor-surface work.
 #
 # Codex MUST NOT independently implement Claude-owned issues:
-#   #332 #260 #181 #182 #184 #185 #176 #262 #293 #306 #309 #205 #267 #172 #186
+#   #260 #181 #182 #184 #185 #176 #262 #293 #306 #309 #205 #267 #172 #186
 #
-# #332 note: A Annotation Preview, B Clock Preview and D contextual disabled reasons are merged.
-# Claude owns the remaining C capability/effect audit closure. Codex must not create a parallel audit.
+# Claude MUST NOT independently implement the Codex-owned #357 runtime/hook lifecycle fix.
+# While #357 is active, minimal-cycle-view.tsx and its directly related runtime-lifecycle owner are
+# Codex-exclusive hot files. Claude may continue independent #260 token/guard work outside them.
 #
 # If a Codex Issue exposes a GUI residual owned by Claude, record it and continue within the
 # Codex-owned core acceptance. Do not create a parallel GUI implementation path.
@@ -64,6 +65,26 @@
 #   -> commit/push if code changed -> close when acceptance is proven -> next Issue
 #
 # If no code change is needed, evidence + closure is sufficient. Never manufacture a commit.
+#
+# ============================================================================
+# P0 CURRENT BLOCKER — #357
+# ============================================================================
+# #357: /?visual-reference fails to mount in a clean browser while plain / works.
+# Reported evidence includes Hook-order / invalid-hook-call / duplicate-createRoot / disposed-runtime
+# symptoms under React StrictMode. It blocks meaningful execution of many visual acceptance specs.
+#
+# Required strategy:
+# - root-cause current main; do not assume the issue's provisional analysis is the final cause;
+# - preserve unconditional Hook order and one product bootstrap/root owner;
+# - fix the smallest actual runtime lifecycle defect;
+# - fresh dev server + brand-new Chromium tab must mount /?visual-reference repeatedly;
+# - plain / must remain functional;
+# - no Golden/reference/threshold/mask changes;
+# - do not remove StrictMode or bypass the route merely to make tests pass without an explicit
+#   architecture/product decision.
+#
+# Once #357 is fixed, rerun the affected visual-reference specs and classify any remaining failures
+# under their actual GUI/visual Issues. Do not absorb all downstream visual gaps into #357.
 #
 # ============================================================================
 # GITHUB ACTIONS / BILLING POLICY
@@ -135,7 +156,9 @@
 # ============================================================================
 # CODEX EXECUTABLE QUEUE — CURRENT CORE LANE
 # ============================================================================
-# Highest-value current Core/Product work first.
+# Highest-value current blocker and bounded closure/product work first.
+357
+313
 200
 250
 
@@ -151,14 +174,20 @@
 177
 
 # ============================================================================
-# CLOSURE-ONLY — NON-EXECUTABLE UNTIL AUDIT SELECTS IT
+# #313 CLOSURE RULE
 # ============================================================================
-# #313 Range drag geometry:
-#   PR #338 fixed the reported drag-release authority mismatch.
-#   PR #341 fixed Escape/PointerCancel trailing-click leakage.
-#   Keep open for focused acceptance audit only: 100k unsampled boundary, terminal boundary,
-#   reverse drag, ruler/waveform equivalence, folds/rebase, zoom/scroll and view-only invariants.
-#   Do not restart broad gesture implementation without a concrete failing acceptance case.
+# PR #338 fixed the reported drag-release authority mismatch.
+# PR #341 fixed Escape/PointerCancel trailing-click leakage.
+# Execute #313 as an acceptance-first closure audit, not as a fresh broad rewrite.
+# Explicitly prove:
+#   - 100k unsampled boundary selection
+#   - terminal boundary
+#   - reverse drag normalization
+#   - ruler/waveform equivalence
+#   - folds/rebase
+#   - zoom/scroll invariance
+#   - range selection remains view-only
+# Implement code only if a concrete bounded residual fails.
 #
 # ============================================================================
 # QUARANTINED / DEPENDENCY HELD — NON-EXECUTABLE
@@ -174,37 +203,39 @@
 #   #264 Event/Pulse full lifecycle overlaps/depends on #223
 #   #265 Spacer full lifecycle overlaps/depends on #222
 #   #267 Group Band is Claude-owned and also depends on Spacer/layout closure
-#   #309 visual interaction scenarios are Claude-owned and gesture-heavy
 #
-# Re-enter a quarantined Issue only when the shared blocker has a concrete current reproduction and
-# a production-safe strategy. Never use sampled ruler DOM, fixed-pitch coordinate workarounds, or
-# timeout/test weakening to force acceptance.
+# Re-enter a quarantined Issue only when its concrete blocker is no longer reproducible or a
+# production-safe strategy exists. Re-enter one Issue at a time. Never use sampled ruler DOM,
+# fixed-pitch coordinate workarounds, timeout inflation, or assertion weakening to force acceptance.
 #
 # ============================================================================
 # CLAUDE-OWNED — NON-EXECUTABLE BY CODEX
 # ============================================================================
 # Immediate Claude queue:
-#   #332 capability/effect audit closure only (A/B/D already merged)
-#   #260 CSS/design-token ownership closure
-#   #181 Left Tree/role/MiniMap
-#   #182 v8 GUI closure
-#   #184 GUI v8 blockers
-#   #185 Golden visual acceptance
+#   #260 residual token-contract + hard legacy-selector anti-regression guard only.
+#        PR #356 already completed legacy.css relocation (449 bytes / 0 selectors).
+#        Final visual/current-contract confirmation waits for #357.
+#   #181 residual Left Tree/Role/MiniMap full-v8 visual closure after #357.
+#        Preserve accepted Collapse/Visibility/Role/MiniMap work.
+#   #182 approved-v8 GUI closure after #357
+#   #184 GUI-v8 blockers after #357 where visual-reference dependent
+#   #185 Golden visual acceptance after #357
 #   #176 professional CAD GUI usability
 #   #262 final GUI/UX closure
-#   #293 constrained non-Home design system
-#   #306 visual scenario harness
-#   #309 interaction visual scenarios (after gesture dependency is safe)
+#   #293 constrained non-Home design-system closure
+#   #306 visual scenario harness; visual-reference runs after #357
+#   #309 interaction visual scenarios after #357 and remaining gesture dependency
 #
 # Claude follow-ups:
 #   #205 datasheet annotations
-#   #267 Group Band editor
-#   #172 Full GUI closure/audit
-#   #186 Golden GUI harness if still materially open
+#   #267 Group Band editor after Spacer/layout readiness
+#   #172 Full GUI broad closure/audit
+#   #186 Golden GUI harness after #357, if still materially open after #185/#306
 #
 # ============================================================================
 # RECENTLY COMPLETED — DO NOT RE-IMPLEMENT
 # ============================================================================
+#   #332 capability truthfulness / Preview + effect audit
 #   #165 Geometry Semantic/Local/Screen contract
 #   #166 RowLayout + Stable Waveform Surface
 #   #169 Reorder / Visibility / D&D
@@ -218,6 +249,9 @@
 #   #328 Product Resource Budget enforcement
 #   #331 Font editing correctness/UX
 #   #352 uncontrolled period-2 Clock timeline ripple regression
+#
+# #332 closed after PR #355 added a mechanical Preview capability/effect audit on top of the real
+# Annotation/Clock Preview fixes and truthful contextual disabled reasons.
 #
 # #352 was fixed by the real Core change (`510f41c`, followed by `8ce9f60` verification).
 # The earlier test fixture changes that used period=1 are not closure evidence by themselves.
