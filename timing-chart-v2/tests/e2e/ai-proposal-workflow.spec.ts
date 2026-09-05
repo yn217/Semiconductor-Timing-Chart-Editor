@@ -137,3 +137,73 @@ test("AI Ribbon is a compact Ask/Edit trigger matching other tabs' geometry, wit
   await trigger.click();
   await expect(page.getByTestId("bottom-editor").getByTestId("ai-operation-panel")).toBeVisible();
 });
+
+// #395 PR2 (partial): Approval Policy defaults to "Always require
+// approval" per the issue's own explicit requirement, and the Activity
+// Log records every Preview/Validate/Apply outcome with a timestamp,
+// provider identity, and result -- a real, auditable record of what the
+// one provider that exists today actually did.
+test("AI Settings default to Always require approval, and every Preview/Validate/Apply is recorded in the Activity Log", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const ai = await openAIAssistant(page);
+
+  const activityLog = ai.getByTestId("ai-activity-log");
+  await expect(activityLog).toContainText("AI Activity (0)");
+
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await expect(settings.getByLabel("Always require approval")).toBeChecked();
+  await expect(settings.getByLabel("Auto-apply view-only operations")).not.toBeChecked();
+  await expect(settings).toContainText("not implemented yet");
+  await ai.getByTestId("ai-settings-toggle").click();
+
+  await ai.getByLabel("AI semantic query").fill("rename selected signal to AI_LOGGED");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("AI_LOGGED");
+
+  await expect(activityLog).toContainText("AI Activity (3)");
+  const entries = activityLog.locator("[data-testid='ai-activity-entry']");
+  await expect(entries).toHaveCount(3);
+  await expect(entries.nth(0)).toContainText("Applied · one atomic SemanticCommand transaction");
+  await expect(entries.nth(1)).toContainText("Validated · deterministic local checks passed");
+  await expect(entries.nth(2)).toContainText("Preview ready");
+  await expect(entries.nth(0)).toContainText("Proposal");
+});
+
+// #395 PR2 (partial): "Auto-apply view-only operations" is a real,
+// working setting -- it only ever short-circuits the manual Validate/
+// Apply button clicks for a proposal already confirmed view-only, going
+// through the exact same validate/apply functions. It must never affect
+// a document-mutating (semantic-command) proposal, which still requires
+// explicit manual Validate + Apply regardless of this setting.
+test("Auto-apply view-only operations applies a view-only proposal immediately, but never a document-mutating one", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const ai = await openAIAssistant(page);
+  await ai.getByTestId("ai-settings-toggle").click();
+  await ai.getByTestId("ai-settings").getByLabel("Auto-apply view-only operations").check();
+  await ai.getByTestId("ai-settings-toggle").click();
+
+  // View-only: Preview alone is enough -- no manual Validate/Apply click.
+  await ai.getByLabel("AI semantic query").fill("fit all");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-status")).toHaveText("Applied · view-only intent");
+  await expect(ai.getByTestId("ai-preview")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  // Document-mutating: still requires the explicit manual click chain --
+  // Preview alone must not commit anything.
+  await ai.getByLabel("AI semantic query").fill("create group named AI_AUTO_GROUP");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-preview")).toBeVisible();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
