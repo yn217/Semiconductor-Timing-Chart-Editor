@@ -81,3 +81,53 @@ body { min-width: 1100px; }
   --ui-row-height: var(--ds-density-compact-row);
   --ui-panel-padding: var(--ds-density-compact-panel-padding);
 }
+
+/* Migrated from legacy.css (#260): global reset plus the whole-shell grid
+   (title bar / column headings / 3-pane workspace / cycle viewport) that
+   every region sits inside -- this is the one genuinely cross-region
+   layout concern app-shell.css is the documented single owner of. */
+* { box-sizing: border-box; }
+button, input, select { font: inherit; font-size: var(--font-ui); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.editor-shell { min-height: 100vh; display: grid; grid-template-rows: 76px auto minmax(250px, 1fr) 32px; }
+.editor-shell { --gui-frozen-width: 160px; --wave-width: calc(100vw - var(--gui-left-width) - var(--gui-inspector-width) - var(--gui-frozen-width)); }
+.editor-shell { width: 100%; height: 100%; min-height: 0; display: grid; grid-template-rows: 32px 38px 147px minmax(0, 1fr) 27px; background: #fff; font-family: var(--gui-font-family); font-size: var(--gui-font-size); }
+.view-title { margin-left: auto; color: #52647a; font-size: 11px; }
+.appmark { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 3px; background: #086fce; color: white; font-size: 17px; }
+.save-state { margin-left: 8px; color: #667488; font-size: 11px; }
+.view-mode { display: flex; align-items: center; gap: 0; margin-left: auto; height: 100%; font-size: 10px; }
+.view-mode span { margin-right: 7px; color: #69778a; }
+.view-mode button { height: 24px; padding: 0 10px; border: 1px solid #bdc8d6; background: white; }
+.view-mode button:first-of-type { border-radius: 4px 0 0 4px; }
+.view-mode button:last-child { border-radius: 0 4px 4px 0; }
+.view-mode button.active { border-color: #1675d1; background: #e7f2ff; color: #0b63b5; }
+.column-headings { display: grid; grid-template-columns: 230px 210px minmax(640px, 1fr); height: 34px; position: relative; z-index: 20; border-bottom: 1px solid #b9c4d2; background: #f5f7fa; color: #435069; font-size: 11px; font-weight: 650; text-transform: uppercase; letter-spacing: .05em; }
+.column-headings span { display: flex; align-items: center; padding: 0 12px; border-right: 1px solid #d6dde6; }
+.cycle-viewport { position: relative; height: 250px; overflow: auto; background: #fbfcfe; }
+.desktop-workspace { min-height: 0; display: grid; grid-template-columns: var(--gui-left-width) minmax(0, 1fr) var(--gui-inspector-width); grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height); }
+.column-headings { grid-template-columns: var(--gui-left-width) var(--gui-frozen-width, 210px) minmax(640px, 1fr); }
+.cycle-viewport { height: calc(100% - 34px); }
+.frozen-pane-resize-handle { position: absolute; z-index: 24; top: 0; bottom: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) - 4px); width: 8px; cursor: ew-resize; touch-action: none; }
+.frozen-pane-resize-handle::after { content: ""; position: absolute; top: 50%; left: 3px; width: 2px; height: 42px; transform: translateY(-50%); border-radius: 2px; background: #9aaabd; opacity: .75; }
+.frozen-pane-resize-handle:hover::after, .frozen-pane-resize-handle:focus-visible::after { background: #2678bc; opacity: 1; }
+.empty-editor { padding: 24px; color: #68768a; }
+
+/* v8 approved visual contract.  The normal editor keeps its responsive V2
+   layout; the reference mode is the deterministic Chromium acceptance mode. */
+.editor-shell {
+  --gui-ribbon-height: 102px;
+  --gui-left-width: 265px;
+  --gui-frozen-width: 209px;
+  --gui-inspector-width: 297px;
+  --gui-bottom-height: 240px;
+  --wave-width: calc(100vw - var(--gui-left-width) - var(--gui-inspector-width) - var(--gui-frozen-width));
+  --gui-row-height: 31px;
+  --gui-role-width: 61px;
+  --gui-signal-width: 148px;
+  grid-template-rows: 31px 34px 102px minmax(0, 1fr) 25px;
+}
+.editor-shell .desktop-workspace { grid-template-columns: 265px minmax(0, 1fr) 297px; grid-template-rows: minmax(260px, 1fr) 10px var(--gui-bottom-height); }
+.editor-shell .column-headings { height: 37px; grid-template-columns: var(--gui-left-width, 265px) var(--gui-role-width, 61px) var(--gui-signal-width, 148px) max(0px, calc(var(--gui-frozen-width, 209px) - var(--gui-role-width, 61px) - var(--gui-signal-width, 148px))) minmax(640px, 1fr); }
+.editor-shell .column-headings .role-column-heading { justify-content: center; padding-inline: 4px; font-size: 10px; text-transform: none; letter-spacing: normal; }
+.editor-shell .column-headings .signal-column-heading { padding-inline: 8px; font-size: 10px; text-transform: none; letter-spacing: normal; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.editor-shell .cycle-viewport { height: calc(100% - 37px); }

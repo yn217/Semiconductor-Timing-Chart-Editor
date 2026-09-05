@@ -56,3 +56,14 @@
   .transaction-editor button):disabled {
   opacity: var(--ds-disabled-opacity);
 }
+
+/* Migrated from legacy.css (#260): .modal-backdrop backs every dialog
+   (Document Properties, Export, Hardware Hierarchy, Rename, Bulk
+   Registration, Save As, ...), a shared cross-region primitive. Its own
+   base box sizing (width/height/display) duplicated ribbon.css's existing
+   token-based `.ds-ribbon-button__icon, .ds-icon-box` rule (both resolve to
+   20px via --ds-icon-box-size) -- dropped rather than left as a second,
+   conflicting definition; only the child-svg sizing below had no existing
+   owner. */
+.modal-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; background: #16263b55; }
+.ds-icon-box > svg { flex: 0 0 18px; width: 18px; height: 18px; }
