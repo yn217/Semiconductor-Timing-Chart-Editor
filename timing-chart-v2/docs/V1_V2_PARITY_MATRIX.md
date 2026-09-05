@@ -259,7 +259,42 @@ membership, including per-Group/per-Signal spacing and Spacer rows, and SVG,
 PNG and PDF share the same scoped fill, opacity and stroke semantics. Unit
 coverage is in `timing-chart-v2/tests/export/deterministic-export.test.ts`;
 browser coverage is in `timing-chart-v2/tests/e2e/group-band.spec.ts`.
+On current main `548114e`, the focused Chromium run is 3/3: the complete
+style/persistence/export flow, invalid-opacity draft atomicity, and valid-draft
+preview/cancel restoration all pass. The first flow also verifies Undo/Redo,
+Save/Open, SVG/PNG/PDF signatures and unchanged WaveDrom/LocalGeometry
+counters. The production implementation is anchored at `4f8822e`.
 Full V1 visual parity remains open.
+
+The independent clock edge-counter contract is also current-main browser
+verified in `timing-chart-v2/tests/e2e/edge-counter-compact.spec.ts` (3/3,
+2026-09-06): all controls remain reachable in the compact grid, the narrow
+bottom-editor layout has no horizontal clipping, and an explicitly selected
+later Bookmark remains the persisted `countFrom=marker` anchor through
+Undo/Redo and Save/Open. The coordinate-dependent selected-edge scenario was
+not executed; the full V1 visual/reference matrix remains open.
+
+Annotation primitive evidence is also current-main browser verified in
+`timing-chart-v2/tests/e2e/annotation-presentation.spec.ts` and
+`annotation-multiline-and-export-shapes.spec.ts` (4/4, 2026-09-06): Marker,
+Callout and Bracket have distinct production presentation, multiline Callout
+text survives into exported SVG tspans, Bracket exports cap marks, and Marker
+exports a vertical tick. The Golden Sample 14 visual/reference matrix remains
+open.
+
+The type-aware Annotation presentation audit also passes 3/3 in current-main
+Chromium (`annotation-presentation-controls.spec.ts`): Range Stroke/Fill
+changes are canonical, rendered and exported; Vertical Line exports a
+full-height dashed line; and Text exposes Stroke/Fill as disabled with a
+truthful reason. Lock interaction and the remaining Golden Sample 14 matrix
+stay explicitly open.
+
+The current-main Hierarchy/Full Path route is browser verified by the focused
+`full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
+view switching, path filtering, stable-ID Reveal, atomic bulk registration,
+and Save/Open preservation of the registered full paths all pass. The
+dedicated hierarchy export view and complete V1 tree visual matrix remain
+open.
 
 ## Dedicated parity children from the 2026-09-05 specification-leak audit
 
