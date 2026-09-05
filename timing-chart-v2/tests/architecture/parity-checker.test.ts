@@ -98,7 +98,7 @@ it("requires Save/Open evidence before an independent contract can be COMPLETE",
   const matrixModel = JSON.parse(readFileSync(matrix, "utf8")) as { independentContracts: Array<{ id: string; saveOpen?: string }> };
   const splitContract = matrixModel.independentContracts.find((contract) => contract.id === "GUI-SPLIT-VIEW");
   if (!splitContract) throw new Error("GUI-SPLIT-VIEW fixture is missing");
-  splitContract.saveOpen = "";
+  splitContract.saveOpen = "N/A split Save/Open evidence is tracked by the dedicated production flow";
   writeFileSync(matrix, JSON.stringify(matrixModel));
   const statusModel = JSON.parse(readFileSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), "utf8")) as { contracts: Array<{ featureKey: string; implementationStatus: string }> };
   const split = statusModel.contracts.find((contract) => contract.featureKey === "GUI-SPLIT-VIEW");
@@ -162,4 +162,28 @@ it("requires every independent parity contract to declare a performance invarian
     output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   }
   expect(output).toContain("GUI-SPLIT-VIEW is missing performance");
+});
+
+it("rejects an empty independent parity evidence field", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-empty-evidence-"));
+  const matrix = path.join(directory, "matrix.json");
+  const manifest = path.join(directory, "manifest.json");
+  const status = path.join(directory, "status.json");
+  cpSync(matrixSource, matrix);
+  cpSync(manifestSource, manifest);
+  cpSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), status);
+  const parsed = JSON.parse(readFileSync(matrix, "utf8")) as { independentContracts: Array<Record<string, unknown>> };
+  const contract = parsed.independentContracts.find((candidate) => candidate.id === "GUI-SPLIT-VIEW");
+  if (!contract) throw new Error("GUI-SPLIT-VIEW fixture is missing");
+  contract.saveOpen = "";
+  writeFileSync(matrix, JSON.stringify(parsed));
+
+  let output = "";
+  try {
+    execFileSync(process.execPath, [checker, "--matrix", matrix, "--manifest", manifest, "--status", status], { cwd: workspace, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const result = error as { stdout?: string; stderr?: string };
+    output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  }
+  expect(output).toContain("GUI-SPLIT-VIEW has empty saveOpen");
 });
