@@ -36,7 +36,7 @@ describe("Screen Geometry and snapping", () => {
     expect(index.nearest({ x: 103, y: 22 }, 5)).toMatchObject({ kind: "signal-transition", distance: 1, anchor: { cycle: 2, point: "transition-center" } });
     expect(index.nearest({ x: 103, y: 22 }, 5, ["cycle-boundary"])).toMatchObject({ kind: "cycle-boundary" });
     expect(index.nearest({ x: 120, y: 40 }, 5)).toBeUndefined();
-    expect(index.metrics()).toEqual({ queries: 3, candidatesVisited: 6 });
+    expect(index.metrics()).toEqual({ queries: 3, candidatesVisited: 4 });
   });
 
   it("prefers richer semantic snap targets when exact points coincide", () => {
