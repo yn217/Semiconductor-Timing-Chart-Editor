@@ -25,6 +25,10 @@ export type AIBridgeContext = {
   // for a document-changing proposal: a human must still open the AI
   // Assistant panel and click Validate + Apply themselves.
   readonly onProposeEdit: ((query: string) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
+  // #395 PR5: get_viewport_snapshot is read-only -- see the comment on
+  // its implementation in ai-operation-panel.tsx for exactly what it
+  // returns and why it deliberately omits a raw pixel image.
+  readonly onGetViewportSnapshot: (() => unknown) | undefined;
 };
 
 function documentSummary(document: CanonicalDocument) {
@@ -44,6 +48,10 @@ function executeTool(tool: string, args: Record<string, unknown>, context: AIBri
     if (!context.onViewIntent) throw new Error("fit_all is not available in the current surface.");
     context.onViewIntent("fit-all");
     return { applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
+  }
+  if (tool === "get_viewport_snapshot") {
+    if (!context.onGetViewportSnapshot) throw new Error("get_viewport_snapshot is not available in the current surface.");
+    return context.onGetViewportSnapshot();
   }
   if (tool === "propose_edit") {
     if (!context.onProposeEdit) throw new Error("propose_edit is not available in the current surface.");

@@ -58,7 +58,7 @@ type ApprovalPolicy = "always" | "auto-view-only";
 // real, truthful record of the one provider that exists today.
 type ActivityEntry = { readonly id: number; readonly timestamp: string; readonly provider: string; readonly actor: "user" | "external-agent"; readonly kind: "read-only" | "proposal"; readonly summary: string; readonly result: string };
 
-export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void }) {
+export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange, getZoom }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void; readonly getZoom?: () => number }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<AIProposal>();
   const [validatedRevision, setValidatedRevision] = useState<number>();
@@ -150,7 +150,39 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
     if (!result.ok) return { error: result.message };
     return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
   };
-  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit });
+  // #395 PR5: get_viewport_snapshot() is read-only, exactly like
+  // get_document_summary/get_selection -- it never mutates anything. It
+  // returns the structured "Element Map" the issue asks for (stable
+  // SignalIds, name/role/type/group/pane/visibility, current selection,
+  // zoom, and cycle count) so an external agent can reason about layout
+  // and target edits at real semantic/stable IDs. It deliberately does
+  // NOT include a rasterized viewport image: the issue's own constraint
+  // ("any resulting edit must target semantic/stable IDs and existing
+  // command fields, not raw pixel coordinates") means the structured map
+  // is what actually matters for a safe edit, and a full pixel capture
+  // would add a real dependency + a much larger, harder-to-audit payload
+  // over the token-gated bridge for no corresponding gain in this pass.
+  const onGetViewportSnapshot = () => {
+    const groupOfRow = new Map<string, string>();
+    for (const group of document.signalGroups) for (const rowId of group.rows) groupOfRow.set(rowId, group.id);
+    const elementMap = document.signals.map((signal) => ({
+      id: signal.id,
+      kind: "signal" as const,
+      name: signal.display.name || signal.name,
+      role: signal.role,
+      type: signal.type,
+      groupId: groupOfRow.get(signal.id),
+      visible: signal.display.visible !== false,
+      splitPane: signal.display.splitPane ?? "both",
+    }));
+    return {
+      zoom: getZoom?.() ?? 1,
+      cycleCount: document.timeline.cycleCount,
+      selection: { selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId },
+      elementMap,
+    };
+  };
+  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit, onGetViewportSnapshot });
   useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">

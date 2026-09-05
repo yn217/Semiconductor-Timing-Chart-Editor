@@ -1677,6 +1677,7 @@ export function MinimalCycleView() {
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
     onViewIntent={aiBridgeOnViewIntent}
+    getZoom={timelineNavigation.getZoom}
     bridgeHost={aiBridgeHost}
     bridgePort={aiBridgePort}
     bridgeEnabled={aiBridgeEnabled}

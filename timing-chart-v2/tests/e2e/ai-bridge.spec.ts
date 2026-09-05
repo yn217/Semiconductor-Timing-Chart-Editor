@@ -70,7 +70,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["get_document_summary", "get_selection", "fit_all", "propose_edit"]);
+  expect(tools).toEqual(["get_document_summary", "get_selection", "get_viewport_snapshot", "fit_all", "propose_edit"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -81,6 +81,17 @@ test("a test MCP client can connect, read the live document/selection, and reque
   const selection = await callTool("get_selection");
   const parsedSelection = JSON.parse(selection.body.result!.content[0]!.text) as { selectedSignalId: string };
   expect(parsedSelection.selectedSignalId).toBe("sig_cycle_request");
+
+  // #395 PR5: get_viewport_snapshot is read-only too -- a structured
+  // Element Map (real stable ids, not pixel coordinates) plus zoom/cycle
+  // count/selection, exactly what the issue's own constraint requires an
+  // edit to target.
+  const viewportSnapshot = await callTool("get_viewport_snapshot");
+  const parsedViewportSnapshot = JSON.parse(viewportSnapshot.body.result!.content[0]!.text) as { zoom: number; cycleCount: number; selection: { selectedSignalId: string }; elementMap: readonly { id: string; name: string; role: string; groupId?: string }[] };
+  expect(parsedViewportSnapshot.cycleCount).toBe(24);
+  expect(parsedViewportSnapshot.selection.selectedSignalId).toBe("sig_cycle_request");
+  expect(parsedViewportSnapshot.elementMap).toContainEqual(expect.objectContaining({ id: "sig_cycle_request", name: "REQUEST", role: "input" }));
+  expect(parsedViewportSnapshot.elementMap.length).toBe(parsedSummary.signalCount);
 
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
 
@@ -180,4 +191,38 @@ test("rejects a request with an invalid token, and rejects any tool outside the 
   await settings.getByLabel("Enable external agents").uncheck();
   await settings.getByLabel("Enable external agents").check();
   await expect(ai.getByTestId("ai-bridge-status")).toHaveText(/Disconnected/, { timeout: 10_000 });
+});
+
+// #395 PR5 (real-client E2E/security closure, acceptance item 15):
+// "Bridge disconnect/reconnect is surfaced truthfully in the Ribbon/
+// Settings." -- kills the real bridge process out from under an already-
+// connected browser tab, confirms the Settings status stops claiming
+// "Connected" once polling starts failing, then respawns a real bridge on
+// the same port/token and confirms the same tab recovers on its own
+// (no page reload, no re-entering the token) purely from its existing
+// poll loop's own retry.
+test("bridge disconnect is surfaced truthfully, and the same tab recovers on its own once the bridge comes back", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+
+  bridge?.kill();
+  bridge = undefined;
+  await expect(ai.getByTestId("ai-bridge-status")).not.toHaveText("Status: Connected", { timeout: 10_000 });
+
+  bridge = spawn(process.execPath, ["scripts/ai-bridge-server.mjs"], { env: { ...process.env, AI_BRIDGE_PORT: String(PORT), AI_BRIDGE_TOKEN: TOKEN }, stdio: "ignore" });
+  await waitForBridgeReady();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+
+  // The recovered connection is not just a status label -- it is a real,
+  // working connection again.
+  const summary = await callTool("get_document_summary");
+  expect(JSON.parse(summary.body.result!.content[0]!.text).signalCount).toBe(8);
 });
