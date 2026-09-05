@@ -282,6 +282,13 @@ text survives into exported SVG tspans, Bracket exports cap marks, and Marker
 exports a vertical tick. The Golden Sample 14 visual/reference matrix remains
 open.
 
+The current-main Hierarchy/Full Path route is browser verified by the focused
+`full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
+view switching, path filtering, stable-ID Reveal, atomic bulk registration,
+and Save/Open preservation of the registered full paths all pass. The
+dedicated hierarchy export view and complete V1 tree visual matrix remain
+open.
+
 ## Dedicated parity children from the 2026-09-05 specification-leak audit
 
 The broad annotation and timeline rows remain in the inventory, but they do
