@@ -3,7 +3,7 @@ import { expect, test } from "@playwright/test";
 test("projects canonical rows into aligned tree, frozen labels, and waveform surfaces", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Semiconductor Timing Chart" })).toBeVisible();
-  await expect(page.getByText("Cycle View", { exact: true })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Cycle View" })).toBeVisible();
 
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
