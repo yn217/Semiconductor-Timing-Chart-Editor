@@ -180,6 +180,34 @@ describe("RowLayout and projection invariants", () => {
     expect(projection.visibleRowIds).not.toContain("sig_clk");
   });
 
+  it("Signal Split (#200): a pane-fixed DefaultProjectionService filters rows, and setPane switches an existing instance's filter and forces a layout rebuild", () => {
+    const document = layoutFixture();
+    document.signals = document.signals.map((signal) => signal.id === "sig_clk" ? { ...signal, display: { ...signal.display, splitPane: "upper" } } : signal.id === "sig_data" ? { ...signal, display: { ...signal.display, splitPane: "lower" } } : signal);
+    const viewport = { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] } as const;
+    const upperOnly = new DefaultProjectionService({ pane: "upper" }).project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    expect(upperOnly.mountedSignalIds).toEqual(["sig_clk"]);
+    const lowerOnly = new DefaultProjectionService({ pane: "lower" }).project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    expect(lowerOnly.mountedSignalIds).toEqual(["sig_data"]);
+    // A single service instance (the Upper-pane's real usage pattern: one
+    // long-lived instance toggled between unfiltered and pane:"upper" as
+    // Split turns on/off) must rebuild its cached layout when the pane
+    // changes, not keep serving the stale unfiltered/other-pane rows.
+    const toggled = new DefaultProjectionService();
+    const beforeSplit = toggled.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: { fullDocumentReplace: true }, viewport });
+    expect(beforeSplit.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
+    toggled.setPane("upper");
+    const afterSplitOn = toggled.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport });
+    expect(afterSplitOn.mountedSignalIds).toEqual(["sig_clk"]);
+    toggled.setPane(undefined);
+    const afterSplitOff = toggled.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport });
+    expect(afterSplitOff.mountedSignalIds).toEqual(["sig_clk", "sig_data"]);
+    // Calling setPane with the same value must not force a needless rebuild.
+    const rebuildsBefore = toggled.diagnostics().rowLayoutBuilds;
+    toggled.setPane(undefined);
+    toggled.project({ snapshot: { revision: 0, document } as CanonicalSnapshot, changeSet: {}, viewport });
+    expect(toggled.diagnostics().rowLayoutBuilds).toBe(rebuildsBefore);
+  });
+
   it("reuses canonical RowLayout for view-only scroll projections", () => {
     const document = layoutFixture();
     const service = new DefaultProjectionService();

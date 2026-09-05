@@ -27,4 +27,17 @@ export class EditorApplicationRuntime {
   createWaveDromAdapter(): ProductionWaveDromAdapter {
     return new ProductionWaveDromAdapter();
   }
+
+  /** Signal Split View (#200): the Lower pane mounts into its own DOM host
+   * and cannot share the primary `geometry`/`projection` singletons -- a
+   * "both"-assigned Signal renders into two hosts, and a shared
+   * SignalId-keyed SVG/geometry map would have whichever pane rendered last
+   * silently win the other's reference. Lower gets its own registry and a
+   * projection coordinator permanently fixed to `pane: "lower"`; Upper keeps
+   * using the primary `projection`/`geometry` above and switches its own
+   * filter via `projection.setPane()` instead of a second instance, since
+   * Upper's is the one that must revert to unfiltered when Split turns off. */
+  createSignalSplitLowerPane(): { readonly geometry: GeometryRegistry; readonly projection: ProjectionCoordinator } {
+    return { geometry: new GeometryRegistry(), projection: new ProjectionCoordinator({ pane: "lower" }) };
+  }
 }

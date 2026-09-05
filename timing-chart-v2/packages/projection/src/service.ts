@@ -6,6 +6,17 @@ import type { RowLayoutResult } from "./row-layout.js";
 const defaultTransform = { scrollX: 0, scrollY: 0, zoom: 1 } as const;
 
 export class DefaultProjectionService implements ProjectionService {
+  // Signal Split View (#200): an optional fixed pane filter for this
+  // instance's own Frozen/Timing + Left Tree row set. `undefined` (every
+  // caller before #200, and this instance's default) matches every row,
+  // byte-for-byte identical to pre-#200 behavior. `setPane` lets the single
+  // Upper-pane instance switch between unfiltered (Split off) and
+  // pane:"upper" (Split on) without constructing a second instance -- the
+  // Lower pane owns its own separate instance constructed with pane:"lower"
+  // and never changes it. This is presentation-only: it never introduces a
+  // second horizontal/pixels-per-cycle authority, only a second vertical row
+  // filter.
+  #pane: "upper" | "lower" | undefined;
   #layout: ReturnType<typeof calculateRowLayout> | undefined;
   #navigationLayout: ReturnType<typeof calculateRowLayout> | undefined;
   #projectionBuilds = 0;
@@ -24,6 +35,22 @@ export class DefaultProjectionService implements ProjectionService {
   #canonicalSignalIds: readonly SignalId[] = [];
   #visibleRowIds: readonly RowLayoutEntry["rowId"][] = [];
 
+  constructor(options: { readonly pane?: "upper" | "lower" } = {}) {
+    this.#pane = options.pane;
+  }
+
+  /** Switches this instance's fixed pane filter and forces the next
+   * `project()` call to rebuild the row layout, since the previous cache was
+   * built for the old filter. Used only by the Upper-pane instance to toggle
+   * between unfiltered (Split off) and pane:"upper" (Split on); the Lower
+   * instance is always constructed with its pane fixed and never calls this. */
+  setPane(pane: "upper" | "lower" | undefined): void {
+    if (this.#pane === pane) return;
+    this.#pane = pane;
+    this.#layout = undefined;
+    this.#navigationLayout = undefined;
+  }
+
   project(request: ProjectionRequest): RenderProjection {
     const document = request.snapshot.document;
     if (request.changeSet.fullDocumentReplace) this.#documentEpoch += 1;
@@ -39,8 +66,17 @@ export class DefaultProjectionService implements ProjectionService {
       // used to render. The separate #navigationLayout below (Left Tree)
       // keeps the default reserveHiddenSpace so every row -- hidden ones
       // included -- gets its own real slot there.
-      this.#layout = calculateRowLayout(document, new Set(), { includeHidden: true, reserveHiddenSpace: false });
-      this.#navigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds));
+      const rawLayout = calculateRowLayout(document, new Set(), { includeHidden: true, reserveHiddenSpace: false, ...(this.#pane === undefined ? {} : { pane: this.#pane }) });
+      const rawNavigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds), this.#pane === undefined ? {} : { pane: this.#pane });
+      // Signal Split View (#200): `calculateRowLayout` keeps a pane-mismatched
+      // row in `navigationRows` purely for Y-sequence bookkeeping (see its own
+      // `paneExcludedRowIds` doc) -- a pane-fixed instance (this one, when
+      // `#pane` is set) must drop those rows here so mounting/Left Tree for
+      // this pane only ever sees its own Signals. Every existing caller
+      // (`#pane === undefined`) is unaffected: `paneExcludedRowIds` is always
+      // empty in that case, so this is a no-op filter.
+      this.#layout = this.#pane === undefined || rawLayout.paneExcludedRowIds.size === 0 ? rawLayout : { ...rawLayout, navigationRows: rawLayout.navigationRows.filter((row) => !rawLayout.paneExcludedRowIds.has(row.rowId)) };
+      this.#navigationLayout = this.#pane === undefined || rawNavigationLayout.paneExcludedRowIds.size === 0 ? rawNavigationLayout : { ...rawNavigationLayout, navigationRows: rawNavigationLayout.navigationRows.filter((row) => !rawNavigationLayout.paneExcludedRowIds.has(row.rowId)) };
       this.#collapsedGroupKey = collapsedGroupKey;
       this.#rowLayoutBuilds += 1;
       this.#visibleRowIds = this.#layout.visibleRows.map((row) => row.rowId);

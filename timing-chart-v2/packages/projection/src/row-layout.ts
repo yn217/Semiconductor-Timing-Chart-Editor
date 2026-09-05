@@ -9,6 +9,16 @@ export interface RowLayoutResult {
   readonly visibleRows: readonly RowLayoutEntry[];
   readonly groupHeaders: readonly GroupHeaderLayoutEntry[];
   readonly totalHeight: number;
+  /** Signal Split View (#200): rowIds present in `navigationRows` purely for
+   * Y-sequence bookkeeping (see the no-dead-gap comment below) whose Signal
+   * does not belong to the requested `pane`. Distinct from "hidden" -- a
+   * pane-mismatched row is never actually rendered by a caller that owns one
+   * fixed pane (unlike a hidden Signal, which genuinely stays in that pane's
+   * own Left Tree). A pane-fixed caller (see `DefaultProjectionService`)
+   * uses this set to drop these rows before mounting, so each pane's own
+   * Left Tree/Frozen/Timing shows only its own Signals. Always empty when
+   * `pane` is omitted, so every existing call site is unaffected. */
+  readonly paneExcludedRowIds: ReadonlySet<RowId>;
 }
 
 export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower" } = {}): RowLayoutResult {
@@ -37,6 +47,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
   const navigationRows: RowLayoutEntry[] = [];
   const visibleRows: RowLayoutEntry[] = [];
   const groupHeaders: GroupHeaderLayoutEntry[] = [];
+  const paneExcludedRowIds = new Set<RowId>();
   let y = 0;
 
   for (const group of document.signalGroups) {
@@ -60,6 +71,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
       const spacer = spacers.get(rowId);
       const isHiddenSignal = signal !== undefined && signal.display.visible === false;
       const isPaneExcluded = signal !== undefined && !matchesPane(signal);
+      if (isPaneExcluded) paneExcludedRowIds.add(rowId);
       if ((isHiddenSignal || isPaneExcluded) && !reserveHiddenSpace) {
         // Positioned at the current (unreserved) y so it remains
         // findable/orderable by rowId, but consumes no space of its own --
@@ -86,7 +98,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
     }
     y += group.spacingAfter ?? 0;
   }
-  return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y };
+  return { canonicalRowIds, navigationRows, visibleRows, groupHeaders, totalHeight: y, paneExcludedRowIds };
 }
 
 function signalEntry(signal: Signal | undefined, groupId: RowLayoutEntry["groupId"], groupName: string, groupStyle: RowLayoutEntry["groupStyle"], y: number, height: number, rowId: RowId): RowLayoutEntry | undefined {

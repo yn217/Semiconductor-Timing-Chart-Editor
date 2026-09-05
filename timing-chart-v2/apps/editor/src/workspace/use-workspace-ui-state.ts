@@ -11,6 +11,7 @@ export const LEFT_PANE_MAX_WIDTH = 420;
 
 export type PaneResizeGesture = { readonly startX: number; readonly startWidth: number };
 export type VerticalResizeGesture = { readonly startY: number; readonly startHeight: number };
+export type RatioResizeGesture = { readonly startY: number; readonly startRatio: number; readonly containerHeight: number };
 
 export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId> = {
   readonly signalId?: SignalId;
@@ -33,6 +34,11 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // (which only stacks Transaction lanes above the single Cycle surface).
   // Pure UI/workspace state, not persisted into the canonical document.
   const [signalSplitEnabled, setSignalSplitEnabled] = useState(false);
+  // Signal Split View (#200): the Upper/Lower height split ratio (Upper's
+  // share, 0.15-0.85). Pure UI state, like signalSplitEnabled above --
+  // dragging or resetting it never touches the canonical document/history.
+  const [signalSplitRatio, setSignalSplitRatio] = useState(0.5);
+  const signalSplitResizeRef = useRef<RatioResizeGesture | undefined>(undefined);
   const [density, setDensity] = useState<DensityMode>("comfortable");
   const [workspacePreset, setWorkspacePreset] = useState<WorkspacePreset>("edit");
 
@@ -68,6 +74,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     bottomTab, setBottomTab,
     viewMode, setViewMode,
     signalSplitEnabled, setSignalSplitEnabled,
+    signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
     density, setDensity,
     workspacePreset, setWorkspacePreset,
     waveformRestoreRef,
