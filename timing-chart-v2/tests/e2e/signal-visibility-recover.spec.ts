@@ -22,7 +22,11 @@ test("hiding a signal keeps its navigation row recoverable while removing its wa
     await expect(left).toBeVisible();
     await expect(left.locator("[data-role='tree-visibility']")).toBeVisible();
     await expect(left.locator("[data-role='tree-visibility']")).toHaveAttribute("aria-pressed", "false");
-    await expect(frozen).toBeVisible();
+    // Hidden signals stay recoverable via their Left Tree row (checked
+    // above/below), but the Frozen label row -- like Timing/Wave -- is
+    // removed rather than kept visible; see reorder-visibility.spec.ts's
+    // "hides and restores a selected signal" test for the same contract.
+    await expect(frozen).toHaveCount(0);
     await expect(timing).toHaveCount(0);
     await expect(wave).toHaveCount(0);
     await expect(unaffected).toBeVisible();

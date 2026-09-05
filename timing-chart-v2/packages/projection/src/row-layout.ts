@@ -11,8 +11,18 @@ export interface RowLayoutResult {
   readonly totalHeight: number;
 }
 
-export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean } = {}): RowLayoutResult {
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
+  // Navigation surfaces (Left Tree) show every row -- hidden ones included,
+  // each occupying its own real slot -- so their Y sequence must reserve
+  // space for hidden rows exactly like visible ones (reserveHiddenSpace
+  // defaults true, matching that use). The Frozen/Timing layout instead
+  // consumes visibleRows/groupHeaders from this same call and must never
+  // draw a hidden signal; without this flag it kept advancing `y` by a
+  // hidden row's full height anyway, leaving a dead visual gap where the
+  // hidden row would have been -- see the caller passing
+  // `reserveHiddenSpace: false` for that instance.
+  const reserveHiddenSpace = options.reserveHiddenSpace ?? true;
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const spacers = new Map<string, SpacerRow>();
   for (const group of document.signalGroups) for (const spacer of group.spacers ?? []) spacers.set(spacer.id, spacer);
@@ -41,6 +51,16 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
     for (const rowId of groupRows) {
       const signal = signals.get(rowId);
       const spacer = spacers.get(rowId);
+      const isHiddenSignal = signal !== undefined && signal.display.visible === false;
+      if (isHiddenSignal && !reserveHiddenSpace) {
+        // Positioned at the current (unreserved) y so it remains
+        // findable/orderable by rowId, but consumes no space of its own --
+        // the next space-reserving entry starts exactly where this one
+        // would have, with no dead gap left behind.
+        const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
+        if (entry) navigationRows.push(entry);
+        continue;
+      }
       if (visibleInGroup > 0) y += document.layout.signalSpacing;
       if (signal) y += signal.spacingBefore ?? 0;
       const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
