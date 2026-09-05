@@ -19,7 +19,7 @@ test("keeps every configured Bottom tab header visible and switchable", async ({
 
   const tabList = page.getByTestId("bottom-tabs");
   const tabs = tabList.locator("[data-bottom-tab]");
-  const expectedTabs = ["Signal", "Annotation", "Problems", "JSON"];
+  const expectedTabs = ["Signal", "Annotation", "Bookmarks", "Problems", "JSON"];
   await expect(tabs).toHaveCount(expectedTabs.length);
   await expect(tabs.evaluateAll((items) => items.map((item) => (item as HTMLElement).dataset.bottomTab))).resolves.toEqual(expectedTabs);
   await expect(tabList).toHaveAttribute("role", "tablist");
@@ -61,4 +61,69 @@ test("keeps every configured Bottom tab header visible and switchable", async ({
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
   await expect(page.getByTestId("cycle-surface").locator("[data-role='timing-chart-surface']")).toHaveAttribute("data-render-counters", before.counters!);
+});
+
+// #391: an unstyled <button> takes its text color from the UA's own
+// ButtonText system color rather than inheriting from its parent -- under
+// `color-scheme: dark` (emulated below) that system default resolves to
+// near-white, which read as invisible against this panel's always-light
+// background. Every Bottom tab state must set its own explicit,
+// sufficiently-contrasting color regardless of the page's color-scheme.
+test("keeps inactive/hover/active Bottom tabs legible under both color schemes (#391)", async ({ page }) => {
+  await page.emulateMedia({ colorScheme: "dark" });
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const tabList = page.getByTestId("bottom-tabs");
+
+  const relativeLuminance = (rgb: string): number => {
+    const [r, g, b] = rgb.match(/\d+/g)!.map(Number).map((channel) => {
+      const c = channel / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r! + 0.7152 * g! + 0.0722 * b!;
+  };
+  const contrastRatio = (a: string, b: string): number => {
+    const [lighter, darker] = [relativeLuminance(a), relativeLuminance(b)].sort((x, y) => y - x);
+    return (lighter + 0.05) / (darker + 0.05);
+  };
+
+  const readStates = () => tabList.locator("[data-bottom-tab]").evaluateAll((tabs) => tabs.map((tab) => {
+    const el = tab as HTMLElement;
+    const cs = getComputedStyle(el);
+    return { id: el.dataset.bottomTab, active: el.classList.contains("active"), color: cs.color, background: cs.backgroundColor };
+  }));
+
+  const inactiveStates = (await readStates()).filter((state) => !state.active);
+  expect(inactiveStates.length).toBeGreaterThan(0);
+  for (const state of inactiveStates) {
+    // A near-white background is where the reported bug (white-on-white)
+    // actually manifested -- treat the panel's own light background as the
+    // effective backdrop for a transparent-looking button background.
+    const effectiveBackground = state.background === "rgba(0, 0, 0, 0)" ? "rgb(255, 255, 255)" : state.background;
+    expect(contrastRatio(state.color, effectiveBackground), JSON.stringify(state)).toBeGreaterThan(4.5);
+  }
+
+  const annotationTab = tabList.locator("[data-bottom-tab='Annotation']");
+  const idleBox = await annotationTab.boundingBox();
+  const before = await annotationTab.evaluate((el) => getComputedStyle(el).backgroundColor);
+  await annotationTab.hover();
+  const hovered = await annotationTab.evaluate((el) => getComputedStyle(el).backgroundColor);
+  expect(hovered).not.toBe(before);
+  const hoverBox = await annotationTab.boundingBox();
+  // Hover must not shift the tab strip's own geometry.
+  expect(Math.abs(hoverBox!.width - idleBox!.width)).toBeLessThanOrEqual(1);
+  expect(Math.abs(hoverBox!.x - idleBox!.x)).toBeLessThanOrEqual(1);
+
+  await annotationTab.click();
+  await expect(annotationTab).toHaveClass(/active/);
+  const activeStyle = await annotationTab.evaluate((el) => { const cs = getComputedStyle(el); return { color: cs.color, fontWeight: cs.fontWeight, borderColor: cs.borderTopColor }; });
+  const inactiveStyle = inactiveStates.find((state) => state.id === "Annotation")!;
+  expect(activeStyle.color).not.toBe(inactiveStyle.color);
+
+  await page.keyboard.press("ArrowRight");
+  const focused = page.locator(":focus");
+  await expect(focused).toHaveAttribute("data-bottom-tab", "Bookmarks");
+  const outline = await focused.evaluate((el) => getComputedStyle(el).outlineStyle);
+  expect(outline).not.toBe("none");
 });

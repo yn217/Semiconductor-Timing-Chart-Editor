@@ -13,9 +13,20 @@
 
 .bottom-tabs { flex: 0 0 38px; display: flex; align-items: end; padding: 0 9px; border-bottom: 1px solid #cbd3dd; }
 
-.bottom-tabs button { height: 37px; padding: 0 15px; border: 0; background: transparent; }
+/* #391: an unstyled <button> takes its default text color from the UA's
+   `ButtonText` system color rather than inheriting from its parent -- under
+   `color-scheme: dark` (responsive.css, prefers-color-scheme: dark) that
+   system default becomes near-white, rendering white-on-white against this
+   always-light panel. Every state below sets its own explicit color so
+   none of them depend on that system default. box-sizing: border-box
+   (app-shell.css) means adding this 1px reserved border does not change
+   the button's own height/width, so no layout shift when a tab becomes
+   active below. */
+.bottom-tabs button { height: 37px; padding: 0 15px; border: 1px solid #e2e7ee; border-bottom: 0; border-radius: 4px 4px 0 0; background: #f4f7fb; color: #33455c; font-weight: 500; }
 
-.bottom-tabs button.active { margin-bottom: -1px; border: 1px solid #599df0; border-bottom: 2px solid white; border-radius: 4px 4px 0 0; color: #086fd2; }
+.bottom-tabs button:hover { background: #e8f1fc; border-color: #a9c9ef; color: #163756; }
+
+.bottom-tabs button.active { margin-bottom: -1px; border: 1px solid #599df0; border-bottom: 2px solid white; border-radius: 4px 4px 0 0; background: #fff; color: #086fd2; font-weight: 700; }
 
 .bottom-pin-label[data-v1-label] { position: relative; color: transparent; }
 
