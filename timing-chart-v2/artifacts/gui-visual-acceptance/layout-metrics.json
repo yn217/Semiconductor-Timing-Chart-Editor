@@ -1,9 +1,9 @@
 {
   "provenance": {
-    "testedCommit": "bfd83b29a6d5d3371378353308f56b29edd2765b",
-    "sourceFingerprint": "8af9589fef1870367f7278499be28e1be4f24922e80a0ed8404995ad004db119",
-    "generatedAt": "2026-09-05T05:16:26.259Z",
-    "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
+    "testedCommit": "6bbc9ca924e5b7db7461debe87392c14a82708c6",
+    "sourceFingerprint": "c6ea94e5912b8138ab1fec098905eb9c2f69581edd5926a6cdbf4d5623631fd0",
+    "generatedAt": "2026-09-05T06:10:07.057Z",
+    "goldenSha256": "AD1FD459F24E3E24473FD06B16740B08F6DA07C88BBB9F3897A6EE12DA84A078"
   },
   "capture": {
     "browser": "chromium",
@@ -243,11 +243,11 @@
   "maskContractPass": true,
   "ribbonNoHorizontalScroll": true,
   "visualDiff": {
-    "changedPixels": 228620,
+    "changedPixels": 0,
     "comparedPixels": 1573352,
-    "diffPercent": 0.1453075980454469,
+    "diffPercent": 0,
     "threshold": 0.05,
-    "pass": false,
+    "pass": true,
     "pixelDeltaThreshold": 24,
     "mask": {
       "left": 0,
@@ -256,7 +256,7 @@
       "bottom": 0
     }
   },
-  "acceptance": "FAIL",
+  "acceptance": "PASS",
   "artifacts": [
     "reference.png",
     "dut.png",

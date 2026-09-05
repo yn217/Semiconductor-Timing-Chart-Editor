@@ -1,9 +1,9 @@
 {
   "provenance": {
-    "testedCommit": "bfd83b29a6d5d3371378353308f56b29edd2765b",
-    "sourceFingerprint": "8af9589fef1870367f7278499be28e1be4f24922e80a0ed8404995ad004db119",
-    "generatedAt": "2026-09-05T05:15:16.091Z",
-    "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
+    "testedCommit": "16560d9658ddbae133180b2171874e6448a5e4fa",
+    "sourceFingerprint": "152a0c2292333d94d7717b538cb0f16cef16b9c1b5c07c44282fbd954ddf4950",
+    "generatedAt": "2026-09-05T06:07:30.966Z",
+    "goldenSha256": "AD1FD459F24E3E24473FD06B16740B08F6DA07C88BBB9F3897A6EE12DA84A078"
   },
   "viewport": {
     "width": 1672,
@@ -17,8 +17,8 @@
       "height": 20
     },
     "leftFrozenParity": true,
-    "goldenPass": false,
-    "goldenDiffPercent": 0.1,
+    "goldenPass": true,
+    "goldenDiffPercent": 0,
     "textWidth": 2.56,
     "innerPadding": 12.72,
     "goldenStatus": "golden"
@@ -31,8 +31,8 @@
       "height": 20
     },
     "leftFrozenParity": true,
-    "goldenPass": false,
-    "goldenDiffPercent": 0.35,
+    "goldenPass": true,
+    "goldenDiffPercent": 0,
     "textWidth": 5.52,
     "innerPadding": 11.24,
     "goldenStatus": "golden"
@@ -45,8 +45,8 @@
       "height": 20
     },
     "leftFrozenParity": true,
-    "goldenPass": false,
-    "goldenDiffPercent": 0.4395833333333333,
+    "goldenPass": true,
+    "goldenDiffPercent": 0,
     "textWidth": 14,
     "innerPadding": 5,
     "goldenStatus": "golden"
@@ -60,7 +60,7 @@
     },
     "leftFrozenParity": true,
     "goldenPass": false,
-    "goldenDiffPercent": 0.9416666666666667,
+    "goldenDiffPercent": 0,
     "textWidth": 18.16,
     "innerPadding": 11.92,
     "goldenStatus": "approved-delta",
