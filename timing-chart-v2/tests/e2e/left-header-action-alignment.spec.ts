@@ -4,15 +4,18 @@ async function readHeaderLayout(page: import("@playwright/test").Page) {
   return page.locator(".left-column-heading").evaluate((header) => {
     const title = header.querySelector("strong")!.getBoundingClientRect();
     const actions = header.querySelector(".left-column-actions")!.getBoundingClientRect();
-    const add = header.querySelector(".tree-add-button")!.getBoundingClientRect();
+    const addButton = header.querySelector(".tree-add-button")!;
+    const add = addButton.getBoundingClientRect();
     const more = header.querySelector(".tree-more-button")!.getBoundingClientRect();
     const bounds = header.getBoundingClientRect();
+    const addIcon = addButton.querySelector("svg")!.getBoundingClientRect();
     return {
       header: { left: bounds.left, right: bounds.right, top: bounds.top, bottom: bounds.bottom },
       title: { left: title.left, right: title.right },
       actions: { left: actions.left, right: actions.right },
-      add: { left: add.left, right: add.right, width: add.width },
+      add: { left: add.left, right: add.right, width: add.width, top: add.top, bottom: add.bottom },
       more: { left: more.left, right: more.right, width: more.width, height: more.height },
+      addIconCenterY: addIcon.top + addIcon.height / 2,
     };
   });
 }
@@ -27,6 +30,12 @@ async function assertAligned(page: import("@playwright/test").Page): Promise<voi
   expect(layout.more.left - layout.add.right).toBeLessThanOrEqual(6);
   expect(Math.abs(layout.more.width - layout.more.height)).toBeLessThanOrEqual(1);
   expect(layout.add.width).toBeGreaterThan(layout.more.width);
+  // #392: the "+" icon and the "Add" label (a ::after generated text node)
+  // must share the same visual center rather than the icon sitting above an
+  // offset-low label -- assert the icon's own center lands within 1px of
+  // the button's own vertical center.
+  const buttonCenterY = (layout.add.top + layout.add.bottom) / 2;
+  expect(Math.abs(layout.addIconCenterY - buttonCenterY)).toBeLessThanOrEqual(1);
 }
 
 async function resizeLeftPane(page: import("@playwright/test").Page, deltaX: number): Promise<void> {

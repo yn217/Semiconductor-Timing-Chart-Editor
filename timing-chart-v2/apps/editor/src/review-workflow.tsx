@@ -50,14 +50,31 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   const errorCount = scopedDiagnostics.filter((item) => (item.severity ?? "error") === "error").length;
   const warningCount = scopedDiagnostics.filter((item) => item.severity === "warning").length;
   const infoCount = scopedDiagnostics.filter((item) => item.severity === "info").length;
+  // #394: Filter / Navigation / Summary / Selection-Status / Action used to
+  // be one flat run of inline-level elements (label/select/button/output)
+  // with no layout of their own, relying only on incidental whitespace --
+  // exactly the "everything competes in one band" complaint. Each role gets
+  // its own group below (same shared gap+separator convention already used
+  // for the Timeline Ribbon's own group boundaries); no testid, text, or
+  // command wiring changes.
   return <div className="review-workflow" data-testid="review-workflow">
-    <label>Severity<select aria-label="Review severity" data-testid="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></select></label>
-    <label>Scope<select aria-label="Review scope" data-testid="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></select></label>
-    <button type="button" data-testid="review-previous" onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</button>
-    <button type="button" data-testid="review-next" onClick={() => navigate(1)} disabled={visible.length === 0}>Next</button>
-    <output data-testid="review-summary">{visible.length} of {scopedDiagnostics.length} · Errors {errorCount} · Warnings {warningCount} · Info {infoCount}</output>
-    <output data-testid="review-current-target">{visible[currentIndex]?.path ?? "No diagnostic selected"}</output>
-    <button type="button" data-testid="review-refresh-checks" onClick={onRefreshChecks}>Refresh Checks</button>
-    <button type="button" className="ribbon-tool" data-testid="review-open-problems" onClick={onShowProblems}>{problemsIcon ?? <svg aria-hidden="true"><use href={`${iconSprite}#i-filter`} /></svg>}<span>Problems</span></button>
+    <div className="review-filter-group" aria-label="Filter">
+      <label>Severity<select aria-label="Review severity" data-testid="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></select></label>
+      <label>Scope<select aria-label="Review scope" data-testid="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></select></label>
+    </div>
+    <div className="review-nav-group" aria-label="Navigation">
+      <button type="button" data-testid="review-previous" onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</button>
+      <button type="button" data-testid="review-next" onClick={() => navigate(1)} disabled={visible.length === 0}>Next</button>
+    </div>
+    <div className="review-summary-group" aria-label="Summary">
+      <output data-testid="review-summary">{visible.length} of {scopedDiagnostics.length} · Errors {errorCount} · Warnings {warningCount} · Info {infoCount}</output>
+    </div>
+    <div className="review-status-group" aria-label="Selection status">
+      <output data-testid="review-current-target">{visible[currentIndex]?.path ?? "No diagnostic selected"}</output>
+    </div>
+    <div className="review-action-group" aria-label="Actions">
+      <button type="button" data-testid="review-refresh-checks" onClick={onRefreshChecks}>Refresh Checks</button>
+      <button type="button" className="ribbon-tool" data-testid="review-open-problems" onClick={onShowProblems}>{problemsIcon ?? <svg aria-hidden="true"><use href={`${iconSprite}#i-filter`} /></svg>}<span>Problems</span></button>
+    </div>
   </div>;
 }

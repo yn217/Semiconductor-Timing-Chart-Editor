@@ -159,9 +159,19 @@
 
 .editor-shell .left-column-heading > .tree-filter-controls input { min-width: 0; }
 
-.editor-shell .left-column-actions > .tree-add-button { flex-basis: 63px; width: 63px; font-size: 0; }
+/* #392: the "+" (an inline SVG, EditorIcon) and the "Add" label (a ::after
+   generated text node) previously sat in the button's plain inline text
+   flow, where an inline SVG's default `vertical-align: baseline` aligns its
+   *bottom* edge to the text baseline rather than its visual center --
+   consistently reading as the label sitting low relative to the icon.
+   Making the button an inline-flex row puts both the icon and the ::after
+   pseudo-element (generated content is a flex item like any other child) on
+   the same cross-axis center, matching the shared icon+label alignment
+   convention used elsewhere (e.g. .ds-ribbon-button). No ad-hoc translateY/
+   margin-top on the text alone. */
+.editor-shell .left-column-actions > .tree-add-button { flex-basis: 63px; width: 63px; display: inline-flex; align-items: center; justify-content: center; gap: 4px; font-size: 0; }
 
-.editor-shell .left-column-actions > .tree-add-button::after { content: "Add"; font-size: 11px; }
+.editor-shell .left-column-actions > .tree-add-button::after { content: "Add"; font-size: 11px; line-height: 1; }
 
 .editor-shell .surface-host [data-role="tree-branch"] { display: none; }
 
