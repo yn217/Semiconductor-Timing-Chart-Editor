@@ -5,6 +5,12 @@ async function ready(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
+async function openTransactionEditor(page: Page) {
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
+  return page.getByTestId("transaction-editor");
+}
+
 test("Comment Row clipboard preserves content, uses fresh IDs, and supports Cut Undo Redo", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
@@ -135,4 +141,77 @@ test("Annotation clipboard is view-only on Copy, creates a fresh entity on Paste
   await expect(page.getByTestId("annotation-count-status")).toHaveText("Annotations: 2");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
+// #221: Transaction had no dedicated clipboard e2e evidence beyond Duplicate
+// (transaction-export.spec.ts's Split View test) -- Copy/Cut/Paste through
+// the same shared use-clipboard-actions.ts owner as every other entity type
+// were unverified. The production code already supports this (transactionRef/
+// createTransaction), so this closes a test-coverage gap, not a code gap.
+test("Transaction clipboard is view-only on Copy, creates a fresh entity on Paste, and cuts atomically", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const ribbon = page.getByTestId("ribbon");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+
+  await ribbon.getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const editor = await openTransactionEditor(page);
+  await editor.getByLabel("Transaction name", { exact: true }).fill("Clip Test");
+  await editor.getByLabel("Transaction start", { exact: true }).fill("2");
+  await editor.getByLabel("Transaction end", { exact: true }).fill("6");
+  await editor.getByTestId("apply-transaction-properties").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(editor.locator(".transaction-list button")).toHaveCount(1);
+
+  // Creating a Transaction auto-selects it (onTransactionCreated ->
+  // selection.selectTransaction), so Copy is reachable directly from Home.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const revisionBeforeCopy = await page.getByTestId("revision-status").textContent();
+  const historyBeforeCopy = await page.getByTestId("history-status").textContent();
+  const countersBeforeCopy = await surface.getAttribute("data-render-counters");
+  await ribbon.getByRole("button", { name: "Copy", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Copied .* transaction/);
+  await expect(page.getByTestId("revision-status")).toHaveText(revisionBeforeCopy!);
+  await expect(page.getByTestId("history-status")).toHaveText(historyBeforeCopy!);
+  const afterCopyCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as { waveDromRenders?: number; localGeometryBuilds?: number };
+  const beforeCopyCounters = JSON.parse(countersBeforeCopy ?? "{}") as { waveDromRenders?: number; localGeometryBuilds?: number };
+  expect(afterCopyCounters.waveDromRenders).toBe(beforeCopyCounters.waveDromRenders);
+  expect(afterCopyCounters.localGeometryBuilds).toBe(beforeCopyCounters.localGeometryBuilds);
+
+  await ribbon.getByRole("button", { name: "Paste", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Pasted .* transaction/);
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  const editorAfterPaste = await openTransactionEditor(page);
+  await expect(editorAfterPaste.locator(".transaction-list button")).toHaveCount(2);
+  await expect(editorAfterPaste.getByRole("button", { name: /Clip Test Paste/ })).toHaveCount(1);
+  const afterPasteCounters = JSON.parse(await surface.getAttribute("data-render-counters") ?? "{}") as { waveDromRenders?: number; localGeometryBuilds?: number };
+  expect(afterPasteCounters.waveDromRenders).toBe(beforeCopyCounters.waveDromRenders);
+  expect(afterPasteCounters.localGeometryBuilds).toBe(beforeCopyCounters.localGeometryBuilds);
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const transactionSavePromise = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const transactionSavedPath = await (await transactionSavePromise).path();
+  expect(transactionSavedPath).toBeTruthy();
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  const editorForCut = page.getByTestId("transaction-editor");
+  await editorForCut.getByRole("button", { name: /Clip Test Paste/ }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await ribbon.getByRole("button", { name: "Cut", exact: true }).click();
+  await expect(ribbon.getByTestId("clipboard-status")).toHaveText(/Cut .* transaction/);
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  const editorAfterCut = await openTransactionEditor(page);
+  await expect(editorAfterCut.locator(".transaction-list button")).toHaveCount(1);
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(transactionSavedPath!);
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-discard").click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  const editorAfterReopen = await openTransactionEditor(page);
+  await expect(editorAfterReopen.locator(".transaction-list button")).toHaveCount(2);
 });
