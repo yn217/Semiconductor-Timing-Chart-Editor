@@ -282,6 +282,13 @@ text survives into exported SVG tspans, Bracket exports cap marks, and Marker
 exports a vertical tick. The Golden Sample 14 visual/reference matrix remains
 open.
 
+The type-aware Annotation presentation audit also passes 3/3 in current-main
+Chromium (`annotation-presentation-controls.spec.ts`): Range Stroke/Fill
+changes are canonical, rendered and exported; Vertical Line exports a
+full-height dashed line; and Text exposes Stroke/Fill as disabled with a
+truthful reason. Lock interaction and the remaining Golden Sample 14 matrix
+stay explicitly open.
+
 The current-main Hierarchy/Full Path route is browser verified by the focused
 `full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
 view switching, path filtering, stable-ID Reveal, atomic bulk registration,
