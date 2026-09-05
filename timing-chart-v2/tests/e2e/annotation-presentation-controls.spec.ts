@@ -166,3 +166,62 @@ test("Lock shows a real visible indicator, blocks drag, and Unlock restores it -
   expect(firstId).not.toBeNull();
   expect(secondId).not.toBeNull();
 });
+
+// #390: Font/Shapes/Paragraph/Arrange must each show their group name
+// exactly once (the outer ribbon-major-group caption and the inner
+// DsRibbonGroup footer label previously both rendered, for any group built
+// on the newer DsRibbonGroup shape), disabled-but-implemented controls
+// must stay clearly readable (not near-invisible) with a truthful reason,
+// and selecting an applicable entity must flip them to enabled with a real
+// effect -- not just a title/opacity change.
+test("Annotation Ribbon groups show one label each, readable-but-disabled with truthful reasons, and enable on selection (#390)", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const groupNames = ["Font", "Shapes", "Paragraph", "Arrange"] as const;
+  for (const name of groupNames) {
+    const group = page.locator(`[data-major-group='${name}']`);
+    const captions = await group.evaluate((element) => {
+      const outer = getComputedStyle(element, "::after").content;
+      const inner = element.querySelector(".ds-ribbon-group > b, .ribbon-group > b");
+      return { outer, innerVisible: inner ? getComputedStyle(inner).visibility !== "hidden" : false, innerText: inner?.textContent };
+    });
+    expect(captions.outer, name).toBe(`"${name}"`);
+    expect(captions.innerVisible, `${name} inner label must stay hidden -- it duplicated the outer caption`).toBe(false);
+  }
+
+  // No selection yet: Font/Paragraph/Shapes read as implemented-but-
+  // unavailable (readable, with a truthful reason), not invisible/broken.
+  const ribbon = page.getByTestId("ribbon");
+  const bold = ribbon.getByRole("button", { name: "Bold", exact: true });
+  const alignLeft = ribbon.getByRole("button", { name: "Align left", exact: true });
+  const arrowShape = ribbon.getByRole("button", { name: "Arrow", exact: true });
+  await expect(bold).toBeDisabled();
+  await expect(alignLeft).toBeDisabled();
+  const readableOpacity = async (locator: typeof bold) => Number(await locator.evaluate((el) => getComputedStyle(el).opacity));
+  expect(await readableOpacity(bold)).toBeGreaterThan(0.5);
+  expect(await readableOpacity(alignLeft)).toBeGreaterThan(0.5);
+  await expect(page.locator("[data-major-group='Font']")).toHaveAttribute("title", /selected Annotation or Comment Row/);
+  await expect(page.locator("[data-major-group='Paragraph']")).toHaveAttribute("title", "Select an Annotation to change alignment");
+
+  // Selecting a Signal enables Shapes and inserting a Text annotation
+  // enables Font/Paragraph, each with a real, observable effect.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await expect(arrowShape).toBeEnabled();
+  await page.getByLabel("Annotation type").selectOption("text");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(bold).toBeEnabled();
+  await expect(alignLeft).toBeEnabled();
+  expect(await readableOpacity(bold)).toBe(1);
+
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  await bold.click();
+  await expect(bold).toHaveAttribute("aria-pressed", "true");
+  await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore!);
+  const afterBold = await page.getByTestId("history-status").textContent();
+  await alignLeft.click();
+  await expect(page.getByTestId("history-status")).not.toHaveText(afterBold!);
+});

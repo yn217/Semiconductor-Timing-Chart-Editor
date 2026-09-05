@@ -379,7 +379,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
           />
         </DsRibbonGroup>
       </div>
-      <div className="ribbon-major-group" data-major-group="Shapes" aria-label="Shape commands">
+      <div className="ribbon-major-group" data-major-group="Shapes" aria-label="Shape commands" title={selectedSignalId ? undefined : "Select a Signal row to insert a shape/annotation there"}>
         <DsRibbonGroup ariaLabel="Shapes" className="annotation-shapes-group" label="Shapes">
           <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-arrow-annotation" />} onClick={() => insertAnnotation("arrow")}>Arrow</DsRibbonButton>
           <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-range-arrow" />} onClick={insertRangeArrow}>Range</DsRibbonButton>
@@ -391,7 +391,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
           <DsRibbonButton disabled={!selectedSignalId} icon={<RibbonIcon name="i-textbox" />} onClick={() => insertAnnotation("textbox")}>Text Box</DsRibbonButton>
         </DsRibbonGroup>
       </div>
-      <div className="ribbon-major-group" data-major-group="Paragraph" aria-label="Paragraph commands">
+      <div className="ribbon-major-group" data-major-group="Paragraph" aria-label="Paragraph commands" title={selectedAnnotation ? undefined : "Select an Annotation to change alignment"}>
         <DsRibbonGroup ariaLabel="Paragraph" className="annotation-paragraph-group" label="Paragraph">
           <DsRibbonButton ariaLabel="Align left" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-left" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "left" })}>Left</DsRibbonButton>
           <DsRibbonButton ariaLabel="Align center" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-center" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "center" })}>Center</DsRibbonButton>
