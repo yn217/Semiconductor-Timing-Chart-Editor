@@ -473,7 +473,7 @@
 .editor-shell .view-display-subgroup[data-display-kind="labels"] { grid-template-rows: 12px repeat(3, 1fr); }
 .editor-shell .view-display-subgroup[data-display-kind="overlays"] { grid-template-rows: 12px repeat(2, 1fr); }
 .editor-shell .view-display-subgroup > span { overflow: hidden; color: #637083; font-size: 8px; font-weight: 700; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 5px; align-content: center; padding: 7px 8px 17px; }
+.editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-guides-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-zoom-group { width: 100%; display: grid; grid-template-columns: 40px 52px 40px 40px minmax(0, 1fr); align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
 .editor-shell .view-zoom-fit-actions { display: flex; min-width: 0; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
@@ -509,7 +509,7 @@
 .editor-shell .view-display-subgroup[data-display-kind="labels"] { grid-template-rows: 12px repeat(3, 1fr); }
 .editor-shell .view-display-subgroup[data-display-kind="overlays"] { grid-template-rows: 12px repeat(2, 1fr); }
 .editor-shell .view-display-subgroup > span { overflow: hidden; color: #637083; font-size: 8px; font-weight: 700; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 5px; align-content: center; padding: 7px 8px 17px; }
+.editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-guides-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-zoom-group { width: 100%; display: grid; grid-template-columns: 40px 52px 40px 40px minmax(0, 1fr); align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
 .editor-shell .view-zoom-fit-actions { display: flex; min-width: 0; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
