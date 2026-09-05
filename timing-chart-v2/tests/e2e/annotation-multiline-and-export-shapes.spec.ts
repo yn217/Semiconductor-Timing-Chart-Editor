@@ -103,3 +103,44 @@ test("Marker's exported SVG carries a vertical tick glyph, not an invisible zero
   expect(tick![1]).toBe(tick![3]);
   expect(Math.abs(Number(tick![4]) - Number(tick![2]))).toBeCloseTo(28, 0);
 });
+
+// #377 parity evidence: the contract's `saveOpen` field said only
+// "primitive lifecycle Save/Open is covered generically" -- there was no
+// test proving a multi-line label (this issue's own headline fix: a plain
+// <input> cannot hold "\n" at all) survives a real Save/Open round trip,
+// as opposed to just an in-session Apply.
+test("Callout's multi-line label survives a real Save/Open round trip, in both the live DOM and the exported SVG", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+
+  const callout = await addAnnotation(page, "callout");
+  const annotationId = await callout.getAttribute("data-annotation-id");
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Annotation label", { exact: true }).fill("Line one\nLine two\nLine three");
+  await editor.getByTestId("apply-annotation-properties").click();
+  await expect(callout.locator("[data-role='annotation-label']")).toHaveText("Line one\nLine two\nLine three");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await saveDownload).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const reopened = page.getByTestId("cycle-surface").locator(`[data-role='annotation-owner'][data-annotation-id='${annotationId}']`);
+  const label = reopened.locator("[data-role='annotation-label']");
+  await expect(label).toHaveCSS("white-space", "pre-wrap");
+  await expect(label).toHaveText("Line one\nLine two\nLine three");
+
+  const svgText = await exportSvgText(page);
+  const groupMatch = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
+  expect(groupMatch).not.toBeNull();
+  expect((groupMatch![0].match(/<tspan/g) ?? []).length).toBe(3);
+  expect(groupMatch![0]).toContain("Line one");
+  expect(groupMatch![0]).toContain("Line two");
+  expect(groupMatch![0]).toContain("Line three");
+});
