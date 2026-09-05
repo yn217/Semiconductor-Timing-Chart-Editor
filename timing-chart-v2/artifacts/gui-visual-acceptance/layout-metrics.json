@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "71e92a4036d0d4398215fb7e620e8dd3778aa9ae",
-    "sourceFingerprint": "50f4d79bdbf322d31b34e4b2d3fc147b1c7d6e55539d7ed6a45ac5dba8990ed7",
-    "generatedAt": "2026-09-05T19:28:43.969Z",
+    "testedCommit": "cb87a73c2ab645adfa384e97d339aaffd543547a",
+    "sourceFingerprint": "53e70f299f60aa4b6bbcb95792b260cd9170738af22536638a4aca9d431b2a98",
+    "generatedAt": "2026-09-05T19:54:57.815Z",
     "goldenSha256": "AD1FD459F24E3E24473FD06B16740B08F6DA07C88BBB9F3897A6EE12DA84A078"
   },
   "capture": {
