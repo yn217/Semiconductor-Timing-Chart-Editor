@@ -498,3 +498,52 @@ test("creates a transition Arrow with two snapped clicks and cancels pending cap
   await expect(page.getByTestId("arrow-pick-status")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
+
+// #375: the picked-transitions workflow (real snapped clicks against
+// rendered geometry, not the generic "Add annotation" button's Timeline-
+// range-derived anchors) must be able to produce a Dependency, the other
+// line-shaped type with real From/To semantic anchors -- not just Arrow.
+test("creates a Dependency (not just an Arrow) with two snapped clicks when Dependency is the selected Annotation type", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const waveLayer = surface.locator("[data-role='stable-waveform-surface']");
+  const waveBox = await waveLayer.boundingBox();
+  const requestBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']").boundingBox();
+  const readyBox = await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_ready']").boundingBox();
+  const cycle3 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  // REQUEST's own transitions are at cycles 0/3/7; READY's are at 0/5/8
+  // (fixtures-cycle-reference-documents.ts) -- cycle7/cycle8 are each a
+  // real second transition on their own row, distinct from the cycle3/
+  // cycle5 pair used for the Dependency above.
+  const cycle7 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='7']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle8 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").evaluate((element) => (element as HTMLElement).style.left));
+  expect(waveBox && requestBox && readyBox).toBeTruthy();
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("dependency");
+  await page.getByRole("button", { name: "Pick arrow endpoints" }).click();
+  await expect(page.getByTestId("arrow-pick-status")).toHaveText("Click from transition");
+  await page.mouse.click(waveBox!.x + cycle3, requestBox!.y + requestBox!.height / 2);
+  await expect(page.getByTestId("arrow-pick-status")).toHaveText("Click to transition");
+  await page.mouse.click(waveBox!.x + cycle5, readyBox!.y + readyBox!.height / 2);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(surface.locator("[data-annotation-type='dependency']")).toHaveCount(1);
+  await expect(surface.locator("[data-annotation-type='arrow']")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  // Switching the dropdown back to Arrow afterward must not retroactively
+  // change what was already picked, and must resume producing Arrows.
+  // Different cycles than the Dependency above, so the click lands on the
+  // underlying wave transition rather than the just-created overlay.
+  await page.getByLabel("Annotation type").selectOption("arrow");
+  await page.getByRole("button", { name: "Pick arrow endpoints" }).click();
+  await page.mouse.click(waveBox!.x + cycle7, requestBox!.y + requestBox!.height / 2);
+  await page.mouse.click(waveBox!.x + cycle8, readyBox!.y + readyBox!.height / 2);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(surface.locator("[data-annotation-type='dependency']")).toHaveCount(1);
+  await expect(surface.locator("[data-annotation-type='arrow']")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+});
