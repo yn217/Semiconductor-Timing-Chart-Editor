@@ -32,6 +32,49 @@ function lineNumber(source, offset) {
   return source.slice(0, offset).split("\n").length;
 }
 
+/** Finds the full `<button ...>...</button>` element (opening tag through its
+ * matching close tag) starting at an opening tag discovered by
+ * openingButtonTags, so callers can inspect the button's visible/accessible
+ * text alongside its attributes. Nested `<button>` elements don't occur in
+ * this codebase's JSX, so a simple non-nesting scan is sufficient. */
+function closingButtonTagIndex(source, openTagEnd) {
+  const close = source.indexOf("</button>", openTagEnd);
+  return close < 0 ? source.length : close;
+}
+
+/**
+ * #332 item C: a control can evade the #253 dead-control check above by
+ * having a real onClick handler that changes only a piece of local status
+ * text/counter state, never producing the effect its label advertises (see
+ * #332's Clock/Annotation "Preview" placeholders, both fixed in the same
+ * issue). This flags any <button> whose visible text or aria-label reads as
+ * a Preview control when the given source contains no call to any
+ * callback-prop-shaped identifier (`onXxx(...)`) at all -- the shape every
+ * real preview effect in this codebase uses to delegate out to renderer-level
+ * DOM work (see refreshClockPreview/refreshAnnotationPreview/
+ * refreshGroupStylePreview in runtime/use-editor-runtime-bridge.ts), whether
+ * called directly from the click handler or from a `useEffect` reacting to
+ * the toggled state. This is intentionally whole-source, not per-button,
+ * scoped: precise per-button attribution of an effect that may be wired
+ * through an intermediate local function or a state-driven effect isn't
+ * staticaly decidable without a real type-checker, and a coarser check that
+ * only flags a preview control with literally zero delegated effect anywhere
+ * in its own file is the version that can't false-positive against a real,
+ * working implementation.
+ */
+export function auditPreviewControls(source, file = "fixture.tsx") {
+  const errors = [];
+  const hasDelegatedEffect = /\bon[A-Z]\w*\s*\(/.test(source);
+  if (hasDelegatedEffect) return errors;
+  for (const tag of openingButtonTags(source)) {
+    const close = closingButtonTagIndex(source, tag.offset + tag.text.length);
+    const element = source.slice(tag.offset, close);
+    if (!/preview/i.test(element)) continue;
+    errors.push(`${file}:${lineNumber(source, tag.offset)} Preview-labeled <button> has no delegated effect (onXxx(...)) anywhere in its source -- looks like a status-text-only placeholder`);
+  }
+  return errors;
+}
+
 export function auditSource(source, file = "fixture.tsx") {
   const errors = [];
   for (const tag of openingButtonTags(source)) {
@@ -42,6 +85,7 @@ export function auditSource(source, file = "fixture.tsx") {
       errors.push(`${file}:${lineNumber(source, tag.offset)} enabled/disabled <button> has no command, form-submit, or event behavior`);
     }
   }
+  errors.push(...auditPreviewControls(source, file));
   return errors;
 }
 
