@@ -140,6 +140,26 @@ describe("RowLayout and projection invariants", () => {
     expect(after.timingRowIds).toEqual(after.mountedRowIds);
   });
 
+  it("retains previously mounted rows across a full-document replacement", () => {
+    const document = layoutFixture();
+    const service = new DefaultProjectionService();
+    const before = service.project({
+      snapshot: { revision: 0, document } as CanonicalSnapshot,
+      changeSet: { fullDocumentReplace: true },
+      viewport: { viewportStartY: 0, viewportEndY: 200, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+    });
+    const after = service.project({
+      snapshot: { revision: 1, document: { ...document, document: { ...document.document, title: "Reopened" } } } as CanonicalSnapshot,
+      changeSet: { fullDocumentReplace: true },
+      viewport: { viewportStartY: 0, viewportEndY: 25, overscanBefore: 0, overscanAfter: 0, pinnedRowIds: [] },
+      previous: before,
+    });
+    expect(before.mountedRowIds).toEqual(["sig_clk", spacerId, "sig_data"]);
+    expect(after.mountedRowIds).toEqual(before.mountedRowIds);
+    expect(after.leftRowIds).toEqual(after.mountedRowIds);
+    expect(after.timingRowIds).toEqual(after.mountedRowIds);
+  });
+
   it("virtualizes row shells and timing SVGs while preserving canonical visible IDs", () => {
     const document = layoutFixture();
     const projection = new DefaultProjectionService().project({
