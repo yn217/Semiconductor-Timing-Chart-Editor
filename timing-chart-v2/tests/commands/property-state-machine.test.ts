@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { CommandId, Signal, SignalId } from "@timing-chart-v2/schema";
+import { DOCUMENT_RESOURCE_BUDGET, type CommandId, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -86,4 +86,29 @@ describe("SemanticCommand state machine foundation", () => {
       assertRejectedWithoutMutation(session, { id: commandId(`reject_value_${seed}`), type: "signal.updateValue", signalId: "sig_data" as SignalId, start: 4, value: "1FF" });
     });
   }
+
+  it("keeps a generated near-limit session atomic across the final accepted and rejected creates", () => {
+    const base = canonicalFixture();
+    const template = base.signals.find((signal) => signal.type === "bus")!;
+    const additions = Array.from({ length: DOCUMENT_RESOURCE_BUDGET.signalCount - 1 - base.signals.length }, (_, index) => ({
+      ...template,
+      id: `property_budget_${index}` as SignalId,
+      name: `PROPERTY_BUDGET_${index}`,
+      source: { ...template.source, signalName: `PROPERTY_BUDGET_${index}` },
+      display: { ...template.display, name: `PROPERTY_BUDGET_${index}` },
+    }));
+    const signals = [...base.signals, ...additions];
+    const document = { ...base, signals, signalGroups: [{ ...base.signalGroups[0]!, rows: signals.map((signal) => signal.id) }] };
+    const session = new CommandHistorySession(document);
+    const accepted = session.execute({ id: commandId("property_budget_accept"), type: "signal.create", signal: { ...template, id: "property_budget_at_limit" as SignalId, name: "PROPERTY_BUDGET_AT_LIMIT", source: { ...template.source, signalName: "PROPERTY_BUDGET_AT_LIMIT" }, display: { ...template.display, name: "PROPERTY_BUDGET_AT_LIMIT" } }, targetGroupId: "grp_main", index: signals.length });
+    expect(accepted).toMatchObject({ ok: true });
+    expect(session.getSnapshot().document.signals).toHaveLength(DOCUMENT_RESOURCE_BUDGET.signalCount);
+
+    const atLimit = session.getSnapshot();
+    const beforeHistory = session.historyState();
+    const rejected = session.execute({ id: commandId("property_budget_reject"), type: "signal.create", signal: { ...template, id: "property_budget_overflow" as SignalId, name: "PROPERTY_BUDGET_OVERFLOW", source: { ...template.source, signalName: "PROPERTY_BUDGET_OVERFLOW" }, display: { ...template.display, name: "PROPERTY_BUDGET_OVERFLOW" } }, targetGroupId: "grp_main", index: DOCUMENT_RESOURCE_BUDGET.signalCount });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.signals" })] });
+    expect(session.getSnapshot()).toBe(atLimit);
+    expect(session.historyState()).toEqual(beforeHistory);
+  });
 });
