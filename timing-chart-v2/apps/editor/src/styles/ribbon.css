@@ -75,18 +75,25 @@
 
 .timeline-toolbar { display: flex; align-items: center; gap: 8px; min-height: 42px; overflow-x: auto; padding: 5px 10px; border-bottom: 1px solid #c6d0dc; background: #f8fafc; color: #49576d; font-size: 10px; white-space: nowrap; }
 
-.ai-operation-panel { display: grid; grid-template-columns: auto minmax(260px, 1fr) auto; align-items: center; gap: 6px 8px; min-width: 560px; font-size: 10px; }
-
-/* #395 item 1: RibbonIcon's <svg> carries no width/height/viewBox of its
-   own (every other Ribbon icon gets sized by a wrapper -- DsIconBox,
-   .ribbon-tool svg, etc. -- that this bare {icon} prop never passed
-   through), so it fell back to the CSS spec's default replaced-element
-   intrinsic size (300x150), rendering as a giant logo that pushed the
-   whole AI Ribbon tab far taller than every other tab. Sized to match
-   the other Ribbon icons' normal scale; no icon/markup change needed. */
-.ai-operation-panel svg { flex: 0 0 auto; width: 22px; height: 22px; color: #29425e; }
+/* #395 PR1: AIOperationPanel now renders inside the Bottom Panel's own
+   "AI Assistant" tab (see minimal-cycle-view.tsx's aiAssistantPanel)
+   rather than the Ribbon, so this grid gets a little breathing room
+   instead of the tight single-row constraint a Ribbon group imposed. */
+.bottom-content .ai-operation-panel { display: grid; grid-template-columns: auto minmax(260px, 1fr) auto; align-items: center; gap: 8px 10px; padding: 10px 12px; font-size: 11px; }
 
 .ai-query-row { display: contents; }
+
+/* #395 item 1 (still relevant if icon is ever passed non-null again):
+   RibbonIcon's <svg> carries no width/height/viewBox of its own -- every
+   other Ribbon icon gets sized by a wrapper (DsIconBox, .ribbon-tool svg,
+   etc.) that a bare {icon} prop never passed through, so an unconstrained
+   one falls back to the CSS spec's default replaced-element intrinsic
+   size (300x150). Kept as a defensive floor. */
+.ai-operation-panel svg { flex: 0 0 auto; width: 22px; height: 22px; color: #29425e; }
+
+.ai-assistant-group, .ai-provider-group { display: flex; align-items: center; padding-inline: 6px; }
+.ai-assistant-group .ds-ribbon-button { min-width: 68px; }
+.ai-provider-status { max-width: 220px; overflow: hidden; color: #52677d; font-size: 9px; line-height: 1.3; text-overflow: ellipsis; white-space: normal; }
 
 .ai-query-row label { display: flex; align-items: center; gap: 5px; }
 

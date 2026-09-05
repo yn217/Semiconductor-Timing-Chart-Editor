@@ -17,6 +17,7 @@ test("AI provider domains use one preview/apply SemanticCommand path", async ({ 
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
 
   await applyAI(page, "create group named AI_GROUP", "Create group AI_GROUP");
   await applyAI(page, "create binary signal named AI_SIGNAL", "Create binary signal AI_SIGNAL");
@@ -45,6 +46,7 @@ test("AI provider domains use one preview/apply SemanticCommand path", async ({ 
     history: await page.getByTestId("history-status").textContent(),
   };
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
   await applyAI(page, "fit all", "Fit the complete timeline", "Applied · view-only intent");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeViewOnly.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(beforeViewOnly.history!);

@@ -5,7 +5,7 @@ test("Bottom tabs support keyboard roving focus and correct tabpanel semantics",
   const host = page.getByTestId("cycle-surface");
   const tablist = page.getByRole("tablist", { name: "Bottom context panels" });
   const before = await host.getAttribute("data-canonical-revision");
-  await expect(tablist.getByRole("tab")).toHaveCount(5);
+  await expect(tablist.getByRole("tab")).toHaveCount(6);
   const signal = tablist.getByRole("tab", { name: "Signal" });
   await signal.focus();
   await signal.press("ArrowRight");

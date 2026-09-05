@@ -1638,6 +1638,29 @@ export function MinimalCycleView() {
     onDelete={deleteBottomBookmark}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
+  // #395 PR1: the AI Ribbon tab used to host the entire query/preview/
+  // apply surface directly -- a narrow control competing for space with
+  // every other Ribbon tab's icon-button rows. It now lives here, as the
+  // Bottom Panel's own "AI Assistant" tab (opened via the Ribbon's Ask/
+  // Edit trigger, see onOpenAIAssistant below), the same relocation this
+  // codebase already uses for Transaction/Bookmarks. AIOperationPanel's
+  // own preview/validate/apply logic is completely unchanged -- this is
+  // still the one and only proposal/apply owner; only where it renders
+  // moved.
+  const aiAssistantPanel = <AIOperationPanel
+    document={snapshot.document}
+    revision={snapshot.revision}
+    selectedSignalId={annotationTargetSignalId}
+    selectedGroupId={selectedGroup?.id}
+    selectedAnnotationId={selectedAnnotation?.id}
+    selectedTransactionId={selectedTransactionId}
+    range={timelineRange}
+    onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
+    onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
+    onViewIntent={(intent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); }}
+    onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
+    icon={null}
+  />;
   const navigateProblem = (path: string) => {
     const problem = diagnostics.find((item) => item.path === path);
     const target = resolveProblemTarget(path, snapshot.document, problem);
@@ -1834,12 +1857,12 @@ export function MinimalCycleView() {
     const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
     if (result.ok) selection.selectSignal(id);
   };
-  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "Problems" | "JSON")[] = viewMode === "Cycle"
-    ? ["Signal", "Annotation", "Bookmarks", "Problems", "JSON"]
+  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
+    ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
     : viewMode === "Transaction"
-      ? ["Transaction", "Annotation", "Bookmarks", "Problems", "JSON"]
-      : ["Signal", "Transaction", "Annotation", "Bookmarks", "Problems", "JSON"];
-  const bottomTabLabels: Readonly<Record<typeof bottomTabs[number], string>> = { Signal: "Signal Editor", Annotation: "Annotations", Transaction: "Transactions", Bookmarks: "Bookmarks", Problems: "Checks", JSON: "JSON" };
+      ? ["Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
+      : ["Signal", "Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+  const bottomTabLabels: Readonly<Record<typeof bottomTabs[number], string>> = { Signal: "Signal Editor", Annotation: "Annotations", Transaction: "Transactions", Bookmarks: "Bookmarks", AI: "AI Assistant", Problems: "Checks", JSON: "JSON" };
   const startBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     bottomResizeRef.current = { startY: event.clientY, startHeight: bottomHeight };
@@ -2138,6 +2161,7 @@ export function MinimalCycleView() {
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
       onOpenTimeline={() => setRibbonTab("Timeline")}
       onOpenBookmarks={() => { setBottomTab("Bookmarks"); setBottomVisible(true); }}
+      onOpenAIAssistant={() => { setBottomTab("AI"); setBottomVisible(true); }}
       onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
     <MinimalCycleViewPanels>
@@ -2197,7 +2221,7 @@ export function MinimalCycleView() {
         onFollowSelectionChange={setFollowSelection}
         pinned={bottomPinned}
         onTogglePinned={toggleBottomPin}
-        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
+        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "AI" ? aiAssistantPanel : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
       />}
        <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={selectedSignal?.id ?? `${selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => { if (selectedGroup) refreshGroupStylePreview(host.current!, selectedGroup.id, selectedGroup.style); setInspectorResetToken((value) => value + 1); }} onGroupPreview={(groupId, style) => refreshGroupStylePreview(host.current!, groupId, style ?? snapshot.document.signalGroups.find((group) => group.id === groupId)?.style)} /></aside>
     </div>
