@@ -366,6 +366,33 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
   const [waveformBackground, setWaveformBackground] = useState(styleString(styleObject, "waveformBackground", "#ffffff"));
   const [problem, setProblem] = useState("");
   const { state: sections, toggle } = useInspectorAccordion("value-signal", { "signal-properties": true, hierarchy: true, "label-style": false, waveform: true });
+  useEffect(() => {
+    const nextStyle = signal.display.style ?? {};
+    const nextStyleJson = JSON.stringify(nextStyle);
+    setName((current) => current === signal.display.name ? current : signal.display.name);
+    setRole((current) => current === signal.role ? current : signal.role);
+    setSignalType((current) => current === signal.type ? current : signal.type);
+    setWidth((current) => current === (signal.width ?? 1) ? current : signal.width ?? 1);
+    setFormat((current) => current === (signal.displayFormat ?? "hex") ? current : signal.displayFormat ?? "hex");
+    setVisible((current) => current === (signal.display.visible !== false) ? current : signal.display.visible !== false);
+    setSpacingBefore((current) => current === (signal.spacingBefore ?? 0) ? current : signal.spacingBefore ?? 0);
+    setSpacingAfter((current) => current === (signal.spacingAfter ?? 0) ? current : signal.spacingAfter ?? 0);
+    setAlign((current) => current === (signal.display.align ?? "left") ? current : signal.display.align ?? "left");
+    setOverflow((current) => current === (signal.display.overflow ?? "ellipsis") ? current : signal.display.overflow ?? "ellipsis");
+    setSplitPane((current) => current === (signal.display.splitPane ?? "both") ? current : signal.display.splitPane ?? "both");
+    setStyle((current) => current === nextStyleJson ? current : nextStyleJson);
+    setTextColor((current) => current === styleString(nextStyle, "color", "#152033") ? current : styleString(nextStyle, "color", "#152033"));
+    setRowBackground((current) => current === styleString(nextStyle, "background", "#ffffff") ? current : styleString(nextStyle, "background", "#ffffff"));
+    setFontFamily((current) => current === styleString(nextStyle, "fontFamily", "Segoe UI") ? current : styleString(nextStyle, "fontFamily", "Segoe UI"));
+    setFontSize((current) => current === styleNumber(nextStyle, "fontSize", 12) ? current : styleNumber(nextStyle, "fontSize", 12));
+    setBold((current) => current === (nextStyle.fontWeight === "bold") ? current : nextStyle.fontWeight === "bold");
+    setItalic((current) => current === (nextStyle.fontStyle === "italic") ? current : nextStyle.fontStyle === "italic");
+    setUnderline((current) => current === styleString(nextStyle, "textDecoration", "").includes("underline") ? current : styleString(nextStyle, "textDecoration", "").includes("underline"));
+    setStrikethrough((current) => current === styleString(nextStyle, "textDecoration", "").includes("line-through") ? current : styleString(nextStyle, "textDecoration", "").includes("line-through"));
+    setWaveformColor((current) => current === styleString(nextStyle, "waveformColor", "#111111") ? current : styleString(nextStyle, "waveformColor", "#111111"));
+    setWaveformBackground((current) => current === styleString(nextStyle, "waveformBackground", "#ffffff") ? current : styleString(nextStyle, "waveformBackground", "#ffffff"));
+    setProblem("");
+  }, [signal]);
   const apply = (event: React.FormEvent) => {
     event.preventDefault();
     let parsed: Signal["display"]["style"];
