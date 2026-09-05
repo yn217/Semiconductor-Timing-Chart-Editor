@@ -86,6 +86,7 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
       ...(annotation.style === undefined ? {} : { style: annotation.style }),
       ...(annotation.rotation === undefined ? {} : { rotation: annotation.rotation }),
       ...(annotation.align === undefined ? {} : { align: annotation.align }),
+      ...(annotation.locked === undefined ? {} : { locked: annotation.locked }),
       surfaceHeight: projection.totalHeight,
     }];
   });

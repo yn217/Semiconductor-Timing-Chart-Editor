@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
-import { anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
+import { anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
 export interface ExportSettings {
@@ -21,7 +21,7 @@ export interface ExportRequest {
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
 export interface ExportPoint { readonly x: number; readonly y: number }
-export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly transitionKind1?: "threshold" | "ratio"; readonly transitionKind2?: "threshold" | "ratio"; readonly measurementProfile?: MeasurementProfile; readonly measurementLayout?: MeasurementLayout; readonly measurementLane?: number; readonly tracePoints?: readonly ExportPoint[]; readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal"; readonly arrowhead?: "end" | "start" | "bidirectional" | "none"; readonly labelOffsetX?: number; readonly labelOffsetY?: number; readonly color?: string }
+export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly transitionKind1?: "threshold" | "ratio"; readonly transitionKind2?: "threshold" | "ratio"; readonly measurementProfile?: MeasurementProfile; readonly measurementLayout?: MeasurementLayout; readonly measurementLane?: number; readonly tracePoints?: readonly ExportPoint[]; readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal"; readonly arrowhead?: "end" | "start" | "bidirectional" | "none"; readonly labelOffsetX?: number; readonly labelOffsetY?: number; readonly color?: string; readonly style?: JsonObject }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly fill: string; readonly fillOpacity: number; readonly stroke: string; readonly scope: "label" | "waveform" | "both"; readonly showHeader: boolean }
 export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
@@ -323,7 +323,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const endFraction = anchorTransitionFraction(annotation.end);
     const startKind = anchorTransitionKind(annotation.start);
     const endKind = anchorTransitionKind(annotation.end);
-    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.color === undefined ? {} : { color: annotation.color }) };
+    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.color === undefined ? {} : { color: annotation.color }), ...(annotation.style === undefined ? {} : { style: annotation.style }) };
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const contentHeight = waveTop + rowLayout.totalHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? effectiveLegendEntries(document).map((entry) => entry.label) : [];
@@ -346,6 +346,69 @@ function multilineText(x: number, y: number, label: string, attrs: string): stri
   if (lines.length === 1) return `<text x="${x}" y="${y}" ${attrs}>${xml(label)}</text>`;
   const lineHeight = 13;
   return `<text x="${x}" y="${y}" ${attrs}>${lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${xml(line)}</tspan>`).join("")}</text>`;
+}
+
+/** #378: Stroke (independent width/style) and Fill (independent color/
+ * opacity) for the CSS-border/background-driven shapes -- same permissive
+ * parse-from-a-free-form-style-object convention, and the same field names,
+ * as the live-DOM renderer's own `parsePresentationStyle`
+ * (packages/renderer/src/stable-surface.ts), so a document's authored
+ * Stroke/Fill produces the same visual result in both places. Deliberately
+ * duplicated rather than shared, matching this package's existing
+ * ExportScene/ExportAnnotation architecture (packages/export has no
+ * dependency on packages/renderer). */
+function parsePresentationStyle(style: JsonObject | undefined): { readonly strokeWidth?: number; readonly strokeDash?: string; readonly fillColor?: string; readonly fillOpacity?: number } {
+  const source = style ?? {};
+  const strokeWidth = typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined;
+  const strokeStyle = source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined;
+  const strokeDash = strokeStyle === "dashed" ? "7 4" : strokeStyle === "dotted" ? "2 3" : undefined;
+  const fillColor = typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined;
+  const fillOpacity = typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined;
+  return { ...(strokeWidth === undefined ? {} : { strokeWidth }), ...(strokeDash === undefined ? {} : { strokeDash }), ...(fillColor === undefined ? {} : { fillColor }), ...(fillOpacity === undefined ? {} : { fillOpacity }) };
+}
+
+/** #378: Range/Highlight/Rectangle/Ellipse are all the renderer's "range"
+ * overlay shape -- a full-surface-height band from the earlier of its two
+ * semantic anchors to the later, NOT a row-height box (see
+ * packages/renderer/src/stable-surface.ts's `primitive.shape === "range"`
+ * branch: `translate(x, 0px)` + `height: ${surfaceHeight}px`, identical for
+ * all four types; only their border-style/radius CSS differs). Before this,
+ * they fell through to the generic point/line fallback, which drew a bare,
+ * usually near-zero-length `<line>` with no fill and no border at all: a
+ * real, silent export gap, not merely an unstyled one. */
+function renderAreaAnnotationSvg(annotation: ExportAnnotation, metadata: string, surfaceHeight: number): string {
+  const presentation = parsePresentationStyle(annotation.style);
+  const color = annotation.color ?? "#d04a36";
+  const x = Math.min(annotation.x1, annotation.x2);
+  const width = Math.max(2, Math.abs(annotation.x2 - annotation.x1));
+  const fill = presentation.fillColor === "none" ? "none" : presentation.fillColor ?? color;
+  const fillOpacity = presentation.fillColor === "none" ? 0 : presentation.fillOpacity ?? (annotation.type === "highlight" ? 0.32 : 0.12);
+  const strokeWidth = presentation.strokeWidth ?? 1;
+  // Matches each type's current CSS default exactly when no Stroke override
+  // is authored: highlight is dashed, ellipse a rounded pill (border-radius:
+  // 50%), range/rectangle a plain solid-bordered box.
+  const strokeDasharray = presentation.strokeDash ?? (annotation.type === "highlight" ? "4 3" : undefined);
+  const rx = annotation.type === "ellipse" ? Math.min(width, surfaceHeight) / 2 : 2;
+  // Label position matches the live-DOM renderer's own placement (the
+  // resolved anchor row's Y, offset by authored labelOffset -- default
+  // -14px), NOT the top of the full-height band this shape now spans.
+  const labelY = (annotation.y1 + annotation.y2) / 2 + (annotation.labelOffsetY ?? -14);
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"${metadata}><rect x="${x}" y="0" width="${width}" height="${surfaceHeight}" rx="${rx}" fill="${xml(fill)}" fill-opacity="${fillOpacity}" stroke="${xml(color)}" stroke-width="${strokeWidth}"${strokeDasharray ? ` stroke-dasharray="${strokeDasharray}"` : ""}/>${multilineText(x + (annotation.labelOffsetX ?? 4), labelY, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`;
+}
+
+/** #378: Vertical Line's live-DOM glyph is a full-height dashed vertical
+ * line at the single semantic anchor (center-columns.css's
+ * `[data-annotation-shape="vertical"] [data-role="annotation-body"]`) --
+ * like Marker/Bracket before #377 fixed them, it fell through to the
+ * generic point/line fallback, which for a point-type annotation
+ * (x1===x2, y1===y2) draws an invisible zero-length line. */
+function renderVerticalLineSvg(annotation: ExportAnnotation, metadata: string, surfaceHeight: number): string {
+  const presentation = parsePresentationStyle(annotation.style);
+  const color = annotation.color ?? "#d04a36";
+  const strokeWidth = presentation.strokeWidth ?? 2;
+  const strokeDasharray = presentation.strokeDash ?? "5 3";
+  const labelY = annotation.y1 + (annotation.labelOffsetY ?? -14);
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="verticalLine"${metadata}><line x1="${annotation.x1}" y1="0" x2="${annotation.x1}" y2="${surfaceHeight}" stroke="${xml(color)}" stroke-width="${strokeWidth}" stroke-dasharray="${strokeDasharray}"/>${multilineText(annotation.x1 + (annotation.labelOffsetX ?? 6), labelY, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`;
 }
 
 function renderMeasurementSvg(annotation: ExportAnnotation, metadata: string): string {
@@ -461,6 +524,8 @@ export function renderExportSvg(scene: ExportScene): string {
       const capY = (dx / length) * 6;
       out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="bracket"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><path data-role="annotation-bracket-caps" d="M ${annotation.x1 - capX} ${annotation.y1 - capY} L ${annotation.x1 + capX} ${annotation.y1 + capY} M ${annotation.x2 - capX} ${annotation.y2 - capY} L ${annotation.x2 + capX} ${annotation.y2 + capY}" fill="none" stroke="#d04a36" stroke-width="2"/>${multilineText(Math.min(annotation.x1, annotation.x2) + 4, Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`);
     }
+    else if (annotation.type === "range" || annotation.type === "highlight" || annotation.type === "rectangle" || annotation.type === "ellipse") out.push(renderAreaAnnotationSvg(annotation, metadata, scene.height));
+    else if (annotation.type === "verticalLine") out.push(renderVerticalLineSvg(annotation, metadata, scene.height));
     else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/>${multilineText(Math.min(annotation.x1, annotation.x2) + 4, Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`);
   }
   out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);

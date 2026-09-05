@@ -548,6 +548,17 @@
 .font-style-button:disabled, .font-style-family:disabled, .font-style-size:disabled { opacity: .4; }
 .font-style-color { cursor: pointer; }
 .font-style-color input[type="color"] { width: 12px; height: 12px; padding: 0; border: none; margin-left: auto; cursor: pointer; }
+/* #378: Stroke/Fill toolbar (annotation-editor.tsx / inspector-annotation-
+   editor.tsx) -- same compact form-field density as font-style-toolbar
+   above, one row per capability group so a disabled group's title reason
+   is discoverable without a separate layout. */
+.stroke-fill-toolbar { display: flex; flex-direction: column; gap: 2px; padding: 4px 8px; border-bottom: 1px solid #e0e5ec; font-size: 9px; }
+.stroke-fill-group { display: flex; align-items: center; gap: 6px; }
+.stroke-fill-label { width: 34px; flex: 0 0 auto; color: #52677d; font-weight: 600; }
+.stroke-fill-group label { display: inline-flex; align-items: center; gap: 3px; color: #29425e; }
+.stroke-fill-group input[type="number"] { width: 40px; }
+.stroke-fill-group input[type="color"] { width: 18px; height: 14px; padding: 0; border: none; cursor: pointer; }
+.stroke-fill-group :disabled { opacity: .4; }
 /* `:disabled` only ever matches the actual form control (the color
    <input> inside), never the wrapping <label> -- so a disabled Color
    control still showed a pointer cursor and full-opacity label text even

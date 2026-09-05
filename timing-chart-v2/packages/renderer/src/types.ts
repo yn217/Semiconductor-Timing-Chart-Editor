@@ -127,6 +127,11 @@ export interface AnnotationOverlayPrimitive {
   readonly align?: "left" | "center" | "right";
   readonly measurementLayout?: Readonly<{ readonly startMarker: "none" | "bar" | "arrow"; readonly endMarker: "none" | "bar" | "arrow"; readonly arrowLayout: "inward" | "outward" | "auto"; readonly extensionLines: "none" | "start" | "end" | "both"; readonly lane?: number }>;
   readonly measurementLane?: number;
+  /** #378: locked Annotations must show a truthful, real (SVG, not Unicode)
+   * lock affordance in the canvas -- previously `locked` blocked pointer/
+   * anchor-handle drag/nudge (timeline-annotation-interaction-owner.ts) with
+   * no visible indicator at all that the block was intentional. */
+  readonly locked?: boolean;
 }
 
 export interface Point { readonly x: number; readonly y: number }
