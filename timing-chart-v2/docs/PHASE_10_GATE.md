@@ -26,6 +26,17 @@ cycle-to-pixel estimate.
 - Derived Measurement cycle delta and Timeline insert/delete ripple with
   delete-range clamp policy.
 
+### Connector rendering contract
+
+- Straight is a solid direct segment between the two semantic endpoints.
+- Diagonal is a direct segment with a dashed stroke, making the explicit
+  choice observable without introducing a second coordinate system.
+- Curve is a quadratic connector with a deterministic midpoint control point.
+- Orthogonal is a deterministic three-segment route through the midpoint X.
+- Arrowheads are SVG markers attached to the actual path endpoints; the
+  `auto-start-reverse` orientation keeps start/end/bidirectional directions
+  correct when endpoint order is reversed.
+
 ## Snap sources
 
 The snap index is rebuilt from actual WaveDrom Local Geometry and contains:
