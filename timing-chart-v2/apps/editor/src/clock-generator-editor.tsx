@@ -50,7 +50,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
       {presetsOpen && <div className="event-presets" role="group" aria-label="Clock presets"><button type="button" onClick={() => setGenerator({ ...generator, duty: 0.5 })}>50% duty</button><button type="button" onClick={() => setGenerator({ ...generator, duty: 0.25 })}>25% duty</button></div>}
       {preview && <output className="event-preview" data-testid="clock-preview-status">Preview only · canonical data unchanged</output>}
     </div>
-    <form className="clock-generator" aria-label="Clock Generator" onSubmit={(event) => {
+    <form className="clock-generator" aria-label="Clock Generator" noValidate onSubmit={(event) => {
       event.preventDefault();
       try {
         const parsedSuppressedPeriods = parseSuppressedPeriods(suppressedPeriods);
