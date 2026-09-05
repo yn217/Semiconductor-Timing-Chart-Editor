@@ -273,4 +273,35 @@ describe("RowLayout and projection invariants", () => {
       expect(projection.mountedRowIds).toEqual(linearMountedRowIds(layout, viewport));
     }
   });
+
+  it("filters visibleRows by Signal Split pane assignment without leaving a dead gap (#200)", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      signals: [
+        { ...base.signals[0]!, display: { ...base.signals[0]!.display, splitPane: "upper" } },
+        { ...base.signals[1]!, display: { ...base.signals[1]!.display, splitPane: "lower" } },
+      ],
+    } as CanonicalDocument;
+
+    const upper = calculateRowLayout(document, new Set(), { reserveHiddenSpace: false, pane: "upper" });
+    expect(upper.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk"]);
+    // sig_data (excluded from this pane) must not reserve space: sig_clk
+    // sits directly after the group header, with no dead gap before it.
+    expect(upper.visibleRows[0]!.y).toBe(upper.groupHeaders[0]!.y + upper.groupHeaders[0]!.height);
+
+    const lower = calculateRowLayout(document, new Set(), { reserveHiddenSpace: false, pane: "lower" });
+    expect(lower.visibleRows.map((row) => row.rowId)).toEqual(["sig_data"]);
+
+    // A "both"-assigned (unset) signal appears in every pane's visibleRows.
+    const bothDocument = { ...base, signals: [{ ...base.signals[0]!, display: { ...base.signals[0]!.display, splitPane: "upper" } }, base.signals[1]!] } as CanonicalDocument;
+    const bothUpper = calculateRowLayout(bothDocument, new Set(), { reserveHiddenSpace: false, pane: "upper" });
+    const bothLower = calculateRowLayout(bothDocument, new Set(), { reserveHiddenSpace: false, pane: "lower" });
+    expect(bothUpper.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
+    expect(bothLower.visibleRows.map((row) => row.rowId)).toEqual(["sig_data"]);
+
+    // Omitting `pane` entirely is byte-for-byte identical to pre-#200 behavior.
+    const unfiltered = calculateRowLayout(document, new Set(), { reserveHiddenSpace: false });
+    expect(unfiltered.visibleRows.map((row) => row.rowId)).toEqual(["sig_clk", "sig_data"]);
+  });
 });
