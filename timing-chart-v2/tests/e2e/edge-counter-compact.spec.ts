@@ -104,4 +104,36 @@ test.describe("Edge Counter compact layout", () => {
     expect(restoredCycles.length).toBeGreaterThan(0);
     expect(Math.min(...restoredCycles)).toBeGreaterThanOrEqual(6);
   });
+
+  test("starts selected-edge counting from the clicked rendered Clock edge", async ({ page }) => {
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+    const editor = page.getByTestId("signal-editor");
+    await editor.getByLabel("Clock edge counter show").check();
+    await editor.getByLabel("Clock edge counter mode").selectOption("both");
+    await editor.getByLabel("Clock edge counter start").fill("10");
+    await editor.getByLabel("Clock edge counter count from").selectOption("selected-edge");
+    await editor.getByTestId("apply-clock-edge-counter").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+    const clock = host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock']");
+    const clockBox = await clock.boundingBox();
+    const edgeTick = await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").boundingBox();
+    expect(clockBox).not.toBeNull();
+    expect(edgeTick).not.toBeNull();
+    await page.mouse.click(edgeTick!.x + 1, clockBox!.y + clockBox!.height / 2);
+    await expect(host).toHaveAttribute("data-selected-cycle", "3");
+
+    const labels = host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']");
+    await expect(labels.first()).toBeVisible();
+    const first = await labels.first().getAttribute("data-edge-counter-id");
+    const firstCycle = Number(first?.split(":").at(-1));
+    // The selected cycle is 3, while the nearest rendered Clock edge is the
+    // preceding edge at cycle 2.  Exact selected-edge counting must begin at
+    // that Geometry-backed edge; cycle-only fallback would begin later.
+    expect(firstCycle).toBe(2);
+    await expect(labels.first()).toHaveText("10");
+  });
 });
