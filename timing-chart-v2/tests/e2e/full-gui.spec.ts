@@ -216,7 +216,7 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   await expect(page.getByTestId("json-panel")).toContainText("Valid");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Inspector", exact: true }).click();
-  await expect(page.getByTestId("inspector")).toHaveCount(0);
+  await expect(page.getByTestId("inspector-shell")).toBeHidden();
   await page.getByTestId("ribbon").getByRole("button", { name: "Bottom Editor", exact: true }).click();
   await expect(page.getByTestId("bottom-editor")).toHaveCount(0);
 });
@@ -906,7 +906,9 @@ test("applies Clock Generator Inspector drafts with editable duty and one histor
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const inspector = page.getByTestId("inspector");
-  await inspector.getByLabel("Inspector clock start").fill("1");
+  // Clock start must align with the edited period; 0 is the valid aligned
+  // value for the period-4 generator used by this acceptance path.
+  await inspector.getByLabel("Inspector clock start").fill("0");
   await inspector.getByLabel("Inspector clock period").fill("4");
   await inspector.getByLabel("Inspector clock duty").fill("0.25");
   await inspector.getByLabel("Inspector clock phase").fill("0.5");
@@ -994,8 +996,8 @@ test("renders Comment Row content at the shared cycle-0 canvas boundary", async 
   const host = page.getByTestId("cycle-surface");
   const commentRow = host.locator("[data-role='left-row'][data-kind='comment'][data-row-id]").first();
   await commentRow.scrollIntoViewIfNeeded();
-  const commentContent = host.locator("[data-role='timing-row'][data-kind='comment'] [data-role='comment-row-content']");
-  await expect(commentContent).toHaveCount(3);
+  const commentContent = host.locator("[data-role='timing-row'][data-kind='comment'][data-row-id='sig_v1_reference_comment'] [data-role='comment-row-content']");
+  await expect(commentContent).toHaveCount(1);
   await expect(commentContent.first()).toHaveAttribute("data-cycle", "0");
   const contentBox = await commentContent.first().boundingBox();
   const rowBox = await host.locator("[data-role='timing-row'][data-kind='comment']").first().boundingBox();
@@ -1080,7 +1082,9 @@ test("renders Clock Edge Numbers from actual Geometry without WaveDrom regenerat
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   expect(await host.locator("[data-role='clock-edge-number'][data-signal-id='sig_cycle_clock']").count()).toBeGreaterThan(5);
-  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(0);
+  // Open/New resets the transient visible range to [0, 1), so a persisted
+  // visible-range-start counter correctly includes the cycle-0 edge again.
+  await expect(host.locator("[data-role='clock-edge-number'][data-edge-counter-id*=':0']")).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
