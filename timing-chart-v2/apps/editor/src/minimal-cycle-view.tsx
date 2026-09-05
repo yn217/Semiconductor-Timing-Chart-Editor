@@ -237,6 +237,7 @@ export function MinimalCycleView() {
   const [treePresentationRevision, setTreePresentationRevision] = useState(0);
   const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
   const [transactionPresentationRevision, setTransactionPresentationRevision] = useState(0);
+  const [rangePresentationRevision, setRangePresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
@@ -422,7 +423,7 @@ export function MinimalCycleView() {
 
   useEffect(() => {
     refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
-  }, [rangeSelectionActive, timelineRange, snapshot.revision]);
+  }, [rangeSelectionActive, timelineRange, rangePresentationRevision]);
 
   useEffect(() => {
     if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
@@ -706,6 +707,16 @@ export function MinimalCycleView() {
       const refreshRuler = invalidation.refreshRuler;
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
+      const rangePresentationAffected = refreshRuler
+        || changed.geometryScreenX === true
+        || changed.geometryScreenY !== undefined
+        || changed.rowOrder !== undefined
+        || changed.rowPresentation !== undefined
+        || changed.addedSignals !== undefined
+        || changed.removedSignals !== undefined
+        || changed.addedGroups !== undefined
+        || changed.removedGroups !== undefined;
+      if (rangePresentationAffected) setRangePresentationRevision((value) => value + 1);
       const refreshPlayheadNow = changed.fullDocumentReplace === true || changed.geometryScreenX === true || refreshRuler;
       if (refreshPlayheadNow) setPlayheadPresentationRevision((value) => value + 1);
       renderer.update(projection);
@@ -1441,7 +1452,7 @@ export function MinimalCycleView() {
   }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
   useEffect(() => {
     refreshRangeSelectionBand.current();
-  }, [snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  }, [rangePresentationRevision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
