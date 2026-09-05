@@ -289,6 +289,13 @@ full-height dashed line; and Text exposes Stroke/Fill as disabled with a
 truthful reason. Lock interaction and the remaining Golden Sample 14 matrix
 stay explicitly open.
 
+Bookmark navigation and editing are current-main browser verified by the two
+focused `timeline-editor.spec.ts` cases (2/2, 2026-09-06): Previous/Next
+navigation reaches a geometry-backed Bookmark without changing Canonical or
+History, and Bottom Bookmarks editing preserves name/cycle/comment through
+Save/Open while delete followed by Undo restores the entry. The full bookmark
+visual/export matrix remains open.
+
 The current-main Hierarchy/Full Path route is browser verified by the focused
 `full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
 view switching, path filtering, stable-ID Reveal, atomic bulk registration,
