@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "3dae48f82def6fc00b93a4893d601bef78cb7d73",
-    "sourceFingerprint": "00eede8927deee63bcf1d72e918f647b6089e72eea4ffec6d64bd3331f817f0e",
-    "generatedAt": "2026-09-04T20:57:59.379Z",
+    "testedCommit": "bfd83b29a6d5d3371378353308f56b29edd2765b",
+    "sourceFingerprint": "8af9589fef1870367f7278499be28e1be4f24922e80a0ed8404995ad004db119",
+    "generatedAt": "2026-09-05T05:16:26.259Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "capture": {
@@ -243,9 +243,9 @@
   "maskContractPass": true,
   "ribbonNoHorizontalScroll": true,
   "visualDiff": {
-    "changedPixels": 228394,
+    "changedPixels": 228620,
     "comparedPixels": 1573352,
-    "diffPercent": 0.14516395568188173,
+    "diffPercent": 0.1453075980454469,
     "threshold": 0.05,
     "pass": false,
     "pixelDeltaThreshold": 24,

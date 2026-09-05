@@ -28,6 +28,12 @@ for (const width of [1672, 1000]) {
       expect(rows.every((row) => category === "comment" ? row.kind === "comment" : category === "wire" ? row.role === "internal" : row.role === category)).toBe(true);
     };
 
+    // #184 P1-2: the Left Tree filter's contract is Left Tree presentation
+    // only -- Frozen/Timing/WaveDrom surfaces must stay fully visible (and
+    // unfiltered) even while filtered-out signals disappear from the tree.
+    const frozenRowCount = await host.locator("[data-role='frozen-row'][data-row-id]").count();
+    const waveOwnerCount = await host.locator("[data-role='wave-owner'][data-signal-id]").count();
+
     for (const [value, category] of [["input", "input"], ["output", "output"], ["wire", "wire"], ["comment", "comment"]] as const) {
       await filter.selectOption(value);
       await expect(host).toHaveAttribute("data-tree-type-filter", value);
@@ -40,7 +46,11 @@ for (const width of [1672, 1000]) {
       for (const groupId of visibleGroupIds) {
         expect(await visibleRows().evaluateAll((elements, id) => elements.some((element) => element.dataset.groupId === id), groupId)).toBe(true);
       }
+      expect(await visibleRows().count()).toBeLessThan(frozenRowCount);
+      expect(await host.locator("[data-role='frozen-row'][data-row-id]:not([hidden])").count()).toBe(frozenRowCount);
+      expect(await host.locator("[data-role='wave-owner'][data-signal-id]:not([hidden])").count()).toBe(waveOwnerCount);
     }
+    await filter.selectOption("all");
 
     await filter.selectOption("input");
     const inputName = await host.locator("[data-role='left-row'][data-signal-role='input']:not([hidden])").first().getAttribute("data-name");

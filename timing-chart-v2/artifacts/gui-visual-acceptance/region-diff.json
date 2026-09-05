@@ -1,8 +1,8 @@
 {
   "provenance": {
-    "testedCommit": "3dae48f82def6fc00b93a4893d601bef78cb7d73",
-    "sourceFingerprint": "00eede8927deee63bcf1d72e918f647b6089e72eea4ffec6d64bd3331f817f0e",
-    "generatedAt": "2026-09-04T20:57:59.379Z",
+    "testedCommit": "bfd83b29a6d5d3371378353308f56b29edd2765b",
+    "sourceFingerprint": "8af9589fef1870367f7278499be28e1be4f24922e80a0ed8404995ad004db119",
+    "generatedAt": "2026-09-05T05:16:26.259Z",
     "goldenSha256": "1BA60E283C66545857877E9A3D362C203409B8C9D15ACB51E633054AF6B53CE6"
   },
   "viewport": {
@@ -35,18 +35,18 @@
       "y": 65,
       "width": 1672,
       "height": 102,
-      "changedPixels": 20778,
+      "changedPixels": 21131,
       "comparedPixels": 170544,
-      "diffPercent": 0.12183366169434282
+      "diffPercent": 0.12390350877192982
     },
     "Left Tree": {
       "x": 0,
       "y": 167,
       "width": 265,
       "height": 749,
-      "changedPixels": 23650,
+      "changedPixels": 23523,
       "comparedPixels": 198485,
-      "diffPercent": 0.11915258079955664
+      "diffPercent": 0.11851273395974507
     },
     "Role": {
       "x": 265,
