@@ -61,7 +61,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     }
     setSnapshot(result.snapshot);
     setHistory(runtime.session.current().historyState());
-    setValidationDiagnostics([]);
+    setValidationDiagnostics((current) => current.length === 0 ? current : []);
     setProblem("");
     setRuntimeDiagnostics(withoutCommandRejectionDiagnostics);
     acceptedHandlerRef.current?.(result, context);
