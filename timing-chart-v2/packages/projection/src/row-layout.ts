@@ -11,8 +11,15 @@ export interface RowLayoutResult {
   readonly totalHeight: number;
 }
 
-export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean } = {}): RowLayoutResult {
+export function calculateRowLayout(document: CanonicalDocument, collapsedGroupIds: ReadonlySet<GroupId> = new Set(), options: { readonly includeHidden?: boolean; readonly reserveHiddenSpace?: boolean; readonly pane?: "upper" | "lower" } = {}): RowLayoutResult {
   const includeHidden = options.includeHidden ?? true;
+  // Signal Split View (#200): a signal's `display.splitPane` (absent means
+  // "both", i.e. today's single-pane behavior) opts it into a specific
+  // pane's Frozen/Timing rendering. Omitting `pane` entirely (every
+  // existing call site) matches every row, byte-for-byte identical to
+  // pre-#200 behavior -- this option only takes effect for a caller that
+  // explicitly requests one pane's filtered view.
+  const matchesPane = (signal: Signal): boolean => options.pane === undefined || (signal.display.splitPane ?? "both") === "both" || signal.display.splitPane === options.pane;
   // Navigation surfaces (Left Tree) show every row -- hidden ones included,
   // each occupying its own real slot -- so their Y sequence must reserve
   // space for hidden rows exactly like visible ones (reserveHiddenSpace
@@ -52,7 +59,8 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
       const signal = signals.get(rowId);
       const spacer = spacers.get(rowId);
       const isHiddenSignal = signal !== undefined && signal.display.visible === false;
-      if (isHiddenSignal && !reserveHiddenSpace) {
+      const isPaneExcluded = signal !== undefined && !matchesPane(signal);
+      if ((isHiddenSignal || isPaneExcluded) && !reserveHiddenSpace) {
         // Positioned at the current (unreserved) y so it remains
         // findable/orderable by rowId, but consumes no space of its own --
         // the next space-reserving entry starts exactly where this one
@@ -66,7 +74,7 @@ export function calculateRowLayout(document: CanonicalDocument, collapsedGroupId
       const entry = signalEntry(signal, group.id, group.name, group.style, y, document.layout.rowHeight, rowId);
       if (entry) {
         navigationRows.push(entry);
-        if (entry.visible) visibleRows.push(entry);
+        if (entry.visible && (signal === undefined || matchesPane(signal))) visibleRows.push(entry);
         y += entry.height + (signal?.spacingAfter ?? 0);
       } else if (spacer) {
         const spacerEntry = { rowId, groupId: group.id, groupName: group.name, kind: "spacer" as const, name: "", visible: true, y, height: spacer.height };
