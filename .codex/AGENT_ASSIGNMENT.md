@@ -1,10 +1,10 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-05 07:00 JST
+Last reconciled: 2026-09-05 11:57 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main at reconciliation: `8399228e330e37d580277e9c297949a9e39f446b`
-Open Issues observed: 44
+Observed main at reconciliation: `f8d2f9a27bae60f03e5c30ca7a737137122ed73c`
+Open Issues observed: 37
 
 This file is the authoritative agent-ownership split. One Issue has one implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
 
@@ -21,6 +21,7 @@ This file is the authoritative agent-ownership split. One Issue has one implemen
 - Required local verification as applicable: TypeScript, architecture/boundary/performance gates, focused unit tests, relevant real-Chromium Playwright/E2E, `git diff --check`.
 - If an Issue is already satisfied, collect evidence, close it, and continue. Do not manufacture a code change.
 - If the same Issue-local blocker reproduces twice, quarantine only that Issue and continue to the next independent Issue.
+- Closed Issues are removed from active ownership queues. Do not reopen or reimplement them unless the user explicitly requests it.
 
 ## Claude ownership — GUI / UX / Visual / Editor surfaces
 
@@ -28,18 +29,17 @@ Claude owns GUI composition, Ribbon/Inspector/Bottom/Tree interaction presentati
 
 ### Immediate Claude queue
 
-1. `#331` Font editing correctness/UX remaining scope
-2. `#332` real Preview behavior / capability truthfulness
-3. `#260` design-token + region CSS ownership closure audit
-4. `#181` Left Tree / role geometry / MiniMap
-5. `#182` approved v8 production GUI closure
-6. `#184` GUI v8 closure blockers
-7. `#185` Golden-image visual acceptance
-8. `#176` professional CAD GUI usability closure
-9. `#262` final GUI/UX closure gate
-10. `#293` non-Home constrained design-system migration closure
-11. `#306` visual scenario acceptance harness
-12. `#309` interaction before/after/undo visual scenarios — only after gesture dependencies are safe
+1. `#332` real Preview behavior / capability truthfulness
+2. `#260` design-token + region CSS ownership closure audit
+3. `#181` Left Tree / role geometry / MiniMap
+4. `#182` approved v8 production GUI closure
+5. `#184` GUI v8 closure blockers
+6. `#185` Golden-image visual acceptance
+7. `#176` professional CAD GUI usability closure
+8. `#262` final GUI/UX closure gate
+9. `#293` non-Home constrained design-system migration closure
+10. `#306` visual scenario acceptance harness
+11. `#309` interaction before/after/undo visual scenarios — only after gesture dependencies are safe
 
 ### Claude product-GUI follow-ups
 
@@ -50,7 +50,9 @@ Claude owns GUI composition, Ribbon/Inspector/Bottom/Tree interaction presentati
 
 ### Claude must not independently implement
 
-Core/data/performance/geometry/history/clipboard/resource-policy Issues assigned to Codex below, including `#165 #166 #169 #170 #175 #180 #200 #210 #219 #221 #222 #223 #250 #259 #264 #265 #269 #273 #275 #277 #281 #313 #328`.
+Core/data/performance/geometry/history/clipboard/resource-policy Issues assigned to Codex below, including `#165 #166 #169 #170 #175 #180 #200 #210 #219 #221 #222 #223 #250 #259 #264 #265 #269 #281 #313 #328`.
+
+`#273`, `#275`, `#277`, and `#331` are closed and are no longer implementation targets for either agent.
 
 If a Claude GUI fix discovers a core defect in a Codex-owned Issue, record the concrete defect and stop at the ownership boundary unless the user explicitly reassigns it.
 
@@ -60,20 +62,22 @@ Codex owns Canonical/data integrity, Semantic Command behavior, clipboard policy
 
 ### Immediate Codex queue
 
-1. `#328` enforce Product Resource Budget at authoritative canonical mutation/replacement boundary
+1. `#328` Product Resource Budget — closure audit and any residual authoritative-boundary gaps only
 2. `#180` viewport projection scaling closure audit / residual implementation
 3. `#219` renderer/runtime scaling and diagnostic hot-path cleanup
-4. `#273` LabelAnchor source/display contract
-5. `#275` bounded Undo/Redo retention
-6. `#259` / `#277` architecture probe extraction — audit overlap first, implement once, close duplicate/superseded Issue appropriately
-7. `#200` Signal Split View core projection/time-domain architecture
-8. `#210` Clock / Edge Counter exact rendered-edge semantics
-9. `#221` clipboard semantics matrix
-10. `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation
-11. `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation
-12. `#250` AI semantic operation gateway
-13. `#269` structured diagnostics model and command/IO error propagation
-14. `#281` property/state-machine correctness harness
+4. `#200` Signal Split View core projection/time-domain architecture
+5. `#210` Clock / Edge Counter exact rendered-edge semantics
+6. `#221` clipboard semantics matrix
+7. `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation
+8. `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation
+9. `#250` AI semantic operation gateway
+10. `#269` structured diagnostics model and command/IO error propagation
+11. `#281` property/state-machine correctness harness
+
+### Codex closure-only / no-parallel-implementation lane
+
+- `#313` authoritative range-drag geometry: PR `#341` is merged into `main`. Treat this as a closure verification item first, not a fresh implementation task. Re-check the remaining Issue acceptance criteria on current `main`; close if satisfied. Only implement a bounded residual gap if the acceptance audit proves one remains.
+- `#259` architecture/probe overlap: audit current `main` and existing closed `#277` before doing any work. Do not recreate an already-completed probe extraction under a second Issue.
 
 ### Codex broad closure/audit lane
 
@@ -83,9 +87,16 @@ These older Phase/Umbrella Issues are audited against current `main`. Do not rec
 
 ### Codex quarantine / special handling
 
-- `#313` authoritative range-drag geometry: keep quarantined until the known shared browser-coordinate/gesture blocker has a production-safe reproduction/fix path. Do not increase ruler tick density or use sampled DOM coordinates as a workaround.
-- `#221 #222 #223 #269 #281` may also encounter the previously known shared gesture/coordinate blocker. If reproduced twice, quarantine only the affected Issue and continue.
+- `#221 #222 #223 #269 #281` may encounter the previously known shared gesture/coordinate blocker. If reproduced twice, quarantine only the affected Issue and continue.
 - `#272` GitHub Actions quality gate is EXTERNAL/HUMAN HOLD while billing/spending limit prevents runner allocation. Do not spend product-development cycles retrying it. Re-evaluate only after billing is restored.
+
+## Recently completed / removed from active split
+
+- `#331` Font editing correctness/UX — closed.
+- `#273` LabelAnchor source/display contract — closed.
+- `#275` bounded Undo/Redo retention — closed.
+- `#277` ArchitectureProbe / StableSurfaceProbe extraction — closed.
+- `#313` implementation work from PR `#341` is merged; Issue remains open only for closure verification unless a concrete residual gap is found.
 
 ## Cross-agent collision rules
 
