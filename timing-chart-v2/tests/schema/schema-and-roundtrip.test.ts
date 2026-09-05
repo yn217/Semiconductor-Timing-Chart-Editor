@@ -210,6 +210,18 @@ describe("semantic validation", () => {
     expect(validateCanonicalDocument(document).map((item) => item.code)).toContain("INVALID_ANCHOR_POINT");
   });
 
+  it("rejects event edge and clock transition anchors before they can become unresolved geometry", () => {
+    const document = clone(canonicalFixture());
+    const event = { id: "sig_event_anchor", name: "EVENT", type: "event", role: "internal", source: { instancePath: [], signalName: "event" }, display: { name: "EVENT" }, values: [{ start: 0, value: "NONE" }] };
+    (document.signals as unknown as unknown[]).push(event);
+    (document.signalGroups as unknown as Array<{ rows: string[] }>)[0]!.rows.push(event.id);
+    (document.annotations as unknown as Array<Record<string, unknown>>).push({ id: "ann_event_edge", type: "text", label: "event edge", visible: true, anchor: { signalId: event.id, cycle: 1, point: "rising-edge" } });
+    (document.annotations as unknown as Array<Record<string, unknown>>).push({ id: "ann_clock_transition", type: "text", label: "clock transition", visible: true, anchor: { signalId: "sig_clk", cycle: 1, point: "transition-center" } });
+    const invalidPoints = validateCanonicalDocument(document).filter((item) => item.code === "INVALID_ANCHOR_POINT");
+    expect(invalidPoints).toHaveLength(2);
+    expect(invalidPoints.map((item) => item.path).every((path) => path.endsWith(".anchor.point"))).toBe(true);
+  });
+
   it("rejects non-timing annotation targets", () => {
     const document = clone(canonicalFixture());
     const comment = {

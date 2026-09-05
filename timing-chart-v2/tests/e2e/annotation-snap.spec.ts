@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 async function createAnnotation(page: import("@playwright/test").Page, type: string) {
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
@@ -8,6 +9,38 @@ async function createAnnotation(page: import("@playwright/test").Page, type: str
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   return host.locator("[data-role='annotation-owner']").last();
 }
+
+test("rejects non-timing and incompatible annotation anchors before replacing the document", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    title: await page.locator(".app-titlebar h1").textContent(),
+  };
+  const source = canonicalFixture();
+  const comment = { id: "comment_annotation_invalid", type: "commentRow" as const, name: "Note", role: "internal" as const, source: { instancePath: [], signalName: "note" }, display: { name: "Note" }, title: "Note", body: "Body" };
+  const invalidDocument = {
+    ...source,
+    signals: [...source.signals, comment],
+    signalGroups: source.signalGroups.map((group, index) => index === 0 ? { ...group, rows: [...group.rows, comment.id] } : group),
+    annotations: [
+      ...source.annotations,
+      { id: "annotation_comment_invalid", type: "text" as const, label: "Comment target", visible: true, anchor: { signalId: comment.id, cycle: 1, point: "value-start" as const } },
+      { id: "annotation_clock_transition_invalid", type: "text" as const, label: "Clock transition", visible: true, anchor: { signalId: "sig_clk" as const, cycle: 1, point: "transition-center" as const } },
+    ],
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "invalid-annotation-anchors.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(invalidDocument)) });
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.locator(".app-titlebar h1")).toHaveText(before.title!);
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems.locator("tbody tr")).toHaveCount(2);
+  await expect(problems).toContainText("NON_TIMING_ANCHOR_TARGET");
+  await expect(problems).toContainText("INVALID_ANCHOR_POINT");
+});
 
 test("creates every Annotation type on a renderer-owned stable overlay surface", async ({ page }) => {
   await page.goto("/");
