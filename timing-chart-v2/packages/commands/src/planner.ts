@@ -270,6 +270,48 @@ function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSe
   };
 }
 
+/**
+ * A single periodic WaveDrom generator cannot represent a timeline edit that
+ * shifts only the pulses after an arbitrary source-time boundary.  Keeping
+ * the old generator would silently create a different clock waveform (and
+ * can also leave enable/suppression slot identities pointing at other
+ * pulses), so reject that edit until a segmented-clock representation exists.
+ * Period-one clocks without controls remain equivalent at every cycle.
+ */
+type TimelineRippleOperation =
+  | Readonly<{ kind: "insert"; at: number; count: number }>
+  | Readonly<{ kind: "delete"; start: number; end: number }>
+  | Readonly<{ kind: "duplicate"; at: number }>
+  | Readonly<{ kind: "move" }>;
+
+function unsupportedClockRipple(document: CanonicalDocument, operation: TimelineRippleOperation): CommandPlanResult | undefined {
+  const clockIndex = document.signals.findIndex((signal) => signal.type === "clock" && (
+    signal.generator.period > 1 ||
+    (signal.enable?.length ?? 0) > 0 ||
+    (signal.generator.suppressedPeriods?.length ?? 0) > 0
+  ));
+  if (clockIndex < 0) return undefined;
+  const clock = document.signals[clockIndex];
+  if (clock?.type !== "clock") return undefined;
+  const period = clock.generator.period;
+  const controlled = (clock.enable?.length ?? 0) > 0 || (clock.generator.suppressedPeriods?.length ?? 0) > 0;
+  const lastPulse = clock.generator.start < document.timeline.cycleCount
+    ? clock.generator.start + Math.floor((document.timeline.cycleCount - 1 - clock.generator.start) / period) * period
+    : -1;
+  const representable = period === 1 && !controlled
+    || !controlled && (operation.kind === "insert"
+      ? operation.at <= clock.generator.start
+        ? (clock.generator.start + operation.count) % period === 0
+        : operation.at > lastPulse
+      : operation.kind === "delete"
+        ? operation.end <= clock.generator.start
+          ? (clock.generator.start - (operation.end - operation.start)) % period === 0
+          : operation.start > lastPulse
+        : false);
+  if (representable) return undefined;
+  return fail("invalid", "UNSUPPORTED_CLOCK_RIPPLE", `$.signals[${clockIndex}]`, "Timeline editing is rejected while this generated Clock needs segmented ripple semantics.");
+}
+
 function canonicalIds(document: CanonicalDocument): Set<string> {
   return new Set([
     ...document.signals.map((item) => item.id),
@@ -1165,6 +1207,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "timeline.insert": {
       if (!Number.isInteger(command.at) || command.at < 0 || command.at > document.timeline.cycleCount || !Number.isInteger(command.count) || command.count < 1) return fail("invalid", "INVALID_TIMELINE_INSERT", "$", "Insert requires an integer boundary and positive integer count.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline ripple is blocked while untyped constraints exist.");
+      const clockPolicy = unsupportedClockRipple(document, { kind: "insert", at: command.at, count: command.count });
+      if (clockPolicy) return clockPolicy;
       const next = insertTimeline(document, command.at, command.count);
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
@@ -1172,6 +1216,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "timeline.delete": {
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount || document.timeline.cycleCount - (command.end - command.start) < 1) return fail("invalid", "INVALID_TIMELINE_DELETE", "$", "Delete requires a non-empty integer half-open range and must retain at least one cycle.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline ripple is blocked while untyped constraints exist.");
+      const clockPolicy = unsupportedClockRipple(document, { kind: "delete", start: command.start, end: command.end });
+      if (clockPolicy) return clockPolicy;
       const mappedLabelSources = document.timeline.labelAnchors.map((anchor) => mapDeleteBoundary(anchor.source, command.start, command.end));
       if (new Set(mappedLabelSources).size !== mappedLabelSources.length) return fail("invalid", "LABEL_ANCHOR_COLLISION", "$.timeline.labelAnchors", "Timeline delete would collapse multiple LabelAnchor sources; the deletion is rejected atomically.");
       const next = deleteTimeline(document, command.start, command.end);
@@ -1181,6 +1227,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "timeline.duplicateRange": {
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount || !Number.isInteger(command.at) || command.at < 0 || command.at > document.timeline.cycleCount) return fail("invalid", "INVALID_TIMELINE_DUPLICATE", "$", "Duplicate requires a valid half-open source range and insertion boundary.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline duplicate is blocked while untyped constraints exist.");
+      const clockPolicy = unsupportedClockRipple(document, { kind: "duplicate", at: command.at });
+      if (clockPolicy) return clockPolicy;
       const next = duplicateTimelineRange(document, command);
       const changeSet = timelineChangeSet(document, next);
       return { ok: true, document: next, changeSet, inverseChangeSet: changeSet };
@@ -1190,6 +1238,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount || !Number.isInteger(command.to) || command.to < 0 || command.to > document.timeline.cycleCount - length) return fail("invalid", "INVALID_TIMELINE_MOVE", "$", "Move requires a valid half-open source range and post-removal destination boundary.");
       if (command.to === command.start) return fail("no-op", "NO_OP", "$", "Timeline range is already at the requested boundary.");
       if (document.constraints.length > 0) return fail("invalid", "UNTYPED_CONSTRAINT_RIPPLE", "$.constraints", "Timeline move is blocked while untyped constraints exist.");
+      const clockPolicy = unsupportedClockRipple(document, { kind: "move" });
+      if (clockPolicy) return clockPolicy;
       const next = moveTimelineRange(document, command.start, command.end, command.to);
       if (!next) return fail("invalid", "NON_CONTIGUOUS_RANGE_MOVE", "$", "Move would split a semantic range or includes non-periodic Clock controls.");
       const changeSet = timelineChangeSet(document, next);
