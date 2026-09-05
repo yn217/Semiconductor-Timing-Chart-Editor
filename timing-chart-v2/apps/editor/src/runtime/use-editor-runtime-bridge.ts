@@ -306,6 +306,7 @@ export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promi
     refresh.overlays();
     refresh.collectErrors();
     refresh.publish();
+    host.dataset.editorIdle = "true";
     host.dataset.cycleViewReady = "true";
   });
 }
