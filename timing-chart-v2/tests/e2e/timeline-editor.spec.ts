@@ -431,6 +431,30 @@ test("allows ordinary timeline insertion with the default uncontrolled periodic 
   await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='26']")).toHaveCount(1);
 });
 
+test("allows all ordinary timeline transforms with the default uncontrolled periodic Clock", async ({ page }) => {
+  const operations = [
+    { name: "Insert before", count: "2", destination: undefined, cycleCount: "26" },
+    { name: "Delete range", count: undefined, destination: undefined, cycleCount: "23" },
+    { name: "Duplicate to", count: undefined, destination: "8", cycleCount: "25" },
+    { name: "Move to", count: undefined, destination: "8", cycleCount: "24" },
+  ];
+  for (const operation of operations) {
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+    await page.getByLabel("Timeline range end").fill("3");
+    await page.getByLabel("Timeline range start").fill("2");
+    if (operation.count) await page.getByLabel("Timeline insert count").fill(operation.count);
+    if (operation.destination) await page.getByLabel("Timeline destination").fill(operation.destination);
+    await page.getByRole("button", { name: operation.name, exact: true }).click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(host).toHaveAttribute("data-canonical-revision", "1");
+    await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+    await expect(page.getByTestId("cycle-ruler").locator(`[data-cycle='${operation.cycleCount}']`)).toHaveCount(1);
+  }
+});
+
 test("deletes a half-open range and preserves the active value at the join", async ({ page }) => {
   await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
