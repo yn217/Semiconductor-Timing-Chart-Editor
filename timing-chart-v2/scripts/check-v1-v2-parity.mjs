@@ -79,7 +79,10 @@ for (const statusRow of statusRows) {
 }
 const evidenceFields = Object.values(statusModel.evidenceClassFields);
 if (evidenceFields.length !== new Set(evidenceFields).size || !evidenceFields.includes("implementationEvidence")) fail("invalid evidence class field mapping");
-const completeEvidenceFields = ["implementationEvidence", "unit", "e2e", "visual", "export"];
+// A COMPLETE parity claim must prove the full closure path required by #177,
+// including persistence.  Keep this separate from the broader evidence-field
+// map so a row cannot become COMPLETE while silently omitting Save/Open.
+const completeEvidenceFields = ["implementationEvidence", "unit", "e2e", "visual", "saveOpen", "export"];
 const concrete = (value) => typeof value === "string" && value.trim().length > 0 && !/^N\/A(?: |$)/.test(value.trim());
 for (const contract of matrix.independentContracts) {
   const statusRow = statusByFeature.get(contract.id);
