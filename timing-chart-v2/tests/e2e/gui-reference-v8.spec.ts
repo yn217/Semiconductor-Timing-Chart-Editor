@@ -42,11 +42,11 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect((await viewMode.boundingBox())?.y ?? -1).toBe(0);
   await expect(viewMode).toContainText("View Mode:");
   await expect(viewMode.getByRole("button", { name: "Cycle" })).toHaveClass(/active/);
-  await expect(page.locator(".ribbon-major-group")).toHaveCount(7);
-  for (const name of ["File", "Edit", "Layout", "Time", "Zoom", "Display", "Options"]) {
+  await expect(page.locator(".ribbon-major-group")).toHaveCount(8);
+  for (const name of ["File", "Edit", "Time", "Transaction", "Layout", "Zoom", "Display", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
-  const timeGroup = page.locator(".v8-compact-time-group");
+  const timeGroup = page.locator(".home-layout-group");
   await expect(timeGroup).toBeVisible();
   await expect(timeGroup.getByRole("button", { name: "Open Timeline interval editor" })).toBeVisible();
   await expect(timeGroup.getByRole("button", { name: "Normalize row spacing" })).toBeVisible();
