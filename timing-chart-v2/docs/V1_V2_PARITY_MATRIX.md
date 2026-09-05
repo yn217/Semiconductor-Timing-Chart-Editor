@@ -259,6 +259,11 @@ membership, including per-Group/per-Signal spacing and Spacer rows, and SVG,
 PNG and PDF share the same scoped fill, opacity and stroke semantics. Unit
 coverage is in `timing-chart-v2/tests/export/deterministic-export.test.ts`;
 browser coverage is in `timing-chart-v2/tests/e2e/group-band.spec.ts`.
+On current main `548114e`, the focused Chromium run is 3/3: the complete
+style/persistence/export flow, invalid-opacity draft atomicity, and valid-draft
+preview/cancel restoration all pass. The first flow also verifies Undo/Redo,
+Save/Open, SVG/PNG/PDF signatures and unchanged WaveDrom/LocalGeometry
+counters. The production implementation is anchored at `4f8822e`.
 Full V1 visual parity remains open.
 
 ## Dedicated parity children from the 2026-09-05 specification-leak audit
