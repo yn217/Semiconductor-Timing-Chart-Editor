@@ -28,6 +28,11 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
   const [viewMode, setViewMode] = useState<ViewMode>("Cycle");
+  // Signal Split View (#200): an independent Upper/Lower dual-pane layout
+  // for Cycle mode -- unrelated to `viewMode`'s pre-existing "Split" value
+  // (which only stacks Transaction lanes above the single Cycle surface).
+  // Pure UI/workspace state, not persisted into the canonical document.
+  const [signalSplitEnabled, setSignalSplitEnabled] = useState(false);
   const [density, setDensity] = useState<DensityMode>("comfortable");
   const [workspacePreset, setWorkspacePreset] = useState<WorkspacePreset>("edit");
 
@@ -62,6 +67,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
     viewMode, setViewMode,
+    signalSplitEnabled, setSignalSplitEnabled,
     density, setDensity,
     workspacePreset, setWorkspacePreset,
     waveformRestoreRef,
