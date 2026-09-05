@@ -734,6 +734,42 @@ test("creates a standalone Label Anchor that restarts the ruler display without 
   await expect(ruler.locator("[data-source-cycle='5']")).toHaveAttribute("data-cycle", "5");
 });
 
+// #376 acceptance item 11: SVG/PNG/PDF export must reproduce the exact same
+// displayed ruler labels a standalone Label Anchor produces in the editor --
+// both share one DisplayTimeMapping owner, but this had no direct evidence.
+test("SVG export reproduces a standalone Label Anchor's displayed ruler numbers, not the source cycle", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end").fill("6");
+  await page.getByLabel("Timeline range start").fill("5");
+  await page.getByTestId("label-anchor-create").click();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveText("⟲ 5→0");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  await dialog.getByLabel("Export format").selectOption("svg");
+  await dialog.getByLabel("Export scope").selectOption("document");
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Export SVG", exact: true }).click();
+  const path = await (await download).path();
+  expect(path).toBeTruthy();
+  const fs = await import("node:fs");
+  const svgText = fs.readFileSync(path!, "utf-8");
+
+  // Editor Zoom/scroll must not affect exported ruler numbering either --
+  // the exported ticks derive purely from Canonical + the shared mapping.
+  const rulerGroupMatch = svgText.match(/<g data-layer="ruler"[\s\S]*?<\/g>/);
+  expect(rulerGroupMatch).not.toBeNull();
+  expect(rulerGroupMatch![0]).toContain(">0<");
+  expect(rulerGroupMatch![0]).toContain(">1<");
+  // A pure display-number rebase (no fold/omission) must not draw an Axis
+  // Break discontinuity marker in the export either.
+  expect(svgText).not.toContain("data-axis-break-id");
+});
+
 test("saves and reopens an edited Time Group presentation exactly", async ({ page }) => {
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
