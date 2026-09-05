@@ -210,6 +210,34 @@ function deleteRange<T extends { readonly start: number; readonly end: number }>
   return mappedStart < mappedEnd ? { ...range, start: mappedStart, end: mappedEnd } : undefined;
 }
 
+/**
+ * Apply the explicit Timeline Delete policy to every Annotation shape.
+ * Point annotations are clamped to the deletion boundary; span and
+ * endpoint-pair annotations are trimmed by the same source-time mapping and
+ * are removed only when every required semantic endpoint was deleted. This
+ * preserves a partially surviving span while preventing a fully deleted
+ * Annotation from becoming a degenerate canonical object.
+ */
+function deleteAnnotation(annotation: Annotation, start: number, end: number, nextCycleCount: number): Annotation | undefined {
+  const fields = ["anchor", "start", "end", "from", "to"] as const;
+  const requiredFields = (["text", "callout", "verticalLine", "marker", "textbox"] as const).includes(annotation.type as "text")
+    ? ["anchor"] as const
+    : (["range", "bracket", "highlight", "measurement", "timingRegion", "ghostTrace", "rectangle", "ellipse"] as const).includes(annotation.type as "range")
+      ? ["start", "end"] as const
+      : ["from", "to"] as const;
+  const fullyDeleted = requiredFields.every((field) => {
+    const anchor = annotation[field];
+    return anchor !== undefined && anchor.cycle >= start && anchor.cycle < end;
+  });
+  if (requiredFields.length > 1 && fullyDeleted) return undefined;
+  const mapped: Record<string, unknown> = { ...annotation };
+  for (const field of fields) {
+    const anchor = annotation[field];
+    if (anchor) mapped[field] = { ...anchor, cycle: mapDeletePoint(anchor.cycle, start, end, nextCycleCount) };
+  }
+  return mapped as unknown as Annotation;
+}
+
 function deleteTimeline(document: CanonicalDocument, start: number, end: number): CanonicalDocument {
   const nextCycleCount = document.timeline.cycleCount - (end - start);
   const signals = document.signals.map((signal): Signal => {
@@ -221,11 +249,9 @@ function deleteTimeline(document: CanonicalDocument, start: number, end: number)
     };
     return { ...signal, values: deleteChanges(signal.values, start, end, nextCycleCount) };
   });
-  const annotations = document.annotations.map((annotation): Annotation => {
-    const mapped: Record<string, unknown> = { ...annotation };
-    for (const key of ["anchor", "start", "end", "from", "to"] as const) if (annotation[key]) mapped[key] = { ...annotation[key], cycle: mapDeletePoint(annotation[key].cycle, start, end, nextCycleCount) };
-    return mapped as unknown as Annotation;
-  });
+  const annotations = document.annotations.map((annotation) => deleteAnnotation(annotation, start, end, nextCycleCount)).filter((annotation): annotation is Annotation => annotation !== undefined);
+  const retainedAnnotationIds = new Set(annotations.map((annotation) => annotation.id));
+  const annotationGroups = (document.annotationGroups ?? []).map((group) => ({ ...group, annotationIds: group.annotationIds.filter((annotationId) => retainedAnnotationIds.has(annotationId)) }));
   const timeGroups = document.timeGroups.map((group) => deleteRange(group, start, end)).filter((group): group is TimeGroup => group !== undefined);
   const transactions = document.transactions.map((transaction): Transaction | undefined => {
     const mapped = deleteRange(transaction, start, end);
@@ -248,6 +274,7 @@ function deleteTimeline(document: CanonicalDocument, start: number, end: number)
     },
     signals,
     annotations,
+    annotationGroups,
     bookmarks: document.bookmarks.map((bookmark) => ({ ...bookmark, start: mapDeletePoint(bookmark.start, start, end, nextCycleCount) })),
     timeGroups,
     transactions,
@@ -257,6 +284,10 @@ function deleteTimeline(document: CanonicalDocument, start: number, end: number)
 function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSet {
   const unique = <T>(values: readonly T[]): T[] => [...new Set(values)];
   const signalIds = unique(documents.flatMap(timingSignalIds));
+  const annotationGroupIds = unique(documents.flatMap((document) => (document.annotationGroups ?? []).map((group) => group.id)));
+  const beforeGroups = new Map((documents[0]?.annotationGroups ?? []).map((group) => [group.id, group.annotationIds]));
+  const afterGroups = new Map((documents.at(-1)?.annotationGroups ?? []).map((group) => [group.id, group.annotationIds]));
+  const changedAnnotationGroups = annotationGroupIds.filter((id) => JSON.stringify(beforeGroups.get(id) ?? []) !== JSON.stringify(afterGroups.get(id) ?? []));
   return {
     waveSemantics: signalIds,
     geometryLocal: signalIds,
@@ -266,6 +297,7 @@ function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSe
     bookmarkPosition: unique(documents.flatMap((document) => document.bookmarks.map((item) => item.id))),
     timeGroupSemantics: unique(documents.flatMap((document) => document.timeGroups.map((item) => item.id))),
     transactionSemantics: unique(documents.flatMap((document) => document.transactions.map((item) => item.id))),
+    ...(changedAnnotationGroups.length > 0 ? { annotationGroups: changedAnnotationGroups } : {}),
     minimapOverview: true,
   };
 }

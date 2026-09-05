@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { isStableId } from "@timing-chart-v2/schema";
-import type { AnnotationId, BookmarkId, ClockSignal, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroupId, AnnotationId, BookmarkId, ClockSignal, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -126,6 +126,23 @@ describe("timeline ripple commands", () => {
       expect(result.changeSet.timeGroupSemantics).toContain("time_wait");
       expect(result.changeSet.transactionSemantics).toContain("txn_data");
     }
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+  });
+
+  it("applies explicit annotation deletion policy and repairs annotation-group membership", () => {
+    const initial = canonicalFixture();
+    const point: Annotation = { id: "ann_point" as AnnotationId, type: "marker", label: "Point", visible: true, anchor: { cycle: 3, point: "cycle-start" } };
+    const range: Annotation = { id: "ann_range" as AnnotationId, type: "range", label: "Range", visible: true, start: { cycle: 2, point: "cycle-start" }, end: { cycle: 3, point: "cycle-end" } };
+    const dependency: Annotation = { id: "ann_dependency" as AnnotationId, type: "dependency", label: "Dependency", visible: true, from: { cycle: 2, point: "cycle-start" }, to: { cycle: 3, point: "cycle-end" }, lineType: "straight", arrowhead: "end" };
+    initial.annotations = [point, range, dependency];
+    initial.annotationGroups = [{ id: "ann_group" as AnnotationGroupId, name: "Timing", annotationIds: [point.id, range.id, dependency.id] }];
+    const session = new CommandHistorySession(initial);
+    const result = session.execute({ id: commandId("cmd_delete_annotation_policy"), type: "timeline.delete", start: 2, end: 4 });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.annotations).toEqual([{ ...point, anchor: { ...point.anchor, cycle: 2 } }]);
+    expect(session.getSnapshot().document.annotationGroups).toEqual([{ id: "ann_group", name: "Timing", annotationIds: [point.id] }]);
+    if (result.ok) expect(result.changeSet.annotationGroups).toEqual(["ann_group"]);
     expect(session.undo().ok).toBe(true);
     expect(session.getSnapshot().document).toEqual(initial);
   });
