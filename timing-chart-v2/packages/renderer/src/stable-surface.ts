@@ -628,6 +628,10 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   label.dataset.role = "annotation-label";
   label.dataset.annotationLabel = "true";
   label.textContent = primitive.label;
+  // #377: Callout (and any Annotation) supports real multi-line text --
+  // a plain <span> collapses embedded "\n" characters by default, so
+  // pre-wrap is required to actually render them as separate lines.
+  label.style.whiteSpace = "pre-wrap";
   applyTextStyle(label, parseTextStyle(primitive.style));
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
   label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;

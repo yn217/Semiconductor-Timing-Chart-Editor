@@ -335,9 +335,22 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
 
 const xml = (value: string) => value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 
+/** #377: an SVG `<text>` element ignores embedded "\n" -- browsers render
+ * every line of text content on one baseline regardless of literal
+ * newlines. One `<tspan>` per line (each re-anchored to the same `x`, the
+ * first at `y`, each subsequent one shifted down a fixed line height) is
+ * the standard SVG multi-line idiom, matching the live-DOM renderer's own
+ * `white-space: pre-wrap` <span> for the same "\n"-separated label text. */
+function multilineText(x: number, y: number, label: string, attrs: string): string {
+  const lines = label.split("\n");
+  if (lines.length === 1) return `<text x="${x}" y="${y}" ${attrs}>${xml(label)}</text>`;
+  const lineHeight = 13;
+  return `<text x="${x}" y="${y}" ${attrs}>${lines.map((line, index) => `<tspan x="${x}" dy="${index === 0 ? 0 : lineHeight}">${xml(line)}</tspan>`).join("")}</text>`;
+}
+
 function renderMeasurementSvg(annotation: ExportAnnotation, metadata: string): string {
   const layout = annotation.measurementLayout;
-  if (!layout || annotation.measurementLane === undefined) return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`;
+  if (!layout || annotation.measurementLane === undefined) return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/>${multilineText(Math.min(annotation.x1, annotation.x2) + 4, Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`;
   const y = Math.min(annotation.y1, annotation.y2) - 18 * (annotation.measurementLane + 1);
   const extension = (side: "start" | "end", x: number, anchorY: number) => layout.extensionLines === "both" || layout.extensionLines === side ? `<line data-role="measurement-extension" data-extension-side="${side}" x1="${x}" y1="${anchorY}" x2="${x}" y2="${y}" stroke-dasharray="3 2"/>` : "";
   const marker = (side: "start" | "end", x: number, kind: "none" | "bar" | "arrow") => {
@@ -349,7 +362,7 @@ function renderMeasurementSvg(annotation: ExportAnnotation, metadata: string): s
       : (inward ? `${x + 7},${y - 4} ${x},${y} ${x + 7},${y + 4}` : `${x - 7},${y - 4} ${x},${y} ${x - 7},${y + 4}`);
     return `<polyline data-role="measurement-marker" data-marker-side="${side}" data-marker-kind="arrow" points="${points}" fill="none" stroke-width="1.5"/>`;
   };
-  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement" data-measurement-lane="${annotation.measurementLane}" data-arrow-layout="${layout.arrowLayout}"${metadata}>${extension("start", annotation.x1, annotation.y1)}${extension("end", annotation.x2, annotation.y2)}${marker("start", annotation.x1, layout.startMarker)}${marker("end", annotation.x2, layout.endMarker)}<line data-role="measurement-dimension-line" x1="${annotation.x1}" y1="${y}" x2="${annotation.x2}" y2="${y}"/><text x="${(annotation.x1 + annotation.x2) / 2 + 4}" y="${y - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement" data-measurement-lane="${annotation.measurementLane}" data-arrow-layout="${layout.arrowLayout}"${metadata}>${extension("start", annotation.x1, annotation.y1)}${extension("end", annotation.x2, annotation.y2)}${marker("start", annotation.x1, layout.startMarker)}${marker("end", annotation.x2, layout.endMarker)}<line data-role="measurement-dimension-line" x1="${annotation.x1}" y1="${y}" x2="${annotation.x2}" y2="${y}"/>${multilineText((annotation.x1 + annotation.x2) / 2 + 4, y - 5, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`;
 }
 
 /** #375: Arrow/Dependency's real route shape (straight/orthogonal/curve/
@@ -392,7 +405,7 @@ function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string)
   const markerAttrs = `${arrowhead === "start" || arrowhead === "bidirectional" ? ` marker-start="url(#${markerId}-start)"` : ""}${arrowhead === "end" || arrowhead === "bidirectional" ? ` marker-end="url(#${markerId}-end)"` : ""}`;
   const labelX = Math.min(annotation.x1, annotation.x2) + 4 + (annotation.labelOffsetX ?? 0);
   const labelY = Math.min(annotation.y1, annotation.y2) - 5 + (annotation.labelOffsetY ?? 0);
-  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="2"${path.dash ? ` stroke-dasharray="${path.dash}"` : ""}${markerAttrs}/><text x="${labelX}" y="${labelY}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`;
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="2"${path.dash ? ` stroke-dasharray="${path.dash}"` : ""}${markerAttrs}/>${multilineText(labelX, labelY, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`;
 }
 
 export function renderExportSvg(scene: ExportScene): string {
@@ -426,11 +439,29 @@ export function renderExportSvg(scene: ExportScene): string {
     else if (annotation.type === "ghostTrace") {
       const points = annotation.tracePoints?.map((point) => `${point.x},${point.y}`).join(" ");
       const path = points ? `<polyline data-role="ghost-trace-path" points="${points}"` : `<line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"`;
-      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}>${path} fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#475569" stroke="none">${xml(annotation.label)}</text></g>`);
+      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}>${path} fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/>${multilineText(Math.min(annotation.x1, annotation.x2) + 4, Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#475569" stroke="none"`)}</g>`);
     }
     else if (annotation.type === "measurement") out.push(renderMeasurementSvg(annotation, metadata));
     else if (annotation.type === "arrow" || annotation.type === "dependency" || annotation.type === "connector") out.push(renderLineAnnotationSvg(annotation, metadata));
-    else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
+    else if (annotation.type === "marker") {
+      // #377: Marker's live-DOM glyph is a short vertical tick at the
+      // semantic anchor (center-columns.css's `[data-annotation-type="marker"]
+      // [data-role="annotation-body"]`, a 28px-tall border-left) -- distinct
+      // from the Bookmark navigation object and from a zero-length line.
+      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="marker"${metadata}><line data-role="marker-tick" x1="${annotation.x1}" y1="${annotation.y1 - 14}" x2="${annotation.x1}" y2="${annotation.y1 + 14}" stroke="#d04a36" stroke-width="3"/>${multilineText(annotation.x1 + 6, annotation.y1 + 4, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`);
+    }
+    else if (annotation.type === "bracket") {
+      // #377: Bracket must read as a bracket, not a plain Range line --
+      // matching the live-DOM renderer's own cap marks
+      // (packages/renderer/src/stable-surface.ts's `primitive.type === "bracket"` branch).
+      const dx = annotation.x2 - annotation.x1;
+      const dy = annotation.y2 - annotation.y1;
+      const length = Math.max(1, Math.hypot(dx, dy));
+      const capX = (-dy / length) * 6;
+      const capY = (dx / length) * 6;
+      out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="bracket"${metadata}><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><path data-role="annotation-bracket-caps" d="M ${annotation.x1 - capX} ${annotation.y1 - capY} L ${annotation.x1 + capX} ${annotation.y1 + capY} M ${annotation.x2 - capX} ${annotation.y2 - capY} L ${annotation.x2 + capX} ${annotation.y2 + capY}" fill="none" stroke="#d04a36" stroke-width="2"/>${multilineText(Math.min(annotation.x1, annotation.x2) + 4, Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`);
+    }
+    else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/>${multilineText(Math.min(annotation.x1, annotation.x2) + 4, Math.min(annotation.y1, annotation.y2) - 5, annotation.label, `fill="#991b1b" stroke="none"`)}</g>`);
   }
   out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);
   for (const edge of scene.edgeCounters) out.push(`<text data-edge-counter-id="${xml(edge.id)}" data-signal-id="${xml(edge.signalId)}" data-edge-kind="${edge.kind}" data-cycle="${edge.cycle}" x="${edge.x}" y="${edge.y}">${xml(edge.label)}</text>`);
