@@ -3,6 +3,14 @@ import { RangeDragController } from "./range-drag.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
+function rulerCycleAtTarget(target: EventTarget | null, cycleCount: number): number | undefined {
+  if (!(target instanceof Element)) return undefined;
+  const tick = target.closest<HTMLElement>("[data-cycle]");
+  if (!tick) return undefined;
+  const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
+  return Number.isInteger(cycle) && cycle >= 0 && cycle <= cycleCount ? cycle : undefined;
+}
+
 export type TimelineRangeInteractionContext = Readonly<{
   rendererHost: HTMLElement;
   isTimeDomainPointerTarget: (event: PointerEvent) => boolean;
@@ -44,9 +52,11 @@ export class TimelineRangeInteractionOwner {
     const target = event.target instanceof Element ? event.target : undefined;
     const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
     if (event.button !== 0 || !this.context.isTimeDomainPointerTarget(event)) return;
-    const cycle = this.context.cycleBoundaryAtX(event.clientX);
+    const cycleCount = this.context.getCycleCount();
+    const rulerClickCycle = onRuler ? rulerCycleAtTarget(event.target, cycleCount) : undefined;
+    const cycle = rulerClickCycle ?? this.context.cycleBoundaryAtX(event.clientX);
     if (cycle === undefined || cycle > this.context.getCycleCount()) return;
-    this.#drag.begin({ start: cycle, anchor: event.shiftKey ? this.context.getRange().start : cycle, selectedCycle: this.context.getSelectedCycle(), startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false });
+    this.#drag.begin({ start: cycle, anchor: event.shiftKey ? this.context.getRange().start : cycle, selectedCycle: this.context.getSelectedCycle(), startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", ...(rulerClickCycle === undefined ? {} : { rulerClickCycle }), moved: false });
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
     event.preventDefault();
   };
@@ -73,7 +83,13 @@ export class TimelineRangeInteractionOwner {
       this.context.setSelectedCyclePreview(drag.selectedCycle);
       this.clearPreview();
       this.suppressClicks(drag.surface);
-      const clickCycle = this.context.cycleBoundaryAtX(event.clientX);
+      // Pointer capture retargets the release event to the Ruler viewport, so
+      // the original tick is no longer available from event.target. Preserve
+      // the tick's semantic source cycle for a click; real drags continue to
+      // resolve their release boundary from the complete waveform geometry.
+      const clickCycle = drag.surface === "ruler"
+        ? drag.rulerClickCycle ?? this.context.cycleBoundaryAtX(event.clientX)
+        : this.context.cycleBoundaryAtX(event.clientX);
       if (clickCycle !== undefined) this.context.applyCanvasCycleSelection(clickCycle, event.shiftKey);
       event.preventDefault();
       return;
