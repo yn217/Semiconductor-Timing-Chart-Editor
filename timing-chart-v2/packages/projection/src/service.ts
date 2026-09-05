@@ -95,7 +95,14 @@ export class DefaultProjectionService implements ProjectionService {
     const viewportStart = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const viewportEnd = request.viewport.viewportEndY + request.viewport.overscanAfter;
     const pinned = new Set(request.viewport.pinnedRowIds);
-    const preservePreviousRows = request.changeSet.rowOrder !== undefined;
+    // A full-document Open/New rebuilds the canonical layout, but rows that
+    // were already mounted and still exist in the replacement document remain
+    // valid viewport retention candidates. Keeping those IDs avoids making a
+    // Save -> Open of the same document appear to lose rows that were visible
+    // immediately before the replacement, while still filtering stale IDs
+    // through the newly-built layout and preserving virtualization for new
+    // offscreen rows.
+    const preservePreviousRows = request.changeSet.rowOrder !== undefined || request.changeSet.fullDocumentReplace === true;
     const mountedRowsOrdered = mountRows(layout, request.viewport, pinned, preservePreviousRows ? (request.previous?.mountedRowIds ?? []) : [], this.#rowIndexById, undefined, undefined, preservePreviousRows);
     const mountedNavigationRows = mountRows(navigationLayout, request.viewport, pinned, preservePreviousRows ? (request.previous?.leftRowIds ?? []) : [], this.#navigationRowIndexById, undefined, undefined, preservePreviousRows);
     const mountedGroupHeaders = selectIntersectingHeaders(layout.groupHeaders, viewportStart, viewportEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });

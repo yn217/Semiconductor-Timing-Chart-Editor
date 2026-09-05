@@ -735,7 +735,7 @@ export function MinimalCycleView() {
       viewportElement.scrollLeft = 0;
       viewportElement.scrollTop = 0;
         window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
-      projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentReplaced();
       markOpenPhase("canonical-replaced");
@@ -1296,7 +1296,7 @@ export function MinimalCycleView() {
         viewportLowerElement.scrollTop = 0;
         const replacedSnapshot = runtime.session.snapshot();
         lowerWindow = buildViewportWindow(viewportLowerElement, replacedSnapshot.document.timeline.referenceClock);
-        lowerProjection = projectionCoordinatorLower.project({ snapshot: replacedSnapshot, changeSet: { fullDocumentReplace: true }, viewport: lowerWindow, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        lowerProjection = projectionCoordinatorLower.project({ snapshot: replacedSnapshot, changeSet: { fullDocumentReplace: true }, viewport: lowerWindow, previous: lowerProjection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
         rendererLower.update(lowerProjection);
       },
       dispose: () => { renderCoordinatorLower.dispose(); },
