@@ -271,6 +271,7 @@ export function deriveRenderInvalidation(changeSet: any, referenceSignalId: stri
 
 export function createTimelineZoomController(context: {
   readonly rendererHost: HTMLElement;
+  readonly timingSurface: HTMLElement;
   readonly viewport: HTMLElement;
   readonly ruler: HTMLElement;
   readonly scalable: readonly HTMLElement[];
@@ -585,6 +586,8 @@ export function attachEditorEventBindings(bindings: readonly EditorEventBinding[
 
 export type TimelineZoomSurfaceContext = {
   readonly rendererHost: HTMLElement;
+  /** Stable renderer-owned surface; avoids a DOM lookup on each view-only Zoom. */
+  readonly timingSurface: HTMLElement;
   readonly viewport: HTMLElement;
   readonly ruler: HTMLElement;
   readonly scalable: readonly HTMLElement[];
@@ -613,7 +616,7 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
   const baseWidth = Math.max(160, context.viewportWidth - context.leftPaneWidth - context.inspectorWidth - context.frozenPaneWidth);
   const width = context.timelineOffset + baseWidth * zoom;
   context.rendererHost.style.width = `${width}px`;
-  context.rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']")?.style.setProperty("width", `${width}px`);
+  context.timingSurface.style.setProperty("width", `${width}px`);
   context.rendererHost.dataset.zoom = String(zoom);
   context.onZoom(zoom);
   return zoom;

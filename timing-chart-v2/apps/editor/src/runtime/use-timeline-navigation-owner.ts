@@ -9,6 +9,7 @@ type TimelineRange = Readonly<{ start: number; end: number }>;
 export type TimelineNavigationAttachment = Readonly<{
   runtime: TimelineViewportRuntime;
   rendererHost: HTMLElement;
+  timingSurface: HTMLElement;
   viewport: HTMLElement;
   ruler: HTMLElement;
   scalable: readonly HTMLElement[];
@@ -54,6 +55,7 @@ export function useTimelineNavigationOwner(): TimelineNavigationOwner {
     attach: (context) => {
       const applyZoom = createTimelineZoomController({
         rendererHost: context.rendererHost,
+        timingSurface: context.timingSurface,
         viewport: context.viewport,
         ruler: context.ruler,
         scalable: context.scalable,

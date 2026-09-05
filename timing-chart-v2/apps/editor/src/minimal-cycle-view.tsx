@@ -552,6 +552,7 @@ export function MinimalCycleView() {
     const detachTimelineNavigation = timelineNavigation.attach({
       runtime: timelineRuntime,
       rendererHost,
+      timingSurface: rendererHost.querySelector<HTMLElement>("[data-role='timing-chart-surface']") ?? rendererHost,
       viewport: viewportElement,
       ruler: rulerElement,
       scalable: [gridElement, ...rendererHost.querySelectorAll<HTMLElement>("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")],

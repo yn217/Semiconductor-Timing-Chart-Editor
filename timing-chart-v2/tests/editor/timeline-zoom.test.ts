@@ -23,9 +23,11 @@ describe("applyTimelineZoom", () => {
     const ruler = styleProbe();
     const viewport = elementWithStyle(styleProbe().style);
     const chart = elementWithStyle(styleProbe().style);
-    const host = { ...elementWithStyle(styleProbe().style), querySelector: () => chart } as unknown as HTMLElement;
+    let hostQueries = 0;
+    const host = { ...elementWithStyle(styleProbe().style), querySelector: () => { hostQueries += 1; return chart; } } as unknown as HTMLElement;
     const context = {
       rendererHost: host,
+      timingSurface: chart,
       viewport,
       ruler: elementWithStyle(ruler.style),
       scalable: [elementWithStyle(scalable.style)],
@@ -43,5 +45,6 @@ describe("applyTimelineZoom", () => {
     expect(scalable.originWrites).toBe(1);
     expect(ruler.originWrites).toBe(1);
     expect(scalable.style.scale).toBe("1.2 1");
+    expect(hostQueries).toBe(0);
   });
 });
