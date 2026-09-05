@@ -1,145 +1,132 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-05 13:19 JST
+Last reconciled: 2026-09-05 15:40 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main at reconciliation: `fec3566d96cf73cdb87d1e0b5437bdc4530dfb28`
-Open Issues observed: 32
+Observed main at reconciliation: `1fc36b6ad9fba865f5c8f12b73da4931c638a2fa`
+Open Issues observed: 20
 
-This file is the authoritative agent-ownership split. One Issue has one implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
+This file is the authoritative agent-ownership split. One Issue has one active implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
 
 ## Shared operating rules
 
 - Both agents start each Issue from latest `origin/main`.
-- Claude works on `agent/claude` or a short-lived Claude branch; Codex works on `main` according to `.codex/ISSUE_ORDER.txt`.
+- Claude works through `agent/claude` or short-lived Claude PR branches; Codex works single-threaded on `main` according to `.codex/ISSUE_ORDER.txt`.
 - After a Claude PR merges, Claude resyncs from latest `origin/main` before the next Issue.
-- Codex never merges/cherry-picks `codex-control`; it only reads control files from that branch.
-- Home Ribbon remains frozen unless an Issue or explicit user instruction authorizes a Home change.
-- Never modify Golden/reference/threshold/mask merely to make a test pass.
+- Codex never merges/cherry-picks `codex-control`; it only reads the control files from that branch.
 - Never reset/stash/clean/delete unrelated user work.
-- GitHub Actions is currently unavailable because of billing/spending-limit failure. This is NOT an implementation failure and is NOT a global blocker. Use local verification and record `GitHub Actions: NOT RUN — billing/spending limit`.
+- Preserve Canonical -> Derived/Projection -> DOM ownership and shared SemanticCommand mutation paths.
+- Renderer/DOM/ruler samples are not semantic authority. Stable IDs remain opaque.
+- Home Ribbon is protected unless an Issue or explicit user instruction authorizes a Home change.
+- Golden/reference/threshold/mask must not be changed merely to pass. The 2026-09-05 v8 Golden regeneration in PR #362 was explicitly user/product approved and is the current approved baseline; any later Golden change again requires explicit approval.
+- GitHub Actions remains unavailable because of billing/spending-limit runner allocation. This is NOT an implementation failure and is NOT a global blocker. Use local verification and record `GitHub Actions: NOT RUN — billing/spending limit`.
 - Required local verification as applicable: TypeScript, architecture/boundary/performance gates, focused unit tests, relevant real-Chromium Playwright/E2E, `git diff --check`.
-- If an Issue is already satisfied, collect evidence, close it, and continue. Do not manufacture a code change.
-- If the same Issue-local blocker reproduces twice, quarantine only that Issue and continue to the next independent Issue.
-- Closed Issues are removed from active ownership queues. Do not reopen or reimplement them unless the user explicitly requests it.
+- If an Issue is already satisfied, collect evidence and close it; do not manufacture a code change.
+- If the same Issue-local blocker reproduces twice, quarantine only that Issue and continue.
 
-## Current cross-lane P0 blocker — #357
+## Implementation-first policy
 
-`#357` (`/?visual-reference` fails to mount) is a Codex-owned Core/runtime blocker.
+The remaining backlog is small enough that agents should prioritize concrete product residuals over repeated broad audit/test-only cycles.
 
-Why Codex owns it:
-- the failure is React StrictMode / Hook ordering / runtime lifecycle / disposal territory;
-- it involves the hot orchestration/runtime path rather than visual styling;
-- a clean `/?visual-reference` page currently fails before GUI visual acceptance can run meaningfully.
+A test-only commit is appropriate when:
+- the Issue itself is a test/harness contract (for example #281), or
+- it reproduces/proves a concrete regression or closes an explicit acceptance gap.
 
-Coordination while #357 is active:
-- Codex owns root-cause analysis and the smallest production-safe fix.
-- Claude MUST NOT concurrently edit `apps/editor/src/minimal-cycle-view.tsx` or the same runtime lifecycle owner while Codex is working #357.
-- Claude may continue #260 residual token/guard work if it stays outside the #357 hot-file path.
-- Do not "fix" #357 by weakening/removing StrictMode, bypassing the visual-reference route, or changing Golden/reference/threshold/mask merely to get tests green.
-- Fresh-browser evidence is required after the fix: `/?visual-reference` mounts, no Hook-order / duplicate-createRoot / disposed-runtime errors, and the affected specs reach the actual product.
+Otherwise prefer:
 
-Visual-reference-dependent closure portions of these Claude Issues wait for #357:
-- `#181 #182 #184 #185 #186 #306 #309`
+```text
+identify concrete missing product behavior
+-> implement bounded production residual
+-> focused verification
+-> close/evidence
+```
 
-This is an Issue-local dependency, not a global project stop. Claude can continue independent non-hot-file work.
+Do not spend repeated cycles adding measurements/assertions while an independent, implementable feature gap remains.
 
-## Claude ownership — GUI / UX / Visual / Editor surfaces
+## Claude ownership — GUI / UX / product surfaces
 
-Claude owns GUI composition, Ribbon/Inspector/Bottom/Tree interaction presentation, design-system use, visual acceptance, editor workflow UX, and GUI truthfulness.
+Claude owns Ribbon/Tree/Inspector/Bottom composition, discoverability, product workflow presentation, visual/system consistency and browser-facing completion.
 
 ### Immediate Claude queue
 
-1. `#260` residual design-token / CSS-owner closure only
-   - PR #356 completed the legacy-cascade relocation: `legacy.css` is 449 bytes / 0 selectors.
-   - Do NOT invent more legacy migration work.
-   - Finish the shared CAD token contract and add a hard guard that rejects new production selectors in `legacy.css`.
-   - Final visual/current-contract confirmation waits for #357.
-2. `#181` Left Tree / role geometry / MiniMap residual closure — after #357 for full visual-reference evidence. Preserve already accepted Collapse/Visibility/Role/MiniMap work.
-3. `#182` approved v8 production GUI closure — after #357.
-4. `#184` GUI v8 closure blockers — after #357 where visual-reference dependent.
-5. `#185` Golden-image visual acceptance — after #357.
-6. `#176` professional CAD GUI usability closure.
-7. `#262` final GUI/UX closure gate.
-8. `#293` non-Home constrained design-system migration closure.
-9. `#306` visual scenario acceptance harness — visual-reference scenarios after #357.
-10. `#309` interaction before/after/undo visual scenarios — after #357 and any remaining gesture dependency.
+1. `#223` + `#264` — Event/Pulse end-to-end product lifecycle. Treat as ONE implementation and use one evidence set to close both overlapping contracts where satisfied.
+2. `#222` + `#265` — Spacer end-to-end product lifecycle. Treat as ONE implementation; reuse existing canonical Spacer/RowLayout/organization owners.
+3. `#293` — constrained non-Home design-system architecture closure; preserve the current approved Home baseline.
+4. `#176` — professional CAD/EDA usability closure.
+5. `#262` — final eight-axis GUI/UX closure gate.
 
-### Claude product-GUI follow-ups
+### Staged handoff for #200 Signal Split
 
-- `#205` datasheet-grade timing annotation GUI/editor workflow.
-- `#267` Group Band editor and visual/export workflow, after Spacer/layout dependencies are ready.
-- `#172` Full GUI broad closure/audit only; do not invent duplicate semantic architecture.
-- `#186` Golden GUI harness after #357, and only if still materially open after #185/#306 evidence.
+`#200` currently has Codex as the active owner ONLY for the Core-model reconciliation described below.
+
+When Codex posts an Issue comment containing `CORE_READY_FOR_GUI` with evidence that one authoritative split-assignment model remains, ownership automatically transfers to Claude for the remaining product surface:
+- real Upper/Lower/Both per-signal routing;
+- Bottom/Inspector assignment UX;
+- splitter UX;
+- browser acceptance and remaining presentation lifecycle.
+
+At that handoff, Codex stops implementing #200 unless Claude records a new bounded Core defect. No parallel PR4 implementation.
 
 ### Claude must not independently implement
 
-Current Core/data/performance/geometry/history/clipboard/resource-policy/runtime work assigned to Codex includes `#357 #313 #170 #175 #200 #221 #222 #223 #250 #264 #265 #269 #281` plus Codex broad closure/audit Issues listed below.
+Current Codex-owned Core/data/runtime work: `#363 #200` (until handoff) `#221 #269 #171 #170 #167 #161 #177 #175 #281`.
 
-If a Claude GUI fix discovers a core defect in a Codex-owned Issue, record the concrete defect and stop at the ownership boundary unless the user explicitly reassigns it.
+If Claude discovers a Core defect in one of these, record the concrete defect and stop at the ownership boundary unless this file or the user reassigns it.
 
-## Codex ownership — Core / Data / Geometry / Performance / Architecture
+## Codex ownership — Core / Data / Geometry / Runtime / Reliability
 
-Codex owns Canonical/data integrity, Semantic Command behavior, clipboard policy, geometry/time mapping, projection/renderer scaling, history, resource budgets, AI semantic gateway, architecture/build hygiene, React/runtime lifecycle, and non-visual performance closure.
+Codex owns Canonical/data integrity, command/history policy, geometry/time mapping, runtime lifecycle, clipboard semantics, structured diagnostics, performance architecture and core closure.
 
 ### Immediate Codex queue
 
-1. `#357` P0 visual-reference mount / StrictMode / runtime lifecycle blocker.
-2. `#313` focused closure audit for authoritative range geometry; implementation fixes are merged, so prove the remaining matrix first and change code only for a concrete bounded residual.
-3. `#200` Signal Split View core projection/time-domain architecture.
-4. `#250` AI semantic operation gateway.
+1. `#363` — fast-fix the current timeline-zoom unit/runtime-context regression. Keep this narrow; restore the green unit baseline first.
+2. `#200` — Core reconciliation ONLY. Resolve the duplicate Signal Split assignment models (`signal.display.splitPane` versus standalone `SignalSplitAssignment[]`) into one authoritative presentation model. Do not build a parallel GUI. Post `CORE_READY_FOR_GUI` and hand off to Claude.
+3. `#221` — complete central clipboard semantics across entities using one policy/command path.
+4. `#269` — structured diagnostics/error propagation through command/IO/parser/export/Problems paths.
+5. `#171` — Annotation/Snap semantic/geometry closure audit and only bounded residual Core fixes.
+6. `#170` — Timeline semantic-transform closure audit and bounded residual fixes.
 
-### Codex overlap / dependency lane
+### Later Codex correctness / broad-closure lane
 
-- `#221` clipboard semantics matrix.
-- `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation.
-- `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation.
-- `#269` structured diagnostics model and command/IO error propagation.
-- `#281` property/state-machine correctness harness.
+- `#167` Minimal Cycle View closure.
+- `#161` Architecture Lock closure.
+- `#177` V1 -> V2 parity audit closure.
+- `#175` Interaction Performance Closure — background lane; recent production Zoom/viewport optimizations are real progress, but do not let this consume the main product queue through repeated test-only measurement work.
+- `#281` property/state-machine correctness harness — inherently test-focused, therefore intentionally late in the queue after concrete product residuals.
 
-These remain held/quarantined when the previously observed shared gesture/coordinate blocker is still the concrete blocker. If the blocker is no longer reproducible, re-enter one Issue at a time rather than reviving all at once.
+## Holds
 
-### Codex broad closure/audit lane
+### Product-decision hold
 
-- `#161 #167 #170 #171 #175 #177`
-
-These older Phase/Umbrella Issues are audited against current `main`. Do not recreate historical `rewrite/v2` execution structure. Close with evidence when already satisfied; implement only bounded residual gaps.
+- `#250` AI provider integration. Provider-neutral Preview/Validate/Apply, deterministic/offline provider and representative semantic-domain coverage exist. Remaining closure requires an explicit production-provider contract: provider/transport, configuration, auth/secrets, network failure behavior and real-provider smoke target. Do not invent an arbitrary network provider merely to close the Issue.
 
 ### External / human hold
 
-- `#272` GitHub Actions quality gate is EXTERNAL/HUMAN HOLD while billing/spending limit prevents runner allocation. Do not spend product-development cycles retrying it. Re-evaluate only after billing is restored.
+- `#272` GitHub Actions quality gate. Billing/spending-limit prevents runner allocation. Do not burn product-development cycles retrying it; re-evaluate after billing is restored.
 
-## Recently completed / removed from active split
+## Recently completed — remove from active queues
 
-- `#332` capability truthfulness / real Preview + effect audit — closed after PR #355; A/B/C/D are complete.
-- `#165` Geometry Semantic/Local/Screen contract — closed.
-- `#166` RowLayout + Stable Waveform Surface — closed.
-- `#169` Reorder / Visibility / D&D — closed.
-- `#180` bounded virtualization projection — closed.
-- `#210` Clock Editor / Edge Counter parity — closed.
-- `#219` renderer/runtime scaling — closed.
-- `#259` production query-routable architecture probes — closed.
-- `#328` Product Resource Budget enforcement — closed.
-- `#352` uncontrolled period-2 Clock timeline ripple regression — fixed by Codex (`510f41c` / `8ce9f60`) and closed.
-- `#331` Font editing correctness/UX — closed.
-- `#273` LabelAnchor source/display contract — closed.
-- `#275` bounded Undo/Redo retention — closed.
-- `#277` ArchitectureProbe / StableSurfaceProbe extraction — closed.
+Current session closures include:
+- `#357` visual-reference StrictMode/runtime mount crash — closed.
+- `#313` authoritative range-drag geometry — closed.
+- `#260` CSS/design-token ownership / legacy cascade retirement — closed.
+- `#181` Left Tree / role geometry / MiniMap — closed.
+- `#182` approved v8 production GUI closure — closed.
+- `#184` GUI v8 blockers — closed.
+- `#185` Golden visual acceptance — closed after explicitly approved PR #362 baseline update and passing mechanical visual gate.
+- `#186` Golden GUI Harness Engineering — closed.
+- `#306` AI-assisted Visual Scenario Harness — closed.
+- `#309` interaction before/after/undo visual scenarios — closed.
+- `#172` Full GUI — closed.
+- `#205` datasheet-grade timing annotations — closed.
+- `#267` Group Band editor — closed.
 
-## Current partials worth preserving
-
-- `#260`: legacy CSS relocation is DONE; keep open only for the residual token-contract, hard anti-regression guard, and final visual/current-contract evidence after #357.
-- `#181`: accepted Collapse/Visibility semantics, Role badge geometry and focused MiniMap evidence must not be redone; remaining full-v8 visual/E2E closure waits for #357.
-- `#175`: current `main@fec3566` removes `zoom` from the pane/host resize effect dependency, eliminating one redundant resize-render path on view-only Zoom. This is partial progress only; retain the full performance/latency/invalidation closure contract.
-- `#313`: core fixes from PR #338/#341 are merged; do not restart broad gesture implementation without a failing acceptance case.
-- `#357`: new P0 current-main runtime blocker; fix this before interpreting visual-reference test failures as GUI/Golden regressions.
+Earlier completed items remain closed and must not be reimplemented: `#165 #166 #169 #180 #210 #219 #259 #273 #275 #277 #328 #331 #332 #352`.
 
 ## Cross-agent collision rules
 
-Files such as `minimal-cycle-view.tsx`, `minimal-cycle-view-ribbon.tsx`, `design-system.tsx`, shared CSS primitives, renderer/projection owners, and semantic command registries are hot files. Before modifying a hot file, each agent must resync from latest `origin/main` and confirm the other agent's latest PR is merged.
+Hot files include `minimal-cycle-view.tsx`, `minimal-cycle-view-ribbon.tsx`, runtime bridge/geometry owners, shared design-system/CSS primitives, renderer/projection owners and semantic-command registries.
 
-During #357 specifically, `minimal-cycle-view.tsx` and the directly related runtime lifecycle owner are Codex-exclusive until the fix/PR is merged.
+Before editing a hot file, resync from latest `origin/main` and confirm the other agent's latest relevant PR is merged. Keep changes Issue-scoped and short-lived.
 
-Do not keep long-lived divergent changes to the same hot file. Prefer small Issue-scoped PRs from Claude and short coherent Codex commits on current main.
-
-If an Issue spans GUI and core, the listed owner remains the primary implementation owner. The other agent may provide review/evidence but must not create a parallel implementation path.
+If an Issue spans GUI and Core, the active owner above remains authoritative. The other agent may provide evidence/review, but must not create a parallel implementation path.
