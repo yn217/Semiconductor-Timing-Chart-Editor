@@ -188,6 +188,14 @@ evidence and the no-scroll assertion are in
 `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts` and the Ribbon tab and
 responsive tests.
 
+Current-main Chromium responsive evidence on 2026-09-06 is 5/5: Home Ribbon
+icon/label overlap checks pass at 1672px and 1365px; Home commands remain
+reachable without horizontal scrolling at 1280px and 1024px; and the 1024px
+More Home Commands menu exposes the required document, edit, selection,
+view/zoom, grid, snap, ruler, and MiniMap actions while Zoom remains
+view-only. The test uses locator-based view actions and does not exercise the
+quarantined #221/#222/#223 gesture paths.
+
 The current-main Clipboard audit is browser verified by four focused
 `home-command-surface.spec.ts` cases (4/4, 2026-09-06): same-document Copy is
 view-only and Duplicate/Paste allocate fresh IDs through one command; opening
