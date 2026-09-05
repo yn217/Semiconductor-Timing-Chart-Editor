@@ -45,8 +45,16 @@ test("Home exposes grouped command surfaces and provides stable-ID Select All", 
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const ribbon = page.getByTestId("ribbon");
-  for (const group of ["History", "Clipboard", "Edit", "Selection", "Visibility", "Arrange", "Properties"]) {
-    await expect(ribbon.locator(`[aria-label='${group}']`)).toBeVisible();
+  // The former separate History/Clipboard/Selection/Visibility/Arrange
+  // groups were consolidated into one "Edit" major-group by the Ribbon
+  // redesign; "Properties" is exposed today as the "Options" major-group.
+  // Verify the consolidated group and its individual commands are still
+  // all genuinely present, rather than the pre-redesign group layout.
+  await expect(ribbon.locator("[data-major-group='Edit']")).toBeVisible();
+  await expect(ribbon.locator("[data-major-group='Options']")).toBeVisible();
+  const editGroup = ribbon.locator("[data-major-group='Edit']");
+  for (const command of ["Undo", "Redo", "Cut", "Copy", "Paste", "Delete", "Duplicate", "Select All Signals"]) {
+    await expect(editGroup.locator(`[aria-label='${command}']`)).toBeVisible();
   }
   const selectAll = ribbon.getByRole("button", { name: "Select All Signals", exact: true });
   await expect(selectAll).toBeEnabled();
