@@ -1,30 +1,36 @@
 import { expect, test } from "@playwright/test";
 
-test("surfaces a WaveDrom render failure in the Problems panel and status bar, and clears it once fixed", async ({ page }) => {
+test("surfaces a rejected Clock Generator update in the Problems panel, leaves the prior waveform untouched, and clears it once fixed", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const editor = page.getByTestId("signal-editor");
+  const before = { history: await host.getAttribute("data-history-depth"), revision: await host.getAttribute("data-canonical-revision") };
 
+  // A phase not aligned to a half cycle is rejected at the command layer
+  // (INVALID_CLOCK_GENERATOR) before it ever reaches WaveDrom -- the
+  // canonical document, and therefore the already-rendered clock
+  // waveform, is left completely untouched by a rejected command.
   await editor.getByLabel("Clock phase").fill("0.25");
   await page.getByTestId("apply-clock-generator").click();
-  await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.locator(".status-bar")).toContainText("WaveDrom: Error");
-  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(0);
+  await expect(page.getByTestId("clock-generator-error")).toContainText("INVALID_CLOCK_GENERATOR");
+  await expect(host).toHaveAttribute("data-history-depth", before.history!);
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(1);
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'] > svg")).toHaveCount(1);
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
-  await expect(page.getByTestId("problems-panel")).toContainText("WAVE_RENDER_ERROR");
-  await expect(page.getByTestId("problems-panel")).toContainText("phase aligned to a half cycle");
+  await expect(page.getByTestId("problems-panel")).toContainText("INVALID_CLOCK_GENERATOR");
+  await expect(page.getByTestId("problems-panel")).toContainText("signal.updateClockGenerator");
 
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Signal" }).click();
   await editor.getByLabel("Clock phase").fill("0.5");
   await page.getByTestId("apply-clock-generator").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(page.locator(".status-bar")).toContainText("WaveDrom: Ready");
+  await expect(page.getByTestId("clock-generator-error")).toHaveCount(0);
   await expect(host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock'] > svg")).toHaveCount(1);
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
-  await expect(page.getByTestId("problems-panel")).toContainText("No validation problems");
+  await expect(page.getByTestId("problems-panel")).not.toContainText("INVALID_CLOCK_GENERATOR");
 });
 
 test("surfaces an Open failure in the Problems panel", async ({ page }) => {
