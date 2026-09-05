@@ -22,7 +22,10 @@ test("AI provider domains use one preview/apply SemanticCommand path", async ({ 
   await applyAI(page, "create binary signal named AI_SIGNAL", "Create binary signal AI_SIGNAL");
   await expect(host.locator("[data-role='frozen-signal-name']").filter({ hasText: "AI_SIGNAL" })).toBeVisible();
 
-  await applyAI(page, "insert 1 cycle at 2", "Insert 1 cycles at 2");
+  // The demo document uses a generated period-two Clock.  An interior ripple
+  // is intentionally rejected unless segmented-clock semantics are available;
+  // exercise the supported terminal-append form through the same AI path.
+  await applyAI(page, "insert 1 cycle at 24", "Insert 1 cycles at 24");
   await applyAI(page, "add bookmark at 4", "Add Bookmark 4");
   await applyAI(page, "create time group AI_WINDOW from 1 to 3", "Create Time Group AI_WINDOW");
   await applyAI(page, "create text annotation", "Create text annotation on REQUEST");
