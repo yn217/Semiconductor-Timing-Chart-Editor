@@ -65,8 +65,12 @@ test("proves Annotation PNG reversibility by region", async ({ page }) => {
   await page.getByLabel("Annotation type").selectOption("text");
   await page.getByRole("button", { name: "Add annotation" }).click();
   await expect(host.locator("[data-role='annotation-owner']")).toHaveCount(1);
-  const after = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
+  // Capture "after" from the same Home-tab ribbon state as "undo"/"redo"
+  // below -- comparing across different active Ribbon tabs would always
+  // show a full-width ribbon-content difference unrelated to the
+  // annotation's own visual reversibility this test actually verifies.
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  const after = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   const undo = PNG.sync.read(await page.screenshot({ animations: "disabled" }));
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
