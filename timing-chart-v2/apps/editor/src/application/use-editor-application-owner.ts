@@ -42,7 +42,17 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   const [snapshot, setSnapshot] = useState<CanonicalSnapshot>(() => runtime.session.snapshot());
   const [history, setHistory] = useState<HistoryState>(() => runtime.session.current().historyState());
   const [problem, setProblem] = useState("");
-  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => validateCanonicalDocument(initialDocument));
+  // #175: proves "View-only React rerender never runs a full Canonical
+  // validation pass" mechanically rather than by inspection -- this counts
+  // actual `validateCanonicalDocument` calls (the expensive whole-document
+  // pass), not every `setValidationDiagnostics` update (dispatchResult/
+  // replaceSession below only ever clear/reset the array on a completed
+  // command or a document replace; they never re-run the validator itself).
+  // Published to `sessionCounters` (see minimal-cycle-view.tsx's
+  // `publishRendererState` call) so an e2e test can assert the delta is 0
+  // across Selection/Ribbon-tab/Zoom/Scroll/panel-resize.
+  const validatorInvocationsRef = useRef(0);
+  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => { validatorInvocationsRef.current += 1; return validateCanonicalDocument(initialDocument); });
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const acceptedHandlerRef = useRef<AcceptedHandler | undefined>(undefined);
 
@@ -86,6 +96,15 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     return session;
   }, [runtime]);
   const publishHistory = useCallback(() => setHistory(runtime.session.current().historyState()), [runtime]);
+  // The one production entry point that actually re-runs the validator on
+  // demand (wired to the "Refresh Checks" command) -- every other diagnostic
+  // update above only clears/resets the array.
+  const validateDocument = useCallback((document: CanonicalDocument) => {
+    validatorInvocationsRef.current += 1;
+    const problems = validateCanonicalDocument(document);
+    setValidationDiagnostics(problems);
+    return problems;
+  }, []);
 
   return {
     runtime,
@@ -105,6 +124,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     setProblem,
     setValidationDiagnostics,
     setRuntimeDiagnostics,
+    validateDocument,
+    validatorInvocationsRef,
   } as const;
 }
 

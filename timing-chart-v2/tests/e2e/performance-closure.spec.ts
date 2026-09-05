@@ -32,6 +32,22 @@ test("View-only operations keep canonical validation and render counters unchang
   expect(afterSession.snapIndexBuilds).toBe(before.session.snapIndexBuilds);
   expect(afterRender.waveDromRenders).toBe(before.render.waveDromRenders);
   expect(afterRender.localGeometryBuilds).toBe(before.render.localGeometryBuilds);
+  // #175 P0: the actual whole-document `validateCanonicalDocument()` pass
+  // (distinct from `validationRuns` above, which tracks routine per-command
+  // semantic planning inside the session, not this GUI-level Refresh-Checks
+  // validator) must stay at delta 0 across every one of these view-only
+  // actions -- it only actually runs at initial mount and an explicit
+  // "Refresh Checks" click (use-editor-application-owner.ts's
+  // `validateDocument`), never on a passive React rerender.
+  expect(afterSession.validatorInvocations).toBe(before.session.validatorInvocations);
+
+  // A real, non-fake counter: an explicit "Refresh Checks" click (the one
+  // production action that actually re-runs the validator) does increment
+  // it, by exactly one.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Check", exact: true }).click();
+  await page.getByTestId("review-refresh-checks").click();
+  const afterRefresh = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, any>;
+  expect(afterRefresh.validatorInvocations).toBe(before.session.validatorInvocations + 1);
 });
 
 test("SnapIndex cache survives a non-geometric Signal rename", async ({ page }) => {

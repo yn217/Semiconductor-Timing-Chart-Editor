@@ -6,7 +6,7 @@ import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument } from "@timing-chart-v2/schema";
+import { scanJsonSyntax, serializeCanonicalDocument } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
@@ -93,7 +93,7 @@ export function MinimalCycleView() {
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
-  const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setValidationDiagnostics, setRuntimeDiagnostics } = application;
+  const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
@@ -321,6 +321,13 @@ export function MinimalCycleView() {
   const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
   const refreshPlayhead = useRef<() => void>(() => undefined);
   const refreshRangeSelectionBand = useRef<() => void>(() => undefined);
+  // #175: lets an outside action (Refresh Checks) that only changes React
+  // state -- never a document/scroll/zoom event the mount effect already
+  // republishes on -- still refresh the DOM `data-session-counters`
+  // snapshot immediately, so `validatorInvocations` is observable right
+  // after the click that incremented it rather than only at the next
+  // unrelated render/publish.
+  const publishStateRef = useRef<() => void>(() => undefined);
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
   // View-only navigation updates zoom without replacing the canonical document.
@@ -530,7 +537,8 @@ export function MinimalCycleView() {
       timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
     };
 
-    publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom());
+    publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current);
+    publishStateRef.current = () => publishState();
     let frame = 0;
     // Definite-assignment: assigned below before createEditorTimelineRuntime's
     // returned closures can ever be invoked (matches this file's rangeInteractions/
@@ -2064,7 +2072,7 @@ export function MinimalCycleView() {
       problemsCount={diagnostics.length}
       diagnostics={diagnostics}
       onNavigateProblem={navigateProblem}
-      onRefreshChecks={() => setValidationDiagnostics(validateCanonicalDocument(snapshot.document))}
+      onRefreshChecks={() => { application.validateDocument(snapshot.document); publishStateRef.current(); }}
       onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
        viewMode={viewMode}
        density={density}
