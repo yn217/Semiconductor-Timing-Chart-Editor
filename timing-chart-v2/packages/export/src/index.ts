@@ -21,7 +21,7 @@ export interface ExportRequest {
 export interface ExportWave { readonly signalId: SignalId; readonly name: string; readonly role: string; readonly y: number; readonly svgMarkup: string; readonly sourceWidth: number; readonly sourceHeight: number; readonly cropX: number; readonly width: number; readonly waveJson: string }
 export interface ExportLabel { readonly text: string; readonly x: number; readonly y: number; readonly kind: "signal" | "comment" | "group" | "annotation" | "transaction" }
 export interface ExportPoint { readonly x: number; readonly y: number }
-export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly transitionKind1?: "threshold" | "ratio"; readonly transitionKind2?: "threshold" | "ratio"; readonly measurementProfile?: MeasurementProfile; readonly measurementLayout?: MeasurementLayout; readonly measurementLane?: number; readonly tracePoints?: readonly ExportPoint[] }
+export interface ExportAnnotation { readonly id: string; readonly type: string; readonly label: string; readonly x1: number; readonly x2: number; readonly y1: number; readonly y2: number; readonly opacity?: number; readonly sourceSignalId?: SignalId; readonly traceOffsetCycles?: number; readonly threshold1?: number; readonly threshold2?: number; readonly transitionKind1?: "threshold" | "ratio"; readonly transitionKind2?: "threshold" | "ratio"; readonly measurementProfile?: MeasurementProfile; readonly measurementLayout?: MeasurementLayout; readonly measurementLane?: number; readonly tracePoints?: readonly ExportPoint[]; readonly lineType?: "straight" | "orthogonal" | "curve" | "diagonal"; readonly arrowhead?: "end" | "start" | "bidirectional" | "none"; readonly labelOffsetX?: number; readonly labelOffsetY?: number; readonly color?: string }
 export interface ExportTransaction { readonly id: string; readonly name: string; readonly laneId: string; readonly x: number; readonly y: number; readonly width: number; readonly linkedSignals: readonly SignalId[] }
 export interface ExportGroupBand { readonly id: string; readonly name: string; readonly x: number; readonly y: number; readonly width: number; readonly height: number; readonly fill: string; readonly fillOpacity: number; readonly stroke: string; readonly scope: "label" | "waveform" | "both"; readonly showHeader: boolean }
 export interface ExportAxisBreak { readonly id: string; readonly name: string; readonly sourceStart: number; readonly sourceEnd: number; readonly x: number }
@@ -323,7 +323,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const endFraction = anchorTransitionFraction(annotation.end);
     const startKind = anchorTransitionKind(annotation.start);
     const endKind = anchorTransitionKind(annotation.end);
-    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }) };
+    return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.color === undefined ? {} : { color: annotation.color }) };
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
   const contentHeight = waveTop + rowLayout.totalHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? effectiveLegendEntries(document).map((entry) => entry.label) : [];
@@ -350,6 +350,49 @@ function renderMeasurementSvg(annotation: ExportAnnotation, metadata: string): s
     return `<polyline data-role="measurement-marker" data-marker-side="${side}" data-marker-kind="arrow" points="${points}" fill="none" stroke-width="1.5"/>`;
   };
   return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="measurement" data-measurement-lane="${annotation.measurementLane}" data-arrow-layout="${layout.arrowLayout}"${metadata}>${extension("start", annotation.x1, annotation.y1)}${extension("end", annotation.x2, annotation.y2)}${marker("start", annotation.x1, layout.startMarker)}${marker("end", annotation.x2, layout.endMarker)}<line data-role="measurement-dimension-line" x1="${annotation.x1}" y1="${y}" x2="${annotation.x2}" y2="${y}"/><text x="${(annotation.x1 + annotation.x2) / 2 + 4}" y="${y - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`;
+}
+
+/** #375: Arrow/Dependency's real route shape (straight/orthogonal/curve/
+ * diagonal) and arrow markers (none/start/end/both), matching the live-DOM
+ * rendering in packages/renderer/src/stable-surface.ts's linePath()/marker
+ * construction -- ported rather than shared, since a DOM-mounted SVG and a
+ * standalone exported document build their markup through genuinely
+ * different mechanisms. Diagonal reuses the straight segment (same
+ * reasoning as the live renderer: distinguishable via dash pattern, not a
+ * second coordinate system) with a dashed stroke. */
+function linePathForExport(lineType: NonNullable<ExportAnnotation["lineType"]>, x1: number, y1: number, x2: number, y2: number): { readonly d: string; readonly dash?: string } {
+  if (lineType === "orthogonal") {
+    const bendX = (x1 + x2) / 2;
+    return { d: `M ${x1} ${y1} L ${bendX} ${y1} L ${bendX} ${y2} L ${x2} ${y2}` };
+  }
+  if (lineType === "curve") {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const offset = Math.max(14, length * 0.24);
+    const normal = { x: (-dy / length) * offset, y: (dx / length) * offset };
+    const controlX = (x1 + x2) / 2 + normal.x;
+    const controlY = (y1 + y2) / 2 + normal.y;
+    return { d: `M ${x1} ${y1} Q ${controlX} ${controlY} ${x2} ${y2}` };
+  }
+  return { d: `M ${x1} ${y1} L ${x2} ${y2}`, ...(lineType === "diagonal" ? { dash: "7 4" } : {}) };
+}
+
+function renderLineAnnotationSvg(annotation: ExportAnnotation, metadata: string): string {
+  const lineType = annotation.lineType ?? "straight";
+  const arrowhead = annotation.arrowhead ?? "none";
+  const color = annotation.color ?? "#d04a36";
+  const path = linePathForExport(lineType, annotation.x1, annotation.y1, annotation.x2, annotation.y2);
+  const markerId = `export-arrow-${xml(annotation.id)}`;
+  const markerDef = (suffix: "start" | "end", reverse: boolean) => `<marker id="${markerId}-${suffix}" markerWidth="8" markerHeight="8" refX="${reverse ? 1 : 7}" refY="4" orient="auto-start-reverse" markerUnits="strokeWidth"><path d="${reverse ? "M 8 0 L 0 4 L 8 8 Z" : "M 0 0 L 8 4 L 0 8 Z"}" fill="${xml(color)}"/></marker>`;
+  const defs = [
+    ...(arrowhead === "start" || arrowhead === "bidirectional" ? [markerDef("start", true)] : []),
+    ...(arrowhead === "end" || arrowhead === "bidirectional" ? [markerDef("end", false)] : []),
+  ];
+  const markerAttrs = `${arrowhead === "start" || arrowhead === "bidirectional" ? ` marker-start="url(#${markerId}-start)"` : ""}${arrowhead === "end" || arrowhead === "bidirectional" ? ` marker-end="url(#${markerId}-end)"` : ""}`;
+  const labelX = Math.min(annotation.x1, annotation.x2) + 4 + (annotation.labelOffsetX ?? 0);
+  const labelY = Math.min(annotation.y1, annotation.y2) - 5 + (annotation.labelOffsetY ?? 0);
+  return `<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}" data-line-type="${lineType}" data-arrowhead="${arrowhead}"${metadata}>${defs.length ? `<defs>${defs.join("")}</defs>` : ""}<path data-role="annotation-path" d="${path.d}" fill="none" stroke="${xml(color)}" stroke-width="2"${path.dash ? ` stroke-dasharray="${path.dash}"` : ""}${markerAttrs}/><text x="${labelX}" y="${labelY}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`;
 }
 
 export function renderExportSvg(scene: ExportScene): string {
@@ -386,6 +429,7 @@ export function renderExportSvg(scene: ExportScene): string {
       out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="ghostTrace"${metadata}>${path} fill="none" stroke="#64748b" stroke-width="2" stroke-dasharray="6 4" opacity="${annotation.opacity ?? 0.55}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#475569" stroke="none">${xml(annotation.label)}</text></g>`);
     }
     else if (annotation.type === "measurement") out.push(renderMeasurementSvg(annotation, metadata));
+    else if (annotation.type === "arrow" || annotation.type === "dependency" || annotation.type === "connector") out.push(renderLineAnnotationSvg(annotation, metadata));
     else out.push(`<g data-annotation-id="${xml(annotation.id)}" data-annotation-type="${xml(annotation.type)}"><line x1="${annotation.x1}" y1="${annotation.y1}" x2="${annotation.x2}" y2="${annotation.y2}"/><text x="${Math.min(annotation.x1, annotation.x2) + 4}" y="${Math.min(annotation.y1, annotation.y2) - 5}" fill="#991b1b" stroke="none">${xml(annotation.label)}</text></g>`);
   }
   out.push(`</g><g data-layer="edge-counters" font-family="Segoe UI,Arial,sans-serif" font-size="10" fill="#7c3aed" stroke="none">`);
