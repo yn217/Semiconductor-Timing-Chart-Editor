@@ -117,3 +117,21 @@ test("creates three distinct empty groups without omissions or duplicates", asyn
   const targetIds = await bottomGroups.evaluateAll((targets) => targets.map((target) => (target as HTMLElement).dataset.groupTarget));
   expect(targetIds.sort()).toEqual([...ids].sort());
 });
+
+test("renders the first signal inserted into an initially empty group", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Insert", exact: true }).click();
+  await page.getByTestId("insert-ribbon").getByRole("button", { name: "Pulse", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await revealTreeBottom(page);
+
+  const created = surface.locator("[data-role='left-row'][data-group-id='grp_cycle_scratch']").last();
+  const createdId = await created.getAttribute("data-row-id");
+  expect(createdId).toBeTruthy();
+  await expect(surface.locator(`[data-role='left-row'][data-row-id='${createdId}']`)).toHaveCount(1);
+  await expect(surface.locator(`[data-role='frozen-row'][data-row-id='${createdId}']`)).toHaveCount(1);
+  await expect(surface.locator(`[data-role='timing-row'][data-row-id='${createdId}']`)).toHaveCount(1);
+  await expect(surface.locator(`[data-role='wave-owner'][data-signal-id='${createdId}']`)).toHaveCount(1);
+});
