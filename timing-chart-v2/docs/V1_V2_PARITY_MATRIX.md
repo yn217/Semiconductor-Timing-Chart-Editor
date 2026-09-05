@@ -219,6 +219,15 @@ that overlay path. Unit coverage is in
 coverage is in `timing-chart-v2/tests/e2e/transaction-export.spec.ts`.
 The complete V1 visual trace matrix remains open.
 
+Measurement, Threshold and Timing Region/Ghost Trace contracts are current-main
+browser verified by four focused `annotation-snap.spec.ts` cases (4/4,
+2026-09-06): linked Ghost Trace and Timing Region edits preserve source links
+and avoid WaveDrom/LocalGeometry regeneration; 30/70 Threshold Measurement
+creation survives Save/Open; standard and custom measurement profiles resolve
+explicit transition semantics; and a custom Measurement edit is one history
+step with exact Undo/Redo and Save/Open restoration. The complete folded
+transition and V1 visual/export matrices remain open.
+
 Signal individual spacing parity is now wired for Value and Clock rows. The
 Inspector keeps `spacingBefore` and `spacingAfter` as transient drafts and
 applies them through `signal.updateProperties`; the Planner emits only the
