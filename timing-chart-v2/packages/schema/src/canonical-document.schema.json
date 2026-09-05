@@ -125,7 +125,7 @@
     },
     "display": {
       "type": "object", "additionalProperties": false, "required": ["name"],
-      "properties": { "name": { "type": "string" }, "visible": { "type": "boolean" }, "style": { "$ref": "#/$defs/jsonObject" }, "align": { "enum": ["left", "center", "right"] }, "overflow": { "enum": ["expand", "ellipsis", "wrap"] } }
+      "properties": { "name": { "type": "string" }, "visible": { "type": "boolean" }, "style": { "$ref": "#/$defs/jsonObject" }, "align": { "enum": ["left", "center", "right"] }, "overflow": { "enum": ["expand", "ellipsis", "wrap"] }, "splitPane": { "enum": ["upper", "lower", "both"] } }
     },
     "change": {
       "type": "object", "additionalProperties": false, "required": ["start", "value"],

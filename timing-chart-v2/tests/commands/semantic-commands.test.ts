@@ -292,6 +292,23 @@ describe("pure Semantic Command planning", () => {
     if (removed.ok) expect((removed.document.signals[1] as Extract<Signal, { values: unknown }>).values).toHaveLength(1);
   });
 
+  it("reassigns a Signal Split pane as a rowPresentation-only change with exact Undo (#200)", () => {
+    const source = canonicalFixture();
+    const signal = source.signals[1]!;
+    const assigned = planCommand(source, { id: commandId("cmd_split_pane"), type: "signal.updateProperties", signalId: signal.id, name: signal.name, role: signal.role, splitPane: "upper" });
+    expect(assigned.ok).toBe(true);
+    if (assigned.ok) {
+      expect(assigned.document.signals[1]).toMatchObject({ display: { splitPane: "upper" } });
+      expect(assigned.changeSet).toEqual({ rowPresentation: [signal.id] });
+    }
+    const noop = planCommand(source, { id: commandId("cmd_split_pane_noop"), type: "signal.updateProperties", signalId: signal.id, name: signal.name, role: signal.role });
+    expect(noop.ok).toBe(false);
+    if (!noop.ok) expect(noop.problems.some((problem) => problem.code === "NO_OP")).toBe(true);
+    const invalid = planCommand(source, { id: commandId("cmd_split_pane_invalid"), type: "signal.updateProperties", signalId: signal.id, name: signal.name, role: signal.role, splitPane: "middle" as never });
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) expect(invalid.problems.some((problem) => problem.code === "INVALID_SPLIT_PANE")).toBe(true);
+  });
+
   it("imports a complete event table as one semantic operation", () => {
     const source = canonicalFixture();
     const session = new CommandHistorySession(source);
