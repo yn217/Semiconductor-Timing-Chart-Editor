@@ -233,6 +233,7 @@ export function MinimalCycleView() {
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
+  const [treePresentationRevision, setTreePresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
@@ -357,13 +358,13 @@ export function MinimalCycleView() {
   }, [bottomPinned, pinnedBottomSelection, snapshot.revision]);
   useEffect(() => {
     refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
-  }, [snapshot.revision, treeFilter, treeTypeFilter, collapsedGroupIds]);
+  }, [treePresentationRevision, treeFilter, treeTypeFilter, collapsedGroupIds]);
   useEffect(() => {
     refreshTreeCollapsedMetadata(host, collapsedGroupIds);
-  }, [snapshot.revision, collapsedGroupIds]);
+  }, [treePresentationRevision, collapsedGroupIds]);
   useEffect(() => {
     refreshTreeRovingFocus(host, treeFocusRowIdRef);
-  }, [snapshot.revision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
+  }, [treePresentationRevision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
   const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
   const setCollapsedGroups = (next: ReadonlySet<GroupId>) => {
@@ -686,6 +687,9 @@ export function MinimalCycleView() {
       delete rendererHost.dataset.editorIdle;
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
+      if (changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined) {
+        setTreePresentationRevision((value) => value + 1);
+      }
       if (changed.fullDocumentReplace === true) {
         timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
         clearAnnotationPreview();
