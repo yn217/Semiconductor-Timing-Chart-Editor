@@ -79,6 +79,21 @@
 
 .bulk-preview.invalid { border-color: #d98b87; background: #fff5f4; color: #8f211b; }
 
+/* #393 item C: a structured Name/Start/End table (see phaseRows in
+   minimal-cycle-view-panels.tsx) instead of raw JSON as the Transaction's
+   primary Phase-editing surface. */
+.transaction-phase-editor { margin: 8px 0; }
+.transaction-phase-editor h4 { margin: 0 0 5px; color: #43536a; font-size: 11px; font-weight: 700; }
+.transaction-phase-table { display: flex; flex-direction: column; gap: 3px; margin-bottom: 5px; }
+.transaction-phase-row { display: grid; grid-template-columns: minmax(0, 1fr) 56px 56px 20px; gap: 4px; align-items: center; }
+.transaction-phase-row-header { color: #7c8ba0; font-size: 9px; font-weight: 600; text-transform: uppercase; }
+.transaction-phase-row input { height: 24px; border: 1px solid #c3ceda; border-radius: 3px; padding: 0 5px; font-size: 11px; }
+.transaction-phase-row button { height: 20px; width: 20px; padding: 0; border: 1px solid #d39b9b; border-radius: 3px; background: white; color: #a52b2b; line-height: 1; }
+.transaction-phase-editor > button[data-testid="add-transaction-phase"] { height: 24px; padding: 0 8px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #29425e; font-size: 10px; }
+.transaction-phase-advanced { margin-top: 6px; color: #63758b; font-size: 10px; }
+.transaction-phase-advanced summary { cursor: pointer; color: #52677d; }
+.transaction-phase-advanced label { margin-top: 5px; }
+
 .bulk-preview ul { max-height: 92px; overflow: auto; margin: 5px 0 0; padding-left: 18px; }
 
 .editor-shell .inspector > header { height: 35px; flex-basis: 35px; padding-inline: 10px; }

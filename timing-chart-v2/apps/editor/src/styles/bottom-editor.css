@@ -92,6 +92,14 @@
 .transaction-editor input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
 .transaction-editor form button, .transaction-editor header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }
 .transaction-editor form button { border-color: #246aa8; background: #2c78bb; color: white; }
+/* #393 item A/B: the empty-state explanation shown only while there are no
+   Transactions yet and no draft is open -- Load Example is a deliberate,
+   single-command action (see transaction-editor.tsx's
+   buildTransactionExampleCommand), not an automatic mode-switch insert. */
+.transaction-empty-state { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 420px; padding: 14px 0 6px; }
+.transaction-empty-state strong { color: #233a59; font-size: 13px; }
+.transaction-empty-state p { margin: 0; color: #5c687c; font-size: 11px; line-height: 1.5; }
+.transaction-empty-state button { height: 27px; padding: 0 12px; border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; font-size: 11px; }
 /* #388: Bookmark's own Bottom Panel editor -- same shape as the
    Transaction editor above (header/form/list), see bookmark-editor.tsx. */
 .bookmark-editor-panel { min-height: 100%; padding: 8px 12px; }

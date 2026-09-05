@@ -894,11 +894,22 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   // "Create Transaction" button, which shares the same accessible name.
   await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await page.getByTestId("inspector").getByLabel("Transaction phases").fill('[{"name":"Address","start":2,"end":4},{"name":"Data","start":4,"end":7}]');
-  await page.getByTestId("inspector").getByTestId("apply-transaction-properties").click();
+  // #393: raw Phases JSON moved behind an Advanced disclosure -- the
+  // structured Name/Start/End table (Add Phase) is the primary path now.
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByTestId("add-transaction-phase").click();
+  await inspector.getByLabel("Phase 1 name").fill("Address");
+  await inspector.getByLabel("Phase 1 start").fill("2");
+  await inspector.getByLabel("Phase 1 end").fill("4");
+  await inspector.getByTestId("add-transaction-phase").click();
+  await inspector.getByLabel("Phase 2 name").fill("Data");
+  await inspector.getByLabel("Phase 2 start").fill("4");
+  await inspector.getByLabel("Phase 2 end").fill("7");
+  await inspector.getByTestId("apply-transaction-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await expect(page.getByTestId("inspector").getByLabel("Transaction phases")).toHaveValue(/Address/);
+  await inspector.locator(".transaction-phase-advanced summary").click();
+  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Address/);
 });
 
 test("applies Clock Generator Inspector drafts with editable duty and one history entry", async ({ page }) => {
