@@ -663,6 +663,77 @@ test("edits a named Bookmark through one semantic operation and preserves it thr
   await expect(page.getByTestId(/bookmark-jump-/)).toHaveText("◆ Review Point");
 });
 
+// #376: a standalone Label Anchor restarts the ruler's displayed number at
+// an arbitrary source cycle without folding/omitting any time (no Time
+// Group, no Axis Break marker) -- distinct from #202's fold-resume anchors.
+test("creates a standalone Label Anchor that restarts the ruler display without folding time, rejects a conflicting source, and preserves it through Undo/Redo and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end").fill("6");
+  await page.getByLabel("Timeline range start").fill("5");
+
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  await page.getByTestId("label-anchor-create").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(revisionBefore) + 1));
+  const summary = page.locator("[data-label-anchor-id]").first();
+  await expect(summary).toBeVisible();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveText("⟲ 5→0");
+
+  // The ruler tick at SOURCE cycle 5 now displays "0"; canonical source
+  // time is untouched, and no Axis Break marker is drawn for this pure
+  // number rebase (it isn't a fold/omission).
+  const ruler = page.getByTestId("cycle-ruler");
+  await expect(ruler.locator("[data-source-cycle='5']")).toHaveAttribute("data-cycle", "0");
+  await expect(ruler.locator("[data-source-cycle='6']")).toHaveAttribute("data-cycle", "1");
+  await expect(host.locator("[data-axis-break-id]")).toHaveCount(0);
+
+  // Duplicate/conflicting source is rejected atomically (view stays
+  // unchanged; a real Chromium click on Add reusing the same start cycle).
+  const revisionBeforeConflict = await host.getAttribute("data-canonical-revision");
+  await page.getByTestId("label-anchor-create").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", revisionBeforeConflict!);
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveCount(1);
+
+  // Edit the display value through the dedicated editor.
+  await page.getByTestId(/label-anchor-edit-/).click();
+  const editor = page.getByTestId("label-anchor-editor");
+  await editor.getByLabel("Label Anchor display").fill("5000");
+  await editor.getByTestId("apply-label-anchor").click();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveText("⟲ 5→5000");
+  await expect(ruler.locator("[data-source-cycle='5']")).toHaveAttribute("data-cycle", "5000");
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+
+  // Undo restores the original display value; Redo reapplies it.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveText("⟲ 5→0");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveText("⟲ 5→5000");
+
+  // Save/Open preserves the anchor exactly.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const saveDownload = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await saveDownload).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveText("⟲ 5→5000");
+  await expect(ruler.locator("[data-source-cycle='5']")).toHaveAttribute("data-cycle", "5000");
+
+  // Delete removes only the standalone anchor's display-number restart.
+  await page.getByTestId(/label-anchor-edit-/).click();
+  await page.getByRole("button", { name: /Delete Label Anchor/, exact: true }).click();
+  await expect(page.getByTestId(/label-anchor-summary-/)).toHaveCount(0);
+  await expect(ruler.locator("[data-source-cycle='5']")).toHaveAttribute("data-cycle", "5");
+});
+
 test("saves and reopens an edited Time Group presentation exactly", async ({ page }) => {
   await page.goto("/");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();

@@ -1332,6 +1332,47 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { bookmarkPosition: [bookmark.id], minimapOverview: true };
       return { ok: true, document: { ...document, bookmarks: document.bookmarks.filter((item) => item.id !== bookmark.id) }, changeSet, inverseChangeSet: changeSet };
     }
+    case "labelAnchor.create": {
+      const anchor = command.labelAnchor;
+      if (!isStableId(anchor.id)) return fail("invalid", "INVALID_STABLE_ID", "$.labelAnchor.id", "Label Anchor ID must be stable.");
+      if (document.timeline.labelAnchors.some((item) => item.id === anchor.id)) return fail("invalid", "DUPLICATE_ID", "$.labelAnchor.id", `Label Anchor '${anchor.id}' already exists.`);
+      // This command only ever produces a standalone anchor -- a Time
+      // Group-owned fold-resume anchor is created/removed through the Time
+      // Group's own lifecycle (#202), never through this one, so the two
+      // ownership paths can never leave the other's anchor dangling.
+      if (anchor.ownerTimeGroupId !== undefined) return fail("invalid", "LABEL_ANCHOR_OWNER_NOT_ALLOWED", "$.labelAnchor.ownerTimeGroupId", "labelAnchor.create only produces a standalone Label Anchor; a Time Group-owned resume anchor is created through the Time Group's own lifecycle.");
+      if (!Number.isInteger(anchor.source) || anchor.source < 0 || anchor.source >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.labelAnchor.source", "Label Anchor source is outside the timeline.");
+      if (!Number.isInteger(anchor.display)) return fail("invalid", "INVALID_LABEL_ANCHOR_DISPLAY", "$.labelAnchor.display", "Label Anchor display value must be an integer.");
+      if (document.timeline.labelAnchors.some((item) => item.source === anchor.source)) return fail("invalid", "LABEL_ANCHOR_SOURCE_CONFLICT", "$.labelAnchor.source", `Another Label Anchor already restarts the ruler at source ${anchor.source}.`);
+      // timelineSemantics (not just geometryScreenX) is what actually
+      // triggers a ruler/grid refresh (see deriveRenderInvalidation in
+      // use-editor-runtime-bridge.ts) -- it does NOT by itself request any
+      // WaveDrom regeneration (that's driven only by changeSet.waveSemantics,
+      // which this intentionally omits: a label-only rebase never touches
+      // signal data).
+      const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors: [...document.timeline.labelAnchors, anchor] } }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "labelAnchor.update": {
+      const index = document.timeline.labelAnchors.findIndex((item) => item.id === command.labelAnchorId);
+      const anchor = document.timeline.labelAnchors[index];
+      if (!anchor) return fail("invalid", "LABEL_ANCHOR_NOT_FOUND", "$.labelAnchorId", `Label Anchor '${command.labelAnchorId}' does not exist.`);
+      if (anchor.ownerTimeGroupId !== undefined) return fail("invalid", "LABEL_ANCHOR_OWNED_BY_TIME_GROUP", "$.labelAnchorId", "This Label Anchor is owned by a Time Group; edit it through the Time Group instead.");
+      if (!Number.isInteger(command.source) || command.source < 0 || command.source >= document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.source", "Label Anchor source is outside the timeline.");
+      if (!Number.isInteger(command.display)) return fail("invalid", "INVALID_LABEL_ANCHOR_DISPLAY", "$.display", "Label Anchor display value must be an integer.");
+      if (anchor.source === command.source && anchor.display === command.display) return fail("no-op", "NO_OP", "$", "Label Anchor is unchanged.");
+      if (document.timeline.labelAnchors.some((item) => item.id !== anchor.id && item.source === command.source)) return fail("invalid", "LABEL_ANCHOR_SOURCE_CONFLICT", "$.source", `Another Label Anchor already restarts the ruler at source ${command.source}.`);
+      const labelAnchors = [...document.timeline.labelAnchors]; labelAnchors[index] = { id: anchor.id, source: command.source, display: command.display };
+      const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors } }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "labelAnchor.delete": {
+      const anchor = document.timeline.labelAnchors.find((item) => item.id === command.labelAnchorId);
+      if (!anchor) return fail("invalid", "LABEL_ANCHOR_NOT_FOUND", "$.labelAnchorId", `Label Anchor '${command.labelAnchorId}' does not exist.`);
+      if (anchor.ownerTimeGroupId !== undefined) return fail("invalid", "LABEL_ANCHOR_OWNED_BY_TIME_GROUP", "$.labelAnchorId", "This Label Anchor is owned by a Time Group; remove it by editing/deleting the Time Group instead.");
+      const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors: document.timeline.labelAnchors.filter((item) => item.id !== anchor.id) } }, changeSet, inverseChangeSet: changeSet };
+    }
     case "timeGroup.create": {
       const group = command.timeGroup;
       if (!isStableId(group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.timeGroup.id", "Time Group ID must be stable.");
