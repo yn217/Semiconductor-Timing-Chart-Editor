@@ -183,7 +183,7 @@ test("switches representative Golden Samples through production File Input witho
   await testInfo.attach("golden-sample-switch-evidence.json", { body: Buffer.from(JSON.stringify({ from: first.meta.file, fromRows: firstIds, to: second.meta.file, toRows: secondIds, renderedAfterSwitch }, null, 2)), contentType: "application/json" });
 });
 
-test("exports SVG for all 20 immutable Golden Samples without mutating Canonical state", async ({ page }, testInfo) => {
+test("exports SVG, PNG and PDF for all 20 immutable Golden Samples without mutating Canonical state", async ({ page }, testInfo) => {
   test.setTimeout(300_000);
   const samples = await samplesFromManifests();
   expect(samples).toHaveLength(process.env.GOLDEN_SAMPLE_FILTER ? 1 : 20);
@@ -218,7 +218,6 @@ test("exports SVG for all 20 immutable Golden Samples without mutating Canonical
     assertGoldenSvgContract(meta, svg.toString("utf8"));
     const exportedFormats: GoldenExportFormat[] = ["svg"];
     for (const format of ["png", "pdf"] as const) {
-      if (!meta.coverage.some((coverage) => coverage.toLowerCase() === `${format} export`)) continue;
       await dialog.getByLabel("Export format").selectOption(format);
       const pendingFormat = page.waitForEvent("download", { timeout: 15_000 });
       await dialog.getByRole("button", { name: `Export ${format.toUpperCase()}` }).click();
