@@ -172,3 +172,34 @@
 .clock-generator input, .clock-generator select { width: 82px; }
 .quick-values { display: flex; gap: 4px; }
 .quick-values button { min-width: 30px; padding-inline: 6px; }
+
+/* Migrated from legacy.css (#260): Comment Row / Transaction linked-signal /
+   Problems / JSON are all Bottom-panel tabs or Bottom-editor variants. */
+.editor-shell .clock-context-toolbar .clock-context-label { margin: 0 2px 0 12px; color: #25384f; font-size: 11px; font-weight: 700; white-space: nowrap; }
+.comment-row-editor { max-width: 620px; padding: 14px 18px; }
+.comment-row-editor h2 { margin: 0 0 12px; font-size: 14px; }
+.comment-row-editor label { display: grid; gap: 4px; margin: 10px 0; color: #5c687c; font-size: 11px; font-weight: 650; }
+.comment-row-editor input, .comment-row-editor textarea { border: 1px solid #b9c5d3; border-radius: 3px; padding: 6px; font: 12px/1.35 "Segoe UI", sans-serif; }
+.comment-row-editor button { height: 29px; border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; }
+.transaction-linked-signals { margin-top: 10px; padding-top: 8px; border-top: 1px solid #edf0f4; }
+.transaction-linked-list { display: grid; gap: 4px; max-height: 116px; overflow: auto; margin-bottom: 7px; }
+.transaction-linked-item { display: flex; min-width: 0; align-items: center; gap: 6px; padding: 3px 5px; border: 1px solid #d5deea; border-radius: 3px; background: #f7faff; color: #2d4158; font-size: 11px; }
+.transaction-linked-item > span { min-width: 0; flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-linked-item > button { flex: 0 0 auto; width: 22px; height: 22px; border: 0; background: transparent; color: #a52b2b; cursor: pointer; }
+.transaction-signal-picker { display: grid; gap: 6px; margin-top: 7px; padding: 7px; border: 1px solid #c8d4e2; border-radius: 4px; background: #fbfcfe; }
+.transaction-signal-picker > label { grid-template-columns: 1fr; gap: 3px; margin: 0; }
+.transaction-signal-picker [role="listbox"] { display: grid; max-height: 170px; overflow: auto; gap: 2px; }
+.transaction-signal-picker [role="option"] { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1px; min-height: 30px; padding: 4px 5px; border: 1px solid transparent; background: white; color: #263d58; text-align: left; }
+.transaction-signal-picker [role="option"]:hover, .transaction-signal-picker [role="option"][aria-selected="true"] { border-color: #9fc4e5; background: #eaf4fd; }
+.transaction-signal-picker [role="option"] span, .transaction-signal-picker [role="option"] small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.transaction-signal-picker [role="option"] small { color: #61758a; font-size: 9px; }
+.problems-panel header, .json-toolbar { height: 40px; display: flex; align-items: center; gap: 10px; padding: 0 12px; border-bottom: 1px solid #d5dce5; }
+.problems-panel header span { color: #69778a; }
+.problems-panel p { padding: 18px; color: #667488; }
+.problems-panel table { width: 100%; border-collapse: collapse; }
+.problems-panel th, .problems-panel td { border: 1px solid #d6dde6; padding: 6px; text-align: left; }
+.json-panel { height: 100%; display: flex; flex-direction: column; }
+.json-toolbar span { color: #667488; }
+.json-toolbar button, .json-toolbar select { height: 27px; border: 1px solid #bdc8d5; border-radius: 3px; background: white; }
+.json-toolbar output { margin-left: auto; }
+.json-panel pre { flex: 1; margin: 0; padding: 10px 18px; overflow: auto; background: #fbfcfe; font: 11px/1.35 Consolas, monospace; }
