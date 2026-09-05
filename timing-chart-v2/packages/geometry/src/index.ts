@@ -115,12 +115,23 @@ export interface SnapCandidate {
 export interface SnapResult extends SnapCandidate { readonly distance: number }
 
 export class ImmutableSnapIndex {
+  static readonly #cellSize = 32;
   readonly #candidates: readonly SnapCandidate[];
+  readonly #buckets: ReadonlyMap<string, readonly number[]>;
   #queries = 0;
   #candidatesVisited = 0;
 
   constructor(candidates: readonly SnapCandidate[]) {
     this.#candidates = Object.freeze(candidates.map((candidate) => Object.freeze({ ...candidate, anchor: Object.freeze({ ...candidate.anchor }), point: Object.freeze({ ...candidate.point }) })));
+    const buckets = new Map<string, number[]>();
+    this.#candidates.forEach((candidate, index) => {
+      if (!Number.isFinite(candidate.point.x) || !Number.isFinite(candidate.point.y)) return;
+      const key = this.#bucketKey(Math.floor(candidate.point.x / ImmutableSnapIndex.#cellSize), Math.floor(candidate.point.y / ImmutableSnapIndex.#cellSize));
+      const bucket = buckets.get(key);
+      if (bucket) bucket.push(index);
+      else buckets.set(key, [index]);
+    });
+    this.#buckets = new Map([...buckets.entries()].map(([key, indexes]) => [key, Object.freeze(indexes.slice())]));
   }
 
   nearest(point: Point, tolerance: number, kinds?: readonly SnapKind[], preferredKinds?: readonly SnapKind[]): SnapResult | undefined {
@@ -128,7 +139,8 @@ export class ImmutableSnapIndex {
     this.#queries += 1;
     const allowed = kinds ? new Set(kinds) : undefined;
     let result: SnapResult | undefined;
-    for (const candidate of this.#candidates) {
+    for (const index of this.#candidateIndexesNear(point, tolerance)) {
+      const candidate = this.#candidates[index]!;
       this.#candidatesVisited += 1;
       if (allowed && !allowed.has(candidate.kind)) continue;
       const distance = Math.hypot(candidate.point.x - point.x, candidate.point.y - point.y);
@@ -144,6 +156,29 @@ export class ImmutableSnapIndex {
 
   metrics(): Readonly<{ queries: number; candidatesVisited: number }> {
     return Object.freeze({ queries: this.#queries, candidatesVisited: this.#candidatesVisited });
+  }
+
+  #bucketKey(x: number, y: number): string {
+    return `${x}:${y}`;
+  }
+
+  #candidateIndexesNear(point: Point, tolerance: number): readonly number[] {
+    if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return [];
+    const minX = Math.floor((point.x - tolerance) / ImmutableSnapIndex.#cellSize);
+    const maxX = Math.floor((point.x + tolerance) / ImmutableSnapIndex.#cellSize);
+    const minY = Math.floor((point.y - tolerance) / ImmutableSnapIndex.#cellSize);
+    const maxY = Math.floor((point.y + tolerance) / ImmutableSnapIndex.#cellSize);
+    const cellCount = (maxX - minX + 1) * (maxY - minY + 1);
+    if (!Number.isFinite(cellCount) || cellCount > 4096) return this.#candidates.map((_, index) => index);
+    const indexes: number[] = [];
+    for (let y = minY; y <= maxY; y += 1) {
+      for (let x = minX; x <= maxX; x += 1) {
+        const bucket = this.#buckets.get(this.#bucketKey(x, y));
+        if (bucket) indexes.push(...bucket);
+      }
+    }
+    indexes.sort((left, right) => left - right);
+    return indexes;
   }
 }
 
