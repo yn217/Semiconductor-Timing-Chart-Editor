@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
 import { isStableId } from "@timing-chart-v2/schema";
-import type { AnnotationId, BookmarkId, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
+import type { AnnotationId, BookmarkId, ClockSignal, CommandId, LabelAnchorId, SignalId, TimeGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -64,6 +64,36 @@ describe("timeline ripple commands", () => {
     expect(session.getSnapshot()).toBe(before);
     expect(session.metrics()).toEqual(metrics);
     expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+  });
+
+  it("rejects unsupported generated-clock ripple atomically", () => {
+    const initial = rippleFixture();
+    const clock = initial.signals[0] as ClockSignal;
+    initial.signals[0] = { ...clock, generator: { ...clock.generator, period: 2 } };
+    const commands = [
+      { id: commandId("cmd_clock_insert"), type: "timeline.insert" as const, at: 3, count: 1 },
+      { id: commandId("cmd_clock_delete"), type: "timeline.delete" as const, start: 2, end: 3 },
+      { id: commandId("cmd_clock_duplicate"), type: "timeline.duplicateRange" as const, start: 3, end: 4, at: 1 },
+      { id: commandId("cmd_clock_move"), type: "timeline.moveRange" as const, start: 3, end: 4, to: 0 },
+    ];
+    for (const command of commands) {
+      const session = new CommandHistorySession(initial);
+      const before = session.getSnapshot();
+      const result = session.execute(command);
+      expect(result).toMatchObject({ reason: "invalid", problems: [expect.objectContaining({ code: "UNSUPPORTED_CLOCK_RIPPLE" })] });
+      expect(session.getSnapshot()).toBe(before);
+      expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+    }
+  });
+
+  it("keeps representable period-one and terminal append edits available", () => {
+    const initial = rippleFixture();
+    const clock = initial.signals[0] as ClockSignal;
+    initial.signals[0] = { ...clock, generator: { ...clock.generator, period: 2 } };
+    const session = new CommandHistorySession(initial);
+    const result = session.execute({ id: commandId("cmd_clock_terminal_insert"), type: "timeline.insert", at: initial.timeline.cycleCount, count: 1 });
+    expect(result.ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.cycleCount).toBe(initial.timeline.cycleCount + 1);
   });
 
   it("rejects a delete that would collapse distinct LabelAnchor sources", () => {
