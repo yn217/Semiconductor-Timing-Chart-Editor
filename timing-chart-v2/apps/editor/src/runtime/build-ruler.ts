@@ -4,7 +4,7 @@ import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock"): number {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -75,7 +75,13 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   element.replaceChildren(rangeBand, ...ticks, ...overlays);
   element.dataset.source = "local-geometry";
   element.parentElement?.setAttribute("data-source", "local-geometry");
-  const targetWidth = Math.ceil((finalX + 24) * scale);
+  // A short document must still fill the available timing column. The ruler
+  // geometry is the content-width authority for long timelines, but allowing
+  // a short intrinsic width to replace the viewport's minimum makes the
+  // waveform column collapse after the initial mount (notably in the
+  // visual-reference route). Keep both contracts: never shrink below the
+  // available column, and never clip a genuinely wider timeline.
+  const targetWidth = Math.max(Math.ceil((finalX + 24) * scale), Math.ceil(minimumWidth));
   element.style.width = `${targetWidth}px`;
   const widthOwner = element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
   widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);

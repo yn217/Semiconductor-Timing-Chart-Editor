@@ -241,7 +241,8 @@ export function refreshTimelinePresentation(context: {
   if (context.reason === "ruler") {
     context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
     const metrics = context.metricsOwner.snapshot();
-    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? context.geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom);
+    const minimumWaveWidth = Math.max(160, metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
+    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? context.geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth);
     timeAxis = rebuilt.timeAxis;
     screenGeometryScale = rebuilt.scale;
     rulerInitialized = true;
@@ -562,7 +563,7 @@ export function refreshRendererOverlays(renderer: any, host: RefObject<HTMLDivEl
 
 export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: any, mappingCache: any, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode); }
 
-export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: any, mappingCache: any, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number): { readonly timeAxis: any; readonly scale: number } { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); const scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode); return { timeAxis, scale }; }
+export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: any, mappingCache: any, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0): { readonly timeAxis: any; readonly scale: number } { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); const scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode, minimumWaveWidth); return { timeAxis, scale }; }
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void { const playheadX = boundaryToLocalX(cycle); let playhead = ruler.querySelector<HTMLElement>("[data-role='playhead']"); if (playheadX === undefined) { playhead?.remove(); return; } if (!playhead) { playhead = ruler.ownerDocument.createElement("span"); playhead.dataset.role = "playhead"; playhead.dataset.testid = "playhead"; playhead.setAttribute("aria-label", "Playhead"); ruler.append(playhead); } playhead.dataset.playheadCycle = String(cycle); playhead.style.left = `${playheadX}px`; }
 
