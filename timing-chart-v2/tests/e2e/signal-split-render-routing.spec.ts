@@ -237,6 +237,52 @@ test("default full-document export contains one row per Signal even when a Signa
   // duplicate the exported wave for a Both-assigned Signal. A missing
   // identifying attribute (0 matches) is a separate, unrelated export-markup
   // concern, not what this test checks; only >1 would indicate duplication.
+  // (No Signal in this document is actually assigned Upper/Lower -- only
+  // the view mode itself is toggled on -- so the combined two-pane export
+  // path below never activates here; see the next test for that case.)
   expect(idAttributeMatches.length).toBeLessThanOrEqual(1);
+  await dialog.getByRole("button", { name: "Close export", exact: true }).click();
+});
+
+// #200 combined two-pane export: once a Signal genuinely has an Upper or
+// Lower assignment (not just the view toggled on), export must show the
+// real two-block layout -- Upper's rows, then Lower's, stacked -- and
+// duplicate a "Both" Signal once per pane rather than pretending the
+// split doesn't exist.
+test("real Upper/Lower assignment produces a combined two-pane export: stacked blocks, and a Both Signal renders once per pane", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+
+  await assignSplitPane(page, host, "sig_cycle_request", "upper", "signal");
+  await assignSplitPane(page, host, "sig_cycle_ready", "lower", "signal");
+  // sig_cycle_valid is left unassigned (default "both").
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  await dialog.getByLabel("Export format").selectOption("svg");
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Export SVG", exact: true }).click();
+  const path = await (await download).path();
+  expect(path).toBeTruthy();
+  const fs = await import("node:fs");
+  const svgText = fs.readFileSync(path!, "utf-8");
+
+  const yOf = (signalId: string) => [...svgText.matchAll(new RegExp(`data-signal-id="${signalId}"[^>]*\\sy="([^"]+)"`, "g"))].map((match) => Number(match[1]));
+  const requestYs = yOf("sig_cycle_request");
+  const readyYs = yOf("sig_cycle_ready");
+  const validYs = yOf("sig_cycle_valid");
+  expect(requestYs).toHaveLength(1);
+  expect(readyYs).toHaveLength(1);
+  // "Both" Signal: once per pane.
+  expect(validYs).toHaveLength(2);
+  // Upper block (Request, then Valid's Upper occurrence, in that document
+  // order) sits entirely above the Lower block (Ready, then Valid's Lower
+  // occurrence, again in document order -- Ready precedes Valid).
+  const [validUpper, validLower] = [...validYs].sort((left, right) => left - right);
+  expect(validUpper).toBeGreaterThan(requestYs[0]!);
+  expect(readyYs[0]).toBeGreaterThan(validUpper!);
+  expect(validLower).toBeGreaterThan(readyYs[0]!);
   await dialog.getByRole("button", { name: "Close export", exact: true }).click();
 });

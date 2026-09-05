@@ -54,6 +54,10 @@ const LABEL_WIDTH = 220;
 const ROW_HEIGHT = 34;
 const TRANSACTION_HEIGHT = 28;
 const HEADER_LINE_LIMIT = 112;
+// #200 combined two-pane export: the visual gap between the stacked
+// Upper and Lower blocks, matching the Editor's own signal-split-pane
+// CSS divider proportions closely enough for a static export.
+const SPLIT_PANE_GAP = 24;
 
 function wrapLayoutText(value: string, limit = HEADER_LINE_LIMIT): string[] {
   const lines: string[] = [];
@@ -197,13 +201,54 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   });
   const cycleWidth = (renderedWaves[0]?.width ?? mapping.displayCycleCount * 20) / mapping.displayCycleCount;
   const rowHeight = Math.max(ROW_HEIGHT, (renderedWaves[0]?.height ?? 30) + 4);
+  // #200 combined two-pane export: when at least one Signal has a real
+  // Upper/Lower splitPane assignment, position every row using two
+  // pane-filtered layouts stacked Upper-above-Lower (matching the Editor's
+  // own two-viewport presentation) instead of the single unfiltered
+  // layout every non-split document still uses byte-for-byte unchanged.
+  // A "both"-assigned Signal is anchored to its Upper position for
+  // annotations/edge-counters/group-bands (rowY/rowEntries hold exactly
+  // one position per row, same as before split existed) but is rendered
+  // TWICE -- once per pane -- in `waveforms`/signal-name `labels` below,
+  // since that duplication is the actual visual point of this feature.
+  // Anything anchored to a "both" Signal (an annotation, an edge counter)
+  // therefore appears once, next to its Upper occurrence only; that is an
+  // explicit, narrower v1 scope boundary, not a misalignment -- every
+  // position it does use comes from the same pane-filtered layout its
+  // corresponding waveform occurrence uses, so nothing ever points at a
+  // stale, pre-split Y coordinate.
+  const splitPaneUsed = document.signals.some((signal) => signal.display.splitPane === "upper" || signal.display.splitPane === "lower");
   const rowLayout = calculateRowLayout(document, new Set(), { includeHidden: false });
-  const rowEntries = new Map(rowLayout.navigationRows.map((entry) => [entry.rowId, entry]));
+  const upperLayout = splitPaneUsed ? calculateRowLayout(document, new Set(), { includeHidden: false, reserveHiddenSpace: false, pane: "upper" }) : undefined;
+  const lowerLayout = splitPaneUsed ? calculateRowLayout(document, new Set(), { includeHidden: false, reserveHiddenSpace: false, pane: "lower" }) : undefined;
+  const totalRowHeight = splitPaneUsed ? upperLayout!.totalHeight + SPLIT_PANE_GAP + lowerLayout!.totalHeight : rowLayout.totalHeight;
+  const rowEntries = splitPaneUsed
+    ? new Map([
+        ...upperLayout!.visibleRows.map((entry) => [entry.rowId, entry] as const),
+        // Lower-exclusive rows only -- a "both" Signal already has its
+        // (authoritative) entry from upperLayout above; re-including it
+        // here would silently overwrite that with its Lower position.
+        ...lowerLayout!.visibleRows.filter((entry) => signalById.get(entry.rowId)?.display.splitPane === "lower").map((entry) => [entry.rowId, { ...entry, y: entry.y + upperLayout!.totalHeight + SPLIT_PANE_GAP }] as const),
+      ])
+    : new Map(rowLayout.navigationRows.map((entry) => [entry.rowId, entry]));
   const rowY = new Map(signals.map((signal, index) => {
     const entry = rowEntries.get(signal.id);
     return [signal.id, waveTop + (entry?.y ?? index * rowHeight) + (entry?.height ?? rowHeight) / 2] as const;
   }));
-  const waveforms = renderedWaves.map(({ signal, waveJson, svgMarkup, width: sourceWidth, height: sourceHeight }): ExportWave => ({ signalId: signal.id, name: signal.display.name, role: signal.role, y: rowY.get(signal.id)!, svgMarkup, sourceWidth, sourceHeight, cropX: range.start * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(waveJson) }));
+  // One rendered occurrence per pane a wave Signal actually belongs to --
+  // exactly one for every Upper-only/Lower-only/non-split Signal, exactly
+  // two (Upper and Lower) for a "both"-assigned one.
+  const wavePositions = splitPaneUsed
+    ? [
+        ...upperLayout!.visibleRows.filter((entry) => entry.kind === "timing").map((entry) => ({ signal: signalById.get(entry.rowId)!, y: waveTop + entry.y + entry.height / 2 })),
+        ...lowerLayout!.visibleRows.filter((entry) => entry.kind === "timing").map((entry) => ({ signal: signalById.get(entry.rowId)!, y: waveTop + entry.y + upperLayout!.totalHeight + SPLIT_PANE_GAP + entry.height / 2 })),
+      ]
+    : waveSignals.map((signal) => ({ signal, y: rowY.get(signal.id)! }));
+  const renderedWaveById = new Map(renderedWaves.map((rendered) => [rendered.signal.id, rendered]));
+  const waveforms: ExportWave[] = wavePositions.map(({ signal, y }): ExportWave => {
+    const rendered = renderedWaveById.get(signal.id)!;
+    return { signalId: signal.id, name: signal.display.name, role: signal.role, y, svgMarkup: rendered.svgMarkup, sourceWidth: rendered.width, sourceHeight: rendered.height, cropX: range.start * cycleWidth, width: (range.end - range.start) * cycleWidth, waveJson: JSON.stringify(rendered.waveJson) };
+  });
   const edgeCounters: ExportEdgeCounter[] = [];
   for (const { signal } of renderedWaves) {
     if (signal.type !== "clock" || !signal.edgeCounter.show) continue;
@@ -234,7 +279,15 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
       edgeCounters.push({ id: `edge:${signal.id}:${edge.kind}:${edge.cycle}`, signalId: signal.id, kind: edge.kind, cycle: edge.cycle, x: LABEL_WIDTH + (displayCycle - range.start) * cycleWidth + signal.edgeCounter.offset.x, y: row + signal.edgeCounter.offset.y + (signal.edgeCounter.position === "above" ? -6 : 10), label: String(signal.edgeCounter.startNumber + index) });
     });
   }
-  const labels: ExportLabel[] = signals.map((signal) => ({ text: signal.display.name, x: 12, y: rowY.get(signal.id)!, kind: "signal" }));
+  const labels: ExportLabel[] = [
+    // Wave-signal name labels duplicate per pane occurrence exactly like
+    // their waveform (a "both"-assigned Signal's name appears once above
+    // each of its two rendered waves). Comment Rows are never split-pane
+    // aware (see the scope note above wavePositions) and keep their
+    // single, pre-split position.
+    ...wavePositions.map(({ signal, y }): ExportLabel => ({ text: signal.display.name, x: 12, y, kind: "signal" })),
+    ...signals.filter((signal) => signal.type === "commentRow").map((signal): ExportLabel => ({ text: signal.display.name, x: 12, y: rowY.get(signal.id)!, kind: "signal" })),
+  ];
   for (const signal of signals) {
     if (signal.type !== "commentRow") continue;
     labels.push({ text: signal.body || signal.title || signal.display.name, x: LABEL_WIDTH, y: rowY.get(signal.id)!, kind: "comment" });
@@ -325,7 +378,7 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const endKind = anchorTransitionKind(annotation.end);
     return { id: annotation.id, type: annotation.type, label: annotation.label, x1: first.x, y1: first.y, x2: second.x, y2: second.y, ...(annotation.opacity === undefined ? {} : { opacity: annotation.opacity }), ...(annotation.sourceSignalId === undefined ? {} : { sourceSignalId: annotation.sourceSignalId }), ...(annotation.traceOffsetCycles === undefined ? {} : { traceOffsetCycles: annotation.traceOffsetCycles }), ...(startFraction === undefined ? {} : { threshold1: startFraction }), ...(endFraction === undefined ? {} : { threshold2: endFraction }), ...(startKind === undefined ? {} : { transitionKind1: startKind }), ...(endKind === undefined ? {} : { transitionKind2: endKind }), ...(annotation.measurement?.profile === undefined ? {} : { measurementProfile: annotation.measurement.profile }), ...(annotation.measurementLayout === undefined ? {} : { measurementLayout: annotation.measurementLayout, measurementLane: measurementLaneById.get(annotation.id) ?? annotation.measurementLayout.lane ?? 0 }), ...(tracePoints === undefined ? {} : { tracePoints }), ...(annotation.lineType === undefined ? {} : { lineType: annotation.lineType }), ...(annotation.arrowhead === undefined ? {} : { arrowhead: annotation.arrowhead }), ...(annotation.labelOffset === undefined ? {} : { labelOffsetX: annotation.labelOffset.x, labelOffsetY: annotation.labelOffset.y }), ...(annotation.color === undefined ? {} : { color: annotation.color }), ...(annotation.style === undefined ? {} : { style: annotation.style }) };
   }).filter((annotation): annotation is ExportAnnotation => annotation !== undefined);
-  const contentHeight = waveTop + rowLayout.totalHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
+  const contentHeight = waveTop + totalRowHeight + 54 + (documentLayout.footerText || documentLayout.figureNumber || documentLayout.revision ? 18 : 0);
   const legend = document.legend.show ? effectiveLegendEntries(document).map((entry) => entry.label) : [];
   const ticks: ExportRulerTick[] = [];
   for (let cycle = range.start; cycle <= range.end; cycle += 1) ticks.push({ cycle, text: String(mapping.labelFor(cycle)) });

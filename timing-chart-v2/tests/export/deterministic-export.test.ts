@@ -32,6 +32,22 @@ function foldedFixture(): CanonicalDocument {
   };
 }
 
+// #200 combined two-pane export: a "both"-assigned Signal must render
+// TWICE (once per pane), while an Upper-only/Lower-only Signal renders
+// once, in its own pane's stacked block.
+function splitFixture(): CanonicalDocument {
+  const base = canonicalFixture();
+  const prototype = base.signals[1]!;
+  const upper = { ...prototype, id: "sig_split_upper" as SignalId, name: "UP", display: { name: "UP", splitPane: "upper" as const } };
+  const shared = { ...prototype, id: "sig_split_shared" as SignalId, name: "SHARED", display: { name: "SHARED" } };
+  const lower = { ...prototype, id: "sig_split_lower" as SignalId, name: "LOW", display: { name: "LOW", splitPane: "lower" as const } };
+  return {
+    ...base,
+    signalGroups: [{ id: "grp_split" as GroupId, name: "Split", rows: [upper.id, shared.id, lower.id] }],
+    signals: [base.signals[0]!, upper, shared, lower],
+  };
+}
+
 describe("deterministic document export", () => {
   it("exports Comment Row body at the waveform origin without sending it to WaveDrom", () => {
     const base = canonicalFixture();
@@ -312,5 +328,44 @@ describe("deterministic document export", () => {
     expect(transaction!.x + transaction!.width).toBeCloseTo(foldBoundaryX, 5);
     expect(annotation!.x1).toBeCloseTo(lastVisibleX, 5);
     expect(annotation!.x1).toBeLessThan(foldBoundaryX);
+  });
+
+  it("#200: exports a combined two-pane scene -- Upper/Lower stack, and a 'both' Signal renders once per pane", () => {
+    const scene = buildExportScene(splitFixture(), { format: "svg", scope: "document" });
+    const upperWaves = scene.waveforms.filter((wave) => wave.signalId === "sig_split_upper");
+    const sharedWaves = scene.waveforms.filter((wave) => wave.signalId === "sig_split_shared");
+    const lowerWaves = scene.waveforms.filter((wave) => wave.signalId === "sig_split_lower");
+    // Upper-only and Lower-only each render exactly once; "both" (shared)
+    // renders exactly twice -- once for each pane it belongs to.
+    expect(upperWaves).toHaveLength(1);
+    expect(lowerWaves).toHaveLength(1);
+    expect(sharedWaves).toHaveLength(2);
+    expect(scene.waveforms).toHaveLength(4);
+
+    // Every occurrence gets its own distinct Y -- no two rows collide.
+    const allYs = scene.waveforms.map((wave) => wave.y);
+    expect(new Set(allYs).size).toBe(allYs.length);
+
+    // Shared's two occurrences are genuinely different rows, one per pane.
+    const [sharedFirst, sharedSecond] = [...sharedWaves].sort((left, right) => left.y - right.y);
+    expect(sharedSecond!.y).toBeGreaterThan(sharedFirst!.y);
+
+    // Upper block (Upper-only, then Shared's Upper occurrence) sits
+    // entirely above the Lower block (Shared's Lower occurrence, then
+    // Lower-only) -- proving a real stacked-block layout, not an
+    // interleaved single list.
+    expect(sharedFirst!.y).toBeGreaterThan(upperWaves[0]!.y);
+    expect(sharedSecond!.y).toBeGreaterThan(sharedFirst!.y);
+    expect(lowerWaves[0]!.y).toBeGreaterThan(sharedSecond!.y);
+
+    // Matching signal-name labels duplicate the same way the waveforms do.
+    const sharedLabels = scene.labels.filter((label) => label.kind === "signal" && label.text === "SHARED");
+    expect(sharedLabels).toHaveLength(2);
+
+    // The exported scene is taller than a single-pane document with the
+    // same three rows would be -- it must actually account for both
+    // stacked blocks plus the pane gap, not just one flat list.
+    const flatScene = buildExportScene({ ...splitFixture(), signals: splitFixture().signals.map((signal) => ({ ...signal, display: { ...signal.display, splitPane: undefined } })) }, { format: "svg", scope: "document" });
+    expect(scene.height).toBeGreaterThan(flatScene.height);
   });
 });
