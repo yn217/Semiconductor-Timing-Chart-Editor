@@ -107,6 +107,19 @@ export function MinimalCycleView() {
   const viewportLower = useRef<HTMLDivElement>(null);
   const rulerLower = useRef<HTMLDivElement>(null);
   const hostLower = useRef<HTMLDivElement>(null);
+  // Signal Split View (#200) PR 4: the Lower pane's own renderer/adapter/
+  // geometry/projection pipeline, owned by the effect below (keyed on
+  // signalSplitEnabled) and consumed by the primary mount effect's document-
+  // change handlers so both panes reproject on every canonical change from
+  // one single source of truth. `null` whenever Split is off -- every
+  // existing document-change path is then a no-op for Lower, unchanged from
+  // pre-#200 behavior.
+  const signalSplitRuntimeRef = useRef<null | { onDocumentChanged: (result: { readonly snapshot: Extract<CommandResult, { readonly ok: true }>["snapshot"]; readonly changeSet: Extract<CommandResult, { readonly ok: true }>["changeSet"] }) => void; onDocumentReplaced: () => void; onViewportResize: () => void; dispose: () => void }>(null);
+  // Lets the signalSplitEnabled effect force the Upper pane (owned by the
+  // primary mount effect) to reproject/re-render after switching its shared
+  // `projection.setPane()` filter, without exposing Upper's internal
+  // renderer/projection closures outside that effect.
+  const forceUpperReprojectRef = useRef<() => void>(() => undefined);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const armArrowPick = useRef<() => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
@@ -143,6 +156,7 @@ export function MinimalCycleView() {
     bottomTab, setBottomTab,
     viewMode, setViewMode,
     signalSplitEnabled, setSignalSplitEnabled,
+    signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
     density, setDensity,
     workspacePreset, setWorkspacePreset,
     waveformRestoreRef,
@@ -469,6 +483,22 @@ export function MinimalCycleView() {
     });
     let window: VirtualizationWindow = initialProjection.window;
     projection = initialProjection.projection;
+    // Signal Split View (#200): lets the signalSplitEnabled effect force
+    // Upper to reproject/re-render immediately after flipping
+    // `projectionCoordinator.setPane()`, using the CURRENT document (not a
+    // change -- Split toggling itself is view-only, so this must never
+    // touch history/dirty/canonical state).
+    forceUpperReprojectRef.current = () => {
+      if (!active) return;
+      // An empty changeSet is correct here, not `fullDocumentReplace` --
+      // `projectionCoordinator.setPane()` already nulled the cached layout,
+      // so the very next `project()` call rebuilds regardless of changeSet
+      // flags. Declaring a fake full-document-replace would incorrectly
+      // advance documentEpoch and clear annotation preview state for a
+      // toggle that must be canonical/history/dirty-neutral.
+      projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      renderer.update(projection);
+    };
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
     let rulerInitialized = false;
@@ -643,6 +673,7 @@ export function MinimalCycleView() {
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
       renderer.update(projection);
+      signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
         return { start, end: Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount)) };
@@ -667,6 +698,7 @@ export function MinimalCycleView() {
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: {}, viewport: window, previous: projection, collapsedGroupIds: [...ids] });
       timelineGeometry.invalidateSnapIndex();
       renderer.update(projection);
+      signalSplitRuntimeRef.current?.onDocumentChanged({ snapshot: session.getSnapshot(), changeSet: {} });
       timelineRuntime.refreshPlayhead();
       timelineRuntime.refreshGrid();
       timelineRuntime.refreshOverlays();
@@ -705,6 +737,7 @@ export function MinimalCycleView() {
         window = buildViewportWindow(viewportElement, canonicalDocument.timeline.referenceClock);
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
+      signalSplitRuntimeRef.current?.onDocumentReplaced();
       markOpenPhase("canonical-replaced");
       requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
       rulerElement.replaceChildren();
@@ -1173,6 +1206,122 @@ export function MinimalCycleView() {
     };
   }, []);
 
+  // Signal Split View (#200) PR 4: builds the Lower pane's own real
+  // renderer/adapter/geometry/projection pipeline (mirroring the primary
+  // mount effect's pattern, via the same runtime factory methods) whenever
+  // Split turns on, mounted into hostLower; disposes it and reverts Upper's
+  // pane filter whenever Split turns off. Upper does NOT get a second
+  // projection instance -- it keeps using the primary mount effect's own
+  // `projectionCoordinator` (runtime.projection) and just switches that one
+  // instance's fixed pane filter via `setPane()`, so there is still exactly
+  // one Upper-owned row-layout authority, and (per #200's own constraint) no
+  // second pixels-per-cycle/horizontal-geometry owner is ever created here --
+  // Lower reuses the shared `runtime.displayMapping` cycle mapping and has
+  // its own CSS `--presentation-x-scale`/width mirrored from Upper's single
+  // authoritative value below, never computing its own.
+  useEffect(() => {
+    const runtime = application.runtime;
+    if (!signalSplitEnabled) {
+      signalSplitRuntimeRef.current?.dispose();
+      signalSplitRuntimeRef.current = null;
+      runtime.projection.setPane(undefined);
+      forceUpperReprojectRef.current();
+      return;
+    }
+    const hostLowerElement = hostLower.current;
+    const viewportLowerElement = viewportLower.current;
+    if (!hostLowerElement || !viewportLowerElement) return;
+    let active = true;
+    const { geometry: geometryRegistryLower, projection: projectionCoordinatorLower } = runtime.createSignalSplitLowerPane();
+    const adapterLower = runtime.createWaveDromAdapter();
+    const providerLower = createWaveformSurfaceProvider({
+      sessionController: runtime.session,
+      mappingCache: runtime.displayMapping,
+      adapter: adapterLower,
+      geometryRegistry: geometryRegistryLower,
+      // Lower doesn't own open/first-paint instrumentation (Upper's single
+      // mount effect already reports that for the document as a whole) and
+      // doesn't do its own snap-index lookups (snap is Upper-owned, per the
+      // single-authority constraint above), so both are no-ops here.
+      markOpenPhase: () => undefined,
+      invalidateSnapIndex: () => undefined,
+    });
+    const renderCoordinatorLower = runtime.createRenderer(providerLower);
+    const rendererLower = renderCoordinatorLower.renderer;
+    const initialSnapshot = runtime.session.snapshot();
+    const initialLower = mountInitialTimelineProjection({
+      coordinator: renderCoordinatorLower,
+      renderer: rendererLower,
+      host: hostLowerElement,
+      viewport: viewportLowerElement,
+      referenceClock: initialSnapshot.document.timeline.referenceClock,
+      projectionCoordinator: projectionCoordinatorLower,
+      snapshot: initialSnapshot,
+      collapsedGroupIds: [...collapsedGroupIdsRef.current],
+    });
+    let lowerWindow = initialLower.window;
+    let lowerProjection = initialLower.projection;
+    // Lower's own vertical scroll must re-virtualize its rows exactly like
+    // Upper's viewport does (via timelineRuntime.onViewportScroll() in the
+    // primary mount effect) -- without this, Lower would only ever mount
+    // whatever rows happened to fall in its initial mount-time window,
+    // never responding to the user scrolling it. This is Lower-local
+    // (Y-axis row mounting), not the shared horizontal/pixels-per-cycle
+    // authority, so it doesn't conflict with the single-owner constraint.
+    const reprojectLowerViewportOnly = () => {
+      if (!active) return;
+      lowerWindow = buildViewportWindow(viewportLowerElement, runtime.session.snapshot().document.timeline.referenceClock);
+      lowerProjection = projectionCoordinatorLower.project({ snapshot: runtime.session.snapshot(), changeSet: {}, viewport: lowerWindow, previous: lowerProjection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+      rendererLower.update(lowerProjection);
+    };
+    viewportLowerElement.addEventListener("scroll", reprojectLowerViewportOnly, { passive: true });
+    signalSplitRuntimeRef.current = {
+      onDocumentChanged: (result) => {
+        if (!active) return;
+        lowerWindow = buildViewportWindow(viewportLowerElement, result.snapshot.document.timeline.referenceClock);
+        lowerProjection = projectionCoordinatorLower.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: lowerWindow, previous: lowerProjection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        rendererLower.update(lowerProjection);
+      },
+      // The splitter (signalSplitRatio) resizes Lower's viewport via CSS
+      // height alone -- unlike a real scroll, that never fires a "scroll"
+      // event on its own, so Lower would keep mounting rows sized for its
+      // pre-resize viewport until the user happened to scroll it. Re-run
+      // the same viewport-only reproject explicitly whenever the ratio
+      // changes (wired below).
+      onViewportResize: reprojectLowerViewportOnly,
+      onDocumentReplaced: () => {
+        if (!active || !viewportLowerElement.isConnected) return;
+        geometryRegistryLower.clear();
+        viewportLowerElement.scrollLeft = 0;
+        viewportLowerElement.scrollTop = 0;
+        const replacedSnapshot = runtime.session.snapshot();
+        lowerWindow = buildViewportWindow(viewportLowerElement, replacedSnapshot.document.timeline.referenceClock);
+        lowerProjection = projectionCoordinatorLower.project({ snapshot: replacedSnapshot, changeSet: { fullDocumentReplace: true }, viewport: lowerWindow, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
+        rendererLower.update(lowerProjection);
+      },
+      dispose: () => { renderCoordinatorLower.dispose(); },
+    };
+    // Upper must now show only its own pane's Signals too -- switch the
+    // shared Upper projection's filter and force it to redraw immediately,
+    // using the document as it stands right now (view-only: no command, no
+    // history/dirty/canonical delta).
+    runtime.projection.setPane("upper");
+    forceUpperReprojectRef.current();
+    return () => {
+      active = false;
+      viewportLowerElement.removeEventListener("scroll", reprojectLowerViewportOnly);
+      renderCoordinatorLower.dispose();
+      if (signalSplitRuntimeRef.current) signalSplitRuntimeRef.current = null;
+    };
+  }, [signalSplitEnabled]);
+
+  // The splitter changes Lower's (and correspondingly Upper's) real CSS
+  // height via signalSplitRatio; re-virtualize Lower's rows for its new
+  // viewport size the same way Upper's own resize effect above does.
+  useEffect(() => {
+    signalSplitRuntimeRef.current?.onViewportResize();
+  }, [signalSplitRatio]);
+
   // Signal Split View (#200) PR 3/4: the Lower pane's viewport scrolls
   // vertically fully independently (native `overflow-y: auto`, no wiring
   // needed) but must share ONE horizontal time domain with Upper. Neither
@@ -1183,9 +1332,9 @@ export function MinimalCycleView() {
   // CSS transform (see syncRulerScroll in use-editor-runtime-bridge.ts);
   // mirroring that same transform string onto Lower's ruler keeps its
   // ticks aligned without re-deriving it independently. Lower's surface
-  // width is mirrored from Upper's so there is real horizontal scroll
-  // range to keep in sync, even though Lower has no rendered rows yet
-  // (real per-pane content routing is PR 4).
+  // width and presentation scale are mirrored from Upper's single
+  // authoritative values so both panes render at the exact same horizontal
+  // scale without Lower ever computing its own.
   useEffect(() => {
     if (!signalSplitEnabled) return;
     const upperViewport = viewport.current;
@@ -1195,14 +1344,30 @@ export function MinimalCycleView() {
       const upperRulerContent = ruler.current;
       const lowerRulerContent = rulerLower.current;
       if (upperRulerContent && lowerRulerContent) lowerRulerContent.style.transform = upperRulerContent.style.transform;
-      if (host.current && hostLower.current) hostLower.current.style.width = host.current.style.width;
+      if (host.current && hostLower.current) {
+        hostLower.current.style.width = host.current.style.width;
+        const scale = host.current.style.getPropertyValue("--presentation-x-scale");
+        if (scale) {
+          hostLower.current.style.setProperty("--presentation-x-scale", scale);
+          viewportLower.current?.style.setProperty("--presentation-x-scale", scale);
+        }
+      }
     };
+    // Upper is the sole horizontal-scroll authority (per #200's single
+    // pixels-per-cycle/horizontal-geometry-owner constraint): Upper's own
+    // scroll always drives Lower's scrollLeft to match. Lower's own "scroll"
+    // event only re-syncs presentation (ruler/scale/width) and must NEVER
+    // write back to Upper -- Lower's real WaveDrom content mounts
+    // asynchronously as rows render, and a resulting incidental reflow can
+    // fire a native "scroll" event on Lower even with no user interaction;
+    // writing that back to Upper would silently clobber the user's actual
+    // scroll position with Lower's still-settling one.
     const onUpperScroll = () => {
       if (lowerViewport.scrollLeft !== upperViewport.scrollLeft) lowerViewport.scrollLeft = upperViewport.scrollLeft;
       mirrorPresentation();
     };
     const onLowerScroll = () => {
-      if (upperViewport.scrollLeft !== lowerViewport.scrollLeft) upperViewport.scrollLeft = lowerViewport.scrollLeft;
+      if (lowerViewport.scrollLeft !== upperViewport.scrollLeft) lowerViewport.scrollLeft = upperViewport.scrollLeft;
       mirrorPresentation();
     };
     upperViewport.addEventListener("scroll", onUpperScroll);
@@ -1553,6 +1718,35 @@ export function MinimalCycleView() {
     event.preventDefault();
     setBottomHeight((current) => Math.max(180, Math.min(420, current + delta)));
   };
+  // Signal Split View (#200) item D: view-only Upper/Lower height splitter.
+  // Ratio-based (not a fixed pixel height like Bottom's) since the two panes
+  // together always fill the same variable container height; dragging never
+  // touches canonical/history/dirty state, matching every other pane resize
+  // handle in this file.
+  const startSignalSplitResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const container = event.currentTarget.parentElement;
+    if (!container) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    signalSplitResizeRef.current = { startY: event.clientY, startRatio: signalSplitRatio, containerHeight: container.getBoundingClientRect().height };
+  };
+  const moveSignalSplitResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    const resize = signalSplitResizeRef.current;
+    if (!resize || resize.containerHeight <= 0) return;
+    const nextRatio = Math.max(0.15, Math.min(0.85, resize.startRatio + (event.clientY - resize.startY) / resize.containerHeight));
+    if (nextRatio !== signalSplitRatio) setSignalSplitRatio(nextRatio);
+  };
+  const finishSignalSplitResize = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!signalSplitResizeRef.current) return;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    signalSplitResizeRef.current = undefined;
+  };
+  const resizeSignalSplitByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const step = event.shiftKey ? 0.1 : 0.02;
+    const delta = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
+    if (delta === 0) return;
+    event.preventDefault();
+    setSignalSplitRatio((current) => Math.max(0.15, Math.min(0.85, current + delta)));
+  };
   const startInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     inspectorResizeRef.current = { startX: event.clientX, startWidth: inspectorWidth };
@@ -1696,7 +1890,7 @@ export function MinimalCycleView() {
     setInspectorWidth(297);
     setBottomHeight(240);
   };
-  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-signal-tree-visible={String(signalTreeVisible)} data-show-signal-names={String(showSignalNames)} data-show-roles={String(showRoles)} data-show-annotations={String(showAnnotations)} data-show-transactions={String(showTransactions)} data-show-group-background={String(showGroupBackground)} data-layout-overflow={snapshot.document.layout.overflow} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth} data-cycle-count={snapshot.document.timeline.cycleCount} data-signal-count={snapshot.document.signals.length} data-transaction-count={snapshot.document.transactions.length}>
+  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-signal-tree-visible={String(signalTreeVisible)} data-show-signal-names={String(showSignalNames)} data-show-roles={String(showRoles)} data-show-annotations={String(showAnnotations)} data-show-transactions={String(showTransactions)} data-show-group-background={String(showGroupBackground)} data-layout-overflow={snapshot.document.layout.overflow} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth} data-cycle-count={snapshot.document.timeline.cycleCount} data-signal-count={snapshot.document.signals.length} data-transaction-count={snapshot.document.transactions.length}>
     <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />
     <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />
     <Ribbon
@@ -1836,7 +2030,7 @@ export function MinimalCycleView() {
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
         {signalSplitEnabled && viewMode === "Cycle" && <>
-          <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" />
+          <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={resizeSignalSplitByKeyboard} onPointerDown={startSignalSplitResize} onPointerMove={moveSignalSplitResize} onPointerUp={finishSignalSplitResize} onPointerCancel={finishSignalSplitResize} />
           <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation">
             <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}>
               <div className="cycle-ruler-content" ref={rulerLower} />

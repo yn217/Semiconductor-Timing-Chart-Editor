@@ -201,11 +201,15 @@
 
 /* Signal Split View (#200): Upper/Lower panes each keep the ruler's
    existing `position: sticky` behavior (native to each pane's own
-   scrollable .cycle-viewport, unmodified) and split the panel's
-   available height evenly; horizontal scrollLeft/zoom stay in sync via
-   the scroll-mirroring effect in minimal-cycle-view.tsx, not CSS. */
-.cycle-panel[data-signal-split="true"] .cycle-viewport { height: calc(50% - 37px - 2px); }
-.signal-split-divider { height: 4px; background: #cbd4df; border-top: 1px solid #b7c2d1; border-bottom: 1px solid #b7c2d1; }
+   scrollable .cycle-viewport, unmodified); horizontal scrollLeft/zoom
+   stay in sync via the scroll-mirroring effect in minimal-cycle-view.tsx,
+   not CSS. `--gui-signal-split-upper-ratio` (a unitless 0.15-0.85 fraction,
+   default 0.5) is the one drag-resizable splitter ratio; Lower always gets
+   the complement, so the two panes' heights never drift out of sync with
+   each other or with the container. */
+.cycle-panel[data-signal-split="true"] .cycle-viewport:not(.signal-split-lower) { height: calc(var(--gui-signal-split-upper-ratio, 0.5) * 100% - 37px - 2px); }
+.cycle-panel[data-signal-split="true"] .signal-split-lower { height: calc((1 - var(--gui-signal-split-upper-ratio, 0.5)) * 100% - 37px - 2px); }
+.signal-split-divider { height: 4px; background: #cbd4df; border-top: 1px solid #b7c2d1; border-bottom: 1px solid #b7c2d1; cursor: row-resize; }
 .signal-split-lower .surface-host { min-height: 100%; }
 
 .clock-edge-counter {
