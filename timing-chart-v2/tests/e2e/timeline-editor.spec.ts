@@ -1,4 +1,21 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
+
+const periodOneClockDocument = {
+  ...cycleDocument,
+  signals: cycleDocument.signals.map((signal) => signal.type === "clock" ? { ...signal, generator: { ...signal.generator, period: 1 } } : signal),
+};
+
+async function openPeriodOneClockDocument(page: Page): Promise<void> {
+  await page.goto("/");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "timeline-period-one.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(periodOneClockDocument)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+}
+
+async function selectTimelineTransformRange(page: Page): Promise<void> {
+  await page.getByLabel("Timeline range end").fill("4");
+  await page.getByLabel("Timeline range start").fill("2");
+}
 
 test("selects a cycle from Canvas geometry and the exclusive terminal boundary from shared mapping", async ({ page }) => {
   await page.goto("/");
@@ -372,10 +389,11 @@ test("ruler range drag cancels without mutation and remains semantic after scrol
 });
 
 test("inserts cycles with full semantic ripple and one Undo entry", async ({ page }) => {
-  await page.goto("/");
+  await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await selectTimelineTransformRange(page);
   const surface = host.locator("[data-role='timing-chart-surface']");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
@@ -399,10 +417,11 @@ test("inserts cycles with full semantic ripple and one Undo entry", async ({ pag
 });
 
 test("deletes a half-open range and preserves the active value at the join", async ({ page }) => {
-  await page.goto("/");
+  await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await selectTimelineTransformRange(page);
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const beforeRevision = await host.getAttribute("data-canonical-revision");
   const beforeCounters = await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters");
@@ -602,10 +621,11 @@ test("renders multiple independent Axis Breaks through the shared mapping", asyn
 });
 
 test("duplicates the selected cycle state range at a destination in one commit", async ({ page }) => {
-  await page.goto("/");
+  await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await selectTimelineTransformRange(page);
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByLabel("Timeline destination").fill("8");
   await page.getByRole("button", { name: "Duplicate to" }).click();
@@ -620,10 +640,11 @@ test("duplicates the selected cycle state range at a destination in one commit",
 });
 
 test("moves the selected range by cycle permutation without changing timeline length", async ({ page }) => {
-  await page.goto("/");
+  await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await selectTimelineTransformRange(page);
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   await page.getByLabel("Timeline destination").fill("8");
   await page.getByRole("button", { name: "Move to" }).click();
