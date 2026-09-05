@@ -57,4 +57,7 @@ test("AI proposal rejects a stale revision after an intervening semantic edit", 
   await expect(ai.getByTestId("ai-preview")).toHaveCount(0);
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("INTERVENING_EDIT");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  await expect(page.getByTestId("problems-panel")).toContainText("AI_PREVIEW_STALE");
+  await expect(page.getByTestId("problems-panel")).toContainText("Regenerate the preview from the current document");
 });

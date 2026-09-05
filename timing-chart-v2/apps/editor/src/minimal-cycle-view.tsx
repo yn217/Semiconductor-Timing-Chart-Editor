@@ -1735,6 +1735,7 @@ export function MinimalCycleView() {
       diagnostics={diagnostics}
       onNavigateProblem={navigateProblem}
       onRefreshChecks={() => setValidationDiagnostics(validateCanonicalDocument(snapshot.document))}
+      onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...(next ? [next] : [])])}
        viewMode={viewMode}
        density={density}
        workspacePreset={workspacePreset}

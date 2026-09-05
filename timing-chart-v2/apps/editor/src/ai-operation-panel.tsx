@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
-import { validateCanonicalDocument, type CanonicalDocument, type GroupId, type SignalId } from "@timing-chart-v2/schema";
+import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
 import { deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
 
 function validationMessage(document: CanonicalDocument, proposal: AIProposal): string | undefined {
@@ -18,21 +18,22 @@ function validationMessage(document: CanonicalDocument, proposal: AIProposal): s
   return documentProblems.length === 0 ? undefined : documentProblems.map((problem) => `${problem.code}: ${problem.message}`).join(" ");
 }
 
-export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, icon, provider = deterministicMockAIProposalProvider }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider }) {
+export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onDiagnostic, icon, provider = deterministicMockAIProposalProvider }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<AIProposal>();
   const [validatedRevision, setValidatedRevision] = useState<number>();
   const [status, setStatus] = useState("Ready");
   const buildPreview = () => {
     const result = provider.propose({ document, revision, query, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
-    if (!result.ok) { setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); return; }
+    if (!result.ok) { onDiagnostic?.({ code: "AI_PROPOSAL_UNAVAILABLE", path: "$.ai.query", message: result.message, severity: "error", operation: "ai.proposal.preview", operationLabel: "Build AI proposal", source: "ai", stage: "validate", recommendation: "Adjust the request or select the required editor object, then preview again.", detail: "ai-proposal:preview" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); return; }
+    onDiagnostic?.(undefined);
     setPreview(result.proposal);
     setValidatedRevision(undefined);
     setStatus("Preview ready · no document mutation");
   };
   const validatePreview = () => {
     if (!preview) { setStatus("Create a preview first."); return; }
-    if (preview.baseRevision !== revision) { setPreview(undefined); setValidatedRevision(undefined); setStatus(`Conflict · preview revision ${preview.baseRevision}, current revision ${revision}`); return; }
+    if (preview.baseRevision !== revision) { onDiagnostic?.({ code: "AI_PREVIEW_STALE", path: "$.ai.preview.baseRevision", message: `Preview revision ${preview.baseRevision} is older than current revision ${revision}.`, severity: "error", operation: "ai.proposal.validate", operationLabel: "Validate AI proposal", source: "ai", stage: "validate", recommendation: "Regenerate the preview from the current document before applying it.", detail: "ai-proposal:stale" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(`Conflict · preview revision ${preview.baseRevision}, current revision ${revision}`); return; }
     const message = validationMessage(document, preview);
     if (message) { setValidatedRevision(undefined); setStatus(`Validation failed · ${message}`); return; }
     setValidatedRevision(revision);
@@ -55,7 +56,8 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
     const result = preview.commands.length === 1
       ? onCommand(preview.commands[0]!)
       : onCommandBatch?.(preview.commands) ?? { ok: false as const, reason: "invalid" as const, problems: [] };
-    if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
+    if (!result.ok) { setValidatedRevision(undefined); const detail = result.problems.map((problem) => `${problem.code} at ${problem.path}: ${problem.message}`).join("; "); setStatus(`Apply failed · ${result.reason}${detail ? ` · ${detail}` : ""}`); return; }
+    onDiagnostic?.(undefined);
     setPreview(undefined);
     setValidatedRevision(undefined);
     setStatus("Applied · one atomic SemanticCommand transaction");
