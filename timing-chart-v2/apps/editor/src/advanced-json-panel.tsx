@@ -38,12 +38,17 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
     else { const problems = validateCanonicalDocument(replaceSelectedJsonObject(document, value, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction)); if (problems.length === 0) { onDiagnostic(undefined); setStatus("Valid"); } else { const diagnostics = problems.map((problem, index) => ({ ...problem, severity: "error" as const, operation: "document.json.validate", operationLabel: "Validate Advanced JSON", source: "validation" as const, stage: "validate" as const, recommendation: "Correct the reported path and validate again.", detail: `advanced-json:validate:${index}` })); const problem = problems[0]!; onDiagnostic(diagnostics); setStatus(`Invalid: ${problem.code} · ${problem.path}`); } }
   };
   const copy = async () => {
-    if (!navigator.clipboard) { setStatus("Copy failed: Clipboard API unavailable"); return; }
+    const reportFailure = (reason: string) => {
+      onDiagnostic({ code: "CLIPBOARD_FAILED", path: "$.clipboard", message: `Clipboard copy failed: ${reason}`, severity: "error", operation: "document.json.copy", operationLabel: "Copy JSON", source: "clipboard", stage: "clipboard-write", recommendation: "Allow clipboard access or retry the copy operation.", detail: "advanced-json:clipboard-failure" });
+      setStatus(`Copy failed: ${reason}`);
+    };
+    if (!navigator.clipboard) { reportFailure("Clipboard API unavailable"); return; }
     try {
       await navigator.clipboard.writeText(draft);
+      onDiagnostic(undefined);
       setStatus("Copied");
     } catch (error) {
-      setStatus(`Copy failed: ${error instanceof Error ? error.message : "Clipboard permission denied"}`);
+      reportFailure(error instanceof Error ? error.message : "Clipboard permission denied");
     }
   };
   const apply = () => {
