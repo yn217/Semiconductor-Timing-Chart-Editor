@@ -416,6 +416,21 @@ test("inserts cycles with full semantic ripple and one Undo entry", async ({ pag
   await expect(editor.getByLabel("Start 7")).toHaveValue("7");
 });
 
+test("allows ordinary timeline insertion with the default uncontrolled periodic Clock", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range end").fill("3");
+  await page.getByLabel("Timeline range start").fill("2");
+  await page.getByLabel("Timeline insert count").fill("2");
+  await page.getByRole("button", { name: "Insert before" }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='26']")).toHaveCount(1);
+});
+
 test("deletes a half-open range and preserves the active value at the join", async ({ page }) => {
   await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");

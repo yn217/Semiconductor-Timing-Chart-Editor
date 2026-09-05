@@ -69,7 +69,7 @@ describe("timeline ripple commands", () => {
   it("rejects unsupported generated-clock ripple atomically", () => {
     const initial = rippleFixture();
     const clock = initial.signals[0] as ClockSignal;
-    initial.signals[0] = { ...clock, generator: { ...clock.generator, period: 2 } };
+    initial.signals[0] = { ...clock, generator: { ...clock.generator, period: 2, suppressedPeriods: [1] } };
     const commands = [
       { id: commandId("cmd_clock_insert"), type: "timeline.insert" as const, at: 3, count: 1 },
       { id: commandId("cmd_clock_delete"), type: "timeline.delete" as const, start: 2, end: 3 },
@@ -83,6 +83,26 @@ describe("timeline ripple commands", () => {
       expect(result).toMatchObject({ reason: "invalid", problems: [expect.objectContaining({ code: "UNSUPPORTED_CLOCK_RIPPLE" })] });
       expect(session.getSnapshot()).toBe(before);
       expect(session.historyState()).toMatchObject({ undoDepth: 0, dirty: false });
+    }
+  });
+
+  it("allows timeline transforms for an uncontrolled periodic Clock", () => {
+    const initial = canonicalFixture();
+    const clock = initial.signals[0] as ClockSignal;
+    initial.signals[0] = { ...clock, generator: { ...clock.generator, period: 2 } };
+    const commands = [
+      { id: commandId("cmd_uncontrolled_clock_insert"), type: "timeline.insert" as const, at: 3, count: 1 },
+      { id: commandId("cmd_uncontrolled_clock_delete"), type: "timeline.delete" as const, start: 2, end: 3 },
+      { id: commandId("cmd_uncontrolled_clock_duplicate"), type: "timeline.duplicateRange" as const, start: 3, end: 4, at: 1 },
+      { id: commandId("cmd_uncontrolled_clock_move"), type: "timeline.moveRange" as const, start: 3, end: 4, to: 0 },
+    ];
+    for (const command of commands) {
+      const session = new CommandHistorySession(initial);
+      const result = session.execute(command);
+      expect(result.ok).toBe(true);
+      expect(session.historyState()).toMatchObject({ undoDepth: 1, dirty: true });
+      expect(session.undo().ok).toBe(true);
+      expect(session.getSnapshot().document).toEqual(initial);
     }
   });
 

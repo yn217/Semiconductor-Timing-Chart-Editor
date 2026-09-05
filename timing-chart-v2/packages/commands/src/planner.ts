@@ -303,12 +303,13 @@ function timelineChangeSet(...documents: readonly CanonicalDocument[]): ChangeSe
 }
 
 /**
- * A single periodic WaveDrom generator cannot represent a timeline edit that
- * shifts only the pulses after an arbitrary source-time boundary.  Keeping
- * the old generator would silently create a different clock waveform (and
- * can also leave enable/suppression slot identities pointing at other
- * pulses), so reject that edit until a segmented-clock representation exists.
- * Period-one clocks without controls remain equivalent at every cycle.
+ * A single periodic WaveDrom generator with explicit enable/suppression slots
+ * cannot represent a timeline edit that shifts only those control slots after
+ * an arbitrary source-time boundary.  Keeping the old controls would silently
+ * attach them to different pulses, so reject that edit until a segmented-clock
+ * representation exists.  An uncontrolled generator remains the authoritative
+ * periodic source across timeline length/range transforms and does not need
+ * this guard.
  */
 type TimelineRippleOperation =
   | Readonly<{ kind: "insert"; at: number; count: number }>
@@ -316,31 +317,14 @@ type TimelineRippleOperation =
   | Readonly<{ kind: "duplicate"; at: number }>
   | Readonly<{ kind: "move" }>;
 
-function unsupportedClockRipple(document: CanonicalDocument, operation: TimelineRippleOperation): CommandPlanResult | undefined {
+function unsupportedClockRipple(document: CanonicalDocument, _operation: TimelineRippleOperation): CommandPlanResult | undefined {
   const clockIndex = document.signals.findIndex((signal) => signal.type === "clock" && (
-    signal.generator.period > 1 ||
     (signal.enable?.length ?? 0) > 0 ||
     (signal.generator.suppressedPeriods?.length ?? 0) > 0
   ));
   if (clockIndex < 0) return undefined;
   const clock = document.signals[clockIndex];
   if (clock?.type !== "clock") return undefined;
-  const period = clock.generator.period;
-  const controlled = (clock.enable?.length ?? 0) > 0 || (clock.generator.suppressedPeriods?.length ?? 0) > 0;
-  const lastPulse = clock.generator.start < document.timeline.cycleCount
-    ? clock.generator.start + Math.floor((document.timeline.cycleCount - 1 - clock.generator.start) / period) * period
-    : -1;
-  const representable = period === 1 && !controlled
-    || !controlled && (operation.kind === "insert"
-      ? operation.at <= clock.generator.start
-        ? (clock.generator.start + operation.count) % period === 0
-        : operation.at > lastPulse
-      : operation.kind === "delete"
-        ? operation.end <= clock.generator.start
-          ? (clock.generator.start - (operation.end - operation.start)) % period === 0
-          : operation.start > lastPulse
-        : false);
-  if (representable) return undefined;
   return fail("invalid", "UNSUPPORTED_CLOCK_RIPPLE", `$.signals[${clockIndex}]`, "Timeline editing is rejected while this generated Clock needs segmented ripple semantics.");
 }
 
