@@ -919,13 +919,11 @@ export function MinimalCycleView() {
         focusTreeItem(groupOwner.closest<HTMLElement>("[role='treeitem']") ?? undefined);
         return;
       }
-      const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
-      if (annotationOwner?.dataset.annotationId) {
-        const id = annotationOwner.dataset.annotationId as AnnotationId;
-        selection.selectAnnotation(id, event.ctrlKey || event.metaKey);
-        return;
-      }
-      if (pendingArrow && event.target instanceof Element && event.target.closest("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface']")) {
+      // Endpoint picking must win over annotation selection when an existing
+      // overlay sits above the actual waveform.  The snap resolver still uses
+      // semantic geometry; this only keeps the overlay from swallowing the
+      // browser click before that resolver runs.
+      if (pendingArrow && event.target instanceof Element && event.target.closest("[data-role='timing-semantic-rows'], [data-role='stable-waveform-surface'], [data-role='annotation-overlay-surface'], [data-role='interactive-overlay-surface']")) {
         const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
         if (!waveLayer) return;
         const bounds = waveLayer.getBoundingClientRect();
@@ -951,6 +949,12 @@ export function MinimalCycleView() {
         setArrowPickStatus("idle");
         delete rendererHost.dataset.arrowPick;
         rendererHost.dataset.snapKind = snap.kind;
+        return;
+      }
+      const annotationOwner = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-role='annotation-owner'][data-annotation-id]") : null;
+      if (annotationOwner?.dataset.annotationId) {
+        const id = annotationOwner.dataset.annotationId as AnnotationId;
+        selection.selectAnnotation(id, event.ctrlKey || event.metaKey);
         return;
       }
       const target = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-row-id]") : null;
