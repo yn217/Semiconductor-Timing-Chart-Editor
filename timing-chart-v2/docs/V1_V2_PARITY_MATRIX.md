@@ -320,6 +320,12 @@ and Save/Open preservation of the registered full paths all pass. The
 dedicated hierarchy export view and complete V1 tree visual matrix remain
 open.
 
+The current-main MiniMap overview route is browser verified by the focused
+`full-gui.spec.ts` case (1/1, 2026-09-06): all eight canonical rows and their
+derived waveform segments are present, while Canonical revision, History and
+render counters remain unchanged. Viewport click/drag navigation and the
+large-document scaling matrix remain open and were not retried here.
+
 The current-main Inspector capability audit is browser verified by five
 focused `full-gui.spec.ts` cases (5/5, 2026-09-06): Annotation, Signal,
 Group, Transaction and Clock draft/apply paths complete through the shared
