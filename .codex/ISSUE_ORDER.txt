@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-05 07:00 JST
+# Last reconciled by ChatGPT: 2026-09-05 12:34 JST
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
@@ -18,14 +18,14 @@
 #   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_4.md
 #
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line, top to bottom.
-# Claude-owned, external-hold, blocked and superseded issues MUST remain comments only.
+# Claude-owned, external-hold, blocked, closure-only and superseded issues MUST remain comments only.
 # Never merge/cherry-pick codex-control into main.
 #
 # Observed product state at reconciliation:
-#   main = 8399228e330e37d580277e9c297949a9e39f446b
-#   open Issues = 44
-#   Claude PR #333 merged
-#   agent/claude has no unmerged product delta at reconciliation
+#   main = ebe2850fddd418c924dc260d45ab596eaf4be82b
+#   open Issues = 33
+#   Claude PR #354 merged (#332 item D)
+#   #352 fixed/closed by Codex real core fix; earlier period=1 test-only workaround is superseded
 #
 # ============================================================================
 # AGENT OWNERSHIP — HARD RULE
@@ -34,7 +34,10 @@
 # Claude owns GUI / UX / Visual / Editor-surface work.
 #
 # Codex MUST NOT independently implement Claude-owned issues:
-#   #331 #332 #260 #181 #182 #184 #185 #176 #262 #293 #306 #309 #205 #267 #172 #186
+#   #332 #260 #181 #182 #184 #185 #176 #262 #293 #306 #309 #205 #267 #172 #186
+#
+# #332 note: A Annotation Preview, B Clock Preview and D contextual disabled reasons are merged.
+# Claude owns the remaining C capability/effect audit closure. Codex must not create a parallel audit.
 #
 # If a Codex Issue exposes a GUI residual owned by Claude, record it and continue within the
 # Codex-owned core acceptance. Do not create a parallel GUI implementation path.
@@ -131,37 +134,36 @@
 # ============================================================================
 # CODEX EXECUTABLE QUEUE — CURRENT CORE LANE
 # ============================================================================
-# Highest-value bounded correctness/data/performance work first.
-328
-180
-219
-273
-275
-259
-277
+# Highest-value current Core/Product work first.
 200
-250
 210
+250
 
 # ============================================================================
 # BROAD CORE / PHASE CLOSURE AUDIT
 # ============================================================================
 # Audit current main first. Close with evidence if satisfied; implement only bounded residual gaps.
 161
-165
-166
 167
-169
 170
 171
 175
 177
 
 # ============================================================================
+# CLOSURE-ONLY — NON-EXECUTABLE UNTIL AUDIT SELECTS IT
+# ============================================================================
+# #313 Range drag geometry:
+#   PR #338 fixed the reported drag-release authority mismatch.
+#   PR #341 fixed Escape/PointerCancel trailing-click leakage.
+#   Keep open for focused acceptance audit only: 100k unsampled boundary, terminal boundary,
+#   reverse drag, ruler/waveform equivalence, folds/rebase, zoom/scroll and view-only invariants.
+#   Do not restart broad gesture implementation without a concrete failing acceptance case.
+#
+# ============================================================================
 # QUARANTINED / DEPENDENCY HELD — NON-EXECUTABLE
 # ============================================================================
-# Known shared real-browser geometry/gesture family; do not retry repeatedly:
-#   #313 authoritative range drag geometry
+# Known or potentially shared real-browser/gesture-heavy families; do not retry repeatedly:
 #   #221 clipboard semantics matrix
 #   #222 first-class Spacer workflow
 #   #223 Logic/Event/Pulse direct creation
@@ -182,8 +184,7 @@
 # CLAUDE-OWNED — NON-EXECUTABLE BY CODEX
 # ============================================================================
 # Immediate Claude queue:
-#   #331 Font editing remaining correctness/UX
-#   #332 Preview/capability truthfulness
+#   #332 capability/effect audit closure only (A/B/D already merged)
 #   #260 CSS/design-token ownership closure
 #   #181 Left Tree/role/MiniMap
 #   #182 v8 GUI closure
@@ -202,21 +203,35 @@
 #   #186 Golden GUI harness if still materially open
 #
 # ============================================================================
+# RECENTLY COMPLETED — DO NOT RE-IMPLEMENT
+# ============================================================================
+#   #165 Geometry Semantic/Local/Screen contract
+#   #166 RowLayout + Stable Waveform Surface
+#   #169 Reorder / Visibility / D&D
+#   #180 bounded viewport projection scaling
+#   #219 renderer/runtime scaling
+#   #259 production query-routable architecture probes
+#   #273 LabelAnchor source/display contract
+#   #275 bounded Undo/Redo retention
+#   #277 ArchitectureProbe / StableSurfaceProbe extraction
+#   #328 Product Resource Budget enforcement
+#   #331 Font editing correctness/UX
+#   #352 uncontrolled period-2 Clock timeline ripple regression
+#
+# #352 was fixed by the real Core change (`510f41c`, followed by `8ce9f60` verification).
+# The earlier test fixture changes that used period=1 are not closure evidence by themselves.
+#
+# ============================================================================
 # EXTERNAL / HUMAN HOLD
 # ============================================================================
 #   #272 GitHub Actions billing/spending-limit runner allocation
 # Do not burn product-development cycles retrying this. Re-evaluate after Billing & plans is fixed.
 #
 # ============================================================================
-# DUPLICATE / OVERLAP AUDIT NOTES
+# OVERLAP NOTES
 # ============================================================================
-# #259 and #277 describe the same ArchitectureProbe/StableSurfaceProbe extraction family.
-# Codex should audit both before coding, produce one implementation, then close one/both with the
-# appropriate completed/duplicate/superseded evidence instead of implementing the same work twice.
-#
-# #222/#265 and #223/#264 are similar paired contracts. They are held until the shared blocker is
-# cleared; when resumed, implement once through the authoritative owner and close overlapping Issue
-# contracts with explicit evidence.
+# #222/#265 and #223/#264 are paired contracts. When resumed, implement once through the
+# authoritative owner and close overlapping Issue contracts with explicit evidence.
 #
 # ============================================================================
 # SUPERSEDED / DO NOT RESTART
