@@ -124,7 +124,7 @@ describe("SemanticCommand state machine foundation", () => {
         const before = session.getSnapshot().document;
         const beforeHistory = session.historyState();
         const result = session.execute(command);
-        const reproduction = `seed=${seed} step=${step} initial=${JSON.stringify(initialDocument)} sequence=${JSON.stringify(sequence.map(({ id, type }) => ({ id, type })))}`;
+        const reproduction = `seed=${seed} step=${step} initial=${JSON.stringify(initialDocument)} sequence=${JSON.stringify(sequence)}`;
         expect(result, `${reproduction} command=${command.type}`).toMatchObject({ ok: true });
         if (!result.ok) throw new Error(`Unexpected rejection for seed=${seed} step=${step}`);
         const after = result.snapshot.document;
