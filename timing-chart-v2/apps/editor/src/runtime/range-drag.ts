@@ -4,6 +4,8 @@ export type RangeDragState = {
   readonly selectedCycle: number;
   readonly startClientX: number;
   readonly surface: "ruler" | "waveform";
+  /** Semantic cycle captured from a Ruler tick before pointer capture retargets the click. */
+  readonly rulerClickCycle?: number;
   moved: boolean;
 };
 

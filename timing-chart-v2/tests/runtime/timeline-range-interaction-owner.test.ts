@@ -33,4 +33,46 @@ describe("TimelineRangeInteractionOwner", () => {
       globalThis.Element = originalElement;
     }
   });
+
+  it("keeps a Ruler tick's semantic cycle for a click after pointer capture", () => {
+    const originalElement = globalThis.Element;
+    const originalRequestAnimationFrame = (globalThis as unknown as { requestAnimationFrame?: (callback: () => void) => number }).requestAnimationFrame;
+    class FakeElement {
+      readonly dataset: Record<string, string> = { sourceCycle: "24", cycle: "24" };
+      closest(selector: string): FakeElement | null {
+        return selector === "[data-testid='cycle-ruler']" || selector === "[data-cycle]" ? this : null;
+      }
+    }
+    globalThis.Element = FakeElement as unknown as typeof Element;
+    (globalThis as unknown as { requestAnimationFrame: (callback: () => void) => number }).requestAnimationFrame = (callback) => { callback(); return 0; };
+    try {
+      const host = { dataset: {} as Record<string, string>, setPointerCapture: () => undefined } as unknown as HTMLElement;
+      const selected: number[] = [];
+      const context: TimelineRangeInteractionContext = {
+        rendererHost: host,
+        isTimeDomainPointerTarget: () => true,
+        cycleBoundaryAtX: () => 11,
+        getCycleCount: () => 24,
+        getRange: () => ({ start: 2, end: 4 }),
+        getSelectedCycle: () => 2,
+        setSelectedCyclePreview: () => undefined,
+        setRangeSelectionActive: () => undefined,
+        setRange: () => undefined,
+        setSelectedCycle: () => undefined,
+        applyCanvasCycleSelection: (cycle) => { selected.push(cycle); },
+        refreshRange: () => undefined,
+        refreshPlayhead: () => undefined,
+      };
+      const owner = new TimelineRangeInteractionOwner(context);
+      const tick = new FakeElement();
+      owner.pointerDown({ button: 0, clientX: 200, pointerId: 1, target: tick, currentTarget: host, preventDefault: () => undefined } as unknown as PointerEvent);
+      owner.pointerUp({ clientX: 200, pointerId: 1, target: host, currentTarget: host, preventDefault: () => undefined } as unknown as PointerEvent);
+
+      expect(selected).toEqual([24]);
+    } finally {
+      globalThis.Element = originalElement;
+      if (originalRequestAnimationFrame === undefined) delete (globalThis as unknown as { requestAnimationFrame?: unknown }).requestAnimationFrame;
+      else (globalThis as unknown as { requestAnimationFrame: (callback: () => void) => number }).requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  });
 });

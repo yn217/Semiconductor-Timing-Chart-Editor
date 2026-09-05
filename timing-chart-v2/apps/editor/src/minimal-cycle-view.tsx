@@ -83,7 +83,7 @@ import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-
 import { buildRuler } from "./runtime/build-ruler.js";
 import { projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshAnnotationPreview, refreshClockPreview, refreshGridPresentation, refreshGroupStylePreview, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshAnnotationPreview, refreshClockPreview, refreshGridPresentation, refreshGroupStylePreview, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererForReason, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 
@@ -233,6 +233,9 @@ export function MinimalCycleView() {
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
+  const [treePresentationRevision, setTreePresentationRevision] = useState(0);
+  const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
+  const [transactionPresentationRevision, setTransactionPresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
@@ -357,14 +360,14 @@ export function MinimalCycleView() {
   }, [bottomPinned, pinnedBottomSelection, snapshot.revision]);
   useEffect(() => {
     refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
-  }, [snapshot.revision, treeFilter, treeTypeFilter, collapsedGroupIds]);
+  }, [treePresentationRevision, treeFilter, treeTypeFilter, collapsedGroupIds]);
   useEffect(() => {
     refreshTreeCollapsedMetadata(host, collapsedGroupIds);
-  }, [snapshot.revision, collapsedGroupIds]);
+  }, [treePresentationRevision, collapsedGroupIds]);
   useEffect(() => {
     refreshTreeRovingFocus(host, treeFocusRowIdRef);
-  }, [snapshot.revision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
-  const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
+  }, [treePresentationRevision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
+  const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
   const setCollapsedGroups = (next: ReadonlySet<GroupId>) => {
     const stable = new Set(next);
@@ -543,7 +546,7 @@ export function MinimalCycleView() {
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererOverlays(renderer, host, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererForReason(renderer, host, reason, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
@@ -686,6 +689,12 @@ export function MinimalCycleView() {
       delete rendererHost.dataset.editorIdle;
       projection = projectionCoordinator.project({ snapshot: result.snapshot, changeSet: result.changeSet, viewport: window, previous: projection, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       const changed = result.changeSet;
+      if (changed.fullDocumentReplace === true || changed.rowOrder !== undefined || changed.rowPresentation !== undefined || changed.addedSignals !== undefined || changed.removedSignals !== undefined || changed.addedGroups !== undefined || changed.removedGroups !== undefined) {
+        setTreePresentationRevision((value) => value + 1);
+      }
+      if (changed.fullDocumentReplace === true || changed.transactionSemantics !== undefined) {
+        setTransactionPresentationRevision((value) => value + 1);
+      }
       if (changed.fullDocumentReplace === true) {
         timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
         clearAnnotationPreview();
@@ -696,11 +705,17 @@ export function MinimalCycleView() {
       const refreshRuler = invalidation.refreshRuler;
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
+      const refreshPlayheadNow = changed.fullDocumentReplace === true || changed.geometryScreenX === true || refreshRuler;
+      if (refreshPlayheadNow) setPlayheadPresentationRevision((value) => value + 1);
       renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
-        return { start, end: Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount)) };
+        const end = Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount));
+        // Most property/style commits do not change the selected timeline
+        // range. Preserve its identity so the range-selection effect does not
+        // perform another DOM pass for an unchanged range.
+        return range.start === start && range.end === end ? range : { start, end };
       });
       publishState();
       void renderer.whenIdle().then(() => {
@@ -709,7 +724,7 @@ export function MinimalCycleView() {
           timelineRuntime.refreshRuler();
           timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
         }
-        timelineRuntime.refreshPlayhead();
+        if (refreshPlayheadNow) timelineRuntime.refreshPlayhead();
         if (refreshGridNow) timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
         if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
@@ -1422,12 +1437,14 @@ export function MinimalCycleView() {
 
   useEffect(() => {
     refreshPlayhead.current();
+  }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  useEffect(() => {
     refreshRangeSelectionBand.current();
-  }, [selectedCycle, snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  }, [snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
-  }, [selectedTransactionId, snapshot.revision]);
+  }, [selectedTransactionId, transactionPresentationRevision]);
 
   const createSelectedAnnotation = (annotation: Annotation) => {
     const result = application.execute({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
