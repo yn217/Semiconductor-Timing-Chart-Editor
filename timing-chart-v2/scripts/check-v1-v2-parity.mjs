@@ -85,7 +85,7 @@ const declaredText = (value) => typeof value === "string" && value.trim().length
 // map so a row cannot become COMPLETE while silently omitting Save/Open.
 const completeEvidenceFields = ["implementationEvidence", "unit", "e2e", "visual", "saveOpen", "export"];
 const concrete = (value) => typeof value === "string" && value.trim().length > 0 && !/^N\/A(?: |$)/.test(value.trim());
-const unresolvedEvidence = /\b(?:partial|pending|open(?:\s+gap)?|remains?\s+open|not\s+(?:yet\s+)?closed)\b/i;
+const unresolvedEvidence = /\b(?:partial|pending|open\s+gap|remains?\s+open|unresolved|not\s+(?:yet\s+)?closed)\b/i;
 const completeEvidence = (value) => concrete(value) && !unresolvedEvidence.test(value);
 for (const contract of matrix.independentContracts) {
   const statusRow = statusByFeature.get(contract.id);

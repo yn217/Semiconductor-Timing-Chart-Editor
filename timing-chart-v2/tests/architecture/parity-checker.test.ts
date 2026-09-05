@@ -145,6 +145,29 @@ it("rejects unresolved partial evidence for a COMPLETE independent contract", ()
   expect(output).toContain("GUI-SPLIT-VIEW COMPLETE requires resolved implementationEvidence, unit, e2e, visual, saveOpen, export evidence");
 });
 
+it("allows resolved Save/Open evidence for a COMPLETE independent contract", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-resolved-complete-"));
+  const matrix = path.join(directory, "matrix.json");
+  const manifest = path.join(directory, "manifest.json");
+  const status = path.join(directory, "status.json");
+  cpSync(matrixSource, matrix);
+  cpSync(manifestSource, manifest);
+  cpSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), status);
+  const matrixModel = JSON.parse(readFileSync(matrix, "utf8")) as { independentContracts: Array<Record<string, unknown>> };
+  const splitContract = matrixModel.independentContracts.find((contract) => contract.id === "GUI-SPLIT-VIEW");
+  if (!splitContract) throw new Error("GUI-SPLIT-VIEW fixture is missing");
+  for (const field of ["implementationEvidence", "unit", "e2e", "visual", "saveOpen", "export"] as const) splitContract[field] = "Verified through Save/Open and production acceptance.";
+  writeFileSync(matrix, JSON.stringify(matrixModel));
+  const statusModel = JSON.parse(readFileSync(status, "utf8")) as { contracts: Array<{ featureKey: string; implementationStatus: string }> };
+  const split = statusModel.contracts.find((contract) => contract.featureKey === "GUI-SPLIT-VIEW");
+  if (!split) throw new Error("GUI-SPLIT-VIEW status row is missing");
+  split.implementationStatus = "COMPLETE";
+  writeFileSync(status, JSON.stringify(statusModel));
+
+  const result = execFileSync(process.execPath, [checker, "--matrix", matrix, "--manifest", manifest, "--status", status], { cwd: workspace, encoding: "utf8" });
+  expect(result).toContain("implementationStatus=");
+});
+
 it("requires every independent parity contract to declare Save/Open evidence", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-save-open-field-"));
   const matrix = path.join(directory, "matrix.json");
