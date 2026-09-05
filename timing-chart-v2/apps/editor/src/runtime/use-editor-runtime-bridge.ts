@@ -1,6 +1,6 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type DocumentProblem, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { assertSafeWaveDromSvg, renderWaveJsonMarkup, toWaveJson, WaveDromAdapterError } from "@timing-chart-v2/wavedrom-adapter";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
@@ -378,7 +378,7 @@ export function mountInitialTimelineProjection(context: { readonly coordinator: 
   return { window, projection };
 }
 
-export function collectWaveRenderErrors(host: HTMLElement): readonly any[] {
+export function collectWaveRenderErrors(host: HTMLElement): readonly DocumentProblem[] {
   return [...host.querySelectorAll<HTMLElement>("[data-wave-error]")].map((owner) => ({
     code: "WAVE_RENDER_ERROR",
     path: `$.signals[${owner.dataset.signalId}]`,
@@ -390,6 +390,8 @@ export function collectWaveRenderErrors(host: HTMLElement): readonly any[] {
     ...(owner.dataset.signalId ? { objectId: owner.dataset.signalId } : {}),
     source: "renderer" as const,
     stage: "render" as const,
+    recommendation: "Review the affected Signal values or type, then retry the operation or open a supported document.",
+    detail: "waveform-render:localized-failure",
   }));
 }
 

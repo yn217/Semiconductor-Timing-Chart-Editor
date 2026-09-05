@@ -61,3 +61,28 @@ test("AI proposal rejects a stale revision after an intervening semantic edit", 
   await expect(page.getByTestId("problems-panel")).toContainText("AI_PREVIEW_STALE");
   await expect(page.getByTestId("problems-panel")).toContainText("Regenerate the preview from the current document");
 });
+
+test("AI Apply reports a stale proposal through the shared Problems diagnostic path", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByLabel("AI semantic query").fill("rename selected signal to STALE_APPLY");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector signal name").fill("INTERVENING_APPLY_EDIT");
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+  await ai.getByTestId("ai-apply").click();
+  await expect(ai.getByTestId("ai-status")).toHaveText(/Conflict · preview revision 0, current revision 1/);
+  await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("INTERVENING_APPLY_EDIT");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems).toContainText("AI_PREVIEW_STALE");
+  await expect(problems).toContainText("Apply AI proposal");
+  await expect(problems).toContainText("Regenerate the preview from the current document before applying it");
+});

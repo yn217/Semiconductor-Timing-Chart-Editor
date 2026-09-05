@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { canonicalFixture } from "../fixtures/canonical.js";
 
 test("surfaces a rejected Clock Generator update in the Problems panel, leaves the prior waveform untouched, and clears it once fixed", async ({ page }) => {
   await page.goto("/");
@@ -41,6 +42,30 @@ test("surfaces an Open failure in the Problems panel", async ({ page }) => {
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   await expect(page.getByTestId("problems-panel")).toContainText("JSON_SYNTAX");
   await expect(page.getByTestId("problems-panel")).toContainText("$@");
+});
+
+test("surfaces a localized WaveDrom render failure with signal context and recovery guidance", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const source = canonicalFixture();
+  const clock = source.signals.find((signal) => signal.type === "clock");
+  if (!clock || clock.type !== "clock") throw new Error("canonical fixture must contain a clock");
+  const document = {
+    ...source,
+    signals: source.signals.map((signal) => signal.id === clock.id ? { ...signal, generator: { ...clock.generator, phase: 0.25 } } : signal),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "localized-wave-error.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host.locator(`[data-role='wave-owner'][data-signal-id='${clock.id}']`)).toHaveAttribute("data-wave-error", /phase/);
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems).toContainText("WAVE_RENDER_ERROR");
+  await expect(problems).toContainText(clock.id);
+  await expect(problems).toContainText("Render waveform");
+  await expect(problems).toContainText("Review the affected Signal values or type");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("surfaces a V1->V2 migration warning after opening a legacy document", async ({ page }) => {
