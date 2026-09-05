@@ -194,6 +194,15 @@
 .cycle-panel.mode-split .transaction-lanes { max-height: 112px; overflow: hidden; }
 .cycle-panel.mode-split .surface-host { padding-top: 120px; }
 
+/* Signal Split View (#200): Upper/Lower panes each keep the ruler's
+   existing `position: sticky` behavior (native to each pane's own
+   scrollable .cycle-viewport, unmodified) and split the panel's
+   available height evenly; horizontal scrollLeft/zoom stay in sync via
+   the scroll-mirroring effect in minimal-cycle-view.tsx, not CSS. */
+.cycle-panel[data-signal-split="true"] .cycle-viewport { height: calc(50% - 37px - 2px); }
+.signal-split-divider { height: 4px; background: #cbd4df; border-top: 1px solid #b7c2d1; border-bottom: 1px solid #b7c2d1; }
+.signal-split-lower .surface-host { min-height: 100%; }
+
 .clock-edge-counter {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

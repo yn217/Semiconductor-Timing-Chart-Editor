@@ -97,6 +97,16 @@ export function MinimalCycleView() {
   const viewport = useRef<HTMLDivElement>(null);
   const ruler = useRef<HTMLDivElement>(null);
   const gridLayer = useRef<HTMLDivElement>(null);
+  // Signal Split View (#200) PR 3/4: a second, independently-scrollable
+  // viewport for the Lower pane. It has its own sticky ruler (matching the
+  // Upper pane's `.cycle-ruler { position: sticky }`, so vertical pinning
+  // is native CSS, not a relocated shared element) kept in horizontal sync
+  // with Upper via viewportLower/upper's own scroll handlers below. It is
+  // an empty placeholder in this PR -- no renderer/projection mounts into
+  // it yet; real per-pane content routing is PR 4.
+  const viewportLower = useRef<HTMLDivElement>(null);
+  const rulerLower = useRef<HTMLDivElement>(null);
+  const hostLower = useRef<HTMLDivElement>(null);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const armArrowPick = useRef<() => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
@@ -132,6 +142,7 @@ export function MinimalCycleView() {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
     viewMode, setViewMode,
+    signalSplitEnabled, setSignalSplitEnabled,
     density, setDensity,
     workspacePreset, setWorkspacePreset,
     waveformRestoreRef,
@@ -1139,6 +1150,47 @@ export function MinimalCycleView() {
     };
   }, []);
 
+  // Signal Split View (#200) PR 3/4: the Lower pane's viewport scrolls
+  // vertically fully independently (native `overflow-y: auto`, no wiring
+  // needed) but must share ONE horizontal time domain with Upper. Neither
+  // side is a persistent "leader" -- whichever pane the user actually
+  // scrolled drives the other, guarded by an equality check so the
+  // opposite side's own scroll listener firing from the mirrored write
+  // doesn't bounce back and forth. The ruler's horizontal position is a
+  // CSS transform (see syncRulerScroll in use-editor-runtime-bridge.ts);
+  // mirroring that same transform string onto Lower's ruler keeps its
+  // ticks aligned without re-deriving it independently. Lower's surface
+  // width is mirrored from Upper's so there is real horizontal scroll
+  // range to keep in sync, even though Lower has no rendered rows yet
+  // (real per-pane content routing is PR 4).
+  useEffect(() => {
+    if (!signalSplitEnabled) return;
+    const upperViewport = viewport.current;
+    const lowerViewport = viewportLower.current;
+    if (!upperViewport || !lowerViewport) return;
+    const mirrorPresentation = () => {
+      const upperRulerContent = ruler.current;
+      const lowerRulerContent = rulerLower.current;
+      if (upperRulerContent && lowerRulerContent) lowerRulerContent.style.transform = upperRulerContent.style.transform;
+      if (host.current && hostLower.current) hostLower.current.style.width = host.current.style.width;
+    };
+    const onUpperScroll = () => {
+      if (lowerViewport.scrollLeft !== upperViewport.scrollLeft) lowerViewport.scrollLeft = upperViewport.scrollLeft;
+      mirrorPresentation();
+    };
+    const onLowerScroll = () => {
+      if (upperViewport.scrollLeft !== lowerViewport.scrollLeft) upperViewport.scrollLeft = lowerViewport.scrollLeft;
+      mirrorPresentation();
+    };
+    upperViewport.addEventListener("scroll", onUpperScroll);
+    lowerViewport.addEventListener("scroll", onLowerScroll);
+    mirrorPresentation();
+    return () => {
+      upperViewport.removeEventListener("scroll", onUpperScroll);
+      lowerViewport.removeEventListener("scroll", onLowerScroll);
+    };
+  }, [signalSplitEnabled, zoom]);
+
   useEffect(() => {
     refreshPlayhead.current();
     refreshRangeSelectionBand.current();
@@ -1624,6 +1676,8 @@ export function MinimalCycleView() {
       snapEnabled={snapEnabled}
       rulerEnabled={rulerEnabled}
       minimapEnabled={minimapEnabled}
+      signalSplitEnabled={signalSplitEnabled}
+      onToggleSignalSplit={() => setSignalSplitEnabled((value) => !value)}
       showSignalNames={showSignalNames}
       showRoles={showRoles}
       showAnnotations={showAnnotations}
@@ -1714,7 +1768,7 @@ export function MinimalCycleView() {
     />
     <MinimalCycleViewPanels>
     <div className="desktop-workspace">
-      <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode}>
+      <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
          <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={resizeLeftPaneByKeyboard} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
           <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={160} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={resizeFrozenPaneByKeyboard} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
         <SignalTreeColumnHeader
@@ -1746,6 +1800,15 @@ export function MinimalCycleView() {
           <LegendView document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />
       <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
+        {signalSplitEnabled && viewMode === "Cycle" && <>
+          <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" />
+          <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation">
+            <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}>
+              <div className="cycle-ruler-content" ref={rulerLower} />
+            </div>
+            <div className="surface-host" ref={hostLower} data-testid="cycle-surface-lower" aria-label="Signal Split Lower pane (not yet populated)" />
+          </div>
+        </>}
       </section>
        {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} onKeyDown={resizeBottomByKeyboard} onPointerDown={startBottomResize} onPointerMove={moveBottomResize} onPointerUp={finishBottomResize} onPointerCancel={finishBottomResize} />}
       <aside className="left-panel-tail"><span data-testid="left-tree-signal-count">{snapshot.document.signals.length} signals</span>{selectedSignal && <span className="scope-breadcrumb" data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}</aside>
