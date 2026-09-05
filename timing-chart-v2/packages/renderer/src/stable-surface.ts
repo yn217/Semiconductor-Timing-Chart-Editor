@@ -177,7 +177,15 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const shellStats = [syncShellLayer(layers.left, this.#leftRows, projection.leftRowIds, navigationRows, "left"), syncShellLayer(layers.frozen, this.#frozenRows, projection.frozenLabelRowIds, rows, "frozen"), syncShellLayer(layers.timing, this.#timingRows, projection.timingRowIds, rows, "timing")];
     const headerStats = [syncGroupHeaderLayer(layers.left, this.#leftGroupHeaders, projection.mountedLeftGroupHeaderIds, projection.leftGroupHeaders, "left"), syncGroupHeaderLayer(layers.frozen, this.#frozenGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "frozen"), syncGroupHeaderLayer(layers.timing, this.#timingGroupHeaders, projection.mountedGroupHeaderIds, projection.groupHeaders, "timing")];
     this.#diagnostics = { ...this.#diagnostics, domNodeCreates: this.#diagnostics.domNodeCreates + shellStats.concat(headerStats).reduce((sum, item) => sum + item.creates, 0), domNodeDestroys: this.#diagnostics.domNodeDestroys + shellStats.concat(headerStats).reduce((sum, item) => sum + item.destroys, 0), domNodeMoves: this.#diagnostics.domNodeMoves + shellStats.concat(headerStats).reduce((sum, item) => sum + item.moves, 0) };
-    layers.root.style.height = `${projection.totalHeight}px`;
+    // The Left Tree shows every row (hidden signals and empty-group headers
+    // included) and can legitimately need more vertical space than
+    // Frozen/Timing (which excludes hidden rows and never grows for an
+    // empty group's own header/rows). Both scroll within this one shared
+    // root, so its height must cover whichever one is taller -- sizing it
+    // to totalHeight alone silently made any Left-only trailing content
+    // (e.g. an empty Group's header) unreachable by scrolling, since the
+    // scrollable region itself never extended that far.
+    layers.root.style.height = `${Math.max(projection.totalHeight, projection.navigationTotalHeight)}px`;
     layers.root.dataset.revision = String(projection.revision);
     if (this.#visibleRowIdsSource !== projection.visibleRowIds) {
       this.#visibleRowIdsSource = projection.visibleRowIds;
