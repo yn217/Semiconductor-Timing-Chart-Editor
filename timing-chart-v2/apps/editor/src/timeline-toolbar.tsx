@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { BookmarkId, CanonicalDocument, GroupId, Signal, SignalGroup, SignalId, TimeGroup, TimeGroupId } from "@timing-chart-v2/schema";
+import type { BookmarkId, CanonicalDocument, ClockGenerator, GroupId, Signal, SignalGroup, SignalId, TimeGroup, TimeGroupId } from "@timing-chart-v2/schema";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { nextCommandId } from "./command-id.js";
@@ -127,4 +127,5 @@ export interface SignalEditorProps {
   readonly onDuplicate: (signalId: SignalId) => void;
   readonly onDropToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
   readonly onCancel: () => void;
+  readonly onClockPreview: (draft: ClockGenerator | undefined) => void;
 }
