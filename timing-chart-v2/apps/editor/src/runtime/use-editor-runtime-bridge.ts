@@ -600,10 +600,13 @@ export type TimelineZoomSurfaceContext = {
 export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceContext): number {
   const zoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
   for (const element of context.scalable) {
-    element.style.transformOrigin = "0 0";
+    // The origin is stable for the lifetime of the mounted surface. Avoid
+    // invalidating style on every view-only Zoom operation; the scale itself
+    // is the only value that changes per operation.
+    if (element.style.transformOrigin !== "0px 0px" && element.style.transformOrigin !== "0 0") element.style.transformOrigin = "0 0";
     element.style.scale = `${zoom} 1`;
   }
-  context.ruler.style.transformOrigin = "0 0";
+  if (context.ruler.style.transformOrigin !== "0px 0px" && context.ruler.style.transformOrigin !== "0 0") context.ruler.style.transformOrigin = "0 0";
   syncRulerScroll(context.ruler, context.viewport, zoom);
   context.viewport.style.setProperty("--zoom-x", String(zoom));
   context.onPresentationScale(zoom);
