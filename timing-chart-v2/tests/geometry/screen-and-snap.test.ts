@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService } from "@timing-chart-v2/geometry";
-import type { SignalId, TimeGroupId } from "@timing-chart-v2/schema";
+import type { AnnotationId, SignalId, TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const signalId = "sig_snap" as SignalId;
@@ -97,5 +97,20 @@ describe("Screen Geometry and snapping", () => {
     expect(new Set(index.entries().map((candidate) => candidate.ownerId))).toEqual(new Set([current.id]));
     expect(index.entries().every((candidate) => candidate.point.y >= 240)).toBe(true);
     expect(service.metrics().candidateCount).toBe(index.entries().length);
+  });
+
+  it("does not reintroduce hidden annotation targets as snap candidates", () => {
+    const source = canonicalFixture();
+    const hidden = { ...source.signals[0]!, display: { ...source.signals[0]!.display, visible: false } };
+    const annotation = { id: "ann_hidden_target" as AnnotationId, type: "text" as const, label: "Hidden", visible: true, anchor: { signalId: hidden.id, cycle: 1, point: "cycle-start" as const } };
+    const map = new ImmutableLocalGeometryMap(hidden.id, [{ cycle: 1, point: "cycle-start", position: { x: 10, y: 0 } }]);
+    const index = new SemanticSnapCandidateService().build({
+      document: { ...source, signals: [hidden], annotations: [annotation] },
+      geometryMaps: new Map([[hidden.id, map]]),
+      rowY: new Map([[hidden.id, 20]]),
+      renderedCycleCount: 1,
+    });
+
+    expect(index.entries().some((candidate) => candidate.ownerId === annotation.id)).toBe(false);
   });
 });

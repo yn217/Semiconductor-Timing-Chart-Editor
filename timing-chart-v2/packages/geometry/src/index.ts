@@ -180,9 +180,11 @@ export class SemanticSnapCandidateService {
     const renderedCycleCount = input.renderedCycleCount ?? input.document.timeline.cycleCount;
     const sourceCycleForRenderedCycle = input.sourceCycleForRenderedCycle ?? ((cycle: number) => cycle);
     const renderedCycleForSourceCycle = input.renderedCycleForSourceCycle ?? ((cycle: number) => cycle);
+    const visibleSignalIds = new Set(input.document.signals.filter((signal) => signal.type !== "commentRow" && signal.display.visible !== false).map((signal) => signal.id));
     const resolve = (anchor: SemanticAnchor): Point | undefined => {
       const signalId = anchor.signalId ?? input.axisOwnerSignalId ?? input.document.timeline.referenceClock;
       if (!signalId) return undefined;
+      if (anchor.signalId !== undefined && !visibleSignalIds.has(anchor.signalId)) return undefined;
       if (!input.rowY.has(signalId)) return undefined;
       const renderedCycle = anchor.cycle === input.document.timeline.cycleCount ? renderedCycleCount : renderedCycleForSourceCycle(anchor.cycle);
       if (renderedCycle === undefined) return undefined;
