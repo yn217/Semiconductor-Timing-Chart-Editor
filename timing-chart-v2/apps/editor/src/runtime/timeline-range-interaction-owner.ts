@@ -5,7 +5,6 @@ type TimelineRange = Readonly<{ start: number; end: number }>;
 
 export type TimelineRangeInteractionContext = Readonly<{
   rendererHost: HTMLElement;
-  ruler: HTMLElement;
   isTimeDomainPointerTarget: (event: PointerEvent) => boolean;
   cycleBoundaryAtX: (clientX: number) => number | undefined;
   getCycleCount: () => number;
@@ -45,16 +44,7 @@ export class TimelineRangeInteractionOwner {
     const target = event.target instanceof Element ? event.target : undefined;
     const onRuler = Boolean(target?.closest("[data-testid='cycle-ruler']"));
     if (event.button !== 0 || !this.context.isTimeDomainPointerTarget(event)) return;
-    // A click landing exactly on a rendered Ruler tick unambiguously means
-    // "this boundary" -- including the terminal (exclusive, cycleCount)
-    // tick, which the complete-geometry resolver does not always resolve
-    // correctly since it sits past the last rendered cycle. Only fall back
-    // to geometry when the pointer isn't over a rendered tick at all.
-    const tick = onRuler ? target?.closest<HTMLElement>("[data-cycle]") : null;
-    const rulerCycle = () => [...this.context.ruler.querySelectorAll<HTMLElement>("[data-cycle]")]
-      .map((item) => ({ cycle: Number(item.dataset.sourceCycle ?? item.dataset.cycle), distance: Math.abs(item.getBoundingClientRect().x - event.clientX) }))
-      .sort((left, right) => left.distance - right.distance)[0]?.cycle;
-    const cycle = onRuler ? (tick ? Number(tick.dataset.sourceCycle ?? tick.dataset.cycle) : (rulerCycle() ?? this.context.cycleBoundaryAtX(event.clientX))) : this.context.cycleBoundaryAtX(event.clientX);
+    const cycle = this.context.cycleBoundaryAtX(event.clientX);
     if (cycle === undefined || cycle > this.context.getCycleCount()) return;
     this.#drag.begin({ start: cycle, anchor: event.shiftKey ? this.context.getRange().start : cycle, selectedCycle: this.context.getSelectedCycle(), startClientX: event.clientX, surface: onRuler ? "ruler" : "waveform", moved: false });
     (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
@@ -83,7 +73,7 @@ export class TimelineRangeInteractionOwner {
       this.context.setSelectedCyclePreview(drag.selectedCycle);
       this.clearPreview();
       this.suppressClicks(drag.surface);
-      const clickCycle = drag.surface === "ruler" ? drag.start : this.context.cycleBoundaryAtX(event.clientX);
+      const clickCycle = this.context.cycleBoundaryAtX(event.clientX);
       if (clickCycle !== undefined) this.context.applyCanvasCycleSelection(clickCycle, event.shiftKey);
       event.preventDefault();
       return;

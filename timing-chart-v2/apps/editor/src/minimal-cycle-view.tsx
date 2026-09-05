@@ -1001,7 +1001,6 @@ export function MinimalCycleView() {
     };
     rangeInteractions = new TimelineRangeInteractionOwner({
       rendererHost,
-      ruler: rulerElement,
       isTimeDomainPointerTarget,
       cycleBoundaryAtX: cycleBoundaryAtPointerX,
       getCycleCount: () => session.getSnapshot().document.timeline.cycleCount,

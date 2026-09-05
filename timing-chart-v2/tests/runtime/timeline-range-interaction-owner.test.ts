@@ -10,7 +10,6 @@ describe("TimelineRangeInteractionOwner", () => {
       const refreshes: string[] = [];
       const context: TimelineRangeInteractionContext = {
         rendererHost: host,
-        ruler: { querySelectorAll: () => [] } as unknown as HTMLElement,
         isTimeDomainPointerTarget: () => true,
         cycleBoundaryAtX: (clientX) => clientX === 20 ? 6 : 2,
         getCycleCount: () => 24,
