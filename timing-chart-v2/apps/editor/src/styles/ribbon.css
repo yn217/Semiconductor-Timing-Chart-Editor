@@ -476,8 +476,8 @@
 .editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-guides-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-zoom-group { width: 100%; display: grid; grid-template-columns: 40px 52px 40px 40px minmax(0, 1fr); align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
-.editor-shell .view-zoom-fit-actions { display: flex; min-width: 0; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
-.editor-shell .view-zoom-fit-actions .view-mini-tool { flex: 1 1 0; }
+.editor-shell .view-zoom-fit-actions { display: flex; min-width: 76px; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
+.editor-shell .view-zoom-fit-actions .view-mini-tool { flex: 1 1 0; min-width: 36px; }
 .editor-shell .view-workspace-group { width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 7px 5px 17px; }
 .editor-shell .view-layout-group { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 6px; padding: 7px 8px 17px; }
 .editor-shell .view-workspace-settings, .editor-shell .view-workspace-actions { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 4px; }
@@ -512,8 +512,8 @@
 .editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-guides-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
 .editor-shell .view-zoom-group { width: 100%; display: grid; grid-template-columns: 40px 52px 40px 40px minmax(0, 1fr); align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
-.editor-shell .view-zoom-fit-actions { display: flex; min-width: 0; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
-.editor-shell .view-zoom-fit-actions .view-mini-tool { flex: 1 1 0; }
+.editor-shell .view-zoom-fit-actions { display: flex; min-width: 76px; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
+.editor-shell .view-zoom-fit-actions .view-mini-tool { flex: 1 1 0; min-width: 36px; }
 .editor-shell .view-workspace-group { width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 7px 5px 17px; }
 .editor-shell .view-layout-group { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 6px; padding: 7px 8px 17px; }
 .editor-shell .view-workspace-settings, .editor-shell .view-workspace-actions { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 4px; }
