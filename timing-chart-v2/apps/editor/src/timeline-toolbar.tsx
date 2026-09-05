@@ -61,7 +61,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
   const rangeLength = Math.max(0, range.end - range.start);
   return <div className="timeline-ribbon" aria-label="Timeline Editor" data-testid="timeline-editor">
     <div className="timeline-slot-group" data-timeline-group="Range" aria-label="Range commands">
-      <DsRibbonGroup ariaLabel="Range" className="timeline-range-group" label="Range">
+      <DsRibbonGroup ariaLabel="Range" className="timeline-range-group" density="compact-grid" label="Range">
         <DsRibbonNumberInput ariaLabel="Timeline range start" label="Start cycle" min={0} max={document.timeline.cycleCount - 1} value={range.start} onChange={(value) => setBoundary("start", value)} title={`Selected range start cycle (inclusive), 0-${document.timeline.cycleCount - 1}`} />
         <DsRibbonNumberInput ariaLabel="Timeline range end" label="End cycle" min={1} max={document.timeline.cycleCount} value={range.end} onChange={(value) => setBoundary("end", value)} title={`Selected range end cycle (exclusive), 1-${document.timeline.cycleCount}`} />
         <label className="ds-control ds-ribbon-number-input" title="Number of cycles in the selected range">
@@ -71,7 +71,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
       </DsRibbonGroup>
     </div>
     <div className="timeline-slot-group" data-timeline-group="Insert" aria-label="Insert timeline commands">
-      <DsRibbonGroup ariaLabel="Insert" className="timeline-insert-group" label="Insert">
+      <DsRibbonGroup ariaLabel="Insert" className="timeline-insert-group" density="compact-grid" label="Insert">
         <DsRibbonNumberInput ariaLabel="Timeline insert count" label="Count" min={1} step={1} value={count} onChange={(value) => setCount(Math.max(1, value))} title="Number of cycles used by Add N / Before / After" />
         <DsRibbonButton ariaLabel="Add one cycle" dataTestId="timeline-cycle-add" icon={<RibbonIcon name="i-plus" />} onClick={() => onCommand({ id: nextCommandId("timeline_add_one"), type: "timeline.insert", at: range.end, count: 1 })} title="Insert 1 cycle after the selected range's end">Add Cycle</DsRibbonButton>
         <DsRibbonButton ariaLabel="Add N cycles" dataTestId="timeline-cycle-add-many" icon={<RibbonIcon name="i-plus" />} onClick={() => onCommand({ id: nextCommandId("timeline_add_many"), type: "timeline.insert", at: range.end, count })} title="Insert Count cycles after the selected range's end">Add N</DsRibbonButton>
@@ -80,7 +80,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
       </DsRibbonGroup>
     </div>
     <div className="timeline-slot-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
-      <DsRibbonGroup ariaLabel="Range Edit" className="timeline-range-edit-group" label="Range Edit">
+      <DsRibbonGroup ariaLabel="Range Edit" className="timeline-range-edit-group" density="compact-grid" label="Range Edit">
         <DsRibbonNumberInput ariaLabel="Timeline destination" label="To" min={0} max={document.timeline.cycleCount} step={1} value={destination} onChange={(value) => setDestination(Math.max(0, value))} title="Destination cycle used by Duplicate / Move" />
         <DsRibbonButton ariaLabel="Delete range" icon={<RibbonIcon name="i-delete" />} onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })} title="Delete the selected range" v1Label="範囲削除">Delete</DsRibbonButton>
         <DsRibbonButton ariaLabel="Duplicate to" icon={<RibbonIcon name="i-duplicate" />} onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })} title="Duplicate the selected range starting at To" v1Label="範囲複製">Duplicate</DsRibbonButton>
@@ -88,7 +88,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
       </DsRibbonGroup>
     </div>
     <div className="timeline-slot-group" data-timeline-group="Bookmark" aria-label="Bookmark commands">
-      <DsRibbonGroup ariaLabel="Bookmark" className="timeline-bookmark-group" label="Bookmark">
+      <DsRibbonGroup ariaLabel="Bookmark" className="timeline-bookmark-group" density="compact-grid" label="Bookmark">
         <DsRibbonButton ariaLabel="Previous bookmark" icon={<RibbonIcon name="i-chevron-left" />} disabled={document.bookmarks.length === 0} onClick={() => navigateBookmark(-1)} title="Jump to the previous Bookmark">Previous</DsRibbonButton>
         <DsRibbonButton ariaLabel="Add marker" icon={<RibbonIcon name="i-bookmark" />} onClick={() => onCommand({ id: nextCommandId("marker"), type: "bookmark.create", bookmark: { id: nextEntityId("bookmark", document) as BookmarkId, name: `Marker ${range.start}`, start: range.start } })} title="Add a Bookmark at the selected range's start" v1Label="ブックマーク">Add</DsRibbonButton>
         <DsRibbonButton ariaLabel="Next bookmark" icon={<RibbonIcon name="i-chevron-right" />} disabled={document.bookmarks.length === 0} onClick={() => navigateBookmark(1)} title="Jump to the next Bookmark">Next</DsRibbonButton>
@@ -99,7 +99,7 @@ export function TimelineToolbar({ document, range, onRange, onCommand, onCommand
       </DsRibbonGroup>
     </div>
     <div className="timeline-slot-group" data-timeline-group="Fold / Break" aria-label="Fold and break commands">
-      <DsRibbonGroup ariaLabel="Fold / Break" className="timeline-fold-group" label="Fold / Break">
+      <DsRibbonGroup ariaLabel="Fold / Break" className="timeline-fold-group" density="compact-grid" label="Fold / Break">
         <DsRibbonButton ariaLabel="Create Time Group" dataTestId="time-group-create" icon={<RibbonIcon name="i-plus" />} onClick={() => onCommand({ id: nextCommandId("time_group_create"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: false, foldStyle: "none" } } })} title="Create a Time Group from the selected range">Create</DsRibbonButton>
         <DsRibbonButton ariaLabel="Axis Break" icon={<RibbonIcon name="i-gap" />} onClick={() => onCommand({ id: nextCommandId("gap"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Gap ${range.start}-${range.end}`, start: range.start, end: range.end, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "GAP" } } })} title="Fold the selected range into a collapsed axis break" v1Label="軸ブレーク">Break</DsRibbonButton>
         <DsRibbonButton ariaLabel="Expand All" dataTestId="time-group-expand-all" icon={<RibbonIcon name="i-expand" />} disabled={!document.timeGroups.some((group) => group.presentation?.collapsed)} onClick={expandAllTimeGroups} title="Expand every collapsed Time Group / axis break">Expand</DsRibbonButton>
