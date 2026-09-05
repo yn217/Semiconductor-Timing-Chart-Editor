@@ -20,13 +20,13 @@ describe("Signal Split projection", () => {
     expect(rows.lower.filter((signalId) => signalId === id("sig_clk"))).toHaveLength(1);
   });
 
-  it("defaults unassigned canonical Signals to Upper and ignores foreign or duplicate assignment records", () => {
+  it("defaults unassigned canonical Signals to Both and ignores foreign or duplicate assignment records", () => {
     const canonical = [id("sig_a"), id("sig_b")];
     const rows = projectSignalSplitRows(canonical, [
       { signalId: id("sig_a"), pane: "lower" },
       { signalId: id("sig_a"), pane: "both" },
       { signalId: id("sig_foreign"), pane: "both" },
     ]);
-    expect(rows).toEqual({ upper: [id("sig_b")], lower: [id("sig_a")], both: [] });
+    expect(rows).toEqual({ upper: [id("sig_b")], lower: [id("sig_a"), id("sig_b")], both: [id("sig_b")] });
   });
 });
