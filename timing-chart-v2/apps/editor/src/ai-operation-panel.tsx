@@ -58,12 +58,57 @@ type ApprovalPolicy = "always" | "auto-view-only";
 // real, truthful record of the one provider that exists today.
 type ActivityEntry = { readonly id: number; readonly timestamp: string; readonly provider: string; readonly actor: "user" | "external-agent"; readonly kind: "read-only" | "proposal"; readonly summary: string; readonly result: string };
 
+// #395 PR5 (part 3): "Context / Scope" -- the acceptance list's own item 2
+// ("Scope can be switched Selection / Current View / Document") names a
+// real, switchable control, not a static label. Every existing command
+// that edits an *existing* Signal/Group/Annotation/Transaction here
+// already targets exactly the current selection (there is no "rename the
+// signal named X" form for those four entity kinds -- only Bookmarks/Time
+// Groups resolve an edit target by name, and neither has a selection
+// concept in AIProposalRequest at all, so they stay outside this gate in
+// every scope, same as today). That makes Selection/Current View scope
+// gating both safe (no existing selected-entity query can ever fail it)
+// and truthful (it actually narrows what CAN be edited, not just what the
+// status line claims). Document is the default -- it is the literal
+// pre-#395-PR5 behavior (no gating at all), so choosing a default other
+// than the narrowest option here is not a silent widening of anything.
+type AIScope = "selection" | "current-view" | "document";
+const scopeLabel = (scope: AIScope): string => scope === "selection" ? "Selection" : scope === "current-view" ? "Current View" : "Document";
+
+function scopeViolationMessage(scope: AIScope, document: CanonicalDocument, command: SemanticCommand, selectedSignalId: SignalId | undefined, selectedGroupId: GroupId | undefined, selectedAnnotationId: string | undefined, selectedTransactionId: string | undefined): string | undefined {
+  if (scope === "document") return undefined;
+  const record = command as unknown as Record<string, unknown>;
+  // A Group is "selected" either directly (selectedGroupId) or by having a
+  // selected Signal inside it -- exactly the same fallback
+  // ai-proposal-provider.ts's own selectedGroup() helper uses to resolve
+  // "selected group" queries. Checking only the direct id would falsely
+  // flag every "rename selected group" query issued while a Signal (not
+  // the group row itself) is selected as a scope violation, even though
+  // that query already only ever targets the real, definitionally-
+  // selected group.
+  const inferredGroupId = selectedGroupId ?? document.signalGroups.find((group) => selectedSignalId !== undefined && group.rows.includes(selectedSignalId))?.id;
+  const checks: readonly { readonly field: string; readonly label: string; readonly selectedId: string | undefined; readonly visible: (id: string) => boolean }[] = [
+    { field: "signalId", label: "Signal", selectedId: selectedSignalId, visible: (id) => document.signals.find((signal) => signal.id === id)?.display.visible !== false },
+    { field: "groupId", label: "Group", selectedId: inferredGroupId, visible: () => true },
+    { field: "annotationId", label: "Annotation", selectedId: selectedAnnotationId, visible: (id) => document.annotations.find((annotation) => annotation.id === id)?.visible !== false },
+    { field: "transactionId", label: "Transaction", selectedId: selectedTransactionId, visible: () => true },
+  ];
+  for (const check of checks) {
+    const id = record[check.field];
+    if (typeof id !== "string") continue;
+    if (scope === "selection" && id !== check.selectedId) return `${check.label} '${id}' is outside the Selection scope -- switch Scope to Document to edit an entity other than the current selection.`;
+    if (scope === "current-view" && !check.visible(id)) return `${check.label} '${id}' is hidden and outside the Current View scope -- switch Scope to Document to edit a hidden entity.`;
+  }
+  return undefined;
+}
+
 export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange, getZoom }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void; readonly getZoom?: () => number }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<AIProposal>();
   const [validatedRevision, setValidatedRevision] = useState<number>();
   const [status, setStatus] = useState("Ready");
   const [approvalPolicy, setApprovalPolicy] = useState<ApprovalPolicy>("always");
+  const [scope, setScope] = useState<AIScope>("document");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
   const providerName = provider === deterministicMockAIProposalProvider ? "Local deterministic (offline)" : "Custom provider";
@@ -72,7 +117,11 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
   };
   const buildPreview = (queryOverride?: string, actor: ActivityEntry["actor"] = "user") => {
     const effectiveQuery = queryOverride ?? query;
-    const result = provider.propose({ document, revision, query: effectiveQuery, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
+    let result = provider.propose({ document, revision, query: effectiveQuery, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
+    if (result.ok) {
+      const violation = result.proposal.commands.map((proposedCommand) => scopeViolationMessage(scope, document, proposedCommand, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId)).find((message) => message !== undefined);
+      if (violation) result = { ok: false, message: violation };
+    }
     if (!result.ok) { onDiagnostic?.({ code: "AI_PROPOSAL_UNAVAILABLE", path: "$.ai.query", message: result.message, severity: "error", operation: "ai.proposal.preview", operationLabel: "Build AI proposal", source: "ai", stage: "validate", recommendation: "Adjust the request or select the required editor object, then preview again.", detail: "ai-proposal:preview" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); logActivity("read-only", effectiveQuery, `Preview unavailable · ${result.message}`, actor); return result; }
     onDiagnostic?.(undefined);
     if (queryOverride !== undefined) setQuery(queryOverride);
@@ -187,7 +236,7 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
 
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
     <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={() => buildPreview()}>Preview</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
-    <div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>
+    <div className="ai-scope">Scope: <label>{" "}<select aria-label="AI context scope" data-testid="ai-scope-select" value={scope} onChange={(event) => setScope(event.target.value as AIScope)}><option value="selection">Selection</option><option value="current-view">Current View</option><option value="document">Document</option></select></label> · Revision: {revision} · Canonical read-only query · Allowed to edit: {scopeLabel(scope)}</div>
     {settingsOpen && <div className="ai-settings" data-testid="ai-settings">
       <h4>AI Settings</h4>
       <fieldset>

@@ -211,3 +211,42 @@ test("Auto-apply view-only operations applies a view-only proposal immediately, 
   await ai.getByTestId("ai-apply").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
+
+// #395 PR5 (part 3): Scope (acceptance item 2, "Scope can be switched
+// Selection / Current View / Document") is a real, switchable control,
+// not a static label -- Current View genuinely refuses to edit a hidden
+// entity even when it is still the current selection (a Signal you just
+// hid does not stop being "selected", but it is no longer in the Current
+// View), while Document allows it and Selection allows it too (a hidden
+// Signal you still have selected is still your Selection).
+test("Scope switches between Selection / Current View / Document, and Current View genuinely refuses to edit a hidden signal", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.getByRole("button", { name: "Hide REQUEST" }).click();
+  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
+
+  const ai = await openAIAssistant(page);
+  await expect(ai.getByTestId("ai-scope-select")).toHaveValue("document");
+
+  await ai.getByTestId("ai-scope-select").selectOption("current-view");
+  await ai.getByLabel("AI semantic query").fill("rename selected signal to REQ");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-status")).toContainText("hidden and outside the Current View scope");
+  await expect(ai.getByTestId("ai-preview")).toHaveCount(0);
+
+  await ai.getByTestId("ai-scope-select").selectOption("selection");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-preview")).toBeVisible();
+  await ai.getByRole("button", { name: "Cancel" }).click();
+
+  await ai.getByTestId("ai-scope-select").selectOption("document");
+  await ai.getByRole("button", { name: "Preview", exact: true }).click();
+  await expect(ai.getByTestId("ai-preview")).toBeVisible();
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  // History 2, not 1: the earlier "Hide REQUEST" click is itself a real,
+  // separate History entry -- this Apply is the second.
+  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+});
