@@ -35,3 +35,25 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   await expect(owner.locator("marker").first()).toHaveAttribute("orient", "auto-start-reverse");
   await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
 });
+
+test("Dependency annotations expose and persist line presentation controls", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("dependency");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+
+  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
+  const editor = page.getByTestId("annotation-editor");
+  await expect(editor.getByLabel("Annotation line type")).toBeVisible();
+  await editor.getByLabel("Annotation line type").selectOption("curve");
+  await editor.getByLabel("Annotation arrowhead").selectOption("bidirectional");
+  await editor.getByTestId("apply-annotation-properties").click();
+
+  await expect(owner).toHaveAttribute("data-line-type", "curve");
+  await expect(owner).toHaveAttribute("data-arrowhead", "bidirectional");
+  await expect(owner.locator("[data-role='annotation-path']")).toHaveAttribute("data-line-type", "curve");
+  await expect(owner.locator("marker")).toHaveCount(2);
+});
