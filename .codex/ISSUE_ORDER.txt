@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-05 13:12 JST
+# Last reconciled by ChatGPT: 2026-09-05 13:19 JST
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
@@ -22,10 +22,11 @@
 # Never merge/cherry-pick codex-control into main.
 #
 # Observed product state at reconciliation:
-#   main = cc7e0a35fe842572507c40f38a18cd12e9e46ae1
+#   main = fec3566d96cf73cdb87d1e0b5437bdc4530dfb28
 #   open Issues = 32
 #   #332 closed after PR #355 capability/effect audit
 #   PR #356 merged: legacy.css = 449 bytes / 0 selectors; #260 remains residual-only
+#   #175 gained a bounded perf fix: view-only Zoom no longer retriggers the pane/host resize effect
 #   new P0 #357: clean /?visual-reference route fails before app mount
 #
 # ============================================================================
@@ -74,6 +75,8 @@
 # symptoms under React StrictMode. It blocks meaningful execution of many visual acceptance specs.
 #
 # Required strategy:
+# - start from latest origin/main; current observed main contains a one-line #175-related Zoom effect
+#   dependency change after #357 was first reported, so reproduce on current main before editing;
 # - root-cause current main; do not assume the issue's provisional analysis is the final cause;
 # - preserve unconditional Hook order and one product bootstrap/root owner;
 # - fix the smallest actual runtime lifecycle defect;
@@ -173,6 +176,11 @@
 175
 177
 
+# #175 current partial evidence:
+#   main@fec3566 removes zoom from the pane/host resize-effect dependency, eliminating one redundant
+#   onViewportResize path for view-only Zoom. Keep the broader latency/invalidation/scale contract;
+#   this one-line fix is not closure by itself.
+#
 # ============================================================================
 # #313 CLOSURE RULE
 # ============================================================================
