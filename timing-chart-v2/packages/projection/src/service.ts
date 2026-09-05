@@ -59,8 +59,9 @@ export class DefaultProjectionService implements ProjectionService {
     const viewportStart = request.viewport.viewportStartY - request.viewport.overscanBefore;
     const viewportEnd = request.viewport.viewportEndY + request.viewport.overscanAfter;
     const pinned = new Set(request.viewport.pinnedRowIds);
-    const mountedRowsOrdered = mountRows(layout, request.viewport, pinned, request.changeSet.rowOrder === undefined ? [] : (request.previous?.mountedRowIds ?? []), this.#rowIndexById);
-    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, pinned, request.changeSet.rowOrder === undefined ? [] : (request.previous?.leftRowIds ?? []), this.#navigationRowIndexById);
+    const preservePreviousRows = request.changeSet.rowOrder !== undefined;
+    const mountedRowsOrdered = mountRows(layout, request.viewport, pinned, preservePreviousRows ? (request.previous?.mountedRowIds ?? []) : [], this.#rowIndexById, undefined, undefined, preservePreviousRows);
+    const mountedNavigationRows = mountRows(navigationLayout, request.viewport, pinned, preservePreviousRows ? (request.previous?.leftRowIds ?? []) : [], this.#navigationRowIndexById, undefined, undefined, preservePreviousRows);
     const mountedGroupHeaders = selectIntersectingHeaders(layout.groupHeaders, viewportStart, viewportEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });
     const mountedLeftGroupHeaders = selectIntersectingHeaders(navigationLayout.groupHeaders, viewportStart, viewportEnd, undefined, (visited) => { this.#groupHeadersVisited += visited; });
     const mountedRowIds = mergeIds(mountedRowsOrdered.map((row) => row.rowId), mountedNavigationRows.map((row) => row.rowId));
@@ -159,6 +160,7 @@ function mountRows(
   rowIndexById: ReadonlyMap<RowLayoutEntry["rowId"], number>,
   onStep?: () => void,
   onVisited?: (count: number) => void,
+  preservePreviousRows = false,
 ): readonly RowLayoutEntry[] {
   const start = viewport.viewportStartY - viewport.overscanBefore;
   const end = viewport.viewportEndY + viewport.overscanAfter;
@@ -177,7 +179,7 @@ function mountRows(
   for (const rowId of previousIds) {
     const index = rowIndexById.get(rowId);
     const row = index === undefined ? undefined : layout.navigationRows[index];
-    if (row && intersects(row, retentionStart, retentionEnd)) candidateIds.add(rowId);
+    if (row && (preservePreviousRows || intersects(row, retentionStart, retentionEnd))) candidateIds.add(rowId);
   }
   return [...candidateIds]
     .map((rowId) => rowIndexById.get(rowId))
