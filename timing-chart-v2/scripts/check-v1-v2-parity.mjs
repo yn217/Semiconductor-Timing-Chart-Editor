@@ -79,6 +79,7 @@ for (const statusRow of statusRows) {
 }
 const evidenceFields = Object.values(statusModel.evidenceClassFields);
 if (evidenceFields.length !== new Set(evidenceFields).size || !evidenceFields.includes("implementationEvidence")) fail("invalid evidence class field mapping");
+const declaredText = (value) => typeof value === "string" && value.trim().length > 0;
 // A COMPLETE parity claim must prove the full closure path required by #177,
 // including persistence.  Keep this separate from the broader evidence-field
 // map so a row cannot become COMPLETE while silently omitting Save/Open.
@@ -101,8 +102,10 @@ for (const contract of matrix.independentContracts) {
 const missingStatusRows = matrix.independentContracts.filter(({ id }) => !statusByFeature.has(id));
 if (missingStatusRows.length) fail(`status model has missing feature rows: ${missingStatusRows.map(({ id }) => id).join(",")}`);
 const independentFields = ["v1Source", "requirement", "decision", "v2OwnerIssue", "acceptance", "implementationEvidence", "unit", "e2e", "visual", "saveOpen", "performance", "export", "status"];
+const independentEvidenceFields = ["acceptance", "implementationEvidence", "unit", "e2e", "visual", "saveOpen", "performance", "export"];
 for (const contract of matrix.independentContracts) {
   for (const field of independentFields) if (!(field in contract)) fail(`${contract.id} is missing ${field}`);
+  for (const field of independentEvidenceFields) if (!declaredText(contract[field])) fail(`${contract.id} has empty ${field}`);
   if (!["KEEP", "MERGED", "DEFER", "DROP"].includes(contract.decision)) fail(`${contract.id} has invalid decision`);
   if (contract.decision === "DROP" || contract.decision === "DEFER") fail(`${contract.id} uses forbidden unapproved ${contract.decision}`);
   if (!contract.v2OwnerIssue || !contract.acceptance || !contract.implementationEvidence) fail(`${contract.id} lacks owner/acceptance/implementation evidence`);
