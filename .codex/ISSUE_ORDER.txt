@@ -3,282 +3,123 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-05 13:19 JST
+# Last reconciled by ChatGPT: 2026-09-05 15:40 JST
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
 #
-# Codex stays on main and reads control files without checking out/merging this branch:
+# Codex stays single-threaded on main and only READS this branch:
 #   git fetch origin codex-control
 #   git show origin/codex-control:.codex/AGENT_ASSIGNMENT.md
 #   git show origin/codex-control:.codex/ISSUE_ORDER.txt
-#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT.md
-#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_2.md
-#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_3.md
-#   git show origin/codex-control:.codex/ISSUE_ACCEPTANCE_SNAPSHOT_4.md
-#
-# Parsing rule: exactly one executable GitHub Issue number per non-comment line, top to bottom.
-# Claude-owned, external-hold, blocked and superseded issues MUST remain comments only.
 # Never merge/cherry-pick codex-control into main.
 #
-# Observed product state at reconciliation:
-#   main = fec3566d96cf73cdb87d1e0b5437bdc4530dfb28
-#   open Issues = 32
-#   #332 closed after PR #355 capability/effect audit
-#   PR #356 merged: legacy.css = 449 bytes / 0 selectors; #260 remains residual-only
-#   #175 gained a bounded perf fix: view-only Zoom no longer retriggers the pane/host resize effect
-#   new P0 #357: clean /?visual-reference route fails before app mount
+# Observed product state:
+#   main = 1fc36b6ad9fba865f5c8f12b73da4931c638a2fa
+#   open Issues = 20
+#   #357 #313 #260 #181 #182 #184 #185 #186 #306 #309 #172 #205 #267 are closed
+#   new immediate regression = #363
+#
+# Parsing rule: exactly one executable GitHub Issue number per non-comment line.
+# Claude-owned, held, paired-secondary and completed Issues remain comments only.
 #
 # ============================================================================
-# AGENT OWNERSHIP — HARD RULE
+# OPERATING POLICY — IMPLEMENTATION FIRST
 # ============================================================================
-# Codex owns Core / Data / Geometry / Performance / Architecture / runtime lifecycle.
-# Claude owns GUI / UX / Visual / Editor-surface work.
+# Prefer concrete production residuals over repeated broad audit/test-only work.
+# Test-only commits are appropriate when the Issue itself is a test/harness contract (#281),
+# or when the test proves/reproduces a concrete acceptance gap/regression.
+# Otherwise: implement bounded product behavior first, then focused verification.
 #
-# Codex MUST NOT independently implement Claude-owned issues:
-#   #260 #181 #182 #184 #185 #176 #262 #293 #306 #309 #205 #267 #172 #186
+# GitHub Actions is NOT RUN because billing/spending-limit prevents runner allocation.
+# This is not an implementation failure/global blocker. Use local TypeScript/gates/unit/Chromium/
+# git diff --check as applicable and record the billing status.
 #
-# Claude MUST NOT independently implement the Codex-owned #357 runtime/hook lifecycle fix.
-# While #357 is active, minimal-cycle-view.tsx and its directly related runtime-lifecycle owner are
-# Codex-exclusive hot files. Claude may continue independent #260 token/guard work outside them.
-#
-# If a Codex Issue exposes a GUI residual owned by Claude, record it and continue within the
-# Codex-owned core acceptance. Do not create a parallel GUI implementation path.
-#
-# If Claude has a PR touching a shared hot file, wait until it is merged, then fast-forward/sync
-# main before editing that hot file. Shared hot files include:
-#   minimal-cycle-view.tsx
-#   minimal-cycle-view-ribbon.tsx
-#   design-system.tsx
-#   shared ribbon/CSS primitives
-#   renderer/projection owners
-#   semantic-command registries
+# Never weaken Golden/reference/threshold/mask merely to pass. PR #362 was an explicitly approved
+# Golden baseline update; any later Golden change requires new explicit approval.
 #
 # ============================================================================
-# CURRENT PRODUCT GOAL
+# CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# Keep burning down CURRENT open Issues from latest main.
-# Old Phase/Umbrella Issues are closure/audit contracts against current main; do not recreate the
-# historical rewrite/v2 branch model and do not restart the completed MinimalCycleView decomposition.
-#
-# One Issue normally ends in:
-#   audit current main -> implement only residual gap if needed -> focused verification -> evidence
-#   -> commit/push if code changed -> close when acceptance is proven -> next Issue
-#
-# If no code change is needed, evidence + closure is sufficient. Never manufacture a commit.
-#
-# ============================================================================
-# P0 CURRENT BLOCKER — #357
-# ============================================================================
-# #357: /?visual-reference fails to mount in a clean browser while plain / works.
-# Reported evidence includes Hook-order / invalid-hook-call / duplicate-createRoot / disposed-runtime
-# symptoms under React StrictMode. It blocks meaningful execution of many visual acceptance specs.
-#
-# Required strategy:
-# - start from latest origin/main; current observed main contains a one-line #175-related Zoom effect
-#   dependency change after #357 was first reported, so reproduce on current main before editing;
-# - root-cause current main; do not assume the issue's provisional analysis is the final cause;
-# - preserve unconditional Hook order and one product bootstrap/root owner;
-# - fix the smallest actual runtime lifecycle defect;
-# - fresh dev server + brand-new Chromium tab must mount /?visual-reference repeatedly;
-# - plain / must remain functional;
-# - no Golden/reference/threshold/mask changes;
-# - do not remove StrictMode or bypass the route merely to make tests pass without an explicit
-#   architecture/product decision.
-#
-# Once #357 is fixed, rerun the affected visual-reference specs and classify any remaining failures
-# under their actual GUI/visual Issues. Do not absorb all downstream visual gaps into #357.
-#
-# ============================================================================
-# GITHUB ACTIONS / BILLING POLICY
-# ============================================================================
-# GitHub Actions is currently unavailable because hosted jobs do not receive a runner due to the
-# account/repository billing/spending limit.
-#
-# This is NOT an implementation failure and NOT a global blocker.
-# Do not repeatedly retry GitHub Actions.
-# Record in PR/Issue evidence:
-#   GitHub Actions: NOT RUN — billing/spending limit
-#
-# Required local verification, as applicable:
-#   - TypeScript / tsc
-#   - architecture / boundary / performance gates
-#   - focused unit tests
-#   - relevant real-Chromium Playwright/E2E
-#   - git diff --check
-#
-# #272 remains external/human hold until billing is restored and a real runner executes the gate.
-#
-# ============================================================================
-# GLOBAL BLOCK POLICY — DEFAULT: DO NOT GLOBAL-BLOCK
-# ============================================================================
-# Normal response to an Issue-local blocker:
-#   record concise evidence -> quarantine ONLY that Issue -> continue to next independent Issue.
-#
-# Overall Goal may be BLOCKED only if:
-#   G1 safe repo baseline cannot be established/preserved;
-#   G2 repo-wide execution failure prevents safe implementation/verification for ALL remaining work;
-#   G3 every remaining executable Issue is blocked/held/retrieval-impossible;
-#   G4 continuing risks loss/corruption of unrelated work/data with no non-destructive path.
-#
-# NOT global blockers while another Issue remains:
-#   - GitHub Issue body retrieval failure
-#   - one or many E2E failures
-#   - known browser gesture/coordinate blocker
-#   - external GitHub Actions billing failure
-#   - one Issue already satisfied/no-code-change
-#   - GitHub close/comment temporarily unavailable
-#
-# Same blocker twice on one Issue:
-#   stop retrying it -> record -> quarantine it -> continue.
-#
-# ============================================================================
-# SAFETY / ARCHITECTURE RULES
-# ============================================================================
-# - Always start from latest origin/main.
-# - If worktree is dirty, do not reset/stash/clean/delete unrelated work.
-# - Preserve Canonical -> Derived/Projection -> DOM ownership.
-# - UI/AI/Keyboard/Context Menu/Inspector/Bottom mutations converge on Semantic Commands.
-# - Renderer is not semantic authority; DOM/ruler samples are not canonical geometry authority.
-# - Stable IDs are opaque; never infer semantics from ID spelling.
-# - Home Ribbon remains frozen unless explicitly authorized by Issue/user.
-# - Never change Golden/reference/threshold/mask merely to make tests pass.
-# - Prefer real-browser observable evidence where the contract is browser/interaction dependent.
-# - Do not weaken assertions to match current incorrect production behavior.
-#
-# ============================================================================
-# ACCEPTANCE RETRIEVAL
-# ============================================================================
-# Resolve each Issue contract in this order:
-#   1. current live GitHub Issue body + later comments
-#   2. ISSUE_ACCEPTANCE_SNAPSHOT.md / _2 / _3 / _4
-#   3. if unavailable everywhere, retrieval-block ONLY that Issue and continue
-#
-# Current GitHub text/comments win over snapshots.
-#
-# ============================================================================
-# CODEX EXECUTABLE QUEUE — CURRENT CORE LANE
-# ============================================================================
-# Highest-value current blocker and bounded closure/product work first.
-357
-313
-200
-250
+# 1) Immediate narrow regression. Restore green baseline, do not redesign Zoom.
+363
 
-# ============================================================================
-# BROAD CORE / PHASE CLOSURE AUDIT
-# ============================================================================
-# Audit current main first. Close with evidence if satisfied; implement only bounded residual gaps.
-161
-167
-170
+# 2) Signal Split Core reconciliation ONLY.
+#    Current duplicate concepts:
+#      - signal.display.splitPane
+#      - standalone SignalSplitAssignment[] / projectSignalSplitRows()
+#    Leave one authoritative presentation model. Do NOT build a parallel GUI/renderer path.
+#    When ready, comment `CORE_READY_FOR_GUI` on #200 and STOP #200 implementation;
+#    .codex/AGENT_ASSIGNMENT.md then transfers #200 to Claude for PR4 GUI/product completion.
+200
+
+# 3) Concrete Core/reliability product residuals.
+221
+269
+
+# 4) Older Core phase contracts: audit latest main, implement only bounded residual gaps.
 171
-175
+170
+167
+161
 177
 
-# #175 current partial evidence:
-#   main@fec3566 removes zoom from the pane/host resize-effect dependency, eliminating one redundant
-#   onViewportResize path for view-only Zoom. Keep the broader latency/invalidation/scale contract;
-#   this one-line fix is not closure by itself.
-#
-# ============================================================================
-# #313 CLOSURE RULE
-# ============================================================================
-# PR #338 fixed the reported drag-release authority mismatch.
-# PR #341 fixed Escape/PointerCancel trailing-click leakage.
-# Execute #313 as an acceptance-first closure audit, not as a fresh broad rewrite.
-# Explicitly prove:
-#   - 100k unsampled boundary selection
-#   - terminal boundary
-#   - reverse drag normalization
-#   - ruler/waveform equivalence
-#   - folds/rebase
-#   - zoom/scroll invariance
-#   - range selection remains view-only
-# Implement code only if a concrete bounded residual fails.
-#
-# ============================================================================
-# QUARANTINED / DEPENDENCY HELD — NON-EXECUTABLE
-# ============================================================================
-# Known or potentially shared real-browser/gesture-heavy families; do not retry repeatedly:
-#   #221 clipboard semantics matrix
-#   #222 first-class Spacer workflow
-#   #223 Logic/Event/Pulse direct creation
-#   #269 structured diagnostics browser matrix
-#   #281 property/state-machine harness where it depends on blocked gestures
-#
-# Dependency/overlap hold:
-#   #264 Event/Pulse full lifecycle overlaps/depends on #223
-#   #265 Spacer full lifecycle overlaps/depends on #222
-#   #267 Group Band is Claude-owned and also depends on Spacer/layout closure
-#
-# Re-enter a quarantined Issue only when its concrete blocker is no longer reproducible or a
-# production-safe strategy exists. Re-enter one Issue at a time. Never use sampled ruler DOM,
-# fixed-pitch coordinate workarounds, timeout inflation, or assertion weakening to force acceptance.
-#
+# 5) Background closure lanes — intentionally after implementable product gaps.
+#    #175: production performance residuals only when evidence identifies a real hot path;
+#          avoid repeated measurement/test-only churn.
+175
+#    #281 is inherently a test/correctness-harness Issue and therefore intentionally late.
+281
+
 # ============================================================================
 # CLAUDE-OWNED — NON-EXECUTABLE BY CODEX
 # ============================================================================
-# Immediate Claude queue:
-#   #260 residual token-contract + hard legacy-selector anti-regression guard only.
-#        PR #356 already completed legacy.css relocation (449 bytes / 0 selectors).
-#        Final visual/current-contract confirmation waits for #357.
-#   #181 residual Left Tree/Role/MiniMap full-v8 visual closure after #357.
-#        Preserve accepted Collapse/Visibility/Role/MiniMap work.
-#   #182 approved-v8 GUI closure after #357
-#   #184 GUI-v8 blockers after #357 where visual-reference dependent
-#   #185 Golden visual acceptance after #357
-#   #176 professional CAD GUI usability
-#   #262 final GUI/UX closure
-#   #293 constrained non-Home design-system closure
-#   #306 visual scenario harness; visual-reference runs after #357
-#   #309 interaction visual scenarios after #357 and remaining gesture dependency
+# #223 + #264 Event/Pulse: ONE Claude-owned end-to-end implementation; do not duplicate.
+# #222 + #265 Spacer: ONE Claude-owned end-to-end implementation; do not duplicate.
+# #293 constrained non-Home design-system closure.
+# #176 professional CAD/EDA usability closure.
+# #262 final GUI/UX closure.
 #
-# Claude follow-ups:
-#   #205 datasheet annotations
-#   #267 Group Band editor after Spacer/layout readiness
-#   #172 Full GUI broad closure/audit
-#   #186 Golden GUI harness after #357, if still materially open after #185/#306
+# #200 becomes Claude-owned only AFTER Codex posts CORE_READY_FOR_GUI, at which point Codex moves
+# immediately to #221 and does not continue a parallel Signal Split GUI implementation.
 #
 # ============================================================================
-# RECENTLY COMPLETED — DO NOT RE-IMPLEMENT
+# PRODUCT-DECISION HOLD — NON-EXECUTABLE
 # ============================================================================
-#   #332 capability truthfulness / Preview + effect audit
-#   #165 Geometry Semantic/Local/Screen contract
-#   #166 RowLayout + Stable Waveform Surface
-#   #169 Reorder / Visibility / D&D
-#   #180 bounded viewport projection scaling
-#   #210 Clock Editor / Edge Counter parity
-#   #219 renderer/runtime scaling
-#   #259 production query-routable architecture probes
-#   #273 LabelAnchor source/display contract
-#   #275 bounded Undo/Redo retention
-#   #277 ArchitectureProbe / StableSurfaceProbe extraction
-#   #328 Product Resource Budget enforcement
-#   #331 Font editing correctness/UX
-#   #352 uncontrolled period-2 Clock timeline ripple regression
-#
-# #332 closed after PR #355 added a mechanical Preview capability/effect audit on top of the real
-# Annotation/Clock Preview fixes and truthful contextual disabled reasons.
-#
-# #352 was fixed by the real Core change (`510f41c`, followed by `8ce9f60` verification).
-# The earlier test fixture changes that used period=1 are not closure evidence by themselves.
+# #250 AI provider integration:
+# Provider-neutral/deterministic semantic path is already substantial. Remaining acceptance needs an
+# explicit product decision for production provider/transport/config/auth/network-failure/smoke.
+# Do not invent an arbitrary provider or keep adding deterministic tests merely to burn the Issue down.
 #
 # ============================================================================
 # EXTERNAL / HUMAN HOLD
 # ============================================================================
-#   #272 GitHub Actions billing/spending-limit runner allocation
-# Do not burn product-development cycles retrying this. Re-evaluate after Billing & plans is fixed.
+# #272 GitHub Actions runner allocation / billing spending limit.
+# Re-evaluate only after billing is restored.
 #
 # ============================================================================
-# OVERLAP NOTES
+# OVERLAP RULES
 # ============================================================================
-# #222/#265 and #223/#264 are paired contracts. When resumed, implement once through the
-# authoritative owner and close overlapping Issue contracts with explicit evidence.
+# #223/#264 = one Event/Pulse lifecycle. Claude implements once; use one evidence set to close both.
+# #222/#265 = one Spacer lifecycle. Claude implements once; use one evidence set to close both.
+# If an Issue-local gesture/coordinate blocker reproduces twice, quarantine only that Issue/pair and
+# continue. Never use sampled ruler DOM, fixed-pitch semantic coordinates, timeout inflation or
+# assertion weakening to force acceptance.
 #
 # ============================================================================
-# SUPERSEDED / DO NOT RESTART
+# RECENTLY COMPLETED — DO NOT REIMPLEMENT
 # ============================================================================
-#   #258 MinimalCycleView monolith decomposition
-#   #312 parallel four-way replacement
-# Responsibility-owner refactor already superseded these strategies and is merged.
+# #357 #313 #260 #181 #182 #184 #185 #186 #306 #309 #172 #205 #267
+# #165 #166 #169 #180 #210 #219 #259 #273 #275 #277 #328 #331 #332 #352
+#
+# ============================================================================
+# GLOBAL SAFETY
+# ============================================================================
+# - Always sync latest origin/main before Issue work.
+# - Preserve unrelated dirty work; no reset/stash/clean/delete.
+# - Canonical -> Derived/Projection -> DOM.
+# - GUI/Keyboard/Context Menu/Inspector/Bottom/AI mutations converge on Semantic Commands.
+# - DOM/ruler samples are not semantic authority.
+# - Stable IDs are opaque.
+# - Home remains protected unless explicitly authorized.
+# - Close already-satisfied Issues with evidence; never manufacture a commit.
