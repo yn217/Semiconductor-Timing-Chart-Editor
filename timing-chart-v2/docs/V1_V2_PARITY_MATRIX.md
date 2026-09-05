@@ -91,6 +91,14 @@ Save/Open, the SVG contains the ordered visible labels, and the shared
 ExportScene also produces valid PNG and PDF outputs. The complete V1 legend
 style/fit reference matrix remains open.
 
+The current-main Ribbon visual refresh is covered by
+`timing-chart-v2/tests/e2e/ribbon-visual-scenario-matrix.spec.ts` (2/2 focused
+Chromium): deterministic desktop manifests cover all supported Ribbon tabs,
+mechanical icon/baseline diagnostics report no findings, and compressed layout
+plus repeated Home round-trip preserves geometry and canonical/history state.
+`v8-gui-contract-coverage.spec.ts` also passes its locked V8 geometry contract.
+The complete V1 replacement-pack pixel matrix remains open.
+
 ## Non-GUI V1 contract sections
 
 The JSON inventory also covers the full product contract, including:
