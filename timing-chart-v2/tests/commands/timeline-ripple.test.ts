@@ -94,7 +94,7 @@ describe("timeline ripple commands", () => {
       { id: commandId("cmd_uncontrolled_clock_insert"), type: "timeline.insert" as const, at: 3, count: 1 },
       { id: commandId("cmd_uncontrolled_clock_delete"), type: "timeline.delete" as const, start: 2, end: 3 },
       { id: commandId("cmd_uncontrolled_clock_duplicate"), type: "timeline.duplicateRange" as const, start: 3, end: 4, at: 1 },
-      { id: commandId("cmd_uncontrolled_clock_move"), type: "timeline.moveRange" as const, start: 3, end: 4, to: 0 },
+      { id: commandId("cmd_uncontrolled_clock_move"), type: "timeline.moveRange" as const, start: 0, end: 2, to: 4 },
     ];
     for (const command of commands) {
       const session = new CommandHistorySession(initial);
@@ -104,6 +104,20 @@ describe("timeline ripple commands", () => {
       expect(session.undo().ok).toBe(true);
       expect(session.getSnapshot().document).toEqual(initial);
     }
+  });
+
+  it("moves an uncontrolled Clock generator start with its source-time range", () => {
+    const initial = canonicalFixture();
+    const clock = initial.signals[0] as ClockSignal;
+    initial.signals[0] = { ...clock, generator: { ...clock.generator, start: 0, period: 2 } };
+    const session = new CommandHistorySession(initial);
+    const result = session.execute({ id: commandId("cmd_move_clock_start"), type: "timeline.moveRange", start: 0, end: 2, to: 4 });
+    expect(result.ok).toBe(true);
+    expect((session.getSnapshot().document.signals[0] as ClockSignal).generator.start).toBe(4);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect((session.getSnapshot().document.signals[0] as ClockSignal).generator.start).toBe(4);
   });
 
   it("rejects a timeline transform that would make a Clock generator unrenderable", () => {
