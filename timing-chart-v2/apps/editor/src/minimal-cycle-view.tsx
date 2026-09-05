@@ -234,6 +234,7 @@ export function MinimalCycleView() {
   const compatibilityDialogRef = useRef<HTMLElement>(null);
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [treePresentationRevision, setTreePresentationRevision] = useState(0);
+  const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
   const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
   const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
@@ -700,6 +701,8 @@ export function MinimalCycleView() {
       const refreshRuler = invalidation.refreshRuler;
       const refreshGridNow = invalidation.refreshGrid;
       const refreshOverlaysNow = invalidation.refreshOverlays;
+      const refreshPlayheadNow = changed.fullDocumentReplace === true || changed.geometryScreenX === true || refreshRuler;
+      if (refreshPlayheadNow) setPlayheadPresentationRevision((value) => value + 1);
       renderer.update(projection);
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
@@ -717,7 +720,7 @@ export function MinimalCycleView() {
           timelineRuntime.refreshRuler();
           timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
         }
-        timelineRuntime.refreshPlayhead();
+        if (refreshPlayheadNow) timelineRuntime.refreshPlayhead();
         if (refreshGridNow) timelineRuntime.refreshGrid();
         timelineRuntime.setZoom(timelineNavigation.getZoom());
         if (refreshOverlaysNow) timelineRuntime.refreshOverlays();
@@ -1430,8 +1433,10 @@ export function MinimalCycleView() {
 
   useEffect(() => {
     refreshPlayhead.current();
+  }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  useEffect(() => {
     refreshRangeSelectionBand.current();
-  }, [selectedCycle, snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
+  }, [snapshot.revision, timelineRange, rangeSelectionActive, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
