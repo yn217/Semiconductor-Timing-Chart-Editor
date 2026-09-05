@@ -1,7 +1,8 @@
 import type { RefObject } from "react";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
+import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
+import { assertSafeWaveDromSvg, renderWaveJsonMarkup, toWaveJson, WaveDromAdapterError } from "@timing-chart-v2/wavedrom-adapter";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters, type SelectedClockEdge } from "./edge-counter-projection.js";
 import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
@@ -89,6 +90,62 @@ export function refreshAnnotationPreview(host: HTMLElement, annotationId: Annota
   const nextOpacity = draft?.opacity ?? canonical.opacity;
   if (nextOpacity !== undefined) owner.style.opacity = String(nextOpacity); else owner.style.removeProperty("opacity");
   owner.dataset.annotationPreview = draft === undefined ? "false" : "true";
+}
+
+/**
+ * Applies a Clock Generator draft (Start/Period/Duty/Phase/Initial/Polarity/
+ * Suppressed periods) as a real transient waveform preview for the selected
+ * Clock row -- unlike refreshGroupStylePreview/refreshAnnotationPreview above,
+ * a generator draft changes the wave SHAPE (edge positions), not just a CSS
+ * property on the existing mounted SVG, so this renders a genuinely separate
+ * preview <svg> via the pinned WaveDrom conversion/render pipeline
+ * (toWaveJson + renderWaveJsonMarkup, both pure functions -- see
+ * packages/wavedrom-adapter) called DIRECTLY, bypassing
+ * ProductionWaveDromAdapter entirely. This is deliberate: the adapter's
+ * `#active`/`#markupCache` maps are keyed by signalId and own the real
+ * canonical mount (renderer.ts:107-146) -- routing a draft through them would
+ * either evict or poison the canonical entry. Instead, the canonical SVG
+ * (already mounted by the real renderer/adapter pair) is only hidden via
+ * `display:none` -- never removed -- and the preview SVG is appended as a
+ * sibling, so Canonical/History/Dirty never change and reverting (draft
+ * undefined) is an exact, lossless restore of the untouched canonical node. */
+export function refreshClockPreview(host: HTMLElement, signal: ClockSignal, draftGenerator: ClockGenerator | undefined, cycleCount: number): void {
+  const mount = host.querySelector<HTMLElement>(`[data-role='wave-owner'][data-signal-id='${CSS.escape(signal.id)}']`);
+  if (!mount) return;
+  const canonicalSvg = mount.querySelector<SVGElement>(":scope > svg:not([data-clock-preview-svg])");
+  const existingPreview = mount.querySelector<SVGElement>("[data-clock-preview-svg]");
+  const restoreCanonical = () => {
+    existingPreview?.remove();
+    canonicalSvg?.style.removeProperty("display");
+    delete mount.dataset.clockPreview;
+  };
+  if (draftGenerator === undefined) { restoreCanonical(); return; }
+  try {
+    const waveJson = toWaveJson({ signal: { ...signal, generator: draftGenerator }, cycleCount });
+    // A fixed high render index keeps this preview's generated element ids
+    // (WaveDrom's gradient/pattern defs) from colliding with the real
+    // adapter's own monotonic per-signal indices, which start at 0.
+    const markup = renderWaveJsonMarkup(waveJson, 0xC10CC, []);
+    const template = mount.ownerDocument.createElement("template");
+    template.innerHTML = markup.trim();
+    const svg = template.content.firstElementChild;
+    if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") { restoreCanonical(); return; }
+    assertSafeWaveDromSvg(svg);
+    svg.setAttribute("data-clock-preview-svg", "true");
+    svg.setAttribute("preserveAspectRatio", "none");
+    existingPreview?.remove();
+    canonicalSvg?.style.setProperty("display", "none");
+    mount.appendChild(svg);
+    mount.dataset.clockPreview = "true";
+  } catch (error) {
+    // An in-progress draft can be transiently unrepresentable (e.g. duty not
+    // aligned to a half cycle) -- Apply's own command-layer validation
+    // (INVALID_CLOCK_GENERATOR) is the real gate, so a draft-conversion
+    // rejection here just falls back to showing the canonical waveform
+    // rather than surfacing a crash from a best-effort visual preview.
+    if (!(error instanceof WaveDromAdapterError)) throw error;
+    restoreCanonical();
+  }
 }
 
 export function refreshRulerRangeSelection(ruler: RefObject<HTMLDivElement | null>, active: boolean, range: { readonly start: number; readonly end: number }): void {

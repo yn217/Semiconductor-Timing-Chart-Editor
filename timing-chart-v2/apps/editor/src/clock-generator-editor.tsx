@@ -6,7 +6,7 @@ import { nextCommandId } from "./command-id.js";
 import { serializeClockSettings } from "./runtime/clock-settings.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 
-export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void }) {
+export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate, onPreview }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void; readonly onPreview: (draft: ClockGenerator | undefined) => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const [suppressedPeriods, setSuppressedPeriods] = useState((signal.generator.suppressedPeriods ?? []).join(", "));
@@ -20,6 +20,17 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
     setSuppressedPeriods((signal.generator.suppressedPeriods ?? []).join(", "));
     setGeneratorError("");
   }, [signal.id, signal.generator, signal.edgeCounter]);
+  // Preview reflects the CURRENT draft generator on the real, selected Clock
+  // row's waveform via a pure DOM-only path (see refreshClockPreview in
+  // runtime/use-editor-runtime-bridge.ts) -- Canonical/History/Dirty stay
+  // untouched; nothing here calls onCommand. Toggling Preview off, editing a
+  // different Signal (this component remounts on signal.id, see the parent's
+  // `key`), or any canonical revision change (Apply/Undo/Redo/Open/New --
+  // same remount mechanism) always reverts to the real canonical waveform.
+  useEffect(() => {
+    onPreview(preview ? generator : undefined);
+    return () => onPreview(undefined);
+  }, [preview, generator, onPreview]);
   const number = (key: "start" | "period" | "duty" | "phase", value: string) => setGenerator({ ...generator, [key]: Number(value) });
   const exportSettings = () => { const blob = new Blob([serializeClockSettings(signal.id, signal.name, generator, edgeCounter)], { type: "application/json" }); const url = URL.createObjectURL(blob); const anchor = document.createElement("a"); anchor.href = url; anchor.download = `${signal.name || signal.id}-clock.json`; anchor.click(); URL.revokeObjectURL(url); };
   const importSettings = (file: File) => { const reader = new FileReader(); reader.onload = () => { try { const parsed = JSON.parse(String(reader.result)) as { generator?: ClockGenerator; edgeCounter?: EdgeCounterSettings }; if (parsed.generator) setGenerator(parsed.generator); if (parsed.edgeCounter) setEdgeCounter(parsed.edgeCounter); } catch { /* Invalid imports remain transient and do not enter the command path. */ } }; reader.readAsText(file); };
