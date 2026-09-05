@@ -100,7 +100,7 @@ for (const contract of matrix.independentContracts) {
 }
 const missingStatusRows = matrix.independentContracts.filter(({ id }) => !statusByFeature.has(id));
 if (missingStatusRows.length) fail(`status model has missing feature rows: ${missingStatusRows.map(({ id }) => id).join(",")}`);
-const independentFields = ["v1Source", "requirement", "decision", "v2OwnerIssue", "acceptance", "implementationEvidence", "unit", "e2e", "visual", "export", "status"];
+const independentFields = ["v1Source", "requirement", "decision", "v2OwnerIssue", "acceptance", "implementationEvidence", "unit", "e2e", "visual", "saveOpen", "export", "status"];
 for (const contract of matrix.independentContracts) {
   for (const field of independentFields) if (!(field in contract)) fail(`${contract.id} is missing ${field}`);
   if (!["KEEP", "MERGED", "DEFER", "DROP"].includes(contract.decision)) fail(`${contract.id} has invalid decision`);
