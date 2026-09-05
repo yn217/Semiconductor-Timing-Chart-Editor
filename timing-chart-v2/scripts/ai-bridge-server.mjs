@@ -28,10 +28,18 @@ const POLL_TIMEOUT_MS = 25_000;
 // for the browser.
 const READ_TOOLS = new Set(["get_document_summary", "get_selection"]);
 const VIEW_ONLY_TOOLS = new Set(["fit_all"]);
+// #395 PR4: propose_edit is the one tool that reaches into document-changing
+// territory, but it still only ever builds a Preview (identical to the user
+// typing the same query and clicking Preview themselves) -- it never
+// validates or applies on its own. There is deliberately no bridge-side
+// "apply" tool for a document-changing proposal at all: a human must open
+// the AI Assistant panel and manually Validate + Apply it.
+const PROPOSAL_TOOLS = new Set(["propose_edit"]);
 const TOOL_CATALOG = [
   { name: "get_document_summary", description: "Read-only summary of the current document (title, signal/annotation/transaction counts, timeline length). Never mutates anything." },
   { name: "get_selection", description: "Read-only current selection (selected Signal/Group/Annotation/Transaction id, if any). Never mutates anything." },
   { name: "fit_all", description: "View-only: fit the complete timeline into the viewport. Canonical/History/Dirty delta is always 0." },
+  { name: "propose_edit", description: "Submit a document-changing edit request as a Preview only -- it is never auto-validated or auto-applied. A human must open the AI Assistant panel and manually Validate + Apply it. Takes a single 'query' string argument." },
 ];
 
 function timingSafeTokenEquals(candidate) {
@@ -106,7 +114,7 @@ async function handleMcp(res, body) {
   if (method === "tools/list") { reply({ tools: TOOL_CATALOG }); return; }
   if (method === "tools/call") {
     const name = params?.name;
-    if (typeof name !== "string" || !(READ_TOOLS.has(name) || VIEW_ONLY_TOOLS.has(name))) { replyError(-32601, `Unknown or unauthorized tool '${name}'. Only ${[...READ_TOOLS, ...VIEW_ONLY_TOOLS].join(", ")} are exposed.`); return; }
+    if (typeof name !== "string" || !(READ_TOOLS.has(name) || VIEW_ONLY_TOOLS.has(name) || PROPOSAL_TOOLS.has(name))) { replyError(-32601, `Unknown or unauthorized tool '${name}'. Only ${[...READ_TOOLS, ...VIEW_ONLY_TOOLS, ...PROPOSAL_TOOLS].join(", ")} are exposed.`); return; }
     try {
       const result = await queueToolCall(name, params?.arguments);
       reply({ content: [{ type: "text", text: JSON.stringify(result) }], isError: false });

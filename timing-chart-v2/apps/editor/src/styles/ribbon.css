@@ -127,9 +127,10 @@
 .ai-activity-log { color: #5c6b7e; font-size: 10px; }
 .ai-activity-log summary { cursor: pointer; color: #334a64; font-weight: 650; }
 .ai-activity-log ol { display: flex; flex-direction: column; gap: 3px; margin: 6px 0 0; padding: 0; list-style: none; max-height: 160px; overflow-y: auto; }
-.ai-activity-log li { display: grid; grid-template-columns: 1fr auto auto; gap: 2px 8px; padding: 4px 6px; border: 1px solid #e1e7ee; border-radius: 3px; background: #fbfcfe; }
+.ai-activity-log li { display: grid; grid-template-columns: 1fr auto auto auto; gap: 2px 8px; padding: 4px 6px; border: 1px solid #e1e7ee; border-radius: 3px; background: #fbfcfe; }
+.ai-activity-log li[data-actor="external-agent"] { border-color: #9ebbd8; background: #eef7ff; }
 .ai-activity-log time { grid-column: 1 / -1; color: #90a0b3; font-size: 9px; }
-.ai-activity-provider, .ai-activity-kind { color: #52677d; font-weight: 650; }
+.ai-activity-provider, .ai-activity-kind, .ai-activity-actor { color: #52677d; font-weight: 650; }
 .ai-activity-summary { grid-column: 1 / -1; color: #304761; }
 .ai-activity-result { grid-column: 1 / -1; color: #5c6b7e; }
 

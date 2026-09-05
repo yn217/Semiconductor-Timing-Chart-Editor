@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { planCommand } from "@timing-chart-v2/commands";
 import { validateCanonicalDocument, type CanonicalDocument, type DocumentProblem, type GroupId, type SignalId } from "@timing-chart-v2/schema";
 import { deterministicMockAIProposalProvider, type AIProposal, type AIProposalProvider, type AIViewIntent } from "./ai-proposal-provider.js";
+import { useAIBridgeClient, type AIBridgeStatus } from "./ai-bridge-client.js";
 
 function proposalValidationProblems(document: CanonicalDocument, proposal: AIProposal): readonly DocumentProblem[] {
   if (proposal.kind === "view-only") return proposal.commands.length === 0 && proposal.viewIntent ? [] : [{ code: "AI_VIEW_INTENT_INVALID", path: "$.ai.proposal", message: "View-only proposals cannot contain document commands." }];
@@ -55,9 +56,9 @@ type ApprovalPolicy = "always" | "auto-view-only";
 // cross-session log item 10 describes for an external agent (there is no
 // external agent yet -- see #395's remaining PR3/PR4 scope); it is a
 // real, truthful record of the one provider that exists today.
-type ActivityEntry = { readonly id: number; readonly timestamp: string; readonly provider: string; readonly kind: "read-only" | "proposal"; readonly summary: string; readonly result: string };
+type ActivityEntry = { readonly id: number; readonly timestamp: string; readonly provider: string; readonly actor: "user" | "external-agent"; readonly kind: "read-only" | "proposal"; readonly summary: string; readonly result: string };
 
-export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, bridgeStatus }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly bridgeStatus: "disabled" | "connecting" | "connected" | "error" }) {
+export function AIOperationPanel({ document, revision, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range, onCommand, onCommandBatch, onViewIntent, onDiagnostic, icon, provider = deterministicMockAIProposalProvider, bridgeHost, bridgePort, bridgeEnabled, onBridgeEnabledChange, bridgeToken, onBridgeTokenChange, onBridgeStatusChange }: { readonly document: CanonicalDocument; readonly revision: number; readonly selectedSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotationId: string | undefined; readonly selectedTransactionId: string | undefined; readonly range: Readonly<{ start: number; end: number }> | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch?: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent?: (intent: AIViewIntent) => void; readonly onDiagnostic?: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly icon: ReactNode; readonly provider?: AIProposalProvider; readonly bridgeHost: string; readonly bridgePort: number; readonly bridgeEnabled: boolean; readonly onBridgeEnabledChange: (enabled: boolean) => void; readonly bridgeToken: string; readonly onBridgeTokenChange: (token: string) => void; readonly onBridgeStatusChange?: (status: AIBridgeStatus) => void }) {
   const [query, setQuery] = useState("");
   const [preview, setPreview] = useState<AIProposal>();
   const [validatedRevision, setValidatedRevision] = useState<number>();
@@ -66,18 +67,28 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [activityLog, setActivityLog] = useState<readonly ActivityEntry[]>([]);
   const providerName = provider === deterministicMockAIProposalProvider ? "Local deterministic (offline)" : "Custom provider";
-  const logActivity = (kind: ActivityEntry["kind"], summary: string, result: string) => {
-    setActivityLog((log) => [{ id: log.length, timestamp: new Date().toISOString(), provider: providerName, kind, summary, result }, ...log].slice(0, 50));
+  const logActivity = (kind: ActivityEntry["kind"], summary: string, result: string, actor: ActivityEntry["actor"] = "user") => {
+    setActivityLog((log) => [{ id: log.length, timestamp: new Date().toISOString(), provider: providerName, actor, kind, summary, result }, ...log].slice(0, 50));
   };
-  const buildPreview = () => {
-    const result = provider.propose({ document, revision, query, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
-    if (!result.ok) { onDiagnostic?.({ code: "AI_PROPOSAL_UNAVAILABLE", path: "$.ai.query", message: result.message, severity: "error", operation: "ai.proposal.preview", operationLabel: "Build AI proposal", source: "ai", stage: "validate", recommendation: "Adjust the request or select the required editor object, then preview again.", detail: "ai-proposal:preview" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); logActivity("read-only", query, `Preview unavailable · ${result.message}`); return; }
+  const buildPreview = (queryOverride?: string, actor: ActivityEntry["actor"] = "user") => {
+    const effectiveQuery = queryOverride ?? query;
+    const result = provider.propose({ document, revision, query: effectiveQuery, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, range });
+    if (!result.ok) { onDiagnostic?.({ code: "AI_PROPOSAL_UNAVAILABLE", path: "$.ai.query", message: result.message, severity: "error", operation: "ai.proposal.preview", operationLabel: "Build AI proposal", source: "ai", stage: "validate", recommendation: "Adjust the request or select the required editor object, then preview again.", detail: "ai-proposal:preview" }); setPreview(undefined); setValidatedRevision(undefined); setStatus(result.message); logActivity("read-only", effectiveQuery, `Preview unavailable · ${result.message}`, actor); return result; }
     onDiagnostic?.(undefined);
+    if (queryOverride !== undefined) setQuery(queryOverride);
     setPreview(result.proposal);
     setValidatedRevision(undefined);
-    setStatus("Preview ready · no document mutation");
-    logActivity(result.proposal.kind === "view-only" ? "read-only" : "proposal", result.proposal.summary, `Preview ready · base revision ${result.proposal.baseRevision}`);
-    if (approvalPolicy === "auto-view-only" && result.proposal.kind === "view-only") runAutoApply(result.proposal);
+    // #395 PR4: a proposal submitted by an external agent still always
+    // lands here -- in Preview, requiring the same manual Validate/Apply
+    // the local UI's own Preview button requires. There is no bridge-side
+    // "apply" tool (see ai-bridge-client.ts's PROPOSAL_TOOLS): approval
+    // policy (above) only ever covers auto-applying a *view-only*
+    // proposal the user's own Preview click just built, never an
+    // external agent's document-changing proposal.
+    setStatus(actor === "external-agent" ? "Proposal ready for review (submitted by external agent) · no document mutation yet" : "Preview ready · no document mutation");
+    logActivity(result.proposal.kind === "view-only" ? "read-only" : "proposal", result.proposal.summary, actor === "external-agent" ? "Proposal ready for review (external agent) · no document mutation yet" : `Preview ready · base revision ${result.proposal.baseRevision}`, actor);
+    if (actor === "user" && approvalPolicy === "auto-view-only" && result.proposal.kind === "view-only") runAutoApply(result.proposal);
+    return result;
   };
   const validatePreview = (current = preview) => {
     if (!current) { setStatus("Create a preview first."); return false; }
@@ -125,8 +136,25 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
     applyPreview(justBuilt, revision);
   };
   const cancelPreview = () => { onDiagnostic?.(undefined); if (preview) logActivity(preview.kind === "view-only" ? "read-only" : "proposal", preview.summary, "Cancelled · no document mutation"); setPreview(undefined); setValidatedRevision(undefined); setStatus("Preview cancelled · no document mutation"); };
+
+  // #395 PR4: propose_edit is the one MCP tool that reaches into document-
+  // changing territory -- and it still only ever *builds a preview*,
+  // through buildPreview above, exactly as if the user had typed the same
+  // query and clicked Preview. It never validates or applies on its own;
+  // there is no bridge-side apply path for a document-changing proposal at
+  // all (see the comment on buildPreview above and ai-bridge-client.ts's
+  // PROPOSAL_TOOLS), so an external agent can request a change but a
+  // human must still explicitly Validate + Apply it here.
+  const onProposeEdit = (proposalQuery: string): { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string } => {
+    const result = buildPreview(proposalQuery, "external-agent");
+    if (!result.ok) return { error: result.message };
+    return { summary: result.proposal.summary, baseRevision: result.proposal.baseRevision, kind: result.proposal.kind, requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." };
+  };
+  const bridgeStatus = useAIBridgeClient(bridgeEnabled, bridgeHost, bridgePort, bridgeToken, { document, selectedSignalId, selectedGroupId, selectedAnnotationId, selectedTransactionId, onViewIntent, onProposeEdit });
+  useEffect(() => { onBridgeStatusChange?.(bridgeStatus); }, [bridgeStatus, onBridgeStatusChange]);
+
   return <section className="ai-operation-panel" data-testid="ai-operation-panel">
-    <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={buildPreview}>Preview</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
+    <div className="ai-query-row">{icon}<label>Semantic query<input aria-label="AI semantic query" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="rename selected signal to REQ" /></label><button type="button" onClick={() => buildPreview()}>Preview</button><button type="button" data-testid="ai-settings-toggle" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((value) => !value)}>Settings</button></div>
     <div className="ai-scope">Scope: selected Signal · Revision: {revision} · Canonical read-only query</div>
     {settingsOpen && <div className="ai-settings" data-testid="ai-settings">
       <h4>AI Settings</h4>
@@ -148,7 +176,7 @@ export function AIOperationPanel({ document, revision, selectedSignalId, selecte
     <details className="ai-activity-log" data-testid="ai-activity-log">
       <summary>AI Activity ({activityLog.length})</summary>
       {activityLog.length === 0 && <span className="inspector-note">No AI activity yet this session.</span>}
-      <ol>{activityLog.map((entry) => <li key={entry.id} data-testid="ai-activity-entry"><time dateTime={entry.timestamp}>{entry.timestamp}</time><span className="ai-activity-provider">{entry.provider}</span><span className="ai-activity-kind">{entry.kind === "read-only" ? "Read-only" : "Proposal"}</span><span className="ai-activity-summary">{entry.summary}</span><span className="ai-activity-result">{entry.result}</span></li>)}</ol>
+      <ol>{activityLog.map((entry) => <li key={entry.id} data-testid="ai-activity-entry" data-actor={entry.actor}><time dateTime={entry.timestamp}>{entry.timestamp}</time><span className="ai-activity-provider">{entry.provider}</span><span className="ai-activity-actor">{entry.actor === "external-agent" ? "External agent" : "You"}</span><span className="ai-activity-kind">{entry.kind === "read-only" ? "Read-only" : "Proposal"}</span><span className="ai-activity-summary">{entry.summary}</span><span className="ai-activity-result">{entry.result}</span></li>)}</ol>
     </details>
   </section>;
 }

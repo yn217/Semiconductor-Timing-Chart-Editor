@@ -19,6 +19,12 @@ export type AIBridgeContext = {
   readonly selectedAnnotationId: string | undefined;
   readonly selectedTransactionId: string | undefined;
   readonly onViewIntent: ((intent: AIViewIntent) => void) | undefined;
+  // #395 PR4: propose_edit's only effect is building a Preview (exactly
+  // what clicking Preview in the UI does) -- it never validates or
+  // applies on its own. There is deliberately no bridge-side "apply" tool
+  // for a document-changing proposal: a human must still open the AI
+  // Assistant panel and click Validate + Apply themselves.
+  readonly onProposeEdit: ((query: string) => { readonly error: string } | { readonly summary: string; readonly baseRevision: number; readonly kind: string; readonly requiresApproval: true; readonly message: string }) | undefined;
 };
 
 function documentSummary(document: CanonicalDocument) {
@@ -31,13 +37,19 @@ function documentSummary(document: CanonicalDocument) {
   };
 }
 
-function executeTool(tool: string, context: AIBridgeContext): unknown {
+function executeTool(tool: string, args: Record<string, unknown>, context: AIBridgeContext): unknown {
   if (tool === "get_document_summary") return documentSummary(context.document);
   if (tool === "get_selection") return { selectedSignalId: context.selectedSignalId, selectedGroupId: context.selectedGroupId, selectedAnnotationId: context.selectedAnnotationId, selectedTransactionId: context.selectedTransactionId };
   if (tool === "fit_all") {
     if (!context.onViewIntent) throw new Error("fit_all is not available in the current surface.");
     context.onViewIntent("fit-all");
     return { applied: true, canonicalDelta: 0, historyDelta: 0, dirtyDelta: 0 };
+  }
+  if (tool === "propose_edit") {
+    if (!context.onProposeEdit) throw new Error("propose_edit is not available in the current surface.");
+    const query = args.query;
+    if (typeof query !== "string" || !query.trim()) throw new Error("propose_edit requires a non-empty 'query' string argument.");
+    return context.onProposeEdit(query);
   }
   throw new Error(`Unknown tool '${tool}'.`);
 }
@@ -67,13 +79,13 @@ export function useAIBridgeClient(enabled: boolean, host: string, port: number, 
       const response = await fetch(`${baseUrl}/bridge/poll`, { headers: authHeaders, signal: controller.signal });
       if (response.status === 401) throw new Error("Bridge rejected the configured token.");
       if (!response.ok) throw new Error(`Bridge poll failed (${response.status}).`);
-      const request = (await response.json()) as { requestId: string | null; tool?: string };
+      const request = (await response.json()) as { requestId: string | null; tool?: string; arguments?: Record<string, unknown> };
       if (cancelled) return false;
       setStatus("connected");
       if (!request.requestId || !request.tool) return false;
       let result: unknown;
       let error: string | undefined;
-      try { result = executeTool(request.tool, contextRef.current); } catch (thrown) { error = thrown instanceof Error ? thrown.message : "Tool execution failed."; }
+      try { result = executeTool(request.tool, request.arguments ?? {}, contextRef.current); } catch (thrown) { error = thrown instanceof Error ? thrown.message : "Tool execution failed."; }
       await fetch(`${baseUrl}/bridge/respond`, { method: "POST", headers: { ...authHeaders, "content-type": "application/json" }, body: JSON.stringify({ requestId: request.requestId, result, error }), signal: controller.signal });
       return true;
     };

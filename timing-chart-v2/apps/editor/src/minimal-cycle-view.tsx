@@ -45,7 +45,7 @@ import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
 import type { AIViewIntent } from "./ai-proposal-provider.js";
-import { useAIBridgeClient } from "./ai-bridge-client.js";
+import type { AIBridgeStatus } from "./ai-bridge-client.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
 import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon.js";
@@ -1640,26 +1640,23 @@ export function MinimalCycleView() {
     onDelete={deleteBottomBookmark}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
-  // #395 PR3: the local Agent Bridge connection itself -- owned here
+  // #395 PR3: the local Agent Bridge's enable/token state is owned here
   // (not inside AIOperationPanel) so the Ribbon's Provider status can
   // show the same real, live connection state the Bottom AI Assistant's
-  // Settings section manages. Off by default; see ai-bridge-client.ts
-  // and scripts/ai-bridge-server.mjs for exactly what it can and cannot
-  // do (three named tools, localhost-only, token-gated, no arbitrary
-  // Canonical JSON patch path).
+  // Settings section manages -- the actual polling connection
+  // (useAIBridgeClient) lives inside AIOperationPanel itself now (PR4),
+  // since propose_edit needs direct access to its own preview/validate
+  // state; it reports status back up here via onBridgeStatusChange. See
+  // ai-bridge-client.ts and scripts/ai-bridge-server.mjs for exactly what
+  // it can and cannot do (three read/view-only tools plus propose_edit,
+  // localhost-only, token-gated, no arbitrary Canonical JSON patch path,
+  // no bridge-side apply for a document-changing proposal).
   const aiBridgeHost = "127.0.0.1";
   const aiBridgePort = 4610;
   const [aiBridgeEnabled, setAiBridgeEnabled] = useState(false);
   const [aiBridgeToken, setAiBridgeToken] = useState("");
+  const [aiBridgeStatus, setAiBridgeStatus] = useState<AIBridgeStatus>("disabled");
   const aiBridgeOnViewIntent = (intent: AIViewIntent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); };
-  const aiBridgeStatus = useAIBridgeClient(aiBridgeEnabled, aiBridgeHost, aiBridgePort, aiBridgeToken, {
-    document: snapshot.document,
-    selectedSignalId: annotationTargetSignalId,
-    selectedGroupId: selectedGroup?.id,
-    selectedAnnotationId: selectedAnnotation?.id,
-    selectedTransactionId,
-    onViewIntent: aiBridgeOnViewIntent,
-  });
   // #395 PR1: the AI Ribbon tab used to host the entire query/preview/
   // apply surface directly -- a narrow control competing for space with
   // every other Ribbon tab's icon-button rows. It now lives here, as the
@@ -1686,7 +1683,7 @@ export function MinimalCycleView() {
     onBridgeEnabledChange={setAiBridgeEnabled}
     bridgeToken={aiBridgeToken}
     onBridgeTokenChange={setAiBridgeToken}
-    bridgeStatus={aiBridgeStatus}
+    onBridgeStatusChange={setAiBridgeStatus}
     onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
     icon={null}
   />;

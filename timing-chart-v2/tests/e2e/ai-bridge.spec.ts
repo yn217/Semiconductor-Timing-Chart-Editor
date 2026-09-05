@@ -26,8 +26,8 @@ async function waitForBridgeReady(): Promise<void> {
   throw new Error("ai-bridge-server.mjs did not become ready in time.");
 }
 
-async function callTool(name: string, token = TOKEN) {
-  const response = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name } }) });
+async function callTool(name: string, token = TOKEN, args?: Record<string, unknown>) {
+  const response = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${token}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/call", params: { name, arguments: args } }) });
   return { status: response.status, body: (await response.json()) as { result?: { content: readonly { text: string }[] }; error?: { code: number; message: string } } };
 }
 
@@ -70,7 +70,7 @@ test("a test MCP client can connect, read the live document/selection, and reque
   expect((await initResponse.json()).result.serverInfo.name).toBe("timing-chart-v2-ai-bridge");
   const listResponse = await fetch(`${BASE_URL}/mcp`, { method: "POST", headers: { authorization: `Bearer ${TOKEN}`, "content-type": "application/json" }, body: JSON.stringify({ jsonrpc: "2.0", id: 0, method: "tools/list" }) });
   const tools = ((await listResponse.json()).result.tools as { name: string }[]).map((tool) => tool.name);
-  expect(tools).toEqual(["get_document_summary", "get_selection", "fit_all"]);
+  expect(tools).toEqual(["get_document_summary", "get_selection", "fit_all", "propose_edit"]);
 
   // Read-only: reflects the real, live document -- never a canned/fake value.
   const summary = await callTool("get_document_summary");
@@ -92,6 +92,65 @@ test("a test MCP client can connect, read the live document/selection, and reque
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
+test("propose_edit builds a Preview only -- it never auto-validates or auto-applies, and a human must still Validate + Apply it themselves", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+
+  const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };
+
+  const proposeEdit = await callTool("propose_edit", TOKEN, { query: "rename selected signal to REQ" });
+  expect(proposeEdit.body.result!.isError).toBe(false);
+  const parsedProposeEdit = JSON.parse(proposeEdit.body.result!.content[0]!.text) as { summary: string; baseRevision: number; kind: string; requiresApproval: boolean; message: string };
+  expect(parsedProposeEdit).toEqual({ summary: "Rename REQUEST to REQ", baseRevision: 0, kind: "semantic-command", requiresApproval: true, message: "Proposal ready for review -- open the AI Assistant panel to Validate and Apply it." });
+
+  // A Preview was built -- but it is only a Preview: zero Canonical/History/
+  // Dirty delta so far, exactly as if nobody had clicked anything.
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+  await expect(ai).toContainText("Proposal ready for review (submitted by external agent)");
+  await expect(ai).toContainText("Rename REQUEST to REQ");
+  const activityLog = ai.getByTestId("ai-activity-log");
+  await expect(activityLog).toContainText("External agent");
+
+  // A human must still explicitly Validate + Apply -- propose_edit itself
+  // never does either.
+  await ai.getByTestId("ai-validate").click();
+  await ai.getByTestId("ai-apply").click();
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(before.revision) + 1));
+});
+
+test("an unauthorized propose_edit call (bad token) never reaches the document, and an empty query is rejected before building any proposal", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+  await page.getByRole("button", { name: "Ask or edit with the AI Assistant" }).click();
+  const ai = page.getByTestId("ai-operation-panel");
+  await ai.getByTestId("ai-settings-toggle").click();
+  const settings = ai.getByTestId("ai-settings");
+  await settings.getByLabel("Bridge connection token").fill(TOKEN);
+  await settings.getByLabel("Enable external agents").check();
+  await expect(ai.getByTestId("ai-bridge-status")).toHaveText("Status: Connected", { timeout: 10_000 });
+
+  const unauthorized = await callTool("propose_edit", "wrong-token", { query: "rename selected signal to REQ" });
+  expect(unauthorized.status).toBe(401);
+
+  const emptyQuery = await callTool("propose_edit", TOKEN, { query: "   " });
+  expect(emptyQuery.body.error?.code).toBe(-32000);
+  expect(emptyQuery.body.error?.message).toContain("non-empty");
 });
 
 test("rejects a request with an invalid token, and rejects any tool outside the exposed whitelist", async ({ page }) => {
