@@ -35,7 +35,11 @@ export function MiniMap({ document, viewport }: { readonly document: Readonly<Ca
     observer?.observe(element);
     for (const child of element.children) observer?.observe(child);
     return () => { element.removeEventListener("scroll", sync); observer?.disconnect(); };
-  }, [document]);
+  // The viewport ref is stable across Canonical commits. Re-registering the
+  // scroll listener and ResizeObserver whenever an Inspector property changes
+  // adds avoidable main-thread work to the commit path; viewport geometry does
+  // not depend on the document object identity.
+  }, [viewport]);
   const documentRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const minimap = documentRef.current;
