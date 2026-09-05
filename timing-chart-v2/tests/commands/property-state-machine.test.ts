@@ -171,6 +171,37 @@ describe("SemanticCommand state machine foundation", () => {
     }
   });
 
+  it("covers generated lifecycle command families through the production session", () => {
+    const session = new CommandHistorySession(variedPropertyFixture());
+    const generatedAnnotation = { id: "annotation_generated" as Annotation["id"], type: "marker" as const, label: "GENERATED", visible: true, anchor: { signalId: "sig_data" as SignalId, cycle: 2, point: "cycle-center" as const } };
+    const generatedTransaction = { id: "transaction_generated" as Transaction["id"], name: "GENERATED_TX", start: 0, end: 1, laneId: "lane_0" };
+    const commands: readonly SemanticCommand[] = [
+      { id: commandId("lifecycle_convert_clock"), type: "signal.convertClock", signalId: "sig_clk" as SignalId, targetType: "binary" },
+      { id: commandId("lifecycle_insert"), type: "timeline.insert", at: 8, count: 1 },
+      { id: commandId("lifecycle_duplicate"), type: "timeline.duplicateRange", start: 0, end: 1, at: 9 },
+      { id: commandId("lifecycle_move"), type: "timeline.moveRange", start: 0, end: 1, to: 2 },
+      { id: commandId("lifecycle_group_move"), type: "group.move", groupId: "grp_aux_property" as GroupId, index: 0 },
+      { id: commandId("lifecycle_signal_move"), type: "signal.move", signalId: "sig_data" as SignalId, targetGroupId: "grp_aux_property" as GroupId, index: 2 },
+      { id: commandId("lifecycle_annotation_create"), type: "annotation.create", annotation: generatedAnnotation },
+      { id: commandId("lifecycle_annotation_delete"), type: "annotation.delete", annotationId: generatedAnnotation.id },
+      { id: commandId("lifecycle_transaction_create"), type: "transaction.create", transaction: generatedTransaction },
+      { id: commandId("lifecycle_transaction_link"), type: "transaction.linkSignal", transactionId: generatedTransaction.id, signalId: "sig_data" as SignalId },
+      { id: commandId("lifecycle_transaction_unlink"), type: "transaction.unlinkSignal", transactionId: generatedTransaction.id, signalId: "sig_data" as SignalId },
+      { id: commandId("lifecycle_transaction_delete"), type: "transaction.delete", transactionId: generatedTransaction.id },
+    ];
+    for (const [step, command] of commands.entries()) {
+      const result = session.execute(command);
+      expect(result, `lifecycle step=${step} command=${command.type}`).toMatchObject({ ok: true });
+      if (result.ok) expect(validateCanonicalDocument(result.snapshot.document), `lifecycle step=${step}`).toEqual([]);
+    }
+
+    const branched = new CommandHistorySession(variedPropertyFixture());
+    expect(branched.execute({ id: commandId("branch_first"), type: "signal.rename", signalId: "sig_data" as SignalId, name: "BRANCH_FIRST" })).toMatchObject({ ok: true });
+    expect(branched.undo()).toMatchObject({ ok: true });
+    expect(branched.execute({ id: commandId("branch_second"), type: "signal.setVisibility", signalId: "sig_data" as SignalId, visible: false })).toMatchObject({ ok: true });
+    expect(branched.historyState()).toMatchObject({ canRedo: false, undoDepth: 1, redoDepth: 0 });
+  });
+
   it("keeps a generated near-limit session atomic across the final accepted and rejected creates", () => {
     const base = canonicalFixture();
     const template = base.signals.find((signal) => signal.type === "bus")!;
