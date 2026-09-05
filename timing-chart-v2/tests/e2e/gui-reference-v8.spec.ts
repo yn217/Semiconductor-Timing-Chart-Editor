@@ -33,15 +33,10 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   expect(metrics.ribbon).toMatchObject({ y: 65, height: 102 });
   expect(metrics.leftWidth).toBe(265);
   // frozenWidth is always Math.max(frozenPaneWidthState, layout.roleColumnWidth
-  // + layout.signalNameWidth) -- there is no visual-reference-specific branch,
-  // so it reflects v1ReferenceDocument's actual layout (62 + 178), not the
-  // "v8 approved visual contract" CSS block's own --gui-frozen-width: 209px,
-  // which that inline style always overrides regardless of route. See
-  // production-presentation-equivalence.spec.ts, which requires this value to
-  // be identical between normal and visual-reference mode -- both currently
-  // share cycleDocument's layout (directly or via inheritance), so 240 is the
-  // one true value for either route today.
-  expect(metrics.frozenWidth).toBe(240);
+  // + layout.signalNameWidth). The V8 fixture uses the approved 61 + 148
+  // columns, so both normal and visual-reference routes expose the same 209px
+  // minimum from the current document layout.
+  expect(metrics.frozenWidth).toBe(209);
   expect(metrics.inspector.width).toBe(297);
   expect(metrics.bottom.height).toBe(240);
   expect(metrics.status.height).toBe(25);
@@ -91,7 +86,7 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   await expect(page.getByTestId("revision-status")).toBeHidden();
   await expect(page.getByTestId("history-status")).toBeHidden();
   await expect(page.getByTestId("inspector")).toContainText("Clock");
-  await expect(page.locator(".bottom-tabs")).toContainText("Signal Editor");
+  await expect(page.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true })).toBeVisible();
   await expect(page.getByTestId("clock-context-toolbar").locator("svg")).toHaveCount(5);
   await expect(page.getByTestId("follow-selection").locator(".." )).toContainText("Follow Selection");
   const minimap = page.getByTestId("minimap");

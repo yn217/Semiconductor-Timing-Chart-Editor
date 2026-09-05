@@ -46,15 +46,15 @@ unclassified decision, stale source manifest, or MERGED row without evidence.
 | ID | Capability | Decision | V2 owner | Current evidence / gap |
 |---|---|---|---|---|
 | GUI-01 | Multi-group feature-rich Ribbon | KEEP | #176 | Home now exposes File, History, Clipboard, Edit, Selection, Visibility, Arrange, Timeline, View, Properties, Review and Export groups with existing semantic/view handlers; Chromium layout checks verify the 12-group high-density surface and stable ribbon/workspace geometry. V1 tab labels and group captions are restored without changing English compatibility names or command routing (`gui-v1-home-vocabulary.spec.ts`). Save As now opens a real filename dialog and downloads the canonical document under the requested name (`full-gui.spec.ts`). At 1024px File, History, Clipboard, Edit, Selection, Visibility, Arrange and all View commands (Zoom/Fit/Grid/Snap/Ruler/MiniMap) are reachable through the More Home Commands menu without Ribbon scrolling; 1280px retains the direct V1-compatible surface (`ribbon-responsive-overflow.spec.ts`). Replacement Pack perceptual diff and complete command matrix remain open. |
-| GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Derived tree supports DOM-only filtering by display name, path, role and group while retaining stable IDs and canonical state; dedicated Group headers, row role/visibility controls and Hardware Hierarchy browser are present. The Tree Add surface now exposes Signal/Clock/Bus/State/Group/Comment Row through `UiCommandRegistry → semantic.execute`, with one canonical revision/history entry. The 330px V1 pane default now has a bounded 280–420px view-only splitter; `gui-left-pane-resize.spec.ts` verifies the derived tree/frozen-label/waveform offsets and zero mutation. Real-browser evidence is in `full-gui.spec.ts` and the V1-compatible header surface is visually checked. Full V1 tree visual parity remains open. |
+| GUI-02 | Signal/Group tree and organization | KEEP | #172/#178 | Derived tree supports DOM-only filtering by display name, path, role and group while retaining stable IDs and canonical state; dedicated Group headers, row role/visibility controls and Hardware Hierarchy browser are present. The Tree Add surface now exposes Signal/Clock/Bus/State/Group/Comment Row through `UiCommandRegistry → semantic.execute`, with one canonical revision/history entry. The 330px V1 pane default now has a bounded 280–420px view-only splitter; `gui-left-pane-resize.spec.ts` verifies the derived tree/frozen-label/waveform offsets and zero mutation. Current-main Chromium `full-gui.spec.ts` passes the hierarchy/full-path/stable-ID reveal/bulk-registration and display-name/path/role/group filter scenarios, including Save/Open history reset. The V1-compatible header surface is visually checked. Full V1 tree visual parity remains open. |
 | GUI-03 | Direct timing canvas interaction | KEEP | #165/#167/#170 | Batch 2A/2B is covered by `timeline-editor.spec.ts`: real waveform-surface cycle click, exclusive terminal boundary, geometry-backed half-open drag, Shift extension, reverse-range normalization and Escape preview cancel. Canonical/History/Dirty remain unchanged throughout view-only interaction. The locked `gui-visual-acceptance.spec.ts` also verifies the V1-sized local waveform viewport geometry; V8 reference mode derives the Screen Geometry width from the full center column after the frozen label column and applies the same scale to ruler/grid screen positions, with `gui-reference-v8.spec.ts` gating the expanded wave owner. Pixel-level V1 parity remains open. |
 | GUI-04 | Signal/Group/Clock/Annotation/Transaction Inspector | KEEP | #172/#176 | Signal/Annotation/Group/Transaction editors use active transient drafts and semantic Apply. Clock now also exposes common Signal Properties, Source/Hierarchy, Label Style and Waveform/Timing sections through the existing `signal.updateProperties` command, alongside its Generator and Edge Counter editors. With no selection, the Inspector now exposes editable Global Row height and Signal spacing through `document.updateLayout`; Group and Value/Clock Signal Inspectors expose independent transient `spacingBefore`/`spacingAfter` fields through `group.updateProperties` and `signal.updateProperties`. The derived Projection invalidates RowLayout on `geometryScreenY` and repositions stable rows without WaveDrom regeneration. `full-gui.spec.ts`, `layout-inspector.spec.ts` and `signal-spacing.spec.ts` verify one History entry per Apply, Undo/Redo, combined global/group/signal spacing, Save/Open exact values and SVG/PNG/PDF signatures. The right Inspector retains the V1 300px default plus bounded 240–420px view-only resize. Full visual parity remains open. |
-| GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON, restores the dense Signal Event Table toolbar (Add Row, Duplicate, Delete, Import, Export and Preview Update), and restores the Clock Bottom context toolbar (Presets, Duplicate, Import, Export and Preview). The approved V8 visual state now selects `clk` by stable ID and places that compact Clock toolbar at the top of the Bottom editor; generic drag/property controls remain available in normal editing and Inspector surfaces. Clock Presets/Import are transient drafts, Export/Preview are view-only, and Duplicate routes through the shared stable-ID batch command with one History entry. The V2 GUI contract now has a bounded center-column Bottom splitter (180–420px) with view-only resize and collapse/reopen; the Bottom tab strip is restored to the V1 38px height. The Annotation context now exposes a dense V1-style table with Type, Start, End, Label/Text, Target and X/Y columns; stable-ID row selection routes back to the shared selection owner without Canonical/History/Dirty/render mutation (`annotation-bottom-list.spec.ts`). Annotation JSON Import replaces the annotation collection through `document.replace`, reselects a stable imported ID, and is verified through Save/Open with History reset. `signal-editor.spec.ts` and `gui-reference-v8.spec.ts` verify the Clock toolbar labels, V8 initial selection, view-only counter invariants, and one-history Duplicate operation in a real browser. Geometry matches the approved V8 layout exactly; full pixel parity remains open. |
+| GUI-05 | Bottom Context Editor | KEEP | #172/#176/#178 | Batch 1C verifies independent Pin/Follow and Advanced JSON, restores the dense Signal Event Table toolbar (Add Row, Duplicate, Delete, Import, Export and Preview Update), and restores the Clock Bottom context toolbar (Presets, Duplicate, Import, Export and Preview). The approved V8 visual state now selects `clk` by stable ID and places that compact Clock toolbar at the top of the Bottom editor; generic drag/property controls remain available in normal editing and Inspector surfaces. Clock Presets/Import are transient drafts, Export/Preview are view-only, and Duplicate routes through the shared stable-ID batch command with one History entry. The V2 GUI contract now has a bounded center-column Bottom splitter (180–420px) with view-only resize and collapse/reopen; the Bottom tab strip is restored to the V1 38px height. The Annotation context now exposes a dense V1-style table with Type, Start, End, Label/Text, Target and X/Y columns; stable-ID row selection routes back to the shared selection owner without Canonical/History/Dirty/render mutation (`annotation-bottom-list.spec.ts`). Annotation JSON Import replaces the annotation collection through `document.replace`, reselects a stable imported ID, and is verified through Save/Open with History reset. `signal-editor.spec.ts` and `gui-reference-v8.spec.ts` verify the Clock toolbar labels, V8 initial selection, view-only counter invariants, and one-history Duplicate operation in a real browser. Current-main `bottom-context.spec.ts` + `advanced-json-diagnostic.spec.ts` pass 10/10 in Chromium, covering independent Pin/Follow, pinned Group JSON, read-only-to-Advanced transition, deterministic syntax/validation diagnostics, atomic ID rejection, clipboard failure diagnostics, one-command Signal/Group Apply and Group Save/Open. Geometry matches the approved V8 layout exactly; full pixel parity remains open. |
 | GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | MiniMap derives a proportional viewport indicator from the actual scrollable range and supports click-pan plus pointer-drag pan with view-only invariants. It now renders a dense derived waveform overview for every canonical row using normalized screen fractions; `full-gui.spec.ts` verifies row/segment coverage and zero Canonical/History/render mutation. Large-document scaling and full V1 visual parity remain open. |
 | GUI-07 | Status Bar | KEEP | #172/#176 | Batch Status Bar: `Ready`, signal/annotation/problem counts, half-open Time Range, Cycle, Zoom, Snap, Mode, revision/history/dirty and WaveDrom state are derived in the production footer. `full-gui.spec.ts` verifies the view-only counter invariant; visual artifact `gui-batch-shell-dut-1672x941.png` confirms the dense 27px layout. Full V1 reference diff remains open. |
 | GUI-08 | Cycle/Transaction/Split selector | KEEP | #172 | Cycle exposes Signal/Annotation/Problems/JSON; Transaction exposes Transaction/Annotation/Problems/JSON; Split exposes both Signal and Transaction contexts. V1 Ribbon labels `Transaction` and `Check` are restored while retaining internal compatibility keys for existing command routing. Mode switching preserves Canonical/History/Dirty/render counters; `gui-v1-ribbon-labels.spec.ts` verifies the label and view-only invariant, and `gui-split-view-visual.spec.ts` captures the 1672x941 Split composition with zero mutation. Current-main `transaction-export.spec.ts` also verifies canonical Split content Save/Open plus the shared Split ExportScene producing valid SVG/PNG/PDF outputs containing both signal and transaction layers without editor mutation. |
 | GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Batch 2C adds geometry-derived grid lines and gates annotation/transaction snapping on the real Snap ON/OFF state. Snap ON resolves rendered candidates; Snap OFF uses free geometry. The Axis Break mapping closure makes Ruler, Grid and Snap share source↔display geometry, skips hidden folded cycles, and preserves canonical source-cycle anchors. Current-main focused evidence includes mapping unit/export coverage, Chromium axis-break compression, exact Time Group Save/Open, multiple folds, folded export, and 100k-cycle/1k-fold scale checks. Ruler/MiniMap visibility toggles remain view-only with zero Canonical/History/Dirty/WaveDrom/LocalGeometry delta. The locked V1 visual run also applies reference-sized local ruler/waveform geometry without changing semantic coordinates; full pixel parity remains open. |
-| GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds RowLayout path metadata, Scope breadcrumb, stable-ID Reveal and atomic bulk registration; current batch adds a derived high-density Hardware Hierarchy browser with stable-ID selection. `full-gui.spec.ts` now saves and reopens after atomic bulk registration and verifies both full paths remain present with History reset to 0. Full hierarchy visual parity remains open. |
+| GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds RowLayout path metadata, Scope breadcrumb, stable-ID Reveal and atomic bulk registration; current batch adds a derived high-density Hardware Hierarchy browser with stable-ID selection. Current-main Chromium `full-gui.spec.ts` passes the complete hierarchy scenario (all four display modes, scope filtering, stable-ID reveal, atomic two-row registration, Save/Open and History reset) and the independent tree filter scenario. Full hierarchy visual parity remains open. |
 | GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Signal display style, alignment and overflow now flow through Projection to derived row presentation; style-only Apply avoids WaveDrom/LocalGeometry rebuilds. Editable Legend now exposes stable-ID row controls for label, visibility and order, applies through `legend.update`, and is covered by real-browser plus visual evidence (`timing-chart-v2/.tmp_gui_reference/gui-batch-legend-editor-1280x720.png`). Full V1 visual/export parity remains open. |
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Inspector and Bottom Clock editors expose editable Start, Period, Duty, Phase, Initial and Polarity plus independent Edge Counter settings (Rising/Falling/Both, Count From, explicit Bookmark anchor, interval and offsets) through separate SemanticCommands. `countFrom=marker` requires a persisted `edgeCounter.anchorId` that resolves to the selected Bookmark; no implicit earliest-Bookmark fallback is allowed. Real-browser coverage verifies one History entry, Undo, and no WaveDrom/local-geometry rebuild for counter-only edits. Full origin matrix and V1 visual parity remain open. |
 | GUI-13 | Problems/JSON/Annotation/Transaction tabs | KEEP | #163/#166/#172 | Batch 1C verifies Advanced JSON Selected Object/Whole Document validation and Apply. Selected Object now covers Signal, Group, Annotation and Transaction through stable-ID-preserving `document.replace`; Group selection plus Save/Open history reset is covered by `bottom-context.spec.ts`. Full tab parity remains open. |
@@ -63,17 +63,27 @@ unclassified decision, stale source manifest, or MERGED row without evidence.
 | GUI-16 | Clipboard/reorder commands | KEEP | #161/#169/#172/#176 | Clipboard now snapshots multi-selected Signals with source Group/index metadata; Copy is view-only, while multi-selection Paste/Duplicate/Cut use one atomic Semantic batch with fresh stable IDs. Full V1 visual/Save-Open parity remains open. |
 
 The current-main Bottom contract refresh is covered by
-`timing-chart-v2/tests/e2e/bottom-context.spec.ts` (5/5 Chromium): Pin and
-Follow Selection remain independent, pinned Group JSON context does not mutate
-Canonical/History/Dirty/render state, Selected Object JSON uses one command,
-and Whole Document JSON remains read-only until Advanced mode and validation.
-The complete V1 visual matrix remains open.
+`timing-chart-v2/tests/e2e/bottom-context.spec.ts` and
+`timing-chart-v2/tests/e2e/advanced-json-diagnostic.spec.ts` (10/10 Chromium):
+Pin and Follow Selection remain independent, pinned Group JSON context does not
+mutate Canonical/History/Dirty/render state, Selected Object JSON uses one
+command, Whole Document JSON remains read-only until Advanced mode and
+validation, malformed/invalid drafts report structured diagnostics without
+mutation, and Group JSON Save/Open is exact. The complete V1 visual matrix
+remains open.
 
 The Header/Footer export refresh is covered by the current-main Chromium
 checks in `timing-chart-v2/tests/e2e/transaction-export.spec.ts`: canonical
 metadata is preserved through Save/Open and emitted in SVG, PNG and PDF, and
 long metadata remains present under A4 portrait Fit Page and landscape Fit
 Width. The full V1 reference-layout comparison remains open.
+
+The current-main hierarchy/full-path and Comment Row alignment refresh is covered
+by `timing-chart-v2/tests/e2e/full-gui.spec.ts` (4/4 focused Chromium):
+hierarchy display modes and scope filtering, stable-ID reveal, atomic bulk
+registration with Save/Open, non-mutating tree filters, and the shared Cycle-0
+waveform boundary all pass. Full V1 hierarchy and reference visual parity
+remains open.
 
 The editable Legend refresh is covered by the current-main `full-gui.spec.ts`
 browser flow: stable entry label, visibility and ordering changes survive
@@ -132,13 +142,16 @@ canonical architecture.
 The visual-reference route now uses an independent V2 canonical fixture that
 matches the approved Golden's ten-row hierarchy (Input, Internal Control and
 Output), three comment rows, stable role presentation and reference clock
-shape. It is selected only by the `visual-reference` query parameter; the
-normal production fixture and runtime architecture are unchanged. Browser
-evidence remains in `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts`.
+shape. Its canonical layout uses the normative 61px Role and 148px Signal
+columns, leaving a 209px frozen pane and the full center waveform width at the
+locked viewport. It is selected only by the `visual-reference` query parameter;
+the normal production fixture shares the same layout contract and runtime
+architecture. Browser evidence remains in
+`timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts`.
 
 The same visual-reference fixture now presents the approved English shell
 vocabulary (`Signals / Groups`, `Time Scale: Cycle`, `Reference: clk`,
-`Signal Editor`, `Annotations`, `Checks`, and `Follow Selection`) while the
+`Signal`, `Annotations`, `Checks`, and `Follow Selection`) while the
 normal V2 surface retains its existing product vocabulary. This is a
 presentation-only reference route; no canonical command or persistence path
 is forked.
@@ -146,8 +159,11 @@ is forked.
 The V8 reference view also exposes the Golden shell vocabulary and context
 headers (`Signals / Groups`, `Role`, `Signal / Annotation`, `Time Scale`, and
 `Reference`) plus the dense English Bottom Editor tabs and Follow Selection
-control. These are visual-reference presentation states only; the normal V2
-surface continues to retain the product's existing labels and all commands.
+control. Current-main Chromium evidence on 2026-09-06 is 3/3 for the V8 shell
+and 1/1 for normal/reference presentation equivalence at 1672×941; the locked
+visual pixel gate is also 1/1. These are visual-reference presentation states
+only; the normal V2 surface continues to retain the product's existing labels
+and all commands.
 
 GUI-02 tree parity evidence also includes the header-level More menu with
 view-only Expand All Groups, Collapse All Groups, and Clear Filter actions.
@@ -181,6 +197,14 @@ presentation-only and does not introduce a second command owner. Browser
 evidence and the no-scroll assertion are in
 `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts` and the Ribbon tab and
 responsive tests.
+
+Current-main Chromium responsive evidence on 2026-09-06 is 5/5: Home Ribbon
+icon/label overlap checks pass at 1672px and 1365px; Home commands remain
+reachable without horizontal scrolling at 1280px and 1024px; and the 1024px
+More Home Commands menu exposes the required document, edit, selection,
+view/zoom, grid, snap, ruler, and MiniMap actions while Zoom remains
+view-only. The test uses locator-based view actions and does not exercise the
+quarantined #221/#222/#223 gesture paths.
 
 The current-main Clipboard audit is browser verified by four focused
 `home-command-surface.spec.ts` cases (4/4, 2026-09-06): same-document Copy is
