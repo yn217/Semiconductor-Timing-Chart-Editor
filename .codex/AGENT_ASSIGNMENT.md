@@ -1,17 +1,17 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-05 11:57 JST
+Last reconciled: 2026-09-05 12:34 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main at reconciliation: `f8d2f9a27bae60f03e5c30ca7a737137122ed73c`
-Open Issues observed: 37
+Observed main at reconciliation: `ebe2850fddd418c924dc260d45ab596eaf4be82b`
+Open Issues observed: 33
 
 This file is the authoritative agent-ownership split. One Issue has one implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
 
 ## Shared operating rules
 
 - Both agents start each Issue from latest `origin/main`.
-- Claude works on `agent/claude`; Codex works on `main` according to `.codex/ISSUE_ORDER.txt`.
+- Claude works on `agent/claude` or a short-lived Claude branch; Codex works on `main` according to `.codex/ISSUE_ORDER.txt`.
 - After a Claude PR merges, Claude resyncs from latest `origin/main` before the next Issue.
 - Codex never merges/cherry-picks `codex-control`; it only reads control files from that branch.
 - Home Ribbon remains frozen unless an Issue or explicit user instruction authorizes a Home change.
@@ -29,7 +29,7 @@ Claude owns GUI composition, Ribbon/Inspector/Bottom/Tree interaction presentati
 
 ### Immediate Claude queue
 
-1. `#332` real Preview behavior / capability truthfulness
+1. `#332` capability/effect audit closure only — Preview items A/B and disabled-reason item D are merged; finish item C so a status-text-only fake implementation mechanically fails the capability audit
 2. `#260` design-token + region CSS ownership closure audit
 3. `#181` Left Tree / role geometry / MiniMap
 4. `#182` approved v8 production GUI closure
@@ -50,9 +50,7 @@ Claude owns GUI composition, Ribbon/Inspector/Bottom/Tree interaction presentati
 
 ### Claude must not independently implement
 
-Core/data/performance/geometry/history/clipboard/resource-policy Issues assigned to Codex below, including `#165 #166 #169 #170 #175 #180 #200 #210 #219 #221 #222 #223 #250 #259 #264 #265 #269 #281 #313 #328`.
-
-`#273`, `#275`, `#277`, and `#331` are closed and are no longer implementation targets for either agent.
+Current Core/data/performance/geometry/history/clipboard/resource-policy work assigned to Codex includes `#170 #175 #200 #210 #221 #222 #223 #250 #264 #265 #269 #281 #313` plus Codex broad closure/audit Issues listed below.
 
 If a Claude GUI fix discovers a core defect in a Codex-owned Issue, record the concrete defect and stop at the ownership boundary unless the user explicitly reassigns it.
 
@@ -62,26 +60,22 @@ Codex owns Canonical/data integrity, Semantic Command behavior, clipboard policy
 
 ### Immediate Codex queue
 
-1. `#328` Product Resource Budget — closure audit and any residual authoritative-boundary gaps only
-2. `#180` viewport projection scaling closure audit / residual implementation
-3. `#219` renderer/runtime scaling and diagnostic hot-path cleanup
-4. `#200` Signal Split View core projection/time-domain architecture
-5. `#210` Clock / Edge Counter exact rendered-edge semantics
-6. `#221` clipboard semantics matrix
-7. `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation
-8. `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation
-9. `#250` AI semantic operation gateway
-10. `#269` structured diagnostics model and command/IO error propagation
-11. `#281` property/state-machine correctness harness
+1. `#200` Signal Split View core projection/time-domain architecture
+2. `#210` Clock / Edge Counter exact rendered-edge semantics
+3. `#221` clipboard semantics matrix
+4. `#222` / `#265` Spacer workflow — audit overlap/dependency first, use one production implementation
+5. `#223` / `#264` Logic/Event/Pulse lifecycle — audit overlap/dependency first, use one production implementation
+6. `#250` AI semantic operation gateway
+7. `#269` structured diagnostics model and command/IO error propagation
+8. `#281` property/state-machine correctness harness
 
 ### Codex closure-only / no-parallel-implementation lane
 
-- `#313` authoritative range-drag geometry: PR `#341` is merged into `main`. Treat this as a closure verification item first, not a fresh implementation task. Re-check the remaining Issue acceptance criteria on current `main`; close if satisfied. Only implement a bounded residual gap if the acceptance audit proves one remains.
-- `#259` architecture/probe overlap: audit current `main` and existing closed `#277` before doing any work. Do not recreate an already-completed probe extraction under a second Issue.
+- `#313` authoritative range-drag geometry: PRs `#338` and `#341` are merged. The reported drag-release authority mismatch and Escape trailing-click leak are fixed. Treat this as a focused closure verification item first; explicitly prove the remaining 100k unsampled-boundary, terminal-boundary, reverse-drag, folds/rebase, zoom/scroll and view-only acceptance before closing. Implement only a bounded residual gap if that audit fails.
 
 ### Codex broad closure/audit lane
 
-- `#161 #165 #166 #167 #169 #170 #171 #175 #177`
+- `#161 #167 #170 #171 #175 #177`
 
 These older Phase/Umbrella Issues are audited against current `main`. Do not recreate historical `rewrite/v2` execution structure. Close with evidence when already satisfied; implement only bounded residual gaps.
 
@@ -92,11 +86,23 @@ These older Phase/Umbrella Issues are audited against current `main`. Do not rec
 
 ## Recently completed / removed from active split
 
+- `#165` Geometry Semantic/Local/Screen contract — closed.
+- `#166` RowLayout + Stable Waveform Surface — closed.
+- `#169` Reorder / Visibility / D&D — closed.
+- `#180` bounded virtualization projection — closed.
+- `#219` renderer/runtime scaling — closed.
+- `#259` production query-routable architecture probes — closed.
+- `#328` Product Resource Budget enforcement — closed.
+- `#352` uncontrolled period-2 Clock timeline ripple regression — fixed by Codex (`510f41c` / `8ce9f60`) and closed.
 - `#331` Font editing correctness/UX — closed.
 - `#273` LabelAnchor source/display contract — closed.
 - `#275` bounded Undo/Redo retention — closed.
 - `#277` ArchitectureProbe / StableSurfaceProbe extraction — closed.
-- `#313` implementation work from PR `#341` is merged; Issue remains open only for closure verification unless a concrete residual gap is found.
+
+## Current partials worth preserving
+
+- `#332`: Annotation Preview (#337), Clock Preview (#353), and contextual Arrange disabled reasons (#354) are merged. Keep open only for the automated capability/effect-contract requirement and any acceptance evidence it reveals.
+- `#313`: core fixes are merged but the Issue remains open for the explicit full closure matrix; do not restart broad gesture implementation without a failing acceptance case.
 
 ## Cross-agent collision rules
 
