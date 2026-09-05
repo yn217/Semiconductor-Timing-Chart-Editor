@@ -285,6 +285,60 @@ test("exports canonical Header/Footer through browser SVG, PNG and PDF", async (
   expect(await surface.getAttribute("data-render-counters")).toBe(before.counters);
 });
 
+test("keeps long document layout metadata through page-fit SVG, PNG and PDF export", async ({ page }) => {
+  await ready(page);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const properties = page.getByRole("dialog", { name: "Document Properties" });
+  await properties.getByLabel("Document title").fill("Paged Timing Review");
+  await properties.getByLabel("Document subtitle").fill("Long layout header");
+  await properties.getByLabel("Document description").fill("A long document description that must remain outside the waveform width during page fitting.");
+  await properties.getByLabel("Document notes").fill("Export notes remain visible in every page mode.");
+  await properties.getByLabel("Document preconditions").fill("Clock is stable");
+  await properties.getByLabel("Document constraints").fill("Setup must hold");
+  await properties.getByLabel("Document exceptions").fill("Reset window");
+  await properties.getByLabel("Footer figure number").fill("Fig. Page");
+  await properties.getByLabel("Footer revision").fill("R5");
+  await properties.getByLabel("Footer text").fill("Fit matrix");
+  await properties.getByTestId("apply-document-properties").click();
+  await properties.getByRole("button", { name: "Close properties" }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  const download = async (format: "svg" | "png" | "pdf") => {
+    await dialog.getByLabel("Export format").selectOption(format);
+    const pending = page.waitForEvent("download");
+    await dialog.getByRole("button", { name: `Export ${format.toUpperCase()}` }).click();
+    return readFile((await (await pending).path())!);
+  };
+  await dialog.getByLabel("Export page size").selectOption("A4");
+  await dialog.getByLabel("Export orientation").selectOption("portrait");
+  await dialog.getByLabel("Export fit").selectOption("page");
+  await dialog.getByLabel("Export margin").fill("32");
+  const portraitSvg = (await download("svg")).toString("utf8");
+  expect(portraitSvg).toContain('viewBox="0 0 794 1123"');
+  expect(portraitSvg).toContain("A long document description that must remain outside the waveform width during page fitting.");
+  expect(portraitSvg).toContain("Precondition: Clock is stable");
+  expect(portraitSvg).toContain("Constraint: Setup must hold");
+  expect(portraitSvg).toContain("Exception: Reset window");
+  expect(portraitSvg).toContain("Fig. Page · R5 · Fit matrix");
+
+  await dialog.getByLabel("Export orientation").selectOption("landscape");
+  await dialog.getByLabel("Export fit").selectOption("width");
+  const landscapeSvg = (await download("svg")).toString("utf8");
+  expect(landscapeSvg).toMatch(/viewBox="0 0 1123 [0-9.]+"/);
+  expect(Number(landscapeSvg.match(/viewBox="0 0 1123 ([0-9.]+)"/)?.[1])).toBeGreaterThan(300);
+  expect(landscapeSvg).toContain("Long layout header");
+  expect(landscapeSvg).toContain("Export notes remain visible in every page mode.");
+
+  const png = await download("png");
+  expect([...png.subarray(0, 8)]).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  expect(png.readUInt32BE(16)).toBeGreaterThan(500);
+  expect(png.readUInt32BE(20)).toBeGreaterThan(300);
+  const pdf = await download("pdf");
+  expect(pdf.subarray(0, 5).toString("utf8")).toBe("%PDF-");
+  expect(pdf.length).toBeGreaterThan(1_000);
+});
+
 test("copies deterministic SVG and PNG through browser Clipboard export", async ({ page }) => {
   await ready(page);
   await page.context().grantPermissions(["clipboard-read", "clipboard-write"], { origin: new URL(page.url()).origin });
