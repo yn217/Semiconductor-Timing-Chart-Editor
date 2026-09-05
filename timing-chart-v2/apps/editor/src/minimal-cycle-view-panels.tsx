@@ -380,7 +380,19 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
     const parsedStyle = parsed ?? {};
     const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
     const structuredStyle = { color: typeof parsedStyle.color === "string" ? parsedStyle.color : textColor, background: typeof parsedStyle.background === "string" ? parsedStyle.background : rowBackground, fontFamily: typeof parsedStyle.fontFamily === "string" ? parsedStyle.fontFamily : fontFamily, fontSize: typeof parsedStyle.fontSize === "number" ? parsedStyle.fontSize : fontSize, fontWeight: typeof parsedStyle.fontWeight === "string" ? parsedStyle.fontWeight : (bold ? "bold" : "normal"), fontStyle: typeof parsedStyle.fontStyle === "string" ? parsedStyle.fontStyle : (italic ? "italic" : "normal"), textDecoration: typeof parsedStyle.textDecoration === "string" ? parsedStyle.textDecoration : decorations, waveformColor: typeof parsedStyle.waveformColor === "string" ? parsedStyle.waveformColor : waveformColor, waveformBackground: typeof parsedStyle.waveformBackground === "string" ? parsedStyle.waveformBackground : waveformBackground };
-    onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, displayStyle: { ...parsedStyle, ...structuredStyle } });
+    const originalStyle = signal.display.style ?? {};
+    const styleDraftChanged = JSON.stringify(parsedStyle) !== JSON.stringify(originalStyle)
+      || textColor !== styleString(originalStyle, "color", "#152033")
+      || rowBackground !== styleString(originalStyle, "background", "#ffffff")
+      || fontFamily !== styleString(originalStyle, "fontFamily", "Segoe UI")
+      || fontSize !== styleNumber(originalStyle, "fontSize", 12)
+      || bold !== (originalStyle.fontWeight === "bold")
+      || italic !== (originalStyle.fontStyle === "italic")
+      || underline !== styleString(originalStyle, "textDecoration", "").includes("underline")
+      || strikethrough !== styleString(originalStyle, "textDecoration", "").includes("line-through")
+      || waveformColor !== styleString(originalStyle, "waveformColor", "#111111")
+      || waveformBackground !== styleString(originalStyle, "waveformBackground", "#ffffff");
+     onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
   };
   const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
   return <aside className="inspector" data-testid="inspector" data-inspector-context="signal" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><span>Inspector</span><b>Signal</b></header>
