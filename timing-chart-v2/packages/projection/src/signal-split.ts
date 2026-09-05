@@ -31,7 +31,10 @@ export function projectSignalSplitRows(canonicalSignalIds: readonly SignalId[], 
   const lower: SignalId[] = [];
   const both: SignalId[] = [];
   for (const signalId of canonicalSignalIds) {
-    const pane = assignmentById.get(signalId) ?? "upper";
+    // An omitted assignment preserves the pre-Signal-Split single-pane
+    // behavior: the canonical Signal is available in both presentation
+    // panes. This matches RowLayout's `display.splitPane ?? "both"` rule.
+    const pane = assignmentById.get(signalId) ?? "both";
     if (pane === "upper" || pane === "both") upper.push(signalId);
     if (pane === "lower" || pane === "both") lower.push(signalId);
     if (pane === "both") both.push(signalId);
