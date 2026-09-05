@@ -9,6 +9,10 @@ describe("annotation interaction offset conversion", () => {
     expect(annotationOffsetDeltaFromScreen({ x: 15, y: 8 }, 1.5)).toEqual({ x: 10, y: 8 });
   });
 
+  it("accounts for the separate CSS zoom before storing the canonical X offset", () => {
+    expect(annotationOffsetDeltaFromScreen({ x: 15, y: 8 }, 1.5, 2)).toEqual({ x: 5, y: 8 });
+  });
+
   it("stores the residual after a scaled snap in canonical offset units", () => {
     expect(withSnapOffset(anchor, { x: 115, y: 28 }, { x: 100, y: 20 }, 1.5)).toEqual({
       ...anchor,

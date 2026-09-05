@@ -5,9 +5,10 @@ import type { SemanticAnchor } from "@timing-chart-v2/schema";
  * units used by the geometry resolver. The waveform surface applies the
  * presentation scale only on X; row Y remains in the layout's unscaled
  * coordinate space. */
-export function annotationOffsetDeltaFromScreen(delta: Point, presentationScale: number): Point {
+export function annotationOffsetDeltaFromScreen(delta: Point, presentationScale: number, zoom = 1): Point {
   if (!Number.isFinite(presentationScale) || presentationScale <= 0) throw new Error("Annotation presentation scale must be positive and finite.");
-  return { x: Math.round(delta.x / presentationScale), y: Math.round(delta.y) };
+  if (!Number.isFinite(zoom) || zoom <= 0) throw new Error("Annotation zoom must be positive and finite.");
+  return { x: Math.round(delta.x / (presentationScale * zoom)), y: Math.round(delta.y) };
 }
 
 export function withAddedOffset(anchor: SemanticAnchor, x: number, y: number): SemanticAnchor {

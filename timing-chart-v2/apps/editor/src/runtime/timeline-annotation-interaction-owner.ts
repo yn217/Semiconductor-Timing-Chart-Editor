@@ -27,6 +27,7 @@ export type AnnotationInteractionContext = Readonly<{
   renderer: Pick<TimingChartRenderer, "updateSnapGuide">;
   timelineGeometry: AnnotationGeometryPort;
   documentEpoch: Pick<DocumentEpoch, "current" | "isCurrent">;
+  getZoom: () => number;
   getDocument: () => CanonicalDocument;
   getProjection: () => RenderProjection;
   isSnapEnabled: () => boolean;
@@ -92,7 +93,7 @@ export class AnnotationInteractionOwner {
     if (!drag) return;
     if (!this.context.documentEpoch.isCurrent(drag.epoch)) { this.cancel(); return; }
     const screenDx = Math.round(event.clientX - drag.startX);
-    const presentationScale = this.context.timelineGeometry.presentationScale;
+    const currentZoom = this.context.getZoom();
     const dy = Math.round(event.clientY - drag.startY);
     for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`;
     if (!drag.field || drag.label) return;
@@ -101,8 +102,8 @@ export class AnnotationInteractionOwner {
     const anchor = annotation?.[drag.field];
     const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
     if (!annotation || !anchor || !point) return;
-    const desired = { x: point.x + screenDx, y: point.y + dy };
-    const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8, undefined, preferredSnapKinds(annotation.type)) : undefined;
+    const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
+    const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
     this.context.publishState();
     if (!snap) {
       this.context.renderer.updateSnapGuide();
@@ -124,7 +125,8 @@ export class AnnotationInteractionOwner {
     if (!this.context.documentEpoch.isCurrent(drag.epoch)) { this.cancel(); return; }
     const rawScreenDx = event.clientX - drag.startX;
     const rawScreenDy = event.clientY - drag.startY;
-    const offsetDelta = annotationOffsetDeltaFromScreen({ x: rawScreenDx, y: rawScreenDy }, this.context.timelineGeometry.presentationScale);
+    const currentZoom = this.context.getZoom();
+    const offsetDelta = annotationOffsetDeltaFromScreen({ x: rawScreenDx, y: rawScreenDy }, this.context.timelineGeometry.presentationScale, currentZoom);
     const dx = offsetDelta.x;
     const dy = offsetDelta.y;
     for (const owner of drag.owners.values()) owner.style.translate = "";
@@ -151,8 +153,8 @@ export class AnnotationInteractionOwner {
     const anchor = field ? annotation[field] : undefined;
     const point = resolveAnchorPoint(anchor, this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
     if (!field || !anchor || !point) return;
-    const desired = { x: point.x + rawScreenDx, y: point.y + rawScreenDy };
-    const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8, undefined, preferredSnapKinds(annotation.type)) : undefined;
+    const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + rawScreenDy };
+    const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
     this.context.publishState();
     const nextAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point, this.context.timelineGeometry.presentationScale) : withAddedOffset(anchor, dx, dy);
     if (snap) {
