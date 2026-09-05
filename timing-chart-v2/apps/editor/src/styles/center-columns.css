@@ -217,7 +217,7 @@
 
 .clock-edge-counter > *, .clock-edge-counter label { min-width: 0; max-width: 100%; box-sizing: border-box; }
 
-.clock-edge-counter .check-label { display: flex; align-items: center; gap: 6px; min-height: var(--control-height); }
+.clock-edge-counter .check-label { display: flex; align-items: center; gap: 6px; min-height: var(--ds-control-height); }
 
 .clock-edge-counter input[type="number"] { width: 82px; max-width: 100%; }
 
