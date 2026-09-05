@@ -364,7 +364,7 @@ export function MinimalCycleView() {
   useEffect(() => {
     refreshTreeRovingFocus(host, treeFocusRowIdRef);
   }, [snapshot.revision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
-  const diagnostics = [...validationDiagnostics, ...runtimeDiagnostics];
+  const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
   const setCollapsedGroups = (next: ReadonlySet<GroupId>) => {
     const stable = new Set(next);
