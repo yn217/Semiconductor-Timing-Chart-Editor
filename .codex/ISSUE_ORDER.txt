@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-05 12:34 JST
+# Last reconciled by ChatGPT: 2026-09-05 12:36 JST
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
@@ -23,8 +23,9 @@
 #
 # Observed product state at reconciliation:
 #   main = ebe2850fddd418c924dc260d45ab596eaf4be82b
-#   open Issues = 33
+#   open Issues = 32
 #   Claude PR #354 merged (#332 item D)
+#   #210 Clock/Edge Counter parity is closed
 #   #352 fixed/closed by Codex real core fix; earlier period=1 test-only workaround is superseded
 #
 # ============================================================================
@@ -136,7 +137,6 @@
 # ============================================================================
 # Highest-value current Core/Product work first.
 200
-210
 250
 
 # ============================================================================
@@ -209,6 +209,7 @@
 #   #166 RowLayout + Stable Waveform Surface
 #   #169 Reorder / Visibility / D&D
 #   #180 bounded viewport projection scaling
+#   #210 Clock Editor / Edge Counter parity
 #   #219 renderer/runtime scaling
 #   #259 production query-routable architecture probes
 #   #273 LabelAnchor source/display contract
