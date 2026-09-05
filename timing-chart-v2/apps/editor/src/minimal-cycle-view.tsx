@@ -390,7 +390,7 @@ export function MinimalCycleView() {
   useEffect(() => {
     if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
     else applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
-  }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth, zoom]);
+  }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
     const rendererHost = host.current;
