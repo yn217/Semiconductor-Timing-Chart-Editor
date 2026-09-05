@@ -295,22 +295,32 @@ export function MinimalCycleView() {
   const refreshRangeSelectionBand = useRef<() => void>(() => undefined);
   const timelineRangeRef = useRef(timelineRange);
   timelineRangeRef.current = timelineRange;
-  const selectedSignal = snapshot.document.signals.find((signal) => signal.id === selectedId);
-  const annotationTargetSignalId = (() => {
-    if (selectedSignal && selectedSignal.type !== "commentRow") return selectedSignal.id;
+  // View-only navigation updates zoom without replacing the canonical document.
+  // Keep entity lookup work on the document boundary so large documents do not
+  // linearly rescan every signal during each zoom render.
+  const signalById = useMemo(() => new Map(snapshot.document.signals.map((signal) => [signal.id, signal] as const)), [snapshot.document]);
+  const groupById = useMemo(() => new Map(snapshot.document.signalGroups.map((group) => [group.id, group] as const)), [snapshot.document]);
+  const annotationById = useMemo(() => new Map(snapshot.document.annotations.map((annotation) => [annotation.id, annotation] as const)), [snapshot.document]);
+  const transactionById = useMemo(() => new Map(snapshot.document.transactions.map((transaction) => [transaction.id, transaction] as const)), [snapshot.document]);
+  const firstNonCommentSignal = useMemo(() => snapshot.document.signals.find((signal) => signal.type !== "commentRow"), [snapshot.document]);
+  const referenceClockSignal = useMemo(() => {
     const referenceClockId = snapshot.document.timeline.referenceClock;
-    const referenceSignal = referenceClockId ? snapshot.document.signals.find((signal) => signal.id === referenceClockId && signal.type !== "commentRow") : undefined;
-    if (referenceSignal) return referenceSignal.id;
-    return snapshot.document.signals.find((signal) => signal.type !== "commentRow")?.id;
-  })();
-  const selectedGroup = snapshot.document.signalGroups.find((group) => group.id === selectedGroupId);
+    return referenceClockId === undefined ? undefined : signalById.get(referenceClockId);
+  }, [signalById, snapshot.document.timeline.referenceClock]);
+  const selectedSignal = selectedId === undefined ? undefined : signalById.get(selectedId);
+  const annotationTargetSignalId = useMemo(() => {
+    if (selectedSignal && selectedSignal.type !== "commentRow") return selectedSignal.id;
+    if (referenceClockSignal && referenceClockSignal.type !== "commentRow") return referenceClockSignal.id;
+    return firstNonCommentSignal?.id;
+  }, [firstNonCommentSignal, referenceClockSignal, selectedSignal]);
+  const selectedGroup = selectedGroupId === undefined ? undefined : groupById.get(selectedGroupId);
   const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
-  const selectedAnnotation = snapshot.document.annotations.find((annotation) => annotation.id === selectedAnnotationId);
-  const selectedTransaction = snapshot.document.transactions.find((transaction) => transaction.id === selectedTransactionId);
-  const bottomSignal = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.signalId === undefined ? undefined : snapshot.document.signals.find((item) => item.id === pinnedBottomSelection.signalId)) : selectedSignal;
-  const bottomGroup = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.groupId === undefined ? undefined : snapshot.document.signalGroups.find((item) => item.id === pinnedBottomSelection.groupId)) : selectedGroup;
-  const bottomAnnotation = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.annotationId === undefined ? undefined : snapshot.document.annotations.find((item) => item.id === pinnedBottomSelection.annotationId)) : selectedAnnotation;
-  const bottomTransaction = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.transactionId === undefined ? undefined : snapshot.document.transactions.find((item) => item.id === pinnedBottomSelection.transactionId)) : selectedTransaction;
+  const selectedAnnotation = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
+  const selectedTransaction = selectedTransactionId === undefined ? undefined : transactionById.get(selectedTransactionId);
+  const bottomSignal = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.signalId === undefined ? undefined : signalById.get(pinnedBottomSelection.signalId)) : selectedSignal;
+  const bottomGroup = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.groupId === undefined ? undefined : groupById.get(pinnedBottomSelection.groupId)) : selectedGroup;
+  const bottomAnnotation = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.annotationId === undefined ? undefined : annotationById.get(pinnedBottomSelection.annotationId)) : selectedAnnotation;
+  const bottomTransaction = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.transactionId === undefined ? undefined : transactionById.get(pinnedBottomSelection.transactionId)) : selectedTransaction;
   useEffect(() => {
     if (!bottomPinned || !pinnedBottomSelection) return;
     const targetExists = (pinnedBottomSelection.signalId === undefined || snapshot.document.signals.some((item) => item.id === pinnedBottomSelection.signalId))
@@ -1791,7 +1801,7 @@ export function MinimalCycleView() {
           onExpandAllGroups={() => setCollapsedGroups(new Set())}
           onOpenHierarchy={() => setHierarchyVisible(true)}
           onCloseMoreMenu={closeTreeMoreMenu}
-          timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
+          timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
         />
         <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
           {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onContextMenu={(event) => openTransactionContextMenu(event)} />}
@@ -1853,7 +1863,7 @@ export function MinimalCycleView() {
       revision={snapshot.revision}
       undoDepth={history.undoDepth}
       redoDepth={history.redoDepth}
-      timeAxisStatus={`Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${snapshot.document.signals.find((signal) => signal.id === snapshot.document.timeline.referenceClock)?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`}
+      timeAxisStatus={`Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`}
       dirty={history.dirty}
       problemsCount={diagnostics.length}
       waveDromHasError={waveDromHasError}

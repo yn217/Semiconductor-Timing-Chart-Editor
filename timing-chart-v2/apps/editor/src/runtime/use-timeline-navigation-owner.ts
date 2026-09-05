@@ -1,4 +1,4 @@
-import { startTransition, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
@@ -39,10 +39,15 @@ export type TimelineNavigationOwner = Readonly<{
 export function useTimelineNavigationOwner(): TimelineNavigationOwner {
   const [zoom, setZoomState] = useState(1);
   const zoomRef = useRef(1);
+  const zoomStateFrameRef = useRef<number | undefined>(undefined);
   const applyZoomRef = useRef<(zoom: number) => void>(() => undefined);
   const fitSelectionRef = useRef<() => void>(() => undefined);
   const fitAllRef = useRef<() => void>(() => undefined);
   const navigateToCycleRef = useRef<(cycle: number) => void>(() => undefined);
+
+  useEffect(() => () => {
+    if (zoomStateFrameRef.current !== undefined) cancelAnimationFrame(zoomStateFrameRef.current);
+  }, []);
 
   return useMemo(() => ({
     zoom,
@@ -68,7 +73,15 @@ export function useTimelineNavigationOwner(): TimelineNavigationOwner {
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;
           context.viewMetrics.update({ zoom: nextZoom, viewportWidth: context.viewport.clientWidth });
-          startTransition(() => setZoomState(nextZoom));
+          // The DOM presentation is already updated synchronously by the
+          // zoom controller. Defer the non-critical React status/ribbon state
+          // to the next frame so large documents can paint the interaction
+          // before rebuilding the owner tree.
+          if (zoomStateFrameRef.current !== undefined) cancelAnimationFrame(zoomStateFrameRef.current);
+          zoomStateFrameRef.current = requestAnimationFrame(() => {
+            zoomStateFrameRef.current = undefined;
+            startTransition(() => setZoomState(nextZoom));
+          });
         },
       });
       applyZoomRef.current = (next) => { zoomRef.current = applyZoom(next); };
