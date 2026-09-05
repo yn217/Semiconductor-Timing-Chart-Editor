@@ -62,6 +62,13 @@ unclassified decision, stale source manifest, or MERGED row without evidence.
 | GUI-15 | Zoom/Fit/navigation | KEEP | #167/#172/#176 | View Ribbon now exposes 50/100/150/200% Zoom presets in addition to Zoom ±. Fit Selection uses ruler-derived geometry; Fit All returns the shared viewport to the document origin with view-only Canonical/History/WaveDrom/LocalGeometry invariants. Keyboard viewport pan (Arrow/Page/Home/End) remains covered. Full V1 navigation and visual parity remain open. |
 | GUI-16 | Clipboard/reorder commands | KEEP | #161/#169/#172/#176 | Clipboard now snapshots multi-selected Signals with source Group/index metadata; Copy is view-only, while multi-selection Paste/Duplicate/Cut use one atomic Semantic batch with fresh stable IDs. Full V1 visual/Save-Open parity remains open. |
 
+The current-main Bottom contract refresh is covered by
+`timing-chart-v2/tests/e2e/bottom-context.spec.ts` (5/5 Chromium): Pin and
+Follow Selection remain independent, pinned Group JSON context does not mutate
+Canonical/History/Dirty/render state, Selected Object JSON uses one command,
+and Whole Document JSON remains read-only until Advanced mode and validation.
+The complete V1 visual matrix remains open.
+
 ## Non-GUI V1 contract sections
 
 The JSON inventory also covers the full product contract, including:
