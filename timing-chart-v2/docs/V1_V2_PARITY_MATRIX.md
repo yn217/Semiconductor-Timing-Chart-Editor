@@ -290,3 +290,25 @@ differs. A V1-pack comparison can close a V2 parity row only after a mapped
 V2 fixture/state, route, and unchanged-reference diff are recorded; otherwise
 the row remains `ACCEPTANCE_ONLY` or `PARTIAL` pending the product decision or
 evidence that the row itself requires.
+
+#### Replacement Pack asset-by-asset mapping status
+
+The legacy pack's six PNGs have fixed dimensions, but those dimensions do not
+match the current V2 v8 shell targets. This is the concrete reason a direct
+image comparison is recorded as an audit observation rather than closure
+evidence.
+
+| Legacy V1 asset | Fixed size | V2 executable counterpart | Mapping status |
+|---|---:|---|---|
+| `00_overall_cycle_view.png` | 1672 × 941 | `gui-visual-acceptance.spec.ts` DUT at `/?visual-reference` | Same viewport, but V2 v8 targets a 265px left pane, 1110px center and 297px Inspector; V1 overall image is not a direct V2 baseline |
+| `01_left_panel_LOCKED.png` | 330 × 670 | V2 v8 Left Tree region in `gui-visual-acceptance.spec.ts` | V1 330px panel versus V2 v8 265px panel; route/state mapping and approved diff are required |
+| `02_bottom_signal_LOCKED.png` | 1039 × 272 | V2 v8 center Bottom Editor | V1 signal context crop and V2 bottom region use different bounds (V2 target 1110 × 240); not directly comparable |
+| `03_bottom_annotation_LOCKED.png` | 985 × 325 | V2 Annotation Bottom context tests | V1 annotation crop has no one-to-one V2 capture contract yet |
+| `04_bottom_problems_LOCKED.png` | 983 × 393 | V2 Problems Bottom context tests | V1 problems crop has no one-to-one V2 capture contract yet |
+| `05_bottom_json_LOCKED.png` | 983 × 440 | V2 JSON Bottom context tests | V1 JSON crop has no one-to-one V2 capture contract yet |
+
+The V2 v8 layout metrics and browser artifacts remain the authoritative
+executable evidence for the current V2 contract. The five panel rows stay
+open until each has a mapped V2 fixture/state and an unchanged-reference
+comparison, or an explicit product decision records why the v8 override is
+the accepted replacement.
