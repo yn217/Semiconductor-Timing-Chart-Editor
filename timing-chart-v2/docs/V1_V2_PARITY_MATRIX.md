@@ -303,6 +303,12 @@ and Save/Open preservation of the registered full paths all pass. The
 dedicated hierarchy export view and complete V1 tree visual matrix remain
 open.
 
+The current-main Inspector capability audit is browser verified by five
+focused `full-gui.spec.ts` cases (5/5, 2026-09-06): Annotation, Signal,
+Group, Transaction and Clock draft/apply paths complete through the shared
+semantic owners, with Signal Save/Open and the Group draft synchronization
+covered. The full cross-context visual/export matrix remains open.
+
 ## Dedicated parity children from the 2026-09-05 specification-leak audit
 
 The broad annotation and timeline rows remain in the inventory, but they do
