@@ -266,6 +266,14 @@ Save/Open, SVG/PNG/PDF signatures and unchanged WaveDrom/LocalGeometry
 counters. The production implementation is anchored at `4f8822e`.
 Full V1 visual parity remains open.
 
+The independent clock edge-counter contract is also current-main browser
+verified in `timing-chart-v2/tests/e2e/edge-counter-compact.spec.ts` (3/3,
+2026-09-06): all controls remain reachable in the compact grid, the narrow
+bottom-editor layout has no horizontal clipping, and an explicitly selected
+later Bookmark remains the persisted `countFrom=marker` anchor through
+Undo/Redo and Save/Open. The coordinate-dependent selected-edge scenario was
+not executed; the full V1 visual/reference matrix remains open.
+
 ## Dedicated parity children from the 2026-09-05 specification-leak audit
 
 The broad annotation and timeline rows remain in the inventory, but they do
