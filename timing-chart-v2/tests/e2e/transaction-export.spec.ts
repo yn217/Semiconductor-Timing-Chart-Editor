@@ -149,6 +149,25 @@ test("exports SVG, PNG and PDF from Split View through the shared ExportScene", 
   expect(await surface.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters")).toBe(before.counters);
 });
 
+test("preserves canonical Split View content through Save/Open", async ({ page }) => {
+  await ready(page);
+  await createTransaction(page, "Split Persisted", 2, 6);
+  await page.getByRole("button", { name: "Split", exact: true }).click();
+  await expect(page.getByTestId("transaction-lanes").getByText("Split Persisted")).toBeVisible();
+
+  const save = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await save).path();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
+  await page.getByTestId("transaction-editor").getByRole("button", { name: /Split Persisted/ }).click();
+  await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("Split Persisted");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction start")).toHaveValue("2");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction end")).toHaveValue("6");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+});
+
 test("keeps the Split View surface contract and view mode changes view-only", async ({ page }) => {
   await ready(page);
   const panel = page.locator(".cycle-panel");
