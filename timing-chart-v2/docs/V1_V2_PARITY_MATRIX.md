@@ -274,6 +274,14 @@ later Bookmark remains the persisted `countFrom=marker` anchor through
 Undo/Redo and Save/Open. The coordinate-dependent selected-edge scenario was
 not executed; the full V1 visual/reference matrix remains open.
 
+Annotation primitive evidence is also current-main browser verified in
+`timing-chart-v2/tests/e2e/annotation-presentation.spec.ts` and
+`annotation-multiline-and-export-shapes.spec.ts` (4/4, 2026-09-06): Marker,
+Callout and Bracket have distinct production presentation, multiline Callout
+text survives into exported SVG tspans, Bracket exports cap marks, and Marker
+exports a vertical tick. The Golden Sample 14 visual/reference matrix remains
+open.
+
 ## Dedicated parity children from the 2026-09-05 specification-leak audit
 
 The broad annotation and timeline rows remain in the inventory, but they do
