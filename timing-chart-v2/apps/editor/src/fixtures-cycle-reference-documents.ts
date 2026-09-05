@@ -83,5 +83,10 @@ export const v1ReferenceDocument: CanonicalDocument = {
   // reference fixture unless the Golden explicitly shows them.
   annotations: [],
   legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
-  layout: { ...cycleDocument.layout, rowHeight: 30, signalSpacing: 1 },
+  // roleColumnWidth/signalNameWidth must match the "v8 approved visual
+  // contract" CSS block's locked --gui-role-width/--gui-signal-width
+  // (61px/148px, summing to the approved 209px frozen pane width) --
+  // cycleDocument's own 62px/178px are its own (unrelated, user-adjustable)
+  // demo-document defaults, not the v8-locked reference geometry.
+  layout: { ...cycleDocument.layout, roleColumnWidth: 61, signalNameWidth: 148, rowHeight: 30, signalSpacing: 1 },
 };
