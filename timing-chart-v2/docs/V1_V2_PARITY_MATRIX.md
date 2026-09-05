@@ -132,13 +132,16 @@ canonical architecture.
 The visual-reference route now uses an independent V2 canonical fixture that
 matches the approved Golden's ten-row hierarchy (Input, Internal Control and
 Output), three comment rows, stable role presentation and reference clock
-shape. It is selected only by the `visual-reference` query parameter; the
-normal production fixture and runtime architecture are unchanged. Browser
-evidence remains in `timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts`.
+shape. Its canonical layout uses the normative 61px Role and 148px Signal
+columns, leaving a 209px frozen pane and the full center waveform width at the
+locked viewport. It is selected only by the `visual-reference` query parameter;
+the normal production fixture shares the same layout contract and runtime
+architecture. Browser evidence remains in
+`timing-chart-v2/tests/e2e/gui-reference-v8.spec.ts`.
 
 The same visual-reference fixture now presents the approved English shell
 vocabulary (`Signals / Groups`, `Time Scale: Cycle`, `Reference: clk`,
-`Signal Editor`, `Annotations`, `Checks`, and `Follow Selection`) while the
+`Signal`, `Annotations`, `Checks`, and `Follow Selection`) while the
 normal V2 surface retains its existing product vocabulary. This is a
 presentation-only reference route; no canonical command or persistence path
 is forked.
@@ -146,8 +149,11 @@ is forked.
 The V8 reference view also exposes the Golden shell vocabulary and context
 headers (`Signals / Groups`, `Role`, `Signal / Annotation`, `Time Scale`, and
 `Reference`) plus the dense English Bottom Editor tabs and Follow Selection
-control. These are visual-reference presentation states only; the normal V2
-surface continues to retain the product's existing labels and all commands.
+control. Current-main Chromium evidence on 2026-09-06 is 3/3 for the V8 shell
+and 1/1 for normal/reference presentation equivalence at 1672×941; the locked
+visual pixel gate is also 1/1. These are visual-reference presentation states
+only; the normal V2 surface continues to retain the product's existing labels
+and all commands.
 
 GUI-02 tree parity evidence also includes the header-level More menu with
 view-only Expand All Groups, Collapse All Groups, and Clear Filter actions.
