@@ -761,6 +761,22 @@ function renderLineBody(body: HTMLElement, primitive: AnnotationOverlayPrimitive
   if (arrowhead === "end" || arrowhead === "bidirectional") pathElement.setAttribute("marker-end", `url(#${markerId}-end)`);
   if (rotationDeg !== 0) pathElement.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
   svg.append(pathElement);
+  if (primitive.type === "bracket") {
+    const dx = second.x - first.x;
+    const dy = second.y - first.y;
+    const length = Math.max(1, Math.hypot(dx, dy));
+    const capX = -dy / length * 6;
+    const capY = dx / length * 6;
+    const caps = svgDocument.createElementNS("http://www.w3.org/2000/svg", "path");
+    caps.dataset.role = "annotation-bracket-caps";
+    caps.setAttribute("d", `M ${localFirst.x - capX} ${localFirst.y - capY} L ${localFirst.x + capX} ${localFirst.y + capY} M ${localSecond.x - capX} ${localSecond.y - capY} L ${localSecond.x + capX} ${localSecond.y + capY}`);
+    caps.setAttribute("fill", "none");
+    caps.setAttribute("stroke", primitive.color ?? "#d04a36");
+    caps.setAttribute("stroke-width", "2");
+    caps.setAttribute("stroke-linecap", "round");
+    if (rotationDeg !== 0) caps.setAttribute("transform", `rotate(${rotationDeg} ${(localFirst.x + localSecond.x) / 2} ${(localFirst.y + localSecond.y) / 2})`);
+    svg.append(caps);
+  }
   body.dataset.lineRenderer = "svg";
   body.dataset.orthogonalDirection = `${second.x - first.x < 0 ? "left" : "right"}-${second.y - first.y < 0 ? "up" : "down"}`;
   body.style.transform = `translate(${minX}px, ${minY}px)`;
