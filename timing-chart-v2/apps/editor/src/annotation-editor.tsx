@@ -6,6 +6,8 @@ import { nextCommandId } from "./command-id.js";
 import { downloadText } from "./download-text.js";
 import { AnnotationList } from "./annotation-list.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
+import { StrokeFillToolbar } from "./stroke-fill-toolbar.js";
+import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
 import { annotationPropertiesBase, buildAnnotationStyleCommand } from "./annotation-style-command.js";
 
 export function AnnotationEditor({ annotation, annotations, document, history, problem, onSelect, onCreate, onDuplicate, onCommand, onUndo, onRedo, onDelete, onCancel, onPreview }: { readonly annotation: Annotation; readonly annotations: readonly Annotation[]; readonly document: CanonicalDocument; readonly history: HistoryState; readonly problem: string; readonly onSelect: (id: AnnotationId) => void; readonly onCreate: (type: AnnotationType) => void; readonly onDuplicate: (annotation: Annotation) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onPreview: (draft: { readonly label?: string; readonly color?: string; readonly opacity?: number } | undefined) => void }) {
@@ -83,6 +85,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
     </div>
     <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} onCommand={onCommand} />
     <FontStyleToolbar idPrefix="annotation-font" style={annotation.style} onChange={applyFontStyle} />
+    <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={annotation.style} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
     <form className="annotation-properties" onSubmit={(event) => {
       event.preventDefault();

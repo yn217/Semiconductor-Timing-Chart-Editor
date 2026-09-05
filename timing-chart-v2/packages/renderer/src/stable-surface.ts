@@ -569,7 +569,8 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   else delete owner.dataset.sourceSignalId;
   if (primitive.traceOffsetCycles !== undefined) owner.dataset.traceOffsetCycles = String(primitive.traceOffsetCycles);
   else delete owner.dataset.traceOffsetCycles;
-  owner.setAttribute("aria-label", `${primitive.type}: ${primitive.label}`);
+  owner.dataset.locked = String(primitive.locked ?? false);
+  owner.setAttribute("aria-label", `${primitive.type}: ${primitive.label}${primitive.locked ? " (locked)" : ""}`);
   owner.hidden = !primitive.visible;
   owner.style.setProperty("--annotation-color", primitive.color ?? "#d04a36");
   owner.style.height = `${primitive.surfaceHeight}px`;
@@ -624,6 +625,18 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
     renderLineBody(body, primitive, lineFirst, lineSecond, rotationDeg);
     body.dataset.annotationField = first.field;
   }
+  // #378: independent Stroke width/style and Fill color/opacity, applied as
+  // inline style overrides on top of the shape's existing CSS defaults (see
+  // center-columns.css's [data-annotation-type=...] [data-role="annotation-
+  // body"] rules) -- an absent value here leaves that CSS default in place,
+  // so a document with no Stroke/Fill authored looks exactly as before.
+  const presentation = parsePresentationStyle(primitive.style);
+  if (presentation.strokeWidth !== undefined) body.style.borderWidth = `${presentation.strokeWidth}px`; else body.style.removeProperty("border-width");
+  if (presentation.strokeStyle !== undefined) body.style.borderStyle = presentation.strokeStyle; else body.style.removeProperty("border-style");
+  if (presentation.fillColor !== undefined || presentation.fillOpacity !== undefined) {
+    const base = presentation.fillColor === "none" ? undefined : presentation.fillColor ?? primitive.color ?? "#d04a36";
+    body.style.backgroundColor = base === undefined ? "transparent" : `color-mix(in srgb, ${base} ${Math.round((presentation.fillOpacity ?? 0.12) * 100)}%, transparent)`;
+  } else body.style.removeProperty("background-color");
   const label = document.createElement("span");
   label.dataset.role = "annotation-label";
   label.dataset.annotationLabel = "true";
@@ -635,6 +648,33 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   applyTextStyle(label, parseTextStyle(primitive.style));
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
   label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;
+  // #378: a real (SVG, not Unicode) lock glyph -- `label` is already
+  // `position: absolute` (center-columns.css), which makes it a containing
+  // block for this glyph's own `position: absolute`, so it rides along with
+  // the label's translate() with no extra positioning math needed here.
+  if (primitive.locked) {
+    const svgNs = "http://www.w3.org/2000/svg";
+    const lock = document.createElementNS(svgNs, "svg");
+    lock.dataset.role = "annotation-lock-glyph";
+    lock.setAttribute("viewBox", "0 0 10 10");
+    lock.setAttribute("aria-hidden", "true");
+    lock.style.position = "absolute";
+    lock.style.left = "-14px";
+    lock.style.top = "2px";
+    lock.style.width = "10px";
+    lock.style.height = "10px";
+    lock.style.color = "#334155";
+    const shackle = document.createElementNS(svgNs, "path");
+    shackle.setAttribute("d", "M 2.5 4 V 2.5 A 2.5 2.5 0 0 1 7.5 2.5 V 4");
+    shackle.setAttribute("fill", "none");
+    shackle.setAttribute("stroke", "currentColor");
+    shackle.setAttribute("stroke-width", "1.2");
+    const body2 = document.createElementNS(svgNs, "rect");
+    body2.setAttribute("x", "1.5"); body2.setAttribute("y", "4"); body2.setAttribute("width", "7"); body2.setAttribute("height", "5.5"); body2.setAttribute("rx", "1");
+    body2.setAttribute("fill", "currentColor");
+    lock.append(shackle, body2);
+    label.append(lock);
+  }
   const dimensionParts: HTMLElement[] = [];
   if (primitive.type === "measurement" && primitive.measurementLayout && dimensionY !== undefined) {
     const layout = primitive.measurementLayout;
@@ -995,6 +1035,23 @@ function populateGroupHeader(shell: HTMLElement, header: GroupHeaderLayoutEntry)
  * Signal/CommentRow display.style and Annotation.style alike) into typed,
  * safe-to-apply CSS values. One validation pass, reused by every entity
  * kind that can carry this style -- no second copy of these regexes. */
+/** #378: Stroke (independent width/style) and Fill (independent color/
+ * opacity) for the CSS-border/background-driven Annotation shapes (see
+ * apps/editor/src/annotation-capability-matrix.ts's STROKE_CAPABLE/
+ * FILL_CAPABLE for exactly which types). Same permissive-parse-from-a-
+ * free-form-JsonObject convention as parseTextStyle below -- an absent or
+ * malformed value here means "use the shape's existing CSS default",
+ * never a thrown error or a garbage inline style. */
+function parsePresentationStyle(style: Record<string, unknown> | undefined): { readonly strokeWidth?: number | undefined; readonly strokeStyle?: "solid" | "dashed" | "dotted" | undefined; readonly fillColor?: string | undefined; readonly fillOpacity?: number | undefined } {
+  const source = style ?? {};
+  return {
+    strokeWidth: typeof source.strokeWidth === "number" && source.strokeWidth >= 1 && source.strokeWidth <= 8 ? source.strokeWidth : undefined,
+    strokeStyle: source.strokeStyle === "solid" || source.strokeStyle === "dashed" || source.strokeStyle === "dotted" ? source.strokeStyle : undefined,
+    fillColor: typeof source.fillColor === "string" && (source.fillColor === "none" || /^#[0-9a-f]{3,8}$/i.test(source.fillColor)) ? source.fillColor : undefined,
+    fillOpacity: typeof source.fillOpacity === "number" && source.fillOpacity >= 0 && source.fillOpacity <= 1 ? source.fillOpacity : undefined,
+  };
+}
+
 function parseTextStyle(style: Record<string, unknown> | undefined): { readonly color?: string | undefined; readonly background?: string | undefined; readonly fontWeight?: string | undefined; readonly fontStyle?: string | undefined; readonly fontFamily?: string | undefined; readonly fontSize?: number | undefined; readonly textDecoration?: string | undefined; readonly lineHeight?: number | undefined } {
   const source = style ?? {};
   return {

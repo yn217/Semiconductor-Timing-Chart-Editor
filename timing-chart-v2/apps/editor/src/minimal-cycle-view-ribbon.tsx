@@ -290,8 +290,16 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       const referenceY = reference.labelOffset?.y ?? -14;
       onCommandBatch(targets.map((annotation) => ({ id: nextCommandId("annotation_align"), type: "annotation.updateLabelOffset" as const, annotationId: annotation.id, labelOffset: { x: annotation.labelOffset?.x ?? 0, y: referenceY } })));
     } } : {}),
-    onLock: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_lock"), type: "annotation.setLocked" as const, annotationId, locked: true }))),
-    onUnlock: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_unlock"), type: "annotation.setLocked" as const, annotationId, locked: false }))),
+    // #378: executeBatch is atomic (one no-op command fails the WHOLE
+    // batch, packages/history/src/session.ts's executeBatch) -- a mixed
+    // selection (some already locked, some not) used to silently lock/
+    // unlock NOTHING, since annotation.setLocked rejects a target already
+    // at the requested state. Pre-filter to only the ids that actually
+    // change, and disable+explain when every selected annotation is
+    // already at the requested state, matching #332's disabled-reason
+    // convention rather than presenting an enabled control with no effect.
+    ...(arrangeTargetIds.some((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)) ? { onLock: () => onCommandBatch(arrangeTargetIds.filter((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)).map((annotationId) => ({ id: nextCommandId("annotation_lock"), type: "annotation.setLocked" as const, annotationId, locked: true }))) } : { lockUnavailableReason: "Selected annotation(s) are already locked" }),
+    ...(arrangeTargetIds.some((id) => document.annotations.find((item) => item.id === id)?.locked ?? false) ? { onUnlock: () => onCommandBatch(arrangeTargetIds.filter((id) => document.annotations.find((item) => item.id === id)?.locked ?? false).map((annotationId) => ({ id: nextCommandId("annotation_unlock"), type: "annotation.setLocked" as const, annotationId, locked: false }))) } : { unlockUnavailableReason: "Selected annotation(s) are already unlocked" }),
     // Same width: match every OTHER selected annotation's start-end cycle
     // span to the first selected one's. Types without start/end (arrow,
     // callout, marker, ...) are silently skipped rather than failing the

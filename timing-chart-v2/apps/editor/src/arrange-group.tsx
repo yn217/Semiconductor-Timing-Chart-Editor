@@ -12,7 +12,7 @@ import { computeViewportSafePosition, currentViewportBounds } from "./viewport-s
  * explaining it isn't wired up yet, so this can ship as a GUI shell ahead
  * of the schema/planner/renderer work (z-order, grouping, rotation) that a
  * working version needs. */
-export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup, onRotateRight, onRotateLeft, onAlign, onLock, onUnlock, onMatchSpan, unavailableReason, groupUnavailableReason, ungroupUnavailableReason, alignUnavailableReason, matchSpanUnavailableReason }: {
+export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup, onRotateRight, onRotateLeft, onAlign, onLock, onUnlock, onMatchSpan, unavailableReason, groupUnavailableReason, ungroupUnavailableReason, alignUnavailableReason, matchSpanUnavailableReason, lockUnavailableReason, unlockUnavailableReason }: {
   readonly onBringToFront?: () => void;
   readonly onSendToBack?: () => void;
   readonly onGroup?: () => void;
@@ -36,6 +36,8 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
   readonly ungroupUnavailableReason?: string | undefined;
   readonly alignUnavailableReason?: string | undefined;
   readonly matchSpanUnavailableReason?: string | undefined;
+  readonly lockUnavailableReason?: string | undefined;
+  readonly unlockUnavailableReason?: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -104,8 +106,8 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
         <button type="button" role="menuitem" disabled={!onAlign} title={onAlign ? "Align selected annotations to the same row" : alignUnavailableReason ?? fallback} onClick={() => { onAlign?.(); setOpen(false); }}><RibbonIcon name="i-align-row" /><span>Align</span></button>
         <button type="button" role="menuitem" disabled={!onMatchSpan} title={onMatchSpan ? "Match the first selected annotation's cycle span" : matchSpanUnavailableReason ?? fallback} onClick={() => { onMatchSpan?.(); setOpen(false); }}><RibbonIcon name="i-range-arrow" /><span>Same width</span></button>
         <div className="arrange-menu-sep" />
-        <button type="button" role="menuitem" disabled={!onLock} title={onLock ? "Lock" : fallback} onClick={() => { onLock?.(); setOpen(false); }}><RibbonIcon name="i-lock" /><span>Lock</span></button>
-        <button type="button" role="menuitem" disabled={!onUnlock} title={onUnlock ? "Unlock" : fallback} onClick={() => { onUnlock?.(); setOpen(false); }}><RibbonIcon name="i-unlock" /><span>Unlock</span></button>
+        <button type="button" role="menuitem" disabled={!onLock} title={onLock ? "Lock" : lockUnavailableReason ?? fallback} onClick={() => { onLock?.(); setOpen(false); }}><RibbonIcon name="i-lock" /><span>Lock</span></button>
+        <button type="button" role="menuitem" disabled={!onUnlock} title={onUnlock ? "Unlock" : unlockUnavailableReason ?? fallback} onClick={() => { onUnlock?.(); setOpen(false); }}><RibbonIcon name="i-unlock" /><span>Unlock</span></button>
       </div>, window.document.body)}
     </div>
   </div>;
