@@ -86,3 +86,26 @@ test("AI Apply reports a stale proposal through the shared Problems diagnostic p
   await expect(problems).toContainText("Apply AI proposal");
   await expect(problems).toContainText("Regenerate the preview from the current document before applying it");
 });
+
+// #395 item 1: RibbonIcon's bare <svg> (no width/height/viewBox) fell back
+// to the CSS spec's default replaced-element intrinsic size (300x150)
+// wherever nothing else constrained it -- the AI tab's icon was the one
+// place that happened, rendering a giant logo that pushed the whole AI
+// Ribbon tab far taller than every other tab.
+test("AI Ribbon icon is normally sized and the tab matches other tabs' geometry", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const tabs = page.locator(".ribbon-tabs");
+  const ribbon = page.getByTestId("ribbon");
+
+  await tabs.getByRole("button", { name: "Home", exact: true }).click();
+  const homeHeight = (await ribbon.boundingBox())!.height;
+
+  await tabs.getByRole("button", { name: "AI", exact: true }).click();
+  const icon = page.getByTestId("ai-operation-panel").locator("svg");
+  const iconBox = (await icon.boundingBox())!;
+  expect(iconBox.width, JSON.stringify(iconBox)).toBeLessThanOrEqual(28);
+  expect(iconBox.height, JSON.stringify(iconBox)).toBeLessThanOrEqual(28);
+  const aiHeight = (await ribbon.boundingBox())!.height;
+  expect(Math.abs(aiHeight - homeHeight)).toBeLessThanOrEqual(2);
+});

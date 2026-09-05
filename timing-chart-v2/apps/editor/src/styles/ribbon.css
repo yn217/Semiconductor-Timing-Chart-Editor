@@ -77,6 +77,15 @@
 
 .ai-operation-panel { display: grid; grid-template-columns: auto minmax(260px, 1fr) auto; align-items: center; gap: 6px 8px; min-width: 560px; font-size: 10px; }
 
+/* #395 item 1: RibbonIcon's <svg> carries no width/height/viewBox of its
+   own (every other Ribbon icon gets sized by a wrapper -- DsIconBox,
+   .ribbon-tool svg, etc. -- that this bare {icon} prop never passed
+   through), so it fell back to the CSS spec's default replaced-element
+   intrinsic size (300x150), rendering as a giant logo that pushed the
+   whole AI Ribbon tab far taller than every other tab. Sized to match
+   the other Ribbon icons' normal scale; no icon/markup change needed. */
+.ai-operation-panel svg { flex: 0 0 auto; width: 22px; height: 22px; color: #29425e; }
+
 .ai-query-row { display: contents; }
 
 .ai-query-row label { display: flex; align-items: center; gap: 5px; }
