@@ -1,10 +1,10 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-05 15:40 JST
+Last reconciled: 2026-09-05 16:53 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main at reconciliation: `1fc36b6ad9fba865f5c8f12b73da4931c638a2fa`
-Open Issues observed: 20
+Observed main at reconciliation: `391bd916587c6ac98ab283947652f5611d3a9292`
+Open Issues observed: 18
 
 This file is the authoritative agent-ownership split. One Issue has one active implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
 
@@ -26,10 +26,10 @@ This file is the authoritative agent-ownership split. One Issue has one active i
 
 ## Implementation-first policy
 
-The remaining backlog is small enough that agents should prioritize concrete product residuals over repeated broad audit/test-only cycles.
+Prioritize concrete product residuals over repeated broad audit/test-only cycles.
 
 A test-only commit is appropriate when:
-- the Issue itself is a test/harness contract (for example #281), or
+- the Issue itself is a test/harness contract, or
 - it reproduces/proves a concrete regression or closes an explicit acceptance gap.
 
 Otherwise prefer:
@@ -49,50 +49,47 @@ Claude owns Ribbon/Tree/Inspector/Bottom composition, discoverability, product w
 
 ### Immediate Claude queue
 
-1. `#223` + `#264` — Event/Pulse end-to-end product lifecycle. Treat as ONE implementation and use one evidence set to close both overlapping contracts where satisfied.
-2. `#222` + `#265` — Spacer end-to-end product lifecycle. Treat as ONE implementation; reuse existing canonical Spacer/RowLayout/organization owners.
-3. `#293` — constrained non-Home design-system architecture closure; preserve the current approved Home baseline.
-4. `#176` — professional CAD/EDA usability closure.
-5. `#262` — final eight-axis GUI/UX closure gate.
+1. `#223` + `#264` — Logic/Event/Pulse end-to-end product lifecycle. Treat as ONE implementation/evidence stream.
+   - PR #370 already added the missing Logic Insert Ribbon entry.
+   - Continue with Event/Pulse normal production lifecycle: Insert + Tree creation equivalence, editing without raw JSON, Undo/Redo, Save/Open, renderer/adapter path, export, and real-browser E2E.
+   - One Add must remain one SemanticCommand/history operation; do not implement `binary -> mutate type` as a second commit.
+   - Do not close either Issue until the shared acceptance set proves the full lifecycle.
 
-### Staged handoff for #200 Signal Split
+2. `#222` + `#265` — Spacer end-to-end product lifecycle. Treat as ONE implementation/evidence stream.
+   - Add first-class Spacer entry points to Insert Ribbon and Left Tree Add.
+   - Preserve Spacer as a stable layout object, never a fake Signal.
+   - Complete selection, height edit, reorder/move, delete, Undo/Redo, Save/Open and export through existing owners.
+   - Clipboard behavior must converge on the central `#221` policy; do not invent a separate clipboard implementation.
 
-`#200` currently has Codex as the active owner ONLY for the Core-model reconciliation described below.
+3. `#200` — Signal Split GUI/product completion, **only after Codex posts `CORE_READY_FOR_GUI` on #200**.
+   - Until that marker exists, Claude must not resume the paused PR4 implementation.
+   - After handoff: real Upper/Lower/Both routing, assignment UI, splitter UX, browser acceptance and remaining presentation lifecycle.
 
-When Codex posts an Issue comment containing `CORE_READY_FOR_GUI` with evidence that one authoritative split-assignment model remains, ownership automatically transfers to Claude for the remaining product surface:
-- real Upper/Lower/Both per-signal routing;
-- Bottom/Inspector assignment UX;
-- splitter UX;
-- browser acceptance and remaining presentation lifecycle.
+### Claude queue completed — do not reimplement
 
-At that handoff, Codex stops implementing #200 unless Claude records a new bounded Core defect. No parallel PR4 implementation.
+The following former Claude queue items are now closed and must not remain active:
+- `#293` constrained non-Home design-system architecture.
+- `#176` professional CAD/EDA usability closure.
+- `#262` final eight-axis GUI/UX closure gate.
+- `#260 #181 #182 #184 #185 #186 #306 #309 #172 #205 #267`.
 
 ### Claude must not independently implement
 
-Current Codex-owned Core/data/runtime work: `#363 #200` (until handoff) `#221 #269 #171 #170 #167 #161 #177 #175 #281`.
+Current Codex/Core-owned work includes:
+- `#369` empty-Group first-insert projection/render bug.
+- `#366` visual-reference wave-owner/ViewMetrics timing bug.
+- `#200` until `CORE_READY_FOR_GUI` handoff.
+- `#221 #269 #171 #170 #167 #161 #177 #175 #281`.
 
-If Claude discovers a Core defect in one of these, record the concrete defect and stop at the ownership boundary unless this file or the user reassigns it.
+If Claude encounters one of these while verifying a GUI issue, record concrete reproduction/evidence and stop at the ownership boundary. Do not patch renderer/projection/runtime hot paths merely to unblock a Claude test.
 
 ## Codex ownership — Core / Data / Geometry / Runtime / Reliability
 
-Codex owns Canonical/data integrity, command/history policy, geometry/time mapping, runtime lifecycle, clipboard semantics, structured diagnostics, performance architecture and core closure.
+Codex owns Canonical/data integrity, command/history policy, geometry/time mapping, projection/renderer correctness, runtime lifecycle, clipboard semantics, structured diagnostics, performance architecture and core closure.
 
-### Immediate Codex queue
+Current concrete Core bugs `#369` and `#366` take precedence over broad test-only churn. `#281` remains valid correctness-harness work but should not displace implementable production defects.
 
-1. `#363` — fast-fix the current timeline-zoom unit/runtime-context regression. Keep this narrow; restore the green unit baseline first.
-2. `#200` — Core reconciliation ONLY. Resolve the duplicate Signal Split assignment models (`signal.display.splitPane` versus standalone `SignalSplitAssignment[]`) into one authoritative presentation model. Do not build a parallel GUI. Post `CORE_READY_FOR_GUI` and hand off to Claude.
-3. `#221` — complete central clipboard semantics across entities using one policy/command path.
-4. `#269` — structured diagnostics/error propagation through command/IO/parser/export/Problems paths.
-5. `#171` — Annotation/Snap semantic/geometry closure audit and only bounded residual Core fixes.
-6. `#170` — Timeline semantic-transform closure audit and bounded residual fixes.
-
-### Later Codex correctness / broad-closure lane
-
-- `#167` Minimal Cycle View closure.
-- `#161` Architecture Lock closure.
-- `#177` V1 -> V2 parity audit closure.
-- `#175` Interaction Performance Closure — background lane; recent production Zoom/viewport optimizations are real progress, but do not let this consume the main product queue through repeated test-only measurement work.
-- `#281` property/state-machine correctness harness — inherently test-focused, therefore intentionally late in the queue after concrete product residuals.
+For `#200`, Codex owns Core-model reconciliation only. Leave one authoritative split-assignment model, post `CORE_READY_FOR_GUI`, then stop #200 implementation and hand the remaining GUI/product work to Claude.
 
 ## Holds
 
@@ -102,24 +99,18 @@ Codex owns Canonical/data integrity, command/history policy, geometry/time mappi
 
 ### External / human hold
 
-- `#272` GitHub Actions quality gate. Billing/spending-limit prevents runner allocation. Do not burn product-development cycles retrying it; re-evaluate after billing is restored.
+- `#272` GitHub Actions quality gate. Billing/spending-limit prevents runner allocation. Re-evaluate after billing is restored.
 
 ## Recently completed — remove from active queues
 
-Current session closures include:
-- `#357` visual-reference StrictMode/runtime mount crash — closed.
-- `#313` authoritative range-drag geometry — closed.
-- `#260` CSS/design-token ownership / legacy cascade retirement — closed.
-- `#181` Left Tree / role geometry / MiniMap — closed.
-- `#182` approved v8 production GUI closure — closed.
-- `#184` GUI v8 blockers — closed.
-- `#185` Golden visual acceptance — closed after explicitly approved PR #362 baseline update and passing mechanical visual gate.
-- `#186` Golden GUI Harness Engineering — closed.
-- `#306` AI-assisted Visual Scenario Harness — closed.
-- `#309` interaction before/after/undo visual scenarios — closed.
-- `#172` Full GUI — closed.
-- `#205` datasheet-grade timing annotations — closed.
-- `#267` Group Band editor — closed.
+Current-session / recent closures include:
+- `#363` timeline-zoom runtime-context test regression.
+- `#357` visual-reference StrictMode/runtime mount crash.
+- `#313` authoritative range-drag geometry.
+- `#293` constrained non-Home design-system architecture.
+- `#176` professional CAD/EDA usability closure.
+- `#262` final GUI/UX closure.
+- `#260 #181 #182 #184 #185 #186 #306 #309 #172 #205 #267`.
 
 Earlier completed items remain closed and must not be reimplemented: `#165 #166 #169 #180 #210 #219 #259 #273 #275 #277 #328 #331 #332 #352`.
 
