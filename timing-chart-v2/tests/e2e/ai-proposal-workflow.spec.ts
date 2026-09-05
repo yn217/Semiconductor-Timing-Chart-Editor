@@ -250,3 +250,57 @@ test("Scope switches between Selection / Current View / Document, and Current Vi
   // separate History entry -- this Apply is the second.
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 });
+
+// #395 acceptance item 16: "1672x941 and 1280x720 remain readable/
+// unclipped." Not exercised anywhere in this issue's 5-PR split until
+// now -- checks both the compact AI Ribbon tab's own controls and the
+// Bottom AI Assistant panel's actual interactive surface (query input,
+// Scope select, Preview/Settings buttons, Settings section once opened,
+// Activity Log) stay fully inside the viewport at both named
+// resolutions, the same "clamped at every corner" style of check this
+// codebase already uses for context menus (home-command-surface.spec.ts).
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`AI Ribbon tab and Bottom AI Assistant panel stay readable and unclipped at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await page.goto("/");
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+
+    await page.getByLabel("Ribbon tabs").getByRole("button", { name: "AI", exact: true }).click();
+    const ribbon = page.getByTestId("ribbon");
+    const trigger = ribbon.getByRole("button", { name: "Ask or edit with the AI Assistant" });
+    const providerStatus = ribbon.getByTestId("ai-provider-status");
+    for (const element of [trigger, providerStatus]) {
+      const box = (await element.boundingBox())!;
+      expect(box.x, JSON.stringify(box)).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, JSON.stringify(box)).toBeLessThanOrEqual(viewport.width);
+      expect(box.y + box.height, JSON.stringify(box)).toBeLessThanOrEqual(viewport.height);
+    }
+
+    await trigger.click();
+    const ai = page.getByTestId("bottom-editor").getByTestId("ai-operation-panel");
+    // The top query/scope/Preview/Settings-toggle row must always be fully
+    // on-screen without scrolling first -- checked for both x and y.
+    for (const element of [ai.getByLabel("AI semantic query"), ai.getByTestId("ai-scope-select"), ai.getByRole("button", { name: "Preview", exact: true }), ai.getByTestId("ai-settings-toggle")]) {
+      const box = (await element.boundingBox())!;
+      expect(box.x, JSON.stringify(box)).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, JSON.stringify(box)).toBeLessThanOrEqual(viewport.width);
+      expect(box.y, JSON.stringify(box)).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height, JSON.stringify(box)).toBeLessThanOrEqual(viewport.height);
+    }
+    // The Settings section and Activity Log below it live inside the
+    // Bottom Panel's own scrollable region (the same as every other
+    // Bottom Panel tab in this app), so they are only held to the
+    // viewport's horizontal bounds -- never clipped sideways -- not to
+    // its exact bottom edge.
+    await ai.getByTestId("ai-settings-toggle").click();
+    const settings = ai.getByTestId("ai-settings");
+    await expect(settings).toBeVisible();
+    for (const element of [settings, ai.getByTestId("ai-activity-log")]) {
+      const box = (await element.boundingBox())!;
+      expect(box.x, JSON.stringify(box)).toBeGreaterThanOrEqual(0);
+      expect(box.x + box.width, JSON.stringify(box)).toBeLessThanOrEqual(viewport.width);
+    }
+  });
+}
