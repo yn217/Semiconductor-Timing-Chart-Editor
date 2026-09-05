@@ -700,7 +700,11 @@ export function MinimalCycleView() {
       signalSplitRuntimeRef.current?.onDocumentChanged(result);
       setTimelineRange((range) => {
         const start = Math.min(range.start, result.snapshot.document.timeline.cycleCount - 1);
-        return { start, end: Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount)) };
+        const end = Math.max(start + 1, Math.min(range.end, result.snapshot.document.timeline.cycleCount));
+        // Most property/style commits do not change the selected timeline
+        // range. Preserve its identity so the range-selection effect does not
+        // perform another DOM pass for an unchanged range.
+        return range.start === start && range.end === end ? range : { start, end };
       });
       publishState();
       void renderer.whenIdle().then(() => {
