@@ -53,7 +53,7 @@ unclassified decision, stale source manifest, or MERGED row without evidence.
 | GUI-06 | Interactive MiniMap | KEEP | #167/#175/#178 | MiniMap derives a proportional viewport indicator from the actual scrollable range and supports click-pan plus pointer-drag pan with view-only invariants. It now renders a dense derived waveform overview for every canonical row using normalized screen fractions; `full-gui.spec.ts` verifies row/segment coverage and zero Canonical/History/render mutation. Large-document scaling and full V1 visual parity remain open. |
 | GUI-07 | Status Bar | KEEP | #172/#176 | Batch Status Bar: `Ready`, signal/annotation/problem counts, half-open Time Range, Cycle, Zoom, Snap, Mode, revision/history/dirty and WaveDrom state are derived in the production footer. `full-gui.spec.ts` verifies the view-only counter invariant; visual artifact `gui-batch-shell-dut-1672x941.png` confirms the dense 27px layout. Full V1 reference diff remains open. |
 | GUI-08 | Cycle/Transaction/Split selector | KEEP | #172 | Cycle exposes Signal/Annotation/Problems/JSON; Transaction exposes Transaction/Annotation/Problems/JSON; Split exposes both Signal and Transaction contexts. V1 Ribbon labels `Transaction` and `Check` are restored while retaining internal compatibility keys for existing command routing. Mode switching preserves Canonical/History/Dirty/render counters; `gui-v1-ribbon-labels.spec.ts` verifies the label and view-only invariant, and `gui-split-view-visual.spec.ts` captures the 1672x941 Split composition with zero mutation. |
-| GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Batch 2C adds geometry-derived grid lines and gates annotation/transaction snapping on the real Snap ON/OFF state. Snap ON resolves rendered candidates; Snap OFF uses free geometry. The Axis Break mapping closure makes Ruler, Grid and Snap share source↔display geometry, skips hidden folded cycles, and preserves canonical source-cycle anchors. Ruler/MiniMap visibility toggles remain view-only with zero Canonical/History/Dirty/WaveDrom/LocalGeometry delta. A dedicated Snap E2E also proves Snap OFF/ON around 125% Zoom preserves Canonical/History/Dirty/session/render counters. The locked V1 visual run also applies reference-sized local ruler/waveform geometry without changing semantic coordinates; full pixel parity remains open. |
+| GUI-09 | Grid/Snap/Ruler | KEEP | #165/#170/#175 | Batch 2C adds geometry-derived grid lines and gates annotation/transaction snapping on the real Snap ON/OFF state. Snap ON resolves rendered candidates; Snap OFF uses free geometry. The Axis Break mapping closure makes Ruler, Grid and Snap share source↔display geometry, skips hidden folded cycles, and preserves canonical source-cycle anchors. Current-main focused evidence includes mapping unit/export coverage, Chromium axis-break compression, exact Time Group Save/Open, multiple folds, folded export, and 100k-cycle/1k-fold scale checks. Ruler/MiniMap visibility toggles remain view-only with zero Canonical/History/Dirty/WaveDrom/LocalGeometry delta. The locked V1 visual run also applies reference-sized local ruler/waveform geometry without changing semantic coordinates; full pixel parity remains open. |
 | GUI-10 | Hardware hierarchy / Full Path / Scope | KEEP | #177/#178 | Batch 1D adds RowLayout path metadata, Scope breadcrumb, stable-ID Reveal and atomic bulk registration; current batch adds a derived high-density Hardware Hierarchy browser with stable-ID selection. `full-gui.spec.ts` now saves and reopens after atomic bulk registration and verifies both full paths remain present with History reset to 0. Full hierarchy visual parity remains open. |
 | GUI-11 | Signal styling and editable Legend | KEEP | #162/#172/#176 | Signal display style, alignment and overflow now flow through Projection to derived row presentation; style-only Apply avoids WaveDrom/LocalGeometry rebuilds. Editable Legend now exposes stable-ID row controls for label, visibility and order, applies through `legend.update`, and is covered by real-browser plus visual evidence (`timing-chart-v2/.tmp_gui_reference/gui-batch-legend-editor-1280x720.png`). Full V1 visual/export parity remains open. |
 | GUI-12 | Clock editor and Edge Counter | KEEP | #164/#172 | Inspector and Bottom Clock editors expose editable Start, Period, Duty, Phase, Initial and Polarity plus independent Edge Counter settings (Rising/Falling/Both, Count From, explicit Bookmark anchor, interval and offsets) through separate SemanticCommands. `countFrom=marker` requires a persisted `edgeCounter.anchorId` that resolves to the selected Bookmark; no implicit earliest-Bookmark fallback is allowed. Real-browser coverage verifies one History entry, Undo, and no WaveDrom/local-geometry rebuild for counter-only edits. Full origin matrix and V1 visual parity remain open. |
@@ -170,13 +170,19 @@ view-only layout operation: the browser test
 Canonical revision, History, WaveDrom and LocalGeometry counters remain
 unchanged while the Tree and Inspector stay synchronized.
 
-Axis Break export parity is now explicit in the shared ExportScene. Collapsed
-Time Groups produce derived paired boundary marks with stable Time Group IDs,
-source `[start,end)` metadata and the same display-time X mapping used by the
-compressed ruler and WaveDrom lanes. `tests/export/deterministic-export.test.ts`
+Axis Break and Time Group parity is now explicit in the shared ExportScene and
+the production browser path. Collapsed Time Groups produce derived paired
+boundary marks with stable Time Group IDs, source `[start,end)` metadata and
+the same display-time X mapping used by the compressed ruler and WaveDrom
+lanes. Current-main focused Chromium evidence is 4/4 for axis compression,
+folded export, exact Time Group Save/Open and multiple independent folds;
+`time-mapping-scale-closure.spec.ts` adds 2/2 production scale cases for
+100,000 cycles with 0 folds and 1,000 folds. The mapping/export unit suites
+pass 14/14 and 19/19 respectively. `tests/export/deterministic-export.test.ts`
 and `timing-chart-v2/tests/e2e/export-fold-mapping.spec.ts` verify that
 respecting folds emits the boundary layer while Expand emits none; source time
-and canonical state remain unchanged.
+and canonical state remain unchanged. Full V1 visual/reference closure remains
+open.
 
 Ghost Trace export parity is now derived from the source signal's WaveDrom
 wave tokens and shared source/display mapping. ExportScene emits a stable
