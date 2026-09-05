@@ -3,7 +3,7 @@ import { EditorApplicationRuntime } from "./editor-application-runtime.js";
 import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
 import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
-import { projectEdgeCounters } from "./edge-counter-projection.js";
+import { projectEdgeCounters, type SelectedClockEdge } from "./edge-counter-projection.js";
 import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { renderGeometryGrid } from "../render-geometry-grid.js";
 import { buildRuler } from "./build-ruler.js";
@@ -496,7 +496,7 @@ export function trapDialogTab(doc: Document, event: KeyboardEvent): boolean {
   return true;
 }
 
-export function refreshRendererOverlays(renderer: any, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: any, geometryMaps: any, mappingCache: any, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined): void { renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale)); renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, range, selectedCycle, screenGeometryScale)); for (const owner of host.current?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationId); }
+export function refreshRendererOverlays(renderer: any, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: any, geometryMaps: any, mappingCache: any, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge): void { renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale)); renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge)); for (const owner of host.current?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationId); }
 
 export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: any, mappingCache: any, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode); }
 
