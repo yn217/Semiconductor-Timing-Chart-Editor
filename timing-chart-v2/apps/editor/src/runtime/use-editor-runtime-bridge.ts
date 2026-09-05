@@ -281,6 +281,7 @@ export function createTimelineZoomController(context: {
   readonly viewportWidth: number;
   readonly timelineOffset: number;
   readonly onPresentationScale: (zoom: number) => void;
+  readonly onSyncFrozenColumns: () => void;
   readonly onZoom: (zoom: number) => void;
 }): (next: number) => number {
   return (next) => applyTimelineZoom(next, context);
@@ -570,6 +571,26 @@ export function publishRendererState(host: HTMLElement, session: any, viewMetric
 export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void { const presentationScale = Math.max(0.0001, zoom * screenGeometryScale); viewport.style.setProperty("--presentation-x-scale", String(presentationScale)); host.style.setProperty("--presentation-x-scale", String(presentationScale)); rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale)); }
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void { ruler.style.transform = `translateX(${-viewport.scrollLeft}px) scaleX(${zoom})`; ruler.dataset.scrollLeft = String(viewport.scrollLeft); }
 
+/** Keep frozen presentation columns pinned when their scroll-content containing
+ * block reaches a horizontal edge. This is view-only and does not alter
+ * canonical coordinates or geometry ownership. */
+export function syncFrozenColumnScroll(viewport: HTMLElement, host: HTMLElement, leftPaneWidth: number): void {
+  const viewportRect = viewport.getBoundingClientRect();
+  const targets: readonly [string, number][] = [
+    ["[data-role='left-tree-rows']", viewportRect.left],
+    ["[data-role='frozen-label-rows']", viewportRect.left + leftPaneWidth],
+  ];
+  for (const [selector, targetLeft] of targets) {
+    const element = host.querySelector<HTMLElement>(selector);
+    if (!element) continue;
+    const currentTranslateX = Number.parseFloat(element.style.getPropertyValue("translate")) || 0;
+    const baseLeft = element.getBoundingClientRect().left - currentTranslateX;
+    const nextTranslateX = targetLeft - baseLeft;
+    if (Math.abs(nextTranslateX) < 0.01) element.style.removeProperty("translate");
+    else element.style.setProperty("translate", `${nextTranslateX}px 0`);
+  }
+}
+
 export type EditorEventBinding = {
   readonly target: EventTarget;
   readonly type: string;
@@ -597,6 +618,7 @@ export type TimelineZoomSurfaceContext = {
   readonly viewportWidth: number;
   readonly timelineOffset: number;
   readonly onPresentationScale: (zoom: number) => void;
+  readonly onSyncFrozenColumns: () => void;
   readonly onZoom: (zoom: number) => void;
 };
 
@@ -618,6 +640,7 @@ export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceCont
   context.rendererHost.style.width = `${width}px`;
   context.timingSurface.style.setProperty("width", `${width}px`);
   context.rendererHost.dataset.zoom = String(zoom);
+  context.onSyncFrozenColumns();
   context.onZoom(zoom);
   return zoom;
 }

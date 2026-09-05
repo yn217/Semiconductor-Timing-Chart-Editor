@@ -83,7 +83,7 @@ import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-
 import { buildRuler } from "./runtime/build-ruler.js";
 import { projectAnnotationOverlays } from "./runtime/annotation-overlays.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshAnnotationPreview, refreshClockPreview, refreshGridPresentation, refreshGroupStylePreview, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachEditorEventBindings, attachMenuKeyboardNavigation, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, createWaveformSurfaceProvider, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, rebuildRulerPresentation, refreshAnnotationPreview, refreshClockPreview, refreshGridPresentation, refreshGroupStylePreview, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererOverlays, refreshRulerRangeSelection, refreshTimelinePresentation, refreshTransactionLinkedRows, resolveTransactionSnapCycle, scheduleDialogFocusRestore, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
 
 const spacerId = (value: string) => value as SpacerId;
 
@@ -499,6 +499,7 @@ export function MinimalCycleView() {
       rendererHost.dataset.timelineRefreshReason = reason;
       if (reason === "scroll") {
         syncRulerScroll(rulerElement, viewportElement, timelineNavigation.getZoom());
+        syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
         cancelAnimationFrame(frame);
         frame = requestAnimationFrame(() => projectViewportWindow({
           viewport: viewportElement,
@@ -571,12 +572,14 @@ export function MinimalCycleView() {
       timelineOffset,
       getPresentationScale: () => timelineGeometry.presentationScale,
       syncPresentationScale: syncPresentationScaleDom,
+      syncFrozenColumns: () => syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth),
       getDocument: () => session.getSnapshot().document,
       getRange: () => timelineRangeRef.current,
       setSelectedCycle,
       setRange: setTimelineRange,
       publishState,
     });
+    syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
     snapTransactionCycle.current = (clientX) => resolveTransactionSnapCycle({
       clientX,
       host: rendererHost,

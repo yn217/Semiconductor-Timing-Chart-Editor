@@ -18,6 +18,7 @@ export type TimelineNavigationAttachment = Readonly<{
   timelineOffset: () => number;
   getPresentationScale: () => number;
   syncPresentationScale: (viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, presentationScale: number) => void;
+  syncFrozenColumns: () => void;
   getDocument: () => CanonicalDocument;
   getRange: () => TimelineRange;
   setSelectedCycle: (cycle: number) => void;
@@ -70,6 +71,7 @@ export function useTimelineNavigationOwner(): TimelineNavigationOwner {
         viewportWidth: globalThis.innerWidth,
         timelineOffset: context.timelineOffset(),
         onPresentationScale: (nextZoom) => context.syncPresentationScale(context.viewport, context.rendererHost, context.rulerViewport, nextZoom, context.getPresentationScale()),
+        onSyncFrozenColumns: context.syncFrozenColumns,
         onZoom: (nextZoom) => {
           zoomRef.current = nextZoom;
           context.viewMetrics.update({ zoom: nextZoom, viewportWidth: context.viewport.clientWidth });
