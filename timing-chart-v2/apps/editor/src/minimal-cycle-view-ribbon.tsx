@@ -261,6 +261,16 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // Arrange handler stays undefined -> ArrangeGroup renders disabled).
   const arrangeTargetIds: readonly AnnotationId[] = selectedAnnotationIds.size > 0 ? [...selectedAnnotationIds] : selectedAnnotation ? [selectedAnnotation.id] : [];
   const arrangeGroup = arrangeTargetIds.length > 0 ? (document.annotationGroups ?? []).find((group) => group.annotationIds.includes(arrangeTargetIds[0]!)) : undefined;
+  // #332 item D: these reasons must distinguish "nothing selected" from an
+  // implemented control that is merely unavailable for the current
+  // selection -- never fall back to a generic "Not yet implemented" for a
+  // control that has real, wired-up behavior.
+  const arrangeReasons = arrangeTargetIds.length === 0 ? { unavailableReason: "Select at least one annotation" } : {
+    groupUnavailableReason: arrangeGroup ? "Selected annotations are already grouped" : arrangeTargetIds.length < 2 ? "Select at least 2 annotations" : undefined,
+    ungroupUnavailableReason: arrangeGroup ? undefined : "Selected annotations are not grouped",
+    alignUnavailableReason: arrangeTargetIds.length < 2 ? "Select at least 2 annotations" : undefined,
+    matchSpanUnavailableReason: arrangeTargetIds.length < 2 ? "Select at least 2 annotations" : "Select at least 2 compatible range annotations",
+  };
   const arrangeHandlers = arrangeTargetIds.length === 0 ? {} : {
     onBringToFront: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_bring_front"), type: "annotation.bringToFront" as const, annotationId }))),
     onSendToBack: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_send_back"), type: "annotation.sendToBack" as const, annotationId }))),
@@ -381,7 +391,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       </div>
       <div className="ribbon-major-group" data-major-group="Arrange" aria-label="Arrange commands">
         <DsRibbonGroup ariaLabel="Arrange" className="annotation-arrange-group" label="Arrange">
-          <ArrangeGroup {...arrangeHandlers} />
+          <ArrangeGroup {...arrangeHandlers} {...arrangeReasons} />
         </DsRibbonGroup>
       </div>
     </>}

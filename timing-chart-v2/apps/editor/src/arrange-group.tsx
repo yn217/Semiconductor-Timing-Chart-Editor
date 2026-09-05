@@ -12,7 +12,7 @@ import { computeViewportSafePosition, currentViewportBounds } from "./viewport-s
  * explaining it isn't wired up yet, so this can ship as a GUI shell ahead
  * of the schema/planner/renderer work (z-order, grouping, rotation) that a
  * working version needs. */
-export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup, onRotateRight, onRotateLeft, onAlign, onLock, onUnlock, onMatchSpan }: {
+export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup, onRotateRight, onRotateLeft, onAlign, onLock, onUnlock, onMatchSpan, unavailableReason, groupUnavailableReason, ungroupUnavailableReason, alignUnavailableReason, matchSpanUnavailableReason }: {
   readonly onBringToFront?: () => void;
   readonly onSendToBack?: () => void;
   readonly onGroup?: () => void;
@@ -23,6 +23,19 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
   readonly onLock?: () => void;
   readonly onUnlock?: () => void;
   readonly onMatchSpan?: () => void;
+  /** #332 item D: every disabled Arrange control here IS implemented --
+   * it's only unavailable because the current selection doesn't satisfy
+   * its precondition. `unavailableReason` covers the common "nothing
+   * selected" case shared by every button; the per-control reasons below
+   * override it once something is selected but a specific precondition
+   * (selection count, grouped state, compatible types) still isn't met.
+   * Neither this component nor its caller should ever fall back to a
+   * generic "Not yet implemented" for a control that has real behavior. */
+  readonly unavailableReason?: string;
+  readonly groupUnavailableReason?: string | undefined;
+  readonly ungroupUnavailableReason?: string | undefined;
+  readonly alignUnavailableReason?: string | undefined;
+  readonly matchSpanUnavailableReason?: string | undefined;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -73,26 +86,26 @@ export function ArrangeGroup({ onBringToFront, onSendToBack, onGroup, onUngroup,
       window.removeEventListener("scroll", position, true);
     };
   }, [open]);
-  const notWired = "Not yet implemented";
+  const fallback = unavailableReason ?? "Select at least one annotation";
   return <div className="arrange-group" ref={rootRef}>
     <div className="arrange-rows">
-      <button type="button" className="font-style-button" title={onBringToFront ? "Bring to front" : notWired} disabled={!onBringToFront} onClick={onBringToFront}><RibbonIcon name="i-bring-front" /><span>Front</span></button>
-      <button type="button" className="font-style-button" title={onSendToBack ? "Send to back" : notWired} disabled={!onSendToBack} onClick={onSendToBack}><RibbonIcon name="i-send-back" /><span>Back</span></button>
-      <button type="button" className="font-style-button" title={onGroup ? "Group" : notWired} disabled={!onGroup} onClick={onGroup}><RibbonIcon name="i-group" /><span>Group</span></button>
+      <button type="button" className="font-style-button" title={onBringToFront ? "Bring to front" : fallback} disabled={!onBringToFront} onClick={onBringToFront}><RibbonIcon name="i-bring-front" /><span>Front</span></button>
+      <button type="button" className="font-style-button" title={onSendToBack ? "Send to back" : fallback} disabled={!onSendToBack} onClick={onSendToBack}><RibbonIcon name="i-send-back" /><span>Back</span></button>
+      <button type="button" className="font-style-button" title={onGroup ? "Group" : groupUnavailableReason ?? fallback} disabled={!onGroup} onClick={onGroup}><RibbonIcon name="i-group" /><span>Group</span></button>
     </div>
     <div className="arrange-dropdown">
       <button ref={triggerRef} type="button" className="arrange-dropdown-trigger" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen((value) => !value)}><RibbonIcon name="i-arrange" /><span>Arrange</span><RibbonIcon name="i-chevron-down" /></button>
       {open && createPortal(<div ref={menuRef} className="arrange-menu" role="menu" aria-label="Arrange" style={{ position: "fixed", visibility: "hidden" }}>
-        <button type="button" role="menuitem" disabled={!onUngroup} title={onUngroup ? undefined : notWired} onClick={() => { onUngroup?.(); setOpen(false); }}><RibbonIcon name="i-ungroup" /><span>Ungroup</span></button>
+        <button type="button" role="menuitem" disabled={!onUngroup} title={onUngroup ? undefined : ungroupUnavailableReason ?? fallback} onClick={() => { onUngroup?.(); setOpen(false); }}><RibbonIcon name="i-ungroup" /><span>Ungroup</span></button>
         <div className="arrange-menu-sep" />
-        <button type="button" role="menuitem" disabled={!onRotateRight} title={onRotateRight ? undefined : notWired} onClick={() => { onRotateRight?.(); setOpen(false); }}><RibbonIcon name="i-rotate-right" /><span>Rotate right 90°</span></button>
-        <button type="button" role="menuitem" disabled={!onRotateLeft} title={onRotateLeft ? undefined : notWired} onClick={() => { onRotateLeft?.(); setOpen(false); }}><RibbonIcon name="i-rotate-left" /><span>Rotate left 90°</span></button>
+        <button type="button" role="menuitem" disabled={!onRotateRight} title={onRotateRight ? undefined : fallback} onClick={() => { onRotateRight?.(); setOpen(false); }}><RibbonIcon name="i-rotate-right" /><span>Rotate right 90°</span></button>
+        <button type="button" role="menuitem" disabled={!onRotateLeft} title={onRotateLeft ? undefined : fallback} onClick={() => { onRotateLeft?.(); setOpen(false); }}><RibbonIcon name="i-rotate-left" /><span>Rotate left 90°</span></button>
         <div className="arrange-menu-sep" />
-        <button type="button" role="menuitem" disabled={!onAlign} title={onAlign ? "Align selected annotations to the same row" : notWired} onClick={() => { onAlign?.(); setOpen(false); }}><RibbonIcon name="i-align-row" /><span>Align</span></button>
-        <button type="button" role="menuitem" disabled={!onMatchSpan} title={onMatchSpan ? "Match the first selected annotation's cycle span" : notWired} onClick={() => { onMatchSpan?.(); setOpen(false); }}><RibbonIcon name="i-range-arrow" /><span>Same width</span></button>
+        <button type="button" role="menuitem" disabled={!onAlign} title={onAlign ? "Align selected annotations to the same row" : alignUnavailableReason ?? fallback} onClick={() => { onAlign?.(); setOpen(false); }}><RibbonIcon name="i-align-row" /><span>Align</span></button>
+        <button type="button" role="menuitem" disabled={!onMatchSpan} title={onMatchSpan ? "Match the first selected annotation's cycle span" : matchSpanUnavailableReason ?? fallback} onClick={() => { onMatchSpan?.(); setOpen(false); }}><RibbonIcon name="i-range-arrow" /><span>Same width</span></button>
         <div className="arrange-menu-sep" />
-        <button type="button" role="menuitem" disabled={!onLock} title={onLock ? "Lock" : notWired} onClick={() => { onLock?.(); setOpen(false); }}><RibbonIcon name="i-lock" /><span>Lock</span></button>
-        <button type="button" role="menuitem" disabled={!onUnlock} title={onUnlock ? "Unlock" : notWired} onClick={() => { onUnlock?.(); setOpen(false); }}><RibbonIcon name="i-unlock" /><span>Unlock</span></button>
+        <button type="button" role="menuitem" disabled={!onLock} title={onLock ? "Lock" : fallback} onClick={() => { onLock?.(); setOpen(false); }}><RibbonIcon name="i-lock" /><span>Lock</span></button>
+        <button type="button" role="menuitem" disabled={!onUnlock} title={onUnlock ? "Unlock" : fallback} onClick={() => { onUnlock?.(); setOpen(false); }}><RibbonIcon name="i-unlock" /><span>Unlock</span></button>
       </div>, window.document.body)}
     </div>
   </div>;
