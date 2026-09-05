@@ -1126,7 +1126,6 @@ export function MinimalCycleView() {
       renderer,
       timelineGeometry,
       documentEpoch,
-      getZoom: () => timelineNavigation.getZoom(),
       getDocument: () => session.getSnapshot().document,
       getProjection: () => projection,
       isSnapEnabled: () => snapEnabledRef.current,
