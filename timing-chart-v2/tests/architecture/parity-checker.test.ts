@@ -113,7 +113,36 @@ it("requires Save/Open evidence before an independent contract can be COMPLETE",
     const result = error as { stdout?: string; stderr?: string };
     output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   }
-  expect(output).toContain("GUI-SPLIT-VIEW COMPLETE requires implementationEvidence, unit, e2e, visual, saveOpen, export evidence");
+  expect(output).toContain("GUI-SPLIT-VIEW COMPLETE requires resolved implementationEvidence, unit, e2e, visual, saveOpen, export evidence");
+});
+
+it("rejects unresolved partial evidence for a COMPLETE independent contract", () => {
+  const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-unresolved-complete-"));
+  const matrix = path.join(directory, "matrix.json");
+  const manifest = path.join(directory, "manifest.json");
+  const status = path.join(directory, "status.json");
+  cpSync(matrixSource, matrix);
+  cpSync(manifestSource, manifest);
+  cpSync(path.join(workspace, "docs", "v1-v2-contract-status.json"), status);
+  const matrixModel = JSON.parse(readFileSync(matrix, "utf8")) as { independentContracts: Array<{ id: string; visual?: string }> };
+  const splitContract = matrixModel.independentContracts.find((contract) => contract.id === "GUI-SPLIT-VIEW");
+  if (!splitContract) throw new Error("GUI-SPLIT-VIEW fixture is missing");
+  splitContract.visual = "partial: V1 visual reference comparison remains open";
+  writeFileSync(matrix, JSON.stringify(matrixModel));
+  const statusModel = JSON.parse(readFileSync(status, "utf8")) as { contracts: Array<{ featureKey: string; implementationStatus: string }> };
+  const split = statusModel.contracts.find((contract) => contract.featureKey === "GUI-SPLIT-VIEW");
+  if (!split) throw new Error("GUI-SPLIT-VIEW status row is missing");
+  split.implementationStatus = "COMPLETE";
+  writeFileSync(status, JSON.stringify(statusModel));
+
+  let output = "";
+  try {
+    execFileSync(process.execPath, [checker, "--matrix", matrix, "--manifest", manifest, "--status", status], { cwd: workspace, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+  } catch (error) {
+    const result = error as { stdout?: string; stderr?: string };
+    output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
+  }
+  expect(output).toContain("GUI-SPLIT-VIEW COMPLETE requires resolved implementationEvidence, unit, e2e, visual, saveOpen, export evidence");
 });
 
 it("requires every independent parity contract to declare Save/Open evidence", () => {
