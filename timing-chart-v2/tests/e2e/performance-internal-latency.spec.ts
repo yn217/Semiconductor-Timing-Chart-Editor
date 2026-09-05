@@ -7,6 +7,8 @@ test("measures GUI latency inside Chromium rather than through Playwright RPC ti
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => resolve())));
 
   await page.evaluate(() => {
     type SampleStore = Record<string, number[]>;
