@@ -245,14 +245,70 @@ legacy source and immutable Golden Sample mapping. Their status is deliberately
 open until the child Issue's complete production and acceptance evidence is
 available.
 
-| Contract | V2 owner | Parent | V1 source | Golden Sample | Current state |
-|---|---|---|---|---:|---|
-| `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | partial production route/marker evidence; full lifecycle/export closure open |
-| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | standalone create/edit/list/delete lifecycle landed; complete coexistence, export and closure evidence remains open |
-| `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | type-specific presentation exists; direct lifecycle/persistence/export matrix open |
-| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | shared style/offset paths exist; full capability matrix and lock/z-order/multiline closure open |
+| Contract | V2 owner | Parent | V1 source | Golden Sample | Historical V1 visual inputs | Current state |
+|---|---|---|---|---:|---|---|
+| `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | `timing-chart-v1/artifacts/issue10/dependency-arrows.png`; `timing-chart-v1/artifacts/issue68/issue68-1672x941.png` | partial production route/marker evidence; full lifecycle/export closure open |
+| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | `timing-chart-v1/artifacts/issue111/issue111-1672x941.png` | standalone create/edit/list/delete lifecycle landed; complete coexistence, export and closure evidence remains open |
+| `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | type-specific presentation exists; direct lifecycle/persistence/export matrix open |
+| `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | shared style/offset paths exist; full capability matrix and lock/z-order/multiline closure open |
 
 The parity checker requires these four child rows, verifies their parent/V1
 source/Golden mappings, and keeps their status rows synchronized with
 `v1-v2-contract-status.json`. This prevents a later broad row or a neighboring
 annotation type from silently satisfying a newly identified contract.
+
+## Historical V1 visual artifact boundary
+
+The repository also contains Git-managed historical V1 issue artifacts under
+`timing-chart-v1/artifacts/`. A read-only inventory of the current parity
+source universe found artifacts for 116 of 155 legacy Issue numbers. These
+artifacts include issue-level acceptance JSON, screenshots, references and
+diffs for the V1 workflows, and remain immutable.
+
+They are historical V1 evidence, not an automatically approved one-to-one
+pixel baseline for the V2 Feature Coverage samples 11–20. A V1 artifact may be
+cited as a legacy reference input only after its fixture/state is explicitly
+mapped to the corresponding V2 production route. Until that mapping and the
+required V2 visual/export review are recorded, the relevant parity row remains
+`ACCEPTANCE_ONLY` or `PARTIAL`; the existence of a V1 image must not be treated
+as proof of V2 closure, and its absence must not be treated as a production
+implementation gap.
+
+### Replacement Pack and the current V2 executable reference
+
+The legacy V1 workspace also has a `references/gui-replacement-pack/` with
+locked overall and Bottom/Left-panel captures plus its production HTML/CSS/SVG
+assets. Its V1 regression script compares that pack with V1's `gui-mockup` and
+`ui-reference-v2` routes; it does not capture or exercise a V2 production DUT.
+The pack is not a tracked asset under the current V2 `references/` directory,
+so its existence cannot by itself provide a V2 Reference-vs-DUT result.
+
+For V2, the executable comparison input is the approved
+`references/v2-gui-reference-v8/` fixture and its production-browser tests.
+The explicit v8 overrides therefore take precedence where the older V1 pack
+differs. A V1-pack comparison can close a V2 parity row only after a mapped
+V2 fixture/state, route, and unchanged-reference diff are recorded; otherwise
+the row remains `ACCEPTANCE_ONLY` or `PARTIAL` pending the product decision or
+evidence that the row itself requires.
+
+#### Replacement Pack asset-by-asset mapping status
+
+The legacy pack's six PNGs have fixed dimensions, but those dimensions do not
+match the current V2 v8 shell targets. This is the concrete reason a direct
+image comparison is recorded as an audit observation rather than closure
+evidence.
+
+| Legacy V1 asset | Fixed size | V2 executable counterpart | Mapping status |
+|---|---:|---|---|
+| `00_overall_cycle_view.png` | 1672 × 941 | `gui-visual-acceptance.spec.ts` DUT at `/?visual-reference` | Same viewport, but V2 v8 targets a 265px left pane, 1110px center and 297px Inspector; V1 overall image is not a direct V2 baseline |
+| `01_left_panel_LOCKED.png` | 330 × 670 | V2 v8 Left Tree region in `gui-visual-acceptance.spec.ts` | V1 330px panel versus V2 v8 265px panel; route/state mapping and approved diff are required |
+| `02_bottom_signal_LOCKED.png` | 1039 × 272 | V2 v8 center Bottom Editor | V1 signal context crop and V2 bottom region use different bounds (V2 target 1110 × 240); not directly comparable |
+| `03_bottom_annotation_LOCKED.png` | 985 × 325 | V2 Annotation Bottom context tests | V1 annotation crop has no one-to-one V2 capture contract yet |
+| `04_bottom_problems_LOCKED.png` | 983 × 393 | V2 Problems Bottom context tests | V1 problems crop has no one-to-one V2 capture contract yet |
+| `05_bottom_json_LOCKED.png` | 983 × 440 | V2 JSON Bottom context tests | V1 JSON crop has no one-to-one V2 capture contract yet |
+
+The V2 v8 layout metrics and browser artifacts remain the authoritative
+executable evidence for the current V2 contract. The five panel rows stay
+open until each has a mapped V2 fixture/state and an unchanged-reference
+comparison, or an explicit product decision records why the v8 override is
+the accepted replacement.

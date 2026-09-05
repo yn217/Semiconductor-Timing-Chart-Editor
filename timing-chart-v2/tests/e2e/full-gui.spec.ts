@@ -250,7 +250,11 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   const properties = page.getByRole("dialog", { name: "Document Properties" });
   await properties.getByLabel("Document title").fill("Timing Review");
   await properties.getByLabel("Document subtitle").fill("Reviewed timing");
+  await properties.getByLabel("Document description").fill("A long description that remains document metadata independently of waveform width.");
+  await properties.getByLabel("Document notes").fill("Review note: preserve the reference edge.");
+  await properties.getByLabel("Document preconditions").fill("Clock is stable\nInput is ready");
   await properties.getByLabel("Document constraints").fill("Setup must hold\nClock must be stable");
+  await properties.getByLabel("Document exceptions").fill("Reset window\nOptional idle phase");
   await properties.getByLabel("Footer figure number").fill("Fig. 2");
   await properties.getByLabel("Footer revision").fill("R3");
   await properties.getByLabel("Footer text").fill("Internal review");
@@ -269,6 +273,18 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   await expect(page.locator(".app-titlebar h1")).toHaveText("Timing Review");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Properties", exact: true }).click();
+  const reopenedProperties = page.getByRole("dialog", { name: "Document Properties" });
+  await expect(reopenedProperties.getByLabel("Document subtitle")).toHaveValue("Reviewed timing");
+  await expect(reopenedProperties.getByLabel("Document description")).toHaveValue("A long description that remains document metadata independently of waveform width.");
+  await expect(reopenedProperties.getByLabel("Document notes")).toHaveValue("Review note: preserve the reference edge.");
+  await expect(reopenedProperties.getByLabel("Document preconditions")).toHaveValue("Clock is stable\nInput is ready");
+  await expect(reopenedProperties.getByLabel("Document constraints")).toHaveValue("Setup must hold\nClock must be stable");
+  await expect(reopenedProperties.getByLabel("Document exceptions")).toHaveValue("Reset window\nOptional idle phase");
+  await expect(reopenedProperties.getByLabel("Footer figure number")).toHaveValue("Fig. 2");
+  await expect(reopenedProperties.getByLabel("Footer revision")).toHaveValue("R3");
+  await expect(reopenedProperties.getByLabel("Footer text")).toHaveValue("Internal review");
+  await reopenedProperties.getByRole("button", { name: "Close properties" }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
   const exportDialog = page.getByRole("dialog", { name: "Export Timing Chart" });
   const pendingExport = page.waitForEvent("download");
@@ -277,6 +293,14 @@ test("edits Header and Footer metadata through Document Properties and reopens i
   const exportedText = await readFile((await exported.path())!, "utf8");
   expect(exportedText).toContain("Timing Review");
   expect(exportedText).toContain("Reviewed timing");
+  expect(exportedText).toContain("A long description that remains document metadata independently of waveform width.");
+  expect(exportedText).toContain("Review note: preserve the reference edge.");
+  expect(exportedText).toContain("Precondition: Clock is stable");
+  expect(exportedText).toContain("Precondition: Input is ready");
+  expect(exportedText).toContain("Constraint: Setup must hold");
+  expect(exportedText).toContain("Constraint: Clock must be stable");
+  expect(exportedText).toContain("Exception: Reset window");
+  expect(exportedText).toContain("Exception: Optional idle phase");
   expect(exportedText).toContain("Fig. 2 · R3 · Internal review");
 });
 
