@@ -455,6 +455,32 @@ test("allows all ordinary timeline transforms with the default uncontrolled peri
   }
 });
 
+test("preserves a timeline transform exactly through Save/Open", async ({ page }) => {
+  await openPeriodOneClockDocument(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await selectTimelineTransformRange(page);
+  await page.getByLabel("Timeline insert count").fill("2");
+  await page.getByRole("button", { name: "Insert before" }).click();
+  await expect(host).toHaveAttribute("data-canonical-revision", "1");
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await downloadPromise;
+  await page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Recent", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(host).toHaveAttribute("data-canonical-revision", "0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='26']")).toHaveCount(1);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  await expect(editor.getByLabel("Start 5")).toHaveValue("5");
+  await expect(editor.getByLabel("Start 9")).toHaveValue("9");
+});
+
 test("deletes a half-open range and preserves the active value at the join", async ({ page }) => {
   await openPeriodOneClockDocument(page);
   const host = page.getByTestId("cycle-surface");
