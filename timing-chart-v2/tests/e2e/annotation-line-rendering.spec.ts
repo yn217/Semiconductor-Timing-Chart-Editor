@@ -26,6 +26,12 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   expect(observed.get("diagonal")?.dash).toBe("7 4");
   expect(observed.get("curve")?.d).toContain(" Q ");
   expect((observed.get("orthogonal")?.d.match(/ L /g) ?? []).length).toBe(3);
+  // #375: Diagonal must have genuinely distinct path geometry from
+  // Straight -- a single 45-degree elbow (two " L " segments), not merely
+  // a dashed stroke on Straight's identical single-segment path. Distinct
+  // from Orthogonal's axis-aligned bend (3 " L " segments) too.
+  expect((observed.get("diagonal")?.d.match(/ L /g) ?? []).length).toBe(2);
+  expect(observed.get("diagonal")?.d).not.toBe(observed.get("straight")?.d);
 
   await editor.getByLabel("Annotation arrowhead").selectOption("bidirectional");
   await editor.getByTestId("apply-annotation-properties").click();
@@ -109,4 +115,42 @@ test("SVG export preserves a Dependency's route shape, arrow markers and label",
   expect(svgText).toContain(`data-annotation-id="${annotationId}"`);
   expect(svgText).toContain("Req to Ready");
   expect((svgText.match(/<marker/g) ?? []).length).toBeGreaterThanOrEqual(2);
+});
+
+// #375: Diagonal must export a genuinely distinct path (a 45-degree elbow,
+// two " L " segments), not Straight's identical single segment with only a
+// different stroke-dasharray -- matching the live-DOM renderer exactly.
+test("SVG export preserves Diagonal's distinct elbow geometry, not Straight's single segment", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("dependency");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+
+  const owner = host.locator("[data-role='annotation-owner'][data-annotation-type='dependency']").last();
+  const editor = page.getByTestId("annotation-editor");
+  await editor.getByLabel("Annotation line type").selectOption("diagonal");
+  await editor.getByTestId("apply-annotation-properties").click();
+  await expect(owner).toHaveAttribute("data-line-type", "diagonal");
+  const annotationId = await owner.getAttribute("data-annotation-id");
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Export", exact: true }).click();
+  const dialog = page.getByRole("dialog", { name: "Export Timing Chart" });
+  await dialog.getByLabel("Export format").selectOption("svg");
+  const download = page.waitForEvent("download");
+  await dialog.getByRole("button", { name: "Export SVG", exact: true }).click();
+  const path = await (await download).path();
+  expect(path).toBeTruthy();
+  const fs = await import("node:fs");
+  const svgText = fs.readFileSync(path!, "utf-8");
+
+  const groupMatch = svgText.match(new RegExp(`<g data-annotation-id="${annotationId}"[\\s\\S]*?</g>`));
+  expect(groupMatch).not.toBeNull();
+  const pathMatch = groupMatch![0].match(/d="(M [^"]+)"/);
+  expect(pathMatch).not.toBeNull();
+  expect((pathMatch![1].match(/ L /g) ?? []).length).toBe(2);
+  expect(groupMatch![0]).toContain(`stroke-dasharray="7 4"`);
 });
