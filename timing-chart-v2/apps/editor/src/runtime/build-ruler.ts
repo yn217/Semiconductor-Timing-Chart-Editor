@@ -4,7 +4,7 @@ import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0): number {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -83,7 +83,23 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // available column, and never clip a genuinely wider timeline.
   const targetWidth = Math.max(Math.ceil((finalX + 24) * scale), Math.ceil(minimumWidth));
   element.style.width = `${targetWidth}px`;
-  const widthOwner = element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
+  // #366: `element` (the ruler content div) is not guaranteed to already be
+  // attached under `[data-testid='cycle-viewport']` at every call time (its
+  // ref can resolve before React has finished committing the surrounding
+  // tree, notably on the very first paint of the `?visual-reference` route)
+  // -- `.closest()` silently returning nothing there fell back to
+  // `element.parentElement` (`.cycle-ruler`, not `.cycle-viewport`), which is
+  // NOT an ancestor of the separate `[data-role="wave-owner"]` DOM subtree
+  // that also reads `var(--wave-width)`. That left the wave-owner's width
+  // permanently on `.editor-shell`'s static CSS fallback (`calc(100vw - ...)`,
+  // which is only an approximation and never removes the container's own
+  // vertical-scrollbar allowance) even though the ruler's own inline
+  // `element.style.width` above was already correct. Callers that already
+  // hold the real viewport element (see `rebuildRulerPresentation`) now pass
+  // it explicitly instead of relying on DOM-tree lookup at an uncertain
+  // moment; `.closest()` remains only as a defensive fallback for any other
+  // caller.
+  const widthOwner = viewportElement ?? element.closest<HTMLElement>("[data-testid='cycle-viewport']") ?? element.parentElement;
   widthOwner?.style.setProperty("--wave-width", `${targetWidth}px`);
   return scale;
 }
