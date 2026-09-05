@@ -31,10 +31,15 @@ export class DefaultProjectionService implements ProjectionService {
     const collapsedGroupKey = collapsedGroupIds.join("\u0000");
     const invalidatesLayout = request.changeSet.fullDocumentReplace || request.changeSet.rowOrder !== undefined || request.changeSet.rowPresentation !== undefined || request.changeSet.geometryScreenY !== undefined || request.changeSet.addedSignals !== undefined || request.changeSet.removedSignals !== undefined || request.changeSet.addedGroups !== undefined || request.changeSet.removedGroups !== undefined;
     if (!this.#layout || !this.#navigationLayout || invalidatesLayout || this.#collapsedGroupKey !== collapsedGroupKey) {
-      // Keep hidden timing rows in the navigation layout so Left Tree and the
-      // Frozen column can recover them; visibleRows remains the source for
-      // timing/waveform projection and excludes hidden rows.
-      this.#layout = calculateRowLayout(document, new Set(), { includeHidden: true });
+      // Keep hidden rows present (by rowId) so a previously-mounted, now-
+      // hidden row can still be looked up during retention, but their Y
+      // reserves no space here (reserveHiddenSpace: false) -- this
+      // instance feeds Frozen/Timing (rowLayout/groupHeaders/visibleRows
+      // below), which must never leave a dead gap where a hidden signal
+      // used to render. The separate #navigationLayout below (Left Tree)
+      // keeps the default reserveHiddenSpace so every row -- hidden ones
+      // included -- gets its own real slot there.
+      this.#layout = calculateRowLayout(document, new Set(), { includeHidden: true, reserveHiddenSpace: false });
       this.#navigationLayout = calculateRowLayout(document, new Set(collapsedGroupIds));
       this.#collapsedGroupKey = collapsedGroupKey;
       this.#rowLayoutBuilds += 1;
