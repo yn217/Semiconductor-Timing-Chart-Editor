@@ -393,6 +393,7 @@ export function MinimalCycleView() {
   }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
 
   useEffect(() => {
+    let active = true;
     const rendererHost = host.current;
     const viewportElement = viewport.current;
     const rulerElement = ruler.current;
@@ -429,7 +430,7 @@ export function MinimalCycleView() {
       geometryRegistry,
       markOpenPhase,
       onReferenceGeometryReady: () => {
-        if (!rulerInitialized) {
+        if (active && !rulerInitialized) {
           timelineRuntimeRef.current?.refreshRuler();
           timelineRuntimeRef.current?.refreshGrid();
         }
@@ -582,14 +583,14 @@ export function MinimalCycleView() {
     publishState();
 
     scheduleInitialTimelineRefresh(renderer, rendererHost, {
-      ruler: () => timelineRuntime.refreshRuler(),
-      range: () => timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end),
-      playhead: () => timelineRuntime.refreshPlayhead(),
-      grid: () => timelineRuntime.refreshGrid(),
-      zoom: () => timelineRuntime.setZoom(timelineNavigation.getZoom()),
-      overlays: () => timelineRuntime.refreshOverlays(),
-      collectErrors: () => collectWaveErrors(),
-      publish: publishState,
+      ruler: () => { if (active) timelineRuntime.refreshRuler(); },
+      range: () => { if (active) timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end); },
+      playhead: () => { if (active) timelineRuntime.refreshPlayhead(); },
+      grid: () => { if (active) timelineRuntime.refreshGrid(); },
+      zoom: () => { if (active) timelineRuntime.setZoom(timelineNavigation.getZoom()); },
+      overlays: () => { if (active) timelineRuntime.refreshOverlays(); },
+      collectErrors: () => { if (active) collectWaveErrors(); },
+      publish: () => { if (active) publishState(); },
     });
 
     const upsertDiagnostic = (predicate: (item: DocumentProblem) => boolean, next: DocumentProblem | undefined) => {
@@ -626,7 +627,7 @@ export function MinimalCycleView() {
       });
       publishState();
       void renderer.whenIdle().then(() => {
-        if (!rendererHost.isConnected) return;
+        if (!active || !rendererHost.isConnected) return;
         if (refreshRuler && (!changed.fullDocumentReplace || !rulerInitialized)) {
           timelineRuntime.refreshRuler();
           timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
@@ -683,11 +684,11 @@ export function MinimalCycleView() {
       projection = projectionCoordinator.project({ snapshot: session.getSnapshot(), changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: [...collapsedGroupIdsRef.current] });
       renderer.update(projection);
       markOpenPhase("canonical-replaced");
-      requestAnimationFrame(() => markOpenPhase("row-shell-painted"));
+      requestAnimationFrame(() => { if (active) markOpenPhase("row-shell-painted"); });
       rulerElement.replaceChildren();
       publishState();
       void renderer.whenIdle().then(() => {
-        if (!rendererHost.isConnected) return;
+        if (!active || !rendererHost.isConnected) return;
         timelineRuntime.refreshRuler();
         timelineRuntime.refreshPlayhead();
         timelineRuntime.refreshGrid();
@@ -1134,6 +1135,7 @@ export function MinimalCycleView() {
       { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
     ]);
     return () => {
+      active = false;
       applyCollapsedGroupsRef.current = () => undefined;
       refreshPlayhead.current = () => undefined;
       detachTimelineNavigation();
@@ -1264,7 +1266,7 @@ export function MinimalCycleView() {
       if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
       commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
     }}
-    onClockPreview={(draft) => { if (bottomSignal?.type === "clock") refreshClockPreview(host.current!, bottomSignal, draft, snapshot.document.timeline.cycleCount); }}
+    onClockPreview={(draft) => { const currentHost = host.current; if (currentHost && bottomSignal?.type === "clock") refreshClockPreview(currentHost, bottomSignal, draft, snapshot.document.timeline.cycleCount); }}
   />;
   const annotationEditor = bottomAnnotation ? <AnnotationEditor
     key={`${bottomAnnotation.id}:${snapshot.revision}:${bottomResetToken}`}
