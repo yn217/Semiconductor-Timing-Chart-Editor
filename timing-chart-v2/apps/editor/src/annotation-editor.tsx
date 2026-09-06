@@ -4,7 +4,7 @@ import type { HistoryState } from "@timing-chart-v2/history";
 import { DEFAULT_MEASUREMENT_LAYOUT, MEASUREMENT_PROFILES, anchorTransitionFraction, measurementProfilePair, type Annotation, type AnnotationId, type AnnotationType, type CanonicalDocument, type JsonObject, type MeasurementLayout, type MeasurementProfile, type TransitionAnchorKind } from "@timing-chart-v2/schema";
 import { nextCommandId } from "./command-id.js";
 import { downloadText } from "./download-text.js";
-import { AnnotationList } from "./annotation-list.js";
+import { AnnotationList, annotationAnchorText } from "./annotation-list.js";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { StrokeFillToolbar } from "./stroke-fill-toolbar.js";
 import { annotationCapabilityDisabledReason } from "./annotation-capability-matrix.js";
@@ -64,18 +64,54 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const customMeasurementPair = { start: Number(measurementStart) / 100, end: Number(measurementEnd) / 100 };
   const measurementPair = measurementProfile === "custom" ? customMeasurementPair : standardMeasurementPair ?? { start: 0, end: 1 };
   const measurementDraftValid = measurementProfile !== "custom" || ([measurementPair.start, measurementPair.end].every((value) => Number.isFinite(value) && value >= 0 && value <= 1) && measurementPair.start <= measurementPair.end);
+  // Visual Reference pass (#426, #418/#421/#423/#424): Apply Annotation
+  // must follow the same Draft/Apply contract every other Bottom tab's
+  // primary Apply button already does (Signal Inspector's Apply Signal
+  // Properties, the Signal tab's per-row Save) -- disabled while the Draft
+  // is byte-for-byte identical to the committed Annotation, with a scoped
+  // "● Unapplied changes" indicator, so a no-op submit can't manufacture an
+  // empty History entry and the panel never implies there's something to
+  // commit when there isn't. Only compares the fields THIS form actually
+  // exposes a draft for (measurement has its own separate Apply below,
+  // matching its own already-existing separate command).
+  const isOpacityType = (["timingRegion", "ghostTrace"] as const).includes(annotation.type as "timingRegion");
+  const defaultOpacity = annotation.type === "ghostTrace" ? 0.55 : 0.16;
+  const hasChanges = label !== annotation.label
+    || color !== (annotation.color ?? "#d04a36")
+    || visible !== annotation.visible
+    || (lineControlsEnabled && (lineType !== (annotation.lineType ?? "straight") || arrowhead !== (annotation.arrowhead ?? "end")))
+    || (isOpacityType && opacity !== (annotation.opacity ?? defaultOpacity))
+    || (annotation.type === "ghostTrace" && traceOffsetCycles !== (annotation.traceOffsetCycles ?? 0));
+  const applyAnnotationProperties = () => onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(isOpacityType ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
+  // Quick Presets (Section 6): draft-only field shortcuts, never a second
+  // Canonical owner -- clicking one only calls the same setLabel/setColor/
+  // setLineType/setArrowhead/setOpacity draft setters the fields above
+  // already use, so Apply Annotation (the one existing command dispatch)
+  // is still the only thing that ever commits. Each preset is scoped to
+  // the AnnotationType it actually makes sense for (truthfully disabled,
+  // matching the #378 capability-matrix convention, rather than silently
+  // renamed to fit whatever type happens to be selected).
+  const presets: readonly { readonly label: string; readonly type: AnnotationType; readonly apply: () => void }[] = [
+    { label: "Arrow (Duration)", type: "arrow", apply: () => { setLabel("Duration"); setLineType("straight"); setArrowhead("bidirectional"); } },
+    { label: "Label (Milestone)", type: "text", apply: () => setLabel("Milestone") },
+    { label: "Region (Highlight)", type: "highlight", apply: () => { setLabel("Highlight"); setOpacity(0.16); } },
+    { label: "Vertical Line (Trigger)", type: "verticalLine", apply: () => setLabel("Trigger") },
+    { label: "Text (Note)", type: "text", apply: () => setLabel("Note") },
+  ];
   return <section className="signal-editor annotation-editor" aria-label="Annotation Editor" data-testid="annotation-editor" data-bottom-target-id={annotation.id} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <span className="editor-tab">Signal</span><span className="editor-tab active">Annotation</span>
       <span className="editor-selection">{annotation.label} · {annotation.type}</span>
-      <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
-      <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
-      <button type="button" onClick={onDelete} data-testid="delete-annotation">Delete</button>
+      <span className="editor-tabbar-secondary">
+        <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
+        <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
+      </span>
+      <button type="button" className="danger" onClick={onDelete} data-testid="delete-annotation">Delete</button>
     </div>
     <div className="annotation-context-toolbar" role="toolbar" aria-label="Annotation operations" data-testid="annotation-context-toolbar">
       <button type="button" aria-label="Create context annotation" onClick={() => onCreate("text")}>＋ Add Annotation</button>
       <button type="button" onClick={() => onDuplicate(annotation)}>Duplicate</button>
-      <button type="button" onClick={onDelete}>Delete</button>
+      <button type="button" className="danger" onClick={onDelete}>Delete</button>
       <button type="button" onClick={() => { setPreviewRevision((value) => value + 1); applyPreview(); }}>⟳ Preview Update</button>
       <button type="button" onClick={() => downloadText(JSON.stringify(annotations, null, 2), "annotations.json")}>Export</button>
       <button type="button" onClick={() => fileInput.current?.click()}>Import</button>
@@ -83,40 +119,73 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
       <output data-testid="annotation-preview-status">{previewRevision > 0 ? `Previewing draft (updated ${previewRevision}) · canonical data unchanged` : "Preview ready"}</output>
       <output data-testid="annotation-import-status">{importStatus}</output>
     </div>
-    <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} onCommand={onCommand} />
-    <FontStyleToolbar idPrefix="annotation-font" style={annotation.style} onChange={applyFontStyle} />
-    <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={annotation.style} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
     {problem && <div className="editor-problem" role="alert">{problem}</div>}
-    <form className="annotation-properties" onSubmit={(event) => {
-      event.preventDefault();
-      // Spread the shared preserve-everything base FIRST, then override only
-      // the fields this form actually exposes a draft for -- so submitting
-      // (e.g. just to rename) never drops a currently-saved lineType/
-      // arrowhead/opacity/sourceSignalId/traceOffsetCycles/style that this
-      // particular annotation type doesn't happen to show an editor for.
-      onCommand({ id: nextCommandId("annotation_style"), type: "annotation.updateProperties", annotationId: annotation.id, ...annotationPropertiesBase(annotation), label, visible, color, ...(lineControlsEnabled ? { lineType, arrowhead } : {}), ...(["timingRegion", "ghostTrace"].includes(annotation.type) ? { opacity } : {}), ...(annotation.type === "ghostTrace" ? { sourceSignalId: annotation.sourceSignalId, traceOffsetCycles } : {}) });
-    }}>
-      {/* #377: Label is a plain textarea (not a single-line input) so
-          Callout/any Annotation can hold real multi-line text -- the
-          renderer (packages/renderer/src/stable-surface.ts) and export
-          (packages/export/src/index.ts) both split on "\n" into separate
-          visual lines to match. */}
-      <label>Label<textarea aria-label="Annotation label" rows={label.includes("\n") ? Math.min(6, label.split("\n").length + 1) : 2} value={label} onChange={(event) => setLabel(event.target.value)} /></label>
-      <label>Color<input aria-label="Annotation color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label>
-      <label className="check-label"><input aria-label="Annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Visible</label>
-      {(["timingRegion", "ghostTrace"] as const).includes(annotation.type as "timingRegion") && <label>Opacity<input aria-label="Annotation opacity" type="number" min="0" max="1" step="0.05" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} /></label>}
-      {annotation.type === "ghostTrace" && <><div className="property-row"><span>Source Signal</span><b data-testid="ghost-source-signal">{annotation.sourceSignalId ?? "Missing"}</b></div><label>Cycle Offset<input aria-label="Ghost Trace cycle offset" type="number" step="1" value={traceOffsetCycles} onChange={(event) => setTraceOffsetCycles(Number(event.target.value))} /></label></>}
-      {annotation.type === "measurement" && <section className="annotation-measurement-editor" aria-label="Measurement semantics"><strong>Transition measurement</strong><label>Profile<select aria-label="Measurement profile" value={measurementProfile} onChange={(event) => setMeasurementProfile(event.target.value as MeasurementProfile)}>{MEASUREMENT_PROFILES.map((profile) => <option key={profile} value={profile}>{profile === "cycle" ? "Cycle anchors" : profile === "custom" ? "Custom" : profile}</option>)}</select></label>{measurementProfile !== "cycle" && <label>Meaning<select aria-label="Measurement anchor kind" value={measurementKind} onChange={(event) => setMeasurementKind(event.target.value as TransitionAnchorKind)}><option value="threshold">Transition threshold</option><option value="ratio">Transition ratio</option></select></label>}{measurementProfile === "custom" && <><label>Start %<input aria-label="Custom measurement start" type="number" min="0" max="100" step="1" value={measurementStart} onChange={(event) => setMeasurementStart(event.target.value)} /></label><label>End %<input aria-label="Custom measurement end" type="number" min="0" max="100" step="1" value={measurementEnd} onChange={(event) => setMeasurementEnd(event.target.value)} /></label></>}<label>Start marker<select aria-label="Measurement start marker" value={measurementLayout.startMarker} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, startMarker: event.target.value as MeasurementLayout["startMarker"] }))}><option value="none">None</option><option value="bar">Bar</option><option value="arrow">Arrow</option></select></label><label>End marker<select aria-label="Measurement end marker" value={measurementLayout.endMarker} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, endMarker: event.target.value as MeasurementLayout["endMarker"] }))}><option value="none">None</option><option value="bar">Bar</option><option value="arrow">Arrow</option></select></label><label>Arrow layout<select aria-label="Measurement arrow layout" value={measurementLayout.arrowLayout} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, arrowLayout: event.target.value as MeasurementLayout["arrowLayout"] }))}><option value="auto">Auto</option><option value="inward">Inward</option><option value="outward">Outward</option></select></label><label>Extensions<select aria-label="Measurement extension lines" value={measurementLayout.extensionLines} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, extensionLines: event.target.value as MeasurementLayout["extensionLines"] }))}><option value="both">Both</option><option value="start">Start</option><option value="end">End</option><option value="none">None</option></select></label><label>Lane<input aria-label="Measurement lane" type="number" min="0" step="1" value={measurementLayout.lane ?? ""} onChange={(event) => setMeasurementLayout((layout) => { if (event.target.value === "") { const { lane: _lane, ...withoutLane } = layout; return withoutLane; } return { ...layout, lane: Number(event.target.value) }; })} /></label><button type="button" data-testid="apply-measurement-semantics" disabled={!measurementDraftValid} onClick={() => onCommand({ id: nextCommandId("annotation_measurement"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: measurementProfile, anchorKind: measurementKind, start: measurementPair.start, end: measurementPair.end, layout: measurementLayout })}>Apply measurement</button></section>}
-      {lineControlsEnabled && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}
-      <button type="submit" data-testid="apply-annotation-properties">Apply</button>
-      <button type="button" onClick={() => onCommand({ id: nextCommandId("annotation_reset_offsets"), type: "annotation.resetOffsets", annotationId: annotation.id })}>Reset offsets</button>
-    </form>
-    <form className="annotation-properties" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("annotation_label_offset"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: labelX, y: labelY } }); }}>
-      <strong>Label offset</strong>
-      <label>X<input aria-label="Annotation label X" type="number" value={labelX} onChange={(event) => setLabelX(Number(event.target.value))} /></label>
-      <label>Y<input aria-label="Annotation label Y" type="number" value={labelY} onChange={(event) => setLabelY(Number(event.target.value))} /></label>
-      <button type="submit">Move label</button>
-      <span className="annotation-hint">Arrow keys nudge 1 px; Shift+Arrow nudges 10 px. Drag endpoints to snap.</span>
-    </form>
+    {/* Visual Reference pass: List / Edit / Quick Presets side by side --
+        selecting a List row edits that same stable Annotation ID here (never
+        an array index or the display label), matching the Signal tab's own
+        3-panel convention (Add/Edit Transition · Value Helper · Generate
+        Waveform) rather than inventing a new layout shape. */}
+    <div className="annotation-panels">
+      <section className="annotation-list-panel" aria-label="Annotation List">
+        <h2>Annotations <span>({annotations.length})</span></h2>
+        <AnnotationList annotations={annotations} selectedId={annotation.id} onSelect={onSelect} onCommand={onCommand} />
+      </section>
+      <section className="annotation-edit-panel" aria-label="Edit Annotation">
+        <h2>Edit Annotation <span>({annotation.type})</span></h2>
+        <FontStyleToolbar idPrefix="annotation-font" style={annotation.style} onChange={applyFontStyle} />
+        <StrokeFillToolbar idPrefix="annotation-stroke-fill" style={annotation.style} onChange={applyFontStyle} strokeDisabled={!!annotationCapabilityDisabledReason(annotation.type, "stroke")} strokeReason={annotationCapabilityDisabledReason(annotation.type, "stroke")} fillDisabled={!!annotationCapabilityDisabledReason(annotation.type, "fill")} fillReason={annotationCapabilityDisabledReason(annotation.type, "fill")} />
+        <form className="annotation-properties" id="annotation-properties-form" onSubmit={(event) => { event.preventDefault(); if (hasChanges) applyAnnotationProperties(); }}>
+          {/* #377: Label is a plain textarea (not a single-line input) so
+              Callout/any Annotation can hold real multi-line text -- the
+              renderer (packages/renderer/src/stable-surface.ts) and export
+              (packages/export/src/index.ts) both split on "\n" into separate
+              visual lines to match. */}
+          <label>Label<textarea aria-label="Annotation label" rows={label.includes("\n") ? Math.min(6, label.split("\n").length + 1) : 2} value={label} onChange={(event) => setLabel(event.target.value)} /></label>
+          <label>Color<input aria-label="Annotation color" type="color" value={color} onChange={(event) => setColor(event.target.value)} /></label>
+          <label className="check-label"><input aria-label="Annotation visible" type="checkbox" checked={visible} onChange={(event) => setVisible(event.target.checked)} />Visible</label>
+          {/* Section 1's "Start / End" -- shown here as the same read-only
+              summary the List column already renders (`item.start ?? item.
+              from ?? item.anchor`), not a second anchor-editing surface:
+              Inspector already owns full anchor editing (Endpoint/Signal/
+              Cycle/Point/offset -- see inspector-annotation-editor.tsx),
+              genuinely reused unchanged, one command owner
+              (annotation.setAnchor) either way. Duplicating that full
+              control set here would be a second, divergent place to edit
+              the same anchor, which Section 7 explicitly rules out; a
+              read-only summary keeps Start/End visible in Bottom without
+              creating that second editor. */}
+          <div className="property-row"><span>Start</span><span>{annotationAnchorText(annotation.start ?? annotation.from ?? annotation.anchor)}</span></div>
+          <div className="property-row"><span>End</span><span>{annotationAnchorText(annotation.end ?? annotation.to)}</span></div>
+          {isOpacityType && <label>Opacity<input aria-label="Annotation opacity" type="number" min="0" max="1" step="0.05" value={opacity} onChange={(event) => setOpacity(Number(event.target.value))} /></label>}
+          {annotation.type === "ghostTrace" && <><div className="property-row"><span>Source Signal</span><b data-testid="ghost-source-signal">{annotation.sourceSignalId ?? "Missing"}</b></div><label>Cycle Offset<input aria-label="Ghost Trace cycle offset" type="number" step="1" value={traceOffsetCycles} onChange={(event) => setTraceOffsetCycles(Number(event.target.value))} /></label></>}
+          {lineControlsEnabled && <><label>Line<select aria-label="Annotation line type" value={lineType} onChange={(event) => setLineType(event.target.value as typeof lineType)}><option value="straight">Straight</option><option value="orthogonal">Orthogonal</option><option value="curve">Curve</option><option value="diagonal">Diagonal</option></select></label><label>Arrow<select aria-label="Annotation arrowhead" value={arrowhead} onChange={(event) => setArrowhead(event.target.value as typeof arrowhead)}><option value="end">End</option><option value="start">Start</option><option value="bidirectional">Both</option><option value="none">None</option></select></label></>}
+          {annotation.type === "measurement" && <section className="annotation-measurement-editor" aria-label="Measurement semantics"><strong>Transition measurement</strong><label>Profile<select aria-label="Measurement profile" value={measurementProfile} onChange={(event) => setMeasurementProfile(event.target.value as MeasurementProfile)}>{MEASUREMENT_PROFILES.map((profile) => <option key={profile} value={profile}>{profile === "cycle" ? "Cycle anchors" : profile === "custom" ? "Custom" : profile}</option>)}</select></label>{measurementProfile !== "cycle" && <label>Meaning<select aria-label="Measurement anchor kind" value={measurementKind} onChange={(event) => setMeasurementKind(event.target.value as TransitionAnchorKind)}><option value="threshold">Transition threshold</option><option value="ratio">Transition ratio</option></select></label>}{measurementProfile === "custom" && <><label>Start %<input aria-label="Custom measurement start" type="number" min="0" max="100" step="1" value={measurementStart} onChange={(event) => setMeasurementStart(event.target.value)} /></label><label>End %<input aria-label="Custom measurement end" type="number" min="0" max="100" step="1" value={measurementEnd} onChange={(event) => setMeasurementEnd(event.target.value)} /></label></>}<label>Start marker<select aria-label="Measurement start marker" value={measurementLayout.startMarker} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, startMarker: event.target.value as MeasurementLayout["startMarker"] }))}><option value="none">None</option><option value="bar">Bar</option><option value="arrow">Arrow</option></select></label><label>End marker<select aria-label="Measurement end marker" value={measurementLayout.endMarker} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, endMarker: event.target.value as MeasurementLayout["endMarker"] }))}><option value="none">None</option><option value="bar">Bar</option><option value="arrow">Arrow</option></select></label><label>Arrow layout<select aria-label="Measurement arrow layout" value={measurementLayout.arrowLayout} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, arrowLayout: event.target.value as MeasurementLayout["arrowLayout"] }))}><option value="auto">Auto</option><option value="inward">Inward</option><option value="outward">Outward</option></select></label><label>Extensions<select aria-label="Measurement extension lines" value={measurementLayout.extensionLines} onChange={(event) => setMeasurementLayout((layout) => ({ ...layout, extensionLines: event.target.value as MeasurementLayout["extensionLines"] }))}><option value="both">Both</option><option value="start">Start</option><option value="end">End</option><option value="none">None</option></select></label><label>Lane<input aria-label="Measurement lane" type="number" min="0" step="1" value={measurementLayout.lane ?? ""} onChange={(event) => setMeasurementLayout((layout) => { if (event.target.value === "") { const { lane: _lane, ...withoutLane } = layout; return withoutLane; } return { ...layout, lane: Number(event.target.value) }; })} /></label><button type="button" data-testid="apply-measurement-semantics" disabled={!measurementDraftValid} onClick={() => onCommand({ id: nextCommandId("annotation_measurement"), type: "annotation.updateMeasurement", annotationId: annotation.id, profile: measurementProfile, anchorKind: measurementKind, start: measurementPair.start, end: measurementPair.end, layout: measurementLayout })}>Apply measurement</button></section>}
+          {annotation.type === "marker" && <div className="property-row"><span>Vertical span</span><span>{annotation.verticalSpan?.mode ?? "auto"}</span></div>}
+        </form>
+        <form className="annotation-properties" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("annotation_label_offset"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: labelX, y: labelY } }); }}>
+          <strong>Label offset</strong>
+          <label>X<input aria-label="Annotation label X" type="number" value={labelX} onChange={(event) => setLabelX(Number(event.target.value))} /></label>
+          <label>Y<input aria-label="Annotation label Y" type="number" value={labelY} onChange={(event) => setLabelY(Number(event.target.value))} /></label>
+          <button type="submit">Move label</button>
+          <button type="button" onClick={() => onCommand({ id: nextCommandId("annotation_reset_offsets"), type: "annotation.resetOffsets", annotationId: annotation.id })}>Reset offsets</button>
+          <span className="annotation-hint">Arrow keys nudge 1 px; Shift+Arrow nudges 10 px. Drag endpoints to snap.</span>
+        </form>
+      </section>
+      <section className="annotation-presets-panel" aria-label="Quick Presets">
+        <h2>Quick Presets</h2>
+        <div className="annotation-quick-presets" role="group" aria-label="Annotation quick presets">
+          {presets.map((preset) => <button type="button" key={preset.label} disabled={annotation.type !== preset.type} title={annotation.type === preset.type ? undefined : `Switch to a ${preset.type} Annotation first.`} onClick={preset.apply}>{preset.label}</button>)}
+        </div>
+        <span className="annotation-hint">Sets Label/Style fields only -- nothing commits until Apply Annotation.</span>
+      </section>
+    </div>
+    {/* Section 3 / Section 9: Cancel and the one primary Apply action stay
+        together in a sticky bar, reachable regardless of how tall the List/
+        Edit panels grow or how the Bottom Editor is resized. */}
+    <div className="annotation-sticky-actions">
+      {hasChanges && <output className="draft-unapplied-indicator" data-testid="annotation-properties-unapplied">● Unapplied changes</output>}
+      <button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
+      <button type="submit" form="annotation-properties-form" data-testid="apply-annotation-properties" disabled={!hasChanges}>Apply Annotation</button>
+    </div>
   </section>;
 }

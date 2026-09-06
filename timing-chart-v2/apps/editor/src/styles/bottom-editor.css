@@ -46,17 +46,48 @@
 /* Annotation and shared detail-editor presentation. These selectors are
    scoped to the Bottom/annotation editing surface rather than the global
    compatibility cascade. */
-.annotation-properties { display: flex; align-items: end; gap: 10px; padding: 12px; border-bottom: 1px solid #e0e5ec; }
-.annotation-properties label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
-.annotation-properties input:not([type="checkbox"]), .annotation-properties select { width: 150px; height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 3px 7px; }
+/* Visual Reference pass (#426): this form now lives in the narrower Edit
+   column of `.annotation-panels` instead of a full Bottom-width row, so
+   `flex-wrap: wrap` + a `min(150px, 100%)` field width replace the old
+   single unwrapped row of fixed-150px fields (which would have forced
+   horizontal overflow in the new column). */
+.annotation-properties { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; padding: 8px 0; border-bottom: 1px solid #e0e5ec; }
+.annotation-properties label { display: grid; gap: 3px; min-width: 0; color: #5c687c; font-size: 10px; font-weight: 650; }
+.annotation-properties input:not([type="checkbox"]), .annotation-properties select, .annotation-properties textarea { width: min(150px, 100%); height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 3px 7px; }
+.annotation-properties textarea { height: auto; }
 .annotation-properties input[type="color"] { width: 46px; padding: 2px; }
 .annotation-properties .check-label { display: flex; align-items: center; height: 27px; }
 .annotation-properties button { height: 27px; border: 1px solid #775a99; border-radius: 3px; background: #76579a; color: white; padding: 3px 10px; }
+.annotation-properties .property-row { grid-template-columns: 50px 1fr; margin: 0; font-size: 10px; color: #5c687c; }
 
-.annotation-context-toolbar { display: flex; align-items: center; gap: 5px; min-height: 33px; padding: 4px 10px; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
+.annotation-context-toolbar { display: flex; align-items: center; gap: 5px; min-height: 33px; padding: 4px 10px; border-bottom: 1px solid #dce3eb; background: #fbfcfe; flex-wrap: wrap; }
 .annotation-context-toolbar button { height: 25px; padding: 2px 8px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #304761; font-size: 10px; }
 .annotation-context-toolbar button:first-child { border-color: #246aa8; background: #2c78bb; color: white; }
+.annotation-context-toolbar button.danger { border-color: #d39b9b; background: white; color: #a52b2b; }
+.annotation-context-toolbar button.danger:hover:not(:disabled) { border-color: #c07a7a; background: #fbeeee; color: #7e1f1f; }
 .annotation-context-toolbar output { margin-left: auto; color: #63758b; font-size: 9px; }
+/* Visual Reference pass (#426): List / Edit / Quick Presets side by side,
+   matching the Signal tab's own established 3-panel convention (Add/Edit
+   Transition · Value Helper · Generate Waveform) rather than a new shape.
+   `overflow: auto` on each panel (not the row) keeps a tall Annotation
+   List's own scrollbar local to that column, so Cancel/Apply below never
+   scrolls out of reach with it. */
+.annotation-panels { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(280px, 1.4fr) minmax(180px, 0.8fr); gap: 8px; align-items: start; flex: 1; min-height: 0; padding: 8px 12px; }
+@media (max-width: 1000px) { .annotation-panels { grid-template-columns: 1fr; } }
+.annotation-panels > section { min-width: 0; min-height: 0; max-height: 100%; display: flex; flex-direction: column; overflow: auto; padding: 8px 10px; border: 1px solid #d7dfe9; border-radius: 4px; background: #fbfcfe; }
+.annotation-panels h2 { margin: 0 0 4px; font-size: 11px; font-weight: 700; color: #304761; text-transform: uppercase; letter-spacing: .03em; }
+.annotation-panels h2 span { font-weight: 500; text-transform: none; letter-spacing: normal; color: #758197; }
+.annotation-quick-presets { display: flex; flex-direction: column; gap: 6px; }
+.annotation-quick-presets button { text-align: left; height: var(--ds-control-height); padding: 3px 10px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 10px; font-weight: 650; }
+.annotation-quick-presets button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
+.annotation-quick-presets button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
+/* Section 3/9: Cancel + the one primary Apply action, sticky at the
+   bottom of the Annotation tab regardless of how the List/Edit panels
+   scroll or how tall the Bottom Editor is resized. */
+.annotation-sticky-actions { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #cad3df; background: #f4f7fa; }
+.annotation-sticky-actions button[data-testid="apply-annotation-properties"] { margin-left: auto; height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 16px; font-weight: 650; }
+.annotation-sticky-actions button[data-testid="apply-annotation-properties"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
+.annotation-sticky-actions button[data-testid="cancel-bottom-draft"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
 
 .editor-shell .signal-editor:has(.clock-editor) .editor-tabbar { display: flex; }
 
@@ -324,6 +355,22 @@
    compatibility cascade. */
 .annotation-hint { align-self: center; color: #718097; font-size: 10px; }
 .signal-editor { min-height: 250px; margin: 0; overflow: auto; border: 0; border-radius: 0; background: white; box-shadow: none; }
+/* `.signal-editor` (shared base class above) is `display: block; overflow:
+   auto` -- both overridden here. `overflow: visible` matters, not just
+   cosmetically: `.signal-editor` never actually grows taller than its own
+   content (no capped height), so its own `overflow: auto` never engages,
+   but CSS still treats it as *a* scroll container for `position: sticky`
+   purposes -- any sticky descendant sticks relative to *this* box instead
+   of continuing up to `.bottom-content` (the Bottom Editor's real,
+   visibly-clipped scrollport), which made `.annotation-sticky-actions`
+   just scroll away with everything else instead of staying pinned
+   (confirmed empirically: scrolling `.bottom-content` moved a sticky-top
+   element by the exact scroll delta, i.e. it wasn't sticking at all).
+   `overflow: visible` here lets the sticky containing-block search
+   continue up to the real scrollport. flex column + min-height: 100% is
+   what lets `.annotation-panels { flex: 1 }` grow to fill available
+   height in the first place. */
+.annotation-editor { display: flex; flex-direction: column; min-height: 100%; overflow: visible; }
 .editor-tabbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 10px; border-bottom: 1px solid #cad3df; background: #f4f7fa; }
 .editor-tabbar button, .editor-tabbar .editor-tab { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
 .editor-tabbar button:disabled { opacity: var(--ds-disabled-opacity); }
@@ -337,8 +384,15 @@
 .editor-tabbar-secondary button { border-color: transparent; background: transparent; color: #5c687c; }
 .editor-tabbar-secondary button:hover:not(:disabled) { border-color: #bdc8d6; background: white; color: #31435d; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
-.annotation-list { min-width: 880px; overflow: hidden; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
-.annotation-list-row { display: grid; grid-template-columns: 20px 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }
+/* Visual Reference pass (#426): this list now lives inside the narrower
+   List column of `.annotation-panels` (not a full-width Bottom row), so
+   the old 880px floor -- sized for the previous 9-column layout including
+   Target/X/Y -- would force a horizontal scrollbar inside an already-
+   narrow column. min-width: 0 + a compact 7-column template (see
+   annotation-list.tsx for which columns) fits it instead. */
+.annotation-list { min-width: 0; overflow: hidden auto; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
+.annotation-list-row { display: grid; grid-template-columns: 18px 20px 46px minmax(0, 1fr) 52px 52px 18px; align-items: center; gap: 4px; min-height: 27px; padding: 3px 6px; color: #304761; text-align: left; font-size: 10px; }
+.annotation-list-color { width: 12px; height: 12px; border-radius: 2px; border: 1px solid rgba(0,0,0,.15); }
 .annotation-list-header { min-height: 25px; border-bottom: 1px solid #cbd6e2; background: #f0f4f8; color: #607188; font-size: 9px; font-weight: 700; }
 .annotation-list > .annotation-list-row:not(.annotation-list-header) { width: 100%; border: 0; border-bottom: 1px solid #e1e7ee; background: white; color: #304761; cursor: pointer; }
 .annotation-list > .annotation-list-row:not(.annotation-list-header):hover { background: #f3f8fd; }

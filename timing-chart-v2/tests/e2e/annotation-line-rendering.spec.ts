@@ -13,7 +13,16 @@ test("renders distinct connector paths and SVG arrowheads for every line type", 
   const editor = page.getByTestId("annotation-editor");
   const path = owner.locator("[data-role='annotation-path']");
   const observed = new Map<string, { readonly d: string; readonly dash: string | null }>();
-  for (const lineType of ["straight", "diagonal", "curve", "orthogonal"] as const) {
+  // Visual Reference pass (#426): Apply Annotation now stays disabled while
+  // the Draft is byte-for-byte identical to the committed Annotation (the
+  // same Draft/Apply contract every other Bottom tab's primary Apply
+  // already follows) -- a freshly-created Arrow's `lineType` is already
+  // "straight" by default, so that first iteration is captured directly
+  // (no Apply needed, nothing to commit) instead of looping Apply
+  // unconditionally over every type including a genuine no-op.
+  await expect(owner).toHaveAttribute("data-line-type", "straight");
+  observed.set("straight", { d: await path.getAttribute("d") ?? "", dash: await path.getAttribute("stroke-dasharray") });
+  for (const lineType of ["diagonal", "curve", "orthogonal"] as const) {
     await editor.getByLabel("Annotation line type").selectOption(lineType);
     await editor.getByTestId("apply-annotation-properties").click();
     await expect(owner).toHaveAttribute("data-line-type", lineType);
