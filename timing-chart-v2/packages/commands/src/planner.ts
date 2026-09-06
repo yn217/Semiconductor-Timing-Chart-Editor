@@ -445,9 +445,16 @@ function moveAnchor(anchor: SemanticAnchor | undefined, start: number, end: numb
 
 function mappedInterval(start: number, end: number, sourceStart: number, sourceEnd: number, to: number): { readonly start: number; readonly end: number } | undefined {
   if (!Number.isInteger(start) || !Number.isInteger(end)) return undefined;
-  const mapped = Array.from({ length: end - start }, (_, index) => moveCycleIndex(start + index, sourceStart, sourceEnd, to)).sort((left, right) => left - right);
-  if (mapped.length === 0 || mapped.some((cycle, index) => index > 0 && cycle !== mapped[index - 1]! + 1)) return undefined;
-  return { start: mapped[0]!, end: mapped.at(-1)! + 1 };
+  if (start >= end) return undefined;
+  const length = sourceEnd - sourceStart;
+  const cuts = [...new Set([start, end, sourceStart, sourceEnd, to, to + length].filter((cut) => cut > start && cut < end))].sort((left, right) => left - right);
+  const boundaries = [start, ...cuts, end];
+  const segments = boundaries.slice(0, -1).map((segmentStart, index) => {
+    const segmentEnd = boundaries[index + 1]!;
+    return { start: moveCycleIndex(segmentStart, sourceStart, sourceEnd, to), end: moveCycleIndex(segmentEnd - 1, sourceStart, sourceEnd, to) + 1 };
+  }).sort((left, right) => left.start - right.start);
+  if (segments.some((segment) => segment.start >= segment.end) || segments.some((segment, index) => index > 0 && segment.start !== segments[index - 1]!.end)) return undefined;
+  return { start: segments[0]!.start, end: segments.at(-1)!.end };
 }
 
 function duplicateTimelineRange(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "timeline.duplicateRange" }>): CanonicalDocument {
@@ -462,8 +469,9 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
     clonedIds.set(id, clone);
     return clone;
   };
+  const sourceSignals = new Map(document.signals.map((item) => [item.id, item]));
   const signals = inserted.signals.map((signal): Signal => {
-    const source = document.signals.find((item) => item.id === signal.id)!;
+    const source = sourceSignals.get(signal.id)!;
     if (signal.type === "commentRow" || source.type === "commentRow") return signal;
     if (signal.type === "clock" && source.type === "clock") return source.enable
       ? { ...signal, enable: duplicateChanges(source.enable, document.timeline.cycleCount, command.start, command.end, command.at) }
