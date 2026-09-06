@@ -1,9 +1,22 @@
 import { expect, test, type Page } from "@playwright/test";
+import type { BookmarkId } from "@timing-chart-v2/schema";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 
 const periodOneClockDocument = {
   ...cycleDocument,
   signals: cycleDocument.signals.map((signal) => signal.type === "clock" ? { ...signal, generator: { ...signal.generator, period: 1 } } : signal),
+};
+
+const largeBookmarkDocument = {
+  ...cycleDocument,
+  document: { ...cycleDocument.document, title: "100 Bookmark navigation fixture" },
+  timeline: { ...cycleDocument.timeline, end: 220, cycleCount: 220 },
+  bookmarks: Array.from({ length: 100 }, (_, index) => ({
+    id: `bookmark_${String(index).padStart(3, "0")}` as BookmarkId,
+    name: `Bookmark ${index}`,
+    start: index < 2 ? 50 : index,
+    ...(index === 0 ? { comment: "same-time A" } : index === 1 ? { comment: "same-time B" } : {}),
+  })),
 };
 
 async function openPeriodOneClockDocument(page: Page): Promise<void> {
@@ -725,6 +738,34 @@ test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom 
   await assertAligned("scroll=end");
   expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
   expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+});
+
+test("keeps 100 Bookmarks distinct and navigation view-only in a long document", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "100-bookmarks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(largeBookmarkDocument)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  const rows = panel.getByTestId(/bookmark-row-/);
+  await expect(rows).toHaveCount(100);
+  await expect(panel.getByTestId("bookmark-row-bookmark_000")).toContainText("same-time A");
+  await expect(panel.getByTestId("bookmark-row-bookmark_001")).toContainText("same-time B");
+  expect(await rows.evaluateAll((items) => new Set(items.map((item) => item.getAttribute("data-testid"))).size)).toBe(100);
+
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const countersBefore = await surface.getAttribute("data-render-counters");
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  for (const index of [0, 1, 25, 50, 75, 99]) {
+    const id = `bookmark_${String(index).padStart(3, "0")}`;
+    await panel.getByTestId(`bookmark-row-${id}`).dblclick();
+    await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", String(index < 2 ? 50 : index));
+  }
+  expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
 });
 
 // #388: the Timeline tab's own History group must reuse the exact same

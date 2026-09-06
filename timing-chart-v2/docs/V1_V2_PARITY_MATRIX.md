@@ -357,7 +357,10 @@ from default specification SVG export, as required by V1 #108; Annotation
 Marker export remains separate. The new `timeline-editor.spec.ts` case passes
 through 50/100/150/200% Zoom and horizontal scroll, comparing the live
 Bookmark flag with the rendered cycle tick while preserving Canonical and
-History. The full bookmark visual matrix remains open.
+History. A second current-main Chromium case opens a 220-cycle document with
+100 persisted Bookmarks, proves same-time entries remain distinct by stable ID,
+and performs repeated list navigation with zero WaveDrom/render-counter,
+Canonical or History mutation. The full bookmark visual matrix remains open.
 
 The current-main Hierarchy/Full Path route is browser verified by the focused
 `full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
