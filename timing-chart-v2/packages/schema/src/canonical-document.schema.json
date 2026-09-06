@@ -469,6 +469,7 @@
         "rotation": { "type": "number" },
         "align": { "enum": ["left", "center", "right"] },
         "locked": { "type": "boolean" },
+        "positionMode": { "enum": ["cycle-snap", "free"] },
         "measurement": {
           "type": "object",
           "additionalProperties": false,

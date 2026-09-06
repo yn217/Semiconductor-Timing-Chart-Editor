@@ -195,8 +195,9 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
 }
 
 function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annotation, signals: ReadonlyMap<string, Signal>, cycleCount: number, problems: DocumentProblem[]): void {
-  if (!Number.isInteger(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
-    problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `Annotation anchor must be an integer cycle satisfying 0 <= cycle < ${cycleCount}.`, annotation.id));
+  const fractionalFreeHighlight = annotation.type === "highlight" && annotation.positionMode === "free";
+  if ((!fractionalFreeHighlight && !Number.isInteger(anchor.cycle)) || !Number.isFinite(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
+    problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `${fractionalFreeHighlight ? "Free Highlight" : "Annotation"} anchor must use a valid source cycle in the timeline.`, annotation.id));
   }
   if (anchor.threshold !== undefined) {
     if (!Number.isFinite(anchor.threshold) || anchor.threshold < 0 || anchor.threshold > 1) problems.push(problem("INVALID_ANCHOR_THRESHOLD", `${path}.threshold`, "Anchor threshold must be a finite fraction between 0 and 1.", annotation.id));
@@ -308,6 +309,12 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       if (annotation.verticalSpan.mode === "rows" && (!annotation.verticalSpan.startRowId || !annotation.verticalSpan.endRowId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan`, "Rows mode requires stable boundary row IDs.", annotation.id));
       for (const [key, id] of [["startRowId", annotation.verticalSpan.startRowId], ["endRowId", annotation.verticalSpan.endRowId]] as const) if (id && !signals.has(id)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span boundary must reference an existing Signal.", annotation.id));
       for (const [key, offset] of [["startOffset", annotation.verticalSpan.startOffset], ["endOffset", annotation.verticalSpan.endOffset]] as const) if (offset !== undefined && !Number.isFinite(offset)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span offsets must be finite.", annotation.id));
+    }
+    if (annotation.positionMode !== undefined) {
+      if (annotation.type !== "highlight") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].positionMode`, "Position mode is only valid for Highlight annotations.", annotation.id));
+      if (annotation.positionMode === "cycle-snap") {
+        for (const field of ["anchor", "start", "end"] as const) if (annotation[field] && !Number.isInteger(annotation[field]!.cycle)) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.annotations[${index}].${field}.cycle`, "Cycle-snap Highlight anchors must use integer source boundaries.", annotation.id));
+      }
     }
     if (annotation.type === "ghostTrace") {
       if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));

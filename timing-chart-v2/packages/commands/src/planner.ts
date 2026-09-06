@@ -1207,6 +1207,17 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
+    case "annotation.setPositionMode": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (annotation.type !== "highlight") return fail("invalid", "INVALID_LABEL", "$.positionMode", "Position mode is only supported by Highlights.");
+      if (command.positionMode === "cycle-snap" && [annotation.anchor, annotation.start, annotation.end].some((anchor) => anchor !== undefined && !Number.isInteger(anchor.cycle))) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.positionMode", "Cycle-snap Highlights require integer source boundaries.");
+      if ((annotation.positionMode ?? "cycle-snap") === command.positionMode) return fail("no-op", "NO_OP", "$", "Highlight position mode is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, positionMode: command.positionMode };
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
     case "annotation.bringToFront": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];

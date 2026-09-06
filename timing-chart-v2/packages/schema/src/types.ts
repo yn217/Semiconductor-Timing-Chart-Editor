@@ -193,6 +193,7 @@ export interface SignalGroup {
 }
 
 export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency" | "timingRegion" | "ghostTrace" | "rectangle" | "ellipse" | "connector" | "textbox";
+export type HighlightPositionMode = "cycle-snap" | "free";
 
 export interface Annotation {
   readonly id: AnnotationId;
@@ -232,6 +233,8 @@ export interface Annotation {
     readonly anchorKind: "threshold" | "ratio";
   };
   readonly measurementLayout?: import("./annotation-semantics.js").MeasurementLayout;
+  /** Highlight coordinate mode; both values remain semantic time, never screen X. */
+  readonly positionMode?: HighlightPositionMode;
   /** Semantic vertical span for Markers; row identity is stable, never screen geometry. */
   readonly verticalSpan?: {
     readonly mode: "auto" | "rows" | "custom";
