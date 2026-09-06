@@ -3,7 +3,7 @@ import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 import type { TimingChartRenderer } from "@timing-chart-v2/renderer";
 import type { AnnotationId, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
-import { annotationFields } from "./annotation-overlays.js";
+import { annotationFields, projectAnnotationOverlays } from "./annotation-overlays.js";
 import { annotationOffsetDeltaFromScreen, withAddedOffset, withSnapOffset } from "./anchor-offset.js";
 import { preferredSnapKinds } from "./snap-policy.js";
 import { normalizeSnapDistance } from "./snap-distance.js";
@@ -24,7 +24,7 @@ export type AnnotationGeometryPort = Readonly<{
 
 export type AnnotationInteractionContext = Readonly<{
   rendererHost: HTMLElement;
-  renderer: Pick<TimingChartRenderer, "updateSnapGuide">;
+  renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "updateOverlays">;
   timelineGeometry: AnnotationGeometryPort;
   documentEpoch: Pick<DocumentEpoch, "current" | "isCurrent">;
   getZoom: () => number;
@@ -95,7 +95,21 @@ export class AnnotationInteractionOwner {
     const screenDx = Math.round(event.clientX - drag.startX);
     const currentZoom = this.context.getZoom();
     const dy = Math.round(event.clientY - drag.startY);
-    for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`;
+    // #421: a whole-annotation move (no field/label -- dragging the body)
+    // previews with a cheap CSS translate on the whole owner element, which
+    // is correct there since every part of the annotation genuinely moves
+    // together. An endpoint-field drag (Arrow/Dependency/Measurement
+    // start|end|from|to) must NOT use that same whole-owner translate --
+    // it would visually move the *other*, untouched endpoint/handle/body
+    // too, which then snaps back to its real (unchanged) position the
+    // moment the transform is cleared on commit. That is exactly the
+    // reported "grab the tip, the whole arrow appears to move, then the
+    // root jumps back on mouse-up" bug. Endpoint drags instead re-run the
+    // exact same projectAnnotationOverlays/renderer.updateOverlays path
+    // used for committed rendering, against a draft document with only the
+    // dragged field's anchor replaced -- the identical geometry algorithm
+    // Preview and commit already share, so nothing needs to snap back.
+    if (!drag.field || drag.label) for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`;
     if (!drag.field || drag.label) return;
     const document = this.context.getDocument();
     const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
@@ -105,6 +119,10 @@ export class AnnotationInteractionOwner {
     const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
     const snap = this.context.isSnapEnabled() ? this.context.timelineGeometry.currentSnapIndex().nearest(desired, 8 / currentZoom, undefined, preferredSnapKinds(annotation.type)) : undefined;
     this.context.publishState();
+    const previewOffsetDelta = annotationOffsetDeltaFromScreen({ x: screenDx, y: dy }, this.context.timelineGeometry.presentationScale, currentZoom);
+    const previewAnchor = snap ? withSnapOffset(snap.anchor, desired, snap.point, this.context.timelineGeometry.presentationScale) : withAddedOffset(anchor, previewOffsetDelta.x, previewOffsetDelta.y);
+    const previewDocument: CanonicalDocument = { ...document, annotations: document.annotations.map((item) => item.id === annotation.id ? { ...item, [drag.field as AnnotationField]: previewAnchor } : item) };
+    this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale));
     if (!snap) {
       this.context.renderer.updateSnapGuide();
       delete this.context.rendererHost.dataset.snapKind;
