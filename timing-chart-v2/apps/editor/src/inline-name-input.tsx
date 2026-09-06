@@ -1,10 +1,16 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { reconcileNameDraft, type NameDraft } from "./name-draft.js";
 import type { CommandResult } from "@timing-chart-v2/commands";
 
-export function InlineNameInput({ value, ariaLabel, onRename, onCommitted, onDraftChange }: { readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void; readonly onDraftChange?: (name: string) => void }) {
-  const [draft, setDraft] = useState(value);
-  const [error, setError] = useState("");
-  useEffect(() => { setDraft(value); setError(""); }, [value]);
+export function InlineNameInput({ target, value, ariaLabel, onRename, onCommitted, onDraftChange }: { readonly target: object | undefined; readonly value: string; readonly ariaLabel: string; readonly onRename: (name: string) => CommandResult; readonly onCommitted?: (name: string) => void; readonly onDraftChange?: (name: string) => void }) {
+  const [stored, setStored] = useState<NameDraft>({ target, base: value, value, error: "" });
+  const current = reconcileNameDraft(stored, target, value);
+  // Reconcile before committing children, so no event sees a previous target's draft.
+  if (current !== stored) setStored(current);
+  const draft = current.value;
+  const error = current.error;
+  const setDraft = (next: string) => setStored((state) => ({ ...reconcileNameDraft(state, target, value), value: next }));
+  const setError = (next: string) => setStored((state) => ({ ...reconcileNameDraft(state, target, value), error: next }));
   const commit = () => {
     const name = draft.trim();
     if (!name) { setError("Name is required."); return; }

@@ -104,7 +104,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
         if (!hasPropertyChanges) return;
         onCommand({ id: nextCommandId("properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), spacingBefore, spacingAfter });
       }}>
-        <label>Name<InlineNameInput value={signal?.display.name ?? ""} ariaLabel="Signal name" onRename={(nextName) => signal ? onCommand({ id: nextCommandId("bottom_signal_rename"), type: "signal.rename", signalId: signal.id, name: nextName }) : { ok: false, reason: "no-op", problems: [] }} onCommitted={setName} onDraftChange={setName} /></label>
+        <label>Name<InlineNameInput target={signal} value={signal?.display.name ?? ""} ariaLabel="Signal name" onRename={(nextName) => signal ? onCommand({ id: nextCommandId("bottom_signal_rename"), type: "signal.rename", signalId: signal.id, name: nextName }) : { ok: false, reason: "no-op", problems: [] }} onCommitted={setName} onDraftChange={setName} /></label>
         <label>Role<select aria-label="Signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
         <label>Type<select aria-label="Signal type" value={signalType} onChange={(event) => setSignalType(event.target.value as ValueSignal["type"])}><option value="binary">Signal</option><option value="bus">Bus</option><option value="state">State</option><option value="logic">Level</option><option value="event">Event</option>{
           // #400: Pulse is legacy-only -- never offered as a type to switch
