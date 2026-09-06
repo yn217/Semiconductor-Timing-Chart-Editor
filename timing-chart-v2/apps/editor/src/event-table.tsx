@@ -8,6 +8,7 @@ import { RibbonIcon } from "./ribbon-icon.js";
 export function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
+  const [comment, setComment] = useState("");
   const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
   const [presetsOpen, setPresetsOpen] = useState(false);
   const [importStatus, setImportStatus] = useState("Import signal events");
@@ -51,6 +52,14 @@ export function EventTable({ signal, cycleCount, onCommand }: { readonly signal:
     reader.onerror = () => setImportStatus("Import rejected: file could not be read.");
     reader.readAsText(file);
   };
+  // #402: preview-only End/Duration for the Add/Edit Transition form's Draft
+  // `start` -- derived the same way each committed row's own `end` is
+  // (the start of the next existing change point, or `cycleCount` if none),
+  // so the Preview always matches what Apply would actually produce. This
+  // is display-only: it is never itself a semantic/geometry source of
+  // truth, and Add still dispatches through the one existing
+  // `signal.updateValue` command path.
+  const previewEnd = signal.values.filter((change) => change.start > start).map((change) => change.start).sort((a, b) => a - b)[0] ?? cycleCount;
   return <div className="event-editor">
     <div className="event-heading"><h2>Event Table</h2><span>End and duration are derived</span></div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
@@ -64,18 +73,27 @@ export function EventTable({ signal, cycleCount, onCommand }: { readonly signal:
       {presetsOpen && <div className="event-presets" role="group" aria-label="Event value presets"><QuickValues signal={signal} setValue={setValue} /></div>}
       <output data-testid="event-import-status">{importStatus}</output>
     </div>
-    <div className="event-table" role="table" aria-label="Signal events">
-      <div className="event-row event-columns" role="row"><span>Start</span><span>Value</span><span>End</span><span>Duration</span><span>Comment</span><span>Actions</span></div>
-      {signal.values.map((change, index) => <EventRow key={change.start} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
-    </div>
+    {/* #402: "Add or Edit Transition controls" placed above the Transition
+        table (Bottom panel layout consistency, section 3). Adds a new
+        change point at Draft `start`; editing an *existing* row's own
+        Start/Value/Comment stays in that row (EventRow already holds its
+        own Draft and Apply/Cancel, scoped to one row at a time) rather than
+        being folded into this shared form, so selecting a different row to
+        edit never discards an unrelated in-progress Add here. */}
     <form className="event-add" onSubmit={(event) => {
       event.preventDefault();
-      onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value });
+      onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
     }}>
       <label>Start<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
       <label>Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
+      <label>Comment<input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+      <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
       <QuickValues signal={signal} setValue={setValue} />
       <button type="submit" data-testid="add-signal-event">Add / replace event</button>
     </form>
+    <div className="event-table" role="table" aria-label="Signal events">
+      <div className="event-row event-columns" role="row"><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
+      {signal.values.map((change, index) => <EventRow key={change.start} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+    </div>
   </div>;
 }

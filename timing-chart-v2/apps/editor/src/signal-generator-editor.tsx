@@ -26,6 +26,17 @@ export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { reado
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const effectiveWidth = widthMode === "duty" ? Math.min(period - 1, Math.max(1, Math.round(duty * period))) : width;
+  // #402: Draft->Apply -- Generate must stay disabled once the computed
+  // candidate waveform is byte-for-byte identical to the Signal's current
+  // `values`, so re-submitting an unchanged Draft can't manufacture an
+  // empty History entry. Computed only for the enabled/indicator check;
+  // Generate itself still always recomputes fresh from the live Draft on
+  // submit (this comparison is never itself dispatched as a command).
+  let hasChanges = true;
+  try {
+    const candidate = generateSignalPulseValues({ start, initial, active, width: effectiveWidth, period, repeat: repeatMode === "infinite" ? "infinite" : repeatCount, phase, suppressedPeriods: parseSuppressedPeriods(suppressedPeriods), cycleCount });
+    hasChanges = JSON.stringify(candidate) !== JSON.stringify(signal.values);
+  } catch { hasChanges = true; } // an invalid Draft is always "changed" -- Apply itself will report the real validation error on submit.
   return <div className="signal-generator">
     <div className="event-heading"><h2>Signal Generator</h2><span>Single, finite or periodic pulses -- computed once into the Signal's ordinary values</span></div>
     <form className="signal-generator-form" aria-label="Signal Generator" noValidate onSubmit={(event) => {
@@ -55,7 +66,8 @@ export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { reado
       <label>Suppressed periods<input aria-label="Signal generator suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
       {error && <output className="editor-problem" role="alert" data-testid="signal-generator-error">{error}</output>}
       {status && !error && <output data-testid="signal-generator-status">{status}</output>}
-      <button type="submit" data-testid="apply-signal-generator">Generate</button>
+      {hasChanges && <output data-testid="signal-generator-unapplied">● Unapplied changes</output>}
+      <button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
     </form>
   </div>;
 }

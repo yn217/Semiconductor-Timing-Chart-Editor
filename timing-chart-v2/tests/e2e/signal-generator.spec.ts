@@ -104,3 +104,33 @@ test("Duty mode computes Width from Period, and Manual/Generator tabs are only o
   await expect(editor.getByTestId("waveform-source-manual")).toHaveCount(0);
   await expect(editor.getByTestId("waveform-source-generator")).toHaveCount(0);
 });
+
+test("#402: Generate stays disabled once the computed Draft matches the Signal's current values", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByTestId("waveform-source-generator").click();
+  const generate = editor.getByTestId("apply-signal-generator");
+
+  await editor.getByLabel("Signal generator start").fill("2");
+  await expect(generate).toBeEnabled();
+  await expect(editor.getByTestId("signal-generator-unapplied")).toBeVisible();
+  await generate.click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+
+  // Applying Generate resets the Bottom Editor's Manual/Generator tab
+  // choice back to Manual (the same convention every other Bottom Editor
+  // tab already follows -- see signal-generator.spec.ts's own "reset to
+  // Manual after Apply" test), so re-entering the exact params that
+  // produced the Signal's current committed values must first reselect
+  // Generator; the fresh Draft (start=0 by default) must then disable
+  // Generate again once it matches, with no second History entry created.
+  await editor.getByTestId("waveform-source-generator").click();
+  await editor.getByLabel("Signal generator start").fill("2");
+  await expect(generate).toBeDisabled();
+  await expect(editor.getByTestId("signal-generator-unapplied")).toHaveCount(0);
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});

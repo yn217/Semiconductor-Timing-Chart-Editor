@@ -336,3 +336,34 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
   expect(Math.abs(afterXs[0] - cycle4X)).toBeLessThan(3);
   expect(Math.abs(afterXs[0] - cycle3X)).toBeGreaterThan(10);
 });
+
+test("#402: Event row Save stays disabled until the Draft differs, and Cancel discards it back to canonical", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const row = editor.locator("form.event-row").nth(1);
+  const saveButton = row.getByRole("button", { name: "Save" });
+  const cancelButton = row.getByRole("button", { name: "Cancel" });
+
+  await expect(saveButton).toBeDisabled();
+  await expect(cancelButton).toBeDisabled();
+
+  await row.getByLabel("Value 3").fill("X");
+  await expect(saveButton).toBeEnabled();
+  await expect(cancelButton).toBeEnabled();
+  await expect(row.getByText("● Unapplied changes")).toBeVisible();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  await cancelButton.click();
+  await expect(row.getByLabel("Value 3")).toHaveValue("1");
+  await expect(saveButton).toBeDisabled();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  await row.getByLabel("Value 3").fill("X");
+  await saveButton.click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(saveButton).toBeDisabled();
+});

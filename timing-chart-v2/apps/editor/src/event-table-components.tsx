@@ -16,15 +16,30 @@ export function EventRow({ signal, change, end, selected, onSelect, onCommand, n
   const [start, setStart] = useState(change.start);
   const [value, setValue] = useState(String(change.value));
   const [comment, setComment] = useState(change.comment ?? "");
+  // #402: Draft->Apply -- Save must stay disabled while this row's Draft is
+  // byte-for-byte identical to its committed `change`, so a no-op submit
+  // can't manufacture an empty History entry, and a Cancel action must be
+  // able to discard the Draft back to the last-committed values (rather
+  // than only being resettable by re-selecting the row, which would also
+  // disturb the selection/Preview surface). `end` is derived and read-only,
+  // so it is intentionally excluded from both the Draft and this comparison.
+  const hasChanges = start !== change.start || value !== String(change.value) || comment !== (change.comment ?? "");
+  const cancel = () => { setStart(change.start); setValue(String(change.value)); setComment(change.comment ?? ""); };
   return <form className={`event-row${selected ? " selected" : ""}`} role="row" data-event-start={change.start} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
+    if (!hasChanges) return;
     onCommand({ id: nextCommandId("replace_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: change.start, start, value, ...(comment ? { comment } : {}) });
   }}>
     <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
-    <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />
     <output>{end}</output><output>{end - change.start}</output>
+    <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />
     <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
-    <span className="event-actions"><button type="submit">Save</button><button type="button" onClick={() => onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start })}>Remove</button></span>
+    <span className="event-actions">
+      {hasChanges && <output data-testid={`event-row-unapplied-${change.start}`}>● Unapplied changes</output>}
+      <button type="button" onClick={(event) => { event.stopPropagation(); cancel(); }} disabled={!hasChanges} data-testid={`event-row-cancel-${change.start}`}>Cancel</button>
+      <button type="submit" disabled={!hasChanges}>Save</button>
+      <button type="button" onClick={(event) => { event.stopPropagation(); onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start }); }}>Remove</button>
+    </span>
   </form>;
 }
 
