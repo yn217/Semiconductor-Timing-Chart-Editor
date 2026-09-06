@@ -365,24 +365,84 @@ test("#402: Event row Save stays disabled until the Draft differs, and Cancel di
   const row = editor.locator("form.event-row").nth(1);
   const saveButton = row.getByRole("button", { name: "Save" });
   const cancelButton = row.getByRole("button", { name: "Cancel" });
+  const deleteButton = row.getByRole("button", { name: /Delete transition/ });
 
-  await expect(saveButton).toBeDisabled();
-  await expect(cancelButton).toBeDisabled();
+  // Visual Quality Closure pass (#402/#426): an at-rest row (no Draft) shows
+  // one compact Delete action, not a disabled Cancel/Save pair sitting
+  // there unused -- Cancel/Save only exist once the row is actually being
+  // edited (this is also what keeps the Actions column narrow enough to
+  // never clip).
+  await expect(deleteButton).toBeVisible();
+  await expect(saveButton).toHaveCount(0);
+  await expect(cancelButton).toHaveCount(0);
 
   await row.getByLabel("Value 3").fill("X");
   await expect(saveButton).toBeEnabled();
   await expect(cancelButton).toBeEnabled();
-  await expect(row.getByText("● Unapplied changes")).toBeVisible();
+  await expect(row.getByTitle("Unapplied changes")).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
   await cancelButton.click();
   await expect(row.getByLabel("Value 3")).toHaveValue("1");
-  await expect(saveButton).toBeDisabled();
+  await expect(saveButton).toHaveCount(0);
+  await expect(deleteButton).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
   await row.getByLabel("Value 3").fill("X");
-  await saveButton.click();
+  await row.getByRole("button", { name: "Save" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(saveButton).toBeDisabled();
+  await expect(saveButton).toHaveCount(0);
+  await expect(deleteButton).toBeVisible();
+});
+
+// Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
+// is bulk-row-selection for the footer's Delete Selected/Move Up/Move Down
+// -- a real tri-state Select All checkbox drives (and reflects) the exact
+// same selection set each row's own checkbox feeds, each row's checkbox
+// has an unambiguous accessible name, and the selection count is visible
+// next to the bulk actions.
+test("Transitions table Select All is a real tri-state checkbox wired to the same selection the footer bulk actions use", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const editor = page.getByTestId("signal-editor");
+  const selectAll = editor.getByLabel("Select all transitions", { exact: true });
+  const rows = editor.locator("form.event-row");
+  await expect(rows).toHaveCount(3);
+  const status = editor.getByTestId("event-selected-count");
+
+  await expect(selectAll).not.toBeChecked();
+  await expect(status).toHaveText("0 rows selected");
+
+  // Each row's own checkbox has a distinct, sentence-like accessible name
+  // (not just the bare cycle number) and feeds the same selection.
+  await editor.getByLabel("Select transition 1", { exact: true }).check();
+  await expect(status).toHaveText("1 row selected");
+  const isIndeterminate = await selectAll.evaluate((element: HTMLInputElement) => element.indeterminate);
+  expect(isIndeterminate).toBe(true);
+  await expect(selectAll).not.toBeChecked();
+
+  await editor.getByLabel("Select transition 2", { exact: true }).check();
+  await editor.getByLabel("Select transition 3", { exact: true }).check();
+  await expect(status).toHaveText("3 rows selected");
+  await expect(selectAll).toBeChecked();
+  const isIndeterminateAllChecked = await selectAll.evaluate((element: HTMLInputElement) => element.indeterminate);
+  expect(isIndeterminateAllChecked).toBe(false);
+
+  // Select All toggles the whole set at once, both directions.
+  await selectAll.uncheck();
+  await expect(status).toHaveText("0 rows selected");
+  await selectAll.check();
+  await expect(status).toHaveText("3 rows selected");
+
+  // Delete Selected refuses to remove every row (would leave the Signal
+  // with none), matching the existing guard -- Move Up/Down require
+  // exactly one row checked.
+  await expect(editor.getByTestId("event-delete-selected")).toBeDisabled();
+  await expect(editor.getByTestId("event-move-up")).toBeDisabled();
+  await selectAll.uncheck();
+  await editor.getByLabel("Select transition 1", { exact: true }).check();
+  await expect(editor.getByTestId("event-delete-selected")).toBeEnabled();
 });

@@ -151,24 +151,64 @@
 /* Bottom Panel Visual Reference pass (#402/#426): checkbox + # (index)
    columns are new (bulk row selection feeding the table footer's Delete
    Selected/Move Up/Move Down); the remaining six columns are unchanged
-   from #402's Start/End/Duration/Value/Comment/Actions order. */
-.event-table { min-width: 850px; border: 1px solid #d0d8e2; border-radius: 4px; overflow: hidden; }
+   from #402's Start/End/Duration/Value/Comment/Actions order.
+   Visual Quality Closure pass, Section 1 (P0): horizontal overflow, if the
+   850px min-width ever exceeds the panel's own rendered width, is now
+   owned by exactly one element -- `.event-table-scroll` -- instead of
+   being silently clipped. The rounded-corner treatment moves to that
+   wrapper (a scrolled `overflow-x` context still clips its own border-
+   radius corners on the *unscrolled* axis, so the top/bottom corners stay
+   visibly rounded even when a horizontal scrollbar is present). */
+.event-table-scroll { overflow-x: auto; overflow-y: hidden; border-radius: 4px; }
+.event-table { min-width: 850px; border: 1px solid #d0d8e2; border-radius: 4px; }
 
-.event-row { display: grid; grid-template-columns: 20px 24px 82px 56px 64px minmax(0, 1fr) minmax(140px, 1.4fr) 150px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
+/* Visual Quality Closure pass, Section 1 (P0): Actions was a fixed 150px
+   column asked to hold "● Unapplied changes" (~110px of running text) plus
+   three text buttons (Cancel/Save/Remove) *simultaneously* -- content that
+   never fit no matter how the rest of the row was arranged, so "Remov..."
+   clipped. The real fix is in event-table-components.tsx (EventRow): the
+   dirty flag is now a small titled dot instead of a sentence, and Cancel/
+   Save only render while the row actually has a Draft (`hasChanges`) --
+   an at-rest row shows one compact icon button instead. That drops the
+   column's worst-case content from ~260px down to ~120px, so 132px here is
+   a real, content-driven fixed width (not a squeeze), with the extra 18px
+   recovered going to the Comment column below. Every `.event-row` is its
+   own independent CSS Grid (one per row, not one grid for the whole
+   table), so this column width must stay an identical fixed value on
+   every row -- an `auto`-sized column here would size itself per-row and
+   break the very column alignment Section 2 asks for. */
+.event-row { display: grid; grid-template-columns: 20px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
 
 .event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
 
 .event-row:last-child { border-bottom: 0; }
 
-.event-row > * { margin: 2px 5px; }
+.event-row > * { min-width: 0; margin: 2px 5px; }
 
 .event-row-index { color: #7b8999; font-size: 10px; text-align: center; }
 
 .event-columns { min-height: 25px; background: #f0f4f8; color: #526177; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
-.event-row output { font: 11px Consolas, monospace; color: #4f5e73; }
+.event-row output { overflow: hidden; text-overflow: ellipsis; font: 11px Consolas, monospace; color: #4f5e73; }
 
-.event-actions { display: flex; gap: 5px; }
+.event-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+/* A row's own Draft dot -- distinct from the Generator/Inspector Draft
+   indicators (Section 9): this one only ever means "this transition row
+   has an unapplied edit," which is already unambiguous from being *inside*
+   the row, so a titled dot (not a repeated sentence) is enough. */
+.event-row-dirty-dot { width: 8px; height: 8px; border-radius: 50%; background: #c9962e; flex: 0 0 auto; }
+.event-actions button { padding: 3px 7px; font-size: 10px; font-weight: 650; }
+/* Shared compact icon-button primitive (Section 6): square, control-height
+   sized, an SVG glyph plus a `title`/`aria-label` rather than a running
+   label -- used here for the at-rest row's Delete action. `.danger` is the
+   one shared "destructive action" visual (Section 11), reused verbatim by
+   the toolbar/footer Delete buttons below. */
+.icon-button { display: inline-flex; align-items: center; justify-content: center; width: var(--ds-control-height); height: var(--ds-control-height); padding: 0; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; }
+.icon-button svg { width: 14px; height: 14px; }
+.icon-button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
+.icon-button.danger, .event-toolbar .danger, .event-table-footer .danger, .editor-tabbar .danger { border-color: #d39b9b; background: white; color: #a52b2b; }
+.icon-button.danger:hover:not(:disabled), .event-toolbar .danger:hover:not(:disabled), .event-table-footer .danger:hover:not(:disabled), .editor-tabbar .danger:hover:not(:disabled) { border-color: #c07a7a; background: #fbeeee; color: #7e1f1f; }
+.icon-button.danger:disabled, .event-toolbar .danger:disabled, .event-table-footer .danger:disabled, .editor-tabbar .danger:disabled { color: #c99; background: #f3f5f8; border-color: #e3cccc; }
 
 /* Bottom Panel Visual Reference pass: Add/Edit Transition, Value Helper
    and (for a binary Signal) Generate Waveform render as one row of
@@ -191,17 +231,28 @@
 .event-panels > * { min-width: 0; padding: 5px 8px; border: 1px solid #d7dfe9; border-radius: 4px; background: #fbfcfe; }
 .event-panels h2 { margin: 0 0 4px; font-size: 11px; font-weight: 700; color: #304761; text-transform: uppercase; letter-spacing: .03em; }
 .event-panels h2 span { font-weight: 500; text-transform: none; letter-spacing: normal; color: #758197; }
+/* Visual Quality Closure pass (#402/#426), Section 2 -- one shared field
+   primitive for every compact "caption + control" pair in the Bottom
+   Signal panel: Add/Edit Transition's Start/Value/Comment, Generate
+   Waveform's whole grid, and the Group context header all apply
+   `.field-inline` (or the equivalent `.signal-generator-grid label` /
+   `.signal-context-header label`, grouped into the same rule below) so
+   they share one definition of "caption sits left of the control, same
+   line, same `--ds-control-height`" rather than each section inventing
+   its own arrangement. The caption is `flex: 0 0 auto` (never shrinks --
+   this is also the Section 1 clipping fix, see event-panels input/select
+   rule below) while the control is `flex: 1 1 auto; min-width: 0` (the
+   side that actually narrows). No section overrides this with a one-off
+   margin-top; a section-specific flex-basis (e.g. `.transition-field-
+   start`) only changes *how much share of its row* a field gets, never
+   its internal caption/control relationship or height. */
+.field-inline, .signal-generator-grid label, .signal-context-header label { display: flex; flex-direction: row; align-items: center; gap: 5px; min-width: 0; }
+.field-inline > span, .signal-generator-grid label > span, .signal-context-header label > span { flex: 0 0 auto; white-space: nowrap; color: #5c687c; font-size: 10px; font-weight: 650; }
+.field-inline > input, .field-inline > select,
+.signal-generator-grid label > input, .signal-generator-grid label > select { flex: 1 1 auto; min-width: 0; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
 .transition-form-panel { display: flex; flex-direction: column; gap: 4px; }
-.transition-form-panel label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
-.transition-form-panel input { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
-/* Density fix (#402/#426 follow-up): Start/Value/Comment sit in one row
-   (see transition-form-row below) with each label's text to the left of
-   its control -- same inline convention as `.signal-generator-grid` -- so
-   this row costs one control-height line instead of a stacked label+input
-   pair. */
 .transition-form-row { display: flex; gap: 8px; }
-.transition-form-row label { display: flex; flex-direction: row; align-items: center; gap: 5px; flex: 1 1 auto; min-width: 0; white-space: nowrap; }
-.transition-form-row label > input { flex: 1 1 auto; min-width: 0; }
+.transition-form-row .field-inline { flex: 1 1 auto; }
 .transition-form-row .transition-field-start { flex: 0 1 108px; }
 .transition-form-row .transition-field-value { flex: 0 1 120px; }
 .transition-form-row .transition-field-comment { flex: 2 1 auto; }
@@ -218,8 +269,6 @@
    unstyled browser label/input defaults. */
 .signal-generator { display: flex; flex-direction: column; gap: 4px; }
 .signal-generator-form { display: flex; flex-direction: column; gap: 4px; }
-.signal-generator-form label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
-.signal-generator-form input, .signal-generator-form select { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
 /* Density fix (#402/#426 follow-up): the always-relevant fields pack three
    per row (2 rows total), and each label's text sits to the *left* of its
    control instead of stacked above it (one compact line per field instead
@@ -234,11 +283,16 @@
 .signal-generator-head h2 { margin: 0; }
 .signal-generator-advanced-toggle { flex: 0 0 auto; height: 18px; border: 0; background: transparent; color: #2c78bb; font-size: 9px; font-weight: 650; text-decoration: underline; padding: 0; cursor: pointer; }
 .signal-generator-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px 6px; }
-.signal-generator-form .signal-generator-grid label { display: flex; flex-direction: row; align-items: center; gap: 5px; white-space: nowrap; }
-.signal-generator-grid label > input, .signal-generator-grid label > select { flex: 1 1 auto; min-width: 0; }
 .signal-generator-footer { display: flex; align-items: center; gap: 8px; margin-top: 0; }
 .signal-generator-form button[type="submit"] { height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 12px; margin-left: auto; }
 .signal-generator-form button[type="submit"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
+/* Visual Quality Closure pass, Section 5: an explicit "Transitions (N)"
+   section identity, one line, immediately above the toolbar it belongs to
+   -- distinguishing this table from the panels above it the same way each
+   of *those* now has its own heading. */
+.event-table-heading { display: flex; align-items: center; padding: 4px 0 2px; }
+.event-table-heading h2 { margin: 0; font-size: 11px; font-weight: 700; color: #304761; text-transform: uppercase; letter-spacing: .03em; }
+.event-table-heading h2 span { font-weight: 500; text-transform: none; letter-spacing: normal; color: #758197; }
 .event-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 4px 0; }
 .event-table-footer-bulk, .event-table-footer-io { display: flex; align-items: center; gap: 6px; }
 .event-table-footer button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
@@ -280,15 +334,15 @@
 .annotation-list-label { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .editor-empty { display: grid; min-height: 160px; place-items: center; color: #728096; font-size: 12px; }
 .editor-problem { padding: 7px 12px; border-bottom: 1px solid #f2c2c2; background: #fff0f0; color: #9a2b2b; font-size: 11px; }
-/* Bottom Panel Visual Reference pass: compact "Signal: NAME  Group [▼]
-   [Move]" header row -- replaces the old `.group-move-picker` name (still
-   the same dropdown+Move from #402) plus the removed `.signal-properties`
-   form and `.group-drop-targets` fixed button list that used to sit below
-   it, all condensed into one line so it never pushes the Transition
-   editor down. */
-.signal-context-header { display: flex; align-items: center; gap: 8px; padding: 3px 12px; border-bottom: 1px solid #e0e5ec; }
-.signal-context-header label { display: flex; align-items: center; gap: 5px; color: #5c687c; font-size: 10px; font-weight: 650; }
-.signal-context-header select { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 2px 6px; }
+/* Visual Quality Closure pass (#402/#426), Section 10: "Signal: NAME
+   Group [▼] [Move]" is no longer its own bordered row below the tabbar --
+   it's an inline group sitting *inside* `.editor-tabbar` now (see
+   signal-editor.tsx), between the selection label and Undo/Redo, so the
+   compact context header is genuinely one line instead of two. The
+   caption/select pairing itself comes from the shared `.field-inline`
+   rule above (Section 2) via `.signal-context-header label`; only the
+   flex-item behavior specific to sitting inside the tabbar lives here. */
+.signal-context-header { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; }
 .signal-context-header button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 2px 10px; }
 .signal-context-header button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
 .clock-generator { display: flex; align-items: end; gap: 10px; padding: 10px 12px 14px; }

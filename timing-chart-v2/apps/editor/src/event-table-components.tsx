@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { quickValueLiteral, quickValueOptions, type CommandId, type ValueSignal } from "@timing-chart-v2/schema";
+import { RibbonIcon } from "./ribbon-icon.js";
 
 export type EventCommandIdFactory = (scope: string) => CommandId;
 
@@ -39,17 +40,36 @@ export function EventRow({ signal, change, end, index, selected, checked, onTogg
     if (!hasChanges) return;
     onCommand({ id: nextCommandId("replace_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: change.start, start, value, ...(comment ? { comment } : {}) });
   }}>
-    <input type="checkbox" aria-label={`Select row ${change.start}`} checked={checked} onClick={(event) => event.stopPropagation()} onChange={onToggleChecked} />
+    {/* Visual Quality Closure pass (#402/#426): "Select transition N" (not
+        the bare cycle number) so the accessible name reads as a sentence,
+        matching Section 4's explicit example. */}
+    <input type="checkbox" aria-label={`Select transition ${index}`} checked={checked} onClick={(event) => event.stopPropagation()} onChange={onToggleChecked} />
     <span className="event-row-index">{index}</span>
     <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
     <output>{end}</output><output>{end - change.start}</output>
     <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />
     <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
+    {/* Visual Quality Closure pass: Cancel/Save/Remove sitting side by side
+        on every row *at all times* is exactly the fixed-150px Actions
+        column that clipped ("Remov..." cut off) -- three always-on text
+        buttons plus the full-text "● Unapplied changes" indicator never fit
+        in a column narrow enough to leave the Comment column real width.
+        Fix is compaction, not a font shrink or overflow:hidden clip: the
+        row's own Draft state (`hasChanges`) already distinguishes "being
+        edited" from "at rest", so only the row actually being edited shows
+        Cancel/Save (the wider state); an at-rest row shows one compact,
+        labelled icon button (Remove). The dirty flag itself becomes a
+        title/aria-labelled dot instead of a full sentence -- still
+        announced to assistive tech and still visually present, just not
+        ~110px of running text competing for the same narrow column. */}
     <span className="event-actions">
-      {hasChanges && <output className="draft-unapplied-indicator" data-testid={`event-row-unapplied-${change.start}`}>● Unapplied changes</output>}
-      <button type="button" onClick={(event) => { event.stopPropagation(); cancel(); }} disabled={!hasChanges} data-testid={`event-row-cancel-${change.start}`}>Cancel</button>
-      <button type="submit" disabled={!hasChanges}>Save</button>
-      <button type="button" onClick={(event) => { event.stopPropagation(); onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start }); }}>Remove</button>
+      {hasChanges && <span className="event-row-dirty-dot" role="status" title="Unapplied changes" aria-label="Unapplied changes" data-testid={`event-row-unapplied-${change.start}`} />}
+      {hasChanges
+        ? <>
+          <button type="button" onClick={(event) => { event.stopPropagation(); cancel(); }} data-testid={`event-row-cancel-${change.start}`}>Cancel</button>
+          <button type="submit">Save</button>
+        </>
+        : <button type="button" className="icon-button danger" title="Delete transition" aria-label={`Delete transition at cycle ${change.start}`} onClick={(event) => { event.stopPropagation(); onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start }); }}><RibbonIcon name="i-delete" /></button>}
     </span>
   </form>;
 }

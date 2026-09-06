@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
@@ -97,6 +97,17 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
   };
   const canMoveUp = soleChecked !== undefined && soleChecked.start > 0 && !signal.values.some((change) => change.start === soleChecked.start - 1);
   const canMoveDown = soleChecked !== undefined && soleChecked.start < cycleCount - 1 && !signal.values.some((change) => change.start === soleChecked.start + 1);
+  // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
+  // only ever meant "this row feeds the footer's bulk actions below" -- but
+  // nothing on screen said so. A header Select All checkbox (tri-state:
+  // indeterminate while some-but-not-all rows are checked) plus a visible
+  // "N selected" count next to the section title make that relationship
+  // explicit without relying on the reader to infer it from the footer
+  // alone.
+  const allChecked = signal.values.length > 0 && checkedCount === signal.values.length;
+  const selectAllRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { if (selectAllRef.current) selectAllRef.current.indeterminate = checkedCount > 0 && !allChecked; }, [checkedCount, allChecked]);
+  const toggleAll = () => setCheckedStarts(allChecked ? new Set() : new Set(signal.values.map((change) => change.start)));
   return <div className="event-editor">
     {/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value
         Helper and (for a binary Signal) Generate Waveform render side by
@@ -115,10 +126,15 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
             row instead, since the panel already has ~570px of horizontal
             room at typical viewport widths and this is by far the tallest
             of the three top-row panels today. */}
+        {/* Visual Quality Closure pass (#402/#426): the caption text sits in
+            its own <span> (`flex-shrink: 0`) so it can never be squeezed
+            below its own content width -- the input is the flexible,
+            `min-width: 0` side. See signal-generator-editor.tsx for the
+            fuller root-cause note; the same bug pattern applied here too. */}
         <div className="transition-form-row">
-          <label className="transition-field-start">Start (cycle)<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-          <label className="transition-field-value">Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
-          <label className="transition-field-comment">Comment<input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+          <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+          <label className="field-inline transition-field-value"><span>Value</span><input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
+          <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
         </div>
         <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
         <div className="transition-form-actions">
@@ -133,18 +149,32 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
       </div>
       {generatorSlot}
     </div>
+    {/* Visual Quality Closure pass, Section 5: an explicit "Transitions (N)"
+        section identity so this table doesn't read as an anonymous list
+        sitting below an unlabeled Duplicate/Add Row/Delete toolbar -- the
+        three roles (Add/Edit Transition, Value Helper + Generate Waveform
+        above, Transitions here) are each named now. */}
+    <div className="event-table-heading">
+      <h2>Transitions <span>({signal.values.length})</span></h2>
+    </div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
       <button type="button" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate">Duplicate</button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
-      <button type="button" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
+      <button type="button" className="danger" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
-    <div className="event-table" role="table" aria-label="Signal events">
-      <div className="event-row event-columns" role="row"><span /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-      {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+    <div className="event-table-scroll">
+      <div className="event-table" role="table" aria-label="Signal events">
+        {/* Visual Quality Closure pass, Section 4: Select All is a real
+            tri-state checkbox (checked/indeterminate/unchecked) driving the
+            exact same `checkedStarts` set each row's own checkbox feeds --
+            not a decorative header cell. */}
+        <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
+        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+      </div>
     </div>
     <div className="event-table-footer">
       <div className="event-table-footer-bulk">
-        <button type="button" data-testid="event-delete-selected" disabled={checkedCount === 0 || checkedCount >= signal.values.length} onClick={deleteSelected}>Delete Selected</button>
+        <button type="button" className="danger" data-testid="event-delete-selected" disabled={checkedCount === 0 || checkedCount >= signal.values.length} onClick={deleteSelected}>Delete Selected</button>
         <button type="button" data-testid="event-move-up" disabled={!canMoveUp} onClick={() => moveBy(-1)}>Move Up</button>
         <button type="button" data-testid="event-move-down" disabled={!canMoveDown} onClick={() => moveBy(1)}>Move Down</button>
         <span data-testid="event-selected-count">{checkedCount} row{checkedCount === 1 ? "" : "s"} selected</span>

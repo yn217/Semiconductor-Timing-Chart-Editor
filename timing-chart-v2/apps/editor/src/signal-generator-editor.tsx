@@ -76,26 +76,43 @@ export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { reado
           `.signal-generator-head`, next to the heading). Every field is
           still reachable, just not forced open by default (progressive
           disclosure, not deleted functionality). */}
+      {/* Visual Quality Closure pass (#402/#426): every label caption here
+          is now wrapped in its own <span> with `flex-shrink: 0` (CSS) --
+          without it, a flex row's *text node* is just as shrinkable as its
+          sibling <input>/<select>, so a narrow grid column would shrink the
+          nowrap caption below its own content width and clip it mid-word
+          ("Width/Du…", "Repeat co…" in the reported screenshot). The input/
+          select stays the flexible, `min-width: 0` side instead -- captions
+          never lose characters, the *control* is what narrows. "Mode" and
+          "Count" (rather than "Width/Duty" and "Repeat count") free up
+          real width for that control without hiding meaning: the Mode
+          select's own options already read "Width"/"Duty", and "Count" is
+          read together with the "Repeat" mode select right before it. */}
       <div className="signal-generator-grid">
-        <label>Start<input aria-label="Signal generator start" type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-        <label>Period<input aria-label="Signal generator period" type="number" min="1" step="1" value={period} onChange={(event) => setPeriod(Number(event.target.value))} /></label>
-        <label>Width/Duty<select aria-label="Signal generator width mode" value={widthMode} onChange={(event) => setWidthMode(event.target.value as typeof widthMode)}><option value="width">Width</option><option value="duty">Duty</option></select></label>
+        <label><span>Start</span><input aria-label="Signal generator start" type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+        <label><span>Period</span><input aria-label="Signal generator period" type="number" min="1" step="1" value={period} onChange={(event) => setPeriod(Number(event.target.value))} /></label>
+        <label><span>Mode</span><select aria-label="Signal generator width mode" value={widthMode} onChange={(event) => setWidthMode(event.target.value as typeof widthMode)}><option value="width">Width</option><option value="duty">Duty</option></select></label>
         {widthMode === "width"
-          ? <label>Width<input aria-label="Signal generator width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label>
-          : <label>Duty<input aria-label="Signal generator duty" type="number" min="0.01" max="0.99" step="0.01" value={duty} onChange={(event) => setDuty(Number(event.target.value))} /></label>}
-        <label>Repeat<select aria-label="Signal generator repeat mode" value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as typeof repeatMode)}><option value="finite">Count</option><option value="infinite">Infinite</option></select></label>
-        {repeatMode === "finite" && <label>Repeat count<input aria-label="Signal generator repeat count" type="number" min="1" step="1" value={repeatCount} onChange={(event) => setRepeatCount(Number(event.target.value))} /></label>}
+          ? <label><span>Width</span><input aria-label="Signal generator width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label>
+          : <label><span>Duty</span><input aria-label="Signal generator duty" type="number" min="0.01" max="0.99" step="0.01" value={duty} onChange={(event) => setDuty(Number(event.target.value))} /></label>}
+        <label><span>Repeat</span><select aria-label="Signal generator repeat mode" value={repeatMode} onChange={(event) => setRepeatMode(event.target.value as typeof repeatMode)}><option value="finite">Count</option><option value="infinite">Infinite</option></select></label>
+        {repeatMode === "finite" && <label><span>Count</span><input aria-label="Signal generator repeat count" type="number" min="1" step="1" value={repeatCount} onChange={(event) => setRepeatCount(Number(event.target.value))} /></label>}
       </div>
       {advancedOpen && <div className="signal-generator-grid" data-testid="signal-generator-advanced-fields">
-        <label>Initial level<select aria-label="Signal generator initial level" value={initial} onChange={(event) => setInitial(Number(event.target.value) as 0 | 1)}><option value={0}>0</option><option value={1}>1</option></select></label>
-        <label>Active level<select aria-label="Signal generator active level" value={active} onChange={(event) => setActive(Number(event.target.value) as 0 | 1)}><option value={0}>0</option><option value={1}>1</option></select></label>
-        <label>Phase<input aria-label="Signal generator phase" type="number" step="1" value={phase} onChange={(event) => setPhase(Number(event.target.value))} /></label>
-        <label>Suppressed periods<input aria-label="Signal generator suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
+        <label><span>Initial</span><select aria-label="Signal generator initial level" value={initial} onChange={(event) => setInitial(Number(event.target.value) as 0 | 1)}><option value={0}>0</option><option value={1}>1</option></select></label>
+        <label><span>Active</span><select aria-label="Signal generator active level" value={active} onChange={(event) => setActive(Number(event.target.value) as 0 | 1)}><option value={0}>0</option><option value={1}>1</option></select></label>
+        <label><span>Phase</span><input aria-label="Signal generator phase" type="number" step="1" value={phase} onChange={(event) => setPhase(Number(event.target.value))} /></label>
+        <label><span>Suppressed</span><input aria-label="Signal generator suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
       </div>}
       <div className="signal-generator-footer">
         {error && <output className="editor-problem" role="alert" data-testid="signal-generator-error">{error}</output>}
         {status && !error && <output data-testid="signal-generator-status">{status}</output>}
-        {hasChanges && <output className="draft-unapplied-indicator" data-testid="signal-generator-unapplied">● Unapplied changes</output>}
+        {/* Visual Quality Closure pass, Section 9: this indicator is scoped
+            to the Generator's own Draft (a candidate waveform not yet
+            applied) -- distinct from a Transition row's Draft and from
+            Inspector's Signal Properties Draft, so its wording says which
+            one it is instead of a bare, ambiguous "Unapplied changes". */}
+        {hasChanges && <output className="draft-unapplied-indicator" data-testid="signal-generator-unapplied">● Generator: unapplied changes</output>}
         <button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
       </div>
     </form>

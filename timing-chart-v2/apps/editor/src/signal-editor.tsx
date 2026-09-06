@@ -25,39 +25,36 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
     <div className="editor-tabbar">
       <span className="editor-tab active">Signal</span>
       <span className="editor-selection">{signal ? `${signal.display.name} · ${signal.type}` : "Select a signal to edit"}</span>
-      {/* Bottom Panel Visual Reference pass (#402/#426): Undo/Redo/Cancel/
+      {/* Visual Quality Closure pass (#402/#426), Section 10: the Group
+          dropdown + Move used to sit in its own bordered row below this
+          tabbar (`.signal-context-header`) -- folded onto this one line
+          instead ("READY · binary   Group [▼] [Move]   Undo Redo ...")
+          so the compact context header is genuinely one line, saving the
+          row entirely rather than just narrowing it. Undo/Redo/Cancel/
           Hide/Delete stay here rather than moving into an overflow menu --
           they are a small, established, heavily-tested header row shared
           across every Bottom tab (Annotation/Transaction/Bookmark editors
           use the identical convention), and hiding them behind a menu
           would touch that shared convention project-wide for a Signal-
-          specific visual pass. Kept, just visually compact (bottom-
-          editor.css). What actually moved: everything that used to sit
-          *below* this row (the property form, the old fixed Group button
-          list) -- see the removed `.signal-properties` form and
-          `.group-drop-targets` block below. */}
+          specific visual pass. Section 11 (button hierarchy): Delete
+          signal is the one danger action here and is styled as such
+          (`.editor-tabbar .danger`) so it doesn't read as equal-weight to
+          Undo/Redo/Cancel/Hide -- it was previously visually identical to
+          them. What moved out of this tabbar entirely, earlier in #402:
+          the property form and the old fixed Group button list -- see the
+          removed `.signal-properties` and `.group-drop-targets` blocks. */}
+      {signal && <div className="signal-context-header">
+        <label className="field-inline"><span>Group</span>
+          <select aria-label="Signal group" value={resolvedTargetGroupId} onChange={(event) => setTargetGroupId(event.target.value)}>
+            {groups.map((group) => <option key={group.id} value={group.id}>{group.name}{group.id === currentGroup?.id ? " (current)" : ""}</option>)}
+          </select>
+        </label>
+        <button type="button" data-testid="move-signal-to-group" disabled={!resolvedTargetGroupId || resolvedTargetGroupId === currentGroup?.id} onClick={() => onDropToGroup("signal", signal.id, resolvedTargetGroupId as GroupId)}>Move</button>
+      </div>}
       <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
       <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
       {signal && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button><button type="button" className="danger" onClick={onDelete} data-testid="signal-delete">Delete signal</button></>}
     </div>
-    {/* Bottom Panel Visual Reference pass: the old fixed "Drop into group
-        [Control] [Payload] [Scratch]" button row is removed -- a fixed
-        column of Group buttons is exactly what the Reference layout (and
-        the Issue's explicit "固定Group button列は禁止") rules out. Dragging
-        an arbitrary Left Tree row onto another row already within the
-        target Group still works unchanged (TreeDragInteractionOwner, Left
-        Tree-internal, unrelated to this removed Bottom-only target list);
-        moving the *currently selected* Signal into any Group -- including
-        an empty one, which that internal drag can't reach on its own --
-        is what this compact dropdown + Move covers instead. */}
-    {signal && <div className="signal-context-header">
-      <label>Group
-        <select aria-label="Signal group" value={resolvedTargetGroupId} onChange={(event) => setTargetGroupId(event.target.value)}>
-          {groups.map((group) => <option key={group.id} value={group.id}>{group.name}{group.id === currentGroup?.id ? " (current)" : ""}</option>)}
-        </select>
-      </label>
-      <button type="button" data-testid="move-signal-to-group" disabled={!resolvedTargetGroupId || resolvedTargetGroupId === currentGroup?.id} onClick={() => onDropToGroup("signal", signal.id, resolvedTargetGroupId as GroupId)}>Move</button>
-    </div>}
     {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>
       {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} onCommand={onCommand} onDuplicate={onDuplicate} onPreview={onClockPreview} />
