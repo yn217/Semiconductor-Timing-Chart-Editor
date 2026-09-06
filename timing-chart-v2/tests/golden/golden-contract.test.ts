@@ -65,4 +65,9 @@ describe("Golden contract gate", () => {
   it("fails when a declared export was not produced", () => {
     expect(() => assertGoldenCoverageContract(coverageMeta, coverageDocument, { rendered: true, visualGate, exportedFormats: ["svg"] })).toThrow(/export-png/);
   });
+
+  it("fails instead of silently accepting an unknown coverage label", () => {
+    const unknown = { ...coverageMeta, coverage: ["future feature"] };
+    expect(() => assertGoldenCoverageContract(unknown, coverageDocument, { rendered: true, visualGate })).toThrow(/unsupported Golden coverage label/);
+  });
 });
