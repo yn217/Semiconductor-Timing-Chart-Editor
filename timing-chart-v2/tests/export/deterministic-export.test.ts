@@ -263,6 +263,30 @@ describe("deterministic document export", () => {
     expect(renderExportSvg(scene)).toContain('data-measurement-lane="2"');
   });
 
+  it("preserves cross-Signal Measurement endpoints and deterministic dimension export", () => {
+    const base = canonicalFixture();
+    const clock = base.signals[0]!;
+    const data = base.signals[1]!;
+    const measurement = {
+      id: "ann_cross_signal" as AnnotationId,
+      type: "measurement" as const,
+      label: "t_cross",
+      visible: true,
+      measurement: { profile: "custom" as const, anchorKind: "ratio" as const },
+      measurementLayout: { startMarker: "arrow" as const, endMarker: "arrow" as const, arrowLayout: "auto" as const, extensionLines: "both" as const },
+      start: { signalId: clock.id, cycle: 2, point: "transition-center" as const, transition: { kind: "ratio" as const, value: 0.25 } },
+      end: { signalId: data.id, cycle: 5, point: "transition-center" as const, transition: { kind: "ratio" as const, value: 0.75 } },
+    };
+    const document = { ...base, annotations: [measurement] };
+    const first = buildExportScene(document, { format: "svg", scope: "document" });
+    const second = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(first.annotations[0]).toMatchObject({ id: "ann_cross_signal", measurementProfile: "custom", transitionKind1: "ratio", transitionKind2: "ratio" });
+    expect(first.annotations[0]?.x1).not.toBe(first.annotations[0]?.x2);
+    expect(renderExportSvg(first)).toBe(renderExportSvg(second));
+    expect(renderExportSvg(first)).toContain('data-start-transition-kind="ratio"');
+    expect(renderExportSvg(first)).toContain('data-end-transition-kind="ratio"');
+  });
+
   it("exports clock edge counters from the same scene cycle mapping", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;
