@@ -221,6 +221,15 @@
 .quick-values { display: flex; gap: 4px; }
 .quick-values button { min-width: 30px; padding-inline: 6px; }
 
+/* #426 Phase 1: one shared visual contract for a Bottom tab's Draft/Apply
+   "unapplied changes" indicator, so every tab that has a Draft state
+   signals it identically rather than each editor inventing its own look.
+   Applied so far to the Signal tab's per-row Event editor, Signal
+   Generator and Signal Properties form (#402); Annotation/Bookmarks/
+   Transaction integrate their own Draft/Apply flows onto this same class
+   in later phases of this Epic rather than duplicating the style. */
+.draft-unapplied-indicator { color: #9a6b00; font-size: 10px; font-weight: 650; white-space: nowrap; }
+
 /* Migrated from legacy.css (#260): Comment Row / Transaction linked-signal /
    Problems / JSON are all Bottom-panel tabs or Bottom-editor variants. */
 .editor-shell .clock-context-toolbar .clock-context-label { margin: 0 2px 0 12px; color: #25384f; font-size: 11px; font-weight: 700; white-space: nowrap; }

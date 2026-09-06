@@ -66,7 +66,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { reado
       <label>Suppressed periods<input aria-label="Signal generator suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
       {error && <output className="editor-problem" role="alert" data-testid="signal-generator-error">{error}</output>}
       {status && !error && <output data-testid="signal-generator-status">{status}</output>}
-      {hasChanges && <output data-testid="signal-generator-unapplied">● Unapplied changes</output>}
+      {hasChanges && <output className="draft-unapplied-indicator" data-testid="signal-generator-unapplied">● Unapplied changes</output>}
       <button type="submit" data-testid="apply-signal-generator" disabled={!hasChanges}>Generate</button>
     </form>
   </div>;

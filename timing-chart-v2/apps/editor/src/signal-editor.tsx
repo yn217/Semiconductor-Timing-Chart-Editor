@@ -115,6 +115,12 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
         }</select></label>
         {signalType === "bus" && <><label>Width<input aria-label="Signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Display<select aria-label="Bus display format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label></>}
         {signal.type !== "commentRow" && <><label>Spacing Before<input aria-label="Signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label></>}
+        {/* #426 Phase 1: same shared "unapplied changes" indicator class as
+            the Event row / Signal Generator, so the Signal tab's three
+            independent Draft/Apply surfaces read as one consistent
+            contract rather than only the Generator/Event editor having a
+            visible Draft state. */}
+        {hasPropertyChanges && <output className="draft-unapplied-indicator" data-testid="signal-properties-unapplied">● Unapplied changes</output>}
         <button type="submit" data-testid="save-signal-properties" disabled={!hasPropertyChanges}>Apply properties</button>
       </form>
       {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} onCommand={onCommand} onDuplicate={onDuplicate} onPreview={onClockPreview} />

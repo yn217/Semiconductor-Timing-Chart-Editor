@@ -35,7 +35,7 @@ export function EventRow({ signal, change, end, selected, onSelect, onCommand, n
     <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />
     <input aria-label={`Comment ${change.start}`} value={comment} onChange={(event) => setComment(event.target.value)} />
     <span className="event-actions">
-      {hasChanges && <output data-testid={`event-row-unapplied-${change.start}`}>● Unapplied changes</output>}
+      {hasChanges && <output className="draft-unapplied-indicator" data-testid={`event-row-unapplied-${change.start}`}>● Unapplied changes</output>}
       <button type="button" onClick={(event) => { event.stopPropagation(); cancel(); }} disabled={!hasChanges} data-testid={`event-row-cancel-${change.start}`}>Cancel</button>
       <button type="submit" disabled={!hasChanges}>Save</button>
       <button type="button" onClick={(event) => { event.stopPropagation(); onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start }); }}>Remove</button>
