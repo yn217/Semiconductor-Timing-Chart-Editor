@@ -593,9 +593,27 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   const second = primitive.anchors[1] ?? first;
   const dx = second.x - first.x;
   const dy = second.y - first.y;
-  const dimensionY = primitive.type === "measurement" && primitive.measurementLane !== undefined
-    ? Math.min(first.y, second.y) - 18 * (primitive.measurementLane + 1)
-    : undefined;
+  // #418: a Measurement's dimension line/label is placed 18px-per-lane
+  // *above* its anchors by default -- but when the topmost anchor is on
+  // (or near) the first row, that pushes the line/label above local
+  // y=RULER_SAFE_AREA_HEIGHT, into the surface-host's own reserved top
+  // padding (center-columns.css's `.surface-host { padding-top: 34px }`,
+  // matching `.cycle-ruler`'s own 34px height) -- the sticky Cycle Ruler
+  // occupies exactly that band at the top of the scrollable content, at
+  // any scroll position, so anything placed above it there is hidden
+  // behind/under the Ruler. Flip to placing the dimension line *below*
+  // the anchors instead whenever the "above" placement would intrude on
+  // that reserved band, so a Measurement starting on the top-row Signal
+  // stays fully inside the visible canvas. `measurementPlacedBelow` also
+  // drives the label's default offset direction below.
+  const RULER_SAFE_AREA_HEIGHT = 34;
+  const measurementLaneOffset = primitive.type === "measurement" && primitive.measurementLane !== undefined ? 18 * (primitive.measurementLane + 1) : undefined;
+  const measurementPlacedBelow = measurementLaneOffset !== undefined && Math.min(first.y, second.y) - measurementLaneOffset < RULER_SAFE_AREA_HEIGHT;
+  const dimensionY = measurementLaneOffset === undefined
+    ? undefined
+    : measurementPlacedBelow ? Math.max(first.y, second.y) + measurementLaneOffset : Math.min(first.y, second.y) - measurementLaneOffset;
+  if (measurementLaneOffset !== undefined) owner.dataset.measurementSide = measurementPlacedBelow ? "below" : "above";
+  else delete owner.dataset.measurementSide;
   const lineFirst = dimensionY === undefined ? first : { x: first.x, y: dimensionY };
   const lineSecond = dimensionY === undefined ? second : { x: second.x, y: dimensionY };
   // Additive on top of any anchor-derived angle below -- never replaces it,
@@ -659,7 +677,7 @@ function renderOverlay(owner: HTMLElement, primitive: AnnotationOverlayPrimitive
   label.style.whiteSpace = "pre-wrap";
   applyTextStyle(label, parseTextStyle(primitive.style));
   if (primitive.align) label.style.textAlign = primitive.align; else label.style.removeProperty("text-align");
-  label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? -14)}px)`;
+  label.style.transform = `translate(${(lineFirst.x + lineSecond.x) / 2 + (primitive.labelOffset?.x ?? 0)}px, ${(lineFirst.y + lineSecond.y) / 2 + (primitive.labelOffset?.y ?? (measurementPlacedBelow ? 14 : -14))}px)`;
   // #378: a real (SVG, not Unicode) lock glyph -- `label` is already
   // `position: absolute` (center-columns.css), which makes it a containing
   // block for this glyph's own `position: absolute`, so it rides along with
