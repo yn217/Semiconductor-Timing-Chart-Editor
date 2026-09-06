@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { applyTimelineZoom, type TimelineZoomSurfaceContext } from "../../apps/editor/src/runtime/use-editor-runtime-bridge.js";
 
+// #417 (Codex's fix): applyTimelineZoom's syncRulerScroll now reads
+// `getComputedStyle(ruler).transform` to recover the ruler's current
+// untransformed layout origin -- this test file runs in a non-browser
+// (Node) vitest environment with no such global. Stub only if absent, so
+// this file keeps working unmodified if it's ever run under a DOM
+// environment that already provides a real one.
+(globalThis as unknown as { getComputedStyle?: (element: Element) => CSSStyleDeclaration }).getComputedStyle ??= () => ({ transform: "none" }) as CSSStyleDeclaration;
+
 function styleProbe() {
   let origin = "";
   let originWrites = 0;
@@ -14,7 +22,24 @@ function styleProbe() {
 }
 
 function elementWithStyle(style: CSSStyleDeclaration): HTMLElement {
-  return { style, dataset: {}, querySelector: () => null } as unknown as HTMLElement;
+  const rect = { left: 0, top: 0, right: 0, bottom: 0, width: 0, height: 0, x: 0, y: 0, toJSON: () => ({}) } as DOMRect;
+  return {
+    style,
+    dataset: {},
+    querySelector: () => null,
+    // #417 (Codex's fix): applyTimelineZoom now calls syncRulerScroll
+    // unconditionally, which reads real layout geometry (getBoundingClientRect,
+    // getComputedStyle().transform, parentElement, scrollLeft) to keep the
+    // ruler continuously aligned to the actual rendered scale rather than a
+    // one-time frozen value. These focused unit tests exercise
+    // applyTimelineZoom's own scale/origin/width bookkeeping in a
+    // non-browser environment (no real layout to measure), so the mock
+    // elements need enough of a stub surface for that geometry read to
+    // complete as a no-op rather than throw.
+    getBoundingClientRect: () => rect,
+    parentElement: null,
+    scrollLeft: 0,
+  } as unknown as HTMLElement;
 }
 
 describe("applyTimelineZoom", () => {
