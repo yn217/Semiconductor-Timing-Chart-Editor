@@ -49,22 +49,28 @@ test("Inspector Cancel restores signal and clock drafts without a canonical muta
   await expect(page.getByTestId("dirty-status")).toHaveText(dirty!);
 });
 
+// Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector,
+// its sole owner now -- Bottom's own duplicate Name field was removed, so
+// the "transient draft discarded on selection change" contract this test
+// covers is now Inspector's own (still the same underlying mechanism: the
+// Draft resyncs from the newly-selected Signal's own committed values,
+// discarding whatever was mid-typed for the previous one).
 test("Bottom editors cancel transient drafts and preserve canonical counters", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  const signalEditor = page.getByTestId("signal-editor");
-  const originalName = await signalEditor.getByLabel("Signal name").inputValue();
+  const inspector = page.getByTestId("inspector");
+  const originalName = await inspector.getByLabel("Inspector signal name", { exact: true }).inputValue();
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
-  await signalEditor.getByLabel("Signal name").fill("BOTTOM_TRANSIENT");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).fill("BOTTOM_TRANSIENT");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
-  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).not.toHaveValue("BOTTOM_TRANSIENT");
-  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).not.toHaveValue(originalName);
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).not.toHaveValue("BOTTOM_TRANSIENT");
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).not.toHaveValue(originalName);
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);

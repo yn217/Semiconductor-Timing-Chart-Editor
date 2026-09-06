@@ -405,8 +405,43 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
     setWaveformBackground((current) => current === styleString(nextStyle, "waveformBackground", "#ffffff") ? current : styleString(nextStyle, "waveformBackground", "#ffffff"));
     setProblem("");
   }, [signal]);
+  // #402/#426 (Bottom Panel Visual Reference pass): Inspector is now the
+  // sole owner of these lightweight Signal properties (Bottom's own
+  // duplicate Name/Role/Type/Spacing form + "Apply properties" button was
+  // removed from signal-editor.tsx) -- Apply must therefore carry the same
+  // Draft/Apply disabled-when-unchanged contract Bottom's form used to
+  // have, so a no-op submit here can't manufacture an empty History
+  // entry either. `name` is excluded for the same reason Bottom's version
+  // excluded it: InlineNameInput's own onRename already commits
+  // immediately on its own gesture. The style-object comparison mirrors
+  // `apply`'s own structured-style computation below (kept as a plain
+  // JSON-text compare here -- an equivalent-but-differently-formatted
+  // Draft only means Apply stays spuriously enabled, never that a real
+  // change goes undetected).
+  const originalStyleForCompare = signal.display.style ?? {};
+  const hasChanges = role !== signal.role
+    || signalType !== signal.type
+    || (signalType === "bus" && (width !== (signal.width ?? 1) || format !== (signal.displayFormat ?? "hex")))
+    || visible !== (signal.display.visible !== false)
+    || spacingBefore !== (signal.spacingBefore ?? 0)
+    || spacingAfter !== (signal.spacingAfter ?? 0)
+    || align !== (signal.display.align ?? "left")
+    || overflow !== (signal.display.overflow ?? "ellipsis")
+    || splitPane !== (signal.display.splitPane ?? "both")
+    || style !== JSON.stringify(originalStyleForCompare)
+    || textColor !== styleString(originalStyleForCompare, "color", "#152033")
+    || rowBackground !== styleString(originalStyleForCompare, "background", "#ffffff")
+    || fontFamily !== styleString(originalStyleForCompare, "fontFamily", "Segoe UI")
+    || fontSize !== styleNumber(originalStyleForCompare, "fontSize", 12)
+    || bold !== (originalStyleForCompare.fontWeight === "bold")
+    || italic !== (originalStyleForCompare.fontStyle === "italic")
+    || underline !== styleString(originalStyleForCompare, "textDecoration", "").includes("underline")
+    || strikethrough !== styleString(originalStyleForCompare, "textDecoration", "").includes("line-through")
+    || waveformColor !== styleString(originalStyleForCompare, "waveformColor", "#111111")
+    || waveformBackground !== styleString(originalStyleForCompare, "waveformBackground", "#ffffff");
   const apply = (event: React.FormEvent) => {
     event.preventDefault();
+    if (!hasChanges) return;
     let parsed: Signal["display"]["style"];
     try {
       const value: unknown = JSON.parse(style || "{}");
@@ -457,7 +492,8 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
       <InspectorSection sectionId="label-style" title="Label Style" open={sections["label-style"] ?? false} onToggle={() => toggle("label-style")}><label>Text Color<input aria-label="Inspector text color" type="color" value={textColor} onChange={(event) => setTextColor(event.target.value)} /></label><label>Background<input aria-label="Inspector label background" type="color" value={rowBackground} onChange={(event) => setRowBackground(event.target.value)} /></label><label>Font<input aria-label="Inspector label font" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)} /></label><label>Size<input aria-label="Inspector label size" type="number" min="6" max="48" step="1" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /></label><div className="inspector-style-checks"><label className="checkline">Bold<input aria-label="Inspector label bold" type="checkbox" checked={bold} onChange={(event) => setBold(event.target.checked)} /></label><label className="checkline">Italic<input aria-label="Inspector label italic" type="checkbox" checked={italic} onChange={(event) => setItalic(event.target.checked)} /></label><label className="checkline">Underline<input aria-label="Inspector label underline" type="checkbox" checked={underline} onChange={(event) => setUnderline(event.target.checked)} /></label><label className="checkline">Strikethrough<input aria-label="Inspector label strikethrough" type="checkbox" checked={strikethrough} onChange={(event) => setStrikethrough(event.target.checked)} /></label></div><label>Align<select aria-label="Inspector label align" value={align} onChange={(event) => setAlign(event.target.value as typeof align)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Overflow<select aria-label="Inspector label overflow" value={overflow} onChange={(event) => setOverflow(event.target.value as typeof overflow)}><option value="ellipsis">Ellipsis</option><option value="expand">Expand</option><option value="wrap">Wrap</option></select></label></InspectorSection>
       <InspectorSection sectionId="waveform" title="Waveform / Row Style" open={sections.waveform ?? true} onToggle={() => toggle("waveform")}><label>Waveform Color<input aria-label="Inspector waveform color" type="color" value={waveformColor} onChange={(event) => setWaveformColor(event.target.value)} /></label><label>Row Background<input aria-label="Inspector waveform background" type="color" value={waveformBackground} onChange={(event) => setWaveformBackground(event.target.value)} /></label><label>Advanced Style JSON<textarea aria-label="Inspector waveform row style" value={style} onChange={(event) => setStyle(event.target.value)} rows={3} /></label></InspectorSection>
       {problem && <div className="editor-problem" role="alert">{problem}</div>}
-      <button type="submit" data-testid="apply-inspector-signal">Apply Signal Properties</button><button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Cancel</button>
+      {hasChanges && <output className="draft-unapplied-indicator" data-testid="inspector-signal-unapplied">● Unapplied changes</output>}
+      <button type="submit" data-testid="apply-inspector-signal" disabled={!hasChanges}>Apply Signal Properties</button><button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Cancel</button>
     </form>
     <MiniMap document={document} viewport={viewport} />
   </aside>;

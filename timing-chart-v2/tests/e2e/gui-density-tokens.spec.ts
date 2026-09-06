@@ -10,7 +10,7 @@ test("Event Table controls never silently fall back to the browser's native font
 
   // These are the controls that previously fell through to the 16px UA default
   // because they weren't wrapped in any font-styled ancestor.
-  for (const selector of [".event-row input", ".event-actions button", ".event-add button[type='submit']", ".quick-values button"]) {
+  for (const selector of [".event-row input", ".event-actions button", ".transition-form-actions button[type='submit']", ".quick-values button"]) {
     const size = await fontSizeOf(selector);
     expect(size).not.toBe("16px");
   }
@@ -19,7 +19,7 @@ test("Event Table controls never silently fall back to the browser's native font
   const tokenValue = await page.evaluate(() => getComputedStyle(document.documentElement).getPropertyValue("--font-ui").trim());
   const inspectorInputSize = await fontSizeOf(".inspector input");
   expect(inspectorInputSize).toBe(tokenValue);
-  for (const selector of [".event-row input", ".event-actions button", ".event-add button[type='submit']", ".quick-values button"]) {
+  for (const selector of [".event-row input", ".event-actions button", ".transition-form-actions button[type='submit']", ".quick-values button"]) {
     expect(await fontSizeOf(selector)).toBe(tokenValue);
   }
 });

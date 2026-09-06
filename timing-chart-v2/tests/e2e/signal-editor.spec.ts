@@ -1,18 +1,23 @@
 import { expect, test } from "@playwright/test";
 
-test("Bottom Signal Editor applies per-signal vertical spacing through the canonical command", async ({ page }) => {
+// Bottom Panel Visual Reference pass (#402/#426): Name/Role/Type/Spacing
+// moved to Inspector (its sole owner now) -- Bottom's own duplicate
+// property form ("Name/Role/Type/Spacing Before/Spacing After/Apply
+// properties") was removed. Inspector's Apply carries the same Draft/
+// Apply disabled-when-unchanged contract Bottom's form used to have.
+test("Inspector applies per-signal vertical spacing through the canonical command", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  const editor = page.getByTestId("signal-editor");
+  const inspector = page.getByTestId("inspector");
   const nextRow = surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']");
   const before = await nextRow.boundingBox();
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  await editor.getByLabel("Signal spacing before").fill("3");
-  await editor.getByLabel("Signal spacing after").fill("18");
-  await editor.getByTestId("save-signal-properties").click();
+  await inspector.getByLabel("Inspector signal spacing before").fill("3");
+  await inspector.getByLabel("Inspector signal spacing after").fill("18");
+  await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   const after = await nextRow.boundingBox();
@@ -21,7 +26,7 @@ test("Bottom Signal Editor applies per-signal vertical spacing through the canon
   expect(after!.y - before!.y).toBeGreaterThanOrEqual(18);
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
-  await editor.getByTestId("editor-undo").click();
+  await page.getByTestId("signal-editor").getByTestId("editor-undo").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
 });
 
@@ -80,44 +85,59 @@ test("commits one event edit once, rerenders only its waveform, and supports Und
   await expect(editor.getByLabel("Value 3")).toHaveValue("1");
 });
 
-test("updates row properties without WaveDrom regeneration", async ({ page }) => {
+// Bottom Panel Visual Reference pass (#402/#426): Name and Role are now
+// two independent Inspector-owned commit paths (InlineNameInput's own
+// Enter gesture vs Apply Signal Properties) rather than one combined
+// Bottom-form submit -- each is its own one-command, one-History-unit
+// action, neither regenerating WaveDrom.
+test("Inspector Name (Enter) and Role (Apply) each commit independently without WaveDrom regeneration", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const countersBefore = await surface.getAttribute("data-render-counters");
-  const editor = page.getByTestId("signal-editor");
-  await editor.getByLabel("Signal name").fill("REQ_VALID");
-  await editor.getByLabel("Signal role").selectOption("output");
-  await page.getByTestId("save-signal-properties").click();
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).fill("REQ_VALID");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).press("Enter");
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
   await expect(page.getByTestId("selection-status")).toHaveText("REQ_VALID");
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQ_VALID");
+  await inspector.getByLabel("Inspector signal role").selectOption("output");
+  await inspector.getByTestId("apply-inspector-signal").click();
+  await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 2");
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='signal-role']")).toHaveText("o");
   expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
 });
 
-test("Bottom Signal editor exposes editable type and bus width through one semantic command", async ({ page }) => {
+// Bottom Panel Visual Reference pass (#402/#426): Type/Role/Width moved
+// to Inspector, the sole owner of `signal.updateProperties` now.
+test("Inspector exposes editable type and bus width through one semantic command", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
-  const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByLabel("Signal type")).toHaveValue("bus");
+  const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByLabel("Inspector signal type")).toHaveValue("bus");
   const revisionBefore = await page.getByTestId("revision-status").textContent();
-  await editor.getByLabel("Signal role").selectOption("output");
-  await editor.getByLabel("Signal width").fill("16");
-  await editor.getByTestId("save-signal-properties").click();
+  await inspector.getByLabel("Inspector signal role").selectOption("output");
+  await inspector.getByLabel("Inspector signal width").fill("16");
+  await inspector.getByTestId("apply-inspector-signal").click();
   await expect(page.getByTestId("revision-status")).not.toHaveText(revisionBefore!);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(editor.getByLabel("Signal width")).toHaveValue("16");
-  await page.getByTestId("editor-undo").click();
+  await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("16");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
-  await expect(editor.getByLabel("Signal width")).toHaveValue("8");
+  await expect(inspector.getByLabel("Inspector signal width")).toHaveValue("8");
 });
 
-test("Bottom Signal event toolbar provides command-backed row operations and export", async ({ page }) => {
+// Bottom Panel Visual Reference pass (#402/#426): Import/Export moved out
+// of the row-operations toolbar into the table footer (alongside the new
+// bulk Delete Selected/Move Up/Move Down), matching the Reference's
+// header/editor/table/footer information architecture; the toolbar keeps
+// only Duplicate/Add Row/Delete (the always-visible Value Helper panel
+// replaced the old toggle-hidden "Presets" button).
+test("Bottom Signal event toolbar provides command-backed row operations, and the table footer provides export", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -125,13 +145,13 @@ test("Bottom Signal event toolbar provides command-backed row operations and exp
   const editor = page.getByTestId("signal-editor");
   const toolbar = page.getByTestId("signal-event-toolbar");
   await expect(toolbar).toBeVisible();
-  await expect(toolbar.getByRole("button")).toHaveText(["Presets", "Duplicate", "Import...", "Export...", "Add Row", "Delete"]);
+  await expect(toolbar.getByRole("button")).toHaveText(["Duplicate", "Add Row", "Delete"]);
   const revisionBefore = await page.getByTestId("revision-status").textContent();
   const historyBefore = await page.getByTestId("history-status").textContent();
   await expect(page.getByTestId("revision-status")).toHaveText(revisionBefore!);
   await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
   const download = page.waitForEvent("download");
-  await toolbar.getByTestId("event-export-action").click();
+  await editor.getByTestId("event-export-action").click();
   const exported = await download;
   expect((await exported.createReadStream())?.readable).toBe(true);
   await editor.locator("[data-event-start='0']").click();
@@ -140,14 +160,13 @@ test("Bottom Signal event toolbar provides command-backed row operations and exp
   await expect(editor.locator("form.event-row")).toHaveCount(4);
 });
 
-test("Bottom Signal event Import replaces the table in one history entry and Undo restores it", async ({ page }) => {
+test("Bottom Signal event Import (table footer) replaces the table in one history entry and Undo restores it", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  const toolbar = page.getByTestId("signal-event-toolbar");
-  await toolbar.getByTestId("event-import-action").click();
+  await editor.getByTestId("event-import-action").click();
   await editor.getByLabel("Import signal events").setInputFiles({ name: "events.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ values: [{ start: 0, value: "0" }, { start: 2, value: "X" }, { start: 5, value: "1" }] })) });
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(editor.locator("form.event-row")).toHaveCount(3);

@@ -38,7 +38,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { reado
     hasChanges = JSON.stringify(candidate) !== JSON.stringify(signal.values);
   } catch { hasChanges = true; } // an invalid Draft is always "changed" -- Apply itself will report the real validation error on submit.
   return <div className="signal-generator">
-    <div className="event-heading"><h2>Signal Generator</h2><span>Single, finite or periodic pulses -- computed once into the Signal's ordinary values</span></div>
+    <h2>Generate Waveform</h2>
     <form className="signal-generator-form" aria-label="Signal Generator" noValidate onSubmit={(event) => {
       event.preventDefault();
       try {

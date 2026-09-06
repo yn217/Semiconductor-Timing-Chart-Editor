@@ -16,20 +16,16 @@ test("creates an empty Signal Group from the tree through one group.create comma
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
   const countersBefore = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
-  const groupsBefore = await surface.locator("[data-role='tree-branch'][data-group-id]").count();
-  const emptyGroupsBefore = await page.locator("[data-group-target]").count();
   // "Group" is a menuitem inside the Left Tree's "+Add" dropdown -- it has
   // to be opened before the item is visible/clickable.
   await page.getByRole("button", { name: "Add signal or group", exact: true }).click();
   await page.getByTestId("create-group").click();
-  await expect(page.locator("[data-group-target]")).toHaveCount(emptyGroupsBefore + 1);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByLabel("Inspector group name")).toHaveValue("Group 4");
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders);
   expect(countersAfter.localGeometryBuilds).toBe(countersBefore.localGeometryBuilds);
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
-  await expect(page.locator("[data-group-target]")).toHaveCount(emptyGroupsBefore);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
 });
 
@@ -149,17 +145,32 @@ test("moves an arbitrary group as one semantic drag-and-drop operation", async (
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
 
+// Bottom Panel Visual Reference pass (#402/#426): the fixed "Drop into
+// group" Bottom button row this test used to drag an arbitrary (not
+// necessarily selected) Signal onto is removed (the Issue's own "固定
+// Group button列は禁止"), so moving a Signal into an otherwise-unreachable
+// empty Group -- the one real capability that row covered which the Left
+// Tree's own row-to-row internal drag (TreeDragInteractionOwner) cannot
+// -- now goes through the Bottom Signal editor's Group dropdown + Move
+// (select the Signal first, same real `signal.move` command as before).
 test("moves a signal across groups without changing its semantic role", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   const surface = host.locator("[data-role='timing-chart-surface']");
-  await surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']").dragTo(page.locator("[data-group-target='grp_cycle_scratch']"));
+  await surface.locator("[data-role='left-row'][data-row-id='sig_cycle_valid']").click();
+  const editor = page.getByTestId("signal-editor");
+  await editor.getByLabel("Signal group", { exact: true }).selectOption({ label: "Scratch" });
+  await editor.getByTestId("move-signal-to-group").click();
   expect(await signalOrder(surface)).toEqual([
     "sig_cycle_clock", "sig_cycle_reset_n", "sig_cycle_request", "sig_cycle_ready",
     "sig_cycle_data", "sig_cycle_result", "sig_cycle_state", "sig_cycle_valid",
   ]);
-  await expect(page.locator("[data-group-target='grp_cycle_scratch'] small")).toHaveText("1");
+  // The dropdown re-reads the live document every render, so its own
+  // "(current)" marker moving to Scratch is direct evidence the real
+  // signal.move command's effect on canonical group membership actually
+  // happened (same technique signal-editor-group-dropdown.spec.ts uses).
+  await expect(editor.getByLabel("Signal group", { exact: true }).locator("option", { hasText: "Scratch (current)" })).toHaveCount(1);
   await expect(surface.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid'] [data-role='signal-role']")).toHaveText("o");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });

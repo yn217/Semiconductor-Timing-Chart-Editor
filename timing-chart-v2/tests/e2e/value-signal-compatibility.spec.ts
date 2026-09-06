@@ -41,8 +41,9 @@ test("shared ValueSignal policy keeps Quick Values renderable through Save/Open"
   await eventRow.click();
   const bottom = page.getByTestId("bottom-editor");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
-  await bottom.getByTestId("event-presets").click();
-  await bottom.locator(".event-add").getByRole("group", { name: "Quick values" }).getByRole("button", { name: "RISE", exact: true }).click();
+  // Bottom Panel Visual Reference pass (#402/#426): Value Helper is now an
+  // always-visible panel (the "Presets" toggle button was removed).
+  await bottom.locator(".value-helper-panel").getByRole("group", { name: "Quick values" }).getByRole("button", { name: "RISE", exact: true }).click();
   await bottom.getByTestId("add-signal-event").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
@@ -176,7 +177,12 @@ test("Event Table exposes one action route and visibly rejects invalid imports",
   const bottom = page.getByTestId("bottom-editor");
   await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
   const toolbar = bottom.getByTestId("signal-event-toolbar");
-  for (const testId of ["event-duplicate", "event-import-action", "event-export-action", "event-add-row", "event-delete-row"]) await expect(toolbar.getByTestId(testId)).toHaveCount(1);
+  // Bottom Panel Visual Reference pass (#402/#426): Import/Export moved
+  // from the toolbar to the table footer (alongside the new bulk Delete
+  // Selected/Move Up/Move Down) -- both are still exactly one action
+  // route each, just relocated.
+  for (const testId of ["event-duplicate", "event-add-row", "event-delete-row"]) await expect(toolbar.getByTestId(testId)).toHaveCount(1);
+  for (const testId of ["event-import-action", "event-export-action"]) await expect(bottom.getByTestId(testId)).toHaveCount(1);
   await expect(toolbar.getByRole("button", { name: "Preview", exact: true })).toHaveCount(0);
   await expect(toolbar.getByRole("button", { name: "Preview Update", exact: true })).toHaveCount(0);
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent(), dirty: await page.getByTestId("dirty-status").textContent() };

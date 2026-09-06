@@ -75,10 +75,13 @@ test("loads, edits, persists and exports a legacy Pulse Signal without breaking 
   await pulseRow.click();
   const editor = page.getByTestId("signal-editor");
   await expect(editor).toContainText("PULSE_LEGACY · pulse");
-  // The Bottom Editor's own Type field must show the legacy value truthfully
-  // (not silently drop it), while never offering it as a choice elsewhere
-  // (see the previous test for the creation-surface assertions).
-  await expect(editor.getByLabel("Signal type")).toHaveValue("pulse");
+  // Bottom Panel Visual Reference pass (#402/#426): Type moved to
+  // Inspector, its sole owner now -- Bottom's own duplicate Type field
+  // was removed. Inspector's Type field must still show the legacy value
+  // truthfully (not silently drop it), while never offering it as a
+  // choice elsewhere (see the previous test for the creation-surface
+  // assertions).
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("pulse");
 
   await editor.locator("form.event-row").first().getByLabel("Value 0").fill("1");
   await editor.locator("form.event-row").first().getByRole("button", { name: "Save" }).click();

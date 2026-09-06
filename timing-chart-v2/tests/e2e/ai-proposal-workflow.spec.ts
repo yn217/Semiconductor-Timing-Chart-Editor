@@ -63,8 +63,13 @@ test("AI proposal rejects a stale revision after an intervening semantic edit", 
   await ai.getByRole("button", { name: "Preview", exact: true }).click();
 
   const inspector = page.getByTestId("inspector");
+  // #402/#426 (Bottom Panel Visual Reference pass): Inspector's Apply is
+  // now Draft/Apply-gated (disabled while unchanged), same as Bottom's own
+  // form used to be -- and `name` is deliberately excluded from that gate,
+  // since InlineNameInput already commits immediately on its own gesture
+  // (Enter), independent of Apply.
   await inspector.getByLabel("Inspector signal name").fill("INTERVENING_EDIT");
-  await inspector.getByTestId("apply-inspector-signal").click();
+  await inspector.getByLabel("Inspector signal name").press("Enter");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   await ai.getByTestId("ai-validate").click();
   await expect(ai.getByTestId("ai-status")).toHaveText(/Conflict · preview revision 0, current revision 1/);
@@ -87,7 +92,7 @@ test("AI Apply reports a stale proposal through the shared Problems diagnostic p
 
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Inspector signal name").fill("INTERVENING_APPLY_EDIT");
-  await inspector.getByTestId("apply-inspector-signal").click();
+  await inspector.getByLabel("Inspector signal name").press("Enter");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   await ai.getByTestId("ai-apply").click();
   await expect(ai.getByTestId("ai-status")).toHaveText(/Conflict · preview revision 0, current revision 1/);

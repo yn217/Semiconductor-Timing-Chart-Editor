@@ -186,7 +186,9 @@ test("keeps a dirty document dirty when the authoritative file Save fails", asyn
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  const name = page.getByTestId("signal-editor").getByLabel("Signal name", { exact: true });
+  // Bottom Panel Visual Reference pass (#402/#426): Name moved to
+  // Inspector, its sole owner now.
+  const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
   await name.fill("REQUEST_UNSAVED");
   await name.press("Enter");
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");

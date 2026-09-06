@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 
 // #402: the Bottom Signal editor gets an explicit Group dropdown + Move
-// button (alongside the existing, already-tested Left-Tree-drag-onto-
-// Bottom-target mechanism, unchanged) -- and the main Signal Properties
-// form's Apply button stays disabled until the Draft actually differs
-// from the committed Signal.
+// button. Bottom Panel Visual Reference pass (#402/#426): the Signal
+// Properties form (Name/Role/Type/Spacing/Apply) moved to Inspector,
+// which is now the sole owner of that Draft/Apply gating -- its own
+// Apply button stays disabled until the Draft actually differs from the
+// committed Signal, matching the contract Bottom's removed form used to
+// have.
 
 test("moves the selected Signal to a Group via the dropdown + Move button, using the real signal.move command", async ({ page }) => {
   await page.goto("/");
@@ -37,18 +39,18 @@ test("moves the selected Signal to a Group via the dropdown + Move button, using
   await expect(groupSelect.locator("option", { hasText: "Control (current)" })).toHaveCount(1);
 });
 
-test("Signal Properties Apply stays disabled until the Draft actually differs from the committed Signal", async ({ page }) => {
+test("Inspector Signal Properties Apply stays disabled until the Draft actually differs from the committed Signal", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
 
-  const editor = page.getByTestId("signal-editor");
-  const applyButton = editor.getByTestId("save-signal-properties");
+  const inspector = page.getByTestId("inspector");
+  const applyButton = inspector.getByTestId("apply-inspector-signal");
   await expect(applyButton).toBeDisabled();
 
   const beforeRevision = await host.getAttribute("data-canonical-revision");
-  await editor.getByLabel("Signal role").selectOption("output");
+  await inspector.getByLabel("Inspector signal role").selectOption("output");
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await expect(applyButton).toBeEnabled();
 

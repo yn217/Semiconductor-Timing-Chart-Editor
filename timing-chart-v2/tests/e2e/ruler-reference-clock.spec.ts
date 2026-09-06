@@ -46,13 +46,15 @@ test("keeps the Ruler alive across edits, Undo/Redo, and repeated Opens with a n
   expect(rulerCountA).toBeGreaterThan(0);
 
   // Signal property edit -- the Name field commits on its own gesture
-  // (Enter), independent of the Draft "Apply properties" button below it
-  // (#402: `name` is deliberately excluded from that button's Draft/Apply
-  // gating, since InlineNameInput already has its own immediate-commit
-  // path -- see signal-editor.tsx's Apply-button comment).
+  // (Enter), independent of Inspector's Draft "Apply Signal Properties"
+  // button (`name` is deliberately excluded from that button's Draft/
+  // Apply gating, since InlineNameInput already has its own immediate-
+  // commit path). Bottom Panel Visual Reference pass (#402/#426): Name
+  // moved to Inspector, its sole owner now -- Bottom's own duplicate Name
+  // field was removed.
   await host.locator("[data-role='frozen-row'][data-row-id='sig_data']").click();
-  await page.getByTestId("signal-editor").getByLabel("Signal name").fill("DATA_RENAMED");
-  await page.getByTestId("signal-editor").getByLabel("Signal name").press("Enter");
+  await page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true }).fill("DATA_RENAMED");
+  await page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true }).press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(ruler.locator("[data-cycle]")).toHaveCount(rulerCountA);
 

@@ -2,8 +2,12 @@ import { expect, test } from "@playwright/test";
 
 // #400: Signal Generator produces single/finite/periodic pulses, computed
 // once into the Signal's ordinary `values` array through the same command
-// the Manual Event Table already uses -- Manual/Generator is a Bottom
-// Editor tab choice, scoped to canonical type `binary` ("Signal") only.
+// the Manual Event Table already uses. Bottom Panel Visual Reference pass
+// (#402/#426): Generator is no longer a Manual/Generator *tab* choice --
+// it renders as an always-visible "Generate Waveform" side panel next to
+// Add/Edit Transition and Value Helper (EventTable's `generatorSlot`),
+// scoped to canonical type `binary` ("Signal") only, matching #400's own
+// scope.
 
 async function jsonValues(page: import("@playwright/test").Page, signalId: string): Promise<readonly { start: number; value: number }[]> {
   await page.getByRole("tab", { name: "JSON", exact: true }).click();
@@ -12,16 +16,14 @@ async function jsonValues(page: import("@playwright/test").Page, signalId: strin
   return document_.signals.find((signal) => signal.id === signalId)?.values ?? [];
 }
 
-test("Generator tab computes a single pulse into the Signal's ordinary values, undoable and Save/Open-stable", async ({ page }) => {
+test("Generate Waveform computes a single pulse into the Signal's ordinary values, undoable and Save/Open-stable", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  await expect(editor.getByTestId("waveform-source-manual")).toBeVisible();
   const originalValues = await jsonValues(page, "sig_cycle_request");
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
-  await editor.getByTestId("waveform-source-generator").click();
 
   await editor.getByLabel("Signal generator start").fill("2");
   const before = { revision: await host.getAttribute("data-canonical-revision"), history: await page.getByTestId("history-status").textContent() };
@@ -54,7 +56,6 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  await editor.getByTestId("waveform-source-generator").click();
 
   await editor.getByLabel("Signal generator repeat mode").selectOption("infinite");
   await editor.getByLabel("Signal generator period").fill("4");
@@ -69,10 +70,9 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
 
   // A successful Generate advances the canonical revision, which remounts
   // the whole Bottom Editor (same convention every other Bottom Editor tab
-  // already follows) -- back on Manual until Generator is chosen again.
-  // jsonValues() above also switched the Bottom Editor to its JSON tab.
+  // already follows) -- the Generate Waveform panel's own Draft resets to
+  // its defaults, same as every other Draft field in the Bottom Panel.
   await page.getByRole("tab", { name: "Signal", exact: true }).click();
-  await editor.getByTestId("waveform-source-generator").click();
   await editor.getByLabel("Signal generator repeat mode").selectOption("finite");
   await editor.getByLabel("Signal generator width", { exact: true }).fill("4");
   await editor.getByLabel("Signal generator period").fill("4");
@@ -83,13 +83,12 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
   await expect(page.getByTestId("history-status")).toHaveText(beforeRejected.history!);
 });
 
-test("Duty mode computes Width from Period, and Manual/Generator tabs are only offered for a Signal (binary), never Level/Bus/State/Event", async ({ page }) => {
+test("Duty mode computes Width from Period, and Generate Waveform is only offered for a Signal (binary), never Level/Bus/State/Event", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  await editor.getByTestId("waveform-source-generator").click();
   await editor.getByLabel("Signal generator width mode").selectOption("duty");
   await editor.getByLabel("Signal generator period").fill("10");
   await editor.getByLabel("Signal generator duty").fill("0.3");
@@ -101,8 +100,7 @@ test("Duty mode computes Width from Period, and Manual/Generator tabs are only o
 
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
   await expect(editor).toContainText("DATA[7:0] · bus");
-  await expect(editor.getByTestId("waveform-source-manual")).toHaveCount(0);
-  await expect(editor.getByTestId("waveform-source-generator")).toHaveCount(0);
+  await expect(editor.getByTestId("apply-signal-generator")).toHaveCount(0);
 });
 
 test("#402: Generate stays disabled once the computed Draft matches the Signal's current values", async ({ page }) => {
@@ -111,7 +109,6 @@ test("#402: Generate stays disabled once the computed Draft matches the Signal's
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
-  await editor.getByTestId("waveform-source-generator").click();
   const generate = editor.getByTestId("apply-signal-generator");
 
   await editor.getByLabel("Signal generator start").fill("2");
@@ -121,14 +118,11 @@ test("#402: Generate stays disabled once the computed Draft matches the Signal's
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 
-  // Applying Generate resets the Bottom Editor's Manual/Generator tab
-  // choice back to Manual (the same convention every other Bottom Editor
-  // tab already follows -- see signal-generator.spec.ts's own "reset to
-  // Manual after Apply" test), so re-entering the exact params that
-  // produced the Signal's current committed values must first reselect
-  // Generator; the fresh Draft (start=0 by default) must then disable
-  // Generate again once it matches, with no second History entry created.
-  await editor.getByTestId("waveform-source-generator").click();
+  // Applying Generate remounts the whole Bottom Editor (canonical revision
+  // bump, same convention every other Bottom Editor tab already follows),
+  // resetting the Draft back to its defaults (start=0) -- re-entering the
+  // exact params that produced the Signal's current committed values must
+  // then disable Generate again, with no second History entry created.
   await editor.getByLabel("Signal generator start").fill("2");
   await expect(generate).toBeDisabled();
   await expect(editor.getByTestId("signal-generator-unapplied")).toHaveCount(0);

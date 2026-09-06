@@ -66,7 +66,7 @@ test("non-overview Signal property commits reuse the static MiniMap overview", a
   const minimap = page.getByTestId("minimap");
   const before = await readState(page);
   await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").fill("REQUEST_RENAMED");
-  await page.getByTestId("apply-inspector-signal").click();
+  await page.getByTestId("inspector").locator("input[aria-label='Inspector signal name']").press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = await readState(page);
   expect(after.overviewBuilds).toBe(before.overviewBuilds);

@@ -74,12 +74,6 @@
 
 .editor-shell .bottom-tabs { height: 38px; }
 
-.event-toolbar .bottom-action { display: inline-flex; align-items: center; gap: 4px; }
-
-.event-toolbar .bottom-action svg { width: 15px; height: 15px; }
-
-.event-presets { display: inline-flex; align-items: center; margin-left: 4px; }
-
 .editor-shell .bottom-pin-label { font-size: 0; }
 
 .editor-shell .bottom-pin-label::after { content: "Pin"; font-size: 9px; }
@@ -134,21 +128,15 @@
 .editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: minmax(0, 1fr) 0 0; }
 .editor-shell[data-bottom-visible="false"] .bottom-resize-track { display: none; }
 
-.signal-properties label, .clock-generator label, .clock-edge-counter label, .event-add label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
+.clock-generator label, .clock-edge-counter label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
 
-.signal-properties input, .signal-properties select, .clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-add input, .event-row input { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
+.clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-row input { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
 
-.signal-properties button, .clock-generator button, .clock-edge-counter button, .event-add button, .event-actions button, .quick-values button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; }
+.clock-generator button, .clock-edge-counter button, .event-actions button, .quick-values button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; }
 
-.signal-properties button[type="submit"], .clock-generator button[type="submit"], .clock-edge-counter button[type="submit"], .event-add > button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
+.clock-generator button[type="submit"], .clock-edge-counter button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
 
 .event-editor { padding: 8px 12px 12px; }
-
-.event-heading { display: flex; align-items: baseline; gap: 12px; }
-
-.event-heading h2 { margin: 0 0 7px; font-size: 13px; }
-
-.event-heading span { color: #758197; font-size: 10px; }
 
 .event-toolbar { display: flex; align-items: center; gap: 5px; min-height: 30px; padding: 4px 0 7px; border-top: 1px solid #d5dde7; border-bottom: 1px solid #d5dde7; }
 
@@ -160,9 +148,13 @@
 
 .event-preview { margin-left: auto; color: #246aa8; font-size: 10px; }
 
+/* Bottom Panel Visual Reference pass (#402/#426): checkbox + # (index)
+   columns are new (bulk row selection feeding the table footer's Delete
+   Selected/Move Up/Move Down); the remaining six columns are unchanged
+   from #402's Start/End/Duration/Value/Comment/Actions order. */
 .event-table { min-width: 850px; border: 1px solid #d0d8e2; border-radius: 4px; overflow: hidden; }
 
-.event-row { display: grid; grid-template-columns: 90px 160px 72px 72px minmax(160px, 1fr) 140px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
+.event-row { display: grid; grid-template-columns: 20px 24px 82px 56px 64px minmax(0, 1fr) minmax(140px, 1.4fr) 150px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
 
 .event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
 
@@ -170,15 +162,52 @@
 
 .event-row > * { margin: 2px 5px; }
 
+.event-row-index { color: #7b8999; font-size: 10px; text-align: center; }
+
 .event-columns { min-height: 25px; background: #f0f4f8; color: #526177; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
 .event-row output { font: 11px Consolas, monospace; color: #4f5e73; }
 
 .event-actions { display: flex; gap: 5px; }
 
-.event-add { display: flex; align-items: end; gap: 8px; padding-top: 9px; }
-
-.event-add input { width: 110px; }
+/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value Helper
+   and (for a binary Signal) Generate Waveform render as one row of
+   compact side-by-side panels, immediately below the tab bar/Group
+   header -- never behind a Manual/Generator mode switch (removed from
+   signal-editor.tsx), and never with a Signal-property form pushing them
+   down (also removed). Wraps to a single column below ~1350px so a
+   1280px viewport still reads top-to-bottom instead of clipping/
+   overlapping. */
+.event-panels { display: grid; grid-template-columns: minmax(280px, 1.3fr) minmax(160px, 0.7fr) minmax(220px, 1fr); gap: 10px; align-items: start; padding: 9px 0; border-bottom: 1px solid #d5dde7; }
+@media (max-width: 1350px) { .event-panels { grid-template-columns: 1fr; } }
+.event-panels > * { min-width: 0; padding: 8px 10px; border: 1px solid #d7dfe9; border-radius: 4px; background: #fbfcfe; }
+.event-panels h2 { margin: 0 0 6px; font-size: 11px; font-weight: 700; color: #304761; text-transform: uppercase; letter-spacing: .03em; }
+.event-panels h2 span { font-weight: 500; text-transform: none; letter-spacing: normal; color: #758197; }
+.transition-form-panel { display: flex; flex-direction: column; gap: 6px; }
+.transition-form-panel label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
+.transition-form-panel input { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
+.transition-form-actions { display: flex; gap: 6px; margin-top: 2px; }
+.transition-form-actions button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 10px; }
+.transition-form-actions button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
+.value-helper-panel { display: flex; flex-direction: column; gap: 6px; }
+.value-helper-hint { color: #758197; font-size: 9px; }
+/* #400/#402: `.signal-generator-form` had no dedicated rule anywhere --
+   embedding it as `generatorSlot` (a compact side-by-side panel, not a
+   full-width tab) makes that gap actually visible, so it gets one here:
+   a compact single-column field list matching `.transition-form-panel`'s
+   own convention, not the previous full-tab layout's implicit reliance on
+   unstyled browser label/input defaults. */
+.signal-generator { display: flex; flex-direction: column; gap: 6px; }
+.signal-generator-form { display: flex; flex-direction: column; gap: 6px; }
+.signal-generator-form label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
+.signal-generator-form input, .signal-generator-form select { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
+.signal-generator-form button[type="submit"] { align-self: start; height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 12px; margin-top: 2px; }
+.signal-generator-form button[type="submit"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
+.event-table-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 0; }
+.event-table-footer-bulk, .event-table-footer-io { display: flex; align-items: center; gap: 6px; }
+.event-table-footer button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
+.event-table-footer button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
+.event-table-footer-bulk span { color: #758197; font-size: 10px; }
 
 /* Existing Bookmark/Time Group object-list rows (jump/edit/delete for
    already-created entities) -- the row shape itself is unchanged, only its
@@ -215,8 +244,17 @@
 .annotation-list-label { overflow: hidden; font-weight: 650; text-overflow: ellipsis; white-space: nowrap; }
 .editor-empty { display: grid; min-height: 160px; place-items: center; color: #728096; font-size: 12px; }
 .editor-problem { padding: 7px 12px; border-bottom: 1px solid #f2c2c2; background: #fff0f0; color: #9a2b2b; font-size: 11px; }
-.signal-properties { display: flex; align-items: end; gap: 10px; padding: 10px 12px; border-bottom: 1px solid #e0e5ec; }
-.signal-properties input { width: 180px; }
+/* Bottom Panel Visual Reference pass: compact "Signal: NAME  Group [▼]
+   [Move]" header row -- replaces the old `.group-move-picker` name (still
+   the same dropdown+Move from #402) plus the removed `.signal-properties`
+   form and `.group-drop-targets` fixed button list that used to sit below
+   it, all condensed into one line so it never pushes the Transition
+   editor down. */
+.signal-context-header { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-bottom: 1px solid #e0e5ec; }
+.signal-context-header label { display: flex; align-items: center; gap: 5px; color: #5c687c; font-size: 10px; font-weight: 650; }
+.signal-context-header select { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 2px 6px; }
+.signal-context-header button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 2px 10px; }
+.signal-context-header button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
 .clock-generator { display: flex; align-items: end; gap: 10px; padding: 10px 12px 14px; }
 .clock-generator h2 { align-self: center; margin: 0 8px 0 0; font-size: 13px; }
 .clock-generator input, .clock-generator select { width: 82px; }

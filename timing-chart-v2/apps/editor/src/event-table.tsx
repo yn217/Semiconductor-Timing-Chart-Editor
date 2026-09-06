@@ -1,16 +1,21 @@
 import { useRef, useState } from "react";
+import type { ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
 import { nextCommandId } from "./command-id.js";
-import { RibbonIcon } from "./ribbon-icon.js";
 
-export function EventTable({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult }) {
+export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
   const [selectedStart, setSelectedStart] = useState<number | undefined>(signal.values[0]?.start);
-  const [presetsOpen, setPresetsOpen] = useState(false);
+  // Bottom Panel Visual Reference pass: bulk row selection (checkbox column)
+  // is a separate concept from `selectedStart` (single-row click-highlight,
+  // used by the per-row inline Draft/Apply/Cancel and by the toolbar's
+  // Duplicate/Delete) -- checking rows only ever feeds the table footer's
+  // bulk actions below.
+  const [checkedStarts, setCheckedStarts] = useState<ReadonlySet<number>>(new Set());
   const [importStatus, setImportStatus] = useState("Import signal events");
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = signal.values.find((change) => change.start === selectedStart);
@@ -60,40 +65,89 @@ export function EventTable({ signal, cycleCount, onCommand }: { readonly signal:
   // truth, and Add still dispatches through the one existing
   // `signal.updateValue` command path.
   const previewEnd = signal.values.filter((change) => change.start > start).map((change) => change.start).sort((a, b) => a - b)[0] ?? cycleCount;
+  const addAndContinue = () => {
+    onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
+    // Auto-advance Start to the next free cycle (excluding the one just
+    // committed) so continuous entry doesn't need manual arithmetic each
+    // time -- Value is kept (commonly the next transition reuses it),
+    // Comment is cleared (a per-transition annotation, not one to repeat).
+    const taken = new Set([...signal.values.map((change) => change.start), start]);
+    const next = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !taken.has(cycle));
+    if (next !== undefined) setStart(next);
+    setComment("");
+  };
+  // Bulk footer actions (Bottom Panel Visual Reference pass): additive to
+  // the existing per-row Draft/Apply/Cancel + toolbar Duplicate/Delete --
+  // checking rows only ever feeds these, never the per-row editing above.
+  const checkedCount = checkedStarts.size;
+  const toggleChecked = (rowStart: number) => setCheckedStarts((current) => { const next = new Set(current); if (next.has(rowStart)) next.delete(rowStart); else next.add(rowStart); return next; });
+  const deleteSelected = () => {
+    if (checkedCount === 0 || checkedCount >= signal.values.length) return;
+    emitValue(signal.values.filter((change) => !checkedStarts.has(change.start)));
+    setCheckedStarts(new Set());
+  };
+  const soleCheckedStart = checkedCount === 1 ? [...checkedStarts][0] : undefined;
+  const soleChecked = soleCheckedStart === undefined ? undefined : signal.values.find((change) => change.start === soleCheckedStart);
+  const moveBy = (delta: -1 | 1) => {
+    if (!soleChecked) return;
+    const target = soleChecked.start + delta;
+    if (target < 0 || target >= cycleCount || signal.values.some((change) => change.start === target)) return;
+    onCommand({ id: nextCommandId("move_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: soleChecked.start, start: target, value: String(soleChecked.value), ...(soleChecked.comment === undefined ? {} : { comment: soleChecked.comment }) });
+    setCheckedStarts(new Set([target]));
+  };
+  const canMoveUp = soleChecked !== undefined && soleChecked.start > 0 && !signal.values.some((change) => change.start === soleChecked.start - 1);
+  const canMoveDown = soleChecked !== undefined && soleChecked.start < cycleCount - 1 && !signal.values.some((change) => change.start === soleChecked.start + 1);
   return <div className="event-editor">
-    <div className="event-heading"><h2>Event Table</h2><span>End and duration are derived</span></div>
+    {/* Bottom Panel Visual Reference pass: Add/Edit Transition, Value
+        Helper and (for a binary Signal) Generate Waveform render side by
+        side in one row, immediately below the tab bar/Group header --
+        never behind a Manual/Generator mode switch, and never with the
+        Transition editor pushed down by a property form above it (both
+        removed from signal-editor.tsx). */}
+    <div className="event-panels">
+      <form className="transition-form-panel" onSubmit={(event) => {
+        event.preventDefault();
+        onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
+      }}>
+        <h2>Add / Edit Transition</h2>
+        <label>Start (cycle)<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+        <label>Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
+        <label>Comment<input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+        <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
+        <div className="transition-form-actions">
+          <button type="submit" data-testid="add-signal-event">Add</button>
+          <button type="button" data-testid="add-signal-event-continue" onClick={addAndContinue}>Add &amp; Continue</button>
+        </div>
+      </form>
+      <div className="value-helper-panel">
+        <h2>Value Helper <span>(Signal)</span></h2>
+        <QuickValues signal={signal} setValue={setValue} />
+        <span className="value-helper-hint">Signal: 0 / 1 / X / Z (High-Z supported)</span>
+      </div>
+      {generatorSlot}
+    </div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
-      <button type="button" className="bottom-action" onClick={() => setPresetsOpen((current) => !current)} aria-pressed={presetsOpen} data-testid="event-presets"><RibbonIcon name="i-settings" /><span>Presets</span></button>
-      <button type="button" className="bottom-action" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate"><RibbonIcon name="i-duplicate" /><span>Duplicate</span></button>
-      <button type="button" className="bottom-action" onClick={() => fileInput.current?.click()} data-testid="event-import-action"><RibbonIcon name="i-import" /><span>Import...</span></button>
-      <button type="button" className="bottom-action" onClick={exportValues} data-testid="event-export-action"><RibbonIcon name="i-export" /><span>Export...</span></button>
+      <button type="button" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate">Duplicate</button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
-      <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import signal events" onChange={(event) => { const file = event.target.files?.[0]; if (file) importValues(file); event.currentTarget.value = ""; }} />
-      {presetsOpen && <div className="event-presets" role="group" aria-label="Event value presets"><QuickValues signal={signal} setValue={setValue} /></div>}
-      <output data-testid="event-import-status">{importStatus}</output>
     </div>
-    {/* #402: "Add or Edit Transition controls" placed above the Transition
-        table (Bottom panel layout consistency, section 3). Adds a new
-        change point at Draft `start`; editing an *existing* row's own
-        Start/Value/Comment stays in that row (EventRow already holds its
-        own Draft and Apply/Cancel, scoped to one row at a time) rather than
-        being folded into this shared form, so selecting a different row to
-        edit never discards an unrelated in-progress Add here. */}
-    <form className="event-add" onSubmit={(event) => {
-      event.preventDefault();
-      onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
-    }}>
-      <label>Start<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-      <label>Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
-      <label>Comment<input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
-      <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
-      <QuickValues signal={signal} setValue={setValue} />
-      <button type="submit" data-testid="add-signal-event">Add / replace event</button>
-    </form>
     <div className="event-table" role="table" aria-label="Signal events">
-      <div className="event-row event-columns" role="row"><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-      {signal.values.map((change, index) => <EventRow key={change.start} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+      <div className="event-row event-columns" role="row"><span /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
+      {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+    </div>
+    <div className="event-table-footer">
+      <div className="event-table-footer-bulk">
+        <button type="button" data-testid="event-delete-selected" disabled={checkedCount === 0 || checkedCount >= signal.values.length} onClick={deleteSelected}>Delete Selected</button>
+        <button type="button" data-testid="event-move-up" disabled={!canMoveUp} onClick={() => moveBy(-1)}>Move Up</button>
+        <button type="button" data-testid="event-move-down" disabled={!canMoveDown} onClick={() => moveBy(1)}>Move Down</button>
+        <span data-testid="event-selected-count">{checkedCount} row{checkedCount === 1 ? "" : "s"} selected</span>
+      </div>
+      <div className="event-table-footer-io">
+        <button type="button" onClick={() => fileInput.current?.click()} data-testid="event-import-action">Import...</button>
+        <button type="button" onClick={exportValues} data-testid="event-export-action">Export...</button>
+        <input ref={fileInput} hidden type="file" accept="application/json,.json" aria-label="Import signal events" onChange={(event) => { const file = event.target.files?.[0]; if (file) importValues(file); event.currentTarget.value = ""; }} />
+        <output data-testid="event-import-status">{importStatus}</output>
+      </div>
     </div>
   </div>;
 }

@@ -1,10 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { canonicalFixture } from "../fixtures/canonical";
 
+// Bottom Panel Visual Reference pass (#402/#426): Name moved to Inspector
+// (its sole owner now) -- Bottom's own duplicate Name field was removed.
 async function makeDirty(page: import("@playwright/test").Page) {
   const host = page.getByTestId("cycle-surface");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  const name = page.getByTestId("signal-editor").getByLabel("Signal name");
+  const name = page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true });
   await name.fill("UNSAVED_REQUEST");
   await name.press("Enter");
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
@@ -15,7 +17,7 @@ test("dirty New uses Cancel and Discard without losing the current document", as
   await makeDirty(page);
   const host = page.getByTestId("cycle-surface");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
-  const beforeName = await page.getByTestId("signal-editor").getByLabel("Signal name").inputValue();
+  const beforeName = await page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true }).inputValue();
 
   await page.getByRole("button", { name: "File", exact: true }).click();
   const newButton = page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true });
@@ -27,7 +29,7 @@ test("dirty New uses Cancel and Discard without losing the current document", as
   await expect(dialog).toHaveCount(0);
   await expect(newButton).toBeFocused();
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
-  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).toHaveValue(beforeName);
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue(beforeName);
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
 
   await newButton.click();
@@ -48,7 +50,7 @@ test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async (
   await makeDirty(page);
   const host = page.getByTestId("cycle-surface");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
-  const beforeName = await page.getByTestId("signal-editor").getByLabel("Signal name").inputValue();
+  const beforeName = await page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true }).inputValue();
 
   await page.getByRole("button", { name: "File", exact: true }).click();
   const newButton = page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true });
@@ -61,7 +63,7 @@ test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async (
   await expect(dialog).toHaveCount(0);
   await expect(newButton).toBeFocused();
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
-  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).toHaveValue(beforeName);
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue(beforeName);
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
@@ -97,7 +99,7 @@ test("dirty Open keeps the current document on Cancel and replaces it on Discard
   await page.getByTestId("unsaved-cancel").click();
   await expect(page.getByTestId("unsaved-file-dialog")).toHaveCount(0);
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
-  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).toHaveValue("UNSAVED_REQUEST");
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal name", { exact: true })).toHaveValue("UNSAVED_REQUEST");
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
 
   await input.setInputFiles(file);

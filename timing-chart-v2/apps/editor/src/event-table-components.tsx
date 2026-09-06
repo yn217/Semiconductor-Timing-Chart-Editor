@@ -4,11 +4,20 @@ import { quickValueLiteral, quickValueOptions, type CommandId, type ValueSignal 
 
 export type EventCommandIdFactory = (scope: string) => CommandId;
 
-export function EventRow({ signal, change, end, selected, onSelect, onCommand, nextCommandId }: {
+export function EventRow({ signal, change, end, index, selected, checked, onToggleChecked, onSelect, onCommand, nextCommandId }: {
   readonly signal: ValueSignal;
   readonly change: ValueSignal["values"][number];
   readonly end: number;
+  // Bottom Panel Visual Reference pass: `#` display index (1-based, table
+  // position) -- purely presentational, never a stable identity (the
+  // change point's own `start` cycle remains the one true identity).
+  readonly index: number;
   readonly selected: boolean;
+  // Bulk-selection checkbox state, separate from `selected` (the single-
+  // row click-highlight already driving this row's own inline Draft) --
+  // feeds only the table footer's bulk actions in event-table.tsx.
+  readonly checked: boolean;
+  readonly onToggleChecked: () => void;
   readonly onSelect: (start: number) => void;
   readonly onCommand: (command: SemanticCommand) => void;
   readonly nextCommandId: EventCommandIdFactory;
@@ -30,6 +39,8 @@ export function EventRow({ signal, change, end, selected, onSelect, onCommand, n
     if (!hasChanges) return;
     onCommand({ id: nextCommandId("replace_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: change.start, start, value, ...(comment ? { comment } : {}) });
   }}>
+    <input type="checkbox" aria-label={`Select row ${change.start}`} checked={checked} onClick={(event) => event.stopPropagation()} onChange={onToggleChecked} />
+    <span className="event-row-index">{index}</span>
     <input aria-label={`Start ${change.start}`} type="number" min="0" step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} />
     <output>{end}</output><output>{end - change.start}</output>
     <input aria-label={`Value ${change.start}`} value={value} onChange={(event) => setValue(event.target.value)} />

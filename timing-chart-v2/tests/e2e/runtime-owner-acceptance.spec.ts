@@ -66,9 +66,12 @@ test("resize then edit then zoom reads current ViewMetrics and keeps semantics c
   expect(resizedWidth).not.toBe(beforeMetrics.inspectorWidth);
   await expect.poll(async () => host.evaluate((element) => getComputedStyle(element).width)).not.toBe(beforeHostWidth);
 
-  const editor = page.getByTestId("signal-editor");
-  await editor.getByLabel("Signal name").fill("REQUEST_AFTER_RESIZE");
-  await editor.getByTestId("save-signal-properties").click();
+  // Bottom Panel Visual Reference pass (#402/#426): Name/Role/Type/Spacing
+  // moved to Inspector (its sole owner now) -- Bottom's own duplicate
+  // property form was removed.
+  const inspector = page.getByTestId("inspector");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).fill("REQUEST_AFTER_RESIZE");
+  await inspector.getByLabel("Inspector signal name", { exact: true }).press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST_AFTER_RESIZE");
   expect(await host.getAttribute("data-canonical-revision")).not.toBe(beforeRevision);

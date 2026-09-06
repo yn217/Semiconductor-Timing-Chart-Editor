@@ -119,12 +119,6 @@
 .left-panel-tail span:first-child { flex: 0 0 auto; }
 .left-panel-tail .scope-breadcrumb { margin-left: auto; }
 
-/* The approved V8 reference opens on the Clock context.  Its compact Bottom
-   surface keeps the dense Clock toolbar at the top; the same capabilities
-   remain available in Inspector and in the normal (non-reference) editor. */
-.editor-shell .signal-editor:has(.clock-editor) .group-drop-targets,
-.editor-shell .signal-editor:has(.clock-editor) .signal-properties { display: none; }
-
 .editor-shell .surface-host [data-role="left-row"][data-row-id="sig_cycle_clock"],
 .editor-shell .surface-host [data-role="frozen-row"][data-row-id="sig_cycle_clock"] { background: white; }
 
@@ -229,14 +223,6 @@
 .hierarchy-browser th { background: #f3f6fa; color: #52677d; }
 .hierarchy-browser tr[data-selected="true"] { background: #e4f1ff; }
 .hierarchy-browser td button { border: 0; padding: 0; background: transparent; color: #145e9f; text-decoration: underline; cursor: pointer; }
-
-.group-drop-targets { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 4px 12px; border-bottom: 1px solid #dce3eb; background: #fbfcfe; color: #637086; font-size: 10px; }
-
-.group-drop-targets button { display: flex; align-items: center; gap: 7px; height: 24px; border: 1px dashed #aebaca; border-radius: 4px; background: white; color: #344a67; padding: 2px 8px; }
-
-.group-drop-targets button[data-drop-active="true"] { border-style: solid; border-color: #2477bd; background: #dcecff; }
-
-.group-drop-targets small { display: inline-grid; min-width: 16px; height: 16px; place-items: center; border-radius: 8px; background: #e6ecf3; font-size: 9px; }
 
 .surface-host [data-role="tree-signal-role"],
 .surface-host [data-role="signal-role"] {

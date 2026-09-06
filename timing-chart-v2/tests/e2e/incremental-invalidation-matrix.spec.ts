@@ -33,7 +33,7 @@ test("ChangeSet invalidation matrix keeps derived owners local", async ({ page }
   const renameBefore = { session: await sessionCounters(page), render: await renderCounters(page) };
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Inspector signal name", { exact: true }).fill("REQUEST_RENAMED");
-  await inspector.getByTestId("apply-inspector-signal").click();
+  await inspector.getByLabel("Inspector signal name", { exact: true }).press("Enter");
   await waitForIdle(page);
   const renameAfter = { session: await sessionCounters(page), render: await renderCounters(page) };
   expect(renameAfter.session.rulerBuilds).toBe(renameBefore.session.rulerBuilds);

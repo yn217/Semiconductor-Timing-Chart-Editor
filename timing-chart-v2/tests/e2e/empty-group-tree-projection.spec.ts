@@ -28,27 +28,59 @@ async function allTreeGroupIds(page: import("@playwright/test").Page): Promise<s
   return [...new Set([...top, ...bottom])];
 }
 
-test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Redo, and Save/Open", async ({ page }) => {
+// Bottom Panel Visual Reference pass (#402/#426): the old always-visible
+// "Drop into group" Bottom button row this file used as its independent
+// "Bottom side" cross-check is removed (the Issue's own "固定Group button
+// 列は禁止"). The Signal editor's Group dropdown replaces it here -- same
+// guarantee (it re-derives its candidate list from the live document's
+// signalGroups every render, including empty groups), but it only exists
+// once a Signal is selected, so every check below selects one stable
+// reference Signal (CLOCK) first.
+async function selectReferenceSignal(page: import("@playwright/test").Page): Promise<void> {
+  await page.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  // The Group dropdown is part of the Signal editor's own render -- wait
+  // for it to actually mount with real options before any caller counts
+  // them, so a read racing the just-issued click's re-render can't
+  // observe a still-empty dropdown as if it were a real baseline of 0.
+  await expect(page.getByTestId("signal-editor").getByLabel("Signal group", { exact: true }).locator("option").first()).toBeAttached();
+}
+
+function bottomGroupOptions(page: import("@playwright/test").Page) {
+  return page.getByTestId("signal-editor").getByLabel("Signal group", { exact: true }).locator("option");
+}
+
+async function bottomGroupIds(page: import("@playwright/test").Page): Promise<string[]> {
+  return bottomGroupOptions(page).evaluateAll((options) => options.map((option) => (option as HTMLOptionElement).value));
+}
+
+test("keeps an empty group consistent across Left Tree, Bottom Group dropdown, Undo/Redo, and Save/Open", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
-  const leftGroups = surface.locator("[data-role='left-group-header'][data-group-id]");
-  const bottomGroups = page.locator("[data-group-target]");
-  const initialGroupCount = await bottomGroups.count();
+  await selectReferenceSignal(page);
+  const initialGroupCount = await bottomGroupOptions(page).count();
   expect(initialGroupCount).toBeGreaterThan(0);
-  const initialGroupIds = await bottomGroups.evaluateAll((targets) => targets.map((target) => (target as HTMLElement).dataset.groupTarget).filter((id): id is string => Boolean(id)));
+  const initialGroupIds = await bottomGroupIds(page);
   expect((await allTreeGroupIds(page)).sort()).toEqual([...initialGroupIds].sort());
 
   await page.getByRole("button", { name: "Add signal or group" }).click();
   await page.getByTestId("create-group").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottomGroups).toHaveCount(initialGroupCount + 1);
-  const groupId = await bottomGroups.last().getAttribute("data-group-target");
+  // Creating a Group moves selection onto the new Group itself (Inspector
+  // now shows it), so the Bottom Signal tab's own "Select a signal to
+  // edit" empty state briefly replaces the dropdown -- reselect the
+  // reference Signal to read it again.
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page)).toHaveCount(initialGroupCount + 1);
+  const groupId = (await bottomGroupIds(page)).find((id) => !initialGroupIds.includes(id));
   expect(groupId).toBeTruthy();
   await revealTreeBottom(page);
   expect(await allTreeGroupIds(page)).toContain(groupId);
   await expect(surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`)).toHaveCount(1);
-  await expect(page.locator(`[data-group-target='${groupId}']`)).toHaveCount(1);
+  // Reselecting the reference Signal above (to read the dropdown) moved
+  // selection off the just-created Group -- reselect it so the Inspector
+  // assertions/edits below target the right entity again.
+  await surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`).click();
   await expect(page.getByTestId("inspector").getByLabel("Inspector group name")).toHaveValue("Group 4");
 
   const groupName = page.getByTestId("inspector").getByLabel("Inspector group name");
@@ -57,7 +89,8 @@ test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Red
   await page.getByTestId("inspector").getByTestId("apply-group-properties").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`)).toContainText("Empty Review Group");
-  await expect(page.locator(`[data-group-target='${groupId}']`)).toContainText("Empty Review Group");
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page).filter({ hasText: "Empty Review Group" })).toHaveCount(1);
 
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -69,19 +102,26 @@ test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Red
   const savedGroup = savedDocument.signalGroups.find((group) => group.id === groupId);
   expect(savedGroup).toMatchObject({ id: groupId, name: "Empty Review Group", rows: [] });
 
+  // Reselecting the reference Signal above (to read the dropdown) moved
+  // selection off the Group again -- reselect it so Delete below targets
+  // the Group, not the Signal.
+  await surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`).click();
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").locator(".home-edit-group").getByRole("button", { name: "Delete", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottomGroups).toHaveCount(initialGroupCount);
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page)).toHaveCount(initialGroupCount);
   expect((await allTreeGroupIds(page)).sort()).toEqual([...initialGroupIds].sort());
 
   await page.getByTestId("ribbon").locator(".home-edit-group").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   expect(await allTreeGroupIds(page)).toContain(groupId);
-  await expect(page.locator(`[data-group-target='${groupId}']`)).toContainText("Empty Review Group");
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page).filter({ hasText: "Empty Review Group" })).toHaveCount(1);
   await page.getByTestId("ribbon").locator(".home-edit-group").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottomGroups).toHaveCount(initialGroupCount);
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page)).toHaveCount(initialGroupCount);
   expect((await allTreeGroupIds(page)).sort()).toEqual([...initialGroupIds].sort());
 
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
@@ -91,30 +131,29 @@ test("keeps an empty group consistent across Left Tree, Bottom targets, Undo/Red
   });
   await page.getByTestId("unsaved-discard").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await expect(bottomGroups).toHaveCount(initialGroupCount + 1);
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page)).toHaveCount(initialGroupCount + 1);
   expect(await allTreeGroupIds(page)).toContain(groupId);
   await expect(surface.locator(`[data-role='left-group-header'][data-group-id='${groupId}']`)).toContainText("Empty Review Group");
-  await expect(page.locator(`[data-group-target='${groupId}']`)).toContainText("Empty Review Group");
+  await expect(bottomGroupOptions(page).filter({ hasText: "Empty Review Group" })).toHaveCount(1);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
 test("creates three distinct empty groups without omissions or duplicates", async ({ page }) => {
   await ready(page);
-  const host = page.getByTestId("cycle-surface");
-  const surface = host.locator("[data-role='timing-chart-surface']");
-  const leftGroups = surface.locator("[data-role='left-group-header'][data-group-id]");
-  const bottomGroups = page.locator("[data-group-target]");
-  const initialGroupCount = await bottomGroups.count();
+  await selectReferenceSignal(page);
+  const initialGroupCount = await bottomGroupOptions(page).count();
   for (let index = 0; index < 3; index += 1) {
     await page.getByRole("button", { name: "Add signal or group" }).click();
     await page.getByTestId("create-group").click();
-    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
   }
-  await expect(bottomGroups).toHaveCount(initialGroupCount + 3);
+  await selectReferenceSignal(page);
+  await expect(bottomGroupOptions(page)).toHaveCount(initialGroupCount + 3);
   const ids = await allTreeGroupIds(page);
   expect(ids).toHaveLength(initialGroupCount + 3);
   expect(new Set(ids).size).toBe(initialGroupCount + 3);
-  const targetIds = await bottomGroups.evaluateAll((targets) => targets.map((target) => (target as HTMLElement).dataset.groupTarget));
+  const targetIds = await bottomGroupIds(page);
   expect(targetIds.sort()).toEqual([...ids].sort());
 });
 

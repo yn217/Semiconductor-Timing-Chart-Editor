@@ -212,7 +212,7 @@ test("applies Inspector drafts, exposes Problems/JSON, and toggles panels", asyn
   const inspector = page.getByTestId("inspector");
   await waitForInspectorPanel(inspector, "Signal Properties");
   await inspector.getByLabel("Inspector signal name").fill("REQUEST_EDITED");
-  await inspector.getByTestId("apply-inspector-signal").click();
+  await inspector.getByLabel("Inspector signal name").press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request'] [data-role='frozen-signal-name']")).toHaveText("REQUEST_EDITED");
   await inspector.getByLabel("Inspector signal visible").uncheck();
@@ -1116,7 +1116,7 @@ test("saves and reopens through the application service boundary", async ({ page
   // alignment/overflow" fields for the instant right after the click.
   await expect(inspector.getByRole("heading", { name: "Signal Properties" })).toBeVisible();
   const name = inspector.getByLabel("Inspector signal name", { exact: true });
-  await name.fill("SAVED_REQUEST"); await inspector.getByTestId("apply-inspector-signal").click();
+  await name.fill("SAVED_REQUEST"); await name.press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const downloadPromise = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -1124,7 +1124,7 @@ test("saves and reopens through the application service boundary", async ({ page
   const download = await downloadPromise;
   const path = await download.path();
   expect(path).toBeTruthy();
-  await name.fill("TEMP_REQUEST"); await page.getByTestId("inspector").getByTestId("apply-inspector-signal").click();
+  await name.fill("TEMP_REQUEST"); await name.press("Enter");
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path!);
   // Reopening over the unsaved TEMP_REQUEST rename raises the confirmation
