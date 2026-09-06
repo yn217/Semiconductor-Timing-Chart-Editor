@@ -11,7 +11,7 @@ import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, ty
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
-import { projectEdgeCounters } from "./runtime/edge-counter-projection.js";
+import { createEdgeCounterProjectionMetrics, projectEdgeCounters } from "./runtime/edge-counter-projection.js";
 import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
 import type { RangeDragState } from "./runtime/range-drag.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
@@ -527,6 +527,7 @@ export function MinimalCycleView() {
     };
     let rulerBuilds = 0;
     let edgeCounterResolvePasses = 0;
+    const edgeCounterMetrics = createEdgeCounterProjectionMetrics();
     let rulerInitialized = false;
     refreshPlayhead.current = () => {
       const boundaryToLocalX = (cycle: number) => timelineRuntime.sourceBoundaryToLocalX(session.getSnapshot().document, cycle);
@@ -550,7 +551,7 @@ export function MinimalCycleView() {
       timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end);
     };
 
-    publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current);
+    publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current, edgeCounterMetrics);
     publishStateRef.current = () => publishState();
     let frame = 0;
     // Definite-assignment: assigned below before createEditorTimelineRuntime's
@@ -569,7 +570,7 @@ export function MinimalCycleView() {
       },
       viewport: { getMetrics: () => { const metrics = viewMetricsOwner.snapshot(); return { width: viewportElement.clientWidth, leftInset: metrics.leftPaneWidth + metrics.frozenPaneWidth }; }, getScrollState: () => ({ left: viewportElement.scrollLeft, top: viewportElement.scrollTop }), setScrollState: (state) => { if (state.left !== undefined) viewportElement.scrollLeft = state.left; if (state.top !== undefined) viewportElement.scrollTop = state.top; }, getZoom: timelineNavigation.getZoom, setZoom: timelineNavigation.setZoom },
       document: { getSnapshot: () => session.getSnapshot().document, getCanonicalRevision: () => session.getSnapshot().revision, getDocumentEpoch: () => documentEpoch.current() },
-      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererForReason(renderer, host, reason, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
+      render: { requestRender: (reason) => timelineRender(reason), requestOverlayRefresh: (reason) => { rendererHost.dataset.overlayRefreshReason = reason; refreshRendererForReason(renderer, host, reason, session.getSnapshot().document, projection, geometryMaps, mappingCache, timelineGeometry.presentationScale, timelineRangeRef.current, selectedCycleRef.current, selectedAnnotationRef.current, selectedEdgeRef.current, edgeCounterMetrics); edgeCounterResolvePasses += 1; }, waitForRendererIdle: () => renderer.whenIdle().then(() => undefined) },
       lifecycle: { isCurrentEpoch: (epoch) => documentEpoch.isCurrent(epoch) },
     });
     timelineRuntimeRef.current = timelineRuntime;
