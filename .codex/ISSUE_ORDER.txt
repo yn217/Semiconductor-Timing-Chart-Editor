@@ -11,21 +11,37 @@
 #
 # Observed state at reconciliation:
 #   main = f401a48 fix(export): make signal split preservation explicit
-#   #443 completed/closed on main.
-#   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444 are also completed/closed.
+#   #443 and previous bounded Codex issues are completed/closed.
 #   #414 remains open; therefore #415 remains dependency-waiting.
-#   There is currently no executable Codex issue.
+#   Additional independent Core foundations from #431 have been split into #456-#460.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: WAITING
+# STATUS: ACTIVE
 #
-# No executable issue at this reconciliation.
-# Report:
-# WAITING_FOR_NEXT_CODEX_ISSUE
+# 1) Bus radix/value formatting Core.
+# Canonical per-Signal formatting metadata + one shared parser/formatter contract.
+456
+
+# 2) Enum/State semantic definitions.
+# Depends on/reuses #456 formatter/parser where appropriate.
+457
+
+# 3) Role-specific Clock/Reset semantics.
+# Canonical timing/reset metadata, shared validation/selectors, persistence/history.
+458
+
+# 4) Cursor A/B semantic workspace state.
+# View/workspace-only source-time cursor model + shared delta calculation/projection contract.
+459
+
+# 5) Timing/protocol diagnostic engine Core.
+# Deterministic derived Problems diagnostics; begin with Unknown/X and at least one handshake/stability rule.
+# Reuse #458 semantics when available, but do not block the entire issue on Reset-specific checks.
+460
 #
-# Do not manufacture audit/test-only work merely to stay busy.
+# After each issue, re-read this file and live GitHub state.
 #
 # ============================================================================
 # HIGH-PRIORITY DEPENDENCY WAIT
@@ -34,8 +50,10 @@
 # Owner: Codex
 # Depends on: #414 completed/closed.
 # DO NOT start #415 while #414 is open.
-# When #414 closes, reconcile this queue and promote #415 ahead of lower-priority work because
-# it unblocks #416 and the Time Outline closure chain.
+# When #414 closes:
+# - finish the currently in-progress bounded Codex issue safely;
+# - reconcile this file;
+# - promote #415 ahead of remaining lower-priority entries because it unblocks #416.
 #
 # Time Outline chain:
 #   DONE  #412 -> #413
@@ -46,7 +64,7 @@
 # ============================================================================
 # TRANSACTION PRODUCT / GUI — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
 # ============================================================================
-# Core prerequisites #450 and #455 are completed.
+# Core prerequisites #430/#450/#455 are completed.
 # The following remain product/GUI/integration work, not Codex queue entries:
 #   #451 Transaction left Tree
 #   #452 Transaction central Lane workspace/integration
@@ -55,8 +73,8 @@
 #   #429 Transaction Mode parent/final product completion
 #   #397 Transaction/Split sample-driven final acceptance
 #
-# #452 is now technically unblocked by #450/#455, but remains product/GUI integration ownership.
-# Do not rebuild a parallel Transaction semantic model. #430/#450/#455 are the shared owners.
+# #452 is technically unblocked by #450/#455, but remains GUI/product integration ownership.
+# Do not rebuild a parallel Transaction semantic model.
 #
 # ============================================================================
 # OTHER GUI / PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
@@ -69,6 +87,7 @@
 #   #431 UX/Product Completion Epic
 #   #403-#409 Contextual Ribbon / Cycle-Transaction Split
 #   #436-#441 Ribbon/GUI visual architecture
+#   #205 Datasheet-grade annotation product completion
 #
 # A narrowly isolated Core/runtime defect discovered by GUI work may be split into a concrete
 # Codex child issue, but Codex must not consume the parent GUI issue merely to stay active.
@@ -93,7 +112,7 @@
 # ============================================================================
 # EXECUTION POLICY
 # ============================================================================
-# For each future executable issue:
+# For each executable issue:
 # 1. sync latest origin/main;
 # 2. read the live GitHub Issue and inspect the current production owner;
 # 3. reproduce/audit the concrete gap before editing;
