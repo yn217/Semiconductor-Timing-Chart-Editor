@@ -73,7 +73,7 @@ mutation, and Group JSON Save/Open is exact. The complete V1 visual matrix
 remains open.
 
 The Header/Footer export refresh is covered by the current-main Chromium
-checks in `timing-chart-v2/tests/e2e/transaction-export.spec.ts`: canonical
+`transaction-export.spec.ts` focused run (2/2, 2026-09-06): canonical
 metadata is preserved through Save/Open and emitted in SVG, PNG and PDF, and
 long metadata remains present under A4 portrait Fit Page and landscape Fit
 Width. The full V1 reference-layout comparison remains open.
