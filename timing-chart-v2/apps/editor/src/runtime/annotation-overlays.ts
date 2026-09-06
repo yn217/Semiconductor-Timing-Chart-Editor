@@ -26,7 +26,15 @@ export function projectAnnotationOverlays(document: CanonicalDocument, projectio
     const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale);
     if (!first || !second) continue;
     const explicitLane = annotation.measurementLayout?.lane;
-    const lane = explicitLane ?? Math.max(0, laneEnds.findIndex((end) => end <= Math.min(first.x, second.x)));
+    // #205: reuse the first existing lane whose previous measurement
+    // already ended before this one starts; when every existing lane is
+    // still occupied (`findIndex` returns -1, none free), the automatic
+    // stacking must allocate a genuinely *new* lane (`laneEnds.length`),
+    // not silently collapse back onto lane 0 -- `Math.max(0, -1)` used to
+    // do exactly that, placing two overlapping Measurements on the same
+    // lane instead of stacking them.
+    const freeLaneIndex = laneEnds.findIndex((end) => end <= Math.min(first.x, second.x));
+    const lane = explicitLane ?? (freeLaneIndex === -1 ? laneEnds.length : freeLaneIndex);
     measurementLaneById.set(annotation.id, lane);
     laneEnds[lane] = Math.max(laneEnds[lane] ?? Number.NEGATIVE_INFINITY, Math.max(first.x, second.x));
   }
