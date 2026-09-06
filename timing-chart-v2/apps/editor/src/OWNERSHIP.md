@@ -48,6 +48,11 @@ Rules:
   long-lived callbacks may access mutable product/view state only through the
   current owner APIs and refs. Do not add a second state system or split the
   component solely for file size.
+
+The complete capture classification for the primary `useEffect(..., [])` is
+maintained in [`runtime/MOUNT_EFFECT_INVENTORY.md`](runtime/MOUNT_EFFECT_INVENTORY.md).
+That inventory is part of the #237 contract: a new long-lived callback must be
+added to the inventory with its owner, lifetime, and replacement/reset rule.
 | `legend-view.tsx` | Legend presentation, drag/nudge interaction, and `legend.update` command emission | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `ai-operation-panel.tsx` | AI query preview and SemanticCommand application surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `ribbon-icon.tsx` | Shared Ribbon icon adapter for non-critical Ribbon assets | `minimal-cycle-view.tsx` composition | 2026-08-31 |

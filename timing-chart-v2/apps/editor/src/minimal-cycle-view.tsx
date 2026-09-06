@@ -785,13 +785,23 @@ export function MinimalCycleView() {
       applyReplacement: ({ document: canonicalDocument, session: nextSession, documentEpoch: nextDocumentEpoch }) => {
       timelineRuntime.onDocumentEpochChanged(nextDocumentEpoch);
       clearAnnotationPreview();
+      rangeInteractions.cancel();
+      treeDrag.cancel();
+      pendingArrow = undefined;
+      pendingArrowAnnotationType = "arrow";
+      delete rendererHost.dataset.arrowPick;
       delete rendererHost.dataset.editorIdle;
       session = nextSession;
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
-      setTimelineRange({ start: 0, end: Math.min(1, canonicalDocument.timeline.cycleCount) });
+      rangeSelectionActiveRef.current = false;
+      const replacementRange = { start: 0, end: Math.min(1, canonicalDocument.timeline.cycleCount) };
+      timelineRangeRef.current = replacementRange;
+      setTimelineRange(replacementRange);
+      selectedCycleRef.current = 0;
       setSelectedCycle(0);
+      selectedEdgeRef.current = undefined;
       selection.clear();
       setCollapsedGroups(new Set());
       setTreeFilter("");
