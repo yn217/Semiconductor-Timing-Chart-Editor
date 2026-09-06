@@ -680,6 +680,53 @@ test("edits a named Bookmark through the Bottom Bookmarks panel and preserves it
   await expect(panel.getByTestId(/bookmark-row-/)).toContainText("Review Point");
 });
 
+test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom and horizontal scroll", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("2");
+  await page.getByLabel("Timeline range end").fill("3");
+  await page.getByRole("button", { name: "Add marker" }).click();
+
+  const ruler = page.getByTestId("cycle-ruler");
+  const viewport = page.getByTestId("cycle-viewport");
+  const marker = ruler.locator("[data-bookmark-id]").first();
+  const tick = ruler.locator("[data-source-cycle='2']");
+  await expect(marker).toBeVisible();
+  await expect(tick).toHaveCount(1);
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+
+  const assertAligned = async (label: string) => {
+    const positions = await page.evaluate(() => {
+      const marker = document.querySelector<HTMLElement>("[data-testid='cycle-ruler'] [data-bookmark-id]");
+      const tick = document.querySelector<HTMLElement>("[data-testid='cycle-ruler'] [data-source-cycle='2']");
+      return { marker: marker?.getBoundingClientRect().left, tick: tick?.getBoundingClientRect().left };
+    });
+    expect(positions.marker, label).toBeDefined();
+    expect(positions.tick, label).toBeDefined();
+    expect(Math.abs(positions.marker! - positions.tick!), label).toBeLessThanOrEqual(1);
+  };
+
+  for (const zoom of ["50", "100", "150", "200"]) {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByLabel("Zoom preset").selectOption(zoom);
+    await expect(page.getByTestId("zoom-status")).toHaveText(`${zoom}%`);
+    await assertAligned(`zoom=${zoom}`);
+  }
+
+  const scrollLeft = await viewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+    element.dispatchEvent(new Event("scroll"));
+    return element.scrollLeft;
+  });
+  expect(scrollLeft).toBeGreaterThan(0);
+  await assertAligned("scroll=end");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+});
+
 // #388: the Timeline tab's own History group must reuse the exact same
 // History/Command owner as Home -- no second Undo implementation -- and
 // the Bookmark Ribbon group must stay a fixed command surface whose height/

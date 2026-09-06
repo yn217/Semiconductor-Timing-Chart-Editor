@@ -354,7 +354,10 @@ Save/Open while delete followed by Undo restores the entry. The new
 `deterministic-export.test.ts` contract case also verifies that persisted
 navigation Bookmark IDs/names/comments and Bookmark flag layers are excluded
 from default specification SVG export, as required by V1 #108; Annotation
-Marker export remains separate. The full bookmark visual matrix remains open.
+Marker export remains separate. The new `timeline-editor.spec.ts` case passes
+through 50/100/150/200% Zoom and horizontal scroll, comparing the live
+Bookmark flag with the rendered cycle tick while preserving Canonical and
+History. The full bookmark visual matrix remains open.
 
 The current-main Hierarchy/Full Path route is browser verified by the focused
 `full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
