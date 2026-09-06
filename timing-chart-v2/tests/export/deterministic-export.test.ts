@@ -61,6 +61,23 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-label-kind="comment"');
   });
 
+  it("keeps navigation Bookmarks out of default specification export", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      bookmarks: [{ id: "bookmark_navigation_only" as BookmarkId, name: "Navigation-only bookmark", start: 3, comment: "editor index" }],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const svg = renderExportSvg(scene);
+
+    // Bookmarks are persisted editor navigation metadata. An exported
+    // specification must not turn them into Annotation Marker-like flags.
+    expect(svg).not.toContain("bookmark_navigation_only");
+    expect(svg).not.toContain("Navigation-only bookmark");
+    expect(svg).not.toContain('data-layer="bookmarks"');
+    expect(svg).not.toContain('data-bookmark-id=');
+  });
+
   it("exports every virtualized-offscreen Signal and excludes editor chrome", () => {
     const scene = buildExportScene(scaleFixture(100), { format: "svg", scope: "document" });
     const first = renderExportSvg(scene);
@@ -173,13 +190,15 @@ describe("deterministic document export", () => {
   });
 
   it("exports document header/footer through an independent wrapped layout", () => {
-    const document = { ...scaleFixture(2), document: {
-      ...scaleFixture(2).document,
+    const base = scaleFixture(2);
+    const document = { ...base, document: {
+      ...base.document,
       title: "Timing Review",
       header: { subtitle: "Reviewed timing", description: "A description that remains in document layout even when the waveform width changes.", notes: "Notes", preconditions: ["Clock is stable"], constraints: ["Setup must hold"], exceptions: ["Reset window"] },
       footer: { figureNumber: "Fig. 2", revision: "R3", text: "Internal review" },
     } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const widerWaveform = buildExportScene({ ...document, timeline: { ...document.timeline, cycleCount: 100 } }, { format: "svg", scope: "document" });
     const svg = renderExportSvg(scene);
     expect(scene.documentLayout.title).toBe("Timing Review");
     expect(svg).toContain('data-layer="document-layout"');
@@ -188,6 +207,9 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-layout="footer"');
     expect(svg).toContain("Fig. 2 · R3 · Internal review");
     expect(scene.height).toBeGreaterThan(buildExportScene(scaleFixture(2), { format: "svg", scope: "document" }).height);
+    expect(widerWaveform.width).toBeGreaterThan(scene.width);
+    expect(widerWaveform.documentLayout).toEqual(scene.documentLayout);
+    expect(widerWaveform.waveforms[0]?.y).toBe(scene.waveforms[0]?.y);
   });
 
   it("exports Timing Region and linked Ghost Trace as derived overlay layers", () => {

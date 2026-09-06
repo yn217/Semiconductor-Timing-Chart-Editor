@@ -1,9 +1,22 @@
 import { expect, test, type Page } from "@playwright/test";
+import type { BookmarkId } from "@timing-chart-v2/schema";
 import { cycleDocument } from "../../apps/editor/src/fixtures-cycle-reference-documents.js";
 
 const periodOneClockDocument = {
   ...cycleDocument,
   signals: cycleDocument.signals.map((signal) => signal.type === "clock" ? { ...signal, generator: { ...signal.generator, period: 1 } } : signal),
+};
+
+const largeBookmarkDocument = {
+  ...cycleDocument,
+  document: { ...cycleDocument.document, title: "100 Bookmark navigation fixture" },
+  timeline: { ...cycleDocument.timeline, end: 220, cycleCount: 220 },
+  bookmarks: Array.from({ length: 100 }, (_, index) => ({
+    id: `bookmark_${String(index).padStart(3, "0")}` as BookmarkId,
+    name: `Bookmark ${index}`,
+    start: index < 2 ? 50 : index,
+    ...(index === 0 ? { comment: "same-time A" } : index === 1 ? { comment: "same-time B" } : {}),
+  })),
 };
 
 async function openPeriodOneClockDocument(page: Page): Promise<void> {
@@ -644,6 +657,38 @@ test("Previous/Next Bookmark navigation jumps to its geometry-backed cycle witho
   await expect(page.getByTestId(`bookmark-row-${bookmarkId}`)).toHaveAttribute("data-selected", "true");
 });
 
+test("creates a Bookmark from the Ruler context menu through shared semantic geometry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const ruler = page.getByTestId("cycle-ruler");
+  const cycle4 = ruler.locator("[data-source-cycle='4']");
+  await expect(cycle4).toHaveCount(1);
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+
+  await cycle4.click({ button: "right" });
+  const menu = page.getByRole("menu", { name: "Ruler context menu" });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "ブックマークを追加", exact: true })).toBeVisible();
+  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+
+  await menu.getByRole("menuitem", { name: "ブックマークを追加", exact: true }).click();
+  const marker = ruler.locator("[data-bookmark-id]");
+  await expect(marker).toHaveCount(1);
+  await expect(marker).toContainText("Bookmark 4");
+  await expect(page.getByTestId("bookmark-editor-panel")).toBeVisible();
+  await expect(page.getByTestId("bookmark-editor-panel").getByTestId(/bookmark-row-/)).toContainText("Bookmark 4");
+  const markerBox = await marker.boundingBox();
+  const tickBox = await cycle4.boundingBox();
+  expect(markerBox).not.toBeNull();
+  expect(tickBox).not.toBeNull();
+  expect(Math.abs(markerBox!.x - tickBox!.x)).toBeLessThanOrEqual(1);
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
 test("edits a named Bookmark through the Bottom Bookmarks panel and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
@@ -678,6 +723,81 @@ test("edits a named Bookmark through the Bottom Bookmarks panel and preserves it
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(panel.getByTestId(/bookmark-row-/)).toContainText("Review Point");
+});
+
+test("keeps Bookmark flags aligned with their rendered Ruler cycle through zoom and horizontal scroll", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByLabel("Timeline range start").fill("2");
+  await page.getByLabel("Timeline range end").fill("3");
+  await page.getByRole("button", { name: "Add marker" }).click();
+
+  const ruler = page.getByTestId("cycle-ruler");
+  const viewport = page.getByTestId("cycle-viewport");
+  const marker = ruler.locator("[data-bookmark-id]").first();
+  const tick = ruler.locator("[data-source-cycle='2']");
+  await expect(marker).toBeVisible();
+  await expect(tick).toHaveCount(1);
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+
+  const assertAligned = async (label: string) => {
+    const positions = await page.evaluate(() => {
+      const marker = document.querySelector<HTMLElement>("[data-testid='cycle-ruler'] [data-bookmark-id]");
+      const tick = document.querySelector<HTMLElement>("[data-testid='cycle-ruler'] [data-source-cycle='2']");
+      return { marker: marker?.getBoundingClientRect().left, tick: tick?.getBoundingClientRect().left };
+    });
+    expect(positions.marker, label).toBeDefined();
+    expect(positions.tick, label).toBeDefined();
+    expect(Math.abs(positions.marker! - positions.tick!), label).toBeLessThanOrEqual(1);
+  };
+
+  for (const zoom of ["50", "100", "150", "200"]) {
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+    await page.getByLabel("Zoom preset").selectOption(zoom);
+    await expect(page.getByTestId("zoom-status")).toHaveText(`${zoom}%`);
+    await assertAligned(`zoom=${zoom}`);
+  }
+
+  const scrollLeft = await viewport.evaluate((element) => {
+    element.scrollLeft = element.scrollWidth;
+    element.dispatchEvent(new Event("scroll"));
+    return element.scrollLeft;
+  });
+  expect(scrollLeft).toBeGreaterThan(0);
+  await assertAligned("scroll=end");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
+  expect(await page.getByTestId("history-status").textContent()).toBe(beforeHistory);
+});
+
+test("keeps 100 Bookmarks distinct and navigation view-only in a long document", async ({ page }) => {
+  await page.goto("/");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "100-bookmarks.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(largeBookmarkDocument)) });
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Open Bookmarks panel", exact: true }).click();
+  const panel = page.getByTestId("bookmark-editor-panel");
+  const rows = panel.getByTestId(/bookmark-row-/);
+  await expect(rows).toHaveCount(100);
+  await expect(panel.getByTestId("bookmark-row-bookmark_000")).toContainText("same-time A");
+  await expect(panel.getByTestId("bookmark-row-bookmark_001")).toContainText("same-time B");
+  expect(await rows.evaluateAll((items) => new Set(items.map((item) => item.getAttribute("data-testid"))).size)).toBe(100);
+
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const countersBefore = await surface.getAttribute("data-render-counters");
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  for (const index of [0, 1, 25, 50, 75, 99]) {
+    const id = `bookmark_${String(index).padStart(3, "0")}`;
+    await panel.getByTestId(`bookmark-row-${id}`).dblclick();
+    await expect(page.getByTestId("playhead")).toHaveAttribute("data-playhead-cycle", String(index < 2 ? 50 : index));
+  }
+  expect(await surface.getAttribute("data-render-counters")).toBe(countersBefore);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
 });
 
 // #388: the Timeline tab's own History group must reuse the exact same

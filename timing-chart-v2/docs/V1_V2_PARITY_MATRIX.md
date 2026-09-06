@@ -350,8 +350,22 @@ Bookmark navigation and editing are current-main browser verified by the two
 focused `timeline-editor.spec.ts` cases (2/2, 2026-09-06): Previous/Next
 navigation reaches a geometry-backed Bookmark without changing Canonical or
 History, and Bottom Bookmarks editing preserves name/cycle/comment through
-Save/Open while delete followed by Undo restores the entry. The full bookmark
-visual/export matrix remains open.
+Save/Open while delete followed by Undo restores the entry. The new
+`deterministic-export.test.ts` contract case also verifies that persisted
+navigation Bookmark IDs/names/comments and Bookmark flag layers are excluded
+from default specification SVG export, as required by V1 #108; Annotation
+Marker export remains separate. The new `timeline-editor.spec.ts` case passes
+through 50/100/150/200% Zoom and horizontal scroll, comparing the live
+Bookmark flag with the rendered cycle tick while preserving Canonical and
+History. A second current-main Chromium case opens a 220-cycle document with
+100 persisted Bookmarks, proves same-time entries remain distinct by stable ID,
+and performs repeated list navigation with zero WaveDrom/render-counter,
+Canonical or History mutation. The full bookmark visual matrix remains open.
+The Ruler context-menu creation path is also current-main Chromium verified
+1/1: a real right-click on the rendered cycle-4 tick opens the dedicated
+`ブックマークを追加` menu item, resolves the cycle through the shared geometry
+resolver, creates one canonical Bookmark/History entry, and opens the Bottom
+Bookmarks panel with the flag aligned to the same tick.
 
 The current-main Hierarchy/Full Path route is browser verified by the focused
 `full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy
