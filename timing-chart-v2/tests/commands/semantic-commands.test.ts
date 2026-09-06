@@ -44,6 +44,56 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.document.title).toBe(source.document.title);
   });
 
+  it("treats property-order-only document replacement as a semantic no-op", () => {
+    const source = canonicalFixture();
+    const reorder = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(reorder);
+      if (value !== null && typeof value === "object") {
+        return Object.fromEntries(Object.entries(value as Record<string, unknown>).reverse().map(([key, entry]) => [key, reorder(entry)]));
+      }
+      return value;
+    };
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const metrics = session.metrics();
+    const result = session.execute({ id: commandId("cmd_json_property_order_noop"), type: "document.replace", document: reorder(source) as ReturnType<typeof canonicalFixture> });
+    expect(result).toMatchObject({ ok: false, reason: "no-op", problems: [{ code: "NO_OP" }] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual(metrics);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
+  });
+
+  it("validates a document replacement only at the authoritative commit boundary", () => {
+    const source = canonicalFixture();
+    const next = { ...source, document: { ...source.document, title: "Validated at commit" } };
+    const session = new CommandHistorySession(source);
+    const before = session.metrics();
+    expect(session.execute({ id: commandId("cmd_json_single_validation"), type: "document.replace", document: next }).ok).toBe(true);
+    expect(session.metrics()).toEqual({ validationRuns: before.validationRuns + 1, commits: before.commits + 1 });
+  });
+
+  it("rejects an invalid replacement atomically with one validation result", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const metrics = session.metrics();
+    const invalid = { ...source, signalGroups: [] };
+    const result = session.execute({ id: commandId("cmd_json_invalid_replace"), type: "document.replace", document: invalid });
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: expect.any(Array) });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.metrics()).toEqual({ validationRuns: metrics.validationRuns + 1, commits: metrics.commits });
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
+  });
+
+  it("does not dereference malformed replacement rows before validation", () => {
+    const source = canonicalFixture();
+    const session = new CommandHistorySession(source);
+    const before = session.getSnapshot();
+    const result = session.execute({ id: commandId("cmd_json_malformed_replace"), type: "document.replace", document: { ...source, signalGroups: undefined } as never });
+    expect(result).toMatchObject({ ok: false, reason: "invalid", problems: expect.any(Array) });
+    expect(session.getSnapshot()).toBe(before);
+  });
+
   it("updates Header and Footer metadata as one non-waveform operation", () => {
     const source = canonicalFixture();
     const session = new CommandHistorySession(source);

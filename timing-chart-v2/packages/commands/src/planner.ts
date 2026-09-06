@@ -15,7 +15,7 @@ import type {
   Transaction,
   ValueSignal,
 } from "@timing-chart-v2/schema";
-import { clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, validateCanonicalDocument, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
+import { canonicalDocumentsEqual, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
@@ -27,6 +27,13 @@ export type CommandPlanResult =
 const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
+
+function replacementRowsOrEmpty(document: unknown): readonly RowId[] {
+  if (document === null || typeof document !== "object") return [];
+  const groups = (document as { signalGroups?: unknown }).signalGroups;
+  if (!Array.isArray(groups) || !groups.every((group) => group !== null && typeof group === "object" && Array.isArray((group as { rows?: unknown }).rows))) return [];
+  return groups.flatMap((group) => (group as { rows: readonly RowId[] }).rows);
+}
 
 function orderedRows(document: CanonicalDocument): readonly RowId[] {
   return document.signalGroups.flatMap((group) => group.rows);
@@ -530,11 +537,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
   if (!isStableId(command.id)) return fail("invalid", "INVALID_COMMAND_ID", "$.id", "Command ID must be a stable ID.");
   switch (command.type) {
     case "document.replace": {
-      const problems = validateCanonicalDocument(command.document);
-      if (problems.length > 0) return { ok: false, reason: "invalid", problems };
-      if (JSON.stringify(document) === JSON.stringify(command.document)) return fail("no-op", "NO_OP", "$", "Document is unchanged.");
+      if (canonicalDocumentsEqual(document, command.document)) return fail("no-op", "NO_OP", "$", "Document is unchanged.");
       const timingRows = timingSignalIds(document);
-      return { ok: true, document: command.document, changeSet: { fullDocumentReplace: true, rowOrder: orderedRows(command.document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true }, inverseChangeSet: { fullDocumentReplace: true, rowOrder: orderedRows(document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true } };
+      return { ok: true, document: command.document, changeSet: { fullDocumentReplace: true, rowOrder: replacementRowsOrEmpty(command.document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true }, inverseChangeSet: { fullDocumentReplace: true, rowOrder: orderedRows(document), waveSemantics: timingRows, geometryLocal: timingRows, geometryScreenX: true, geometryScreenY: timingRows, timelineSemantics: true, minimapOverview: true } };
     }
     case "document.updateMetadata": {
       if (!command.title.trim()) return fail("invalid", "EMPTY_DOCUMENT_TITLE", "$.title", "Document title must not be empty.");
