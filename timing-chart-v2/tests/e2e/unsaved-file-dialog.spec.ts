@@ -39,6 +39,33 @@ test("dirty New uses Cancel and Discard without losing the current document", as
   await expect(host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']")).toContainText("REQUEST");
 });
 
+// #208: Escape on the unsaved-changes dialog itself must behave exactly
+// like clicking Cancel -- preserve the current document exactly, and
+// restore focus to a safe default (the button that opened the dialog),
+// not just close the dialog and leave focus stranded.
+test("Escape on the unsaved-changes dialog behaves exactly like Cancel", async ({ page }) => {
+  await page.goto("/");
+  await makeDirty(page);
+  const host = page.getByTestId("cycle-surface");
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeName = await page.getByTestId("signal-editor").getByLabel("Signal name").inputValue();
+
+  await page.getByRole("button", { name: "File", exact: true }).click();
+  const newButton = page.getByTestId("ribbon").getByRole("button", { name: "New", exact: true });
+  await newButton.click();
+  const dialog = page.getByTestId("unsaved-file-dialog");
+  await expect(dialog).toBeVisible();
+  await expect(page.getByTestId("unsaved-cancel")).toBeFocused();
+
+  await page.keyboard.press("Escape");
+  await expect(dialog).toHaveCount(0);
+  await expect(newButton).toBeFocused();
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("signal-editor").getByLabel("Signal name")).toHaveValue(beforeName);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
 test("dirty Open uses Save before replacing the document", async ({ page }) => {
   await page.goto("/");
   await makeDirty(page);
