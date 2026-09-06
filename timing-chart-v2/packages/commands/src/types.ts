@@ -92,9 +92,13 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>
   | Readonly<{ id: CommandId; type: "transaction.create"; transaction: Transaction }>
+  | Readonly<{ id: CommandId; type: "transaction.duplicate"; transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
   | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string; phases?: readonly TransactionPhase[] }>
+  | Readonly<{ id: CommandId; type: "transaction.phaseAdd"; transactionId: TransactionId; phase: TransactionPhase }>
+  | Readonly<{ id: CommandId; type: "transaction.phaseUpdate"; transactionId: TransactionId; phaseIndex: number; phase: TransactionPhase }>
+  | Readonly<{ id: CommandId; type: "transaction.phaseDelete"; transactionId: TransactionId; phaseIndex: number }>
   | Readonly<{ id: CommandId; type: "transaction.move"; transactionId: TransactionId; start: number }>
   | Readonly<{ id: CommandId; type: "transaction.resize"; transactionId: TransactionId; edge: "start" | "end"; value: number }>
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>

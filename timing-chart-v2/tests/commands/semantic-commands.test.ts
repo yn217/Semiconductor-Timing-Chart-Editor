@@ -577,6 +577,23 @@ describe("command execution and atomic history", () => {
     expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
   });
 
+  it("duplicates a Transaction with a fresh stable ID and supports atomic phase CRUD", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const transactionId = "txn_crud" as TransactionId;
+    expect(session.execute({ id: commandId("txn_crud_create"), type: "transaction.create", transaction: { id: transactionId, name: "Read", start: 1, end: 8, phases: [{ name: "Address", start: 1, end: 3 }] } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("txn_duplicate"), type: "transaction.duplicate", transactionId, newTransactionId: "txn_copy" as TransactionId }).ok).toBe(true);
+    expect(session.getSnapshot().document.transactions.map((item) => item.id)).toEqual([transactionId, "txn_copy"]);
+    expect(session.getSnapshot().document.transactions[1]?.phases).toEqual([{ name: "Address", start: 1, end: 3 }]);
+    expect(session.execute({ id: commandId("txn_phase_add"), type: "transaction.phaseAdd", transactionId, phase: { name: "Data", start: 3, end: 6 } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("txn_phase_update"), type: "transaction.phaseUpdate", transactionId, phaseIndex: 0, phase: { name: "Setup", start: 1, end: 2 } }).ok).toBe(true);
+    expect(session.execute({ id: commandId("txn_phase_delete"), type: "transaction.phaseDelete", transactionId, phaseIndex: 1 }).ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]?.phases).toEqual([{ name: "Setup", start: 1, end: 2 }]);
+    const before = session.getSnapshot().document;
+    expect(session.execute({ id: commandId("txn_phase_overlap"), type: "transaction.phaseAdd", transactionId, phase: { name: "Bad", start: 1, end: 4 } })).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState().undoDepth).toBe(5);
+  });
+
   it("updates Clock Edge Numbers as presentation-only state", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });

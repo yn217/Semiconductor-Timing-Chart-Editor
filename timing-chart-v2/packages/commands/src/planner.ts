@@ -962,6 +962,17 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transaction.duplicate": {
+      const source = document.transactions.find((item) => item.id === command.transactionId);
+      if (!source) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      if (!isStableId(command.newTransactionId)) return fail("invalid", "INVALID_STABLE_ID", "$.newTransactionId", "Transaction ID must be stable.");
+      if (document.transactions.some((item) => item.id === command.newTransactionId)) return fail("invalid", "DUPLICATE_ID", "$.newTransactionId", "Duplicate Transaction ID.");
+      const name = command.name === undefined ? source.name : command.name.trim();
+      if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
+      const duplicate: Transaction = { ...source, id: command.newTransactionId, name };
+      const changeSet: ChangeSet = { transactionSemantics: [duplicate.id], minimapOverview: true };
+      return { ok: true, document: { ...document, transactions: [...document.transactions, duplicate] }, changeSet, inverseChangeSet: changeSet };
+    }
     case "transaction.delete": {
       const transaction = document.transactions.find((item) => item.id === command.transactionId);
       if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
@@ -977,6 +988,25 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (name === transaction.name) return fail("no-op", "NO_OP", "$", "Transaction already has this name.");
       const transactions = [...document.transactions]; transactions[index] = { ...transaction, name };
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
+      return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transaction.phaseAdd":
+    case "transaction.phaseUpdate":
+    case "transaction.phaseDelete": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId);
+      const transaction = document.transactions[index];
+      if (!transaction) return fail("invalid", "TRANSACTION_NOT_FOUND", "$.transactionId", `Transaction '${command.transactionId}' does not exist.`);
+      const phases = [...(transaction.phases ?? [])];
+      if (command.type === "transaction.phaseAdd") phases.push(command.phase);
+      else if (command.phaseIndex < 0 || command.phaseIndex >= phases.length) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phaseIndex", "Phase index is out of range.");
+      else if (command.type === "transaction.phaseUpdate") phases[command.phaseIndex] = command.phase;
+      else phases.splice(command.phaseIndex, 1);
+      const sorted = phases.slice().sort((a, b) => a.start - b.start || a.end - b.end || a.name.localeCompare(b.name));
+      if (sorted.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", "Phase must be an integer-cycle subrange of its transaction.");
+      if (sorted.some((phase, i) => i > 0 && sorted[i - 1]!.end > phase.start)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", "Transaction phases must not overlap.");
+      const next: Transaction = sorted.length ? { ...transaction, phases: sorted } : (() => { const { phases: _phases, ...rest } = transaction; return rest; })();
+      const transactions = [...document.transactions]; transactions[index] = next;
+      const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
     case "transaction.update": {
