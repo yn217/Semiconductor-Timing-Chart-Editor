@@ -290,6 +290,21 @@ describe("timeline ripple commands", () => {
     expect(session.historyState().undoDepth).toBe(1);
   });
 
+  it("clones a boundary-owned Time Group resume anchor with its group", () => {
+    const source = canonicalFixture();
+    const groupId = "time_owned" as TimeGroupId;
+    const anchorId = "label_owned" as LabelAnchorId;
+    source.timeGroups = [{ id: groupId, name: "Fold", start: 3, end: 8, presentation: { collapsed: true, foldStyle: "axis-break", resumeLabelAnchorId: anchorId } }];
+    source.timeline = { ...source.timeline, end: 10, cycleCount: 10, labelAnchors: [{ id: anchorId, source: 8, display: 8, ownerTimeGroupId: groupId }] };
+    const session = new CommandHistorySession(source);
+    expect(session.execute({ id: commandId("cmd_owned_duplicate"), type: "timeline.duplicateRange", start: 3, end: 8, at: 0 }).ok).toBe(true);
+    const document = session.getSnapshot().document;
+    const clonedGroup = document.timeGroups.find((group) => group.id !== groupId)!;
+    const clonedAnchor = document.timeline.labelAnchors.find((anchor) => anchor.id !== anchorId);
+    expect(clonedGroup?.presentation?.resumeLabelAnchorId).toBe(clonedAnchor?.id);
+    expect(clonedAnchor).toMatchObject({ source: 5, ownerTimeGroupId: clonedGroup?.id });
+  });
+
   it("allocates collision-free opaque clone IDs after reload when a command ID is reused", () => {
     const first = new CommandHistorySession(rippleFixture());
     expect(first.execute({ id: commandId("cmd_duplicate"), type: "timeline.duplicateRange", start: 3, end: 6, at: 1 }).ok).toBe(true);

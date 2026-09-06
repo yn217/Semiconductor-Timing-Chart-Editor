@@ -491,8 +491,9 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
     return [clone];
   });
   const sourceGroups = document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end);
-  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source < command.end);
   const groupIds = new Map(sourceGroups.map((group) => [group.id, cloneId(group.id)]));
+  const ownedResumeAnchorIds = new Set(sourceGroups.map((group) => group.presentation?.resumeLabelAnchorId).filter((id) => id !== undefined));
+  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => (anchor.source >= command.start && anchor.source < command.end) || (anchor.source === command.end && ownedResumeAnchorIds.has(anchor.id)));
   const labelIds = new Map(sourceLabels.map((anchor) => [anchor.id, cloneId(anchor.id)]));
   const clonedGroups = sourceGroups.map((group) => ({
     ...group,
