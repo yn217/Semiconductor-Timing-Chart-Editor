@@ -594,6 +594,15 @@ describe("command execution and atomic history", () => {
     expect(session.historyState().undoDepth).toBe(5);
   });
 
+  it("rejects invalid Transaction links and overlapping phases atomically at command planning", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot().document;
+    expect(session.execute({ id: commandId("txn_invalid_link"), type: "transaction.create", transaction: { id: "txn_invalid_link" as TransactionId, name: "Bad", start: 1, end: 5, linkedSignals: ["sig_missing" as SignalId] } })).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.execute({ id: commandId("txn_invalid_phases"), type: "transaction.create", transaction: { id: "txn_invalid_phases" as TransactionId, name: "Bad", start: 1, end: 5, phases: [{ name: "A", start: 1, end: 4 }, { name: "B", start: 3, end: 5 }] } })).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
   it("updates Clock Edge Numbers as presentation-only state", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });

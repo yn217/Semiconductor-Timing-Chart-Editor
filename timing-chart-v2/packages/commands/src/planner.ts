@@ -13,6 +13,7 @@ import type {
   SemanticAnchor,
   TimeGroup,
   Transaction,
+  TransactionPhase,
   ValueSignal,
 } from "@timing-chart-v2/schema";
 import { canonicalDocumentsEqual, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
@@ -28,6 +29,13 @@ export type CommandPlanResult =
 const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
+
+function transactionPhasesProblem(phases: readonly TransactionPhase[], start: number, end: number): string | undefined {
+  const ordered = phases.slice().sort((left, right) => left.start - right.start || left.end - right.end || left.name.localeCompare(right.name));
+  if (ordered.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < start || phase.start >= phase.end || phase.end > end)) return "Phases must be named integer-cycle half-open subranges of the Transaction.";
+  if (ordered.some((phase, index) => index > 0 && ordered[index - 1]!.end > phase.start)) return "Transaction phases must not overlap.";
+  return undefined;
+}
 
 function replacementRowsOrEmpty(document: unknown): readonly RowId[] {
   if (document === null || typeof document !== "object") return [];
@@ -958,6 +966,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (document.transactions.some((item) => item.id === transaction.id)) return fail("invalid", "DUPLICATE_ID", "$.transaction.id", `Transaction '${transaction.id}' already exists.`);
       if (!transaction.name.trim()) return fail("invalid", "INVALID_NAME", "$.transaction.name", "Transaction name cannot be empty.");
       if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.transaction", "Transaction must use a half-open source-time range.");
+      if (transaction.phases && transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.transaction.phases", transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)!);
       if (transaction.linkedSignals?.some((id) => !document.signals.some((signal) => signal.id === id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.linkedSignals", "Transaction links must target existing Signals.");
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
@@ -1002,8 +1011,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       else if (command.type === "transaction.phaseUpdate") phases[command.phaseIndex] = command.phase;
       else phases.splice(command.phaseIndex, 1);
       const sorted = phases.slice().sort((a, b) => a.start - b.start || a.end - b.end || a.name.localeCompare(b.name));
-      if (sorted.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", "Phase must be an integer-cycle subrange of its transaction.");
-      if (sorted.some((phase, i) => i > 0 && sorted[i - 1]!.end > phase.start)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", "Transaction phases must not overlap.");
+      const phaseProblem = transactionPhasesProblem(sorted, transaction.start, transaction.end);
+      if (phaseProblem) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", phaseProblem);
       const next: Transaction = sorted.length ? { ...transaction, phases: sorted } : (() => { const { phases: _phases, ...rest } = transaction; return rest; })();
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
@@ -1018,7 +1027,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$", "Transaction must use a half-open source-time range.");
       const phases = command.phases === undefined ? transaction.phases : command.phases;
-      if (phases?.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < command.start || phase.start >= phase.end || phase.end > command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", "Transaction phases must be named integer-cycle half-open subranges.");
+      if (phases && transactionPhasesProblem(phases, command.start, command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", transactionPhasesProblem(phases, command.start, command.end)!);
       if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined) && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
       const { laneId: _oldLane, ...base } = transaction;
       const { phases: _oldPhases, ...withoutPhases } = base;

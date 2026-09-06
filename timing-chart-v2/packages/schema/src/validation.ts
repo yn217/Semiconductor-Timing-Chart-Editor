@@ -376,10 +376,10 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   document.transactions.forEach((transaction, index) => {
     if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.transactions[${index}]`, "Transaction must use an integer-cycle half-open range within the source timeline.", transaction.id));
     transaction.phases?.forEach((phase, phaseIndex) => {
-      if (!Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be an integer-cycle half-open subrange of its transaction.", transaction.id));
+      if (!phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be named and use an integer-cycle half-open subrange of its transaction.", transaction.id));
     });
     transaction.linkedSignals?.forEach((signalId, signalIndex) => {
-
+      if (!signals.has(signalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals[${signalIndex}]`, `Signal '${signalId}' does not exist.`, transaction.id));
     });
   });
 
