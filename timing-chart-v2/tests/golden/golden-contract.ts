@@ -36,6 +36,17 @@ export interface GoldenObservedCounts {
   readonly transactions: number;
 }
 
+const browserOnlyCoverageLabels = new Set([
+  "dram abstract states",
+  "internal conflict flag",
+  "role icons",
+  "insert cycle",
+  "delete cycle",
+  "insert n cycles",
+  "ripple edit",
+  "linked selection",
+]);
+
 export function assertGoldenSemanticContract(meta: GoldenContractMeta, observed: GoldenObservedCounts): void {
   if (meta.cycles !== undefined && observed.cycles !== meta.cycles) throw new Error(`${meta.file}: expected ${meta.cycles} cycles, received ${observed.cycles}`);
   if (meta.signalCount !== undefined && observed.signals !== meta.signalCount) throw new Error(`${meta.file}: expected ${meta.signalCount} signals, received ${observed.signals}`);
@@ -190,8 +201,10 @@ export function assertGoldenCoverageContract(meta: GoldenContractMeta, document:
       check(coverage, "canonical-transaction-phases", transactions.some((transaction) => (transaction.phases?.length ?? 0) > 1), "a transaction has multiple phases.");
     } else if (token === "undo/redo" || token.includes("view") || token.includes("rendering") || token.includes("signals") || token.includes("values") || token.includes("roles") || token.includes("ordering") || token.includes("follow") || token.includes("labels") || token.includes("stall") || token.includes("error") || token.includes("latency") || token.includes("simple") || token.includes("large") || token.includes("held") || token.includes("ready")) {
       check(coverage, "production-browser-surface", options.rendered, "the production browser surface was rendered and inspected.");
+    } else if (browserOnlyCoverageLabels.has(token)) {
+      check(coverage, "production-browser-surface", options.rendered, "the declared browser-only feature was rendered and inspected in production.");
     } else {
-      check(coverage, "canonical-document-surface", document.signals.length > 0 && document.signalGroups.length > 0, "the declared sample was parsed into a non-empty Canonical document and rendered in production.");
+      throw new Error(`${meta.file}: unsupported Golden coverage label '${coverage}'. Add an observable contract or an explicit approved skip/defer record.`);
     }
   }
   return evidence;
