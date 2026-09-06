@@ -190,13 +190,15 @@ describe("deterministic document export", () => {
   });
 
   it("exports document header/footer through an independent wrapped layout", () => {
-    const document = { ...scaleFixture(2), document: {
-      ...scaleFixture(2).document,
+    const base = scaleFixture(2);
+    const document = { ...base, document: {
+      ...base.document,
       title: "Timing Review",
       header: { subtitle: "Reviewed timing", description: "A description that remains in document layout even when the waveform width changes.", notes: "Notes", preconditions: ["Clock is stable"], constraints: ["Setup must hold"], exceptions: ["Reset window"] },
       footer: { figureNumber: "Fig. 2", revision: "R3", text: "Internal review" },
     } };
     const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const widerWaveform = buildExportScene({ ...document, timeline: { ...document.timeline, cycleCount: 100 } }, { format: "svg", scope: "document" });
     const svg = renderExportSvg(scene);
     expect(scene.documentLayout.title).toBe("Timing Review");
     expect(svg).toContain('data-layer="document-layout"');
@@ -205,6 +207,9 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-layout="footer"');
     expect(svg).toContain("Fig. 2 · R3 · Internal review");
     expect(scene.height).toBeGreaterThan(buildExportScene(scaleFixture(2), { format: "svg", scope: "document" }).height);
+    expect(widerWaveform.width).toBeGreaterThan(scene.width);
+    expect(widerWaveform.documentLayout).toEqual(scene.documentLayout);
+    expect(widerWaveform.waveforms[0]?.y).toBe(scene.waveforms[0]?.y);
   });
 
   it("exports Timing Region and linked Ghost Trace as derived overlay layers", () => {
