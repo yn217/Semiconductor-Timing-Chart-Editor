@@ -7,6 +7,7 @@ export * from "./validation.js";
 export * from "./serialization.js";
 export * from "./value-signal-compatibility.js";
 export * from "./value-format.js";
+export * from "./enum-semantics.js";
 export * from "./json-syntax.js";
 export * from "./reference-registry.js";
 export * from "./edge-counter.js";

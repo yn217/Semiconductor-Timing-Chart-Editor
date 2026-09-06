@@ -84,6 +84,8 @@ export interface Timeline {
 
 export type SignalRole = "input" | "output" | "internal";
 export type SignalType = "binary" | "bus" | "state" | "logic" | "event" | "pulse" | "clock" | "commentRow";
+export interface EnumEntry { readonly value: string | number; readonly label: string }
+export interface EnumDefinition { readonly id: string; readonly name: string; readonly entries: readonly EnumEntry[] }
 
 export interface SignalValueChange {
   readonly start: number;
@@ -148,6 +150,7 @@ export interface ValueSignal extends SignalBase {
   readonly values: readonly SignalValueChange[];
   readonly width?: number;
   readonly displayFormat?: "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
+  readonly enumId?: string;
 }
 
 export interface ClockSignal extends SignalBase {
@@ -337,6 +340,7 @@ export interface CanonicalDocument {
   readonly layout: Layout;
   readonly transactions: readonly Transaction[];
   readonly transactionGroups?: readonly TransactionGroup[];
+  readonly enumDefinitions?: readonly EnumDefinition[];
   readonly transactionTimeScale?: TransactionTimeScale;
   readonly constraints: readonly Constraint[];
   readonly checkSettings: CheckSettings;

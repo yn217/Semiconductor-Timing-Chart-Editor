@@ -80,6 +80,7 @@
       "items": { "$ref": "#/$defs/transactionGroup" }
     },
     "transactionTimeScale": { "$ref": "#/$defs/transactionTimeScale" },
+    "enumDefinitions": { "type": "array", "items": { "$ref": "#/$defs/enumDefinition" } },
     "constraints": {
       "type": "array",
       "items": { "$ref": "#/$defs/constraint" }
@@ -98,6 +99,7 @@
   },
   "$defs": {
     "stableId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.:-]*$" },
+    "enumDefinition": { "type": "object", "additionalProperties": false, "required": ["id", "name", "entries"], "properties": { "id": { "$ref": "#/$defs/stableId" }, "name": { "type": "string", "minLength": 1 }, "entries": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["value", "label"], "properties": { "value": { "type": ["string", "number"] }, "label": { "type": "string", "minLength": 1 } } } } }, "allOf": [] },
     "offset": {
       "type": "object",
       "additionalProperties": false,
@@ -308,6 +310,7 @@
         "edgeCounter": { "$ref": "#/$defs/edgeCounter" },
         "width": { "type": "integer", "minimum": 1 },
         "displayFormat": { "enum": ["hex", "binary", "decimal", "signed", "unsigned", "symbolic"] },
+        "enumId": { "type": "string", "minLength": 1 },
         "title": { "type": "string" },
         "body": { "type": "string" },
         "spacingBefore": { "type": "number", "minimum": 0 },
