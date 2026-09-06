@@ -8,6 +8,16 @@ const workspace = path.resolve(import.meta.dirname, "../..");
 const checker = path.join(workspace, "scripts", "check-v1-v2-parity.mjs");
 const matrixSource = path.join(workspace, "docs", "v1-v2-parity.json");
 const manifestSource = path.join(workspace, "docs", "v1-v2-source-manifest.json");
+const matrixDocument = path.join(workspace, "docs", "V1_V2_PARITY_MATRIX.md");
+
+it("keeps the explicit V1/V2 conflict register reviewable", () => {
+  const document = readFileSync(matrixDocument, "utf8");
+  expect(document).toContain("## Explicit V1/V2 conflict register");
+  for (const conflictId of ["CONFLICT-01", "CONFLICT-02", "CONFLICT-03"]) {
+    expect(document).toContain(`\`${conflictId}\``);
+  }
+  expect(document).toContain("Product decision needed");
+});
 
 it("fails when matrix coverage is missing a source-manifest Issue", () => {
   const directory = mkdtempSync(path.join(tmpdir(), "v1-v2-parity-"));
