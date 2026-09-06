@@ -9,15 +9,22 @@ import { EditorIconButton } from "./editor-icon.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonNumberInput } from "./design-system.js";
 
-/** #388: this file's own destination/range-edit summary + tooltip helpers.
- * `destinationSummary` covers the Duplicate/Move sentence shown next to the
- * destination field; the per-button explanations reflect the actual shared
- * #170 timeline-transform contract (packages/commands/src/planner.ts's
- * timeline.delete/duplicateRange/moveRange handlers) rather than repeating
- * the command name. */
-function destinationSummary(range: { readonly start: number; readonly end: number }, destination: number): string {
+/** #388/#396: this file's own destination/range-edit summary + tooltip
+ * helpers. `destinationSummary` covers the Duplicate/Move sentence shown
+ * next to the destination field; the per-button explanations reflect the
+ * actual shared #170 timeline-transform contract (packages/commands/src/
+ * planner.ts's timeline.delete/duplicateRange/moveRange handlers) rather
+ * than repeating the command name. #396: the single long
+ * "Selected [.,.) -> Target [.,.)" line never fit this Ribbon slot's actual
+ * width -- it wrapped, and the shared .ds-ribbon-number-input output's
+ * tight line-height then overlapped the wrapped lines on top of each
+ * other. Two short, independently labeled lines (each always shorter than
+ * either half of the old single line) replace it -- see the
+ * .timeline-range-edit-group / .ds-ribbon-number-input--summary rules in
+ * ribbon.css for the matching layout. */
+function destinationSummary(range: { readonly start: number; readonly end: number }, destination: number): readonly [selected: string, target: string] {
   const length = Math.max(0, range.end - range.start);
-  return `Selected [${range.start},${range.end}) → Target [${destination},${destination + length})`;
+  return [`Selected [${range.start},${range.end})`, `Target [${destination},${destination + length})`];
 }
 
 /** Timeline renders through the exact same Ds* ribbon primitives Insert and
@@ -110,9 +117,9 @@ export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRa
     <div className="timeline-slot-group" data-timeline-group="Range Edit" aria-label="Range edit commands">
       <DsRibbonGroup ariaLabel="Range Edit" className="timeline-range-edit-group" density="compact-grid" label="Range Edit">
         <DsRibbonNumberInput ariaLabel="Timeline destination" label="Destination" min={0} max={document.timeline.cycleCount} step={1} value={destination} onChange={(value) => setDestination(Math.max(0, value))} title="Start cycle used by Duplicate / Move -- has no effect on Delete" />
-        <label className="ds-control ds-ribbon-number-input" title="What Duplicate/Move will do with the current Destination value">
+        <label className="ds-control ds-ribbon-number-input ds-ribbon-number-input--summary" title="What Duplicate/Move will do with the current Destination value">
           <span className="ds-ribbon-number-input__caption">Preview</span>
-          <output data-testid="timeline-destination-summary">{destinationSummary(range, destination)}</output>
+          <output data-testid="timeline-destination-summary">{destinationSummary(range, destination).map((line) => <span key={line}>{line}</span>)}</output>
         </label>
         <DsRibbonButton ariaLabel="Delete range" icon={<RibbonIcon name="i-delete" />} onClick={() => onCommand({ id: nextCommandId("timeline_delete"), type: "timeline.delete", start: range.start, end: range.end })} title={`Delete [${range.start},${range.end}). Later Signal change points, Annotation anchors, Bookmarks, Label Anchors, Time Groups and Transactions shift earlier by ${rangeLength} cycles (the shared #170 timeline-transform ripple). Destination is not used.`} v1Label="範囲削除">Delete</DsRibbonButton>
         <DsRibbonButton ariaLabel="Duplicate to" icon={<RibbonIcon name="i-duplicate" />} onClick={() => onCommand({ id: nextCommandId("timeline_duplicate"), type: "timeline.duplicateRange", start: range.start, end: range.end, at: destination })} title={`Copy [${range.start},${range.end}) → [${destination},${destination + rangeLength}). The original range remains; Signal change points and Annotation anchors inside the source range are duplicated into the new location.`} v1Label="範囲複製">Duplicate</DsRibbonButton>
