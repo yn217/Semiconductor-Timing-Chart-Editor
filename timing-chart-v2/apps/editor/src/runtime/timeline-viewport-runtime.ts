@@ -62,11 +62,12 @@ export type TimelineViewportRuntime = Readonly<{
   onViewportResize: () => void;
 }>;
 
-const MIN_ZOOM = 0.5;
-const MAX_ZOOM = 2;
+export const MIN_TIMELINE_ZOOM = 0.5;
+export const MAX_TIMELINE_ZOOM = 8;
 
-function clampZoom(zoom: number): number {
-  return Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, Math.round(zoom * 100) / 100));
+export function clampTimelineZoom(zoom: number): number {
+  if (!Number.isFinite(zoom)) return MIN_TIMELINE_ZOOM;
+  return Math.max(MIN_TIMELINE_ZOOM, Math.min(MAX_TIMELINE_ZOOM, Math.round(zoom * 100) / 100));
 }
 
 export function createTimelineViewportRuntime(context: TimelineViewportRuntimeContext): TimelineViewportRuntime {
@@ -88,7 +89,7 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
   const fit = (startLocalX: number, endLocalX: number) => {
     const span = Math.max(1, endLocalX - startLocalX);
     const available = Math.max(160, context.viewport.getMetrics().width - context.viewport.getMetrics().leftInset - 20);
-    return clampZoom(available / span);
+    return clampTimelineZoom(available / span);
   };
 
   return {
@@ -107,12 +108,12 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
     detach: () => { resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; },
     dispose: () => { resizeObserver?.disconnect(); resizeObserver = undefined; attached = false; disposed = true; },
     onDocumentEpochChanged: (epoch) => { assertActive(); documentEpoch = epoch; },
-    zoomIn: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampZoom(context.viewport.getZoom() + 0.1)); render("zoom-in"); },
-    zoomOut: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampZoom(context.viewport.getZoom() - 0.1)); render("zoom-out"); },
+    zoomIn: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampTimelineZoom(context.viewport.getZoom() + 0.1)); render("zoom-in"); },
+    zoomOut: () => { assertActive(); if (!attached) return; context.viewport.setZoom(clampTimelineZoom(context.viewport.getZoom() - 0.1)); render("zoom-out"); },
     setZoom: (zoom) => {
       assertActive();
       if (!attached) return;
-      const nextZoom = clampZoom(zoom);
+      const nextZoom = clampTimelineZoom(zoom);
       // Accepted semantic commands call this synchronizer after the renderer
       // becomes idle. Once the initial presentation is applied, reapplying
       // the same zoom only schedules another scroll-layout/render pass (most
@@ -123,7 +124,30 @@ export function createTimelineViewportRuntime(context: TimelineViewportRuntimeCo
       render("zoom");
     },
     fitAll: (contentWidth) => { assertActive(); if (!attached) return; context.viewport.setZoom(fit(0, contentWidth)); context.viewport.setScrollState({ left: 0 }); render("fit-all"); },
-    fitSelection: (startLocalX, endLocalX) => { assertActive(); if (!attached) return; const zoom = fit(startLocalX, endLocalX); context.viewport.setZoom(zoom); context.viewport.setScrollState({ left: Math.max(0, Math.round(startLocalX * zoom - context.viewport.getMetrics().leftInset)) }); render("fit-selection"); },
+    fitSelection: (startLocalX, endLocalX) => {
+      assertActive();
+      if (!attached || !Number.isFinite(startLocalX) || !Number.isFinite(endLocalX) || endLocalX <= startLocalX) return;
+      const metrics = context.viewport.getMetrics();
+      const available = Math.max(160, metrics.width - metrics.leftInset - 20);
+      const zoom = fit(startLocalX, endLocalX);
+      const selectionWidth = (endLocalX - startLocalX) * zoom;
+      const centeringOffset = Math.max(0, (available - selectionWidth) / 2);
+      // startLocalX is measured from the time-domain origin. scrollLeft is
+      // measured from the viewport's full surface origin, so the time-domain
+      // inset must not be subtracted a second time here.
+      const scrollLeft = Math.max(0, Math.round(startLocalX * zoom - centeringOffset));
+      context.viewport.setZoom(zoom);
+      const applyScroll = () => {
+        if (!attached) return;
+        context.viewport.setScrollState({ left: scrollLeft });
+        render("fit-selection");
+      };
+      // Zoom presentation updates the scrollable surface on the next frame.
+      // Apply the target scroll after that layout pass so the browser does not
+      // clamp it against the previous (smaller) scrollWidth.
+      if (typeof globalThis.requestAnimationFrame === "function") globalThis.requestAnimationFrame(applyScroll);
+      else applyScroll();
+    },
     navigateToCycle: (cycle) => { assertActive(); if (!attached) return; const localX = context.geometry.sourceBoundaryToLocalX(context.document.getSnapshot(), cycle); if (localX === undefined) return; context.viewport.setScrollState({ left: Math.max(0, Math.round(context.geometry.localXToScreenX(localX) * context.viewport.getZoom() - context.viewport.getMetrics().width * 0.35)) }); render("navigate-cycle"); },
     sourceBoundaryToLocalX: (document, cycle) => { assertActive(); return context.geometry.sourceBoundaryToLocalX(document, cycle); },
     screenXToSourceCycle: (screenX) => { assertActive(); const zoom = context.viewport.getZoom(); if (!Number.isFinite(zoom) || zoom <= 0) return undefined; const localX = screenX / zoom; const mapping = context.geometry.getDisplayTimeMapping(); return typeof mapping === "object" && mapping !== null && "displayToSourceCycle" in mapping && typeof mapping.displayToSourceCycle === "function" ? (mapping.displayToSourceCycle as (x: number) => number | undefined)(localX) : undefined; },

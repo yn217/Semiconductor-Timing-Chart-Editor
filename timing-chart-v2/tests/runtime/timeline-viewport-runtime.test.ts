@@ -20,9 +20,9 @@ describe("TimelineViewportRuntime", () => {
     const runtime = createTimelineViewportRuntime(runtimeContext);
     runtime.attach();
     runtime.setZoom(9);
-    expect(runtimeContext.viewport.getZoom()).toBe(2);
+    expect(runtimeContext.viewport.getZoom()).toBe(8);
     runtime.fitSelection(100, 300);
-    expect(runtimeContext.viewport.getZoom()).toBe(2);
+    expect(runtimeContext.viewport.getZoom()).toBe(4.4);
     expect(runtimeContext.render.requestRender).toHaveBeenCalled();
   });
 

@@ -694,8 +694,14 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").click();
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [8, 9)");
   await page.getByLabel("Zoom preset").selectOption("50");
   await expect(page.getByTestId("zoom-status")).toHaveText("50%");
+  for (const preset of ["100", "200", "400", "800"]) {
+    await page.getByLabel("Zoom preset").selectOption(preset);
+    await expect(page.getByTestId("zoom-status")).toHaveText(`${preset}%`);
+  }
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
   const afterPreset = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
@@ -703,7 +709,13 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   expect(afterPreset.localGeometryBuilds).toBe(before.localGeometryBuilds);
   await page.getByLabel("Zoom preset").selectOption("100");
   await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
-  await expect(page.getByTestId("zoom-status")).toHaveText("200%");
+  await expect(page.getByTestId("zoom-status")).toHaveText("800%");
+  const fittedViewport = await page.getByTestId("cycle-viewport").boundingBox();
+  const fittedBand = await page.getByTestId("range-selection-band").boundingBox();
+  expect(fittedViewport).not.toBeNull();
+  expect(fittedBand).not.toBeNull();
+  expect(fittedBand!.x).toBeGreaterThanOrEqual(fittedViewport!.x);
+  expect(fittedBand!.x + fittedBand!.width).toBeLessThanOrEqual(fittedViewport!.x + fittedViewport!.width);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", "0");
   const after = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;

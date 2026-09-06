@@ -48,4 +48,24 @@ describe("applyTimelineZoom", () => {
     expect(scalable.style.scale).toBe("1.2 1");
     expect(hostQueries).toBe(0);
   });
+
+  it("clamps programmatic zoom to the shared 800% ceiling", () => {
+    const context = {
+      rendererHost: elementWithStyle(styleProbe().style),
+      timingSurface: elementWithStyle(styleProbe().style),
+      viewport: elementWithStyle(styleProbe().style),
+      ruler: elementWithStyle(styleProbe().style),
+      scalable: [],
+      leftPaneWidth: 0,
+      frozenPaneWidth: 0,
+      inspectorWidth: 0,
+      viewportWidth: 800,
+      timelineOffset: 0,
+      onPresentationScale: () => undefined,
+      onSyncFrozenColumns: () => undefined,
+      onZoom: () => undefined,
+    } satisfies TimelineZoomSurfaceContext;
+
+    expect(applyTimelineZoom(9, context)).toBe(8);
+  });
 });

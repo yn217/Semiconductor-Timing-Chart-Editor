@@ -17,7 +17,7 @@ function nextBrowserFrame(): Promise<void> {
 }
 import { referenceSvgScreenScale } from "./screen-scale.js";
 import { buildViewportWindow } from "./viewport-window.js";
-import { createTimelineViewportRuntime, type TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
+import { clampTimelineZoom, createTimelineViewportRuntime, type TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import type { ImmutableSnapIndex } from "@timing-chart-v2/geometry";
 
 export type RendererHostSizingContext = { readonly host: RefObject<HTMLDivElement | null>; readonly viewport: RefObject<HTMLDivElement | null>; readonly metrics: { readonly viewportWidth: number; readonly leftPaneWidth: number; readonly inspectorWidth: number; readonly frozenPaneWidth: number; readonly zoom: number } };
@@ -301,14 +301,24 @@ export function createTimelineNavigationController(context: {
     fitSelection() {
       const document = context.getDocument();
       const range = context.getRange();
-      const start = context.runtime.sourceBoundaryToLocalX(document, range.start) ?? 0;
-      const end = context.runtime.sourceBoundaryToLocalX(document, range.end) ?? start + 1;
+      const start = context.runtime.sourceBoundaryToLocalX(document, range.start);
+      const end = context.runtime.sourceBoundaryToLocalX(document, range.end);
+      if (start === undefined || end === undefined || end <= start) {
+        context.host.dataset.timelineNavigationDiagnostic = "fit-selection-geometry-unavailable";
+        return;
+      }
+      delete context.host.dataset.timelineNavigationDiagnostic;
       context.runtime.fitSelection(start, end);
     },
     fitAll() {
       const document = context.getDocument();
-      const start = context.runtime.sourceBoundaryToLocalX(document, 0) ?? 0;
-      const end = context.runtime.sourceBoundaryToLocalX(document, document.timeline.cycleCount) ?? start + 1;
+      const start = context.runtime.sourceBoundaryToLocalX(document, 0);
+      const end = context.runtime.sourceBoundaryToLocalX(document, document.timeline.cycleCount);
+      if (start === undefined || end === undefined || end <= start) {
+        context.host.dataset.timelineNavigationDiagnostic = "fit-all-geometry-unavailable";
+        return;
+      }
+      delete context.host.dataset.timelineNavigationDiagnostic;
       context.runtime.fitAll(end);
     },
     navigateToCycle(cycle) {
@@ -630,7 +640,7 @@ export type TimelineZoomSurfaceContext = {
 };
 
 export function applyTimelineZoom(next: number, context: TimelineZoomSurfaceContext): number {
-  const zoom = Math.max(0.5, Math.min(2, Math.round(next * 100) / 100));
+  const zoom = clampTimelineZoom(next);
   const baseWidth = Math.max(160, context.viewportWidth - context.leftPaneWidth - context.inspectorWidth - context.frozenPaneWidth);
   const width = context.timelineOffset + baseWidth * zoom;
   const applyPresentation = () => {

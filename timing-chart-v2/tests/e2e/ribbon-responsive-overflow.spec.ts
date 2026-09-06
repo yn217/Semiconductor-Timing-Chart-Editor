@@ -16,7 +16,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 720
       await overflow.click();
       const menu = page.getByRole("menu", { name: "More Home Commands" });
       await expect(menu).toBeVisible();
-      for (const label of ["New", "Open", "Save", "Save As", "Recent", "Undo", "Copy", "Paste", "Delete", "Select All Signals", "Hide", "Move Down", "Zoom −", "Zoom +", "Zoom 50%", "Zoom 100%", "Zoom 150%", "Zoom 200%", "Fit Selection", "Fit All", "Grid", "Snap", "Ruler", "MiniMap"]) {
+      for (const label of ["New", "Open", "Save", "Save As", "Recent", "Undo", "Copy", "Paste", "Delete", "Select All Signals", "Hide", "Move Down", "Zoom −", "Zoom +", "Zoom 50%", "Zoom 100%", "Zoom 150%", "Zoom 200%", "Zoom 400%", "Zoom 800%", "Fit Selection", "Fit All", "Grid", "Snap", "Ruler", "MiniMap"]) {
         await expect(menu.getByRole("button", { name: label, exact: true })).toBeVisible();
       }
       for (const label of ["Document Properties", "Problems", "SVG / PNG / PDF"]) {
