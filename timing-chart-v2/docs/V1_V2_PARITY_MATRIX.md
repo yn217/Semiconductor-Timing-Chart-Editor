@@ -91,6 +91,14 @@ Save/Open, the SVG contains the ordered visible labels, and the shared
 ExportScene also produces valid PNG and PDF outputs. The complete V1 legend
 style/fit reference matrix remains open.
 
+The current-main Ribbon visual refresh is covered by
+`timing-chart-v2/tests/e2e/ribbon-visual-scenario-matrix.spec.ts` (2/2 focused
+Chromium): deterministic desktop manifests cover all supported Ribbon tabs,
+mechanical icon/baseline diagnostics report no findings, and compressed layout
+plus repeated Home round-trip preserves geometry and canonical/history state.
+`v8-gui-contract-coverage.spec.ts` also passes its locked V8 geometry contract.
+The complete V1 replacement-pack pixel matrix remains open.
+
 ## Non-GUI V1 contract sections
 
 The JSON inventory also covers the full product contract, including:
@@ -235,6 +243,14 @@ respecting folds emits the boundary layer while Expand emits none; source time
 and canonical state remain unchanged. Full V1 visual/reference closure remains
 open.
 
+The current-main Chromium `label-anchor-source-display.spec.ts` case also
+passes (1/1, 2026-09-06), proving the standalone LabelAnchor source/display
+relationship on both no-fold and folded ruler paths, including Undo and
+Save/Open. `clock-presentation-closure.spec.ts` passes 2/2 for delayed-start
+clock presentation and geometry-backed edge-counter updates. These are
+additional acceptance evidence only; the complete V1 visual/reference matrix
+and cross-feature closure remain open.
+
 Ghost Trace export parity is now derived from the source signal's WaveDrom
 wave tokens and shared source/display mapping. ExportScene emits a stable
 polyline with source signal and cycle-offset metadata, and SVG/PNG/PDF share
@@ -368,7 +384,7 @@ available.
 | Contract | V2 owner | Parent | V1 source | Golden Sample | Historical V1 visual inputs | Current state |
 |---|---|---|---|---:|---|---|
 | `GUI-TRANSITION-ARROW` | #375 | `ANNOT-01` | #10, #68 | 15 | `timing-chart-v1/artifacts/issue10/dependency-arrows.png`; `timing-chart-v1/artifacts/issue68/issue68-1672x941.png` | partial production route/marker evidence; full lifecycle/export closure open |
-| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | `timing-chart-v1/artifacts/issue111/issue111-1672x941.png` | standalone create/edit/list/delete lifecycle landed; complete coexistence, export and closure evidence remains open |
+| `GUI-RULER-LABEL-ANCHOR` | #376 | `TIME-01` | #111 | 16 | `timing-chart-v1/artifacts/issue111/issue111-1672x941.png` | standalone create/edit/list/delete lifecycle landed; current-main `label-anchor-source-display.spec.ts` passes no-fold/folded source-display, Undo and Save/Open; complete coexistence, export and closure evidence remains open |
 | `GUI-ANNOTATION-PRIMITIVES` | #377 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | type-specific presentation lands, incl. Callout multiline label's real Save/Open round trip; full Golden Sample 14 visual/performance matrix remains open |
 | `GUI-ANNOTATION-PRESENTATION` | #378 | `ANNOT-01` | #40, #69 | 14 | `timing-chart-v1/artifacts/issue40/annotation-1672x941.png`; `timing-chart-v1/artifacts/issue69/issue69-1672x941.png` | capability matrix + Lock/Stroke/Fill/z-order/visibility landed, incl. Lock's real Save/Open round trip; full Golden Sample 14 visual/performance matrix remains open |
 
