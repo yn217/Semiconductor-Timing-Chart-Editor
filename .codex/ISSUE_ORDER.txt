@@ -10,33 +10,34 @@
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed state at reconciliation:
-#   main = f401a48 fix(export): make signal split preservation explicit
-#   #443 and previous bounded Codex issues are completed/closed.
+#   main = 46a5f5e fix(schema): validate enum definition schema
+#   #456 completed/closed.
+#   #457 is actively in progress on main; foundation is implemented, lifecycle/history/round-trip evidence remains.
 #   #414 remains open; therefore #415 remains dependency-waiting.
-#   Additional independent Core foundations from #431 have been split into #456-#460.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 # STATUS: ACTIVE
 #
-# 1) Bus radix/value formatting Core.
-# Canonical per-Signal formatting metadata + one shared parser/formatter contract.
-456
-
-# 2) Enum/State semantic definitions.
-# Depends on/reuses #456 formatter/parser where appropriate.
+# 1) Finish Enum/State semantic lifecycle on the existing #457 implementation.
+# Already present on main: Canonical EnumDefinition, Signal enumId references,
+# shared resolveEnumValue, fallback behavior, duplicate value/label validation,
+# schema/reference-registry foundation.
+# Remaining closure work: rename lifecycle, delete/dependent-Signal policy,
+# Undo/Redo exact, Save/Open round-trip and migration/backward-compat evidence where required.
+# Do NOT reimplement the completed foundation.
 457
 
-# 3) Role-specific Clock/Reset semantics.
+# 2) Role-specific Clock/Reset semantics.
 # Canonical timing/reset metadata, shared validation/selectors, persistence/history.
 458
 
-# 4) Cursor A/B semantic workspace state.
+# 3) Cursor A/B semantic workspace state.
 # View/workspace-only source-time cursor model + shared delta calculation/projection contract.
 459
 
-# 5) Timing/protocol diagnostic engine Core.
+# 4) Timing/protocol diagnostic engine Core.
 # Deterministic derived Problems diagnostics; begin with Unknown/X and at least one handshake/stability rule.
 # Reuse #458 semantics when available, but do not block the entire issue on Reset-specific checks.
 460
@@ -96,6 +97,7 @@
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
+#   #456
 #   #443
 #   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444
 #   #430 #432 #412 #413
