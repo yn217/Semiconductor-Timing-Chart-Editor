@@ -3,97 +3,92 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-06 17:43 JST
+# Last reconciled by ChatGPT: 2026-09-06 17:56 JST
 #
-# Cross-agent ownership is authoritative in:
-#   .codex/AGENT_ASSIGNMENT.md
-#
-# Codex stays single-threaded on main and only READS this branch:
-#   git fetch origin codex-control
-#   git show origin/codex-control:.codex/AGENT_ASSIGNMENT.md
-#   git show origin/codex-control:.codex/ISSUE_ORDER.txt
+# Cross-agent ownership: .codex/AGENT_ASSIGNMENT.md
+# Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 #
-# Observed product state at reconciliation:
-#   main = origin/main = 4956eab (user-reported pushed main)
+# Observed product state:
+#   main = origin/main = 4956eab (user-reported)
 #   worktree clean
-#   #412 completed/closed with evidence
-#   #413 completed/closed with evidence
-#   #414 next dependency owner = Claude
-#   #415 Codex-owned but dependency-waiting on #414
-#   #429 new P0 Transaction Mode production-completion owner = Claude/product lane
-#   #177 external/product hold
+#   #412 completed/closed
+#   #413 completed/closed
+#   Claude is working the GUI/product dependency lane beginning with #414
+#   #415 remains dependency-waiting on #414
 #
-# Parsing rule: exactly one executable GitHub Issue number per non-comment line.
-# Claude-owned, held, dependency-waiting, mixed-ownership and completed Issues remain comments only.
+# Parsing rule: exactly one executable Issue number per non-comment line.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: WAITING_FOR_#414
+# STATUS: ACTIVE
 #
-# There are currently NO executable Codex Issues.
-#
-# #412 and #413 are completed/closed. Do not re-audit/reimplement them merely to remain busy.
-# #415 is the next Codex task, but MUST NOT start until #414 is completed/closed and latest main
-# containing #414 is available. After that event, update this file and move 415 into this section.
-#
-# Do not manufacture unrelated Core work while waiting.
-#
+# 1) Transaction Core foundation for #429.
+# Complete one production semantic owner for Transaction create/update/delete/duplicate,
+# Phase CRUD/validation, linked Signal semantics, atomic History and persistence.
+# NO Ribbon/Bottom/Inspector/direct-manipulation product GUI.
+430
+
+# 2) Marker vertical-span Core foundation for #424.
+# Stable semantic row-span model, migration/validation, commands, Undo/Redo, Save/Open.
+# NO resize handles/Inspector/visual styling.
+432
+
+# 3) Highlight Cycle-Snap / Free Core foundation for #419.
+# Persisted semantic positioning modes, validation, commands, Undo/Redo, Save/Open.
+# Free mode must NOT store screen pixels.
+# NO Inspector/pointer/UI work.
+433
+
 # ============================================================================
-# FUTURE CODEX LANE — DEPENDENCY WAIT
+# HIGH-PRIORITY FUTURE CODEX LANE — DEPENDENCY WAIT
 # ============================================================================
 # #415 Nested collapse + shared DisplayTimeMapping / Axis Break
 # Owner: Codex
-# Dependency: #414 completed/closed on main
+# Dependency: #414 completed/closed on main.
 #
-# Scope once executable:
+# When #414 completes, reconcile this control file. Preferred priority:
+# - finish the currently in-progress bounded Codex Issue safely;
+# - then promote #415 ahead of remaining lower-priority independent queue entries,
+#   because #415 unblocks Claude #416 and the Time Outline closure chain.
+#
+# #415 scope:
 # - effective nested fold resolution
 # - shared DisplayTimeMapping
 # - Axis Break mapping/geometry owner
-# - shared time projection for Ruler/Signal/Grid/Playhead/Range/Annotation/Transaction/Bookmark
-# - Clock/fold semantics + performance
+# - Ruler/Signal/Grid/Playhead/Range/Annotation/Transaction/Bookmark shared mapping
+# - Clock/fold semantics and performance
 # - no final Ribbon/product closure
 #
-# Time Outline intended split:
-#   COMPLETED Codex:  #412 -> #413
-#   NOW       Claude: #414
-#   NEXT      Codex:  #415
-#   THEN      Claude: #416
-#
-# Parent #411 is coordination/Epic only.
+# Time Outline chain:
+#   DONE  Codex  #412 -> #413
+#   NOW   Claude #414
+#   WAIT  Codex  #415
+#   THEN  Claude #416
 #
 # ============================================================================
-# CLAUDE / GUI-PRODUCT PRIORITY LANE
+# CROSS-AGENT PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
 # ============================================================================
-# Immediate:
-#   #414 Excel-like Time Outline visualization
-#
-# After #414 merges:
-#   Codex may start #415.
-#   Claude should use the available GUI lane for #429 Transaction Mode production completion rather
-#   than waiting idle for #415, while avoiding hot-file collisions with #415 geometry/runtime work.
-#
-# After #415 completes:
-#   #416 Time Outline Timeline Ribbon + persistence/export/E2E closure
-#
-# Transaction/product lane:
-#   #429 P0 Transaction Mode production completion
-#   #426 Bottom Panel consolidation (parts may be satisfied/consumed by #429; do not duplicate owner)
+# Claude/product owners:
+#   #414 Time Outline GUI
+#   #416 Time Outline final Ribbon/export/E2E closure
+#   #429 Transaction Mode product completion
+#   #424 Marker vertical-span GUI/product completion
+#   #419 Highlight Snap/Free GUI/product completion
+#   #431 current UX/Product Completion Epic
+#   #426 Bottom Panel consolidation
 #   #403-#409 Contextual Ribbon / Cycle-Transaction Split
-#   #397 final sample-driven Transaction/Split acceptance — run after concrete implementation owners
-#        (#429 and applicable #403-#409/#426 work) are complete enough for meaningful acceptance.
+#   #397 final Transaction/Split sample-driven acceptance
 #
-# Other GUI/product issues remain Claude-owned unless explicitly transferred:
-#   #419 Highlight Cycle Snap / Free
-#   #424 Marker vertical span
+# Codex children #430/#432/#433 intentionally split out only Core/Data semantics.
+# They do NOT transfer the parent GUI/product Issues to Codex.
 #
 # ============================================================================
 # EXTERNAL / PRODUCT HOLD
 # ============================================================================
-# #177 Final broad parity/closure lane.
-# Replacement Pack external input/product decision is unavailable. Do not re-audit unchanged state.
-#
+# #177 Final broad parity/closure lane: external Replacement Pack / product decision unavailable.
+# Do not repeatedly re-audit unchanged state.
 # #250 production AI provider contract remains product-decision hold.
 # #272 closed not_planned due external Actions runner/billing condition.
 #
@@ -109,46 +104,47 @@
 # ============================================================================
 # OPERATING POLICY — IMPLEMENTATION FIRST
 # ============================================================================
-# Prefer concrete production residuals over repeated broad audit/test-only work.
 # If current main already satisfies an Issue, collect evidence and close it; do not manufacture work.
-#
-# GitHub Actions availability is not a global blocker. Use local TypeScript/gates/unit/Chromium/
-# git diff --check as applicable and record Actions status.
-#
-# Never weaken Golden/reference/threshold/mask merely to pass. Any Golden change requires explicit
-# user/product approval.
+# Prefer bounded production implementation before broad audit/test-only work.
+# GitHub Actions availability is not a global blocker; use local TypeScript/gates/unit/Chromium/
+# git diff --check as applicable.
+# Never weaken Golden/reference/threshold/mask merely to pass.
 #
 # ============================================================================
 # SINGLE-WORKTREE / DIRTY-WORK RULES
 # ============================================================================
-# - One repository / one main worktree / sequential Codex implementation stream.
-# - No temporary clone, no per-Issue clone, no git worktree add.
+# - One repository / one main worktree / sequential Codex stream.
+# - No temporary clone, per-Issue clone, or git worktree add.
 # - Never reset/stash/clean/delete unrelated dirty work.
-# - A dirty file is not itself a blocker. Classify dirty hunks as previous-Issue, current-Issue,
-#   unrelated, generated/evidence, or unknown/mixed.
-# - Previous-Issue dirty work: finish/test/commit/push first.
-# - Current-Issue work: continue.
-# - Same file but non-overlapping hunks: partial-stage and inspect staged diff.
-# - Only a true same-hunk unsafe conflict may defer that Issue as DEFERRED_LOCAL_CONFLICT.
+# - Dirty file != blocker. Classify hunks: previous/current/unrelated/generated/unknown.
+# - Previous Issue dirty work: finish/test/commit/push first.
+# - Same file non-overlap: partial-stage and inspect.
+# - Only true same-hunk unsafe conflict may defer one Issue as DEFERRED_LOCAL_CONFLICT.
 #
 # ============================================================================
 # NORMAL EXECUTION LOOP
 # ============================================================================
-# inspect -> acceptance -> bounded production implementation -> focused tests -> git diff --check
-# -> stage intended changes -> inspect staged diff -> commit -> push -> evidence/close -> next Issue
-#
-# When executable queue is empty, report WAITING_FOR_DEPENDENCY and do not repeatedly audit unchanged holds.
+# sync latest origin/main
+# -> inspect Issue and existing production owner
+# -> reproduce/audit concrete gap
+# -> bounded production implementation
+# -> focused tests
+# -> git diff --check
+# -> inspect/stage intended diff
+# -> commit/push to main according to repo workflow
+# -> verify main == origin/main
+# -> evidence comment / close
+# -> next queue entry
 #
 # ============================================================================
-# GLOBAL SAFETY / ARCHITECTURE
+# GLOBAL ARCHITECTURE / SAFETY
 # ============================================================================
-# - Always sync latest origin/main before Issue work.
-# - Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
-# - GUI/Keyboard/Context Menu/Inspector/Bottom/AI mutations converge on Semantic Commands.
-# - One logical user action = one intended semantic operation = one History unit.
-# - DOM/ruler samples are not semantic authority.
-# - Canonical source cycle/boundary -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> local X -> screen X.
-# - Stable IDs are opaque; never use array index as identity.
-# - WaveDrom/default skin remains normative waveform renderer.
-# - Home remains protected unless explicitly authorized.
-# - No Golden/reference/threshold/mask changes merely to pass.
+# Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
+# One logical user action = one intended semantic operation = one History unit.
+# Stable IDs are opaque; no array-index identity.
+# DOM/ruler samples are not semantic authority.
+# Canonical source time -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> screen.
+# No fixed cycle*pitch semantic owners or canonical screen coordinates.
+# WaveDrom/default skin remains normative waveform renderer.
+# Home is protected unless explicitly authorized.
+# No Golden/reference/threshold/mask changes merely to pass.
