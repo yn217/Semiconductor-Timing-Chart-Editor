@@ -230,6 +230,16 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
     const offset = record(source.labelOffset);
     result.labelOffset = { x: number(offset.x, 0), y: number(offset.y, 0) };
   }
+  const span = record(source.verticalSpan);
+  if (["auto", "rows", "custom"].includes(text(span.mode))) {
+    result.verticalSpan = {
+      mode: text(span.mode) || "auto",
+      ...(typeof span.startRowId === "string" ? { startRowId: span.startRowId } : {}),
+      ...(typeof span.endRowId === "string" ? { endRowId: span.endRowId } : {}),
+      ...(typeof span.startOffset === "number" ? { startOffset: span.startOffset } : {}),
+      ...(typeof span.endOffset === "number" ? { endOffset: span.endOffset } : {}),
+    };
+  }
   const style = { ...record(source.style) };
   if (typeof source.opacity === "number") style.opacity = source.opacity;
   if (typeof source.side === "string") style.side = source.side;

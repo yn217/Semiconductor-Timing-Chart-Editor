@@ -232,6 +232,14 @@ export interface Annotation {
     readonly anchorKind: "threshold" | "ratio";
   };
   readonly measurementLayout?: import("./annotation-semantics.js").MeasurementLayout;
+  /** Semantic vertical span for Markers; row identity is stable, never screen geometry. */
+  readonly verticalSpan?: {
+    readonly mode: "auto" | "rows" | "custom";
+    readonly startRowId?: SignalId;
+    readonly endRowId?: SignalId;
+    readonly startOffset?: number;
+    readonly endOffset?: number;
+  };
 }
 
 /** Groups Annotations for "select together / drag together" -- same shape

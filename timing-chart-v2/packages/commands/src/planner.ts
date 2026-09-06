@@ -1184,6 +1184,20 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { annotationStyle: [annotation.id], minimapOverview: true };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
+    case "annotation.updateVerticalSpan": {
+      const index = document.annotations.findIndex((item) => item.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (annotation.type !== "marker") return fail("invalid", "INVALID_LABEL", "$.verticalSpan", "Vertical spans are only supported by Markers.");
+      const span = command.verticalSpan;
+      if (span.mode === "rows" && (!span.startRowId || !span.endRowId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.verticalSpan", "Rows mode requires stable start and end row IDs.");
+      if (span.mode === "custom" && (!Number.isFinite(span.startOffset ?? 0) || !Number.isFinite(span.endOffset ?? 0))) return fail("invalid", "NON_FINITE_OFFSET", "$.verticalSpan", "Custom span offsets must be finite.");
+      if (span.startRowId && !document.signals.some((signal) => signal.id === span.startRowId) || span.endRowId && !document.signals.some((signal) => signal.id === span.endRowId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.verticalSpan", "Vertical span row IDs must reference existing Signals.");
+      if (JSON.stringify(annotation.verticalSpan ?? { mode: "auto" }) === JSON.stringify(span)) return fail("no-op", "NO_OP", "$", "Marker vertical span is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, verticalSpan: span };
+      const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
     case "annotation.bringToFront": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];

@@ -303,6 +303,12 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     }
     if (annotation.measurement !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurement`, "Measurement semantics are only valid for Measurement annotations.", annotation.id));
     if (annotation.measurementLayout !== undefined && annotation.type !== "measurement") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].measurementLayout`, "Measurement layout is only valid for Measurement annotations.", annotation.id));
+    if (annotation.verticalSpan !== undefined) {
+      if (annotation.type !== "marker") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan`, "Vertical span is only valid for Marker annotations.", annotation.id));
+      if (annotation.verticalSpan.mode === "rows" && (!annotation.verticalSpan.startRowId || !annotation.verticalSpan.endRowId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan`, "Rows mode requires stable boundary row IDs.", annotation.id));
+      for (const [key, id] of [["startRowId", annotation.verticalSpan.startRowId], ["endRowId", annotation.verticalSpan.endRowId]] as const) if (id && !signals.has(id)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span boundary must reference an existing Signal.", annotation.id));
+      for (const [key, offset] of [["startOffset", annotation.verticalSpan.startOffset], ["endOffset", annotation.verticalSpan.endOffset]] as const) if (offset !== undefined && !Number.isFinite(offset)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span offsets must be finite.", annotation.id));
+    }
     if (annotation.type === "ghostTrace") {
       if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));
 
