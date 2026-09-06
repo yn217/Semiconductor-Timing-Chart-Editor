@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-05 15:40 JST
+# Last reconciled by ChatGPT: 2026-09-06 10:28 JST
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
@@ -14,112 +14,156 @@
 #   git show origin/codex-control:.codex/ISSUE_ORDER.txt
 # Never merge/cherry-pick codex-control into main.
 #
-# Observed product state:
-#   main = 1fc36b6ad9fba865f5c8f12b73da4931c638a2fa
-#   open Issues = 20
-#   #357 #313 #260 #181 #182 #184 #185 #186 #306 #309 #172 #205 #267 are closed
-#   new immediate regression = #363
+# Observed product state at reconciliation:
+#   main = 018b4420f5e9721d3fe1f59cab78989eedb34832
+#   open Issues observed = 23
+#   latest user-approved Zoom/Fit Selection change = #410
+#   #400 remains open but main already contains an in-progress/merged #400 PR1 integration commit;
+#        do not start a parallel Codex implementation unless ownership is explicitly transferred.
 #
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
-# Claude-owned, held, paired-secondary and completed Issues remain comments only.
+# Claude-owned, held, mixed-ownership, paired-secondary and completed Issues remain comments only.
 #
 # ============================================================================
 # OPERATING POLICY — IMPLEMENTATION FIRST
 # ============================================================================
 # Prefer concrete production residuals over repeated broad audit/test-only work.
-# Test-only commits are appropriate when the Issue itself is a test/harness contract (#281),
+# Test-only commits are appropriate when the Issue itself is a test/harness contract,
 # or when the test proves/reproduces a concrete acceptance gap/regression.
 # Otherwise: implement bounded product behavior first, then focused verification.
 #
-# GitHub Actions is NOT RUN because billing/spending-limit prevents runner allocation.
+# GitHub Actions may be unavailable because of billing/spending-limit runner allocation.
 # This is not an implementation failure/global blocker. Use local TypeScript/gates/unit/Chromium/
-# git diff --check as applicable and record the billing status.
+# git diff --check as applicable and record the Actions status.
 #
-# Never weaken Golden/reference/threshold/mask merely to pass. PR #362 was an explicitly approved
-# Golden baseline update; any later Golden change requires new explicit approval.
+# Never weaken Golden/reference/threshold/mask merely to pass. The approved Golden baseline remains
+# acceptance input; any later Golden change requires explicit user/product approval.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# 1) Immediate narrow regression. Restore green baseline, do not redesign Zoom.
-363
+# 1) Immediate user-observed Zoom/Fit Selection behavior.
+#    Raise the shared zoom ceiling from 200% to 800%, make all zoom routes use one clamp,
+#    fit the actual selected source-cycle range, and remove the silent Cycle-0 fallback.
+#    View-only invariants: Canonical/History/Dirty delta = 0.
+410
 
-# 2) Signal Split Core reconciliation ONLY.
-#    Current duplicate concepts:
-#      - signal.display.splitPane
-#      - standalone SignalSplitAssignment[] / projectSignalSplitRows()
-#    Leave one authoritative presentation model. Do NOT build a parallel GUI/renderer path.
-#    When ready, comment `CORE_READY_FOR_GUI` on #200 and STOP #200 implementation;
-#    .codex/AGENT_ASSIGNMENT.md then transfers #200 to Claude for PR4 GUI/product completion.
-200
+# 2) Concrete Core/performance residuals discovered on current V2.
+#    #399: document.replace must cross one authoritative validation boundary and use a
+#          deterministic semantic no-op contract rather than whole-document JSON.stringify equality.
+399
+#    #398: Edge Counter overlay refresh must stop probing every source cycle; reuse/index real
+#          WaveDrom/LocalGeometry edge truth and keep scroll/range refresh localized.
+398
 
-# 3) Concrete Core/reliability product residuals.
-221
-269
+# 3) Runtime ownership architecture after the concrete hot-path fixes.
+#    Remove mount-time stale mutable closure ownership without replacing the efficient imperative
+#    renderer with a second state system. Keep explicit current owners/epochs.
+237
 
-# 4) Older Core phase contracts: audit latest main, implement only bounded residual gaps.
-171
-170
-167
-161
+# 4) Final broad parity/closure lane — intentionally last.
+#    Audit current main and implement only bounded remaining residuals. Do not revive rewrite/v2,
+#    copy V1 runtime code, or manufacture work for already-satisfied rows.
 177
 
-# 5) Background closure lanes — intentionally after implementable product gaps.
-#    #175: production performance residuals only when evidence identifies a real hot path;
-#          avoid repeated measurement/test-only churn.
-175
-#    #281 is inherently a test/correctness-harness Issue and therefore intentionally late.
-281
-
 # ============================================================================
-# CLAUDE-OWNED — NON-EXECUTABLE BY CODEX
+# CLAUDE / GUI-PRODUCT SURFACES — NON-EXECUTABLE BY CODEX
 # ============================================================================
-# #223 + #264 Event/Pulse: ONE Claude-owned end-to-end implementation; do not duplicate.
-# #222 + #265 Spacer: ONE Claude-owned end-to-end implementation; do not duplicate.
-# #293 constrained non-Home design-system closure.
-# #176 professional CAD/EDA usability closure.
-# #262 final GUI/UX closure.
+# Existing ownership policy assigns Ribbon/Tree/Inspector/Bottom composition, discoverability,
+# product workflow presentation and visual-system consistency to Claude unless explicitly transferred.
 #
-# #200 becomes Claude-owned only AFTER Codex posts CORE_READY_FOR_GUI, at which point Codex moves
-# immediately to #221 and does not continue a parallel Signal Split GUI implementation.
+# Current GUI/product issues created after the previous reconciliation:
+#   #396 Timeline Ribbon Range Edit readability/layout
+#   #400 Signal/Level/Pulse consolidation + Insert icons + Bottom product surface
+#   #401 View Mode inactive readability
+#   #402 Bottom panel dynamic Group dropdown + Draft -> Apply to Waveform UX
+#   #403 Contextual Ribbon Epic
+#   #404 ActiveContext state (GUI workspace owner)
+#   #405 data-driven Ribbon composition
+#   #406 Transaction-focused Ribbon
+#   #407 Split active-pane ownership
+#   #408 horizontal Signal | Transaction Split product layout
+#   #409 active-pane-driven contextual Ribbon closure
+#   #397 Transaction + Split sample-driven product acceptance
+#   #200 Signal Split GUI/product completion
+#
+# Codex may fix a specifically isolated Core/runtime defect reported by those Issues, but must not
+# independently build a parallel Ribbon/Bottom/Split GUI path.
 #
 # ============================================================================
-# PRODUCT-DECISION HOLD — NON-EXECUTABLE
+# BROAD / MIXED PARITY ISSUES — HOLD UNTIL OWNER IS EXPLICITLY RECONCILED
 # ============================================================================
-# #250 AI provider integration:
-# Provider-neutral/deterministic semantic path is already substantial. Remaining acceptance needs an
-# explicit product decision for production provider/transport/config/auth/network-failure/smoke.
-# Do not invent an arbitrary provider or keep adding deterministic tests merely to burn the Issue down.
+# These remain open but span GUI/product + Core responsibilities. Do not let them preempt the
+# concrete queue above without an explicit ownership decision or a narrowly isolated Core defect:
+#   #208 File/New/Open production UX + atomic replacement lifecycle
+#   #202 Bookmark / Time Group / Axis Break production workflow + shared time mapping
+#   #204 AI proposal workflow
+#   #205 Datasheet-grade timing annotation parity
 #
 # ============================================================================
 # EXTERNAL / HUMAN HOLD
 # ============================================================================
 # #272 GitHub Actions runner allocation / billing spending limit.
-# Re-evaluate only after billing is restored.
+# Re-evaluate only after the account/workflow can allocate and execute a real runner.
 #
 # ============================================================================
-# OVERLAP RULES
+# COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
-# #223/#264 = one Event/Pulse lifecycle. Claude implements once; use one evidence set to close both.
-# #222/#265 = one Spacer lifecycle. Claude implements once; use one evidence set to close both.
-# If an Issue-local gesture/coordinate blocker reproduces twice, quarantine only that Issue/pair and
-# continue. Never use sampled ruler DOM, fixed-pitch semantic coordinates, timeout inflation or
-# assertion weakening to force acceptance.
+# The previous ISSUE_ORDER contained stale executable entries that are now closed or transferred.
+# Do not re-add them merely to generate more tests:
+#   #363 #269 #281
+#   #221 #171 #170 #167 #161 #175 (not present in the current open-Issue set)
+#   #372 #366 #369 (recent Core defects already closed)
+#
+# #200 transferred to Claude after CORE_READY_FOR_GUI; it is not a Codex executable entry.
 #
 # ============================================================================
-# RECENTLY COMPLETED — DO NOT REIMPLEMENT
+# OVERLAP / LOCAL-CONFLICT RULES
 # ============================================================================
-# #357 #313 #260 #181 #182 #184 #185 #186 #306 #309 #172 #205 #267
-# #165 #166 #169 #180 #210 #219 #259 #273 #275 #277 #328 #331 #332 #352
+# - One repository / one main worktree / sequential Codex implementation stream.
+# - No temporary clone, no per-Issue clone, no `git worktree add`.
+# - Never reset/stash/clean/delete unrelated dirty work.
+# - A dirty file is not itself a blocker. Classify dirty hunks as previous-Issue, current-Issue,
+#   unrelated, generated/evidence, or unknown/mixed.
+# - Previous-Issue dirty work: finish/test/commit/push it first.
+# - Current-Issue work: continue it.
+# - Same file but non-overlapping hunks: use partial staging and inspect the staged diff.
+# - Only a true same-hunk unsafe conflict may defer that Issue as DEFERRED_LOCAL_CONFLICT;
+#   continue to the next safe Issue instead of blocking the whole Goal.
+# - If an Issue-local gesture/coordinate blocker reproduces twice, quarantine only that Issue and
+#   continue. Never use sampled ruler DOM, fixed-pitch semantic coordinates, timeout inflation or
+#   assertion weakening to force acceptance.
+#
+# ============================================================================
+# NORMAL EXECUTION LOOP
+# ============================================================================
+# inspect
+# -> resolve acceptance contract
+# -> implement bounded production gap
+# -> focused tests
+# -> git diff --check
+# -> stage intended changes
+# -> inspect staged diff
+# -> commit
+# -> push
+# -> evidence / re-audit
+# -> next Issue
+#
+# Prefer focused unit/component/geometry tests plus 1-3 relevant Playwright cases where needed.
+# Do not run broad full E2E/visual/perf suites for every bounded Issue unless its acceptance requires it.
+# If current main already satisfies an Issue, audit with evidence and close; do not manufacture a commit.
 #
 # ============================================================================
 # GLOBAL SAFETY
 # ============================================================================
 # - Always sync latest origin/main before Issue work.
 # - Preserve unrelated dirty work; no reset/stash/clean/delete.
-# - Canonical -> Derived/Projection -> DOM.
+# - Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
 # - GUI/Keyboard/Context Menu/Inspector/Bottom/AI mutations converge on Semantic Commands.
+# - One logical user action = one intended semantic operation = one History unit.
 # - DOM/ruler samples are not semantic authority.
+# - Canonical source cycle/boundary -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> local X -> screen X.
 # - Stable IDs are opaque.
-# - Home remains protected unless explicitly authorized.
+# - WaveDrom/default skin remains the normative waveform renderer; do not replace it with a fixed-pitch lookalike.
+# - Home remains protected unless explicitly authorized by an Issue/user instruction.
 # - Close already-satisfied Issues with evidence; never manufacture a commit.
