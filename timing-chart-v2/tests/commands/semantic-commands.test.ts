@@ -687,6 +687,19 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations).toEqual([]);
   });
 
+  it("deletes a grouped Annotation and restores exact membership through Undo/Redo", () => {
+    const annotation: Annotation = { id: "ann_grouped_delete" as AnnotationId, type: "marker", label: "Grouped", visible: true, anchor: { cycle: 2, point: "cycle-start" } };
+    const other: Annotation = { id: "ann_grouped_keep" as AnnotationId, type: "marker", label: "Keep", visible: true, anchor: { cycle: 4, point: "cycle-start" } };
+    const initial = { ...canonicalFixture(), annotations: [annotation, other], annotationGroups: [{ id: "ann_group_lifecycle" as never, name: "Lifecycle", annotationIds: [annotation.id, other.id] }] };
+    const session = new CommandHistorySession(initial);
+    expect(session.execute({ id: commandId("cmd_grouped_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual([other.id]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual([other.id]);
+  });
+
   it("updates Measurement profile atomically and restores it through Undo/Redo", () => {
     const source = canonicalFixture();
     const annotation: Annotation = { id: "ann_measurement_profile" as AnnotationId, type: "measurement", label: "Measurement", visible: true, start: { signalId: "sig_data" as SignalId, cycle: 1, point: "cycle-start" }, end: { signalId: "sig_data" as SignalId, cycle: 4, point: "cycle-end" } };

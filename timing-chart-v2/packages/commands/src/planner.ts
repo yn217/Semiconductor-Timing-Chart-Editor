@@ -1143,8 +1143,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "annotation.delete": {
       const annotation = document.annotations.find((item) => item.id === command.annotationId);
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
-      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true };
-      return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id) }, changeSet, inverseChangeSet: changeSet };
+      const annotationGroups = (document.annotationGroups ?? []).map((group) => ({ ...group, annotationIds: group.annotationIds.filter((id) => id !== annotation.id) }));
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true, ...(annotationGroups.some((group, index) => JSON.stringify(group) !== JSON.stringify(document.annotationGroups?.[index])) ? { annotationGroups: annotationGroups.map((group) => group.id) } : {}) };
+      return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id), annotationGroups }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.setAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
