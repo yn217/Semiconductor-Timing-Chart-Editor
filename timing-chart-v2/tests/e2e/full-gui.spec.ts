@@ -46,6 +46,11 @@ test("matches the locked desktop pane geometry at the Golden viewport", async ({
   // ribbon redesign; the Home tab also grew an 8th group (Transaction) since
   // this count was last locked -- both confirmed current/intentional via
   // live production DOM, not a regression.
+  // #406: Home Ribbon's group set is now ActiveContext-dependent for
+  // Time/Layout (Cycle/Signal-only), but Transaction stays common (see
+  // the scoped-decision comment on commonRibbonGroups in
+  // minimal-cycle-view-ribbon.tsx) -- so the default Cycle context still
+  // shows all 8 groups.
   await expect(page.locator(".ribbon-major-group")).toHaveCount(8);
 });
 
