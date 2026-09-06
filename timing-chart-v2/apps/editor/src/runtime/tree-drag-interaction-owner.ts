@@ -91,5 +91,8 @@ export class TreeDragInteractionOwner {
     this.clearDropState();
   };
 
-  onDragEnd = (): void => { this.#dragged = undefined; this.clearDropState(); };
+  onDragEnd = (): void => { this.cancel(); };
+
+  /** Drop all document-scoped drag state when Open/New replaces the document. */
+  cancel = (): void => { this.#dragged = undefined; this.clearDropState(); };
 }

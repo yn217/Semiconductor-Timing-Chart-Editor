@@ -1,13 +1,22 @@
 import type { RefObject } from "react";
+import type { ChangeSet } from "@timing-chart-v2/commands";
+import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { EditorApplicationRuntime } from "./editor-application-runtime.js";
-import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type DocumentProblem, type GroupId, type SignalGroupStyle } from "@timing-chart-v2/schema";
-import type { WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
-import { assertSafeWaveDromSvg, renderWaveJsonMarkup, toWaveJson, WaveDromAdapterError } from "@timing-chart-v2/wavedrom-adapter";
+import type { EditorSessionController } from "./editor-session-controller.js";
+import { valueSignalWaveDomain, type AnnotationId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type DocumentProblem, type GroupId, type Signal, type SignalGroupStyle, type SignalId, type SignalValueChange } from "@timing-chart-v2/schema";
+import type { TimingChartRenderer, WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
+import { assertSafeWaveDromSvg, renderWaveJsonMarkup, toWaveJson, WaveDromAdapterError, type RenderedWave, type WaveDromAdapter, type WaveJsonSignal } from "@timing-chart-v2/wavedrom-adapter";
 import { projectAnnotationOverlays } from "./annotation-overlays.js";
 import { projectEdgeCounters, type EdgeCounterProjectionMetrics, type SelectedClockEdge } from "./edge-counter-projection.js";
-import { resolveTimeAxisGeometry } from "@timing-chart-v2/geometry";
+import { resolveTimeAxisGeometry, type ImmutableSnapIndex, type LocalGeometryMap, type ScreenGeometryProjector, type SemanticSnapCandidateService, type TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { renderGeometryGrid } from "../render-geometry-grid.js";
 import { buildRuler } from "./build-ruler.js";
+import { DisplayTimeMappingCache, type DisplayTimeMapping, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
+import type { CommandHistorySession } from "@timing-chart-v2/history";
+import type { GeometryRegistry } from "./geometry-registry.js";
+import type { ProjectionCoordinator } from "./projection-coordinator.js";
+import type { RenderCoordinator } from "./render-coordinator.js";
+import type { ViewMetricsOwner } from "./view-metrics.js";
 
 function nextBrowserFrame(): Promise<void> {
   return new Promise((resolve) => {
@@ -18,7 +27,6 @@ function nextBrowserFrame(): Promise<void> {
 import { referenceSvgScreenScale } from "./screen-scale.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { clampTimelineZoom, createTimelineViewportRuntime, type TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
-import type { ImmutableSnapIndex } from "@timing-chart-v2/geometry";
 
 export type RendererHostSizingContext = { readonly host: RefObject<HTMLDivElement | null>; readonly viewport: RefObject<HTMLDivElement | null>; readonly metrics: { readonly viewportWidth: number; readonly leftPaneWidth: number; readonly inspectorWidth: number; readonly frozenPaneWidth: number; readonly zoom: number } };
 export function applyRendererHostSizing({ host, viewport, metrics }: RendererHostSizingContext): void { const rendererHost = host.current; const viewportElement = viewport.current; if (!rendererHost || !viewportElement) return; const availableWidth = metrics.viewportWidth > 0 ? metrics.viewportWidth : globalThis.innerWidth; // viewportWidth is the cycle viewport; the Inspector is outside it.
@@ -165,12 +173,12 @@ export type SnapIndexResolver = (() => ImmutableSnapIndex) & { invalidate: () =>
 
 export function createSnapIndexResolver(context: {
   readonly getDocument: () => CanonicalDocument;
-  readonly getProjection: () => any;
-  readonly geometryMaps: any;
-  readonly mappingCache: any;
-  readonly snapService: any;
-  readonly screenGeometry: any;
-  readonly build: (document: CanonicalDocument, projection: any, geometryMaps: any, mapping: any, snapService: any, screenGeometry: any) => ImmutableSnapIndex;
+  readonly getProjection: () => RenderProjection;
+  readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
+  readonly mappingCache: Pick<DisplayTimeMappingCache, "get">;
+  readonly snapService: SemanticSnapCandidateService;
+  readonly screenGeometry: ScreenGeometryProjector;
+  readonly build: (document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, snapService: SemanticSnapCandidateService, screenGeometry: ScreenGeometryProjector) => ImmutableSnapIndex;
   readonly onBuilt: () => void;
 }): SnapIndexResolver {
   let index: ImmutableSnapIndex | undefined;
@@ -196,14 +204,14 @@ export function projectViewportWindow({
   onProjection,
 }: {
   readonly viewport: HTMLElement;
-  readonly referenceClock: any;
-  readonly snapshot: any;
-  readonly previous: any;
-  readonly projectionCoordinator: { project: (input: any) => any };
-  readonly collapsedGroupIds: readonly string[];
-  readonly onProjection: (projection: any, window: any, mountedSignalsChanged: boolean) => void;
+  readonly referenceClock: SignalId | undefined;
+  readonly snapshot: CanonicalSnapshot;
+  readonly previous: Readonly<{ readonly window: VirtualizationWindow; readonly projection: RenderProjection }>;
+  readonly projectionCoordinator: Pick<ProjectionCoordinator, "project">;
+  readonly collapsedGroupIds: readonly GroupId[];
+  readonly onProjection: (projection: RenderProjection, window: VirtualizationWindow, mountedSignalsChanged: boolean) => void;
 }): void {
-  const nextWindow = buildViewportWindow(viewport, referenceClock as any);
+  const nextWindow = buildViewportWindow(viewport, referenceClock);
   if (nextWindow.viewportStartY === previous.window.viewportStartY && nextWindow.viewportEndY === previous.window.viewportEndY) return;
   const nextProjection = projectionCoordinator.project({ snapshot, changeSet: {}, viewport: nextWindow, previous: previous.projection, collapsedGroupIds });
   const oldMounted = previous.projection.mountedSignalIds;
@@ -220,21 +228,21 @@ export function refreshTimelinePresentation(context: {
   readonly viewport: HTMLElement;
   readonly host: HTMLElement;
   readonly rulerViewport: HTMLElement;
-  readonly geometryMaps: any;
-  readonly geometrySvgs: any;
-  readonly mappingCache: any;
-  readonly metricsOwner: any;
+  readonly geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>;
+  readonly geometrySvgs: ReadonlyMap<SignalId, SVGSVGElement>;
+  readonly mappingCache: Pick<DisplayTimeMappingCache, "get">;
+  readonly metricsOwner: Pick<ViewMetricsOwner, "update" | "snapshot">;
   readonly currentZoom: number;
   readonly previousScale: number;
   readonly rulerInitialized: boolean;
-  readonly timeAxis: any;
+  readonly timeAxis: TimeAxisGeometry;
   readonly totalHeight: number;
   readonly gridEnabled: boolean;
   readonly markOpenPhase: (phase: string) => void;
   readonly onPlayhead: () => void;
   readonly onRange: () => void;
   readonly onResize: () => void;
-}): { readonly timeAxis: any; readonly screenGeometryScale: number; readonly rulerInitialized: boolean } {
+}): { readonly timeAxis: TimeAxisGeometry; readonly screenGeometryScale: number; readonly rulerInitialized: boolean } {
   let timeAxis = context.timeAxis;
   let screenGeometryScale = context.previousScale;
   let rulerInitialized = context.rulerInitialized;
@@ -260,7 +268,7 @@ export function refreshTimelinePresentation(context: {
   return { timeAxis, screenGeometryScale, rulerInitialized };
 }
 
-export function deriveRenderInvalidation(changeSet: any, referenceSignalId: string | undefined): Readonly<{ snapDependenciesChanged: boolean; referenceWaveChanged: boolean; refreshRuler: boolean; refreshGrid: boolean; refreshOverlays: boolean }> {
+export function deriveRenderInvalidation(changeSet: ChangeSet, referenceSignalId: SignalId | undefined): Readonly<{ snapDependenciesChanged: boolean; referenceWaveChanged: boolean; refreshRuler: boolean; refreshGrid: boolean; refreshOverlays: boolean }> {
   const full = changeSet.fullDocumentReplace === true;
   const snapDependenciesChanged = full || changeSet.rowOrder !== undefined || changeSet.addedSignals !== undefined || changeSet.removedSignals !== undefined || changeSet.addedGroups !== undefined || changeSet.removedGroups !== undefined || changeSet.waveSemantics !== undefined || changeSet.geometryLocal !== undefined || changeSet.geometryScreenX === true || changeSet.geometryScreenY !== undefined || changeSet.annotationPosition !== undefined || changeSet.annotationStyle !== undefined || changeSet.bookmarkPosition !== undefined || changeSet.timeGroupSemantics !== undefined || changeSet.timelineSemantics === true;
   const referenceWaveChanged = referenceSignalId !== undefined && (full || changeSet.timelineSemantics === true || changeSet.timeGroupSemantics !== undefined || changeSet.waveSemantics?.includes(referenceSignalId) === true || changeSet.geometryLocal?.includes(referenceSignalId) === true);
@@ -337,20 +345,20 @@ export function createTimelineNavigationController(context: {
 export function resolveTransactionSnapCycle(context: {
   readonly clientX: number;
   readonly host: HTMLElement;
-  readonly projection: any;
-  readonly timeAxis: any;
-  readonly screenGeometry: any;
+  readonly projection: RenderProjection;
+  readonly timeAxis: TimeAxisGeometry;
+  readonly screenGeometry: ScreenGeometryProjector;
   readonly zoom: number;
   readonly snapEnabled: boolean;
   readonly document: CanonicalDocument;
-  readonly currentSnapIndex: () => any;
+  readonly currentSnapIndex: () => ImmutableSnapIndex;
   readonly cycleBoundaryAtPointerX: (clientX: number) => number | undefined;
   readonly cycleBoundaryAtX: (clientX: number) => number | undefined;
   readonly publishState: () => void;
 }): number | undefined {
   const waveLayer = context.host.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
   const axisOwner = context.timeAxis.ownerSignalId;
-  const axisRow = axisOwner === undefined ? undefined : context.projection.rowLayout.find((row: any) => row.rowId === axisOwner);
+  const axisRow = axisOwner === undefined ? undefined : context.projection.rowLayout.find((row) => row.rowId === axisOwner);
   if (!waveLayer || !axisOwner || !axisRow) return context.cycleBoundaryAtPointerX(context.clientX);
   context.host.dataset.transactionSnapAxisRowId = axisRow.rowId;
   const bounds = waveLayer.getBoundingClientRect();
@@ -365,9 +373,12 @@ export function resolveTransactionSnapCycle(context: {
   return snap?.anchor.cycle ?? context.cycleBoundaryAtPointerX(context.clientX);
 }
 
-export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }): void {
+export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }, lifecycle: { readonly isCurrent: () => boolean } = { isCurrent: () => true }): void {
   void renderer.whenIdle().then(() => {
-    if (!host.isConnected) return;
+    // The initial mount promise can settle after Open/New has replaced the
+    // document. It must not publish initial-document presentation or mark the
+    // replacement idle; the replacement owns its own epoch and idle lifecycle.
+    if (!host.isConnected || !lifecycle.isCurrent()) return;
     refresh.ruler();
     refresh.range();
     refresh.playhead();
@@ -381,7 +392,7 @@ export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promi
   });
 }
 
-export function mountInitialTimelineProjection(context: { readonly coordinator: { mount: (host: HTMLElement) => void }; readonly renderer: { update: (projection: any) => void }; readonly host: HTMLElement; readonly viewport: HTMLElement; readonly referenceClock: any; readonly projectionCoordinator: { project: (input: any) => any }; readonly snapshot: any; readonly collapsedGroupIds: readonly string[] }): { readonly window: any; readonly projection: any } {
+export function mountInitialTimelineProjection(context: { readonly coordinator: Pick<RenderCoordinator, "mount">; readonly renderer: Pick<TimingChartRenderer, "update">; readonly host: HTMLElement; readonly viewport: HTMLElement; readonly referenceClock: SignalId | undefined; readonly projectionCoordinator: Pick<ProjectionCoordinator, "project">; readonly snapshot: CanonicalSnapshot; readonly collapsedGroupIds: readonly GroupId[] }): { readonly window: VirtualizationWindow; readonly projection: RenderProjection } {
   context.coordinator.mount(context.host);
   const window = buildViewportWindow(context.viewport, context.referenceClock);
   const projection = context.projectionCoordinator.project({ snapshot: context.snapshot, changeSet: { fullDocumentReplace: true }, viewport: window, collapsedGroupIds: context.collapsedGroupIds });
@@ -411,10 +422,12 @@ export function createEditorTimelineRuntime(context: Parameters<typeof createTim
 }
 
 export type WaveformProviderContext = Readonly<{
-  sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
-  mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };
-  adapter: any;
-  geometryRegistry: { readonly maps: Map<string, any>; readonly svgs: Map<string, SVGSVGElement>; remove: (id: any) => void };
+  sessionController: Pick<EditorSessionController, "snapshot">;
+  /** Projection generation, distinct from the application gesture epoch. */
+  getDocumentEpoch: () => number;
+  mappingCache: Pick<DisplayTimeMappingCache, "get" | "remapValueChanges">;
+  adapter: WaveDromAdapter;
+  geometryRegistry: GeometryRegistry;
   markOpenPhase: (phase: string, phaseTimestamp?: number) => void;
   onReferenceGeometryReady?: () => void;
   invalidateSnapIndex: () => void;
@@ -423,9 +436,14 @@ export type WaveformProviderContext = Readonly<{
 export function createWaveformSurfaceProvider(context: WaveformProviderContext): WaveformSurfaceProvider {
   let signalIndexDocument: CanonicalDocument | undefined;
   let signalIndexRevision = -1;
-  let signalById = new Map<string, CanonicalDocument["signals"][number]>();
+  let signalById = new Map<SignalId, Signal>();
   return {
     async mountWaveBatch(requests) {
+      const requestEpoch = requests[0]?.documentEpoch;
+      const isCurrent = (request: { readonly documentEpoch?: number }): boolean => request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch;
+      if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) {
+        return requests.map(({ signalId }) => ({ signalId, stale: true }));
+      }
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
@@ -438,17 +456,19 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
       }
       const prepared = requests.map((request) => {
         const signal = signalById.get(request.signalId);
-        if (!signal) return { request, waveJson: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
-        let remappedValues: any;
+        if (!signal) return { request, waveJson: undefined, semanticValues: undefined, error: new Error(`Signal '${request.signalId}' is missing.`) };
+        let remappedValues: readonly SignalValueChange[] | undefined;
         const displaySignal = signal.type === "commentRow" ? signal : signal.type === "clock"
           ? { ...signal, ...(signal.enable ? { enable: context.mappingCache.remapValueChanges(signal.enable, mapping) } : {}) }
           : (remappedValues = context.mappingCache.remapValueChanges(signal.values, mapping), { ...signal, values: remappedValues });
         const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
         return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), semanticValues, error: undefined };
       });
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: any; readonly semanticValues?: readonly string[]; readonly error: Error | undefined; readonly rendered: any }> = [];
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: WaveJsonSignal | undefined; readonly semanticValues: readonly string[] | undefined; readonly error: Error | undefined; readonly rendered: RenderedWave | undefined; readonly stale?: boolean }> = [];
       for (const item of prepared) {
-        if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
+        if (!isCurrent(item.request)) {
+          renderResults.push({ ...item, rendered: undefined, stale: true });
+        } else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
           try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
           catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
@@ -461,10 +481,13 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (yieldBetweenOwners) await nextBrowserFrame();
       }
       const results = renderResults.map((item) => {
+        if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {
+          if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
+          if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
           if (item.request.signalId === document.timeline.referenceClock) {
@@ -569,21 +592,21 @@ export function trapDialogTab(doc: Document, event: KeyboardEvent): boolean {
   return true;
 }
 
-export function refreshRendererEdgeCounters(renderer: any, document: CanonicalDocument, projection: any, geometryMaps: any, range: { readonly start: number; readonly end: number }, selectedCycle: number, screenGeometryScale: number, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics)); }
+export function refreshRendererEdgeCounters(renderer: Pick<TimingChartRenderer, "updateEdgeCounters">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, range: { readonly start: number; readonly end: number }, selectedCycle: number, screenGeometryScale: number, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics)); }
 
-export function refreshRendererOverlays(renderer: any, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: any, geometryMaps: any, mappingCache: any, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale)); refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics); for (const owner of host.current?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationId); }
+export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale)); refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics); for (const owner of host.current?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationId); }
 
-export function refreshRendererForReason(renderer: any, host: RefObject<HTMLDivElement | null>, reason: string, document: CanonicalDocument, projection: any, geometryMaps: any, mappingCache: any, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { if (reason === "range") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics); else refreshRendererOverlays(renderer, host, document, projection, geometryMaps, mappingCache, screenGeometryScale, range, selectedCycle, selectedAnnotationId, selectedEdge, metrics); }
+export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, reason: string, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { if (reason === "range") refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics); else refreshRendererOverlays(renderer, host, document, projection, geometryMaps, mappingCache, screenGeometryScale, range, selectedCycle, selectedAnnotationId, selectedEdge, metrics); }
 
-export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: any, mappingCache: any, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode); }
+export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode); }
 
-export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: any, mappingCache: any, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: any; readonly scale: number } { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); const scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode, minimumWaveWidth, viewportElement); return { timeAxis, scale }; }
+export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); const scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode, minimumWaveWidth, viewportElement); return { timeAxis, scale }; }
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void { const playheadX = boundaryToLocalX(cycle); let playhead = ruler.querySelector<HTMLElement>("[data-role='playhead']"); if (playheadX === undefined) { playhead?.remove(); return; } if (!playhead) { playhead = ruler.ownerDocument.createElement("span"); playhead.dataset.role = "playhead"; playhead.dataset.testid = "playhead"; playhead.setAttribute("aria-label", "Playhead"); ruler.append(playhead); } playhead.dataset.playheadCycle = String(cycle); playhead.style.left = `${playheadX}px`; }
 
 export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLElement, rendererHost: HTMLElement, active: boolean, preview: string | undefined, range: { readonly start: number; readonly end: number }, boundaryToLocalX: (cycle: number) => number | undefined, zoom: number, timeDomainLeft: number, totalHeight: number): void { const band = viewport.querySelector<HTMLElement>("[data-role='range-selection-band']"); const rulerBand = ruler.querySelector<HTMLElement>("[data-role='range-selection-ruler-band']"); if (!band) return; if (!active && !preview) { band.hidden = true; if (rulerBand) rulerBand.hidden = true; for (const tick of ruler.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected; return; } const [startText, endText] = (preview ?? `${range.start}:${range.end}`).split(":"); const start = Number(startText); const end = Number(endText); const startLocalX = boundaryToLocalX(start); const endLocalX = boundaryToLocalX(end); if (startLocalX === undefined || endLocalX === undefined || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) { band.hidden = true; return; } const startX = startLocalX * zoom; const endX = endLocalX * zoom; if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) { band.hidden = true; return; } band.hidden = false; band.dataset.rangeStart = String(start); band.dataset.rangeEnd = String(end); band.dataset.source = "ruler-local-geometry"; band.style.left = `${timeDomainLeft + startX}px`; band.style.width = `${endX - startX}px`; band.style.top = "34px"; band.style.height = `${Math.max(totalHeight, viewport.clientHeight - 34)}px`; band.setAttribute("aria-label", `Selected time range [${start}, ${end})`); if (rulerBand) { rulerBand.hidden = false; rulerBand.dataset.rangeStart = String(start); rulerBand.dataset.rangeEnd = String(end); rulerBand.dataset.source = "ruler-local-geometry"; rulerBand.style.left = `${startLocalX}px`; rulerBand.style.width = `${endLocalX - startLocalX}px`; rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`); } for (const tick of ruler.querySelectorAll<HTMLElement>("[data-cycle]")) { const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle); tick.dataset.rangeSelected = String(cycle >= start && cycle < end); } void rendererHost; }
 
-export function publishRendererState(host: HTMLElement, session: any, viewMetricsOwner: any, adapter: any, geometryCache: any, projectionCoordinator: any, renderer: any, mappingCache: any, snapService: any, snapIndex: any, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void { host.dataset.canonicalRevision = String(session.getSnapshot().revision); host.dataset.historyDepth = String(session.historyState().undoDepth); const metrics = viewMetricsOwner.snapshot(); host.dataset.viewMetrics = JSON.stringify(metrics); const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics(); const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics(); host.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...edgeCounterMetrics, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction, zoom, validatorInvocations }); }
+export function publishRendererState(host: HTMLElement, session: Pick<CommandHistorySession, "getSnapshot" | "historyState" | "metrics" | "historyMetrics">, viewMetricsOwner: Pick<ViewMetricsOwner, "snapshot">, adapter: WaveDromAdapter, geometryCache: unknown, projectionCoordinator: Pick<ProjectionCoordinator, "currentDocumentEpoch" | "diagnostics">, renderer: Pick<TimingChartRenderer, "diagnosticSummary">, mappingCache: Pick<DisplayTimeMappingCache, "metrics">, snapService: Pick<SemanticSnapCandidateService, "metrics">, snapIndex: ImmutableSnapIndex | undefined, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void { host.dataset.canonicalRevision = String(session.getSnapshot().revision); host.dataset.historyDepth = String(session.historyState().undoDepth); const metrics = viewMetricsOwner.snapshot(); host.dataset.viewMetrics = JSON.stringify(metrics); const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics(); const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics(); const projectionDocumentEpoch = projectionCoordinator.currentDocumentEpoch(); host.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), projectionDocumentEpoch, ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...edgeCounterMetrics, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction, zoom, validatorInvocations }); void geometryCache; }
 
 export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void { const presentationScale = Math.max(0.0001, zoom * screenGeometryScale); viewport.style.setProperty("--presentation-x-scale", String(presentationScale)); host.style.setProperty("--presentation-x-scale", String(presentationScale)); rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale)); }
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void { ruler.style.transform = `translateX(${-viewport.scrollLeft}px) scaleX(${zoom})`; ruler.dataset.scrollLeft = String(viewport.scrollLeft); }

@@ -75,4 +75,41 @@ describe("TimelineRangeInteractionOwner", () => {
       else (globalThis as unknown as { requestAnimationFrame: (callback: () => void) => number }).requestAnimationFrame = originalRequestAnimationFrame;
     }
   });
+
+  it("cancels an active range gesture without committing it", () => {
+    const originalElement = globalThis.Element;
+    const originalRequestAnimationFrame = (globalThis as unknown as { requestAnimationFrame?: (callback: () => void) => number }).requestAnimationFrame;
+    globalThis.Element = class {} as unknown as typeof Element;
+    (globalThis as unknown as { requestAnimationFrame: (callback: () => void) => number }).requestAnimationFrame = (callback) => { callback(); return 0; };
+    try {
+      const host = { dataset: {} as Record<string, string>, setPointerCapture: () => undefined } as unknown as HTMLElement;
+      const context: TimelineRangeInteractionContext = {
+        rendererHost: host,
+        isTimeDomainPointerTarget: () => true,
+        cycleBoundaryAtX: (clientX) => clientX === 20 ? 6 : 2,
+        getCycleCount: () => 24,
+        getRange: () => ({ start: 2, end: 4 }),
+        getSelectedCycle: () => 2,
+        setSelectedCyclePreview: () => undefined,
+        setRangeSelectionActive: () => undefined,
+        setRange: () => { throw new Error("cancel must not commit a range"); },
+        setSelectedCycle: () => { throw new Error("cancel must not commit a cycle"); },
+        applyCanvasCycleSelection: () => { throw new Error("cancel must not select a cycle"); },
+        refreshRange: () => undefined,
+        refreshPlayhead: () => undefined,
+      };
+      const owner = new TimelineRangeInteractionOwner(context);
+      owner.pointerDown({ button: 0, clientX: 10, pointerId: 1, target: undefined, currentTarget: host, preventDefault: () => undefined } as unknown as PointerEvent);
+      owner.pointerMove({ clientX: 20, pointerId: 1, preventDefault: () => undefined } as unknown as PointerEvent);
+      owner.cancel();
+
+      expect(host.dataset.rangeDrag).toBeUndefined();
+      expect(host.dataset.rangePreview).toBeUndefined();
+      expect(host.dataset.rangePreviewCycle).toBeUndefined();
+    } finally {
+      globalThis.Element = originalElement;
+      if (originalRequestAnimationFrame === undefined) delete (globalThis as unknown as { requestAnimationFrame?: unknown }).requestAnimationFrame;
+      else (globalThis as unknown as { requestAnimationFrame: (callback: () => void) => number }).requestAnimationFrame = originalRequestAnimationFrame;
+    }
+  });
 });

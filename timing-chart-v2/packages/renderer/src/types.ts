@@ -10,12 +10,16 @@ export interface WaveMountResult {
 export interface WaveMountRequest {
   readonly signalId: WaveSignalId;
   readonly owner: HTMLElement;
+  /** Document generation that produced this owner/request pair. */
+  readonly documentEpoch?: number;
 }
 
 export interface WaveMountBatchItem {
   readonly signalId: WaveSignalId;
   readonly result?: WaveMountResult;
   readonly error?: unknown;
+  /** The request became obsolete while an async render was in flight. */
+  readonly stale?: boolean;
 }
 
 export interface WaveformSurfaceProvider {
@@ -65,6 +69,8 @@ export interface RendererDiagnostics {
   readonly dirtyWaveSize: number;
   readonly waveVersionSize: number;
   readonly fullReplaceEpochResets: number;
+  /** Async waveform results ignored because their document generation is obsolete. */
+  readonly staleWaveResultsDropped: number;
   readonly diagnosticMapPrunePasses: number;
   /** Number of hot-path diagnostic payload serializations published to the DOM. */
   readonly diagnosticSerializationCount: number;

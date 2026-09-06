@@ -102,8 +102,8 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #edgeCounterOwners = new Map<string, HTMLElement>();
   readonly #dirtyWaves = new Set<WaveSignalId>();
   readonly #waveVersions = new Map<WaveSignalId, number>();
-  readonly #wavePending = new Set<WaveSignalId>();
-  readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number }>();
+  readonly #wavePending = new Map<WaveSignalId, number>();
+  readonly #waveQueue = new Map<WaveSignalId, { readonly owner: HTMLElement; readonly version: number; readonly documentEpoch: number }>();
   readonly #waveRendersBySignal = new Map<WaveSignalId, number>();
   readonly #localGeometryBuildsBySignal = new Map<WaveSignalId, number>();
   #waveBatchScheduled = false;
@@ -124,7 +124,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   readonly #pending = new Set<Promise<void>>();
   #layers: Layers | undefined;
   #counters: RenderCounters = { waveDromRenders: 0, localGeometryBuilds: 0, rowPositionUpdates: 0, overlayUpdates: 0 };
-  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
+  #diagnostics: RendererDiagnostics = { projectionUpdates: 0, mountedRows: 0, mountedWaveOwners: 0, cachedWaveOwners: 0, waveOwnerCacheLimit: 32, domNodeCreates: 0, domNodeDestroys: 0, domNodeMoves: 0, waveArtifactCacheHits: 0, waveArtifactCacheMisses: 0, waveArtifactDisposals: 0, waveRendersBySignal: {}, localGeometryBuildsBySignal: {}, annotationResolvePasses: 0, resolvedAnnotations: 0, waveBatchCount: 0, waveBatchFrameYields: 0, waveBatchMaxSize: 0, waveBatchPending: 0, rowsVisited: 0, fullRowScans: 0, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, documentEpoch: 0, rowYSize: 0, rowYStaleCount: 0, rowYPrunePasses: 0, dirtyWaveSize: 0, waveVersionSize: 0, fullReplaceEpochResets: 0, staleWaveResultsDropped: 0, diagnosticMapPrunePasses: 0, diagnosticSerializationCount: 0, diagnosticSerializationBytes: 0, diagnosticSerializationDurationMs: 0, diagnosticStringifyCount: 0, diagnosticStringifyDurationMs: 0, diagnosticEncodingCount: 0, diagnosticEncodingDurationMs: 0, diagnosticPublishCount: 0, diagnosticPublishDurationMs: 0 };
 
   constructor(provider: WaveformSurfaceProvider) {
     this.#provider = provider;
@@ -205,6 +205,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
       this.#diagnosticMapPrunePasses += 1;
       this.#waveRendersBySignal.clear();
       this.#localGeometryBuildsBySignal.clear();
+      // Requests already queued belong to the replaced document. In-flight
+      // requests remain awaitable, but their epoch is checked before any
+      // result can update counters, errors, or derived geometry state.
+      this.#waveQueue.clear();
+      this.#wavePending.clear();
       this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: 0, localGeometryBuildsBySignalCount: 0, diagnosticMapPrunePasses: this.#diagnosticMapPrunePasses };
       for (const [signalId, owner] of this.#waveOwners) {
         owner.remove();
@@ -422,10 +427,11 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   #queueWave(signalId: WaveSignalId, owner: HTMLElement): void {
-    if (this.#wavePending.has(signalId)) return;
-    this.#wavePending.add(signalId);
+    const documentEpoch = this.#documentEpoch;
+    if (this.#wavePending.get(signalId) === documentEpoch) return;
+    this.#wavePending.set(signalId, documentEpoch);
     const version = this.#waveVersions.get(signalId) ?? 0;
-    this.#waveQueue.set(signalId, { owner, version });
+    this.#waveQueue.set(signalId, { owner, version, documentEpoch });
     this.#scheduleWaveBatch();
   }
 
@@ -462,14 +468,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
   }
 
   async #flushWaveBatch(): Promise<void> {
-    const queued = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version }));
+    const queued = [...this.#waveQueue.entries()].slice(0, WAVE_BATCH_LIMIT).map(([signalId, item]) => ({ signalId, owner: item.owner, version: item.version, documentEpoch: item.documentEpoch }));
     for (const request of queued) this.#waveQueue.delete(request.signalId);
     const requests = queued.filter((request) => {
       if (request.owner.isConnected) return true;
       // Virtualized owners can leave the viewport after they were queued but
       // before their frame runs. Keep the signal dirty so a later remount can
       // render it, but never spend WaveDrom/geometry work on a detached owner.
-      this.#wavePending.delete(request.signalId);
+      if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
       return false;
     });
     if (requests.length === 0) return;
@@ -501,6 +507,12 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
     const bySignal = new Map(results.map((item) => [item.signalId, item]));
     for (const request of requests) {
       const item = bySignal.get(request.signalId);
+      const stale = request.documentEpoch !== this.#documentEpoch || item?.stale === true;
+      if (stale) {
+        this.#diagnostics = { ...this.#diagnostics, staleWaveResultsDropped: this.#diagnostics.staleWaveResultsDropped + 1 };
+        if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
+        continue;
+      }
       if (item?.result) {
         const delta = item.result;
         this.#counters = {
@@ -519,7 +531,7 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         request.owner.replaceChildren();
         request.owner.dataset.waveError = item?.error instanceof Error ? item.error.message : "Unknown waveform render failure";
       }
-      this.#wavePending.delete(request.signalId);
+      if (this.#wavePending.get(request.signalId) === request.documentEpoch) this.#wavePending.delete(request.signalId);
       if (request.owner.isConnected && this.#dirtyWaves.has(request.signalId) && (this.#waveVersions.get(request.signalId) ?? 0) !== request.version) this.#queueWave(request.signalId, request.owner);
     }
     this.#diagnostics = { ...this.#diagnostics, waveBatchPending: this.#waveQueue.size };

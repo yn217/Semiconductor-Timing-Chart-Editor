@@ -483,6 +483,7 @@ export function MinimalCycleView() {
     });
     const provider = createWaveformSurfaceProvider({
       sessionController,
+      getDocumentEpoch: () => projectionCoordinator.currentDocumentEpoch(),
       mappingCache,
       adapter,
       geometryRegistry,
@@ -685,6 +686,7 @@ export function MinimalCycleView() {
     });
     publishState();
 
+    const initialDocumentEpoch = documentEpoch.current();
     scheduleInitialTimelineRefresh(renderer, rendererHost, {
       ruler: () => { if (active) timelineRuntime.refreshRuler(); },
       range: () => { if (active) timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end); },
@@ -694,7 +696,7 @@ export function MinimalCycleView() {
       overlays: () => { if (active) timelineRuntime.refreshOverlays(); },
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
-    });
+    }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });
 
     const upsertDiagnostic = (predicate: (item: DocumentProblem) => boolean, next: DocumentProblem | undefined) => {
       setRuntimeDiagnostics((current) => {
@@ -783,13 +785,23 @@ export function MinimalCycleView() {
       applyReplacement: ({ document: canonicalDocument, session: nextSession, documentEpoch: nextDocumentEpoch }) => {
       timelineRuntime.onDocumentEpochChanged(nextDocumentEpoch);
       clearAnnotationPreview();
+      rangeInteractions.cancel();
+      treeDrag.cancel();
+      pendingArrow = undefined;
+      pendingArrowAnnotationType = "arrow";
+      delete rendererHost.dataset.arrowPick;
       delete rendererHost.dataset.editorIdle;
       session = nextSession;
       setBottomPinned(false);
       setPinnedBottomSelection(undefined);
       setRangeSelectionActive(false);
-      setTimelineRange({ start: 0, end: Math.min(1, canonicalDocument.timeline.cycleCount) });
+      rangeSelectionActiveRef.current = false;
+      const replacementRange = { start: 0, end: Math.min(1, canonicalDocument.timeline.cycleCount) };
+      timelineRangeRef.current = replacementRange;
+      setTimelineRange(replacementRange);
+      selectedCycleRef.current = 0;
       setSelectedCycle(0);
+      selectedEdgeRef.current = undefined;
       selection.clear();
       setCollapsedGroups(new Set());
       setTreeFilter("");
@@ -1366,6 +1378,7 @@ export function MinimalCycleView() {
     const adapterLower = runtime.createWaveDromAdapter();
     const providerLower = createWaveformSurfaceProvider({
       sessionController: runtime.session,
+      getDocumentEpoch: () => projectionCoordinatorLower.currentDocumentEpoch(),
       mappingCache: runtime.displayMapping,
       adapter: adapterLower,
       geometryRegistry: geometryRegistryLower,

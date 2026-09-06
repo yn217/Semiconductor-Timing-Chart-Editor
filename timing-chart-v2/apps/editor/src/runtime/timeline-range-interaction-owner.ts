@@ -115,10 +115,13 @@ export class TimelineRangeInteractionOwner {
     event.preventDefault();
   };
 
-  pointerCancel = (): void => { if (this.#drag.current) this.cancel(); };
-  keyDown = (event: KeyboardEvent): void => { if (event.key === "Escape" && this.#drag.current) this.cancel(); };
+  pointerCancel = (): void => { if (this.#drag.current) this.cancelActive(); };
+  keyDown = (event: KeyboardEvent): void => { if (event.key === "Escape" && this.#drag.current) this.cancelActive(); };
 
-  private cancel(): void {
+  /** Cancel any in-flight range gesture when its document epoch is replaced. */
+  cancel = (): void => { if (this.#drag.current) this.cancelActive(); };
+
+  private cancelActive(): void {
     const surface = this.#drag.current!.surface;
     this.context.setSelectedCyclePreview(this.#drag.current!.selectedCycle);
     this.clearPreview();

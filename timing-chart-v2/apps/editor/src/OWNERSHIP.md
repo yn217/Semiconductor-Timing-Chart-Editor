@@ -7,9 +7,10 @@ controllers are extracted incrementally.
 | --- | --- | --- | --- |
 | Review scope, severity, navigation | `review-workflow.tsx` | parent `UiCommandRegistry` callback | extracted |
 | Problems presentation | `problems-panel.tsx` | parent `UiCommandRegistry` callback | extracted |
-| Viewport, timeline, ruler and grid lifecycle | `minimal-cycle-view.tsx` | parent `UiCommandRegistry` callback | pending extraction |
-| File open/save/export lifecycle | `minimal-cycle-view.tsx` | `CommandHistorySession` / SemanticCommand | pending extraction |
-| Canonical session and renderer bridge | `minimal-cycle-view.tsx` | `CommandHistorySession` | composition boundary |
+| Viewport, timeline, ruler and grid lifecycle | `runtime/timeline-viewport-runtime.ts`, `runtime/timeline-geometry-owner.ts`, `runtime/view-metrics.ts` | parent `UiCommandRegistry` callback | explicit runtime owners; `minimal-cycle-view.tsx` integrates them |
+| File open/save/export lifecycle | `application/use-document-lifecycle.ts` | `CommandHistorySession` / SemanticCommand | explicit lifecycle owner; `minimal-cycle-view.tsx` integrates effects |
+| Canonical session and renderer bridge | `application/use-editor-application-owner.ts`, `runtime/editor-application-runtime.ts`, `runtime/use-editor-runtime-bridge.ts` | `CommandHistorySession` | explicit application/renderer boundary |
+| Document replacement and async render generation | `runtime/document-epoch.ts`, `projection`, `renderer` | `DocumentEpoch` / current session | explicit epoch propagation; stale wave results are dropped |
 | Event table row editing and quick values | `event-table-components.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Comment Row editor | `comment-row-editor.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Dialog focus trapping and restoration | `dialog-focus-loop.ts` | view-only focus lifecycle | Phase 1 extracted utility |
@@ -43,8 +44,15 @@ Rules:
   and session/registry callbacks.
 - View-only state remains transient and is not persisted in CanonicalDocument.
 - Renderer and WaveDrom ownership remains in their existing packages.
-- A new surface owner must be added here before adding another responsibility
-  to `minimal-cycle-view.tsx`.
+- `MinimalCycleView` is the composition/integration layer for these owners; its
+  long-lived callbacks may access mutable product/view state only through the
+  current owner APIs and refs. Do not add a second state system or split the
+  component solely for file size.
+
+The complete capture classification for the primary `useEffect(..., [])` is
+maintained in [`runtime/MOUNT_EFFECT_INVENTORY.md`](runtime/MOUNT_EFFECT_INVENTORY.md).
+That inventory is part of the #237 contract: a new long-lived callback must be
+added to the inventory with its owner, lifetime, and replacement/reset rule.
 | `legend-view.tsx` | Legend presentation, drag/nudge interaction, and `legend.update` command emission | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `ai-operation-panel.tsx` | AI query preview and SemanticCommand application surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `ribbon-icon.tsx` | Shared Ribbon icon adapter for non-critical Ribbon assets | `minimal-cycle-view.tsx` composition | 2026-08-31 |
