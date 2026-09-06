@@ -95,24 +95,36 @@ export class AnnotationInteractionOwner {
     const screenDx = Math.round(event.clientX - drag.startX);
     const currentZoom = this.context.getZoom();
     const dy = Math.round(event.clientY - drag.startY);
-    // #421: a whole-annotation move (no field/label -- dragging the body)
-    // previews with a cheap CSS translate on the whole owner element, which
-    // is correct there since every part of the annotation genuinely moves
-    // together. An endpoint-field drag (Arrow/Dependency/Measurement
-    // start|end|from|to) must NOT use that same whole-owner translate --
-    // it would visually move the *other*, untouched endpoint/handle/body
+    // #421/#423: a whole-annotation move (no field, no label -- dragging
+    // the body of e.g. a Dependency/Arrow with no separate anchor/label
+    // gesture) previews with a cheap CSS translate on the whole owner
+    // element, which is correct there since every part of the annotation
+    // genuinely moves together. An endpoint-field drag (Arrow/Dependency/
+    // Measurement start|end|from|to, #421) or a label/comment-body drag
+    // (Callout, #423) must NOT use that same whole-owner translate -- it
+    // would visually move the *other*, untouched endpoint/handle/anchor
     // too, which then snaps back to its real (unchanged) position the
     // moment the transform is cleared on commit. That is exactly the
-    // reported "grab the tip, the whole arrow appears to move, then the
-    // root jumps back on mouse-up" bug. Endpoint drags instead re-run the
-    // exact same projectAnnotationOverlays/renderer.updateOverlays path
-    // used for committed rendering, against a draft document with only the
-    // dragged field's anchor replaced -- the identical geometry algorithm
-    // Preview and commit already share, so nothing needs to snap back.
-    if (!drag.field || drag.label) for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`;
-    if (!drag.field || drag.label) return;
+    // reported "grab the tip/comment, the whole annotation appears to
+    // move, then the untouched part jumps back on mouse-up" bug. Both
+    // instead re-run the exact same projectAnnotationOverlays/
+    // renderer.updateOverlays path used for committed rendering, against a
+    // draft document with only the dragged field's anchor (or the
+    // labelOffset) replaced -- the identical geometry algorithm Preview
+    // and commit already share, so nothing needs to snap back.
+    if (!drag.field && !drag.label) { for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`; return; }
     const document = this.context.getDocument();
     const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
+    if (drag.label) {
+      if (!annotation) return;
+      this.context.publishState();
+      const previewOffsetDelta = annotationOffsetDeltaFromScreen({ x: screenDx, y: dy }, this.context.timelineGeometry.presentationScale, currentZoom);
+      const previewLabelOffset = { x: (annotation.labelOffset?.x ?? 0) + previewOffsetDelta.x, y: (annotation.labelOffset?.y ?? -14) + previewOffsetDelta.y };
+      const previewDocument: CanonicalDocument = { ...document, annotations: document.annotations.map((item) => item.id === annotation.id ? { ...item, labelOffset: previewLabelOffset } : item) };
+      this.context.renderer.updateOverlays(projectAnnotationOverlays(previewDocument, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale));
+      return;
+    }
+    if (!drag.field) return;
     const anchor = annotation?.[drag.field];
     const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
     if (!annotation || !anchor || !point) return;
@@ -207,14 +219,15 @@ export class AnnotationInteractionOwner {
   cancel = (): void => {
     const drag = this.#drag;
     if (drag) for (const owner of drag.owners.values()) owner.style.translate = "";
-    // #421: an endpoint-field drag's preview is rendered via
-    // `renderer.updateOverlays` against a draft (uncommitted) document, not
-    // a CSS transform -- clearing `owner.style.translate` above (a no-op
-    // for this drag mode) does not undo that. Re-render from the real,
-    // still-canonical document so a cancelled drag leaves no visible trace
-    // of the discarded preview (Canonical/History/Dirty were never
-    // touched by the preview in the first place, but the DOM must match).
-    if (drag?.field && !drag.label) {
+    // #421/#423: an endpoint-field or label/comment-body drag's preview is
+    // rendered via `renderer.updateOverlays` against a draft (uncommitted)
+    // document, not a CSS transform -- clearing `owner.style.translate`
+    // above (a no-op for these drag modes) does not undo that. Re-render
+    // from the real, still-canonical document so a cancelled drag leaves
+    // no visible trace of the discarded preview (Canonical/History/Dirty
+    // were never touched by the preview in the first place, but the DOM
+    // must match).
+    if (drag?.field || drag?.label) {
       this.context.renderer.updateOverlays(projectAnnotationOverlays(this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale));
     }
     this.#drag = undefined;
