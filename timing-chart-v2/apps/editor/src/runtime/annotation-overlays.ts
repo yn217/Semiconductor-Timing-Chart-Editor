@@ -1,6 +1,6 @@
 import { anchorTransitionFraction, anchorTransitionKind } from "@timing-chart-v2/schema";
 import type { Annotation, CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
-import type { LocalGeometryMap, Point } from "@timing-chart-v2/geometry";
+import { allocateMeasurementLanes, type LocalGeometryMap, type Point } from "@timing-chart-v2/geometry";
 import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
 import type { AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { resolveAnchorPoint } from "../resolve-anchor-point.js";
@@ -18,26 +18,13 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
 }
 
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
-  const measurementLaneById = new Map<string, number>();
-  const laneEnds: number[] = [];
-  for (const annotation of document.annotations) {
-    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) continue;
+  const measurementSpans = document.annotations.flatMap((annotation) => {
+    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale);
     const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale);
-    if (!first || !second) continue;
-    const explicitLane = annotation.measurementLayout?.lane;
-    // #205: reuse the first existing lane whose previous measurement
-    // already ended before this one starts; when every existing lane is
-    // still occupied (`findIndex` returns -1, none free), the automatic
-    // stacking must allocate a genuinely *new* lane (`laneEnds.length`),
-    // not silently collapse back onto lane 0 -- `Math.max(0, -1)` used to
-    // do exactly that, placing two overlapping Measurements on the same
-    // lane instead of stacking them.
-    const freeLaneIndex = laneEnds.findIndex((end) => end <= Math.min(first.x, second.x));
-    const lane = explicitLane ?? (freeLaneIndex === -1 ? laneEnds.length : freeLaneIndex);
-    measurementLaneById.set(annotation.id, lane);
-    laneEnds[lane] = Math.max(laneEnds[lane] ?? Number.NEGATIVE_INFINITY, Math.max(first.x, second.x));
-  }
+    return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
+  });
+  const measurementLaneById = allocateMeasurementLanes(measurementSpans);
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
       const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);

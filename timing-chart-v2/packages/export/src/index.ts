@@ -1,4 +1,5 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
+import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
 import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import { anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
@@ -339,18 +340,12 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
     const x = LABEL_WIDTH + (Math.max(range.start, displayStart) - range.start) * cycleWidth;
     return { id: transaction.id, name: transaction.name, laneId, x, y: transactionTop + lanes.indexOf(laneId) * TRANSACTION_HEIGHT, width: (Math.min(range.end, displayEnd) - Math.max(range.start, displayStart)) * cycleWidth, linkedSignals: transaction.linkedSignals ?? [] };
   }).filter((transaction): transaction is ExportTransaction => transaction !== undefined);
-  const measurementLaneById = new Map<string, number>();
-  const measurementLaneEnds: number[] = [];
-  for (const annotation of document.annotations) {
-    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) continue;
+  const measurementLaneById = allocateMeasurementLanes(document.annotations.flatMap((annotation) => {
+    if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
     const first = anchorPoint(annotation, "start", document, rowY, mapping, range.start, cycleWidth);
     const second = anchorPoint(annotation, "end", document, rowY, mapping, range.start, cycleWidth);
-    if (!first || !second) continue;
-    const explicitLane = annotation.measurementLayout?.lane;
-    const lane = explicitLane ?? Math.max(0, measurementLaneEnds.findIndex((end) => end <= Math.min(first.x, second.x)));
-    measurementLaneById.set(annotation.id, lane);
-    measurementLaneEnds[lane] = Math.max(measurementLaneEnds[lane] ?? Number.NEGATIVE_INFINITY, Math.max(first.x, second.x));
-  }
+    return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
+  }));
   const annotations = document.annotations.map((annotation): ExportAnnotation | undefined => {
     const firstAnchor = annotation.anchor ?? annotation.start ?? annotation.from;
     const lastAnchor = annotation.anchor ?? annotation.end ?? annotation.to ?? firstAnchor;

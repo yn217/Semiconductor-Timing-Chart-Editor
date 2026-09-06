@@ -4,6 +4,33 @@ import type { AnchorPoint, Annotation, Bookmark, CanonicalDocument, SemanticAnch
 export interface Point { readonly x: number; readonly y: number }
 export interface ViewTransform { readonly scrollX: number; readonly scrollY: number; readonly zoom: number }
 
+export interface MeasurementLaneSpan {
+  readonly id: string;
+  readonly firstX: number;
+  readonly secondX: number;
+  readonly explicitLane?: number;
+}
+
+/**
+ * Allocate dimension-measurement lanes from resolved screen-independent X
+ * spans.  Both the live overlay and export use this same derived policy so
+ * overlapping measurements receive a new lane instead of collapsing onto lane
+ * zero when all existing lanes are occupied.
+ */
+export function allocateMeasurementLanes(spans: readonly MeasurementLaneSpan[]): ReadonlyMap<string, number> {
+  const laneById = new Map<string, number>();
+  const laneEnds: number[] = [];
+  for (const span of spans) {
+    const startX = Math.min(span.firstX, span.secondX);
+    const endX = Math.max(span.firstX, span.secondX);
+    const firstFreeLane = laneEnds.findIndex((end) => end <= startX);
+    const lane = span.explicitLane ?? (firstFreeLane >= 0 ? firstFreeLane : laneEnds.length);
+    laneById.set(span.id, lane);
+    laneEnds[lane] = Math.max(laneEnds[lane] ?? Number.NEGATIVE_INFINITY, endX);
+  }
+  return laneById;
+}
+
 export interface LocalAnchorGeometry {
   readonly signalId: SignalId;
   readonly anchor: SemanticAnchor;

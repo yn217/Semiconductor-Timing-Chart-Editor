@@ -244,6 +244,25 @@ describe("deterministic document export", () => {
     expect(first).toContain('data-measurement-profile="custom"');
   });
 
+  it("uses the same non-overlapping automatic Measurement lanes as the live overlay", () => {
+    const base = canonicalFixture();
+    const signal = base.signals[1]!;
+    const measurement = (id: string) => ({
+      id: id as AnnotationId,
+      type: "measurement" as const,
+      label: id,
+      visible: true,
+      measurement: { profile: "cycle" as const, anchorKind: "threshold" as const },
+      measurementLayout: { startMarker: "bar" as const, endMarker: "bar" as const, arrowLayout: "auto" as const, extensionLines: "both" as const },
+      start: { signalId: signal.id, cycle: 2, point: "cycle-start" as const },
+      end: { signalId: signal.id, cycle: 6, point: "cycle-end" as const },
+    });
+    const document = { ...base, annotations: [measurement("ann_0"), measurement("ann_1"), measurement("ann_2")] };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    expect(scene.annotations.map((annotation) => annotation.measurementLane)).toEqual([0, 1, 2]);
+    expect(renderExportSvg(scene)).toContain('data-measurement-lane="2"');
+  });
+
   it("exports clock edge counters from the same scene cycle mapping", () => {
     const base = canonicalFixture();
     const clock = base.signals[0]!;
