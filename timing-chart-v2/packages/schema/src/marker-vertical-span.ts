@@ -10,7 +10,8 @@ export interface ResolvedMarkerVerticalSpan {
 export function resolveMarkerVerticalSpan(document: CanonicalDocument, annotation: Annotation): ResolvedMarkerVerticalSpan {
   const span = annotation.verticalSpan;
   if (annotation.type !== "marker" || span === undefined || span.mode === "auto") return { rowIds: [] };
-  const rowIds = document.signalGroups.flatMap((group) => group.rows).filter((id): id is SignalId => document.signals.some((signal) => signal.id === id));
+  const signalIds = new Set(document.signals.map((signal) => signal.id));
+  const rowIds = document.signalGroups.flatMap((group) => group.rows).filter((id): id is SignalId => signalIds.has(id as SignalId));
   if (span.mode === "custom") return { rowIds, ...(span.startRowId ? { startRowId: span.startRowId } : {}), ...(span.endRowId ? { endRowId: span.endRowId } : {}) };
   const start = rowIds.indexOf(span.startRowId!);
   const end = rowIds.indexOf(span.endRowId!);

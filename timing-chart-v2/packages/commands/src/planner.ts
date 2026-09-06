@@ -92,7 +92,7 @@ function replaceSignal(document: CanonicalDocument, index: number, signal: Signa
 
 function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): Annotation[] {
   const annotationIds = new Set(referencesToSignal(document, signalId)
-    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource")
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd")
     .map((reference) => reference.ownerId));
   return document.annotations.filter((annotation) => annotationIds.has(annotation.id));
 }
