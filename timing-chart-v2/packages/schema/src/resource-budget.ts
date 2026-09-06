@@ -30,6 +30,7 @@ export function validateDocumentResourceBudget(document: CanonicalDocument): rea
   // commit boundary. Keep the budget pass total for malformed runtime input:
   // the structural validator owns those diagnostics, while this pass must not
   // throw before the caller can receive them atomically.
+  if (document === null || typeof document !== "object") return [];
   const candidate = document as unknown as Record<string, unknown>;
   const signals = Array.isArray(candidate.signals) ? candidate.signals : [];
   const groups = Array.isArray(candidate.signalGroups) ? candidate.signalGroups : [];
