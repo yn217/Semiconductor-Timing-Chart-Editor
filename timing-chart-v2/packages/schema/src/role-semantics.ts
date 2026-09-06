@@ -7,4 +7,9 @@ export function validateClockTiming(signal: Signal): string | undefined {
   if (!Number.isFinite(generator.phase) || generator.phase < 0) return "Clock phase must be finite and non-negative.";
 }
 export function clockTiming(signal: Signal): ClockSignal["generator"] | undefined { return signal.type === "clock" ? signal.generator : undefined; }
+/** Derived frequency; period remains the sole persisted timing authority. */
+export function clockFrequency(signal: Signal, cyclesPerSecond = 1): number | undefined {
+  const generator = clockTiming(signal); if (!generator || !Number.isFinite(cyclesPerSecond) || cyclesPerSecond <= 0 || generator.period <= 0) return undefined;
+  return cyclesPerSecond / generator.period;
+}
 export function resetSemantics(signal: Signal): ResetSemantics | undefined { return signal.type !== "clock" && signal.type !== "commentRow" ? signal.resetSemantics : undefined; }
