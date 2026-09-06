@@ -113,6 +113,7 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   // REQUEST has change points at cycles 0, 3, 7. Moving cycle 3's Start onto the existing
   // cycle-0 change point is a genuine rejection (DUPLICATE_CHANGE_POINT), not a no-op.
   const row = editor.locator("form.event-row").nth(1);
+  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Start 3").fill("0");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("editor-problem")).toBeVisible();
@@ -126,6 +127,7 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   await expect(page.getByTestId("problems-panel")).toContainText("cycle");
 
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Signal" }).click();
+  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Start 3").fill("4");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");

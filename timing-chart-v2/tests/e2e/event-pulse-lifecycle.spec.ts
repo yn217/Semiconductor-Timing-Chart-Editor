@@ -45,8 +45,10 @@ test("Insert Ribbon and Left Tree Add menu never offer Pulse; Event is still a r
   await eventRow.click();
   const editor = page.getByTestId("signal-editor");
   await expect(editor).toContainText("EVENT_9 · event");
-  await editor.locator("form.event-row").first().getByLabel("Value 0").fill("RISE");
-  await editor.locator("form.event-row").first().getByRole("button", { name: "Save" }).click();
+  const eventFirstRow = editor.locator("form.event-row").first();
+  await eventFirstRow.getByRole("button", { name: /Edit transition/ }).click();
+  await eventFirstRow.getByLabel("Value 0").fill("RISE");
+  await eventFirstRow.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
 
   await page.getByTestId("editor-undo").click();
@@ -83,8 +85,13 @@ test("loads, edits, persists and exports a legacy Pulse Signal without breaking 
   // assertions).
   await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("pulse");
 
-  await editor.locator("form.event-row").first().getByLabel("Value 0").fill("1");
-  await editor.locator("form.event-row").first().getByRole("button", { name: "Save" }).click();
+  // Value Editor Policy pass: Pulse shares Logic's closed WaveDrom token
+  // domain (0/1/X/Z/D/U) -- the Value field is a real <select>, not free
+  // text, so this is `selectOption`, not `fill`.
+  const pulseFirstRow = editor.locator("form.event-row").first();
+  await pulseFirstRow.getByRole("button", { name: /Edit transition/ }).click();
+  await pulseFirstRow.getByLabel("Value 0").selectOption("1");
+  await pulseFirstRow.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await page.getByTestId("editor-undo").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");

@@ -16,6 +16,7 @@ test("beforeunload guard follows the History dirty state without mutating it", a
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const row = editor.locator("form.event-row").nth(1);
+  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Start 3").fill("1");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(page.getByTestId("dirty-status")).toHaveText("Modified");

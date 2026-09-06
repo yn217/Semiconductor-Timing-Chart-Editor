@@ -130,7 +130,7 @@
 
 .clock-generator label, .clock-edge-counter label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; font-weight: 650; }
 
-.clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-row input { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
+.clock-generator input, .clock-generator select, .clock-edge-counter input, .clock-edge-counter select, .event-row input, .event-row select { height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; color: #19243a; padding: 3px 7px; }
 
 .clock-generator button, .clock-edge-counter button, .event-actions button, .quick-values button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; }
 
@@ -180,6 +180,13 @@
 .event-row { display: grid; grid-template-columns: 20px 24px 82px 56px 64px minmax(0, 1fr) minmax(160px, 1.4fr) 132px; align-items: center; min-height: var(--table-row-height); border-bottom: 1px solid #e1e6ed; }
 
 .event-row.selected:not(.event-columns) { background: #eaf3fb; box-shadow: inset 3px 0 #2c78bb; }
+/* Visual Quality Closure follow-up, Section 7: a row reads as plain text
+   at rest (Start/Value/Comment become <output>) -- inputs only exist
+   while it's the one row actually being edited. `.editing` layers an
+   amber inset border over whatever `.selected` already drew (editing a
+   row always selects it too), so the one row with live inputs is visibly
+   distinct from a merely-selected-but-read-only one. */
+.event-row.editing:not(.event-columns) { box-shadow: inset 3px 0 #c9962e; }
 
 .event-row:last-child { border-bottom: 0; }
 
@@ -190,6 +197,9 @@
 .event-columns { min-height: 25px; background: #f0f4f8; color: #526177; font-size: 10px; font-weight: 700; text-transform: uppercase; }
 
 .event-row output { overflow: hidden; text-overflow: ellipsis; font: 11px Consolas, monospace; color: #4f5e73; }
+/* A read-only row's Comment is prose, not data -- proportional type reads
+   better than the Consolas the numeric/value outputs share. */
+.event-row output.event-row-comment { font-family: var(--gui-font-family, inherit); color: #5c687c; }
 
 .event-actions { display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
 /* A row's own Draft dot -- distinct from the Generator/Inspector Draft
@@ -318,6 +328,14 @@
 .editor-tabbar button, .editor-tabbar .editor-tab { min-height: 26px; padding: 3px 10px; border: 1px solid #bdc8d6; border-radius: 4px; background: white; color: #31435d; }
 .editor-tabbar button:disabled { opacity: var(--ds-disabled-opacity); }
 .editor-tabbar .editor-tab.active { border-color: #2d78bf; color: #145994; box-shadow: inset 0 -2px #2d78bf; }
+/* Visual Quality Closure follow-up, Section 11: Undo/Redo/Cancel/Hide are
+   not Transition editing's primary action -- a ghost treatment (no resting
+   border/background, only on hover/focus) reads as clearly lower-priority
+   than Add/Save (primary blue) and Delete signal (danger red), without
+   removing or relocating any of them. */
+.editor-tabbar-secondary { display: flex; gap: 4px; }
+.editor-tabbar-secondary button { border-color: transparent; background: transparent; color: #5c687c; }
+.editor-tabbar-secondary button:hover:not(:disabled) { border-color: #bdc8d6; background: white; color: #31435d; }
 .editor-selection { margin-right: auto; padding-left: 8px; color: #526078; font-size: 11px; }
 .annotation-list { min-width: 880px; overflow: hidden; border-bottom: 1px solid #dce3eb; background: #fbfcfe; }
 .annotation-list-row { display: grid; grid-template-columns: 20px 28px 90px minmax(135px, 1fr) minmax(135px, 1fr) minmax(180px, 1.4fr) 68px 34px 34px; align-items: center; gap: 6px; min-height: 29px; padding: 3px 10px; color: #304761; text-align: left; font-size: 10px; }

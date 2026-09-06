@@ -205,5 +205,5 @@ test("Event Table valid import uses canonical validation and one history entry",
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
-  await expect(bottom.getByLabel("Value 3")).toHaveValue("RISE");
+  await expect(bottom.getByTestId("event-row-value-3")).toHaveText("RISE");
 });

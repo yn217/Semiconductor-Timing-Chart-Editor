@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
-import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
+import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { nextCommandId } from "./command-id.js";
 
 export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly generatorSlot?: ReactNode }) {
@@ -22,12 +22,18 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
   const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
   const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => onCommand({ id: nextCommandId("replace_values"), type: "signal.replaceValues", signalId: signal.id, values: nextValues });
   const addRow = () => onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start: nextStart, value });
-  const duplicateRow = () => {
-    if (!selected) return;
+  // Row Actions compaction follow-up: the toolbar's Duplicate (targets
+  // `selected`) and each row's own Duplicate icon (targets that row
+  // directly) are the same operation parametrized over which change point
+  // is the source -- one function, not two copies of "find a free cycle
+  // and copy value/comment onto it".
+  const duplicateChange = (source: ValueSignal["values"][number]) => {
     const duplicateStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle));
     if (duplicateStart === undefined) return;
-    onCommand({ id: nextCommandId("duplicate_value"), type: "signal.updateValue", signalId: signal.id, start: duplicateStart, value: selected.value, ...(selected.comment === undefined ? {} : { comment: selected.comment }) });
+    onCommand({ id: nextCommandId("duplicate_value"), type: "signal.updateValue", signalId: signal.id, start: duplicateStart, value: source.value, ...(source.comment === undefined ? {} : { comment: source.comment }) });
   };
+  const duplicateRow = () => { if (selected) duplicateChange(selected); };
+  const canDuplicate = nextStart < cycleCount;
   const exportValues = () => {
     const blob = new Blob([JSON.stringify({ signalId: signal.id, name: signal.name, values: signal.values }, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -133,7 +139,12 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
             fuller root-cause note; the same bug pattern applied here too. */}
         <div className="transition-form-row">
           <label className="field-inline transition-field-start"><span>Start (cycle)</span><input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-          <label className="field-inline transition-field-value"><span>Value</span><input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
+          {/* Value Editor Policy pass: this Value field is no longer
+              unconditionally free text -- `ValueEditorControl` (shared
+              with a Transition row's own inline editor) resolves the
+              right control from the Signal's type (a closed logic domain
+              gets a real <select>; an open one gets a combo). */}
+          <label className="field-inline transition-field-value"><span>Value</span><ValueEditorControl signal={signal} value={value} onChange={setValue} ariaLabel="New event value" listId="add-edit-transition-value-options" /></label>
           <label className="field-inline transition-field-comment"><span>Comment</span><input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
         </div>
         <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
@@ -158,7 +169,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
       <h2>Transitions <span>({signal.values.length})</span></h2>
     </div>
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
-      <button type="button" onClick={duplicateRow} disabled={!selected || nextStart >= cycleCount} data-testid="event-duplicate">Duplicate</button>
+      <button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
       <button type="button" className="danger" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
@@ -169,7 +180,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} onCommand={onCommand} nextCommandId={nextCommandId} />)}
       </div>
     </div>
     <div className="event-table-footer">

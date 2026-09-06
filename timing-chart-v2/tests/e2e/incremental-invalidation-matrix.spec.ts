@@ -47,7 +47,8 @@ test("ChangeSet invalidation matrix keeps derived owners local", async ({ page }
   const waveformBefore = { session: await sessionCounters(page), render: await renderCounters(page) };
   const editor = page.getByTestId("signal-editor");
   const row = editor.locator("form.event-row").nth(1);
-  await row.getByLabel(/Value 3|Value 4/).fill("X");
+  await row.getByRole("button", { name: /Edit transition/ }).click();
+  await row.getByLabel(/Value 3|Value 4/).selectOption("X");
   await row.getByRole("button", { name: "Save" }).click();
   await waitForIdle(page);
   const waveformAfter = { session: await sessionCounters(page), render: await renderCounters(page) };

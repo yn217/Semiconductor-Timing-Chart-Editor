@@ -51,9 +51,19 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
         </label>
         <button type="button" data-testid="move-signal-to-group" disabled={!resolvedTargetGroupId || resolvedTargetGroupId === currentGroup?.id} onClick={() => onDropToGroup("signal", signal.id, resolvedTargetGroupId as GroupId)}>Move</button>
       </div>}
-      <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
-      <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
-      {signal && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button><button type="button" className="danger" onClick={onDelete} data-testid="signal-delete">Delete signal</button></>}
+      {/* Visual Quality Closure follow-up (#402/#426): Undo/Redo/Cancel/
+          Hide aren't Transition-editing's primary action (Add/Save are) --
+          `.editor-tabbar-secondary` gives them a visibly lighter (ghost,
+          border-only-on-hover) treatment so they read as available-but-
+          background, without removing or relocating them. Delete signal
+          stays outside this wrapper -- a danger action reads as itself,
+          not folded into "secondary". */}
+      <span className="editor-tabbar-secondary">
+        <button type="button" onClick={onUndo} disabled={!history.canUndo} data-testid="editor-undo">Undo</button>
+        <button type="button" onClick={onRedo} disabled={!history.canRedo} data-testid="editor-redo">Redo</button>
+        {signal && <><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="button" onClick={() => onVisibility(signal.id, signal.display.visible === false)} data-testid="signal-visibility">{signal.display.visible === false ? "Show signal" : "Hide signal"}</button></>}
+      </span>
+      {signal && <button type="button" className="danger" onClick={onDelete} data-testid="signal-delete">Delete signal</button>}
     </div>
     {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>

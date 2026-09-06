@@ -40,11 +40,15 @@ test("follows row selection and exposes derived Event Table columns", async ({ p
   const editor = page.getByTestId("signal-editor");
   await expect(editor).toContainText("REQUEST · binary");
   await expect(editor.getByRole("table", { name: "Signal events" }).locator("form.event-row")).toHaveCount(3);
+  // Visual Quality Closure follow-up, Section 7: a row reads as plain text
+  // at rest -- each read-only cell keeps its own stable `data-testid`
+  // rather than relying on `.nth()` position (read-only rows now render
+  // more <output> elements than an editing one).
   const first = editor.locator("form.event-row").first();
-  await expect(first.getByLabel("Start 0")).toHaveValue("0");
-  await expect(first.getByLabel("Value 0")).toHaveValue("0");
-  await expect(first.locator("output").nth(0)).toHaveText("3");
-  await expect(first.locator("output").nth(1)).toHaveText("3");
+  await expect(first.getByTestId("event-row-start-0")).toHaveText("0");
+  await expect(first.getByTestId("event-row-value-0")).toHaveText("0");
+  await expect(first.getByTestId("event-row-end-0")).toHaveText("3");
+  await expect(first.getByTestId("event-row-duration-0")).toHaveText("3");
   await expect(editor.getByRole("group", { name: "Quick values" }).getByRole("button")).toHaveText(["0", "1", "X", "Z"]);
 });
 
@@ -60,14 +64,15 @@ test("commits one event edit once, rerenders only its waveform, and supports Und
   const requestSvg = await surface.locator("[data-signal-id='sig_cycle_request'] > svg").elementHandle();
 
   const row = editor.locator("form.event-row").nth(1);
+  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Start 3").fill("4");
-  await row.getByLabel("Value 3").fill("X");
+  await row.getByLabel("Value 3").selectOption("X");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await expect(editor.getByLabel("Start 4")).toHaveValue("4");
-  await expect(editor.getByLabel("Value 4")).toHaveValue("X");
+  await expect(editor.getByTestId("event-row-start-4")).toHaveText("4");
+  await expect(editor.getByTestId("event-row-value-4")).toHaveText("X");
 
   const countersAfter = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(countersAfter.waveDromRenders).toBe(countersBefore.waveDromRenders + 1);
@@ -81,8 +86,8 @@ test("commits one event edit once, rerenders only its waveform, and supports Und
   await page.getByTestId("editor-undo").click();
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 2");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
-  await expect(editor.getByLabel("Start 3")).toHaveValue("3");
-  await expect(editor.getByLabel("Value 3")).toHaveValue("1");
+  await expect(editor.getByTestId("event-row-start-3")).toHaveText("3");
+  await expect(editor.getByTestId("event-row-value-3")).toHaveText("1");
 });
 
 // Bottom Panel Visual Reference pass (#402/#426): Name and Role are now
@@ -170,10 +175,10 @@ test("Bottom Signal event Import (table footer) replaces the table in one histor
   await editor.getByLabel("Import signal events").setInputFiles({ name: "events.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify({ values: [{ start: 0, value: "0" }, { start: 2, value: "X" }, { start: 5, value: "1" }] })) });
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(editor.locator("form.event-row")).toHaveCount(3);
-  await expect(editor.getByLabel("Value 2")).toHaveValue("X");
+  await expect(editor.getByTestId("event-row-value-2")).toHaveText("X");
   await editor.getByTestId("editor-undo").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
-  await expect(editor.getByLabel("Value 3")).toHaveValue("1");
+  await expect(editor.getByTestId("event-row-value-3")).toHaveText("1");
 });
 
 test("edits Clock Generator through one semantic history entry", async ({ page }) => {
@@ -344,6 +349,7 @@ test("moves the rendered waveform transition to the edited Start cycle, not just
   const row = editor.locator("form.event-row").nth(1);
 
   const revisionBeforeType = await page.getByTestId("revision-status").textContent();
+  await row.getByRole("button", { name: /Edit transition/ }).click();
   await row.getByLabel("Start 3").fill("4");
   await expect(page.getByTestId("revision-status")).toHaveText(revisionBeforeType!);
 
@@ -363,37 +369,48 @@ test("#402: Event row Save stays disabled until the Draft differs, and Cancel di
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
   const editor = page.getByTestId("signal-editor");
   const row = editor.locator("form.event-row").nth(1);
+  const editButton = row.getByRole("button", { name: /Edit transition/ });
+  const deleteButton = row.getByRole("button", { name: /Delete transition/ });
   const saveButton = row.getByRole("button", { name: "Save" });
   const cancelButton = row.getByRole("button", { name: "Cancel" });
-  const deleteButton = row.getByRole("button", { name: /Delete transition/ });
 
-  // Visual Quality Closure pass (#402/#426): an at-rest row (no Draft) shows
-  // one compact Delete action, not a disabled Cancel/Save pair sitting
-  // there unused -- Cancel/Save only exist once the row is actually being
-  // edited (this is also what keeps the Actions column narrow enough to
-  // never clip).
+  // Visual Quality Closure follow-up (#402/#426), Section 7: a row reads as
+  // plain text at rest -- Edit/Duplicate/Delete are the only actions, no
+  // Cancel/Save sitting there unused, and no live inputs at all. Cancel/
+  // Save (and the inputs themselves) only exist once Edit has actually
+  // been clicked (this is also what keeps the Actions column narrow
+  // enough to never clip).
+  await expect(editButton).toBeVisible();
   await expect(deleteButton).toBeVisible();
   await expect(saveButton).toHaveCount(0);
   await expect(cancelButton).toHaveCount(0);
+  await expect(row.getByLabel("Value 3")).toHaveCount(0);
+  await expect(row.getByTestId("event-row-value-3")).toHaveText("1");
 
-  await row.getByLabel("Value 3").fill("X");
+  await editButton.click();
+  await expect(saveButton).toBeDisabled();
+  await row.getByLabel("Value 3").selectOption("X");
   await expect(saveButton).toBeEnabled();
   await expect(cancelButton).toBeEnabled();
   await expect(row.getByTitle("Unapplied changes")).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
+  // Cancel discards the Draft *and* leaves edit mode entirely, back to the
+  // same read-only Edit/Duplicate/Delete state Save eventually returns to.
   await cancelButton.click();
-  await expect(row.getByLabel("Value 3")).toHaveValue("1");
+  await expect(row.getByTestId("event-row-value-3")).toHaveText("1");
+  await expect(editButton).toBeVisible();
   await expect(saveButton).toHaveCount(0);
-  await expect(deleteButton).toBeVisible();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 
-  await row.getByLabel("Value 3").fill("X");
+  await editButton.click();
+  await row.getByLabel("Value 3").selectOption("X");
   await row.getByRole("button", { name: "Save" }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(saveButton).toHaveCount(0);
-  await expect(deleteButton).toBeVisible();
+  await expect(row.getByTestId("event-row-value-3")).toHaveText("X");
+  await expect(editButton).toBeVisible();
 });
 
 // Visual Quality Closure pass (#402/#426), Section 4: the checkbox column
