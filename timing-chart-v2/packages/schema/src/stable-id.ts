@@ -8,6 +8,14 @@ export function deterministicId(prefix: string, index: number): string {
   return `${prefix}_${String(index + 1).padStart(3, "0")}`;
 }
 
+export function allocateMigrationId(prefix: string, preferredIndex: number, usedIds: Set<string>): string {
+  let candidate = deterministicId(prefix, preferredIndex);
+  let suffix = 1;
+  while (usedIds.has(candidate)) candidate = `${deterministicId(prefix, preferredIndex)}_${suffix++}`;
+  usedIds.add(candidate);
+  return candidate;
+}
+
 /**
  * Allocate a deterministic identifier for a derived entity without encoding
  * the source, command, or provenance in the persisted token. The seed stays

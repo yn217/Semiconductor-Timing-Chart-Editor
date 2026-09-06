@@ -1,4 +1,4 @@
-import { deterministicId } from "./stable-id.js";
+import { allocateMigrationId, deterministicId } from "./stable-id.js";
 import type {
   AnchorPoint,
   Annotation,
@@ -100,9 +100,9 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
   return merged.length > 0 ? merged : [{ start: 0, value: fallback }];
 }
 
-function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[]): Signal {
+function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[], usedIds: Set<string>): Signal {
   const source = record(value);
-  const id = text(source.id, deterministicId("signal", index)) as SignalId;
+  const id = (typeof source.id === "string" ? source.id : allocateMigrationId("signal", index, usedIds)) as SignalId;
   const type = ["binary", "bus", "state", "logic", "event", "pulse", "clock", "commentRow"].includes(text(source.type))
     ? text(source.type)
     : "binary";
@@ -289,7 +289,9 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const sourceTimeline = record(source.timeline);
   const timebase = { ...record(sourceDocument.timebase), ...sourceTimeline };
   const cycleCount = Math.max(1, Math.trunc(number(timebase.cycleCount, number(sourceDocument.cycleCount, 10))));
-  const signals = list(source.signals ?? cycleView.signals).map((value, index) => normalizeSignal(value, index, warnings));
+  const legacySignals = list(source.signals ?? cycleView.signals);
+  const usedSignalIds = new Set(legacySignals.map((value) => record(value).id).filter((id): id is string => typeof id === "string"));
+  const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedSignalIds));
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
@@ -301,7 +303,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
 
   const groups = list(source.signalGroups).map((value, index) => {
     const group = record(value);
-    const rows = list(group.rows ?? group.signals).filter((id): id is string => typeof id === "string");
+    const rows = list(group.rows ?? group.signals).filter((id): id is SignalId => typeof id === "string");
     const result: MutableRecord = {
       id: text(group.id, deterministicId("group", index)),
       name: text(group.name, `Group ${index + 1}`),
