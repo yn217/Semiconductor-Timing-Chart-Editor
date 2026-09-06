@@ -7,6 +7,33 @@ async function ready(page: Page): Promise<void> {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
+function longReferenceClockDocument() {
+  const clockId = "sig_cycle_clock";
+  return {
+    formatVersion: 2,
+    document: {
+      id: "geometry-closure",
+      title: "Geometry closure",
+      header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] },
+      footer: { figureNumber: "", revision: "V2", text: "" },
+    },
+    timeline: { start: 0, end: 128, cycleCount: 128, timeBase: "cycle", referenceClock: clockId, edge: "rising", labelAnchors: [] },
+    signalGroups: [{ id: "grp_main", name: "Main", rows: [clockId, "sig_data"] }],
+    signals: [
+      { id: clockId, name: "CLK", type: "clock", role: "input", source: { instancePath: [], signalName: "clk" }, display: { name: "CLK" }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } },
+      { id: "sig_data", name: "DATA", type: "binary", role: "input", source: { instancePath: [], signalName: "data" }, display: { name: "DATA" }, values: [{ start: 0, value: 0 }, { start: 64, value: 1 }] },
+    ],
+    bookmarks: [], timeGroups: [], annotations: [], transactions: [], constraints: [],
+    legend: { show: false, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
+    layout: { roleColumnWidth: 62, signalNameWidth: 178, signalNameAlign: "left", rowHeight: 30, signalSpacing: 4, overflow: "ellipsis" },
+    checkSettings: {},
+  };
+}
+
+async function waitForPresentation(page: Page): Promise<void> {
+  await page.evaluate(() => new Promise<void>((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))));
+}
+
 async function boundaries(page: Page, cycles: readonly number[]) {
   return page.evaluate((requestedCycles) => {
     const svg = [...document.querySelectorAll<SVGSVGElement>("[data-role='stable-waveform-surface'] svg")]
@@ -45,26 +72,50 @@ function assertAligned(samples: Awaited<ReturnType<typeof boundaries>>): void {
 
 test("keeps Grid and Ruler on the actual WaveDrom X geometry across scale and scroll", async ({ page }) => {
   await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  const fileInput = page.locator("input[type='file'][accept='.json,.tcd']");
+  await fileInput.setInputFiles({ name: "geometry-closure.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(longReferenceClockDocument())) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await expect(page.getByTestId("cycle-ruler").locator("[data-cycle='128']")).toHaveCount(1);
+  await waitForPresentation(page);
   const cycles = [0, 12, 24] as const;
   const before = {
-    revision: await page.getByTestId("cycle-surface").getAttribute("data-canonical-revision"),
+    revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
 
   assertAligned(await boundaries(page, cycles));
-  for (const preset of ["50", "150", "200"]) {
-    await page.getByRole("button", { name: "View", exact: true }).click();
+  await page.getByRole("button", { name: "View", exact: true }).click();
+  for (const preset of ["50", "100", "200", "400", "800"]) {
     await page.getByLabel("Zoom preset").selectOption(preset);
     await expect(page.getByTestId("zoom-status")).toHaveText(`${preset}%`);
-    assertAligned(await boundaries(page, cycles));
+    await waitForPresentation(page);
+    assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
   }
 
   const viewport = page.getByTestId("cycle-viewport");
   await viewport.evaluate((element) => { element.scrollLeft = Math.min(220, element.scrollWidth); });
-  assertAligned(await boundaries(page, cycles));
+  await waitForPresentation(page);
+  assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
 
-  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-canonical-revision", before.revision!);
+  await page.setViewportSize({ width: 1280, height: 720 });
+  await waitForPresentation(page);
+  assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
+
+  await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").click();
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [8, 9)");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
+  await expect(page.getByTestId("zoom-status")).toHaveText("800%");
+  await waitForPresentation(page);
+  assertAligned(await boundaries(page, [0, 1, 8, 10, 32, 64, 128]));
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit All", exact: true }).click();
+  await expect(page.getByTestId("zoom-status")).not.toHaveText("800%");
+  await waitForPresentation(page);
+  assertAligned(await boundaries(page, [0, 1, 10, 32, 64, 128]));
+
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 });

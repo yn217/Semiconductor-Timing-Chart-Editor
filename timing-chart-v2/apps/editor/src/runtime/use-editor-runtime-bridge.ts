@@ -265,6 +265,11 @@ export function refreshTimelinePresentation(context: {
   if (context.reason === "playhead") context.onPlayhead();
   if (context.reason === "range") context.onRange();
   if (context.reason === "resize") context.onResize();
+  // Fit Selection applies its target scroll position on a later animation
+  // frame, after the zoom pass has already run. Re-sync the ruler from the
+  // viewport's actual scroll state for every non-scroll presentation pass so
+  // the ruler and waveform keep the same screen origin.
+  if (context.reason !== "scroll") syncRulerScroll(context.ruler, context.viewport, context.currentZoom);
   return { timeAxis, screenGeometryScale, rulerInitialized };
 }
 
@@ -379,16 +384,26 @@ export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promi
     // document. It must not publish initial-document presentation or mark the
     // replacement idle; the replacement owns its own epoch and idle lifecycle.
     if (!host.isConnected || !lifecycle.isCurrent()) return;
-    refresh.ruler();
-    refresh.range();
-    refresh.playhead();
-    refresh.grid();
-    refresh.zoom();
-    refresh.overlays();
-    refresh.collectErrors();
-    refresh.publish();
-    host.dataset.editorIdle = "true";
-    host.dataset.cycleViewReady = "true";
+    // The first ruler pass writes the shared wave-width CSS variable. Give
+    // the browser a frame to commit that width before taking the authoritative
+    // reference-SVG screen-scale sample used by the settling pass below.
+    return nextBrowserFrame().then(() => {
+      if (!host.isConnected || !lifecycle.isCurrent()) return;
+      refresh.ruler();
+      return nextBrowserFrame();
+    }).then(() => {
+      if (!host.isConnected || !lifecycle.isCurrent()) return;
+      refresh.ruler();
+      refresh.range();
+      refresh.playhead();
+      refresh.grid();
+      refresh.zoom();
+      refresh.overlays();
+      refresh.collectErrors();
+      refresh.publish();
+      host.dataset.editorIdle = "true";
+      host.dataset.cycleViewReady = "true";
+    });
   });
 }
 
@@ -600,7 +615,23 @@ export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "up
 
 export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode); }
 
-export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); const scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mappingCache.get(document.timeline, document.timeGroups), previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode, minimumWaveWidth, viewportElement); return { timeAxis, scale }; }
+export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } {
+  const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
+  const mapping = mappingCache.get(document.timeline, document.timeGroups);
+  const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
+  let scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+
+  // buildRuler updates the shared wave-width owner. That can change the SVG's
+  // intrinsic screen transform during the same presentation pass, so measure
+  // once after the width write and repaint the ruler/grid from the settled
+  // transform. This bounded second pass avoids retaining a pre-layout scale
+  // while keeping the rendered WaveDrom geometry authoritative.
+  const settledScale = referenceSvgScreenScale(referenceSvg, zoom);
+  if (settledScale !== undefined && Math.abs(settledScale - scale) > 0.0001) {
+    scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, undefined, settledScale, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+  }
+  return { timeAxis, scale };
+}
 
 export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, boundaryToLocalX: (cycle: number) => number | undefined): void { const playheadX = boundaryToLocalX(cycle); let playhead = ruler.querySelector<HTMLElement>("[data-role='playhead']"); if (playheadX === undefined) { playhead?.remove(); return; } if (!playhead) { playhead = ruler.ownerDocument.createElement("span"); playhead.dataset.role = "playhead"; playhead.dataset.testid = "playhead"; playhead.setAttribute("aria-label", "Playhead"); ruler.append(playhead); } playhead.dataset.playheadCycle = String(cycle); playhead.style.left = `${playheadX}px`; }
 
@@ -609,7 +640,22 @@ export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLE
 export function publishRendererState(host: HTMLElement, session: Pick<CommandHistorySession, "getSnapshot" | "historyState" | "metrics" | "historyMetrics">, viewMetricsOwner: Pick<ViewMetricsOwner, "snapshot">, adapter: WaveDromAdapter, geometryCache: unknown, projectionCoordinator: Pick<ProjectionCoordinator, "currentDocumentEpoch" | "diagnostics">, renderer: Pick<TimingChartRenderer, "diagnosticSummary">, mappingCache: Pick<DisplayTimeMappingCache, "metrics">, snapService: Pick<SemanticSnapCandidateService, "metrics">, snapIndex: ImmutableSnapIndex | undefined, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void { host.dataset.canonicalRevision = String(session.getSnapshot().revision); host.dataset.historyDepth = String(session.historyState().undoDepth); const metrics = viewMetricsOwner.snapshot(); host.dataset.viewMetrics = JSON.stringify(metrics); const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics(); const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics(); const projectionDocumentEpoch = projectionCoordinator.currentDocumentEpoch(); host.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), projectionDocumentEpoch, ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...edgeCounterMetrics, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction, zoom, validatorInvocations }); void geometryCache; }
 
 export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void { const presentationScale = Math.max(0.0001, zoom * screenGeometryScale); viewport.style.setProperty("--presentation-x-scale", String(presentationScale)); host.style.setProperty("--presentation-x-scale", String(presentationScale)); rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale)); }
-export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void { ruler.style.transform = `translateX(${-viewport.scrollLeft}px) scaleX(${zoom})`; ruler.dataset.scrollLeft = String(viewport.scrollLeft); }
+export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void {
+  // The sticky ruler shell and the waveform layer do not share the same
+  // layout origin once the scroll container has been zoomed. Recover the
+  // ruler content's untransformed layout origin from its current matrix, then
+  // place it at the sticky shell's screen origin minus the viewport scroll.
+  // This keeps the correction in view/layout space without deriving any
+  // semantic coordinates from DOM samples.
+  const currentRect = ruler.getBoundingClientRect();
+  const currentTransform = getComputedStyle(ruler).transform;
+  const currentTranslation = currentTransform === "none" ? 0 : new DOMMatrixReadOnly(currentTransform).e;
+  const layoutLeft = currentRect.left - currentTranslation;
+  const stickyLeft = ruler.parentElement?.getBoundingClientRect().left ?? viewport.getBoundingClientRect().left;
+  const waveOrigin = stickyLeft - viewport.scrollLeft;
+  ruler.style.transform = `translateX(${waveOrigin - layoutLeft}px) scaleX(${zoom})`;
+  ruler.dataset.scrollLeft = String(viewport.scrollLeft);
+}
 
 /** Keep frozen presentation columns pinned when their scroll-content containing
  * block reaches a horizontal edge. This is view-only and does not alter

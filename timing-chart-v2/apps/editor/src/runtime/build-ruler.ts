@@ -4,7 +4,7 @@ import type { DisplayTimeMapping } from "@timing-chart-v2/projection";
 import type { TimeAxisGeometry } from "@timing-chart-v2/geometry";
 import { presentationCycles } from "../presentation-cycles.js";
 
-export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement): number {
+export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | undefined, document: CanonicalDocument, axisOwnerSignalId: SignalId | undefined, mapping: DisplayTimeMapping, forcedScale?: number, actualScreenScale?: number, axisMode: TimeAxisGeometry["mode"] = "reference-clock", minimumWidth = 0, viewportElement?: HTMLElement, referenceViewBoxWidth?: number): number {
   element.dataset.axisMode = axisMode;
   if (!geometry || !axisOwnerSignalId) {
     element.dataset.geometryError = "Time-axis geometry unavailable";
@@ -24,14 +24,13 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // zoom, independent of the visible pane's width. Any shrink-to-fit is an
   // explicit, on-demand action (Fit All / Fit Selection, which set zoom
   // directly -- see createTimelineNavigationController) rather than
-  // something every render silently redoes. `forcedScale` still lets a
-  // resolved scale persist across re-renders once established.
-  // Resolve the screen scale once on the initial mount. Subsequent timeline
-  // edits may change the SVG's intrinsic width; reusing that new browser
-  // matrix would move existing semantic anchors even when their source cycle
-  // is unchanged. The TimelineGeometryOwner's established scale remains the
-  // single presentation-scale authority after initialization.
-  const scale = forcedScale ?? actualScreenScale ?? 1;
+  // something every render silently redoes. The current browser transform
+  // remains the presentation-scale authority whenever it is available;
+  // `forcedScale` is only a first-paint fallback.
+  // Prefer the current browser transform whenever it is available. The
+  // retained value is only a first-paint fallback; keeping it over a valid
+  // SVG matrix lets ruler/grid pitch drift after layout or zoom changes.
+  const scale = actualScreenScale ?? forcedScale ?? 1;
   let finalX = 0;
   for (const display of presentationCycles(mapping.displayCycleCount)) {
     const point = geometry.find({ signalId: axisOwnerSignalId, cycle: display, point: "cycle-start" })?.point;
@@ -81,7 +80,15 @@ export function buildRuler(element: HTMLElement, geometry: LocalGeometryMap | un
   // waveform column collapse after the initial mount (notably in the
   // visual-reference route). Keep both contracts: never shrink below the
   // available column, and never clip a genuinely wider timeline.
-  const targetWidth = Math.max(Math.ceil((finalX + 24) * scale), Math.ceil(minimumWidth));
+  // The rendered SVG's viewBox is the actual horizontal presentation extent.
+  // Using `finalX + padding` here would make the CSS viewport wider than that
+  // viewBox and introduce a different screen scale for the waveform than for
+  // the LocalGeometry consumers. Keep the old extent only when no reference
+  // SVG measurement is available (for the initial geometry-error fallback).
+  const geometryWidth = Number.isFinite(referenceViewBoxWidth) && (referenceViewBoxWidth ?? 0) > 0
+    ? referenceViewBoxWidth!
+    : finalX + 24;
+  const targetWidth = Math.max(Math.ceil(geometryWidth * scale), Math.ceil(minimumWidth));
   element.style.width = `${targetWidth}px`;
   // #366: `element` (the ruler content div) is not guaranteed to already be
   // attached under `[data-testid='cycle-viewport']` at every call time (its
