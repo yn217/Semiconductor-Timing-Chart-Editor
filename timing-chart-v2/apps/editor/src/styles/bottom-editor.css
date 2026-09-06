@@ -90,8 +90,23 @@
 .transaction-editor form { display: flex; align-items: end; gap: 9px; padding: 9px 0; }
 .transaction-editor label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; }
 .transaction-editor input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
-.transaction-editor form button, .transaction-editor header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }
+/* #420: same unstyled-<button> UA `ButtonText`-under-`color-scheme:dark`
+   root cause as the list-row fix in center-columns.css -- these plain
+   toolbar buttons (Undo/Redo/Reveal/Duplicate/Cancel/Delete) never set an
+   explicit `color`, so they went near-invisible under the dark scheme.
+   `.danger` (Delete Bookmark/Delete Transaction) gets its own explicit
+   color instead of the neutral toolbar color -- `.inspector .danger`
+   already does this for the Inspector; these two panels need their own
+   copy since it's scoped there, not shared. */
+.transaction-editor form button, .transaction-editor header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; }
+.transaction-editor form button:hover:not(:disabled), .transaction-editor header button:hover:not(:disabled) { border-color: #9fc4e5; background: #eef4fb; color: #163756; }
+.transaction-editor form button:focus-visible, .transaction-editor header button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; }
+.transaction-editor form button:disabled, .transaction-editor header button:disabled { color: #9aa7b8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
 .transaction-editor form button { border-color: #246aa8; background: #2c78bb; color: white; }
+.transaction-editor form button:hover:not(:disabled) { border-color: #1a5c94; background: #2569a4; color: white; }
+.transaction-editor header .danger, .bookmark-editor-panel header .danger { border-color: #d39b9b; background: white; color: #a52b2b; }
+.transaction-editor header .danger:hover:not(:disabled), .bookmark-editor-panel header .danger:hover:not(:disabled) { border-color: #c07a7a; background: #fbeeee; color: #7e1f1f; }
+.transaction-editor header .danger:disabled, .bookmark-editor-panel header .danger:disabled { color: #c99; background: #f3f5f8; border-color: #e3cccc; }
 /* #393 item A/B: the empty-state explanation shown only while there are no
    Transactions yet and no draft is open -- Load Example is a deliberate,
    single-command action (see transaction-editor.tsx's
@@ -108,8 +123,12 @@
 .bookmark-editor-panel form { display: flex; align-items: end; gap: 9px; padding: 9px 0; }
 .bookmark-editor-panel label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; }
 .bookmark-editor-panel input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
-.bookmark-editor-panel form button, .bookmark-editor-panel header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; }
+.bookmark-editor-panel form button, .bookmark-editor-panel header button { height: 27px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; }
+.bookmark-editor-panel form button:hover:not(:disabled), .bookmark-editor-panel header button:hover:not(:disabled) { border-color: #9fc4e5; background: #eef4fb; color: #163756; }
+.bookmark-editor-panel form button:focus-visible, .bookmark-editor-panel header button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; }
+.bookmark-editor-panel form button:disabled, .bookmark-editor-panel header button:disabled { color: #9aa7b8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
 .bookmark-editor-panel form button { border-color: #246aa8; background: #2c78bb; color: white; }
+.bookmark-editor-panel form button:hover:not(:disabled) { border-color: #1a5c94; background: #2569a4; color: white; }
 .editor-shell[data-bottom-visible="false"] .desktop-workspace { grid-template-rows: minmax(0, 1fr) 0 0; }
 .editor-shell[data-bottom-visible="false"] .bottom-resize-track { display: none; }
 

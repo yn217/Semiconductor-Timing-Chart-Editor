@@ -259,11 +259,25 @@
 .transaction-track { position: absolute; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
 .transaction-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap: 6px; }
-.transaction-list > button { height: 34px; display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; border: 1px solid #c2cfdd; border-radius: 4px; background: white; text-align: left; }
-.transaction-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; }
+.transaction-list > button { height: 34px; display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; }
 /* #388: Bookmark's Bottom Panel list -- Marker | Name | Cycle | Comment
    columns, one row per canonical Bookmark (never a second stored copy). */
 .bookmark-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .bookmark-list-header { display: grid; grid-template-columns: 28px 1fr 60px 1fr; gap: 8px; padding: 2px 8px; color: #5c687c; font-size: 10px; font-weight: 600; }
-.bookmark-list > button { height: 30px; display: grid; grid-template-columns: 28px 1fr 60px 1fr; align-items: center; gap: 8px; border: 1px solid #c2cfdd; border-radius: 4px; background: white; text-align: left; padding: 0 8px; }
-.bookmark-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; }
+.bookmark-list > button { height: 30px; display: grid; grid-template-columns: 28px 1fr 60px 1fr; align-items: center; gap: 8px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; padding: 0 8px; }
+/* #420: an unstyled <button> takes its text color from the UA's `ButtonText`
+   system color rather than inheriting from its parent -- under
+   `color-scheme: dark` (responsive.css) that default resolves near-white,
+   making these row buttons' text invisible against their explicit white/
+   light-blue backgrounds (same root cause as the #391/#401 fixes). Bookmark
+   and Transaction rows share the exact same unstyled-<button>-as-row-primitive
+   shape, so both get one shared, explicit visual-state contract here instead
+   of a Bookmark-only patch: every state (base/hover/selected/selected+hover/
+   focus-visible/disabled) sets its own color, background and border,
+   keeping border-width constant across states to avoid layout shift. */
+.transaction-list > button, .bookmark-list > button { color: #233a59; background: #fff; }
+.transaction-list > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: #9fc4e5; background: #f3f8fd; color: #163756; }
+.transaction-list > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; color: #163756; }
+.transaction-list > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
+.transaction-list > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
+.transaction-list > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
