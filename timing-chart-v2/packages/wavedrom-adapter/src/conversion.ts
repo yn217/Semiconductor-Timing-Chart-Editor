@@ -1,4 +1,4 @@
-import { valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
+import { formatBusValue, valueSignalWaveDomain, waveDromLogicToken, type ClockSignal, type SignalValueChange, type ValueSignal } from "@timing-chart-v2/schema";
 import {
   WAVEDROM_CLOCK_TOKENS,
   WAVEDROM_DATA_TOKEN,
@@ -53,7 +53,9 @@ function valueSignalToWaveJson(signal: ValueSignal, cycleCount: number, gaps: re
   for (const change of signal.values) {
     if (isData) {
       wave[change.start] = WAVEDROM_DATA_TOKEN;
-      data.push(change.displayLabel ?? String(change.value));
+      data.push(change.displayLabel ?? (signal.type === "bus" && signal.displayFormat !== undefined
+        ? formatBusValue(change.value, signal.displayFormat, signal.width)
+        : String(change.value)));
     } else {
       wave[change.start] = logicToken(signal.type, change.value);
     }
