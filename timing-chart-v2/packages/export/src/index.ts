@@ -1,6 +1,6 @@
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import { allocateMeasurementLanes } from "@timing-chart-v2/geometry";
-import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, type DisplayTimeMapping } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, calculateRowLayout, remapValueChangesToDisplay, resolveSourcePosition, type DisplayTimeMapping } from "@timing-chart-v2/projection";
 import { anchorTransitionFraction, anchorTransitionKind, effectiveLegendEntries, resolveEdgeCounterMarker, valueSignalWaveDomain, type Annotation, type CanonicalDocument, type ClockSignal, type JsonObject, type MeasurementProfile, type MeasurementLayout, type Signal, type SignalId } from "@timing-chart-v2/schema";
 import { renderWaveJsonMarkup, toWaveJson, WAVEDROM_VERSION } from "@timing-chart-v2/wavedrom-adapter";
 
@@ -83,14 +83,7 @@ function buildDocumentLayout(document: CanonicalDocument): ExportDocumentLayout 
 }
 
 function toDisplayCycle(mapping: DisplayTimeMapping, sourceCycle: number, bias: "floor" | "ceil"): number {
-  const clamped = Math.max(0, Math.min(mapping.sourceToDisplay.length - 1, sourceCycle));
-  const direct = mapping.sourceToDisplay[clamped];
-  if (direct !== undefined) return direct;
-  const scanOrder = bias === "floor"
-    ? [...Array(clamped + 1).keys()].reverse().concat([...Array(mapping.sourceToDisplay.length - clamped - 1).keys()].map((offset) => clamped + 1 + offset))
-    : [...Array(mapping.sourceToDisplay.length - clamped).keys()].map((offset) => clamped + offset).concat([...Array(clamped).keys()].reverse());
-  for (const cycle of scanOrder) { const value = mapping.sourceToDisplay[cycle]; if (value !== undefined) return value; }
-  return 0;
+  return resolveSourcePosition(mapping, sourceCycle, bias) ?? (bias === "floor" ? 0 : mapping.displayCycleCount);
 }
 
 function rangeFor(document: CanonicalDocument, settings: ExportSettings, mapping: DisplayTimeMapping): { start: number; end: number } {
@@ -122,12 +115,7 @@ function anchorPoint(annotation: Annotation, field: "anchor" | "start" | "end" |
 }
 
 function toDisplayPosition(mapping: DisplayTimeMapping, sourceCycle: number): number {
-  const clamped = Math.max(0, Math.min(mapping.sourceToDisplay.length - 1, sourceCycle));
-  const lower = Math.floor(clamped);
-  const upper = Math.min(mapping.sourceToDisplay.length - 1, lower + 1);
-  const left = mapping.sourceToDisplay[lower] ?? 0;
-  const right = mapping.sourceToDisplay[upper] ?? left;
-  return left + (right - left) * (clamped - lower);
+  return resolveSourcePosition(mapping, sourceCycle, "omit") ?? resolveSourcePosition(mapping, sourceCycle, "floor") ?? resolveSourcePosition(mapping, sourceCycle, "ceil") ?? mapping.displayCycleCount;
 }
 
 function waveTokenAt(wave: string, period: number, cycle: number): string {
