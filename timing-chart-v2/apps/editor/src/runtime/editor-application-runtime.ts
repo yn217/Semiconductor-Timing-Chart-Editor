@@ -16,8 +16,13 @@ export class EditorApplicationRuntime {
   readonly projection = new ProjectionCoordinator();
   readonly session: EditorSessionController;
 
-  constructor(readonly document: CanonicalDocument) {
+  constructor(document: CanonicalDocument) {
     this.session = new EditorSessionController(document);
+  }
+
+  /** Always exposes the session's current document after Open/New replacement. */
+  get document(): CanonicalDocument {
+    return this.session.snapshot().document;
   }
 
   createRenderer(provider: WaveformSurfaceProvider): RenderCoordinator {
