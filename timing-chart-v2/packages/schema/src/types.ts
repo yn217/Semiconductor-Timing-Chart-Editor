@@ -147,7 +147,7 @@ export interface ValueSignal extends SignalBase {
   readonly type: Exclude<SignalType, "clock" | "commentRow">;
   readonly values: readonly SignalValueChange[];
   readonly width?: number;
-  readonly displayFormat?: "hex" | "binary" | "symbolic";
+  readonly displayFormat?: "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
 }
 
 export interface ClockSignal extends SignalBase {

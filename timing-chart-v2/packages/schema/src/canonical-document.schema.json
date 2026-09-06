@@ -307,7 +307,7 @@
         "enable": { "type": "array", "items": { "$ref": "#/$defs/change" } },
         "edgeCounter": { "$ref": "#/$defs/edgeCounter" },
         "width": { "type": "integer", "minimum": 1 },
-        "displayFormat": { "enum": ["hex", "binary", "symbolic"] },
+        "displayFormat": { "enum": ["hex", "binary", "decimal", "signed", "unsigned", "symbolic"] },
         "title": { "type": "string" },
         "body": { "type": "string" },
         "spacingBefore": { "type": "number", "minimum": 0 },

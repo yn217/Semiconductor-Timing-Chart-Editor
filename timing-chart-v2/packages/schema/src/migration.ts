@@ -173,7 +173,7 @@ function normalizeSignal(value: unknown, index: number, warnings: MigrationWarni
 
   common.values = normalizeChanges(source.values, type === "state" ? "IDLE" : type === "bus" ? "X" : 0, warnings, `$.signals[${index}].values`);
   optionalNumber(common, "width", source.width);
-  if (["hex", "binary", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
+  if (["hex", "binary", "decimal", "signed", "unsigned", "symbolic"].includes(text(source.displayFormat))) common.displayFormat = source.displayFormat;
   return common as unknown as Signal;
 }
 
