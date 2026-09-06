@@ -25,6 +25,25 @@ describe("Phase 13 performance fixtures and statistics", () => {
 });
 
 describe("large-document edit history", () => {
+  it("keeps a 100k-cycle property-order-only replacement a no-op", () => {
+    const source = generatePerformanceDocument({ signalCount: 1000, cycleCount: 1000 });
+    const large = { ...source, timeline: { ...source.timeline, cycleCount: 100_000, end: 100_000 } };
+    const reorder = (value: unknown): unknown => {
+      if (Array.isArray(value)) return value.map(reorder);
+      if (value !== null && typeof value === "object") return Object.fromEntries(Object.entries(value as Record<string, unknown>).reverse().map(([key, entry]) => [key, reorder(entry)]));
+      return value;
+    };
+    const session = new CommandHistorySession(large);
+    const before = session.metrics();
+    const started = performance.now();
+    const result = session.execute({ id: "cmd_perf_replace_noop" as CommandId, type: "document.replace", document: reorder(large) as ReturnType<typeof generatePerformanceDocument> });
+    const elapsedMs = performance.now() - started;
+    console.log(`[document-replace-scale] cycles=100000 signals=1000 elapsedMs=${elapsedMs.toFixed(2)} validationRuns=${session.metrics().validationRuns}`);
+    expect(result).toMatchObject({ ok: false, reason: "no-op", problems: [{ code: "NO_OP" }] });
+    expect(session.metrics()).toEqual(before);
+    expect(session.historyState()).toMatchObject({ undoDepth: 0, redoDepth: 0, dirty: false });
+  });
+
   it("retains structural sharing through a long edit/Undo/Redo sequence", () => {
     const session = new CommandHistorySession(generatePerformanceDocument({ signalCount: 1000, cycleCount: 1000 }));
     const unchanged = session.getSnapshot().document.signals[999];
