@@ -9,6 +9,13 @@ const checker = path.join(workspace, "scripts", "check-v1-v2-parity.mjs");
 const matrixSource = path.join(workspace, "docs", "v1-v2-parity.json");
 const manifestSource = path.join(workspace, "docs", "v1-v2-source-manifest.json");
 const matrixDocument = path.join(workspace, "docs", "V1_V2_PARITY_MATRIX.md");
+const referenceBoundaryDocuments = [
+  path.join(workspace, "docs", "GUI_IMPLEMENTATION_REFERENCE.md"),
+  path.join(workspace, "docs", "GUI_SPEC.md"),
+  path.join(workspace, "docs", "V2_GUI_VISUAL_CONTRACT.md"),
+  path.join(workspace, "docs", "GUI_LOCK_SPEC.md"),
+  path.join(workspace, "docs", "CODEX_REPLACEMENT_INSTRUCTIONS.md"),
+];
 
 it("keeps the explicit V1/V2 conflict register reviewable", () => {
   const document = readFileSync(matrixDocument, "utf8");
@@ -17,6 +24,14 @@ it("keeps the explicit V1/V2 conflict register reviewable", () => {
     expect(document).toContain(`\`${conflictId}\``);
   }
   expect(document).toContain("Product decision needed");
+});
+
+it("keeps the current V2 reference distinct from the optional historical pack", () => {
+  const documents = referenceBoundaryDocuments.map((file) => readFileSync(file, "utf8")).join("\n");
+  expect(documents).toContain("references/v2-gui-reference-v8");
+  expect(documents).toContain("external");
+  expect(documents).not.toContain("checked-in `references/gui-replacement-pack/");
+  expect(documents).not.toContain("Use the Replacement Pack as the implementation source.");
 });
 
 it("fails when matrix coverage is missing a source-manifest Issue", () => {
