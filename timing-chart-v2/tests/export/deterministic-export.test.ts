@@ -61,6 +61,23 @@ describe("deterministic document export", () => {
     expect(svg).toContain('data-label-kind="comment"');
   });
 
+  it("keeps navigation Bookmarks out of default specification export", () => {
+    const base = canonicalFixture();
+    const document = {
+      ...base,
+      bookmarks: [{ id: "bookmark_navigation_only" as BookmarkId, name: "Navigation-only bookmark", start: 3, comment: "editor index" }],
+    };
+    const scene = buildExportScene(document, { format: "svg", scope: "document" });
+    const svg = renderExportSvg(scene);
+
+    // Bookmarks are persisted editor navigation metadata. An exported
+    // specification must not turn them into Annotation Marker-like flags.
+    expect(svg).not.toContain("bookmark_navigation_only");
+    expect(svg).not.toContain("Navigation-only bookmark");
+    expect(svg).not.toContain('data-layer="bookmarks"');
+    expect(svg).not.toContain('data-bookmark-id=');
+  });
+
   it("exports every virtualized-offscreen Signal and excludes editor chrome", () => {
     const scene = buildExportScene(scaleFixture(100), { format: "svg", scope: "document" });
     const first = renderExportSvg(scene);
