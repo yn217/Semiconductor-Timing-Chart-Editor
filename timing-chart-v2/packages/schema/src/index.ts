@@ -1,5 +1,6 @@
 export * from "./types.js";
 export * from "./time-group-hierarchy.js";
+export * from "./marker-vertical-span.js";
 export * from "./stable-id.js";
 export * from "./migration.js";
 export * from "./validation.js";
