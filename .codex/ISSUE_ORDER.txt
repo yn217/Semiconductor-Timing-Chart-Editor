@@ -3,35 +3,28 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-07 06:16 JST
+# Last reconciled by ChatGPT: 2026-09-07 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed state at reconciliation:
-#   main = 0275cc1 fix(export): resolve folded source positions explicitly
-#   completed/closed since previous reconciliation:
-#     #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444
+#   main = f401a48 fix(export): make signal split preservation explicit
+#   #443 completed/closed on main.
+#   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444 are also completed/closed.
 #   #414 remains open; therefore #415 remains dependency-waiting.
-#   #443 remains open and is a bounded Core/Export issue suitable for Codex.
+#   There is currently no executable Codex issue.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: ACTIVE
+# STATUS: WAITING
 #
-# Restore default Full Document export to canonical merged Signal membership/order.
-# Signal Split editor organization must not silently change default export semantics.
-# A `both` Signal must appear exactly once in default merged export.
-# If split-preserving export is supported, its policy must be explicit in ExportSettings;
-# do not create a screenshot/DOM-capture export path.
-# Reuse the existing export semantic owner and keep SVG/PNG/PDF policy consistent.
-443
-#
-# After #443 completes, re-read this file and live GitHub state.
-# If #414 is still open and no new executable Core issue has been added, report:
+# No executable issue at this reconciliation.
+# Report:
 # WAITING_FOR_NEXT_CODEX_ISSUE
+#
 # Do not manufacture audit/test-only work merely to stay busy.
 #
 # ============================================================================
@@ -53,7 +46,7 @@
 # ============================================================================
 # TRANSACTION PRODUCT / GUI — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
 # ============================================================================
-# Core prerequisites #450 and #455 are now completed.
+# Core prerequisites #450 and #455 are completed.
 # The following remain product/GUI/integration work, not Codex queue entries:
 #   #451 Transaction left Tree
 #   #452 Transaction central Lane workspace/integration
@@ -62,6 +55,7 @@
 #   #429 Transaction Mode parent/final product completion
 #   #397 Transaction/Split sample-driven final acceptance
 #
+# #452 is now technically unblocked by #450/#455, but remains product/GUI integration ownership.
 # Do not rebuild a parallel Transaction semantic model. #430/#450/#455 are the shared owners.
 #
 # ============================================================================
@@ -83,6 +77,7 @@
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
+#   #443
 #   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444
 #   #430 #432 #412 #413
 #   #410 #399 #398 #237 #417 #428 #272
@@ -98,7 +93,7 @@
 # ============================================================================
 # EXECUTION POLICY
 # ============================================================================
-# For each executable issue:
+# For each future executable issue:
 # 1. sync latest origin/main;
 # 2. read the live GitHub Issue and inspect the current production owner;
 # 3. reproduce/audit the concrete gap before editing;
