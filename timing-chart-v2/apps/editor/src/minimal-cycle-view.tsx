@@ -1718,13 +1718,21 @@ export function MinimalCycleView() {
     onDelete={deleteBottomTransaction}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
+  // #422: the one Bookmark-navigation dispatch owner -- shared verbatim by
+  // the Timeline Ribbon's Previous/Next and the Bottom Bookmarks panel's
+  // Previous/Next, so neither surface can drift into a second navigation
+  // command path (both still resolve *which* Bookmark is adjacent via the
+  // shared runtime/bookmark-navigation.js `findAdjacentBookmark`).
+  const navigateToBookmark = (cycle: number, bookmarkId?: BookmarkId) => { timelineNavigation.navigateToCycle(cycle); if (bookmarkId) selectBookmark(bookmarkId); };
   const bookmarkEditor = <BookmarkEditor
     key={`${selectedBookmark?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     bookmark={selectedBookmark}
     document={snapshot.document}
     history={history}
+    range={timelineRange}
     onSelect={selectBookmark}
     onReveal={revealBookmark}
+    onNavigateBookmark={navigateToBookmark}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
@@ -2251,7 +2259,7 @@ export function MinimalCycleView() {
       onArrowPick={(annotationType) => armArrowPick.current(annotationType)}
       onZoom={timelineNavigation.zoomBy}
       onFitSelection={timelineNavigation.fitSelection}
-      onNavigateBookmark={(cycle, bookmarkId) => { timelineNavigation.navigateToCycle(cycle); if (bookmarkId) selectBookmark(bookmarkId); }}
+      onNavigateBookmark={navigateToBookmark}
       onFitAll={timelineNavigation.fitAll}
       onSetZoom={timelineNavigation.setZoom}
       onToggleGrid={() => setGridEnabled((value) => !value)}

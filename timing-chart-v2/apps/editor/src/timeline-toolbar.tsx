@@ -5,6 +5,7 @@ import type { HistoryState } from "@timing-chart-v2/history";
 import type { CommandResult } from "@timing-chart-v2/commands";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
+import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
 import { EditorIconButton } from "./editor-icon.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonNumberInput } from "./design-system.js";
@@ -63,11 +64,7 @@ export function TimelineToolbar({ document, range, history, onUndo, onRedo, onRa
     setEditingLabelAnchorId(undefined);
   };
   const navigateBookmark = (direction: -1 | 1) => {
-    const ordered = [...document.bookmarks].sort((left, right) => left.start - right.start);
-    if (ordered.length === 0) return;
-    const next = direction < 0
-      ? [...ordered].reverse().find((bookmark) => bookmark.start < range.start) ?? ordered.at(-1)
-      : ordered.find((bookmark) => bookmark.start >= range.end) ?? ordered[0];
+    const next = findAdjacentBookmark(document.bookmarks, range, direction);
     if (next) onNavigateBookmark(next.start, next.id);
   };
   const applyTimeGroup = () => {
