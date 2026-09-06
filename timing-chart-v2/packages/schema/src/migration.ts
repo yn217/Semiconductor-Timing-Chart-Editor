@@ -268,6 +268,9 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
   if (typeof (source.destination ?? source.to) === "string") result.destination = source.destination ?? source.to;
   if (phases.length > 0) result.phases = phases;
   if (typeof source.laneId === "string") result.laneId = source.laneId;
+  if (typeof source.groupId === "string") result.groupId = source.groupId;
+  if (typeof source.color === "string") result.color = source.color;
+  if (typeof source.description === "string") result.description = source.description;
   const linkedSignals = list(source.linkedSignals).filter((id): id is string => typeof id === "string");
   if (linkedSignals.length > 0) result.linkedSignals = linkedSignals;
   if (typeof source.category === "string") result.category = source.category;
@@ -336,6 +339,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
 
   const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings));
   const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings));
+  const transactionGroups = list(source.transactionGroups).map((value, index) => { const item = record(value); return { id: text(item.id, deterministicId("transactionGroup", index)), name: text(item.name, `Transaction Group ${index + 1}`), ...(typeof item.color === "string" ? { color: item.color } : {}), order: Number.isInteger(item.order) && Number(item.order) >= 0 ? Number(item.order) : index }; });
   if (Array.isArray(transactionView.lanes) && transactionView.lanes.length > 0) {
     warnings.push({ code: "MIGRATION_TRANSACTION_LANES", path: "$.transactionView.lanes", message: "Lane IDs remain on transaction source/destination; legacy lane display names are not canonical fields." });
   }
@@ -435,6 +439,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
       },
       layout,
       transactions,
+      ...(transactionGroups.length > 0 ? { transactionGroups: transactionGroups as unknown as NonNullable<CanonicalDocument["transactionGroups"]> } : {}),
       constraints,
       checkSettings: jsonObject(source.checkSettings) as CanonicalDocument["checkSettings"] ?? {},
     },

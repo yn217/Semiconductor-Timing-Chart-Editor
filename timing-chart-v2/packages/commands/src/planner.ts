@@ -968,6 +968,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.transaction", "Transaction must use a half-open source-time range.");
       if (transaction.phases && transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.transaction.phases", transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)!);
       if (transaction.linkedSignals?.some((id) => !document.signals.some((signal) => signal.id === id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.linkedSignals", "Transaction links must target existing Signals.");
+      if (transaction.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.groupId", "Transaction Group does not exist.");
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
     }
@@ -1028,10 +1029,11 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$", "Transaction must use a half-open source-time range.");
       const phases = command.phases === undefined ? transaction.phases : command.phases;
       if (phases && transactionPhasesProblem(phases, command.start, command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", transactionPhasesProblem(phases, command.start, command.end)!);
-      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined) && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
-      const { laneId: _oldLane, ...base } = transaction;
+      if (command.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
+      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined) && (transaction.groupId ?? undefined) === (command.groupId ?? undefined) && transaction.color === command.color && transaction.description === command.description && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
+      const { laneId: _oldLane, groupId: _oldGroup, color: _oldColor, description: _oldDescription, ...base } = transaction;
       const { phases: _oldPhases, ...withoutPhases } = base;
-      const next: Transaction = { ...withoutPhases, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}), ...(phases && phases.length > 0 ? { phases } : {}) };
+      const next: Transaction = { ...withoutPhases, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}), ...(command.groupId ? { groupId: command.groupId } : {}), ...(command.color ? { color: command.color } : {}), ...(command.description !== undefined ? { description: command.description } : {}), ...(phases && phases.length > 0 ? { phases } : {}) };
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
@@ -1088,6 +1090,34 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const transactions = [...document.transactions]; transactions[index] = { ...transaction, linkedSignals };
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "transactionGroup.create": {
+      const group = command.group;
+      if (!isStableId(group.id) || !group.name.trim() || !Number.isInteger(group.order) || group.order < 0 || (document.transactionGroups ?? []).some((item) => item.id === group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.group", "Transaction Group must have a unique stable ID, name, and order.");
+      return { ok: true, document: { ...document, transactionGroups: [...(document.transactionGroups ?? []), group] }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transactionGroup.rename": {
+      const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
+      if (index < 0 || !command.name.trim()) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist or has an empty name.");
+      if (groups[index]!.name === command.name) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
+      groups[index] = { ...groups[index]!, name: command.name }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transactionGroup.update": {
+      const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
+      if (index < 0 || !command.name.trim() || !Number.isInteger(command.order) || command.order < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group update is invalid.");
+      groups[index] = { id: command.groupId, name: command.name, order: command.order, ...(command.color ? { color: command.color } : {}) }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transactionGroup.delete": {
+      const groups = document.transactionGroups ?? []; if (!groups.some((item) => item.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
+      const transactions = document.transactions.map((item) => item.groupId === command.groupId ? (({ groupId: _removed, ...rest }) => rest)(item) : item);
+      return { ok: true, document: { ...document, transactionGroups: groups.filter((item) => item.id !== command.groupId), transactions }, changeSet: { transactionSemantics: transactions.filter((item, i) => item !== document.transactions[i]).map((item) => item.id) }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transaction.moveToGroup": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId); const transaction = document.transactions[index];
+      if (!transaction || (command.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === command.groupId))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction or Group does not exist.");
+      if (transaction.groupId === command.groupId) return fail("no-op", "NO_OP", "$", "Transaction is already in this Group.");
+      const transactions = [...document.transactions]; transactions[index] = command.groupId === undefined ? (({ groupId: _removed, ...rest }) => rest)(transaction) : { ...transaction, groupId: command.groupId };
+      return { ok: true, document: { ...document, transactions }, changeSet: { transactionSemantics: [transaction.id] }, inverseChangeSet: { transactionSemantics: [transaction.id] } };
     }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);

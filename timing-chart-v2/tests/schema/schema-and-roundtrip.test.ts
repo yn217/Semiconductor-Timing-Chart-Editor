@@ -16,6 +16,14 @@ import { canonicalFixture } from "../fixtures/canonical.js";
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
 describe("canonical v2 schema and roundtrip", () => {
+  it("round-trips Transaction Groups and semantic Transaction presentation fields", () => {
+    const document = clone(canonicalFixture());
+    const groupId = "txn_group_roundtrip";
+    document.transactionGroups = [{ id: groupId as never, name: "Transfers", color: "#123456", order: 2 }];
+    document.transactions = [{ id: "txn_roundtrip" as never, name: "Read", start: 1, end: 3, groupId: groupId as never, color: "#abcdef", description: "payload" }];
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    expect(parseDocument(serializeCanonicalDocument(document)).document).toEqual(document);
+  });
   it("exposes a compiled Draft 2020-12 schema and deterministic Save/Open/Save", () => {
     expect(canonicalSchema.$schema).toBe("https://json-schema.org/draft/2020-12/schema");
     const original = canonicalFixture();

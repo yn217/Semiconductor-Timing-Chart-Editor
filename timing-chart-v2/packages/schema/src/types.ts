@@ -7,6 +7,7 @@ export type RowId = SignalId | SpacerId;
 export type AnnotationId = StableId<"annotation">;
 export type AnnotationGroupId = StableId<"annotationGroup">;
 export type TransactionId = StableId<"transaction">;
+export type TransactionGroupId = StableId<"transactionGroup">;
 export type BookmarkId = StableId<"bookmark">;
 export type TimeGroupId = StableId<"time-group">;
 export type LabelAnchorId = StableId<"label-anchor">;
@@ -276,6 +277,7 @@ export interface TimeGroup {
 }
 
 export interface TransactionPhase { readonly name: string; readonly start: number; readonly end: number }
+export interface TransactionGroup { readonly id: TransactionGroupId; readonly name: string; readonly color?: string; readonly order: number }
 
 export interface Transaction {
   readonly id: TransactionId;
@@ -287,6 +289,9 @@ export interface Transaction {
   readonly phases?: readonly TransactionPhase[];
   readonly laneId?: string;
   readonly linkedSignals?: readonly SignalId[];
+  readonly groupId?: TransactionGroupId;
+  readonly color?: string;
+  readonly description?: string;
   readonly category?: string;
   readonly style?: JsonObject;
   readonly metadata?: JsonObject;
@@ -330,6 +335,7 @@ export interface CanonicalDocument {
   readonly legend: Legend;
   readonly layout: Layout;
   readonly transactions: readonly Transaction[];
+  readonly transactionGroups?: readonly TransactionGroup[];
   readonly constraints: readonly Constraint[];
   readonly checkSettings: CheckSettings;
 }

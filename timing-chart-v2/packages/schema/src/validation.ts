@@ -251,6 +251,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   document.annotations.forEach((item, index) => registerId(item.id, `$.annotations[${index}].id`, "annotation"));
   (document.annotationGroups ?? []).forEach((item, index) => registerId(item.id, `$.annotationGroups[${index}].id`, "annotationGroup"));
   document.transactions.forEach((item, index) => registerId(item.id, `$.transactions[${index}].id`, "transaction"));
+  (document.transactionGroups ?? []).forEach((item, index) => registerId(item.id, `$.transactionGroups[${index}].id`, "transaction-group"));
   document.bookmarks.forEach((item, index) => registerId(item.id, `$.bookmarks[${index}].id`, "bookmark"));
   document.timeGroups.forEach((item, index) => registerId(item.id, `$.timeGroups[${index}].id`, "time-group"));
   document.timeline.labelAnchors.forEach((item, index) => registerId(item.id, `$.timeline.labelAnchors[${index}].id`, "label-anchor"));
@@ -259,6 +260,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   if (document.timeline.end !== document.timeline.cycleCount) problems.push(problem("TIMELINE_END_MISMATCH", "$.timeline.end", "Canonical timeline end must equal cycleCount."));
 
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
+  const transactionGroups = new Map((document.transactionGroups ?? []).map((group) => [group.id, group]));
   const spacerOwners = new Map<string, string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => [spacer.id, group.id] as const)));
   const spacers = new Set(spacerOwners.keys());
   const renderableRows = new Set<string>([...signals.keys(), ...spacers]);
@@ -388,6 +390,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     transaction.linkedSignals?.forEach((signalId, signalIndex) => {
       if (!signals.has(signalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals[${signalIndex}]`, `Signal '${signalId}' does not exist.`, transaction.id));
     });
+    if (transaction.groupId !== undefined && !transactionGroups.has(transaction.groupId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].groupId`, `Transaction Group '${transaction.groupId}' does not exist.`, transaction.id));
   });
 
   const legendEntryIds = new Set<string>();

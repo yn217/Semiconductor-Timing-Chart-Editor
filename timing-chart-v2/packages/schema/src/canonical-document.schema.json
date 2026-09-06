@@ -74,6 +74,10 @@
       "type": "array",
       "items": { "$ref": "#/$defs/transaction" }
     },
+    "transactionGroups": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/transactionGroup" }
+    },
     "constraints": {
       "type": "array",
       "items": { "$ref": "#/$defs/constraint" }
@@ -572,6 +576,9 @@
           }
         },
         "laneId": { "type": "string", "minLength": 1 },
+        "groupId": { "$ref": "#/$defs/stableId" },
+        "color": { "type": "string", "minLength": 1 },
+        "description": { "type": "string" },
         "linkedSignals": {
           "type": "array",
           "uniqueItems": true,
@@ -581,6 +588,17 @@
         "style": { "$ref": "#/$defs/jsonObject" },
         "metadata": { "$ref": "#/$defs/jsonObject" },
         "links": { "$ref": "#/$defs/jsonObject" }
+      }
+    },
+    "transactionGroup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "order"],
+      "properties": {
+        "id": { "$ref": "#/$defs/stableId" },
+        "name": { "type": "string", "minLength": 1 },
+        "color": { "type": "string", "minLength": 1 },
+        "order": { "type": "integer", "minimum": 0 }
       }
     },
     "constraint": {
