@@ -205,7 +205,18 @@ export class AnnotationInteractionOwner {
   };
 
   cancel = (): void => {
-    if (this.#drag) for (const owner of this.#drag.owners.values()) owner.style.translate = "";
+    const drag = this.#drag;
+    if (drag) for (const owner of drag.owners.values()) owner.style.translate = "";
+    // #421: an endpoint-field drag's preview is rendered via
+    // `renderer.updateOverlays` against a draft (uncommitted) document, not
+    // a CSS transform -- clearing `owner.style.translate` above (a no-op
+    // for this drag mode) does not undo that. Re-render from the real,
+    // still-canonical document so a cancelled drag leaves no visible trace
+    // of the discarded preview (Canonical/History/Dirty were never
+    // touched by the preview in the first place, but the DOM must match).
+    if (drag?.field && !drag.label) {
+      this.context.renderer.updateOverlays(projectAnnotationOverlays(this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale));
+    }
     this.#drag = undefined;
     this.context.renderer.updateSnapGuide();
     delete this.context.rendererHost.dataset.snapKind;

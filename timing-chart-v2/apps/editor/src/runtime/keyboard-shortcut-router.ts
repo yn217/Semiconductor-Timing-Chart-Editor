@@ -1,4 +1,4 @@
-import { mayRouteGlobalShortcut } from "@timing-chart-v2/ui";
+import { keyboardScope, mayRouteGlobalShortcut } from "@timing-chart-v2/ui";
 
 export type GlobalShortcutContext = Readonly<{
   /** True while a pointer/drag gesture owns input (Range/Annotation/Transaction
@@ -22,12 +22,27 @@ const CONTROL_SHORTCUTS: Readonly<Record<string, string>> = {
  * shared UiCommandRegistry. Holds no semantic implementation of its own --
  * every branch either dispatches a named UI command or delegates to the
  * caller's `cancel`. `mayRouteGlobalShortcut` (typing/IME/dialog/gesture
- * focus classification) gates every branch below Escape so native
- * text-editing behavior and IME composition are never intercepted.
+ * focus classification) gates every branch except Escape, which gets its
+ * own narrower check (still excludes native text editing/an open dialog,
+ * but -- unlike every other branch -- is explicitly allowed to fire during
+ * an active gesture, since cancelling that gesture is Escape's job) so
+ * native text-editing behavior and IME composition are never intercepted.
  * Returns whether the event was handled (callers should stop there and not
  * fall through to widget-specific keyboard handling, e.g. Annotation nudge). */
 export function routeGlobalShortcut(event: KeyboardEvent, context: GlobalShortcutContext): boolean {
-  if (!(event.target instanceof Element) || !mayRouteGlobalShortcut(event, context.isGestureActive())) return false;
+  if (!(event.target instanceof Element)) return false;
+  // #421: Escape must still cancel an in-progress Annotation drag (the
+  // gesture `mayRouteGlobalShortcut` exists to protect from -- Undo/Redo/
+  // Copy/Paste/Delete must never fire mid-gesture) -- it's the one global
+  // shortcut whose whole purpose IS to end a gesture, so it gets its own,
+  // narrower gate: never during native text editing or an open dialog,
+  // but explicitly allowed during the "gesture" scope that blocks every
+  // other branch below.
+  if (event.key === "Escape" && !event.isComposing) {
+    const scope = keyboardScope(event.target, false);
+    if (scope !== "editable" && scope !== "modal") { context.cancel(); return true; }
+  }
+  if (!mayRouteGlobalShortcut(event, context.isGestureActive())) return false;
   if (event.ctrlKey || event.metaKey) {
     const key = event.key.toLowerCase();
     if (key === "z") {
@@ -45,10 +60,6 @@ export function routeGlobalShortcut(event: KeyboardEvent, context: GlobalShortcu
   if (event.key === "Delete") {
     event.preventDefault();
     context.execute("selection.delete");
-    return true;
-  }
-  if (event.key === "Escape") {
-    context.cancel();
     return true;
   }
   return false;

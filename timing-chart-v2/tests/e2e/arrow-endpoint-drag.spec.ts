@@ -72,3 +72,51 @@ test("dragging the Arrow end handle moves only the end anchor; the start handle 
   const undoEndBox = (await endHandle.boundingBox())!;
   expect(Math.abs(undoEndBox.x - endBox.x)).toBeLessThan(2);
 });
+
+test("Escape during an endpoint drag discards the preview -- both endpoints stay exactly as committed, zero Canonical/History/Dirty delta", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  const waveLayer = surface.locator("[data-role='stable-waveform-surface']");
+  const waveBox = (await waveLayer.boundingBox())!;
+  const requestBox = (await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_request']").boundingBox())!;
+  const readyBox = (await surface.locator("[data-role='timing-row'][data-row-id='sig_cycle_ready']").boundingBox())!;
+  const cycle3 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='3']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle5 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").evaluate((element) => (element as HTMLElement).style.left));
+  const cycle7 = Number.parseFloat(await page.getByTestId("cycle-ruler").locator("[data-cycle='7']").evaluate((element) => (element as HTMLElement).style.left));
+
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByRole("button", { name: "Pick arrow endpoints" }).click();
+  await page.mouse.click(waveBox.x + cycle3, requestBox.y + requestBox.height / 2);
+  await page.mouse.click(waveBox.x + cycle5, readyBox.y + readyBox.height / 2);
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+
+  const owner = surface.locator("[data-annotation-type='arrow']");
+  const startHandle = owner.locator("[data-role='annotation-handle'][data-annotation-field='from']");
+  const endHandle = owner.locator("[data-role='annotation-handle'][data-annotation-field='to']");
+  const beforeStartBox = (await startHandle.boundingBox())!;
+  const beforeEndBox = (await endHandle.boundingBox())!;
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeDirty = await page.getByTestId("dirty-status").textContent();
+
+  await page.mouse.move(beforeEndBox.x + beforeEndBox.width / 2, beforeEndBox.y + beforeEndBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(waveBox.x + cycle7, beforeEndBox.y + beforeEndBox.height / 2, { steps: 4 });
+  // Confirm the preview actually moved the end handle before cancelling,
+  // so this test would catch a no-op Escape handler too.
+  const midDragEndBox = (await endHandle.boundingBox())!;
+  expect(midDragEndBox.x - beforeEndBox.x).toBeGreaterThan(20);
+
+  await page.keyboard.press("Escape");
+  await page.mouse.up();
+
+  const afterEndBox = (await endHandle.boundingBox())!;
+  expect(Math.abs(afterEndBox.x - beforeEndBox.x), JSON.stringify({ afterEndBox, beforeEndBox })).toBeLessThan(2);
+  const afterStartBox = (await startHandle.boundingBox())!;
+  expect(Math.abs(afterStartBox.x - beforeStartBox.x)).toBeLessThan(2);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(beforeDirty!);
+});
