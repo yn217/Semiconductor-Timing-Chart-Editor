@@ -170,6 +170,7 @@ export function MinimalCycleView() {
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
     viewMode, setViewMode,
+    activeContext,
     signalSplitEnabled, setSignalSplitEnabled,
     signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
     density, setDensity,
@@ -2224,6 +2225,7 @@ export function MinimalCycleView() {
       onRefreshChecks={() => { application.validateDocument(snapshot.document); publishStateRef.current(); }}
       onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
        viewMode={viewMode}
+       activeContext={activeContext}
        density={density}
        workspacePreset={workspacePreset}
        onDensityChange={setDensity}

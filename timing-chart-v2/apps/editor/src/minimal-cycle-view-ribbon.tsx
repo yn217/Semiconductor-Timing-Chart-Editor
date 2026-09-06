@@ -11,6 +11,8 @@ import { DsIconBox, DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggl
 import { RibbonIcon } from "./ribbon-icon.js";
 import { RibbonGroup } from "./ribbon-group.js";
 import type { RibbonGroupSpec } from "./ribbon-schema.js";
+import { composeRibbon } from "./ribbon-composition.js";
+import type { ActiveContext } from "./workspace/use-workspace-ui-state.js";
 import { InsertSemanticIcon } from "./insert-semantic-icon.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { ReviewWorkflow } from "./review-workflow.js";
@@ -33,8 +35,8 @@ function valueSignal(id: string, name: string, role: SignalRole, values: ValueSi
 
 export { Ribbon };
 
-function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, onToggleSignalSplit, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, arrowPickStatus, selectedSignalId, selectedInsertionSignalId, selectedGroupId, selectedAnnotation, selectedAnnotationIds, selectedCommentRow, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, onDiagnostic, viewMode, density, workspacePreset, onDensityChange, onWorkspacePresetChange, onResetLayout, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, onSignalCreated, onGroupCreated, onSpacerCreated, onTransactionCreated, onRange, onCommand, onCommandBatch, onViewIntent, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties, onOpenBookmarks, onOpenAIAssistant, aiBridgeStatus }: {
-  readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly signalSplitEnabled: boolean; readonly onToggleSignalSplit: () => void; readonly showSignalNames: boolean; readonly showRoles: boolean; readonly showAnnotations: boolean; readonly showTransactions: boolean; readonly showGroupBackground: boolean; readonly signalTreeVisible: boolean; readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly selectedInsertionSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedAnnotationIds: ReadonlySet<AnnotationId>; readonly selectedCommentRow: CommentRow | undefined; readonly problemsCount: number; readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigateProblem: (path: string) => void; readonly onRefreshChecks: () => void; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly density: DensityMode; readonly workspacePreset: WorkspacePreset; readonly onDensityChange: (density: DensityMode) => void; readonly onWorkspacePresetChange: (preset: WorkspacePreset) => void; readonly onResetLayout: () => void; readonly selectedTransactionId: TransactionId | undefined;
+function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, onToggleSignalSplit, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, arrowPickStatus, selectedSignalId, selectedInsertionSignalId, selectedGroupId, selectedAnnotation, selectedAnnotationIds, selectedCommentRow, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, onDiagnostic, viewMode, activeContext, density, workspacePreset, onDensityChange, onWorkspacePresetChange, onResetLayout, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, onSignalCreated, onGroupCreated, onSpacerCreated, onTransactionCreated, onRange, onCommand, onCommandBatch, onViewIntent, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties, onOpenBookmarks, onOpenAIAssistant, aiBridgeStatus }: {
+  readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly signalSplitEnabled: boolean; readonly onToggleSignalSplit: () => void; readonly showSignalNames: boolean; readonly showRoles: boolean; readonly showAnnotations: boolean; readonly showTransactions: boolean; readonly showGroupBackground: boolean; readonly signalTreeVisible: boolean; readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly selectedInsertionSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedAnnotationIds: ReadonlySet<AnnotationId>; readonly selectedCommentRow: CommentRow | undefined; readonly problemsCount: number; readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigateProblem: (path: string) => void; readonly onRefreshChecks: () => void; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly activeContext: ActiveContext; readonly density: DensityMode; readonly workspacePreset: WorkspacePreset; readonly onDensityChange: (density: DensityMode) => void; readonly onWorkspacePresetChange: (preset: WorkspacePreset) => void; readonly onResetLayout: () => void; readonly selectedTransactionId: TransactionId | undefined;
   readonly clipboardStatus: string; readonly clipboardAvailable: boolean; readonly hasSelectedSignal: boolean; readonly hasSelectedClipboard: boolean; readonly hasSelectedEntity: boolean; readonly hasDeletableSelection: boolean; readonly canRenameSelection: boolean; readonly canMoveUp: boolean; readonly canMoveDown: boolean; readonly canShowSelection: boolean; readonly canHideSelection: boolean;
   // Same "select the thing that was just created" contract the Left Tree's
   // own +Add button already follows: without it, Ribbon Insert leaves
@@ -191,7 +193,29 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     <strong>View</strong><button type="button" onClick={() => { onZoom(-0.25); setHomeOverflowOpen(false); }}>Zoom −</button><button type="button" onClick={() => { onZoom(0.25); setHomeOverflowOpen(false); }}>Zoom +</button><button type="button" onClick={() => { onSetZoom(0.5); setHomeOverflowOpen(false); }}>Zoom 50%</button><button type="button" onClick={() => { onSetZoom(1); setHomeOverflowOpen(false); }}>Zoom 100%</button><button type="button" onClick={() => { onSetZoom(1.5); setHomeOverflowOpen(false); }}>Zoom 150%</button><button type="button" onClick={() => { onSetZoom(2); setHomeOverflowOpen(false); }}>Zoom 200%</button><button type="button" onClick={() => { onSetZoom(4); setHomeOverflowOpen(false); }}>Zoom 400%</button><button type="button" onClick={() => { onSetZoom(8); setHomeOverflowOpen(false); }}>Zoom 800%</button><button type="button" onClick={() => { onFitSelection(); setHomeOverflowOpen(false); }}>Fit Selection</button><button type="button" onClick={() => { onFitAll(); setHomeOverflowOpen(false); }}>Fit All</button><button type="button" onClick={() => { onToggleGrid(); setHomeOverflowOpen(false); }}>Grid</button><button type="button" onClick={() => { onToggleSnap(); setHomeOverflowOpen(false); }}>Snap</button><button type="button" onClick={() => { onToggleRuler(); setHomeOverflowOpen(false); }}>Ruler</button><button type="button" onClick={() => { onToggleMinimap(); setHomeOverflowOpen(false); }}>MiniMap</button>
     <strong>Document</strong><button type="button" role="menuitem" onClick={() => { onProperties(); setHomeOverflowOpen(false); }}>Document Properties</button><button type="button" role="menuitem" onClick={() => { onShowProblems(); setHomeOverflowOpen(false); }}>Problems</button><button type="button" role="menuitem" onClick={() => { onExport(); setHomeOverflowOpen(false); }}>SVG / PNG / PDF</button><strong>Timeline</strong><button type="button" role="menuitem" onClick={() => { onOpenTimeline(); setHomeOverflowOpen(false); }}>Timeline Editor</button>
   </div>, window.document.body) : null;
-  const homeGroups: readonly RibbonGroupSpec[] = [
+  // #406: Home Ribbon's group set now depends on ActiveContext (#404/#405)
+  // rather than always showing every group regardless of Cycle/Transaction
+  // ViewMode. Time/Layout (Cycle-specific row/timeline-range commands) only
+  // appear for the Signal context.
+  //
+  // Scoped decision: the issue's own "Required behavior" table lists
+  // Transaction (Create/Duplicate) as a Transaction-context-only group,
+  // which would hide it while in Cycle ViewMode. That conflicts with an
+  // established, already-tested product workflow -- creating a Transaction
+  // from the Ribbon while still in Cycle view (transaction-export.spec.ts's
+  // `createTransaction` helper and every test built on it) -- so Transaction
+  // stays in the common bucket here rather than being hidden per the
+  // issue's literal text. Flagging this rather than silently breaking that
+  // workflow or reinterpreting the issue unilaterally either way. Delete/
+  // Rename for a selected Transaction already ride on the common Edit
+  // group's existing hasDeletableSelection/canRenameSelection gating (both
+  // already support a selected Transaction). Phase/Lane/Linked-Signals
+  // editing already has a real, always-reachable entry point independent
+  // of the Ribbon (the Bottom "Transaction" tab, visible in every
+  // ViewMode) -- not reimplemented as separate Ribbon buttons here to
+  // avoid a second, divergent entry point to the same TransactionEditor
+  // state.
+  const commonRibbonGroups: readonly RibbonGroupSpec[] = [
     {
       id: "file", majorGroup: "File", caption: "File", items: [
         { kind: "button", id: "new", icon: "i-new", label: "New", v1Label: "新規", onClick: onNew },
@@ -221,29 +245,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       ],
     },
     {
-      id: "timeline", majorGroup: "Time", caption: "Time", items: [
-        { kind: "button", id: "row-up", icon: "i-up", label: "Up", ariaLabel: "Move selected row up", onClick: onMoveUp, disabled: !canMoveUp },
-        { kind: "button", id: "row-down", icon: "i-down", label: "Down", ariaLabel: "Move selected row down", onClick: onMoveDown, disabled: !canMoveDown },
-        { kind: "button", id: "cycle-insert", icon: "i-plus", label: "Cycle Insert", ariaLabel: "Insert one cycle", onClick: () => onCommand({ id: nextCommandId("timeline_insert_one"), type: "timeline.insert", at: range.start, count: 1 }) },
-        { kind: "button", id: "cycle-delete", icon: "i-delete", label: "Cycle Delete", ariaLabel: "Delete one cycle", onClick: () => onCommand({ id: nextCommandId("timeline_delete_one"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + 1) }) },
-        { kind: "button", id: "n-cycle-insert", icon: "i-plus", label: "N Cycle Insert", ariaLabel: `Insert ${compactCycleCount} cycles`, onClick: () => onCommand({ id: nextCommandId("timeline_insert_many"), type: "timeline.insert", at: range.start, count: compactCycleCount }) },
-        { kind: "button", id: "n-cycle-delete", icon: "i-delete", label: "N Cycle Delete", ariaLabel: `Delete ${compactCycleCount} cycles`, onClick: () => onCommand({ id: nextCommandId("timeline_delete_many"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + compactCycleCount) }) },
-      ],
-    },
-    {
-      id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
-        { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
-        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", onClick: duplicateTransaction, disabled: !selectedTransactionId },
-      ],
-    },
-    {
-      id: "layout", majorGroup: "Layout", caption: "Layout", items: [
-        { kind: "button", id: "edit-interval", icon: "i-align-interval", label: "Edit Interval", ariaLabel: "Open Timeline interval editor", title: "Open Timeline to edit the selected interval.", onClick: onOpenTimeline },
-        { kind: "button", id: "time-group", icon: "i-group", label: "Create Time Group", ariaLabel: "Create Time Group", title: "Create a Time Group for the selected timeline range.", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
-        { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Normalize Spacing", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
-      ],
-    },
-    {
       id: "view", majorGroup: "Zoom", caption: "Zoom", items: [
         { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", v1Label: "ズーム−", onClick: () => onZoom(-0.25) },
         { kind: "button", id: "zoom-reset", icon: "i-zoom-reset", label: "100%", ariaLabel: "Reset zoom to 100%", onClick: () => onSetZoom(1) },
@@ -260,7 +261,39 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "toggle", id: "ruler", label: "Ruler", testId: "home-ruler-toggle", checked: rulerEnabled, onChange: onToggleRuler },
       ],
     },
+    {
+      id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
+        { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
+        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", onClick: duplicateTransaction, disabled: !selectedTransactionId },
+      ],
+    },
   ];
+  const signalRibbonGroups: readonly RibbonGroupSpec[] = [
+    {
+      id: "timeline", majorGroup: "Time", caption: "Time", items: [
+        { kind: "button", id: "row-up", icon: "i-up", label: "Up", ariaLabel: "Move selected row up", onClick: onMoveUp, disabled: !canMoveUp },
+        { kind: "button", id: "row-down", icon: "i-down", label: "Down", ariaLabel: "Move selected row down", onClick: onMoveDown, disabled: !canMoveDown },
+        { kind: "button", id: "cycle-insert", icon: "i-plus", label: "Cycle Insert", ariaLabel: "Insert one cycle", onClick: () => onCommand({ id: nextCommandId("timeline_insert_one"), type: "timeline.insert", at: range.start, count: 1 }) },
+        { kind: "button", id: "cycle-delete", icon: "i-delete", label: "Cycle Delete", ariaLabel: "Delete one cycle", onClick: () => onCommand({ id: nextCommandId("timeline_delete_one"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + 1) }) },
+        { kind: "button", id: "n-cycle-insert", icon: "i-plus", label: "N Cycle Insert", ariaLabel: `Insert ${compactCycleCount} cycles`, onClick: () => onCommand({ id: nextCommandId("timeline_insert_many"), type: "timeline.insert", at: range.start, count: compactCycleCount }) },
+        { kind: "button", id: "n-cycle-delete", icon: "i-delete", label: "N Cycle Delete", ariaLabel: `Delete ${compactCycleCount} cycles`, onClick: () => onCommand({ id: nextCommandId("timeline_delete_many"), type: "timeline.delete", start: range.start, end: Math.min(document.timeline.cycleCount, range.start + compactCycleCount) }) },
+      ],
+    },
+    {
+      id: "layout", majorGroup: "Layout", caption: "Layout", items: [
+        { kind: "button", id: "edit-interval", icon: "i-align-interval", label: "Edit Interval", ariaLabel: "Open Timeline interval editor", title: "Open Timeline to edit the selected interval.", onClick: onOpenTimeline },
+        { kind: "button", id: "time-group", icon: "i-group", label: "Create Time Group", ariaLabel: "Create Time Group", title: "Create a Time Group for the selected timeline range.", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
+        { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Normalize Spacing", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
+      ],
+    },
+  ];
+  // Transaction group now lives in commonRibbonGroups (see the scoped-
+  // decision comment above) -- no Transaction-only group exists yet, but
+  // the bucket stays wired through composeRibbon so a real one (Phase/
+  // Lane-specific commands, say) can be added later without re-threading
+  // the ActiveContext plumbing again.
+  const transactionRibbonGroups: readonly RibbonGroupSpec[] = [];
+  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext });
   // Arrange group targets: the current multi-selection if there is one,
   // otherwise the single selected Annotation, otherwise nothing (every
   // Arrange handler stays undefined -> ArrangeGroup renders disabled).
