@@ -3,43 +3,83 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-06 17:56 JST
+# Last reconciled by ChatGPT: 2026-09-07 JST
 #
 # Cross-agent ownership: .codex/AGENT_ASSIGNMENT.md
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 #
-# Observed product state:
-#   main = origin/main = 4956eab (user-reported)
-#   worktree clean
-#   #412 completed/closed
-#   #413 completed/closed
-#   Claude is working the GUI/product dependency lane beginning with #414
-#   #415 remains dependency-waiting on #414
+# Observed product state at reconciliation:
+#   latest observed main commit: 831611c fix(transaction): validate links and phase commands atomically
+#   #430 Transaction Semantic Core completed/closed
+#   #432 Marker vertical-span Core completed/closed
+#   #433 Highlight Cycle-Snap / Free Core remains open
+#   #414 Time Outline GUI remains open; #415 remains dependency-waiting on #414
+#   Transaction product work is split into #450-#455 under parent #429
 #
-# Parsing rule: exactly one executable Issue number per non-comment line.
+# Parsing rule: exactly one executable GitHub Issue number per non-comment line.
+# GUI/product, parent/acceptance, dependency-waiting and completed Issues remain comments only.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 # STATUS: ACTIVE
 #
-# 1) Transaction Core foundation for #429.
-# Complete one production semantic owner for Transaction create/update/delete/duplicate,
-# Phase CRUD/validation, linked Signal semantics, atomic History and persistence.
-# NO Ribbon/Bottom/Inspector/direct-manipulation product GUI.
-430
-
-# 2) Marker vertical-span Core foundation for #424.
-# Stable semantic row-span model, migration/validation, commands, Undo/Redo, Save/Open.
-# NO resize handles/Inspector/visual styling.
-432
-
-# 3) Highlight Cycle-Snap / Free Core foundation for #419.
+# 1) Highlight Cycle-Snap / Free Core foundation for #419.
 # Persisted semantic positioning modes, validation, commands, Undo/Redo, Save/Open.
 # Free mode must NOT store screen pixels.
 # NO Inspector/pointer/UI work.
 433
+
+# 2) Transaction model extension after completed #430.
+# Implement only the residual shared model/semantic owner required by #450:
+# Transaction Group, group color inheritance/override policy, Lane identity/semantics,
+# description/comment and related validation/persistence/Undo/Redo.
+# DO NOT re-implement #430 Create/Delete/Phase/Link core that is already completed.
+450
+
+# 3) Transaction Time Scale / Geometry Core.
+# Establish Transaction Cycle semantic unit and one shared TC <-> source-clock/time mapping owner.
+# Ruler/bar/phase/snap/zoom/fit consumers must use the shared transform; no independent pixels-per-cycle.
+# Core/geometry only; no broad Transaction GUI redesign.
+455
+
+# 4) Annotation Group delete lifecycle bug.
+# Deleting grouped Annotation must update membership atomically; do not weaken validation.
+448
+
+# 5) Marker vertical-span stable reference registration/performance.
+# Register Marker span start/end Signal references in shared canonical reference registry and make
+# Signal-delete policy deterministic. Remove O(rows * signals) resolution pattern.
+447
+
+# 6) Migration/schema contract hardening.
+# Collision-safe generated migration IDs and exact TypeScript/JSON Schema canonical required-field parity.
+435
+
+# 7) Import robustness / structural complexity limits.
+# Bound JSON depth/node complexity before recursive migration/validation; deterministic atomic rejection.
+434
+
+# 8) Timeline Move/Duplicate Range performance.
+# Eliminate duration-proportional interval enumeration and O(N^2) Signal stable-ID lookup.
+442
+
+# 9) TimeGroup Duplicate ownership bug.
+# Clone/remap boundary-owned resume LabelAnchors when a complete TimeGroup subtree is duplicated.
+445
+
+# 10) TimeGroup range-edit hierarchy re-resolution.
+# Re-resolve parent/enclosed children deterministically when Start/End changes.
+446
+
+# 11) TimeGroup Delete/Ungroup owned resume-anchor lifecycle.
+# Owned resume LabelAnchor must be removed atomically with its TimeGroup unless explicit conversion exists.
+449
+
+# 12) Folded-source export mapping.
+# Remove implicit display-cycle-0 fallback and use explicit shared folded-source projection policy.
+444
 
 # ============================================================================
 # HIGH-PRIORITY FUTURE CODEX LANE — DEPENDENCY WAIT
@@ -48,18 +88,10 @@
 # Owner: Codex
 # Dependency: #414 completed/closed on main.
 #
-# When #414 completes, reconcile this control file. Preferred priority:
-# - finish the currently in-progress bounded Codex Issue safely;
-# - then promote #415 ahead of remaining lower-priority independent queue entries,
-#   because #415 unblocks Claude #416 and the Time Outline closure chain.
-#
-# #415 scope:
-# - effective nested fold resolution
-# - shared DisplayTimeMapping
-# - Axis Break mapping/geometry owner
-# - Ruler/Signal/Grid/Playhead/Range/Annotation/Transaction/Bookmark shared mapping
-# - Clock/fold semantics and performance
-# - no final Ribbon/product closure
+# When #414 completes, reconcile this file before continuing lower-priority work.
+# Preferred policy:
+# - finish any currently in-progress bounded Codex Issue safely;
+# - then promote #415 near the front because it unblocks Claude #416 and Time Outline closure.
 #
 # Time Outline chain:
 #   DONE  Codex  #412 -> #413
@@ -68,21 +100,35 @@
 #   THEN  Claude #416
 #
 # ============================================================================
-# CROSS-AGENT PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
+# TRANSACTION GUI / INTEGRATION LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
 # ============================================================================
-# Claude/product owners:
+# Claude/Astra GUI/product owners:
+#   #451 Transaction left Tree
+#   #453 Transaction Bottom Table
+#   #454 Transaction Inspector
+#
+# Integration/dependency hold:
+#   #452 Central Lane workspace — phase rendering has partial implementation already;
+#        full Group/Lane stacking/color/direct-manipulation integration should follow #450/#455.
+#
+# Parent/final acceptance only:
+#   #429 Transaction Mode production completion parent
+#   #397 Transaction/Split sample-driven final acceptance
+#
+# Codex must not implement a parallel Tree/Bottom/Inspector/central-lane product GUI merely to consume queue.
+# A narrowly isolated Core/runtime defect discovered by those GUI Issues may be split into a concrete Codex child.
+#
+# ============================================================================
+# OTHER CROSS-AGENT PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
+# ============================================================================
 #   #414 Time Outline GUI
 #   #416 Time Outline final Ribbon/export/E2E closure
-#   #429 Transaction Mode product completion
 #   #424 Marker vertical-span GUI/product completion
 #   #419 Highlight Snap/Free GUI/product completion
 #   #431 current UX/Product Completion Epic
 #   #426 Bottom Panel consolidation
 #   #403-#409 Contextual Ribbon / Cycle-Transaction Split
-#   #397 final Transaction/Split sample-driven acceptance
-#
-# Codex children #430/#432/#433 intentionally split out only Core/Data semantics.
-# They do NOT transfer the parent GUI/product Issues to Codex.
+#   #436-#441 Ribbon/GUI visual architecture work
 #
 # ============================================================================
 # EXTERNAL / PRODUCT HOLD
@@ -96,6 +142,7 @@
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely to generate tests/audits:
+#   #430 #432
 #   #412 #413
 #   #410 #399 #398 #237 #417 #428 #272
 #   #363 #269 #281 #372 #366 #369
@@ -105,6 +152,7 @@
 # OPERATING POLICY — IMPLEMENTATION FIRST
 # ============================================================================
 # If current main already satisfies an Issue, collect evidence and close it; do not manufacture work.
+# Before starting each queue entry, re-read the live GitHub Issue and current main to avoid stale scope.
 # Prefer bounded production implementation before broad audit/test-only work.
 # GitHub Actions availability is not a global blocker; use local TypeScript/gates/unit/Chromium/
 # git diff --check as applicable.
@@ -125,7 +173,8 @@
 # NORMAL EXECUTION LOOP
 # ============================================================================
 # sync latest origin/main
-# -> inspect Issue and existing production owner
+# -> inspect live Issue and existing production owner
+# -> verify dependency/ownership still valid
 # -> reproduce/audit concrete gap
 # -> bounded production implementation
 # -> focused tests
