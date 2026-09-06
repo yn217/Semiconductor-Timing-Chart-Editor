@@ -304,9 +304,24 @@
 
 .editor-shell .ribbon-tabs .view-mode span { color: #172033; font-size: 11px; font-weight: 600; }
 
-.editor-shell .ribbon-tabs .view-mode button { height: 24px; padding: 0 10px; }
+/* #401: same root cause as #391's fix just below in bottom-editor.css --
+   an unstyled <button> takes its default text color from the UA's
+   `ButtonText` system color rather than inheriting from its parent, and
+   under `color-scheme: dark` (responsive.css, prefers-color-scheme: dark)
+   that system default becomes near-white, rendering white-on-white
+   against this always-light control. Every state below sets its own
+   explicit color/background/border so none of them depend on that system
+   default; border stays 1px in every state (only its color changes) so
+   selected/unselected/hover/focus never shifts this control's own size. */
+.editor-shell .ribbon-tabs .view-mode button { height: 24px; padding: 0 10px; color: #33455c; background: #fff; border: 1px solid #bdc8d6; }
 
-.editor-shell .ribbon-tabs .view-mode button.active { background: #3478f6; color: #fff; }
+.editor-shell .ribbon-tabs .view-mode button:hover:not(.active):not(:disabled) { background: #eef4fb; border-color: #9ec2ef; color: #163756; }
+
+.editor-shell .ribbon-tabs .view-mode button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
+
+.editor-shell .ribbon-tabs .view-mode button:disabled { color: #9aa7b8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
+
+.editor-shell .ribbon-tabs .view-mode button.active { background: #3478f6; color: #fff; border-color: #1675d1; }
 
 .editor-shell .home-display-toggles { display: grid; grid-template-columns: 65px 76px; grid-template-rows: 28px 28px; gap: 4px 7px; align-self: center; }
 
