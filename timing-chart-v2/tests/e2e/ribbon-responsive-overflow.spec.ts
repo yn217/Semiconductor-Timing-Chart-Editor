@@ -28,7 +28,7 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 1024, height: 720
       await expect(page.getByTestId("revision-status")).toHaveText(revision!);
     } else {
       await expect(ribbon.locator(".ribbon-major-group")).toHaveCount(8);
-      expect(await ribbon.locator(".ribbon-major-group").evaluateAll((groups) => groups.map((group) => group.getAttribute("data-major-group")))).toEqual(["File", "Edit", "Time", "Transaction", "Layout", "Zoom", "Display", "Options"]);
+      expect(await ribbon.locator(".ribbon-major-group").evaluateAll((groups) => groups.map((group) => group.getAttribute("data-major-group")))).toEqual(["File", "Edit", "Time", "Zoom", "Transaction", "Layout", "Display", "Options"]);
     }
   });
 }

@@ -293,7 +293,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // Lane-specific commands, say) can be added later without re-threading
   // the ActiveContext plumbing again.
   const transactionRibbonGroups: readonly RibbonGroupSpec[] = [];
-  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext });
+  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "layout", "display"]);
   // Arrange group targets: the current multi-selection if there is one,
   // otherwise the single selected Annotation, otherwise nothing (every
   // Arrange handler stays undefined -> ArrangeGroup renders disabled).

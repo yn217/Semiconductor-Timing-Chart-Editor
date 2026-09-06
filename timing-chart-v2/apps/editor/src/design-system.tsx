@@ -30,8 +30,8 @@ export function DsRibbonToggle({ checked, className, dataTestId, label, onChange
  * `.ds-ribbon-group[data-density="compact-grid"] .ds-ribbon-button` rule),
  * matching this design system's "primitive owns internal geometry, Tab
  * owns composition only" contract (#293). */
-export function DsRibbonGroup({ ariaLabel, children, className, density, label }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly density?: "compact-grid" | "compact-toggle" | undefined; readonly label: string }) {
-  return <div className={`ds-ribbon-group${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-density={density}>{children}<b>{label}</b></div>;
+export function DsRibbonGroup({ ariaLabel, children, className, density, label, externalCaption = false }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly density?: "compact-grid" | "compact-toggle" | undefined; readonly label: string; readonly externalCaption?: boolean }) {
+  return <div className={`ds-ribbon-group${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-density={density}>{children}{!externalCaption && <b>{label}</b>}</div>;
 }
 
 /** Compact captioned numeric field for a ribbon group -- the field-input

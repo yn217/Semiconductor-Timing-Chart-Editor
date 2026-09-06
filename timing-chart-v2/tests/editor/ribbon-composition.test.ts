@@ -7,6 +7,12 @@ function group(id: string): RibbonGroupSpec {
 }
 
 describe("composeRibbon (#405)", () => {
+  it("uses one declared order for common and contextual groups", () => {
+    const groups = { common: [group("file"), group("zoom")], bySignal: [group("cycle")], byTransaction: [group("transaction")] };
+    const order = ["file", "cycle", "transaction", "zoom"];
+    expect(composeRibbon(groups, { viewMode: "Cycle", activeContext: "Signal" }, order).map(g => g.id)).toEqual(["file", "cycle", "zoom"]);
+    expect(composeRibbon(groups, { viewMode: "Split", activeContext: "Transaction" }, order).map(g => g.id)).toEqual(["file", "transaction", "zoom"]);
+  });
   const groups: RibbonContextGroups = {
     common: [group("edit"), group("clipboard")],
     bySignal: [group("insert"), group("zoom")],
