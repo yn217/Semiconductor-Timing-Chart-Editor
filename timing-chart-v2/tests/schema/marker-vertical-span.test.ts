@@ -15,7 +15,7 @@ describe("Marker vertical span core", () => {
   });
 
   it("migrates legacy markers without a span as auto", () => {
-    const result = migrateV1({ formatVersion: 1, document: { title: "legacy" }, cycleView: { signalGroups: [], signals: [], annotations: [{ type: "marker", text: "legacy", cycle: 1 }] }, timeline: { cycleCount: 4 } });
+    const result = migrateV1({ formatVersion: 1, document: { title: "legacy" }, cycleView: { signalGroups: [], signals: [], annotations: [{ type: "marker", text: "legacy", anchor: { cycle: 1 } }] }, timeline: { cycleCount: 4 } });
     expect(result.document.annotations[0]?.verticalSpan).toBeUndefined();
     expect(validateCanonicalDocument(result.document)).toEqual([]);
   });
