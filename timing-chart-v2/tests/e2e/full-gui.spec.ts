@@ -732,6 +732,33 @@ test("Fit Selection is a view-only navigation action backed by ruler geometry", 
   expect(afterFitAll.localGeometryBuilds).toBe(after.localGeometryBuilds);
 });
 
+test("Fit Selection resolves source boundaries through a collapsed TimeGroup", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
+  await page.getByRole("button", { name: "Axis Break", exact: true }).click();
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await page.getByTestId("cycle-ruler").locator("[data-cycle='8']").click();
+  await expect(page.getByTestId("range-status")).toHaveText("Range: [8, 9)");
+  const before = {
+    revision: await host.getAttribute("data-canonical-revision"),
+    history: await page.getByTestId("history-status").textContent(),
+    dirty: await page.getByTestId("dirty-status").textContent(),
+  };
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Fit Selection", exact: true }).click();
+  await expect(page.getByTestId("zoom-status")).toHaveText("800%");
+  const viewport = await page.getByTestId("cycle-viewport").boundingBox();
+  const band = await page.getByTestId("range-selection-band").boundingBox();
+  expect(viewport).not.toBeNull();
+  expect(band).not.toBeNull();
+  expect(band!.x).toBeGreaterThanOrEqual(viewport!.x);
+  expect(band!.x + band!.width).toBeLessThanOrEqual(viewport!.x + viewport!.width);
+  await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
+  await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
+});
+
 test("Canvas cycle selection exposes a ruler-geometry-backed playhead without mutation", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
