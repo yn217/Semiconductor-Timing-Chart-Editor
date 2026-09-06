@@ -1,7 +1,15 @@
 import { describe, expect, it } from "vitest";
+import { parseDocument } from "../../packages/schema/src/serialization.js";
 import { parseDocument, scanJsonSyntax } from "@timing-chart-v2/schema";
 
 describe("deterministic JSON syntax diagnostics", () => {
+  it("rejects deeply nested JSON before migration walkers recurse", () => {
+    let value: unknown = { formatVersion: 2 };
+    for (let index = 0; index < 140; index += 1) value = { nested: value };
+    const result = parseDocument(JSON.stringify(value));
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.problems[0]).toMatchObject({ code: "RESOURCE_LIMIT_EXCEEDED" });
+  });
   it.each([
     ["multiline", "{\n  \"formatVersion\": 2,\n  ]", 3, 3],
     ["trailing comma", "{\"値\": [1,],\n\"formatVersion\": 2}", 1, 10],
