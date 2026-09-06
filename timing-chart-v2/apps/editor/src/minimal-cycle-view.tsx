@@ -483,6 +483,7 @@ export function MinimalCycleView() {
     });
     const provider = createWaveformSurfaceProvider({
       sessionController,
+      getDocumentEpoch: () => projectionCoordinator.currentDocumentEpoch(),
       mappingCache,
       adapter,
       geometryRegistry,
@@ -685,6 +686,7 @@ export function MinimalCycleView() {
     });
     publishState();
 
+    const initialDocumentEpoch = documentEpoch.current();
     scheduleInitialTimelineRefresh(renderer, rendererHost, {
       ruler: () => { if (active) timelineRuntime.refreshRuler(); },
       range: () => { if (active) timelineRuntime.refreshRange(timelineRangeRef.current.start, timelineRangeRef.current.end); },
@@ -694,7 +696,7 @@ export function MinimalCycleView() {
       overlays: () => { if (active) timelineRuntime.refreshOverlays(); },
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
-    });
+    }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });
 
     const upsertDiagnostic = (predicate: (item: DocumentProblem) => boolean, next: DocumentProblem | undefined) => {
       setRuntimeDiagnostics((current) => {
@@ -1366,6 +1368,7 @@ export function MinimalCycleView() {
     const adapterLower = runtime.createWaveDromAdapter();
     const providerLower = createWaveformSurfaceProvider({
       sessionController: runtime.session,
+      getDocumentEpoch: () => projectionCoordinatorLower.currentDocumentEpoch(),
       mappingCache: runtime.displayMapping,
       adapter: adapterLower,
       geometryRegistry: geometryRegistryLower,

@@ -3,6 +3,50 @@ import { generatePerformanceDocument } from "@timing-chart-v2/testing";
 
 test.setTimeout(120_000);
 
+test("drops WaveDrom results that belong to a replaced document epoch", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  const surface = host.locator("[data-role='timing-chart-surface']");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+
+  const firstDocument = generatePerformanceDocument({ signalCount: 500, cycleCount: 500, profile: "mixed" });
+  const secondDocument = generatePerformanceDocument({ signalCount: 50, cycleCount: 100, profile: "standard" });
+  secondDocument.document.title = "Epoch Replacement";
+
+  // Replace the file from the first batch's own DOM publication callback.
+  // This schedules Open while mountWaveBatch is already awaiting a render,
+  // making the stale-result contract deterministic without a production hook.
+  await surface.evaluate((element, secondJson) => {
+    const input = document.querySelector<HTMLInputElement>("input[type='file'][accept='.json,.tcd']");
+    if (!input) throw new Error("File input is missing.");
+    const initialBatchCount = Number((element as HTMLElement).dataset.performanceCounters ? JSON.parse((element as HTMLElement).dataset.performanceCounters!).waveBatchCount : 0);
+    const observer = new MutationObserver(() => {
+      const counters = JSON.parse((element as HTMLElement).dataset.performanceCounters ?? "{}") as { waveBatchCount?: number };
+      if ((counters.waveBatchCount ?? 0) <= initialBatchCount) return;
+      observer.disconnect();
+      const transfer = new DataTransfer();
+      transfer.items.add(new File([secondJson], "epoch-second.tcd", { type: "application/json" }));
+      input.files = transfer.files;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    observer.observe(element, { attributes: true, attributeFilter: ["data-performance-counters"] });
+  }, JSON.stringify(secondDocument));
+
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({
+    name: "epoch-first.tcd",
+    mimeType: "application/json",
+    buffer: Buffer.from(JSON.stringify(firstDocument)),
+  });
+
+  await expect(host).toHaveAttribute("data-editor-idle", "true", { timeout: 120_000 });
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Epoch Replacement");
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-signal-count", "50");
+  const counters = JSON.parse(await surface.getAttribute("data-performance-counters") ?? "{}") as Record<string, number>;
+  expect(counters.fullReplaceEpochResets).toBeGreaterThanOrEqual(2);
+  expect(counters.staleWaveResultsDropped).toBeGreaterThan(0);
+  expect(await surface.locator("[data-role='wave-owner'][data-signal-id='sig_perf_499']").count()).toBe(0);
+});
+
 test("yields between bounded WaveDrom batches during Open", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

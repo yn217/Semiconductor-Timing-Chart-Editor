@@ -365,9 +365,12 @@ export function resolveTransactionSnapCycle(context: {
   return snap?.anchor.cycle ?? context.cycleBoundaryAtPointerX(context.clientX);
 }
 
-export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }): void {
+export function scheduleInitialTimelineRefresh(renderer: { whenIdle: () => Promise<unknown> }, host: HTMLElement, refresh: { readonly ruler: () => void; readonly range: () => void; readonly playhead: () => void; readonly grid: () => void; readonly zoom: () => void; readonly overlays: () => void; readonly collectErrors: () => void; readonly publish: () => void; }, lifecycle: { readonly isCurrent: () => boolean } = { isCurrent: () => true }): void {
   void renderer.whenIdle().then(() => {
-    if (!host.isConnected) return;
+    // The initial mount promise can settle after Open/New has replaced the
+    // document. It must not publish initial-document presentation or mark the
+    // replacement idle; the replacement owns its own epoch and idle lifecycle.
+    if (!host.isConnected || !lifecycle.isCurrent()) return;
     refresh.ruler();
     refresh.range();
     refresh.playhead();
@@ -412,6 +415,8 @@ export function createEditorTimelineRuntime(context: Parameters<typeof createTim
 
 export type WaveformProviderContext = Readonly<{
   sessionController: { snapshot: () => { readonly document: CanonicalDocument; readonly revision: number } };
+  /** Projection generation, distinct from the application gesture epoch. */
+  getDocumentEpoch: () => number;
   mappingCache: { get: (timeline: CanonicalDocument["timeline"], timeGroups: CanonicalDocument["timeGroups"]) => any; remapValueChanges: (values: any, mapping: any) => any };
   adapter: any;
   geometryRegistry: { readonly maps: Map<string, any>; readonly svgs: Map<string, SVGSVGElement>; remove: (id: any) => void };
@@ -426,6 +431,11 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   let signalById = new Map<string, CanonicalDocument["signals"][number]>();
   return {
     async mountWaveBatch(requests) {
+      const requestEpoch = requests[0]?.documentEpoch;
+      const isCurrent = (request: { readonly documentEpoch?: number }): boolean => request.documentEpoch === undefined || context.getDocumentEpoch() === request.documentEpoch;
+      if (requestEpoch !== undefined && (requestEpoch !== context.getDocumentEpoch() || requests.some((request) => request.documentEpoch !== requestEpoch))) {
+        return requests.map(({ signalId }) => ({ signalId, stale: true }));
+      }
       const currentSnapshot = context.sessionController.snapshot();
       const document = currentSnapshot.document;
       const mapping = context.mappingCache.get(document.timeline, document.timeGroups);
@@ -446,9 +456,11 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         const semanticValues = remappedValues !== undefined && signal.type !== "clock" && signal.type !== "commentRow" && valueSignalWaveDomain(signal.type) === "data" ? remappedValues.map((change: { readonly value: string | number }) => String(change.value)) : undefined;
         return { request, waveJson: context.adapter.toWaveJson({ signal: displaySignal, cycleCount: mapping.displayCycleCount }), semanticValues, error: undefined };
       });
-      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: any; readonly semanticValues?: readonly string[]; readonly error: Error | undefined; readonly rendered: any }> = [];
+      const renderResults: Array<{ readonly request: (typeof requests)[number]; readonly waveJson: any; readonly semanticValues?: readonly string[]; readonly error: Error | undefined; readonly rendered: any; readonly stale?: boolean }> = [];
       for (const item of prepared) {
-        if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
+        if (!isCurrent(item.request)) {
+          renderResults.push({ ...item, rendered: undefined, stale: true });
+        } else if (item.error || !item.waveJson) renderResults.push({ ...item, rendered: undefined });
         else {
           try { renderResults.push({ ...item, rendered: await context.adapter.renderWave(item.request.signalId, item.waveJson, item.request.owner, item.semanticValues) }); }
           catch (error: unknown) { renderResults.push({ ...item, rendered: undefined, error: error instanceof Error ? error : new Error(String(error)) }); }
@@ -461,10 +473,13 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
         if (yieldBetweenOwners) await nextBrowserFrame();
       }
       const results = renderResults.map((item) => {
+        if (item.stale === true || !isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
         if (item.error || !item.rendered) return { signalId: item.request.signalId, error: item.error ?? new Error("Waveform render did not produce an SVG.") };
         try {
+          if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           if (item.request.signalId === document.timeline.referenceClock) context.markOpenPhase("reference-clock-painted");
           const geometry = context.adapter.extractLocalGeometry(item.rendered);
+          if (!isCurrent(item.request)) return { signalId: item.request.signalId, stale: true };
           context.geometryRegistry.maps.set(item.request.signalId, geometry);
           context.geometryRegistry.svgs.set(item.request.signalId, item.rendered.svg as SVGSVGElement);
           if (item.request.signalId === document.timeline.referenceClock) {
@@ -583,7 +598,7 @@ export function refreshPlayheadPresentation(ruler: HTMLElement, cycle: number, b
 
 export function refreshRangeBandPresentation(viewport: HTMLElement, ruler: HTMLElement, rendererHost: HTMLElement, active: boolean, preview: string | undefined, range: { readonly start: number; readonly end: number }, boundaryToLocalX: (cycle: number) => number | undefined, zoom: number, timeDomainLeft: number, totalHeight: number): void { const band = viewport.querySelector<HTMLElement>("[data-role='range-selection-band']"); const rulerBand = ruler.querySelector<HTMLElement>("[data-role='range-selection-ruler-band']"); if (!band) return; if (!active && !preview) { band.hidden = true; if (rulerBand) rulerBand.hidden = true; for (const tick of ruler.querySelectorAll<HTMLElement>("[data-cycle]")) delete tick.dataset.rangeSelected; return; } const [startText, endText] = (preview ?? `${range.start}:${range.end}`).split(":"); const start = Number(startText); const end = Number(endText); const startLocalX = boundaryToLocalX(start); const endLocalX = boundaryToLocalX(end); if (startLocalX === undefined || endLocalX === undefined || !Number.isInteger(start) || !Number.isInteger(end) || end <= start) { band.hidden = true; return; } const startX = startLocalX * zoom; const endX = endLocalX * zoom; if (!Number.isFinite(startX) || !Number.isFinite(endX) || endX <= startX) { band.hidden = true; return; } band.hidden = false; band.dataset.rangeStart = String(start); band.dataset.rangeEnd = String(end); band.dataset.source = "ruler-local-geometry"; band.style.left = `${timeDomainLeft + startX}px`; band.style.width = `${endX - startX}px`; band.style.top = "34px"; band.style.height = `${Math.max(totalHeight, viewport.clientHeight - 34)}px`; band.setAttribute("aria-label", `Selected time range [${start}, ${end})`); if (rulerBand) { rulerBand.hidden = false; rulerBand.dataset.rangeStart = String(start); rulerBand.dataset.rangeEnd = String(end); rulerBand.dataset.source = "ruler-local-geometry"; rulerBand.style.left = `${startLocalX}px`; rulerBand.style.width = `${endLocalX - startLocalX}px`; rulerBand.setAttribute("aria-label", `Selected time range [${start}, ${end})`); } for (const tick of ruler.querySelectorAll<HTMLElement>("[data-cycle]")) { const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle); tick.dataset.rangeSelected = String(cycle >= start && cycle < end); } void rendererHost; }
 
-export function publishRendererState(host: HTMLElement, session: any, viewMetricsOwner: any, adapter: any, geometryCache: any, projectionCoordinator: any, renderer: any, mappingCache: any, snapService: any, snapIndex: any, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void { host.dataset.canonicalRevision = String(session.getSnapshot().revision); host.dataset.historyDepth = String(session.historyState().undoDepth); const metrics = viewMetricsOwner.snapshot(); host.dataset.viewMetrics = JSON.stringify(metrics); const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics(); const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics(); host.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...edgeCounterMetrics, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction, zoom, validatorInvocations }); }
+export function publishRendererState(host: HTMLElement, session: any, viewMetricsOwner: any, adapter: any, geometryCache: any, projectionCoordinator: any, renderer: any, mappingCache: any, snapService: any, snapIndex: any, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void { host.dataset.canonicalRevision = String(session.getSnapshot().revision); host.dataset.historyDepth = String(session.historyState().undoDepth); const metrics = viewMetricsOwner.snapshot(); host.dataset.viewMetrics = JSON.stringify(metrics); const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics(); const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics(); const projectionDocumentEpoch = typeof projectionCoordinator.currentDocumentEpoch === "function" ? projectionCoordinator.currentDocumentEpoch() : undefined; host.dataset.sessionCounters = JSON.stringify({ ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), ...(projectionDocumentEpoch === undefined ? {} : { projectionDocumentEpoch }), ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...edgeCounterMetrics, ...mappingCache.metrics(), snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount, snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0, viewMetrics: metrics, waveAdapter, geometryExtraction, zoom, validatorInvocations }); }
 
 export function syncPresentationScale(viewport: HTMLElement, host: HTMLElement, rulerViewport: HTMLElement, zoom: number, screenGeometryScale: number): void { const presentationScale = Math.max(0.0001, zoom * screenGeometryScale); viewport.style.setProperty("--presentation-x-scale", String(presentationScale)); host.style.setProperty("--presentation-x-scale", String(presentationScale)); rulerViewport.style.setProperty("--presentation-x-scale", String(presentationScale)); }
 export function syncRulerScroll(ruler: HTMLElement, viewport: HTMLElement, zoom: number): void { ruler.style.transform = `translateX(${-viewport.scrollLeft}px) scaleX(${zoom})`; ruler.dataset.scrollLeft = String(viewport.scrollLeft); }
