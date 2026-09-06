@@ -11,6 +11,8 @@ export interface ExportSettings {
   readonly scale?: number;
   readonly page?: Readonly<{ size: "A4" | "Letter" | "wide"; orientation: "portrait" | "landscape"; margin: number; fit: "width" | "page" }>;
   readonly foldPolicy?: "respect" | "expand";
+  /** Signal Split is an editor arrangement by default; opt in to preserving it in export. */
+  readonly signalLayout?: "merged" | "preserve-split";
 }
 
 export interface ExportRequest {
@@ -206,7 +208,10 @@ export function buildExportScene(document: CanonicalDocument, settings: ExportSe
   // position it does use comes from the same pane-filtered layout its
   // corresponding waveform occurrence uses, so nothing ever points at a
   // stale, pre-split Y coordinate.
-  const splitPaneUsed = document.signals.some((signal) => signal.display.splitPane === "upper" || signal.display.splitPane === "lower");
+  // Signal Split is view organization, not export semantics. Only an explicit
+  // ExportSettings policy may opt into the stacked two-pane representation.
+  const splitPaneUsed = settings.signalLayout === "preserve-split"
+    && document.signals.some((signal) => signal.display.splitPane === "upper" || signal.display.splitPane === "lower");
   const rowLayout = calculateRowLayout(document, new Set(), { includeHidden: false });
   const upperLayout = splitPaneUsed ? calculateRowLayout(document, new Set(), { includeHidden: false, reserveHiddenSpace: false, pane: "upper" }) : undefined;
   const lowerLayout = splitPaneUsed ? calculateRowLayout(document, new Set(), { includeHidden: false, reserveHiddenSpace: false, pane: "lower" }) : undefined;

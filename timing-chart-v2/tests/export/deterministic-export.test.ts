@@ -395,8 +395,8 @@ describe("deterministic document export", () => {
     expect(annotation!.x1).toBeLessThan(foldBoundaryX);
   });
 
-  it("#200: exports a combined two-pane scene -- Upper/Lower stack, and a 'both' Signal renders once per pane", () => {
-    const scene = buildExportScene(splitFixture(), { format: "svg", scope: "document" });
+  it("#200: explicitly preserves a combined two-pane scene", () => {
+    const scene = buildExportScene(splitFixture(), { format: "svg", scope: "document", signalLayout: "preserve-split" });
     const upperWaves = scene.waveforms.filter((wave) => wave.signalId === "sig_split_upper");
     const sharedWaves = scene.waveforms.filter((wave) => wave.signalId === "sig_split_shared");
     const lowerWaves = scene.waveforms.filter((wave) => wave.signalId === "sig_split_lower");
@@ -432,5 +432,19 @@ describe("deterministic document export", () => {
     // stacked blocks plus the pane gap, not just one flat list.
     const flatScene = buildExportScene({ ...splitFixture(), signals: splitFixture().signals.map((signal) => ({ ...signal, display: { ...signal.display, splitPane: undefined } })) }, { format: "svg", scope: "document" });
     expect(scene.height).toBeGreaterThan(flatScene.height);
+  });
+
+  it("#443: default export merges Signal Split into canonical order and emits each signal once", () => {
+    const split = splitFixture();
+    const scene = buildExportScene(split, { format: "svg", scope: "document" });
+    const flat = buildExportScene({
+      ...split,
+      signals: split.signals.map((signal) => ({ ...signal, display: { ...signal.display, splitPane: undefined } })),
+    }, { format: "svg", scope: "document" });
+    expect(scene.waveforms.map((wave) => wave.signalId)).toEqual(flat.waveforms.map((wave) => wave.signalId));
+    expect(scene.waveforms).toHaveLength(3);
+    expect(new Set(scene.waveforms.map((wave) => wave.signalId)).size).toBe(3);
+    expect(scene.labels.filter((label) => label.kind === "signal")).toHaveLength(3);
+    expect(scene.height).toBe(flat.height);
   });
 });
