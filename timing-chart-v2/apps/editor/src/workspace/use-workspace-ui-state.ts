@@ -6,6 +6,29 @@ export type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON";
 export type ViewMode = "Cycle" | "Transaction" | "Split";
 
+/** #403/#404: which pane/entity family the Ribbon and other chrome should
+ * treat as "active" for contextual command surfaces -- deliberately its
+ * own state, separate from `ViewMode` (Cycle/Transaction/Split are
+ * *layout* modes; `Split` still needs an explicit active pane), `Selection`
+ * (which entity is selected; selecting a Signal while in Transaction
+ * context, e.g. via a Linked Signal jump, must not silently flip context),
+ * and `WorkspacePreset` (a panel/layout preset name, not a pane identity --
+ * `ViewMode=Transaction` and `WorkspacePreset="transaction"` are not the
+ * same concept and must not be conflated). Pure UI/workspace state, like
+ * everything else in this hook -- never persisted into the canonical
+ * document, never itself a driver of Canonical/History/Dirty mutation. */
+export type ActiveContext = "Signal" | "Transaction";
+
+export function normalizedActiveContextFor(viewMode: ViewMode, current: ActiveContext): ActiveContext {
+  // Cycle/Transaction each have exactly one meaningful context, so entering
+  // either one normalizes to it. Split has no single natural default --
+  // an explicitly-set active context (e.g. from before switching modes, or
+  // set while already in Split) is preserved rather than reset.
+  if (viewMode === "Cycle") return "Signal";
+  if (viewMode === "Transaction") return "Transaction";
+  return current;
+}
+
 export const LEFT_PANE_MIN_WIDTH = 265;
 export const LEFT_PANE_MAX_WIDTH = 420;
 
@@ -28,7 +51,14 @@ export type BottomPinnedSelection<SignalId, GroupId, AnnotationId, TransactionId
 export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>() {
   const [ribbonTab, setRibbonTab] = useState("Home");
   const [bottomTab, setBottomTab] = useState<BottomTab>("Signal");
-  const [viewMode, setViewMode] = useState<ViewMode>("Cycle");
+  const [viewMode, setViewModeRaw] = useState<ViewMode>("Cycle");
+  const [activeContext, setActiveContext] = useState<ActiveContext>("Signal");
+  // #404: entering Cycle or Transaction normalizes ActiveContext to the one
+  // meaningful value for that mode; entering Split preserves whatever
+  // ActiveContext was already set (no natural single default there). A
+  // Selection change alone must never call this -- only a real ViewMode
+  // change may normalize ActiveContext.
+  const setViewMode = (next: ViewMode) => { setViewModeRaw(next); setActiveContext((current) => normalizedActiveContextFor(next, current)); };
   // Signal Split View (#200): an independent Upper/Lower dual-pane layout
   // for Cycle mode -- unrelated to `viewMode`'s pre-existing "Split" value
   // (which only stacks Transaction lanes above the single Cycle surface).
@@ -73,6 +103,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     ribbonTab, setRibbonTab,
     bottomTab, setBottomTab,
     viewMode, setViewMode,
+    activeContext, setActiveContext,
     signalSplitEnabled, setSignalSplitEnabled,
     signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
     density, setDensity,
