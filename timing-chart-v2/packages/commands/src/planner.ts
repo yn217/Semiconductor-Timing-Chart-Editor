@@ -19,6 +19,7 @@ import { canonicalDocumentsEqual, clockSlotCount, isStableId, opaqueDerivedId, r
 import type { ChangeSet, SemanticCommand } from "./types.js";
 import type { CommandPolicyCode } from "./policy.js";
 import { mergeChangeSets } from "./changeset.js";
+import { resolveTimeGroupRange, promoteTimeGroupChildren } from "./time-group.js";
 
 export type CommandPlanResult =
   | Readonly<{ ok: true; document: CanonicalDocument; changeSet: ChangeSet; inverseChangeSet: ChangeSet }>
@@ -479,6 +480,7 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
   const labelIds = new Map(sourceLabels.map((anchor) => [anchor.id, cloneId(anchor.id)]));
   const clonedGroups = sourceGroups.map((group) => ({
     ...group,
+    ...(group.parentId !== undefined && groupIds.has(group.parentId) ? { parentId: groupIds.get(group.parentId)! } : {}),
     id: groupIds.get(group.id)!,
     start: command.at + group.start - command.start,
     end: command.at + group.end - command.start,
@@ -1378,6 +1380,23 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { timelineSemantics: true, geometryScreenX: true, minimapOverview: true };
       return { ok: true, document: { ...document, timeline: { ...document.timeline, labelAnchors: document.timeline.labelAnchors.filter((item) => item.id !== anchor.id) } }, changeSet, inverseChangeSet: changeSet };
     }
+    case "timeGroup.groupRange": {
+      if (!isStableId(command.timeGroupId)) return fail("invalid", "INVALID_STABLE_ID", "$.timeGroupId", "TimeGroup ID must be stable.");
+      if (document.timeGroups.some(group => group.id === command.timeGroupId)) return fail("invalid", "DUPLICATE_ID", "$.timeGroupId", "TimeGroup ID already exists.");
+      const resolution = resolveTimeGroupRange(document, command);
+      if (!resolution.ok) return fail("invalid", resolution.code, "$.range", resolution.message);
+      const name = command.name ?? "Time Group";
+      if (!name.trim()) return fail("invalid", "EMPTY_TIME_GROUP_NAME", "$.name", "TimeGroup name must not be empty.");
+      const group: TimeGroup = { id: command.timeGroupId, name, start: command.start, end: command.end, ...(resolution.parentId === undefined ? {} : { parentId: resolution.parentId }), ...(command.category === undefined ? {} : { category: command.category }) };
+      const changed = [group.id];
+      const timeGroups = document.timeGroups.map(item => {
+        if (!resolution.enclosedIds.has(item.id) || (item.parentId !== undefined && resolution.enclosedIds.has(item.parentId))) return item;
+        changed.push(item.id);
+        return { ...item, parentId: group.id };
+      });
+      const changeSet: ChangeSet = { timeGroupSemantics: changed, geometryScreenX: true, minimapOverview: true };
+      return { ok: true, document: { ...document, timeGroups: [...timeGroups, group] }, changeSet, inverseChangeSet: changeSet };
+    }
     case "timeGroup.create": {
       const group = command.timeGroup;
       if (!isStableId(group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.timeGroup.id", "Time Group ID must be stable.");
@@ -1392,9 +1411,13 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const group = document.timeGroups[index];
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
       if (!command.name.trim()) return fail("invalid", "EMPTY_TIME_GROUP_NAME", "$.name", "Time Group name must not be empty.");
+      if (command.start !== group.start || command.end !== group.end) {
+        const resolution = resolveTimeGroupRange({ ...document, timeGroups: promoteTimeGroupChildren(document.timeGroups, group) }, command);
+        if (!resolution.ok) return fail("invalid", resolution.code, "$.range", resolution.message);
+      }
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
       if (group.name === command.name && group.start === command.start && group.end === command.end && group.category === command.category && group.comment === command.comment && JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group is unchanged.");
-      const nextGroup: TimeGroup = { id: group.id, name: command.name, start: command.start, end: command.end, ...(command.category === undefined ? {} : { category: command.category }), ...(command.comment === undefined ? {} : { comment: command.comment }), ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
+      const nextGroup: TimeGroup = { ...(group.parentId === undefined ? {} : { parentId: group.parentId }), id: group.id, name: command.name, start: command.start, end: command.end, ...(command.category === undefined ? {} : { category: command.category }), ...(command.comment === undefined ? {} : { comment: command.comment }), ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
       const timeGroups = [...document.timeGroups]; timeGroups[index] = nextGroup;
       const nextDocument = { ...document, timeGroups };
       const collapseChanged = Boolean(group.presentation?.collapsed) !== Boolean(command.presentation?.collapsed);
@@ -1414,6 +1437,7 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(collapseChanged ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+    case "timeGroup.ungroup":
     case "timeGroup.delete": {
       const group = document.timeGroups.find((item) => item.id === command.timeGroupId);
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
@@ -1422,8 +1446,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
         const { ownerTimeGroupId: _owner, ...rest } = anchor;
         return rest;
       });
-      const nextDocument = { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: document.timeGroups.filter((item) => item.id !== group.id) };
-      const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
+      const nextDocument = { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: promoteTimeGroupChildren(document.timeGroups, group) };
+      const changeSet: ChangeSet = { timeGroupSemantics: [group.id, ...document.timeGroups.filter(item => item.parentId === group.id).map(item => item.id)], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
   }

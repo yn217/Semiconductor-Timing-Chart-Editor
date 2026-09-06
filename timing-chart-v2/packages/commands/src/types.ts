@@ -86,6 +86,8 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "labelAnchor.update"; labelAnchorId: LabelAnchorId; source: number; display: number }>
   | Readonly<{ id: CommandId; type: "labelAnchor.delete"; labelAnchorId: LabelAnchorId }>
   | Readonly<{ id: CommandId; type: "timeGroup.create"; timeGroup: TimeGroup }>
+  | Readonly<{ id: CommandId; type: "timeGroup.groupRange"; timeGroupId: TimeGroupId; start: number; end: number; name?: string; category?: string }>
+  | Readonly<{ id: CommandId; type: "timeGroup.ungroup"; timeGroupId: TimeGroupId }>
   | Readonly<{ id: CommandId; type: "timeGroup.update"; timeGroupId: TimeGroupId; name: string; start: number; end: number; category?: string; comment?: string; presentation?: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.updatePresentation"; timeGroupId: TimeGroupId; presentation: TimeGroup["presentation"] }>
   | Readonly<{ id: CommandId; type: "timeGroup.delete"; timeGroupId: TimeGroupId }>

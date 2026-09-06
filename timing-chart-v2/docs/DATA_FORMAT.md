@@ -92,6 +92,28 @@ from/to anchor、line type、arrowhead、label、start/end/label offset。
 Anchor+OffsetまたはCanvas free position。orientation、usedRolesOnly。
 # TimeGroup hierarchy compatibility (#412)
 
+## TimeGroup editing commands (#413)
+
+`timeGroup.groupRange` takes a fresh `timeGroupId`, integer `start/end`, and
+optional `name/category`. `resolveTimeGroupRange(document, range)` is the shared
+capability/preflight: missing or zero-width selection, out-of-timeline ranges,
+equal ranges and partial overlaps return specific diagnostics. Adjacency is
+legal. The smallest enclosing range is the parent; ties use greatest explicit
+depth, then stable ID. Enclosed groups whose parents are not also enclosed are
+reparented to the new group; deeper links stay intact. Canonical array order is
+preserved, with the new group appended. Old flat data is not globally reparented.
+
+`timeGroup.ungroup` removes one group and promotes its direct children to its
+parent (or roots). Existing `timeGroup.delete` uses the same promotion policy.
+Resume label anchors are detached through the existing deletion policy. Group
+and Ungroup each commit once through CommandHistorySession and restore the full
+document, links and order on Undo/Redo. Existing property edits retain parentId;
+invalid containment is rejected by canonical validation. Timeline insert/delete
+reuse existing half-open transforms and final canonical validation. Duplicating
+a complete subtree remaps copied parent IDs; a copy whose external parent no
+longer contains it is rejected atomically. UI/Outline integration follows #414;
+nested fold projection follows #415.
+
 TimeGroup `parentId` optionally references a TimeGroup stable ID in the same
 document. Omission means root; existing flat documents retain all roots even
 when their ranges contain one another. Version 2 remains the format version:
