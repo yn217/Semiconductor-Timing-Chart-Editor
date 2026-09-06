@@ -41,6 +41,18 @@ one contract ID. Run `npm run check:parity` (also included in `npm run check`
 and `npm run check:ci`) to fail on any unmapped issue, unknown owner,
 unclassified decision, stale source manifest, or MERGED row without evidence.
 
+## Explicit V1/V2 conflict register
+
+These are specification conflicts, not implementation failures. They remain
+open until the product decision is recorded; none is represented as `DROP`,
+and no visual baseline is changed to make the conflict disappear.
+
+| ID | V1 requirement | V2 proposal/current contract | Tradeoff | Recommended resolution | Product decision needed |
+|---|---|---|---|---|---|
+| `CONFLICT-01` | V1 #32 favors compact split/dropdown Signal insertion and a lower-density Ribbon. | V2 #176 exposes feature-rich Home/Insert/Timeline workflows with direct Signal, Clock, Bus and State discovery, using responsive overflow where necessary. | Direct discovery improves findability but consumes Ribbon density; a compact menu preserves density but hides approved actions. | Keep the V2 semantic owners and direct supported entries, retain the V1 command vocabulary/IDs, and use the documented overflow route at constrained widths. | Confirm the V2 feature-rich grouping and overflow behavior as the approved replacement for the compact V1 grouping. |
+| `CONFLICT-02` | The historical V1 replacement pack uses fixed overall and panel crops, including a 330px Left panel and several independent Bottom crops. | The approved V2 v8 contract uses different pane bounds and a production `/?visual-reference` state. | Direct pixel comparison would conflate viewport/state geometry differences with product regressions; ignoring the pack loses useful historical evidence. | Treat the v8 fixture as the executable V2 baseline, retain the V1 pack as historical input, and require a mapped fixture plus unchanged-reference comparison before claiming V1 visual closure. | Confirm whether v8 is the accepted V2 visual replacement, or provide approved one-to-one mapped captures for the remaining V1 pack rows. |
+| `CONFLICT-03` | Existing V1 fixtures commonly assume a first/default `clk` reference identity. | V2 timeline state may use a differently named reference Clock and supports the approved clockless mode; no literal `clk` may be semantic truth. | Default-name compatibility is convenient for old fixtures, but it can silently retarget stable IDs and prevents valid clockless documents. | Preserve opaque stable-ID references, test differently named clocks, and keep clockless behavior explicit; do not synthesize a fake `clk`. | Confirm the V2 named-reference/clockless contract as the compatibility policy for legacy fixtures. |
+
 ## High-Risk GUI section
 
 | ID | Capability | Decision | V2 owner | Current evidence / gap |
