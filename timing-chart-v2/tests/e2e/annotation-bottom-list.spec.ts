@@ -18,7 +18,7 @@ test("Annotation bottom editor lists stable annotation IDs without mutating docu
   await expect(list.locator(".annotation-list-header")).toContainText("Label / Text");
   await expect(page.getByRole("toolbar", { name: "Annotation operations" })).toBeVisible();
   await expect(page.getByTestId("annotation-preview-status")).toHaveText("Preview ready");
-  await page.getByRole("button", { name: "⟳ Preview Update" }).click();
+  await page.getByTestId("annotation-preview-action").click();
   await expect(page.getByTestId("annotation-preview-status")).toHaveText("Previewing draft (updated 1) · canonical data unchanged");
   const ids = await list.locator("[data-annotation-list-id]").evaluateAll((items) => items.map((item) => item.getAttribute("data-annotation-list-id")));
   expect(ids).toEqual(ids.filter((id): id is string => id !== null));

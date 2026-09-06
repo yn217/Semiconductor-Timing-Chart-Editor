@@ -26,7 +26,7 @@ test("Annotation Preview Update reflects draft Label/Color on the live overlay w
   const revisionBefore = await host.getAttribute("data-canonical-revision");
   const historyBefore = await page.getByTestId("history-status").textContent();
 
-  await page.getByRole("button", { name: "Preview Update" }).click();
+  await page.getByTestId("annotation-preview-action").click();
   await expect(label).toHaveText("PREVIEW LABEL");
   await expect(owner).toHaveCSS("--annotation-color", "#00cc44");
   await expect(page.getByTestId("annotation-preview-status")).toContainText("canonical data unchanged");
@@ -53,7 +53,7 @@ test("Annotation Preview Update reverts even without an explicit Cancel, when se
   const label = owner.locator("[data-role='annotation-label']");
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Annotation label", { exact: true }).fill("LEAK TEST");
-  await page.getByRole("button", { name: "Preview Update" }).click();
+  await page.getByTestId("annotation-preview-action").click();
   await expect(label).toHaveText("LEAK TEST");
 
   // Switch to Home without clicking Cancel -- the Bottom Editor unmounts,
@@ -76,7 +76,7 @@ test("Apply commits the previewed draft as one real SemanticCommand", async ({ p
   const label = owner.locator("[data-role='annotation-label']");
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Annotation label", { exact: true }).fill("COMMITTED LABEL");
-  await page.getByRole("button", { name: "Preview Update" }).click();
+  await page.getByTestId("annotation-preview-action").click();
   await expect(label).toHaveText("COMMITTED LABEL");
 
   const revisionBefore = await host.getAttribute("data-canonical-revision");

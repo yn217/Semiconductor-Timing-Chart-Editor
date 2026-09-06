@@ -62,7 +62,6 @@
 
 .annotation-context-toolbar { display: flex; align-items: center; gap: 5px; min-height: 33px; padding: 4px 10px; border-bottom: 1px solid #dce3eb; background: #fbfcfe; flex-wrap: wrap; }
 .annotation-context-toolbar button { height: 25px; padding: 2px 8px; border: 1px solid #aebccd; border-radius: 3px; background: white; color: #304761; font-size: 10px; }
-.annotation-context-toolbar button:first-child { border-color: #246aa8; background: #2c78bb; color: white; }
 .annotation-context-toolbar button.danger { border-color: #d39b9b; background: white; color: #a52b2b; }
 .annotation-context-toolbar button.danger:hover:not(:disabled) { border-color: #c07a7a; background: #fbeeee; color: #7e1f1f; }
 .annotation-context-toolbar output { margin-left: auto; color: #63758b; font-size: 9px; }
@@ -84,10 +83,39 @@
 /* Section 3/9: Cancel + the one primary Apply action, sticky at the
    bottom of the Annotation tab regardless of how the List/Edit panels
    scroll or how tall the Bottom Editor is resized. */
+/* Visual/UX Closure pass, Section 9: Cancel and Apply Annotation are one
+   grouped unit at the right end of the bar -- the "unapplied changes"
+   indicator is the side that grows (margin-right: auto on it, not
+   margin-left: auto on Apply), so the two buttons never end up stranded
+   at opposite ends of a full-width bar the way "Cancel far left, Apply
+   far right" was before. */
 .annotation-sticky-actions { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #cad3df; background: #f4f7fa; }
-.annotation-sticky-actions button[data-testid="apply-annotation-properties"] { margin-left: auto; height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 16px; font-weight: 650; }
-.annotation-sticky-actions button[data-testid="apply-annotation-properties"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
-.annotation-sticky-actions button[data-testid="cancel-bottom-draft"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
+.annotation-sticky-actions .draft-unapplied-indicator { margin-right: auto; }
+.annotation-sticky-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.annotation-sticky-buttons button[data-testid="apply-annotation-properties"] { height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 16px; font-weight: 650; }
+.annotation-sticky-buttons button[data-testid="apply-annotation-properties"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
+.annotation-sticky-buttons button[data-testid="cancel-bottom-draft"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
+/* Section 7: List management sits at the top of the List panel it
+   manages. */
+.annotation-list-actions { display: flex; gap: 6px; margin-bottom: 6px; }
+.annotation-list-actions button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 8px; font-size: 10px; font-weight: 650; }
+.annotation-list-actions button.danger { border-color: #d39b9b; background: white; color: #a52b2b; }
+.annotation-list-actions button.danger:hover:not(:disabled) { border-color: #c07a7a; background: #fbeeee; color: #7e1f1f; }
+/* Section 3: a compact Signal + Cycle anchor editor, one row per anchor
+   field this Annotation actually has. */
+.annotation-anchor-mini { display: flex; align-items: center; gap: 5px; margin: 2px 0; }
+.annotation-anchor-mini-label { flex: 0 0 34px; color: #5c687c; font-size: 10px; font-weight: 650; }
+.annotation-anchor-mini select { flex: 1 1 auto; min-width: 0; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
+.annotation-anchor-mini input { flex: 0 0 52px; height: var(--ds-control-height); border: 1px solid #b9c5d3; border-radius: 3px; background: white; padding: 2px 5px; font-size: 10px; }
+.annotation-anchor-mini button { flex: 0 0 auto; height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 2px 8px; font-size: 10px; }
+.annotation-anchor-mini button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
+/* Section 4: Font/Stroke/Fill fold under a closed-by-default disclosure
+   instead of sitting unconditionally expanded above Type/Label/Start/End
+   -- same "closed unless opened" convention as Generate Waveform's own
+   Advanced section earlier in this Epic. */
+.annotation-style-section, .annotation-label-offset-row { margin-top: 4px; border-top: 1px solid #e0e5ec; padding-top: 4px; }
+.annotation-style-section summary { cursor: pointer; color: #5c687c; font-size: 10px; font-weight: 650; }
+.annotation-style-section .font-style-toolbar, .annotation-style-section .stroke-fill-toolbar { padding-left: 0; padding-right: 0; }
 
 .editor-shell .signal-editor:has(.clock-editor) .editor-tabbar { display: flex; }
 

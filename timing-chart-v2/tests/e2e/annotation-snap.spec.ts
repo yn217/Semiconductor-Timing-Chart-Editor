@@ -83,7 +83,7 @@ test("edits a linked Ghost Trace and Timing Region without WaveDrom regeneration
   const editor = page.getByTestId("annotation-editor");
   await editor.getByLabel("Ghost Trace cycle offset").fill("2");
   await editor.getByLabel("Annotation opacity").fill("0.35");
-  await editor.getByRole("button", { name: "Apply" }).click();
+  await editor.getByTestId("apply-annotation-properties").click();
   await expect(ghost).toHaveAttribute("data-annotation-type", "ghostTrace");
   const sourceSignalId = await ghost.getAttribute("data-source-signal-id");
   expect(sourceSignalId).toMatch(/^sig_/);
