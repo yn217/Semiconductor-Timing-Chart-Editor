@@ -8,12 +8,18 @@
  * in minimal-cycle-view-panels.tsx's `InspectorPanel`) -- this component
  * owns no Selection state of its own. */
 export function InspectorSelectionHeader({ kind, title, detail, iconKind }: { readonly kind: string; readonly title: string; readonly detail?: string; readonly iconKind?: string }) {
+  // Kind and detail share ONE line (not one each) -- title stays its own
+  // line, but "Input · Signal" and "dut.reset_n" used to stack as two
+  // more lines below it even though the panel is wide enough for them
+  // side by side, wasting vertical height the Properties below need.
+  // Merging them into a single "Input · Signal · dut.reset_n" row uses
+  // that idle horizontal space instead of stacking further downward.
+  const meta = detail ? `${kind} · ${detail}` : kind;
   return <div className="inspector-selection-header" data-testid="inspector-selection-header">
     <span className="inspector-selection-icon" data-kind={(iconKind ?? kind).toLowerCase()} aria-hidden="true" />
     <span className="inspector-selection-text">
       <strong className="inspector-selection-title" title={title}>{title}</strong>
-      <span className="inspector-selection-kind">{kind}</span>
-      {detail && <span className="inspector-selection-detail" title={detail}>{detail}</span>}
+      <span className="inspector-selection-meta" title={meta}>{meta}</span>
     </span>
   </div>;
 }
