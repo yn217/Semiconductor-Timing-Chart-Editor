@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-06 16:30 JST
+# Last reconciled by ChatGPT: 2026-09-06
 #
 # Cross-agent ownership is authoritative in:
 #   .codex/AGENT_ASSIGNMENT.md
@@ -17,47 +17,44 @@
 # Observed product state at reconciliation:
 #   main = origin/main = 447ebe05051ec6272815ba764245fede0e3d3c1d
 #   worktree clean
-#   #410 #399 #398 #237 completed
 #   #417 completed/closed
-#   #428 completed/closed; Bottom Panel common shell now uses full width left of MiniMap
-#   #272 closed as not_planned because it depends on external GitHub Actions runner/billing conditions
-#   #177 requires external Replacement Pack input and product decision; Replacement Pack path count = 0
+#   #428 completed/closed
+#   #177 external/product hold (Replacement Pack path count = 0)
 #
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
-# Claude-owned, held, mixed-ownership, external/product-hold and completed Issues remain comments only.
-#
-# ============================================================================
-# OPERATING POLICY — IMPLEMENTATION FIRST
-# ============================================================================
-# Prefer concrete production residuals over repeated broad audit/test-only work.
-# Test-only commits are appropriate when the Issue itself is a test/harness contract,
-# or when the test proves/reproduces a concrete acceptance gap/regression.
-# Otherwise: implement bounded product behavior first, then focused verification.
-#
-# GitHub Actions availability is not a global implementation blocker. Use local TypeScript/gates/
-# unit/Chromium/git diff --check as applicable and record the Actions status.
-#
-# Never weaken Golden/reference/threshold/mask merely to pass. Any Golden change requires explicit
-# user/product approval.
+# Claude-owned, held, dependency-waiting, mixed-ownership and completed Issues remain comments only.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: WAITING_FOR_NEXT_CODEX_ISSUE
+# User-approved TimeGroup Core/Data split.
 #
-# There are currently NO executable Codex Issues.
+# 1) Canonical hierarchy foundation.
+#    Add stable-ID parent ownership to TimeGroup, schema/migration/validation,
+#    derived hierarchy utilities, malformed graph rejection, and exact round-trip.
+#    No GUI/Outline/collapse work in this Issue.
+412
+
+# 2) Semantic command / validation layer after #412.
+#    Implement deterministic Group/Ungroup, containment resolution, automatic reparent,
+#    partial-overlap reject, atomic Undo/Redo and specific diagnostics.
+#    No Outline rendering/fold geometry/Ribbon work in this Issue.
+413
+
+# ============================================================================
+# FUTURE CODEX LANE — DEPENDENCY WAIT
+# ============================================================================
+# #415 Nested collapse + shared DisplayTimeMapping / Axis Break is Codex-owned Geometry/Runtime work,
+# but it depends on #414. Do NOT execute #415 until #414 is completed/closed and current main is synced.
+# After #414 completion, reconcile and move #415 into CURRENT CODEX EXECUTABLE QUEUE.
 #
-# #417 is completed/closed and must not be re-added merely for another audit.
-# #177 is not executable while the external Replacement Pack path count remains 0 and the required
-# product decision has not been supplied. Do not synthesize or guess the Replacement Pack.
+# Time Outline intended split:
+#   Codex:  #412 -> #413
+#   Claude: #414
+#   Codex:  #415
+#   Claude: #416
 #
-# While this section has no non-comment Issue number, Codex must remain idle and wait for either:
-#   1) an explicit user instruction / ownership transfer, or
-#   2) a future update to this file that adds an executable Issue number.
-#
-# Do not repeatedly re-audit the same unchanged blocker state. Re-check #177 only when there is a
-# concrete external-input/product-decision change, or when this control file explicitly moves it back
-# into the executable queue.
+# Parent #411 is coordination/Epic only; do not implement the entire Epic as one Codex task.
 #
 # ============================================================================
 # EXTERNAL / PRODUCT HOLD
@@ -67,88 +64,69 @@
 #   - Replacement Pack external input is not available (path count = 0)
 #   - required product decision is pending
 #
-# Codex must not manufacture parity work, invent a Replacement Pack, revive rewrite/v2, or copy V1
-# runtime code merely to keep the Goal active. Once the required external input / decision is supplied,
-# reconcile acceptance and move #177 back into CURRENT CODEX EXECUTABLE QUEUE only if concrete bounded
-# residuals remain.
+# Do not repeatedly re-audit unchanged #177 state. Re-check only after concrete external input,
+# product decision, or explicit control-file reassignment.
 #
 # ============================================================================
 # CLAUDE / GUI-PRODUCT SURFACES — NON-EXECUTABLE BY CODEX
 # ============================================================================
-# Ribbon/Tree/Inspector/Bottom composition, discoverability, product workflow presentation and
-# visual-system consistency are Claude-owned unless explicitly transferred.
+# Ribbon/Tree/Inspector/Bottom composition, discoverability, product workflow presentation,
+# visual-system consistency and browser-facing GUI closure are Claude-owned unless explicitly transferred.
 #
-# Current/known GUI-product Issues include:
-#   #396 Timeline Ribbon Range Edit readability/layout
-#   #400 Signal/Level/Pulse consolidation + Insert icons + Bottom product surface
-#   #401 View Mode inactive readability
-#   #402 Bottom panel dynamic Group dropdown + Draft -> Apply to Waveform UX
-#   #403 Contextual Ribbon Epic
-#   #404 ActiveContext state
-#   #405 data-driven Ribbon composition
-#   #406 Transaction-focused Ribbon
-#   #407 Split active-pane ownership
-#   #408 horizontal Signal | Transaction Split product layout
-#   #409 active-pane-driven contextual Ribbon closure
+# Current/new GUI-product lane includes:
+#   #414 Excel-like Time Outline visualization
+#   #416 Timeline Ribbon + persistence/export/E2E product closure
 #   #419 Highlight Cycle Snap / Free positioning product UI
-#   #422 Bottom Bookmarks Previous/Next + Draft/Apply workflow
+#   #424 Marker vertical-span GUI
 #   #426 Bottom Panel UX consolidation Epic
+#   #403-#409 Contextual Ribbon / Split GUI sequence
 #   #397 Transaction + Split sample-driven product acceptance
-#   #200 Signal Split GUI/product completion
 #
-# #428 was explicitly transferred to Codex for one focused implementation pass and is now completed;
-# that one-off transfer does NOT transfer #426 or other Bottom/GUI work to Codex.
+# #428 was a one-off explicit Codex transfer and is completed; it does not transfer #426.
 #
-# Codex may fix a specifically isolated Core/runtime defect reported by those Issues, but must not
-# independently build a parallel Ribbon/Bottom/Split GUI path.
+# Codex may fix a specifically isolated Core/runtime defect reported by GUI Issues only when ownership
+# is explicitly transferred or the defect is separately filed/assigned. Do not build parallel GUI paths.
 #
 # ============================================================================
-# BROAD / MIXED PARITY ISSUES — HOLD UNTIL OWNER IS EXPLICITLY RECONCILED
+# BROAD / MIXED / OTHER HOLDS
 # ============================================================================
-# These span GUI/product + Core responsibilities. Do not let them become Codex executable work
-# without an explicit ownership decision or a narrowly isolated Core defect:
-#   #208 File/New/Open production UX + atomic replacement lifecycle
-#   #202 Bookmark / Time Group / Axis Break production workflow + shared time mapping
-#   #204 AI proposal workflow
-#   #205 Datasheet-grade timing annotation parity
-#
-# #205 is open on GitHub but remains mixed/Claude-held here; Codex must not auto-claim it.
-#
-# ============================================================================
-# CLOSED / NOT PLANNED EXTERNAL CONDITION
-# ============================================================================
-# #272 GitHub Actions runner allocation / billing spending-limit dependency.
-# Closed as not_planned because it is not resolvable by repository implementation work.
-# Reopen or file a new CI-verification Issue only if runner allocation becomes available and the
-# repository-level gate needs validation again.
+# #205 remains mixed/Claude-held despite being open; Codex must not auto-claim it.
+# #250 remains product-decision hold for production AI provider contract.
+# #272 is closed not_planned (external GitHub Actions runner/billing condition).
 #
 # ============================================================================
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
-# Do not re-add merely to generate more tests or re-audit unchanged acceptance:
+# Do not re-add merely to generate more tests or another audit:
 #   #410 #399 #398 #237 #417 #428 #272
-#   #363 #269 #281
+#   #363 #269 #281 #372 #366 #369
 #   #221 #171 #170 #167 #161 #175
-#   #372 #366 #369
-#
-# #200 transferred to Claude after CORE_READY_FOR_GUI; it is not a Codex executable entry.
 #
 # ============================================================================
-# OVERLAP / LOCAL-CONFLICT RULES
+# OPERATING POLICY — IMPLEMENTATION FIRST
+# ============================================================================
+# Prefer concrete production residuals over repeated broad audit/test-only work.
+# If current main already satisfies an Issue, collect evidence and close it; do not manufacture a commit.
+#
+# GitHub Actions availability is not a global blocker. Use local TypeScript/gates/unit/Chromium/
+# git diff --check as applicable and record Actions status.
+#
+# Never weaken Golden/reference/threshold/mask merely to pass. Any Golden change requires explicit
+# user/product approval.
+#
+# ============================================================================
+# SINGLE-WORKTREE / DIRTY-WORK RULES
 # ============================================================================
 # - One repository / one main worktree / sequential Codex implementation stream.
 # - No temporary clone, no per-Issue clone, no git worktree add.
 # - Never reset/stash/clean/delete unrelated dirty work.
 # - A dirty file is not itself a blocker. Classify dirty hunks as previous-Issue, current-Issue,
 #   unrelated, generated/evidence, or unknown/mixed.
-# - Previous-Issue dirty work: finish/test/commit/push it first.
-# - Current-Issue work: continue it.
-# - Same file but non-overlapping hunks: use partial staging and inspect the staged diff.
+# - Previous-Issue dirty work: finish/test/commit/push first.
+# - Current-Issue work: continue.
+# - Same file but non-overlapping hunks: partial-stage and inspect staged diff.
 # - Only a true same-hunk unsafe conflict may defer that Issue as DEFERRED_LOCAL_CONFLICT;
 #   continue to the next safe Issue instead of blocking the whole Goal.
-# - If an Issue-local gesture/coordinate blocker reproduces twice, quarantine only that Issue and
-#   continue. Never use sampled ruler DOM, fixed-pitch semantic coordinates, timeout inflation or
-#   assertion weakening to force acceptance.
 #
 # ============================================================================
 # NORMAL EXECUTION LOOP
@@ -162,27 +140,22 @@
 # -> inspect staged diff
 # -> commit
 # -> push
-# -> evidence / re-audit
+# -> evidence / close if satisfied
 # -> next Issue
 #
 # Prefer focused unit/component/geometry tests plus 1-3 relevant Playwright cases where needed.
-# Do not run broad full E2E/visual/perf suites for every bounded Issue unless its acceptance requires it.
-# If current main already satisfies an Issue, audit with evidence and close; do not manufacture a commit.
-#
-# When CURRENT CODEX EXECUTABLE QUEUE is empty, do not execute the normal loop merely to remain busy.
-# Report WAITING_FOR_NEXT_CODEX_ISSUE and wait for control/input changes.
+# Do not run broad full E2E/visual/perf suites for every bounded Issue unless closure requires it.
 #
 # ============================================================================
-# GLOBAL SAFETY
+# GLOBAL SAFETY / ARCHITECTURE
 # ============================================================================
 # - Always sync latest origin/main before Issue work.
-# - Preserve unrelated dirty work; no reset/stash/clean/delete.
 # - Canonical -> Semantic Commands / History -> Projection -> Renderer -> DOM.
 # - GUI/Keyboard/Context Menu/Inspector/Bottom/AI mutations converge on Semantic Commands.
 # - One logical user action = one intended semantic operation = one History unit.
 # - DOM/ruler samples are not semantic authority.
 # - Canonical source cycle/boundary -> DisplayTimeMapping -> TimeAxisGeometry/LocalGeometry -> local X -> screen X.
-# - Stable IDs are opaque.
-# - WaveDrom/default skin remains the normative waveform renderer; do not replace it with a fixed-pitch lookalike.
-# - Home remains protected unless explicitly authorized by an Issue/user instruction.
-# - Close already-satisfied Issues with evidence; never manufacture a commit.
+# - Stable IDs are opaque; never use array index as identity.
+# - WaveDrom/default skin remains the normative waveform renderer.
+# - Home remains protected unless explicitly authorized by Issue/user instruction.
+# - No Golden/reference/threshold/mask changes merely to pass.
