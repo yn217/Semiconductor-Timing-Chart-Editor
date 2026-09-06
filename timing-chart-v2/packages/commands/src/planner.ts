@@ -855,6 +855,15 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.updateResetSemantics": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "Reset semantics require a value signal.");
+      const reset = command.resetSemantics;
+      if (reset && ( !["active-high", "active-low"].includes(reset.polarity) || !["synchronous", "asynchronous"].includes(reset.synchronization) || (reset.assertCycle !== undefined && (!Number.isInteger(reset.assertCycle) || reset.assertCycle < 0)) || (reset.deassertCycle !== undefined && (!Number.isInteger(reset.deassertCycle) || reset.deassertCycle < 0)))) return fail("invalid", "INVALID_EDGE_COUNTER", "$.resetSemantics", "Reset semantics are invalid.");
+      if (JSON.stringify(signal.resetSemantics) === JSON.stringify(reset)) return fail("no-op", "NO_OP", "$", "Reset semantics are unchanged.");
+      return { ok: true, document: replaceSignal(document, index, reset === undefined ? (() => { const { resetSemantics: _reset, ...rest } = signal; return rest; })() : { ...signal, resetSemantics: reset }), changeSet: { waveSemantics: [signal.id] }, inverseChangeSet: { waveSemantics: [signal.id] } };
+    }
     case "spacer.create": {
       const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
       const group = document.signalGroups[groupIndex];
