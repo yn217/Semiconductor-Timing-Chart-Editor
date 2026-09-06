@@ -246,11 +246,12 @@ export function refreshTimelinePresentation(context: {
   let timeAxis = context.timeAxis;
   let screenGeometryScale = context.previousScale;
   let rulerInitialized = context.rulerInitialized;
-  if (context.reason === "ruler") {
+  if (context.reason === "ruler" || context.reason === "resize") {
     context.metricsOwner.update({ viewportWidth: context.viewport.clientWidth });
     const metrics = context.metricsOwner.snapshot();
     const minimumWaveWidth = Math.max(160, metrics.viewportWidth - metrics.leftPaneWidth - metrics.frozenPaneWidth);
-    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, timeAxis.ownerSignalId ? context.geometrySvgs.get(timeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport);
+    const currentTimeAxis = resolveTimeAxisGeometry(context.document, context.geometryMaps);
+    const rebuilt = rebuildRulerPresentation(context.ruler, context.document, context.geometryMaps, context.mappingCache, rulerInitialized ? screenGeometryScale : undefined, currentTimeAxis.ownerSignalId ? context.geometrySvgs.get(currentTimeAxis.ownerSignalId) : undefined, metrics.zoom, minimumWaveWidth, context.viewport, context.reason === "resize" || !rulerInitialized);
     timeAxis = rebuilt.timeAxis;
     screenGeometryScale = rebuilt.scale;
     rulerInitialized = true;
@@ -615,18 +616,18 @@ export function refreshRendererForReason(renderer: Pick<TimingChartRenderer, "up
 
 export function refreshGridPresentation(grid: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, enabled: boolean, totalHeight: number, viewportWidth: number, screenGeometryScale: number): void { const timeAxis = resolveTimeAxisGeometry(document, geometryMaps); renderGeometryGrid(grid, timeAxis.geometry, timeAxis.ownerSignalId, enabled, totalHeight, mappingCache.get(document.timeline, document.timeGroups), Math.max(160, viewportWidth), screenGeometryScale, timeAxis.mode); }
 
-export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } {
+export function rebuildRulerPresentation(ruler: HTMLElement, document: CanonicalDocument, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, previousScale: number | undefined, referenceSvg: SVGSVGElement | undefined, zoom: number, minimumWaveWidth = 0, viewportElement?: HTMLElement, measureCurrentScale = true): { readonly timeAxis: TimeAxisGeometry; readonly scale: number } {
   const timeAxis = resolveTimeAxisGeometry(document, geometryMaps);
   const mapping = mappingCache.get(document.timeline, document.timeGroups);
   const referenceViewBoxWidth = referenceSvg?.viewBox.baseVal.width;
-  let scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, referenceSvgScreenScale(referenceSvg, zoom), timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
+  let scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, previousScale, measureCurrentScale ? referenceSvgScreenScale(referenceSvg, zoom) : undefined, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
 
   // buildRuler updates the shared wave-width owner. That can change the SVG's
   // intrinsic screen transform during the same presentation pass, so measure
   // once after the width write and repaint the ruler/grid from the settled
   // transform. This bounded second pass avoids retaining a pre-layout scale
   // while keeping the rendered WaveDrom geometry authoritative.
-  const settledScale = referenceSvgScreenScale(referenceSvg, zoom);
+  const settledScale = measureCurrentScale ? referenceSvgScreenScale(referenceSvg, zoom) : undefined;
   if (settledScale !== undefined && Math.abs(settledScale - scale) > 0.0001) {
     scale = buildRuler(ruler, timeAxis.geometry, document, timeAxis.ownerSignalId, mapping, undefined, settledScale, timeAxis.mode, minimumWaveWidth, viewportElement, referenceViewBoxWidth);
   }
