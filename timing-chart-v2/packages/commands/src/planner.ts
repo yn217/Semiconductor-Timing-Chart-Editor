@@ -1551,11 +1551,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "timeGroup.delete": {
       const group = document.timeGroups.find((item) => item.id === command.timeGroupId);
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
-      const labelAnchors = document.timeline.labelAnchors.map((anchor) => {
-        if (anchor.ownerTimeGroupId !== group.id) return anchor;
-        const { ownerTimeGroupId: _owner, ...rest } = anchor;
-        return rest;
-      });
+      const ownedAnchorId = group.presentation?.resumeLabelAnchorId;
+      const labelAnchors = document.timeline.labelAnchors.filter((anchor) => anchor.id !== ownedAnchorId && anchor.ownerTimeGroupId !== group.id);
       const nextDocument = { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: promoteTimeGroupChildren(document.timeGroups, group) };
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id, ...document.timeGroups.filter(item => item.parentId === group.id).map(item => item.id)], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
