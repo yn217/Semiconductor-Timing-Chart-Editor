@@ -7,6 +7,7 @@ export type RowId = SignalId | SpacerId;
 export type AnnotationId = StableId<"annotation">;
 export type AnnotationGroupId = StableId<"annotationGroup">;
 export type TransactionId = StableId<"transaction">;
+export type TransactionGroupId = StableId<"transactionGroup">;
 export type BookmarkId = StableId<"bookmark">;
 export type TimeGroupId = StableId<"time-group">;
 export type LabelAnchorId = StableId<"label-anchor">;
@@ -193,6 +194,7 @@ export interface SignalGroup {
 }
 
 export type AnnotationType = "text" | "callout" | "verticalLine" | "range" | "bracket" | "highlight" | "marker" | "measurement" | "arrow" | "dependency" | "timingRegion" | "ghostTrace" | "rectangle" | "ellipse" | "connector" | "textbox";
+export type HighlightPositionMode = "cycle-snap" | "free";
 
 export interface Annotation {
   readonly id: AnnotationId;
@@ -232,6 +234,8 @@ export interface Annotation {
     readonly anchorKind: "threshold" | "ratio";
   };
   readonly measurementLayout?: import("./annotation-semantics.js").MeasurementLayout;
+  /** Highlight coordinate mode; both values remain semantic time, never screen X. */
+  readonly positionMode?: HighlightPositionMode;
   /** Semantic vertical span for Markers; row identity is stable, never screen geometry. */
   readonly verticalSpan?: {
     readonly mode: "auto" | "rows" | "custom";
@@ -273,6 +277,8 @@ export interface TimeGroup {
 }
 
 export interface TransactionPhase { readonly name: string; readonly start: number; readonly end: number }
+export interface TransactionGroup { readonly id: TransactionGroupId; readonly name: string; readonly color?: string; readonly order: number }
+export interface TransactionTimeScale { readonly clockCyclesPerTransactionCycle: number; readonly majorInterval: number; readonly minorInterval: number; readonly showSecondaryClock?: boolean }
 
 export interface Transaction {
   readonly id: TransactionId;
@@ -284,6 +290,9 @@ export interface Transaction {
   readonly phases?: readonly TransactionPhase[];
   readonly laneId?: string;
   readonly linkedSignals?: readonly SignalId[];
+  readonly groupId?: TransactionGroupId;
+  readonly color?: string;
+  readonly description?: string;
   readonly category?: string;
   readonly style?: JsonObject;
   readonly metadata?: JsonObject;
@@ -327,6 +336,8 @@ export interface CanonicalDocument {
   readonly legend: Legend;
   readonly layout: Layout;
   readonly transactions: readonly Transaction[];
+  readonly transactionGroups?: readonly TransactionGroup[];
+  readonly transactionTimeScale?: TransactionTimeScale;
   readonly constraints: readonly Constraint[];
   readonly checkSettings: CheckSettings;
 }
@@ -336,7 +347,7 @@ export const CANONICAL_PROBLEM_CODES = [
   "BUS_WIDTH_OVERFLOW", "CHANGE_POINTS_NOT_STRICTLY_SORTED", "DUPLICATE_ID",
   "DUPLICATE_LABEL_ANCHOR_SOURCE", "DUPLICATE_ROW_MEMBERSHIP", "INVALID_ANCHOR_POINT", "INVALID_ANCHOR_THRESHOLD",
   "INVALID_ANCHOR_THRESHOLD_POINT", "INVALID_ANNOTATION_STYLE", "INVALID_BUS_LITERAL", "INVALID_LEGEND_ENTRY",
-  "INVALID_REFERENCE_CLOCK", "INVALID_STABLE_ID", "INVALID_TIME_GROUP_RANGE", "INVALID_TRANSACTION_PHASE",
+  "INVALID_REFERENCE_CLOCK", "INVALID_STABLE_ID", "INVALID_TIME_GROUP_RANGE", "INVALID_TRANSACTION_PHASE", "INVALID_TRANSACTION_TIME_SCALE",
   "LABEL_ANCHOR_BOUNDARY_MISMATCH", "LABEL_ANCHOR_OWNER_MISMATCH", "MISSING_ANNOTATION_ANCHOR", "MISSING_CROSS_REFERENCE",
   "NON_FINITE_NUMBER", "NON_PERSISTENT_FIELD", "NON_TIMING_ANCHOR_TARGET", "ORPHAN_ROW", "SPACER_OWNER_MISMATCH",
   "TIME_GROUP_RESUME_BOUNDARY_MISMATCH", "TIME_GROUP_RESUME_OWNER_MISMATCH", "TIMELINE_END_MISMATCH", "TIMELINE_OUT_OF_RANGE",

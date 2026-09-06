@@ -68,6 +68,7 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_STABLE_ID", "Entity identifiers must be stable IDs", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
   canonicalRule("INVALID_TIME_GROUP_RANGE", "Time Group must use a valid half-open range", "$.timeGroups[*]"),
   canonicalRule("INVALID_TRANSACTION_PHASE", "Transaction phases must fit their parent range", "$.transactions[*].phases[*]"),
+  canonicalRule("INVALID_TRANSACTION_TIME_SCALE", "Transaction time scale must use positive finite ratio and intervals", "$.transactionTimeScale"),
   canonicalRule("LABEL_ANCHOR_BOUNDARY_MISMATCH", "Resume label anchor must match group boundary", "$.timeline.labelAnchors[*].source"),
   canonicalRule("LABEL_ANCHOR_OWNER_MISMATCH", "Label anchor owner must reciprocate", "$.timeline.labelAnchors[*].ownerTimeGroupId"),
   canonicalRule("MISSING_ANNOTATION_ANCHOR", "Annotation must provide its required anchor", "$.annotations[*]"),
@@ -195,8 +196,9 @@ function validateChanges(signal: Signal, changes: readonly SignalValueChange[], 
 }
 
 function validateAnchor(anchor: SemanticAnchor, path: string, annotation: Annotation, signals: ReadonlyMap<string, Signal>, cycleCount: number, problems: DocumentProblem[]): void {
-  if (!Number.isInteger(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
-    problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `Annotation anchor must be an integer cycle satisfying 0 <= cycle < ${cycleCount}.`, annotation.id));
+  const fractionalFreeHighlight = annotation.type === "highlight" && annotation.positionMode === "free";
+  if ((!fractionalFreeHighlight && !Number.isInteger(anchor.cycle)) || !Number.isFinite(anchor.cycle) || anchor.cycle < 0 || anchor.cycle >= cycleCount) {
+    problems.push(problem("TIMELINE_OUT_OF_RANGE", `${path}.cycle`, `${fractionalFreeHighlight ? "Free Highlight" : "Annotation"} anchor must use a valid source cycle in the timeline.`, annotation.id));
   }
   if (anchor.threshold !== undefined) {
     if (!Number.isFinite(anchor.threshold) || anchor.threshold < 0 || anchor.threshold > 1) problems.push(problem("INVALID_ANCHOR_THRESHOLD", `${path}.threshold`, "Anchor threshold must be a finite fraction between 0 and 1.", annotation.id));
@@ -250,6 +252,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   document.annotations.forEach((item, index) => registerId(item.id, `$.annotations[${index}].id`, "annotation"));
   (document.annotationGroups ?? []).forEach((item, index) => registerId(item.id, `$.annotationGroups[${index}].id`, "annotationGroup"));
   document.transactions.forEach((item, index) => registerId(item.id, `$.transactions[${index}].id`, "transaction"));
+  (document.transactionGroups ?? []).forEach((item, index) => registerId(item.id, `$.transactionGroups[${index}].id`, "transaction-group"));
   document.bookmarks.forEach((item, index) => registerId(item.id, `$.bookmarks[${index}].id`, "bookmark"));
   document.timeGroups.forEach((item, index) => registerId(item.id, `$.timeGroups[${index}].id`, "time-group"));
   document.timeline.labelAnchors.forEach((item, index) => registerId(item.id, `$.timeline.labelAnchors[${index}].id`, "label-anchor"));
@@ -258,6 +261,9 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   if (document.timeline.end !== document.timeline.cycleCount) problems.push(problem("TIMELINE_END_MISMATCH", "$.timeline.end", "Canonical timeline end must equal cycleCount."));
 
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
+  const transactionGroups = new Map((document.transactionGroups ?? []).map((group) => [group.id, group]));
+  const transactionScale = document.transactionTimeScale;
+  if (transactionScale !== undefined && (!Number.isFinite(transactionScale.clockCyclesPerTransactionCycle) || transactionScale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(transactionScale.majorInterval) || transactionScale.majorInterval < 1 || !Number.isInteger(transactionScale.minorInterval) || transactionScale.minorInterval < 1)) problems.push(problem("INVALID_TRANSACTION_TIME_SCALE", "$.transactionTimeScale", "Transaction time scale is invalid."));
   const spacerOwners = new Map<string, string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => [spacer.id, group.id] as const)));
   const spacers = new Set(spacerOwners.keys());
   const renderableRows = new Set<string>([...signals.keys(), ...spacers]);
@@ -308,6 +314,12 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       if (annotation.verticalSpan.mode === "rows" && (!annotation.verticalSpan.startRowId || !annotation.verticalSpan.endRowId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan`, "Rows mode requires stable boundary row IDs.", annotation.id));
       for (const [key, id] of [["startRowId", annotation.verticalSpan.startRowId], ["endRowId", annotation.verticalSpan.endRowId]] as const) if (id && !signals.has(id)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span boundary must reference an existing Signal.", annotation.id));
       for (const [key, offset] of [["startOffset", annotation.verticalSpan.startOffset], ["endOffset", annotation.verticalSpan.endOffset]] as const) if (offset !== undefined && !Number.isFinite(offset)) problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].verticalSpan.${key}`, "Vertical span offsets must be finite.", annotation.id));
+    }
+    if (annotation.positionMode !== undefined) {
+      if (annotation.type !== "highlight") problems.push(problem("INVALID_ANNOTATION_STYLE", `$.annotations[${index}].positionMode`, "Position mode is only valid for Highlight annotations.", annotation.id));
+      if (annotation.positionMode === "cycle-snap") {
+        for (const field of ["anchor", "start", "end"] as const) if (annotation[field] && !Number.isInteger(annotation[field]!.cycle)) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.annotations[${index}].${field}.cycle`, "Cycle-snap Highlight anchors must use integer source boundaries.", annotation.id));
+      }
     }
     if (annotation.type === "ghostTrace") {
       if (!annotation.sourceSignalId) problems.push(problem("MISSING_CROSS_REFERENCE", `$.annotations[${index}].sourceSignalId`, "Ghost Trace requires a source Signal.", annotation.id));
@@ -376,11 +388,12 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
   document.transactions.forEach((transaction, index) => {
     if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.transactions[${index}]`, "Transaction must use an integer-cycle half-open range within the source timeline.", transaction.id));
     transaction.phases?.forEach((phase, phaseIndex) => {
-      if (!Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be an integer-cycle half-open subrange of its transaction.", transaction.id));
+      if (!phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end) problems.push(problem("INVALID_TRANSACTION_PHASE", `$.transactions[${index}].phases[${phaseIndex}]`, "Phase must be named and use an integer-cycle half-open subrange of its transaction.", transaction.id));
     });
     transaction.linkedSignals?.forEach((signalId, signalIndex) => {
-
+      if (!signals.has(signalId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].linkedSignals[${signalIndex}]`, `Signal '${signalId}' does not exist.`, transaction.id));
     });
+    if (transaction.groupId !== undefined && !transactionGroups.has(transaction.groupId)) problems.push(problem("MISSING_CROSS_REFERENCE", `$.transactions[${index}].groupId`, `Transaction Group '${transaction.groupId}' does not exist.`, transaction.id));
   });
 
   const legendEntryIds = new Set<string>();

@@ -7,10 +7,11 @@ import { RibbonIcon } from "./ribbon-icon.js";
  * group goes through the single `DsRibbonButton` primitive -- there is no
  * second, hand-written button path left to drift out of sync with it. */
 export function RibbonGroup({ spec }: { readonly spec: RibbonGroupSpec }) {
-  return <div className="ribbon-major-group" data-major-group={spec.majorGroup} data-ribbon-home aria-label={`${spec.majorGroup} commands`}>
-    <DsRibbonGroup ariaLabel={spec.majorGroup} className={`home-${spec.id}-group`} label={spec.caption}>
+  return <div className="ribbon-major-group ribbon-schema-group" data-major-group={spec.majorGroup} data-ribbon-home aria-label={`${spec.majorGroup} commands`}>
+    <DsRibbonGroup ariaLabel={spec.majorGroup} className={`home-${spec.id}-group`} label={spec.caption} externalCaption>
       {spec.items.map((item) => <RibbonSchemaItem key={item.id} item={item} />)}
     </DsRibbonGroup>
+    <span className="ribbon-schema-group__caption">{spec.caption}</span>
   </div>;
 }
 

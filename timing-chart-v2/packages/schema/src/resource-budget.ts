@@ -9,7 +9,23 @@ export const DOCUMENT_RESOURCE_BUDGET = Object.freeze({
   transactionCount: 10_000,
   cycleCount: 100_000,
   valueChangeCount: 1_000_000,
+  maxJsonDepth: 128,
+  maxJsonNodes: 250_000,
 });
+
+export function validateDocumentInputComplexity(value: unknown): readonly DocumentProblem[] {
+  const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 0 }];
+  let nodes = 0;
+  while (stack.length > 0) {
+    const current = stack.pop()!;
+    nodes += 1;
+    if (nodes > DOCUMENT_RESOURCE_BUDGET.maxJsonNodes) return [{ code: "RESOURCE_LIMIT_EXCEEDED", path: "$", message: "Document JSON node complexity exceeds the import limit.", expected: String(DOCUMENT_RESOURCE_BUDGET.maxJsonNodes), value: nodes, detail: `resource-budget;metric=jsonNodes;current=${nodes};limit=${DOCUMENT_RESOURCE_BUDGET.maxJsonNodes}` }];
+    if (current.depth > DOCUMENT_RESOURCE_BUDGET.maxJsonDepth) return [{ code: "RESOURCE_LIMIT_EXCEEDED", path: "$", message: "Document JSON nesting depth exceeds the import limit.", expected: String(DOCUMENT_RESOURCE_BUDGET.maxJsonDepth), value: current.depth, detail: `resource-budget;metric=jsonDepth;current=${current.depth};limit=${DOCUMENT_RESOURCE_BUDGET.maxJsonDepth}` }];
+    if (Array.isArray(current.value)) for (const entry of current.value) stack.push({ value: entry, depth: current.depth + 1 });
+    else if (current.value !== null && typeof current.value === "object") for (const entry of Object.values(current.value)) stack.push({ value: entry, depth: current.depth + 1 });
+  }
+  return [];
+}
 
 export function validateDocumentInputBytes(byteLength: number): readonly DocumentProblem[] {
   if (!Number.isFinite(byteLength) || byteLength <= DOCUMENT_RESOURCE_BUDGET.inputBytes) return [];

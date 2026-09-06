@@ -1,4 +1,4 @@
-import { deterministicId } from "./stable-id.js";
+import { allocateMigrationId, deterministicId } from "./stable-id.js";
 import type {
   AnchorPoint,
   Annotation,
@@ -100,9 +100,9 @@ function normalizeChanges(value: unknown, fallback: string | number, warnings: M
   return merged.length > 0 ? merged : [{ start: 0, value: fallback }];
 }
 
-function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[]): Signal {
+function normalizeSignal(value: unknown, index: number, warnings: MigrationWarning[], usedIds: Set<string>): Signal {
   const source = record(value);
-  const id = text(source.id, deterministicId("signal", index)) as SignalId;
+  const id = (typeof source.id === "string" ? source.id : allocateMigrationId("signal", index, usedIds)) as SignalId;
   const type = ["binary", "bus", "state", "logic", "event", "pulse", "clock", "commentRow"].includes(text(source.type))
     ? text(source.type)
     : "binary";
@@ -230,6 +230,7 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
     const offset = record(source.labelOffset);
     result.labelOffset = { x: number(offset.x, 0), y: number(offset.y, 0) };
   }
+  if (source.positionMode === "cycle-snap" || source.positionMode === "free") result.positionMode = source.positionMode;
   const span = record(source.verticalSpan);
   if (["auto", "rows", "custom"].includes(text(span.mode))) {
     result.verticalSpan = {
@@ -267,6 +268,9 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
   if (typeof (source.destination ?? source.to) === "string") result.destination = source.destination ?? source.to;
   if (phases.length > 0) result.phases = phases;
   if (typeof source.laneId === "string") result.laneId = source.laneId;
+  if (typeof source.groupId === "string") result.groupId = source.groupId;
+  if (typeof source.color === "string") result.color = source.color;
+  if (typeof source.description === "string") result.description = source.description;
   const linkedSignals = list(source.linkedSignals).filter((id): id is string => typeof id === "string");
   if (linkedSignals.length > 0) result.linkedSignals = linkedSignals;
   if (typeof source.category === "string") result.category = source.category;
@@ -285,7 +289,9 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const sourceTimeline = record(source.timeline);
   const timebase = { ...record(sourceDocument.timebase), ...sourceTimeline };
   const cycleCount = Math.max(1, Math.trunc(number(timebase.cycleCount, number(sourceDocument.cycleCount, 10))));
-  const signals = list(source.signals ?? cycleView.signals).map((value, index) => normalizeSignal(value, index, warnings));
+  const legacySignals = list(source.signals ?? cycleView.signals);
+  const usedSignalIds = new Set(legacySignals.map((value) => record(value).id).filter((id): id is string => typeof id === "string"));
+  const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedSignalIds));
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
@@ -297,7 +303,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
 
   const groups = list(source.signalGroups).map((value, index) => {
     const group = record(value);
-    const rows = list(group.rows ?? group.signals).filter((id): id is string => typeof id === "string");
+    const rows = list(group.rows ?? group.signals).filter((id): id is SignalId => typeof id === "string");
     const result: MutableRecord = {
       id: text(group.id, deterministicId("group", index)),
       name: text(group.name, `Group ${index + 1}`),
@@ -335,6 +341,8 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
 
   const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings));
   const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings));
+  const transactionTimeScale = record(source.transactionTimeScale);
+  const transactionGroups = list(source.transactionGroups).map((value, index) => { const item = record(value); return { id: text(item.id, deterministicId("transactionGroup", index)), name: text(item.name, `Transaction Group ${index + 1}`), ...(typeof item.color === "string" ? { color: item.color } : {}), order: Number.isInteger(item.order) && Number(item.order) >= 0 ? Number(item.order) : index }; });
   if (Array.isArray(transactionView.lanes) && transactionView.lanes.length > 0) {
     warnings.push({ code: "MIGRATION_TRANSACTION_LANES", path: "$.transactionView.lanes", message: "Lane IDs remain on transaction source/destination; legacy lane display names are not canonical fields." });
   }
@@ -434,6 +442,8 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
       },
       layout,
       transactions,
+      ...(transactionGroups.length > 0 ? { transactionGroups: transactionGroups as unknown as NonNullable<CanonicalDocument["transactionGroups"]> } : {}),
+      ...(Number.isFinite(transactionTimeScale.clockCyclesPerTransactionCycle) && Number(transactionTimeScale.clockCyclesPerTransactionCycle) > 0 ? { transactionTimeScale: { clockCyclesPerTransactionCycle: Number(transactionTimeScale.clockCyclesPerTransactionCycle), majorInterval: Number.isInteger(transactionTimeScale.majorInterval) && Number(transactionTimeScale.majorInterval) > 0 ? Number(transactionTimeScale.majorInterval) : 1, minorInterval: Number.isInteger(transactionTimeScale.minorInterval) && Number(transactionTimeScale.minorInterval) > 0 ? Number(transactionTimeScale.minorInterval) : 1, ...(typeof transactionTimeScale.showSecondaryClock === "boolean" ? { showSecondaryClock: transactionTimeScale.showSecondaryClock } : {}) } } : {}),
       constraints,
       checkSettings: jsonObject(source.checkSettings) as CanonicalDocument["checkSettings"] ?? {},
     },

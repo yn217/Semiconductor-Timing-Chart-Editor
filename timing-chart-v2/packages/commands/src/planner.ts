@@ -13,6 +13,7 @@ import type {
   SemanticAnchor,
   TimeGroup,
   Transaction,
+  TransactionPhase,
   ValueSignal,
 } from "@timing-chart-v2/schema";
 import { canonicalDocumentsEqual, clockSlotCount, isStableId, opaqueDerivedId, referencesToSignal, valueSignalValueProblem, valuesCompatibleForType } from "@timing-chart-v2/schema";
@@ -28,6 +29,13 @@ export type CommandPlanResult =
 const fail = (reason: "invalid" | "no-op", code: CommandPolicyCode, path: string, message: string): CommandPlanResult => ({ ok: false, reason, problems: [{ code, path, message }] });
 const timingSignalIds = (document: CanonicalDocument) => document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
 const annotationIds = (document: CanonicalDocument) => document.annotations.map((annotation) => annotation.id);
+
+function transactionPhasesProblem(phases: readonly TransactionPhase[], start: number, end: number): string | undefined {
+  const ordered = phases.slice().sort((left, right) => left.start - right.start || left.end - right.end || left.name.localeCompare(right.name));
+  if (ordered.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < start || phase.start >= phase.end || phase.end > end)) return "Phases must be named integer-cycle half-open subranges of the Transaction.";
+  if (ordered.some((phase, index) => index > 0 && ordered[index - 1]!.end > phase.start)) return "Transaction phases must not overlap.";
+  return undefined;
+}
 
 function replacementRowsOrEmpty(document: unknown): readonly RowId[] {
   if (document === null || typeof document !== "object") return [];
@@ -84,7 +92,7 @@ function replaceSignal(document: CanonicalDocument, index: number, signal: Signa
 
 function dependentAnnotations(document: CanonicalDocument, signalId: SignalId): Annotation[] {
   const annotationIds = new Set(referencesToSignal(document, signalId)
-    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource")
+    .filter((reference) => reference.kind === "annotation.anchor" || reference.kind === "annotation.ghostTraceSource" || reference.kind === "annotation.markerSpanStart" || reference.kind === "annotation.markerSpanEnd")
     .map((reference) => reference.ownerId));
   return document.annotations.filter((annotation) => annotationIds.has(annotation.id));
 }
@@ -437,9 +445,16 @@ function moveAnchor(anchor: SemanticAnchor | undefined, start: number, end: numb
 
 function mappedInterval(start: number, end: number, sourceStart: number, sourceEnd: number, to: number): { readonly start: number; readonly end: number } | undefined {
   if (!Number.isInteger(start) || !Number.isInteger(end)) return undefined;
-  const mapped = Array.from({ length: end - start }, (_, index) => moveCycleIndex(start + index, sourceStart, sourceEnd, to)).sort((left, right) => left - right);
-  if (mapped.length === 0 || mapped.some((cycle, index) => index > 0 && cycle !== mapped[index - 1]! + 1)) return undefined;
-  return { start: mapped[0]!, end: mapped.at(-1)! + 1 };
+  if (start >= end) return undefined;
+  const length = sourceEnd - sourceStart;
+  const cuts = [...new Set([start, end, sourceStart, sourceEnd, to, to + length].filter((cut) => cut > start && cut < end))].sort((left, right) => left - right);
+  const boundaries = [start, ...cuts, end];
+  const segments = boundaries.slice(0, -1).map((segmentStart, index) => {
+    const segmentEnd = boundaries[index + 1]!;
+    return { start: moveCycleIndex(segmentStart, sourceStart, sourceEnd, to), end: moveCycleIndex(segmentEnd - 1, sourceStart, sourceEnd, to) + 1 };
+  }).sort((left, right) => left.start - right.start);
+  if (segments.some((segment) => segment.start >= segment.end) || segments.some((segment, index) => index > 0 && segment.start !== segments[index - 1]!.end)) return undefined;
+  return { start: segments[0]!.start, end: segments.at(-1)!.end };
 }
 
 function duplicateTimelineRange(document: CanonicalDocument, command: Extract<SemanticCommand, { type: "timeline.duplicateRange" }>): CanonicalDocument {
@@ -454,8 +469,9 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
     clonedIds.set(id, clone);
     return clone;
   };
+  const sourceSignals = new Map(document.signals.map((item) => [item.id, item]));
   const signals = inserted.signals.map((signal): Signal => {
-    const source = document.signals.find((item) => item.id === signal.id)!;
+    const source = sourceSignals.get(signal.id)!;
     if (signal.type === "commentRow" || source.type === "commentRow") return signal;
     if (signal.type === "clock" && source.type === "clock") return source.enable
       ? { ...signal, enable: duplicateChanges(source.enable, document.timeline.cycleCount, command.start, command.end, command.at) }
@@ -475,8 +491,9 @@ function duplicateTimelineRange(document: CanonicalDocument, command: Extract<Se
     return [clone];
   });
   const sourceGroups = document.timeGroups.filter((group) => group.start >= command.start && group.end <= command.end);
-  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => anchor.source >= command.start && anchor.source < command.end);
   const groupIds = new Map(sourceGroups.map((group) => [group.id, cloneId(group.id)]));
+  const ownedResumeAnchorIds = new Set(sourceGroups.map((group) => group.presentation?.resumeLabelAnchorId).filter((id) => id !== undefined));
+  const sourceLabels = document.timeline.labelAnchors.filter((anchor) => (anchor.source >= command.start && anchor.source < command.end) || (anchor.source === command.end && ownedResumeAnchorIds.has(anchor.id)));
   const labelIds = new Map(sourceLabels.map((anchor) => [anchor.id, cloneId(anchor.id)]));
   const clonedGroups = sourceGroups.map((group) => ({
     ...group,
@@ -958,7 +975,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (document.transactions.some((item) => item.id === transaction.id)) return fail("invalid", "DUPLICATE_ID", "$.transaction.id", `Transaction '${transaction.id}' already exists.`);
       if (!transaction.name.trim()) return fail("invalid", "INVALID_NAME", "$.transaction.name", "Transaction name cannot be empty.");
       if (!Number.isInteger(transaction.start) || !Number.isInteger(transaction.end) || transaction.start < 0 || transaction.start >= transaction.end || transaction.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.transaction", "Transaction must use a half-open source-time range.");
+      if (transaction.phases && transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.transaction.phases", transactionPhasesProblem(transaction.phases, transaction.start, transaction.end)!);
       if (transaction.linkedSignals?.some((id) => !document.signals.some((signal) => signal.id === id))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.linkedSignals", "Transaction links must target existing Signals.");
+      if (transaction.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === transaction.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.transaction.groupId", "Transaction Group does not exist.");
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions: [...document.transactions, transaction] }, changeSet, inverseChangeSet: changeSet };
     }
@@ -1002,8 +1021,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       else if (command.type === "transaction.phaseUpdate") phases[command.phaseIndex] = command.phase;
       else phases.splice(command.phaseIndex, 1);
       const sorted = phases.slice().sort((a, b) => a.start - b.start || a.end - b.end || a.name.localeCompare(b.name));
-      if (sorted.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transaction.start || phase.start >= phase.end || phase.end > transaction.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", "Phase must be an integer-cycle subrange of its transaction.");
-      if (sorted.some((phase, i) => i > 0 && sorted[i - 1]!.end > phase.start)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", "Transaction phases must not overlap.");
+      const phaseProblem = transactionPhasesProblem(sorted, transaction.start, transaction.end);
+      if (phaseProblem) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phase", phaseProblem);
       const next: Transaction = sorted.length ? { ...transaction, phases: sorted } : (() => { const { phases: _phases, ...rest } = transaction; return rest; })();
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
@@ -1018,11 +1037,12 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Transaction name cannot be empty.");
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$", "Transaction must use a half-open source-time range.");
       const phases = command.phases === undefined ? transaction.phases : command.phases;
-      if (phases?.some((phase) => !phase.name.trim() || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < command.start || phase.start >= phase.end || phase.end > command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", "Transaction phases must be named integer-cycle half-open subranges.");
-      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined) && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
-      const { laneId: _oldLane, ...base } = transaction;
+      if (phases && transactionPhasesProblem(phases, command.start, command.end)) return fail("invalid", "INVALID_TRANSACTION_PHASE", "$.phases", transactionPhasesProblem(phases, command.start, command.end)!);
+      if (command.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
+      if (transaction.name === name && transaction.start === command.start && transaction.end === command.end && (transaction.laneId ?? undefined) === (laneId || undefined) && (transaction.groupId ?? undefined) === (command.groupId ?? undefined) && transaction.color === command.color && transaction.description === command.description && JSON.stringify(transaction.phases ?? []) === JSON.stringify(phases ?? [])) return fail("no-op", "NO_OP", "$", "Transaction is unchanged.");
+      const { laneId: _oldLane, groupId: _oldGroup, color: _oldColor, description: _oldDescription, ...base } = transaction;
       const { phases: _oldPhases, ...withoutPhases } = base;
-      const next: Transaction = { ...withoutPhases, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}), ...(phases && phases.length > 0 ? { phases } : {}) };
+      const next: Transaction = { ...withoutPhases, name, start: command.start, end: command.end, ...(laneId ? { laneId } : {}), ...(command.groupId ? { groupId: command.groupId } : {}), ...(command.color ? { color: command.color } : {}), ...(command.description !== undefined ? { description: command.description } : {}), ...(phases && phases.length > 0 ? { phases } : {}) };
       const transactions = [...document.transactions]; transactions[index] = next;
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id], minimapOverview: true };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
@@ -1080,6 +1100,40 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { transactionSemantics: [transaction.id] };
       return { ok: true, document: { ...document, transactions }, changeSet, inverseChangeSet: changeSet };
     }
+    case "transactionGroup.create": {
+      const group = command.group;
+      if (!isStableId(group.id) || !group.name.trim() || !Number.isInteger(group.order) || group.order < 0 || (document.transactionGroups ?? []).some((item) => item.id === group.id)) return fail("invalid", "INVALID_STABLE_ID", "$.group", "Transaction Group must have a unique stable ID, name, and order.");
+      return { ok: true, document: { ...document, transactionGroups: [...(document.transactionGroups ?? []), group] }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transactionGroup.rename": {
+      const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
+      if (index < 0 || !command.name.trim()) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist or has an empty name.");
+      if (groups[index]!.name === command.name) return fail("no-op", "NO_OP", "$", "Transaction Group is unchanged.");
+      groups[index] = { ...groups[index]!, name: command.name }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transactionGroup.update": {
+      const groups = [...(document.transactionGroups ?? [])]; const index = groups.findIndex((item) => item.id === command.groupId);
+      if (index < 0 || !command.name.trim() || !Number.isInteger(command.order) || command.order < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group update is invalid.");
+      groups[index] = { id: command.groupId, name: command.name, order: command.order, ...(command.color ? { color: command.color } : {}) }; return { ok: true, document: { ...document, transactionGroups: groups }, changeSet: { transactionSemantics: [] }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transactionGroup.delete": {
+      const groups = document.transactionGroups ?? []; if (!groups.some((item) => item.id === command.groupId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction Group does not exist.");
+      const transactions = document.transactions.map((item) => item.groupId === command.groupId ? (({ groupId: _removed, ...rest }) => rest)(item) : item);
+      return { ok: true, document: { ...document, transactionGroups: groups.filter((item) => item.id !== command.groupId), transactions }, changeSet: { transactionSemantics: transactions.filter((item, i) => item !== document.transactions[i]).map((item) => item.id) }, inverseChangeSet: { transactionSemantics: [] } };
+    }
+    case "transaction.moveToGroup": {
+      const index = document.transactions.findIndex((item) => item.id === command.transactionId); const transaction = document.transactions[index];
+      if (!transaction || (command.groupId !== undefined && !(document.transactionGroups ?? []).some((group) => group.id === command.groupId))) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.groupId", "Transaction or Group does not exist.");
+      if (transaction.groupId === command.groupId) return fail("no-op", "NO_OP", "$", "Transaction is already in this Group.");
+      const transactions = [...document.transactions]; transactions[index] = command.groupId === undefined ? (({ groupId: _removed, ...rest }) => rest)(transaction) : { ...transaction, groupId: command.groupId };
+      return { ok: true, document: { ...document, transactions }, changeSet: { transactionSemantics: [transaction.id] }, inverseChangeSet: { transactionSemantics: [transaction.id] } };
+    }
+    case "transaction.setTimeScale": {
+      const scale = command.scale;
+      if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
+      if (JSON.stringify(document.transactionTimeScale ?? {}) === JSON.stringify(scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
+      return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id) }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id) } };
+    }
     case "annotation.updateAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
       const annotation = document.annotations[index];
@@ -1098,8 +1152,9 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "annotation.delete": {
       const annotation = document.annotations.find((item) => item.id === command.annotationId);
       if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
-      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true };
-      return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id) }, changeSet, inverseChangeSet: changeSet };
+      const annotationGroups = (document.annotationGroups ?? []).map((group) => ({ ...group, annotationIds: group.annotationIds.filter((id) => id !== annotation.id) }));
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id], annotationStyle: [annotation.id], minimapOverview: true, ...(annotationGroups.some((group, index) => JSON.stringify(group) !== JSON.stringify(document.annotationGroups?.[index])) ? { annotationGroups: annotationGroups.map((group) => group.id) } : {}) };
+      return { ok: true, document: { ...document, annotations: document.annotations.filter((item) => item.id !== annotation.id), annotationGroups }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.setAnchor": {
       const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
@@ -1196,6 +1251,17 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       if (JSON.stringify(annotation.verticalSpan ?? { mode: "auto" }) === JSON.stringify(span)) return fail("no-op", "NO_OP", "$", "Marker vertical span is unchanged.");
       const annotations = [...document.annotations]; annotations[index] = { ...annotation, verticalSpan: span };
       const changeSet: ChangeSet = { annotationStyle: [annotation.id] };
+      return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
+    }
+    case "annotation.setPositionMode": {
+      const index = document.annotations.findIndex((annotation) => annotation.id === command.annotationId);
+      const annotation = document.annotations[index];
+      if (!annotation) return fail("invalid", "ANNOTATION_NOT_FOUND", "$.annotationId", `Annotation '${command.annotationId}' does not exist.`);
+      if (annotation.type !== "highlight") return fail("invalid", "INVALID_LABEL", "$.positionMode", "Position mode is only supported by Highlights.");
+      if (command.positionMode === "cycle-snap" && [annotation.anchor, annotation.start, annotation.end].some((anchor) => anchor !== undefined && !Number.isInteger(anchor.cycle))) return fail("invalid", "TIMELINE_OUT_OF_RANGE", "$.positionMode", "Cycle-snap Highlights require integer source boundaries.");
+      if ((annotation.positionMode ?? "cycle-snap") === command.positionMode) return fail("no-op", "NO_OP", "$", "Highlight position mode is unchanged.");
+      const annotations = [...document.annotations]; annotations[index] = { ...annotation, positionMode: command.positionMode };
+      const changeSet: ChangeSet = { annotationPosition: [annotation.id] };
       return { ok: true, document: { ...document, annotations }, changeSet, inverseChangeSet: changeSet };
     }
     case "annotation.bringToFront": {
@@ -1455,17 +1521,17 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const group = document.timeGroups[index];
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
       if (!command.name.trim()) return fail("invalid", "EMPTY_TIME_GROUP_NAME", "$.name", "Time Group name must not be empty.");
-      if (command.start !== group.start || command.end !== group.end) {
-        const resolution = resolveTimeGroupRange({ ...document, timeGroups: promoteTimeGroupChildren(document.timeGroups, group) }, command);
-        if (!resolution.ok) return fail("invalid", resolution.code, "$.range", resolution.message);
-      }
+      const rangeChanged = command.start !== group.start || command.end !== group.end;
+      const hierarchyBase = rangeChanged ? promoteTimeGroupChildren(document.timeGroups, group) : document.timeGroups.filter((item) => item.id !== group.id);
+      const resolution = resolveTimeGroupRange({ ...document, timeGroups: hierarchyBase }, command);
+      if (!resolution.ok) return fail("invalid", resolution.code, "$.range", resolution.message);
       if (!Number.isInteger(command.start) || !Number.isInteger(command.end) || command.start < 0 || command.start >= command.end || command.end > document.timeline.cycleCount) return fail("invalid", "INVALID_TIME_GROUP_RANGE", "$.timeGroup", "Time Group must be a non-empty half-open range.");
       if (group.name === command.name && group.start === command.start && group.end === command.end && group.category === command.category && group.comment === command.comment && JSON.stringify(group.presentation) === JSON.stringify(command.presentation)) return fail("no-op", "NO_OP", "$", "Time Group is unchanged.");
-      const nextGroup: TimeGroup = { ...(group.parentId === undefined ? {} : { parentId: group.parentId }), id: group.id, name: command.name, start: command.start, end: command.end, ...(command.category === undefined ? {} : { category: command.category }), ...(command.comment === undefined ? {} : { comment: command.comment }), ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
-      const timeGroups = [...document.timeGroups]; timeGroups[index] = nextGroup;
+      const nextGroup: TimeGroup = { ...(resolution.parentId === undefined ? {} : { parentId: resolution.parentId }), id: group.id, name: command.name, start: command.start, end: command.end, ...(command.category === undefined ? {} : { category: command.category }), ...(command.comment === undefined ? {} : { comment: command.comment }), ...(command.presentation === undefined ? {} : { presentation: command.presentation }) };
+      const timeGroups = hierarchyBase.map((item) => resolution.enclosedIds.has(item.id) && (item.parentId === undefined || !resolution.enclosedIds.has(item.parentId)) ? { ...item, parentId: group.id } : item);
+      timeGroups.splice(index, 0, nextGroup);
       const nextDocument = { ...document, timeGroups };
       const collapseChanged = Boolean(group.presentation?.collapsed) !== Boolean(command.presentation?.collapsed);
-      const rangeChanged = group.start !== command.start || group.end !== command.end;
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id], geometryScreenX: true, minimapOverview: true, ...(collapseChanged || rangeChanged || Boolean(group.presentation?.collapsed) ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
@@ -1485,11 +1551,8 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
     case "timeGroup.delete": {
       const group = document.timeGroups.find((item) => item.id === command.timeGroupId);
       if (!group) return fail("invalid", "TIME_GROUP_NOT_FOUND", "$.timeGroupId", `Time Group '${command.timeGroupId}' does not exist.`);
-      const labelAnchors = document.timeline.labelAnchors.map((anchor) => {
-        if (anchor.ownerTimeGroupId !== group.id) return anchor;
-        const { ownerTimeGroupId: _owner, ...rest } = anchor;
-        return rest;
-      });
+      const ownedAnchorId = group.presentation?.resumeLabelAnchorId;
+      const labelAnchors = document.timeline.labelAnchors.filter((anchor) => anchor.id !== ownedAnchorId && anchor.ownerTimeGroupId !== group.id);
       const nextDocument = { ...document, timeline: { ...document.timeline, labelAnchors }, timeGroups: promoteTimeGroupChildren(document.timeGroups, group) };
       const changeSet: ChangeSet = { timeGroupSemantics: [group.id, ...document.timeGroups.filter(item => item.parentId === group.id).map(item => item.id)], geometryScreenX: true, minimapOverview: true, ...(group.presentation?.collapsed ? { waveSemantics: timingSignalIds(nextDocument), geometryLocal: timingSignalIds(nextDocument) } : {}) };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };

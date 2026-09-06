@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { commandPolicyCodes, commandPolicyDescriptors, planCommand, type SemanticCommand } from "@timing-chart-v2/commands";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import type { Annotation, AnnotationId, BookmarkId, ClockSignal, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, BookmarkId, ClockSignal, CommandId, CommentRow, GroupId, Signal, SignalId, SpacerId, TransactionGroupId, TransactionId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (id: string) => id as CommandId;
@@ -13,6 +13,22 @@ function extraSignal(id = "sig_extra"): Signal {
 }
 
 describe("pure Semantic Command planning", () => {
+  it("owns Transaction Groups and preserves group/color/description semantics atomically", () => {
+    const document = canonicalFixture();
+    const groupId = "txn_group_main" as TransactionGroupId;
+    const transactionId = "txn_grouped" as TransactionId;
+    const group = { id: groupId, name: "Transfers", color: "#123456", order: 0 } as const;
+    expect(planCommand(document, { id: commandId("txn_group_create"), type: "transactionGroup.create", group }).ok).toBe(true);
+    const grouped = planCommand({ ...document, transactionGroups: [group] }, { id: commandId("txn_create_grouped"), type: "transaction.create", transaction: { id: transactionId, name: "Read", start: 1, end: 4, groupId, color: "#abcdef", description: "payload" } });
+    expect(grouped.ok).toBe(true);
+    if (!grouped.ok) return;
+    expect(grouped.document.transactions[0]).toMatchObject({ groupId, color: "#abcdef", description: "payload" });
+    const moved = planCommand(grouped.document, { id: commandId("txn_group_remove"), type: "transaction.moveToGroup", transactionId, groupId: undefined });
+    expect(moved.ok).toBe(true);
+    if (moved.ok) expect(moved.document.transactions[0]).not.toHaveProperty("groupId");
+    const rejected = planCommand(document, { id: commandId("txn_bad_group"), type: "transaction.create", transaction: { id: transactionId, name: "Bad", start: 1, end: 2, groupId } });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
+  });
   it("validates suppressed clock slots relative to a delayed generator start", () => {
     const source = canonicalFixture();
     const clock = source.signals[0] as ClockSignal;
@@ -594,6 +610,15 @@ describe("command execution and atomic history", () => {
     expect(session.historyState().undoDepth).toBe(5);
   });
 
+  it("rejects invalid Transaction links and overlapping phases atomically at command planning", () => {
+    const session = new CommandHistorySession(canonicalFixture());
+    const before = session.getSnapshot().document;
+    expect(session.execute({ id: commandId("txn_invalid_link"), type: "transaction.create", transaction: { id: "txn_invalid_link" as TransactionId, name: "Bad", start: 1, end: 5, linkedSignals: ["sig_missing" as SignalId] } })).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.execute({ id: commandId("txn_invalid_phases"), type: "transaction.create", transaction: { id: "txn_invalid_phases" as TransactionId, name: "Bad", start: 1, end: 5, phases: [{ name: "A", start: 1, end: 4 }, { name: "B", start: 3, end: 5 }] } })).toMatchObject({ ok: false, reason: "invalid" });
+    expect(session.getSnapshot().document).toEqual(before);
+    expect(session.historyState().undoDepth).toBe(0);
+  });
+
   it("updates Clock Edge Numbers as presentation-only state", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const result = session.execute({ id: commandId("cmd_edge_numbers"), type: "signal.updateEdgeCounter", signalId: "sig_clk" as SignalId, edgeCounter: { show: true, mode: "rising", startNumber: 4, countFrom: "signal-start", labelEvery: 2, position: "above", offset: { x: 1, y: -8 } } });
@@ -660,6 +685,19 @@ describe("command execution and atomic history", () => {
     expect(session.getSnapshot().document.annotations[0]?.to).not.toHaveProperty("offset");
     expect(session.execute({ id: commandId("cmd_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
     expect(session.getSnapshot().document.annotations).toEqual([]);
+  });
+
+  it("deletes a grouped Annotation and restores exact membership through Undo/Redo", () => {
+    const annotation: Annotation = { id: "ann_grouped_delete" as AnnotationId, type: "marker", label: "Grouped", visible: true, anchor: { cycle: 2, point: "cycle-start" } };
+    const other: Annotation = { id: "ann_grouped_keep" as AnnotationId, type: "marker", label: "Keep", visible: true, anchor: { cycle: 4, point: "cycle-start" } };
+    const initial = { ...canonicalFixture(), annotations: [annotation, other], annotationGroups: [{ id: "ann_group_lifecycle" as never, name: "Lifecycle", annotationIds: [annotation.id, other.id] }] };
+    const session = new CommandHistorySession(initial);
+    expect(session.execute({ id: commandId("cmd_grouped_ann_delete"), type: "annotation.delete", annotationId: annotation.id }).ok).toBe(true);
+    expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual([other.id]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(initial);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.annotationGroups?.[0]?.annotationIds).toEqual([other.id]);
   });
 
   it("updates Measurement profile atomically and restores it through Undo/Redo", () => {

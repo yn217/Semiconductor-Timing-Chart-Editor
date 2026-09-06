@@ -64,6 +64,15 @@ describe("canonical stable-ID reference registry", () => {
     ]);
   });
 
+  it("registers Marker vertical-span boundaries as Signal references", () => {
+    const base = canonicalFixture();
+    const marker = { id: "marker_span_registry" as AnnotationId, type: "marker" as const, label: "Span", visible: true, anchor: { cycle: 2, point: "cycle-start" as const }, verticalSpan: { mode: "rows" as const, startRowId: base.signals[0]!.id, endRowId: base.signals[1]!.id } };
+    const document = { ...base, annotations: [marker] };
+    expect(validateCanonicalDocument(document)).toEqual([]);
+    expect(canonicalReferences(document).filter((reference) => reference.ownerId === marker.id).map((reference) => reference.kind)).toEqual(["annotation.markerSpanStart", "annotation.markerSpanEnd"]);
+    expect(referencesToSignal(document, base.signals[0]!.id).map((reference) => reference.kind)).toContain("annotation.markerSpanStart");
+  });
+
   it("registers an Edge Counter marker by explicit Bookmark identity", () => {
     const base = canonicalFixture();
     const markerA = { id: "bookmark_a" as BookmarkId, name: "A", start: 1 };

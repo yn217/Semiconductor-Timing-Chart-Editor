@@ -29,6 +29,8 @@ import type {
   Transaction,
   TransactionPhase,
   TransactionId,
+  TransactionGroup,
+  TransactionTimeScale,
   CommentRow,
   ValueSignal,
 } from "@timing-chart-v2/schema";
@@ -95,7 +97,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.duplicate"; transactionId: TransactionId; newTransactionId: TransactionId; name?: string }>
   | Readonly<{ id: CommandId; type: "transaction.delete"; transactionId: TransactionId }>
   | Readonly<{ id: CommandId; type: "transaction.rename"; transactionId: TransactionId; name: string }>
-  | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string; phases?: readonly TransactionPhase[] }>
+  | Readonly<{ id: CommandId; type: "transaction.update"; transactionId: TransactionId; name: string; start: number; end: number; laneId?: string; phases?: readonly TransactionPhase[]; groupId?: TransactionGroup["id"]; color?: string; description?: string }>
   | Readonly<{ id: CommandId; type: "transaction.phaseAdd"; transactionId: TransactionId; phase: TransactionPhase }>
   | Readonly<{ id: CommandId; type: "transaction.phaseUpdate"; transactionId: TransactionId; phaseIndex: number; phase: TransactionPhase }>
   | Readonly<{ id: CommandId; type: "transaction.phaseDelete"; transactionId: TransactionId; phaseIndex: number }>
@@ -104,6 +106,12 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transaction.moveLane"; transactionId: TransactionId; laneId: string }>
   | Readonly<{ id: CommandId; type: "transaction.linkSignal"; transactionId: TransactionId; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "transaction.unlinkSignal"; transactionId: TransactionId; signalId: SignalId }>
+  | Readonly<{ id: CommandId; type: "transactionGroup.create"; group: TransactionGroup }>
+  | Readonly<{ id: CommandId; type: "transactionGroup.rename"; groupId: TransactionGroup["id"]; name: string }>
+  | Readonly<{ id: CommandId; type: "transactionGroup.update"; groupId: TransactionGroup["id"]; name: string; color?: string; order: number }>
+  | Readonly<{ id: CommandId; type: "transactionGroup.delete"; groupId: TransactionGroup["id"] }>
+  | Readonly<{ id: CommandId; type: "transaction.moveToGroup"; transactionId: TransactionId; groupId?: TransactionGroup["id"] }>
+  | Readonly<{ id: CommandId; type: "transaction.setTimeScale"; scale: TransactionTimeScale }>
   | Readonly<{ id: CommandId; type: "timeline.setReferenceClock"; referenceClock?: SignalId }>
   | Readonly<{ id: CommandId; type: "timeline.setReferenceEdge"; edge: "rising" | "falling" }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
@@ -115,6 +123,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "annotation.updateLabelOffset"; annotationId: AnnotationId; labelOffset: PixelOffset }>
   | Readonly<{ id: CommandId; type: "annotation.updateProperties"; annotationId: AnnotationId; label: string; visible: boolean; color?: string; lineType?: Annotation["lineType"]; arrowhead?: Annotation["arrowhead"]; sourceSignalId?: SignalId; traceOffsetCycles?: number; opacity?: number; style?: Annotation["style"]; measurement?: Annotation["measurement"] }>
   | Readonly<{ id: CommandId; type: "annotation.updateVerticalSpan"; annotationId: AnnotationId; verticalSpan: NonNullable<Annotation["verticalSpan"]> }>
+  | Readonly<{ id: CommandId; type: "annotation.setPositionMode"; annotationId: AnnotationId; positionMode: "cycle-snap" | "free" }>
   | Readonly<{ id: CommandId; type: "annotation.updateMeasurement"; annotationId: AnnotationId; profile: "cycle" | "30-70" | "10-90" | "20-80" | "50%" | "custom"; anchorKind: "threshold" | "ratio"; start: number; end: number; layout?: Annotation["measurementLayout"] }>
   | Readonly<{ id: CommandId; type: "annotation.bringToFront"; annotationId: AnnotationId }>
   | Readonly<{ id: CommandId; type: "annotation.sendToBack"; annotationId: AnnotationId }>

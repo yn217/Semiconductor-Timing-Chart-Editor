@@ -257,6 +257,21 @@ describe("timeline ripple commands", () => {
     expect(session.getSnapshot().document.timeGroups).toEqual([]);
   });
 
+  it("removes an owned resume anchor with its Time Group while retaining standalone anchors", () => {
+    const source = canonicalFixture();
+    const groupId = "time_owned_delete" as TimeGroupId;
+    const ownedId = "label_owned_delete" as LabelAnchorId;
+    const standaloneId = "label_standalone" as LabelAnchorId;
+    source.timeGroups = [{ id: groupId, name: "Fold", start: 2, end: 5, presentation: { collapsed: true, foldStyle: "axis-break", resumeLabelAnchorId: ownedId } }];
+    source.timeline = { ...source.timeline, labelAnchors: [{ id: ownedId, source: 5, display: 50, ownerTimeGroupId: groupId }, { id: standaloneId, source: 7, display: 70 }] };
+    const session = new CommandHistorySession(source);
+    expect(session.execute({ id: commandId("cmd_owned_delete"), type: "timeGroup.delete", timeGroupId: groupId }).ok).toBe(true);
+    expect(session.getSnapshot().document.timeline.labelAnchors).toEqual([{ id: standaloneId, source: 7, display: 70 }]);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document).toEqual(source);
+    expect(session.redo().ok).toBe(true);
+  });
+
   it("updates a Time Group editor atomically and restores it with Undo", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const timeGroup = { id: "time_editor_gap" as TimeGroupId, name: "Wait", start: 2, end: 5, comment: "initial", presentation: { collapsed: true as const, foldStyle: "axis-break" as const, foldLabel: "WAIT" } };
@@ -288,6 +303,21 @@ describe("timeline ripple commands", () => {
     expect(document.annotations).toContainEqual(expect.objectContaining({ id: "ann_data", anchor: { signalId: "sig_data", cycle: 7, point: "value-start" } }));
     expect(document.bookmarks).toContainEqual(expect.objectContaining({ id: "bookmark_data", start: 7 }));
     expect(session.historyState().undoDepth).toBe(1);
+  });
+
+  it("clones a boundary-owned Time Group resume anchor with its group", () => {
+    const source = canonicalFixture();
+    const groupId = "time_owned" as TimeGroupId;
+    const anchorId = "label_owned" as LabelAnchorId;
+    source.timeGroups = [{ id: groupId, name: "Fold", start: 3, end: 8, presentation: { collapsed: true, foldStyle: "axis-break", resumeLabelAnchorId: anchorId } }];
+    source.timeline = { ...source.timeline, end: 10, cycleCount: 10, labelAnchors: [{ id: anchorId, source: 8, display: 8, ownerTimeGroupId: groupId }] };
+    const session = new CommandHistorySession(source);
+    expect(session.execute({ id: commandId("cmd_owned_duplicate"), type: "timeline.duplicateRange", start: 3, end: 8, at: 0 }).ok).toBe(true);
+    const document = session.getSnapshot().document;
+    const clonedGroup = document.timeGroups.find((group) => group.id !== groupId)!;
+    const clonedAnchor = document.timeline.labelAnchors.find((anchor) => anchor.id !== anchorId);
+    expect(clonedGroup?.presentation?.resumeLabelAnchorId).toBe(clonedAnchor?.id);
+    expect(clonedAnchor).toMatchObject({ source: 5, ownerTimeGroupId: clonedGroup?.id });
   });
 
   it("allocates collision-free opaque clone IDs after reload when a command ID is reused", () => {

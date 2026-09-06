@@ -26,7 +26,7 @@ export function canonicalFixture(): CanonicalDocument {
         values: [{ start: 0, value: "00" }, { start: 4, value: "A5" }],
       },
     ],
-    bookmarks: [], timeGroups: [], annotations: [],
+    bookmarks: [], timeGroups: [], annotations: [], annotationGroups: [],
     legend: { show: true, orientation: "horizontal", usedRolesOnly: true, position: { x: 0, y: 0 } },
     layout: { roleColumnWidth: 32, signalNameWidth: 168, signalNameAlign: "left", rowHeight: 28, signalSpacing: 6, overflow: "ellipsis" },
     transactions: [], constraints: [], checkSettings: {},

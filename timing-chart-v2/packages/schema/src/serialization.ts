@@ -2,7 +2,7 @@ import { migrateThroughRegistry } from "./migration.js";
 import { validateCanonicalDocument } from "./validation.js";
 import { scanJsonSyntax } from "./json-syntax.js";
 import type { CanonicalDocument, DocumentProblem, MigrationWarning, ParseDocumentResult } from "./types.js";
-import { validateDocumentInputBytes, validateDocumentResourceBudget } from "./resource-budget.js";
+import { validateDocumentInputBytes, validateDocumentInputComplexity, validateDocumentResourceBudget } from "./resource-budget.js";
 
 function cloneUnknown(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(cloneUnknown);
@@ -64,6 +64,8 @@ export function parseDocument(input: string | unknown): ParseDocumentResult {
   } catch (error) {
     return { ok: false, kind: "syntax", problems: [syntaxProblem(error, input)] };
   }
+  const complexityProblems = validateDocumentInputComplexity(parsed);
+  if (complexityProblems.length > 0) return { ok: false, kind: "validation", problems: complexityProblems };
   return normalizeDocument(parsed);
 }
 
@@ -77,7 +79,12 @@ export function serializeValidatedCanonicalDocument(document: CanonicalDocument,
 }
 
 function utf8ByteLength(value: string): number {
-  return encodeURIComponent(value).match(/%[0-9A-F]{2}|./g)?.length ?? 0;
+  let bytes = 0;
+  for (const character of value) {
+    const codePoint = character.codePointAt(0)!;
+    bytes += codePoint <= 0x7f ? 1 : codePoint <= 0x7ff ? 2 : codePoint <= 0xffff ? 3 : 4;
+  }
+  return bytes;
 }
 
 export function serializeCanonicalDocument(document: CanonicalDocument, indent = 2): string {

@@ -8,6 +8,8 @@ export type CanonicalReferenceKind =
   | "signal.edgeCounter.marker"
   | "annotation.anchor"
   | "annotation.ghostTraceSource"
+  | "annotation.markerSpanStart"
+  | "annotation.markerSpanEnd"
   | "transaction.linkedSignal"
   | "labelAnchor.ownerTimeGroup"
   | "signalGroup.row"
@@ -73,6 +75,10 @@ export function canonicalReferences(document: CanonicalDocument): readonly Canon
         targetType: "signal",
         path: `$.annotations[${index}].sourceSignalId`,
       });
+    }
+    if (annotation.type === "marker") {
+      if (annotation.verticalSpan?.startRowId !== undefined) references.push({ kind: "annotation.markerSpanStart", ownerId: annotation.id, targetId: annotation.verticalSpan.startRowId, targetType: "signal", path: `$.annotations[${index}].verticalSpan.startRowId` });
+      if (annotation.verticalSpan?.endRowId !== undefined) references.push({ kind: "annotation.markerSpanEnd", ownerId: annotation.id, targetId: annotation.verticalSpan.endRowId, targetType: "signal", path: `$.annotations[${index}].verticalSpan.endRowId` });
     }
   });
   document.transactions.forEach((transaction, index) => {
