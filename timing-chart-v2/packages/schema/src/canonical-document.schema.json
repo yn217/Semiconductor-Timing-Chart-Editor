@@ -100,6 +100,7 @@
   "$defs": {
     "stableId": { "type": "string", "pattern": "^[A-Za-z][A-Za-z0-9_.:-]*$" },
     "enumDefinition": { "type": "object", "additionalProperties": false, "required": ["id", "name", "entries"], "properties": { "id": { "$ref": "#/$defs/stableId" }, "name": { "type": "string", "minLength": 1 }, "entries": { "type": "array", "items": { "type": "object", "additionalProperties": false, "required": ["value", "label"], "properties": { "value": { "type": ["string", "number"] }, "label": { "type": "string", "minLength": 1 } } } } } },
+    "resetSemantics": { "type": "object", "additionalProperties": false, "required": ["polarity", "synchronization"], "properties": { "polarity": { "enum": ["active-high", "active-low"] }, "synchronization": { "enum": ["synchronous", "asynchronous"] }, "assertCycle": { "type": "integer", "minimum": 0 }, "deassertCycle": { "type": "integer", "minimum": 0 } } },
     "offset": {
       "type": "object",
       "additionalProperties": false,
@@ -311,6 +312,7 @@
         "width": { "type": "integer", "minimum": 1 },
         "displayFormat": { "enum": ["hex", "binary", "decimal", "signed", "unsigned", "symbolic"] },
         "enumId": { "type": "string", "minLength": 1 },
+        "resetSemantics": { "$ref": "#/$defs/resetSemantics" },
         "title": { "type": "string" },
         "body": { "type": "string" },
         "spacingBefore": { "type": "number", "minimum": 0 },

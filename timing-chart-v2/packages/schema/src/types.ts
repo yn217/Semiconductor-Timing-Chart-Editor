@@ -86,6 +86,7 @@ export type SignalRole = "input" | "output" | "internal";
 export type SignalType = "binary" | "bus" | "state" | "logic" | "event" | "pulse" | "clock" | "commentRow";
 export interface EnumEntry { readonly value: string | number; readonly label: string }
 export interface EnumDefinition { readonly id: string; readonly name: string; readonly entries: readonly EnumEntry[] }
+export interface ResetSemantics { readonly polarity: "active-high" | "active-low"; readonly synchronization: "synchronous" | "asynchronous"; readonly assertCycle?: number; readonly deassertCycle?: number }
 
 export interface SignalValueChange {
   readonly start: number;
@@ -151,6 +152,7 @@ export interface ValueSignal extends SignalBase {
   readonly width?: number;
   readonly displayFormat?: "hex" | "binary" | "decimal" | "signed" | "unsigned" | "symbolic";
   readonly enumId?: string;
+  readonly resetSemantics?: ResetSemantics;
 }
 
 export interface ClockSignal extends SignalBase {
