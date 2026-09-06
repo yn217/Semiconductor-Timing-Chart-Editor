@@ -59,6 +59,10 @@ test("Generator supports an infinite periodic pulse train and suppressed periods
 
   await editor.getByLabel("Signal generator repeat mode").selectOption("infinite");
   await editor.getByLabel("Signal generator period").fill("4");
+  // Density fix (#402/#426 follow-up): Suppressed periods lives behind the
+  // "Advanced" disclosure toggle now (see signal-generator-editor.tsx) --
+  // open it before reaching for the field.
+  await editor.getByTestId("signal-generator-advanced-toggle").click();
   await editor.getByLabel("Signal generator suppressed periods").fill("1");
   await editor.getByTestId("apply-signal-generator").click();
   await expect(host).toHaveAttribute("data-canonical-revision", "1");

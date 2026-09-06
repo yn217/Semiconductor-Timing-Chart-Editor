@@ -110,9 +110,16 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
         onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
       }}>
         <h2>Add / Edit Transition</h2>
-        <label>Start (cycle)<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-        <label>Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
-        <label>Comment<input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+        {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to
+            stack as three full-height labels; laid out side by side in one
+            row instead, since the panel already has ~570px of horizontal
+            room at typical viewport widths and this is by far the tallest
+            of the three top-row panels today. */}
+        <div className="transition-form-row">
+          <label className="transition-field-start">Start (cycle)<input aria-label="New event start" type="number" min="0" max={cycleCount - 1} step="1" value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+          <label className="transition-field-value">Value<input aria-label="New event value" value={value} onChange={(event) => setValue(event.target.value)} /></label>
+          <label className="transition-field-comment">Comment<input aria-label="New event comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+        </div>
         <span className="event-add-preview">End: {previewEnd} / Duration: {previewEnd - start} cycles</span>
         <div className="transition-form-actions">
           <button type="submit" data-testid="add-signal-event">Add</button>
