@@ -1,9 +1,9 @@
 # Claude / Codex Issue Ownership
 
-Last reconciled: 2026-09-06
+Last reconciled: 2026-09-06 17:43 JST
 Repository: `yn217/Semiconductor-Timing-Chart-Editor`
 Current product branch: `main`
-Observed main at reconciliation: `447ebe05051ec6272815ba764245fede0e3d3c1d`
+Observed main at reconciliation: `4956eab` (user-reported pushed main)
 
 This file is the authoritative cross-agent ownership split. One Issue has one active implementation owner at a time. Do not have Claude and Codex independently implement the same Issue.
 
@@ -20,31 +20,17 @@ This file is the authoritative cross-agent ownership split. One Issue has one ac
 - One logical mutation = one intended semantic operation = one History unit.
 - View-only operations keep Canonical/History/Dirty delta = 0.
 - Home Ribbon is protected unless an Issue or explicit user instruction authorizes a Home change.
-- Golden/reference/threshold/mask must not be changed merely to pass; any new Golden change requires explicit user/product approval.
-- GitHub Actions runner/billing availability is not a global implementation blocker. Use local typecheck/gates/unit/Chromium/`git diff --check` as applicable.
-- If an Issue is already satisfied, collect evidence and close it; do not manufacture code/test-only work.
+- Golden/reference/threshold/mask must not be changed merely to pass.
+- GitHub Actions availability is not a global implementation blocker. Use local verification as applicable.
+- If an Issue is already satisfied, collect evidence and close it; do not manufacture work.
 
 ## Ownership model
 
 ### Codex — Core / Data / Geometry / Runtime / Reliability
-
-Codex owns:
-- Canonical/schema/data integrity
-- migration/validation
-- Semantic Commands / History policy
-- geometry/time mapping
-- projection/renderer/runtime correctness
-- performance architecture
-- broad Core closure
+Codex owns Canonical/schema/data integrity, migration/validation, Semantic Commands/History, geometry/time mapping, projection/renderer/runtime correctness, performance architecture and bounded Core closure.
 
 ### Claude — GUI / UX / Product surfaces
-
-Claude owns:
-- Ribbon/Tree/Inspector/Bottom composition
-- visual hierarchy and design-system consistency
-- product workflow presentation/discoverability
-- browser-facing GUI completion
-- final layout/interaction polish
+Claude owns Ribbon/Tree/Inspector/Bottom composition, visual hierarchy/design-system consistency, product workflow presentation/discoverability, browser-facing GUI completion and final interaction polish.
 
 For mixed Issues, split by explicit child Issue/ownership below. Neither agent should create a parallel implementation path.
 
@@ -53,86 +39,106 @@ For mixed Issues, split by explicit child Issue/ownership below. Neither agent s
 ## Time Outline / TimeGroup ownership — #411 sequence
 
 Parent Epic:
-- `#411` — coordination only. Do not implement the entire Epic as one task.
+- `#411` — coordination only.
 
-### Codex NOW
+### Completed by Codex
+- `#412` — completed/closed on main through `4956eab` lineage.
+  - stable parent ID
+  - hierarchy validation
+  - shared selector
+  - Save/Open
+- `#413` — completed/closed on main through `4956eab` lineage.
+  - Group/Ungroup
+  - deterministic child reparent
+  - partial-overlap reject
+  - atomic Undo/Redo
 
-1. `#412` — **Codex**
-   - explicit nested TimeGroup hierarchy in Canonical model
-   - stable `parentId`
-   - schema/migration/validation
-   - derived hierarchy utilities
-   - malformed graph rejection
-   - Save/Open round-trip
-   - NO GUI/Outline/fold geometry
+Do not reimplement #412/#413.
 
-2. `#413` — **Codex**, after #412
-   - deterministic Group/Ungroup Semantic Commands
-   - containment/parent resolution
-   - automatic reparent
-   - partial-overlap reject
-   - atomic Undo/Redo
-   - specific diagnostics
-   - NO Outline rendering/fold mapping/Ribbon
-
-### Claude after #413
-
-3. `#414` — **Claude**
-   - Excel-like Outline visualization above ruler
-   - hierarchy rows/brackets
-   - `+/-` controls
-   - `[1][2][3...]` level controls
-   - zoom/scroll/accessibility/real-browser visual acceptance
-   - consume #412/#413 owners; do not reimplement hierarchy/command rules
+### Claude NOW
+- `#414` — Excel-like Time Outline visualization above ruler
+  - hierarchy rows/brackets
+  - +/- controls
+  - [1][2][3...] level controls
+  - zoom/scroll/accessibility/real-browser acceptance
+  - MUST consume #412/#413 owners; no duplicate hierarchy/command logic
 
 ### Codex after #414 is completed/closed
-
-4. `#415` — **Codex**, dependency wait until #414 closes
-   - nested collapse/effective fold resolution
-   - shared `DisplayTimeMapping`
-   - Axis Break mapping/geometry owner
-   - Ruler/Signal/Grid/Playhead/Range/Annotation/Transaction/Bookmark shared time mapping
-   - Clock/fold semantics and performance
-   - NO final Ribbon/product closure
+- `#415` — nested collapse + shared DisplayTimeMapping / Axis Break
+  - effective nested fold resolution
+  - shared mapping/geometry ownership
+  - Ruler/Signal/Grid/Playhead/Range/Annotation/Transaction/Bookmark alignment
+  - Clock/fold semantics and performance
+  - no final Ribbon/product closure
 
 ### Claude after #415
+- `#416` — Timeline Ribbon integration + persistence/export/E2E product closure
 
-5. `#416` — **Claude**
-   - Timeline Ribbon integration
-   - final GUI workflow
-   - persistence/export product acceptance
-   - Cycle/Transaction/Split real-browser closure
-   - final #411 product-level completion
-
-Intended sequence:
+Intended dependency chain:
 
 ```text
-Codex  #412
-  -> Codex  #413
-  -> Claude #414
-  -> Codex  #415
-  -> Claude #416
+DONE  Codex  #412
+DONE  Codex  #413
+NOW   Claude #414
+NEXT  Codex  #415
+THEN  Claude #416
 ```
 
-Do not start #415 early merely because its Core scope is clear; #414 is an explicit dependency in the current Issue contract.
+---
+
+## Transaction Mode product lane
+
+### `#429` — P0 Transaction Mode production completion — Claude/product owner
+
+This is the concrete production implementation owner for the currently underdeveloped Transaction workspace. It is not merely an acceptance Issue.
+
+Primary scope:
+- multiple Transactions / Lane visualization
+- semantic Phase visualization
+- Create / Duplicate / Delete
+- direct Move / Resize
+- completed Bottom Transaction detailed editor
+- Phase GUI editing
+- Linked Signal workflow
+- Inspector/Bottom synchronization
+- Transaction-focused Ribbon integration/reuse
+- shared time geometry
+- Undo/Redo, Save/Open, Export
+- empty/first-use state
+- 1672x941 and 1280x720 real-browser completion
+
+Related existing owners must be reused rather than duplicated:
+- `#403-#409` ActiveContext / contextual Ribbon / Cycle-Transaction Split
+- `#426` common Bottom Draft/Apply contract
+- `#397` final sample-driven Transaction/Split acceptance
+
+Recommended execution relationship:
+
+```text
+Claude #414
+   -> #414 merge
+      -> Codex #415 starts
+      -> Claude may start #429 in parallel at product/GUI layer, avoiding #415 mapping/runtime hot-file collisions
+   -> after #415, Claude #416
+   -> after concrete Transaction/Split implementation is mature, run #397 final acceptance
+```
+
+#397 remains an acceptance gate; do not substitute it for #429 production implementation.
 
 ---
 
 ## Current Claude / GUI-product lane
 
-Unless explicitly transferred, Claude owns browser/product completion for:
-- `#403`–`#409` Contextual Ribbon / Cycle-Transaction-Split sequence
-- `#414` Time Outline GUI
-- `#416` Time Outline final Ribbon/export/E2E closure
-- `#419` Highlight Cycle Snap / Free product UI
-- `#424` Marker adjustable vertical-span GUI
-- `#426` Bottom Panel UX consolidation Epic
-- `#397` Transaction + Split sample-driven product acceptance
-- `#200` remaining Signal Split GUI/product completion if still open
+Priority:
+1. `#414` Time Outline GUI — immediate dependency unblocker
+2. `#429` Transaction Mode P0 production completion — start after #414 merge while Codex works #415
+3. `#416` Time Outline final product closure — after #415
+4. continue/reconcile applicable `#403-#409` and `#426` residuals through #429 rather than duplicating features
+5. `#397` final sample-driven Transaction/Split acceptance when implementation is ready
 
-`#402` Signal Bottom Panel Draft/Apply work has been implemented/merged; do not reopen it merely to create work. Remaining Bottom consolidation belongs to #426/children.
-
-`#405` Ribbon composition foundation has been implemented/merged; later contextual Ribbon Issues must reuse it rather than create a second composition owner.
+Other Claude-owned surfaces unless explicitly transferred:
+- `#419` Highlight Cycle Snap / Free
+- `#424` Marker vertical span
 
 ---
 
@@ -140,50 +146,39 @@ Unless explicitly transferred, Claude owns browser/product completion for:
 
 The actual executable order is `.codex/ISSUE_ORDER.txt`.
 
-At this reconciliation it is:
+Current status:
+- no executable Issue while #414 is in progress
+- `#415` is next Codex-owned task after #414 closes and control queue is updated
 
-```text
-#412
-#413
-```
-
-`#415` is Codex-owned but not executable until #414 is completed and the control queue is updated.
+Codex should report dependency wait rather than manufacture unrelated work.
 
 ---
 
 ## Holds / mixed ownership
 
 ### `#177` — external/product hold
-
-Final parity lane is NOT currently executable.
-- Replacement Pack path count = 0
-- required product decision pending
-- do not invent/synthesize Replacement Pack input
-- do not repeatedly re-audit unchanged blocker state
+Replacement Pack path count remains 0 / product decision pending. Do not invent input or repeatedly re-audit unchanged state.
 
 ### `#205` — mixed / Claude-held unless explicitly decomposed
-
-Although open, do not let Codex auto-claim the whole datasheet-grade annotation product surface. If a concrete Core geometry/runtime defect is isolated, file/transfer that bounded child separately.
+Concrete Core geometry/runtime defects may be separately filed/transferred.
 
 ### `#250` — product-decision hold
-
-Production AI provider contract remains a product decision. Do not invent an arbitrary provider merely to close it.
+Production AI provider contract unresolved.
 
 ### `#272` — closed not_planned
-
-External GitHub Actions runner/billing condition. It is not a repository implementation task.
+External GitHub Actions runner/billing condition.
 
 ---
 
 ## Recently completed / do not reimplement
 
-Do not re-add these merely to generate more audit/tests:
+- `#412 #413`
 - `#410 #399 #398 #237 #417 #428`
 - `#372 #366 #369 #363 #269 #281`
 - `#221 #171 #170 #167 #161 #175`
 - `#272` closed not_planned
 
-`#428` was a one-off explicit Codex transfer for Bottom shell layout and is completed. It does NOT transfer #426 or future Bottom GUI work to Codex.
+`#428` was a one-off Codex transfer and does not transfer #426.
 
 ---
 
@@ -198,24 +193,18 @@ Hot/shared areas include:
 - renderer/projection owners
 - semantic-command registries
 
-Before editing a hot area, sync latest `origin/main` and confirm the predecessor Issue/other-agent work required by dependency has merged.
+Before editing a hot area, sync latest `origin/main` and confirm predecessor/other-agent work required by dependency has merged.
 
-If an Issue spans GUI and Core:
-- active owner handles only its assigned slice
-- the other agent may provide evidence/review
-- do not patch across ownership boundary merely to make one E2E pass
-- create/transfer a bounded child Issue when necessary
+When Claude #429 and Codex #415 overlap in calendar time:
+- Codex owns fold/shared mapping runtime changes
+- Claude owns Transaction GUI/product surfaces
+- Claude must not create a Transaction-only mapping to bypass #415
+- Codex must not redesign Transaction Bottom/Ribbon/UI as part of #415
+- isolate and transfer a bounded defect if one side needs the other's owner.
 
 ## Implementation-first policy
 
 Prefer:
-
-```text
-identify concrete missing behavior
--> root cause
--> bounded production implementation
--> focused verification
--> evidence/close
-```
+`identify concrete missing behavior -> root cause -> bounded production implementation -> focused verification -> evidence/close`.
 
 Test-only commits are appropriate only when the Issue itself is a test/harness contract or the test mechanically proves a concrete regression/acceptance gap.
