@@ -1,4 +1,7 @@
 import { expect, test } from "@playwright/test";
+import { canonicalFixture } from "../fixtures/canonical.js";
+
+test.setTimeout(180_000);
 
 test.describe("Edge Counter compact layout", () => {
   test("keeps all controls reachable in a compact desktop grid", async ({ page }) => {
@@ -135,5 +138,39 @@ test.describe("Edge Counter compact layout", () => {
     // that Geometry-backed edge; cycle-only fallback would begin later.
     expect(firstCycle).toBe(2);
     await expect(labels.first()).toHaveText("10");
+  });
+
+  test("reuses the production edge index for a 100k-cycle Clock refresh", async ({ page }) => {
+    const source = canonicalFixture();
+    const sourceClock = source.signals[0]!;
+    const document = {
+      ...source,
+      document: { ...source.document, id: "edge-counter-100k" },
+      timeline: { ...source.timeline, end: 100_000, cycleCount: 100_000 },
+      signalGroups: [{ ...source.signalGroups[0]!, rows: [sourceClock.id] }],
+      signals: [{
+        ...sourceClock,
+        generator: { ...sourceClock.generator, period: 1 },
+        edgeCounter: { ...sourceClock.edgeCounter, show: true, mode: "both" as const, labelEvery: 100_000 },
+      }],
+    };
+    await page.goto("/");
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "edge-counter-100k.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    const host = page.getByTestId("cycle-surface");
+    await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+    const before = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
+    expect(before.edgeCounterCyclesProbed).toBe(0);
+    expect(before.edgeCounterGeometryLookups).toBe(0);
+    expect(before.edgeCounterEdgeIndexBuilds).toBeGreaterThanOrEqual(1);
+
+    await host.locator("[data-role='frozen-row'][data-row-id='sig_clk']").click();
+    const editor = page.getByTestId("signal-editor");
+    await editor.getByLabel("Clock edge counter every").fill("99999");
+    await editor.getByTestId("apply-clock-edge-counter").click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect.poll(async () => Number((JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>).edgeCounterEdgeIndexHits ?? 0)).toBeGreaterThan(0);
+    const after = JSON.parse(await host.getAttribute("data-session-counters") ?? "{}") as Record<string, number>;
+    expect(after.edgeCounterCyclesProbed).toBe(0);
+    expect(after.edgeCounterGeometryLookups).toBe(0);
   });
 });
