@@ -899,6 +899,23 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { rowOrder: [spacer.id], geometryScreenY: geometryRowsFrom(document, spacer.id), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
     }
+    case "enum.rename": {
+      const index = (document.enumDefinitions ?? []).findIndex((definition) => definition.id === command.enumId);
+      const name = command.name.trim();
+      if (index < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Enum name cannot be empty.");
+      const current = document.enumDefinitions![index]!;
+      if (current.name === name) return fail("no-op", "NO_OP", "$", "Enum already has this name.");
+      const definitions = [...document.enumDefinitions!]; definitions[index] = { ...current, name };
+      return { ok: true, document: { ...document, enumDefinitions: definitions }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
+    case "enum.delete": {
+      const definitions = document.enumDefinitions ?? [];
+      if (!definitions.some((definition) => definition.id === command.enumId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      const dependent = document.signals.filter((signal) => signal.type !== "clock" && signal.type !== "commentRow" && signal.enumId === command.enumId).map((signal) => signal.id);
+      if (dependent.length > 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' is referenced by ${dependent.length} Signal(s): ${dependent.join(", ")}.`);
+      return { ok: true, document: { ...document, enumDefinitions: definitions.filter((definition) => definition.id !== command.enumId) }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
     case "group.create": {
       if (command.group.rows.length > 0 || (command.group.spacers?.length ?? 0) > 0) return fail("invalid", "GROUP_CREATE_NOT_EMPTY", "$.group", "Group creation cannot implicitly move existing rows.");
       if (!Number.isInteger(command.index) || command.index < 0 || command.index > document.signalGroups.length) return fail("invalid", "INDEX_OUT_OF_RANGE", "$.index", "Group insertion index is outside the group list.");

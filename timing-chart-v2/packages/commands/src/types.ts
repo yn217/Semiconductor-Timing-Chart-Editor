@@ -42,6 +42,8 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "document.updateMetadata"; title: string; header: CanonicalDocument["document"]["header"]; footer: CanonicalDocument["document"]["footer"] }>
   | Readonly<{ id: CommandId; type: "document.updateLayout"; layout: Layout }>
   | Readonly<{ id: CommandId; type: "legend.update"; legend: CanonicalDocument["legend"] }>
+  | Readonly<{ id: CommandId; type: "enum.rename"; enumId: string; name: string }>
+  | Readonly<{ id: CommandId; type: "enum.delete"; enumId: string }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.bulkCreate"; signals: readonly Signal[]; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
