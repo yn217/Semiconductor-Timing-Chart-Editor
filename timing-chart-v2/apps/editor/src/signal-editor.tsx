@@ -5,6 +5,7 @@ import { InlineNameInput } from "./inline-name-input.js";
 import { ClockGeneratorEditor } from "./clock-generator-editor.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 import { EventTable } from "./event-table.js";
+import { SignalGeneratorEditor } from "./signal-generator-editor.js";
 import { type SignalEditorProps } from "./timeline-toolbar.js";
 
 export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview }: SignalEditorProps) {
@@ -15,6 +16,13 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
   const [format, setFormat] = useState<"hex" | "binary" | "symbolic">(signal?.type === "bus" ? signal.displayFormat ?? "hex" : "hex");
   const [spacingBefore, setSpacingBefore] = useState(signal?.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(signal?.spacingAfter ?? 0);
+  // #400: Manual/Generator is a transient editor-mode choice, not a
+  // persisted canonical field -- this component remounts (key includes the
+  // selected signal id) whenever the selection changes, so it always
+  // starts back on Manual. Scoped to canonical type `binary` ("Signal")
+  // only, matching the issue's own scope; every other value-signal type
+  // keeps using the Manual Event Table exactly as before.
+  const [waveformSource, setWaveformSource] = useState<"manual" | "generator">("manual");
   return <section className="signal-editor" aria-label="Signal Editor" data-testid="signal-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <div className="editor-tabbar">
       <span className="editor-tab active">Signal</span>
@@ -61,7 +69,16 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
         {signal.type !== "commentRow" && <><label>Spacing Before<input aria-label="Signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label><label>Spacing After<input aria-label="Signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label></>}
         <button type="submit" data-testid="save-signal-properties">Apply properties</button>
       </form>
-      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} onCommand={onCommand} onDuplicate={onDuplicate} onPreview={onClockPreview} /> : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} /> : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} onCommand={onCommand} onDuplicate={onDuplicate} onPreview={onClockPreview} />
+        : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} />
+        : signal.type === "binary" ? <>
+          <div className="waveform-source-tabs" role="tablist" aria-label="Waveform source">
+            <button type="button" role="tab" aria-selected={waveformSource === "manual"} data-testid="waveform-source-manual" onClick={() => setWaveformSource("manual")}>Manual</button>
+            <button type="button" role="tab" aria-selected={waveformSource === "generator"} data-testid="waveform-source-generator" onClick={() => setWaveformSource("generator")}>Generator</button>
+          </div>
+          {waveformSource === "manual" ? <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} /> : <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
+        </>
+        : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} />}
     </>}
   </section>;
 }
