@@ -90,3 +90,23 @@ from/to anchor、line type、arrowhead、label、start/end/label offset。
 
 ## Legend
 Anchor+OffsetまたはCanvas free position。orientation、usedRolesOnly。
+# TimeGroup hierarchy compatibility (#412)
+
+TimeGroup `parentId` optionally references a TimeGroup stable ID in the same
+document. Omission means root; existing flat documents retain all roots even
+when their ranges contain one another. Version 2 remains the format version:
+this is an optional additive field. Older strict V2 readers may reject the new
+field rather than silently drop it. V1 migration preserves an explicit parentId
+for validation; it never infers parents from ranges.
+
+Children must satisfy `start >= parent.start && end <= parent.end`. Shared
+boundaries and equal ranges are valid at the canonical model boundary. Missing
+parents, duplicate IDs and direct/indirect cycles are invalid. Group creation's
+overlap and equal-range policy belongs to the semantic command layer (#413).
+
+`buildTimeGroupHierarchy` in schema is the shared derived hierarchy owner.
+It returns roots, childrenByParent, depthById and maxDepth (root depth 0, empty
+maxDepth 0), ordered by start ascending, end descending, then opaque stable ID.
+Graph validation and depth traversal are iterative O(n); ordering is O(n log n).
+Invalid graphs throw structured problems rather than being silently repaired.
+Depth is never persisted. This addition does not change fold mapping or GUI.

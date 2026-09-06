@@ -4,6 +4,7 @@ import { isStableId } from "./stable-id.js";
 import { CANONICAL_PROBLEM_CODES, SCHEMA_RULE_KEYWORDS, type Annotation, type CanonicalDocument, type CanonicalDocumentProblem, type CanonicalProblemCode, type CanonicalRuleDescriptor, type DocumentProblem, type SchemaProblemCode, type SchemaRuleDescriptor, type SchemaRuleKeyword, type SemanticAnchor, type Signal, type SignalValueChange, type TimeGroup } from "./types.js";
 import { valueSignalValueProblem } from "./value-signal-compatibility.js";
 import { canonicalReferences } from "./reference-registry.js";
+import { validateTimeGroupHierarchy } from "./time-group-hierarchy.js";
 
 const ajv = new Ajv2020({ allErrors: true, strict: true, strictRequired: false, allowUnionTypes: true });
 const validateSchema = ajv.compile<CanonicalDocument>(canonicalSchema);
@@ -46,6 +47,9 @@ const canonicalRule = (code: CanonicalProblemCode, title: string, pathPattern: s
 // descriptor so Problems, Quick Fix, AI review, and CI can identify the same
 // invariant without parsing human-readable messages.
 const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
+  canonicalRule("TIME_GROUP_PARENT_NOT_FOUND", "TimeGroup parent must exist", "$.timeGroups[*].parentId"),
+  canonicalRule("TIME_GROUP_PARENT_CYCLE", "TimeGroup parent graph must be acyclic", "$.timeGroups[*].parentId"),
+  canonicalRule("TIME_GROUP_PARENT_CONTAINMENT", "TimeGroup parent must contain child", "$.timeGroups[*].parentId"),
   canonicalRule("ANCHOR_SIGNAL_REQUIRED", "Anchor requires a timing signal", "$.annotations[*].anchor.signalId"),
   canonicalRule("ANNOTATION_GROUP_DUPLICATE_MEMBER", "An Annotation can belong to at most one group", "$.annotationGroups[*].annotationIds[*]"),
   canonicalRule("ANNOTATION_GROUP_MEMBER_NOT_FOUND", "Annotation Group members must reference existing Annotations", "$.annotationGroups[*].annotationIds[*]"),
@@ -348,6 +352,7 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
       if (anchor && anchor.source !== group.end) problems.push(problem("TIME_GROUP_RESUME_BOUNDARY_MISMATCH", `$.timeGroups[${index}].presentation.resumeLabelAnchorId`, `Resume label anchor must be at Time Group end ${group.end}.`, group.id));
     }
   });
+  problems.push(...validateTimeGroupHierarchy(document.timeGroups));
   const labelSources = new Map<number, string>();
   document.timeline.labelAnchors.forEach((anchor, index) => {
     if (!Number.isInteger(anchor.source) || anchor.source < 0 || anchor.source > document.timeline.cycleCount) problems.push(problem("TIMELINE_OUT_OF_RANGE", `$.timeline.labelAnchors[${index}].source`, "Ruler label anchor source must be an integer cycle within the source timeline.", anchor.id));

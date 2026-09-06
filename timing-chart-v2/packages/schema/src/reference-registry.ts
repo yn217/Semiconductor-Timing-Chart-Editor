@@ -4,6 +4,7 @@ export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spac
 
 export type CanonicalReferenceKind =
   | "timeline.referenceClock"
+  | "timeGroup.parent"
   | "signal.edgeCounter.marker"
   | "annotation.anchor"
   | "annotation.ghostTraceSource"
@@ -27,6 +28,9 @@ export interface CanonicalReference {
  */
 export function canonicalReferences(document: CanonicalDocument): readonly CanonicalReference[] {
   const references: CanonicalReference[] = [];
+  document.timeGroups.forEach((group, index) => {
+    if (group.parentId !== undefined) references.push({ kind: "timeGroup.parent", ownerId: group.id, targetId: group.parentId, targetType: "time-group", path: `$.timeGroups[${index}].parentId` });
+  });
   const signalIds = new Set<string>(document.signals.map((signal) => signal.id));
   const spacerIds = new Set<string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => spacer.id)));
   if (document.timeline.referenceClock !== undefined) {

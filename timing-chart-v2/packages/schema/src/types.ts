@@ -255,6 +255,7 @@ export interface TimeGroupPresentation {
 
 export interface TimeGroup {
   readonly id: TimeGroupId;
+  readonly parentId?: TimeGroupId;
   readonly name: string;
   readonly category?: string;
   readonly start: number;
@@ -332,6 +333,7 @@ export const CANONICAL_PROBLEM_CODES = [
   "NON_FINITE_NUMBER", "NON_PERSISTENT_FIELD", "NON_TIMING_ANCHOR_TARGET", "ORPHAN_ROW", "SPACER_OWNER_MISMATCH",
   "TIME_GROUP_RESUME_BOUNDARY_MISMATCH", "TIME_GROUP_RESUME_OWNER_MISMATCH", "TIMELINE_END_MISMATCH", "TIMELINE_OUT_OF_RANGE",
   "UNKNOWN_ROW", "UNSUPPORTED_SIGNAL_VALUE",
+  "TIME_GROUP_PARENT_NOT_FOUND", "TIME_GROUP_PARENT_CYCLE", "TIME_GROUP_PARENT_CONTAINMENT",
 ] as const;
 
 export type CanonicalProblemCode = typeof CANONICAL_PROBLEM_CODES[number];

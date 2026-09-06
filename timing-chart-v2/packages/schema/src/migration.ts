@@ -344,7 +344,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   });
   const timeGroups: MutableRecord[] = list(source.timeGroups).map((value, index) => {
     const group = record(value);
-    return { id: text(group.id, deterministicId("time_group", index)), name: text(group.name, `Time Group ${index + 1}`), start: roundCycle(group.start, 0, warnings, `$.timeGroups[${index}].start`), end: roundCycle(group.end, cycleCount, warnings, `$.timeGroups[${index}].end`), ...(typeof group.category === "string" ? { category: group.category } : {}), ...(typeof group.comment === "string" ? { comment: group.comment } : {}), ...(jsonObject(group.presentation) ? { presentation: jsonObject(group.presentation) } : {}) };
+    return { ...(group.parentId !== undefined ? { parentId: group.parentId } : {}), id: text(group.id, deterministicId("time_group", index)), name: text(group.name, `Time Group ${index + 1}`), start: roundCycle(group.start, 0, warnings, `$.timeGroups[${index}].start`), end: roundCycle(group.end, cycleCount, warnings, `$.timeGroups[${index}].end`), ...(typeof group.category === "string" ? { category: group.category } : {}), ...(typeof group.comment === "string" ? { comment: group.comment } : {}), ...(jsonObject(group.presentation) ? { presentation: jsonObject(group.presentation) } : {}) };
   });
   for (const [gapIndex, value] of list(sourceTimeline.gaps).entries()) {
     const gap = record(value);
