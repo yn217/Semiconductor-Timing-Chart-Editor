@@ -1,25 +1,29 @@
 # V2 GUI Visual / Interaction Contract
 
-Status: reconstructed from the checked-in V1 GUI reference sources. This is a
-normative migration contract; it is not a redesign proposal.
+Status: reconstructed from historical V1 GUI reference sources and the
+approved V2 v8 executable reference. This is a normative migration contract;
+it is not a redesign proposal. The historical V1 sources are external inputs
+when supplied and mapped; they are not assumed to be present in the current V2
+tree.
 
 ## Source excavation record
 
-The following sources were inspected in priority order:
+The following sources were inspected or recorded in priority order:
 
 1. `docs/GUI_VISUAL_CONTRACT.md`
 2. `docs/GUI_IMPLEMENTATION_REFERENCE.md`
-3. `references/gui-replacement-pack/production/index.html`
-4. `references/gui-replacement-pack/production/styles.css`
-5. `references/gui-replacement-pack/production/icons.svg`
-6. `references/gui-replacement-pack/*.png`
-7. `docs/GUI_SPEC.md` and `docs/GUI_LOCK_SPEC.md`
-8. `gui-mockup/` HTML/CSS/assets
-9. V2 editor CSS/TSX, for the measured gap only
+3. Approved V2 v8 `gui-reference.json`, HTML/CSS and PNG under
+   `references/v2-gui-reference-v8/`
+4. Historical V1 Replacement Pack HTML/CSS/SVG/PNG, when supplied externally
+   and mapped to a V2 fixture/state
+5. `docs/GUI_SPEC.md` and `docs/GUI_LOCK_SPEC.md`
+6. Historical `gui-mockup/` HTML/CSS/assets, when available
+7. V2 editor CSS/TSX, for the measured gap only
 
-The V1 reference HTML and CSS are the authority for visual structure and
-numeric layout values. Screenshots are evidence, not a substitute for source
-inspection.
+The approved V2 v8 reference is the authority for current V2 visual structure
+and numeric layout values. Historical V1 HTML/CSS and screenshots inform
+parity mapping only when the assets and a V2 fixture/state mapping are
+available. Screenshots are evidence, not a substitute for source inspection.
 
 ## Reference viewport and tokens
 
@@ -79,7 +83,7 @@ one-row toolbar, or a large dead canvas gap is non-compliant.
 | Status | 27px bar; Ready, signal/annotation/problem counts, time range, zoom | Keep stable left/right ordering and expose derived state without canonical mutation. |
 | View mode | right side of ribbon tab row; segmented Cycle/Transaction/Split | View-only switch: Canonical/History/Dirty/Validation/WaveDrom/LocalGeometry counters all remain zero. |
 | Grid/Snap/Ruler | Home display group contains four explicit toggles: grid, snap, ruler, minimap | Controls are functional and use shared semantic/screen mappings; no dummy toggles. |
-| Icons | V1 uses `icons.svg` symbols via `<svg><use>` | Reuse the replacement-pack icon vocabulary or a semantically equivalent V2 adapter; do not substitute unrelated emoji. |
+| Icons | V1 uses `icons.svg` symbols via `<svg><use>` | Preserve the approved semantic V2 icon vocabulary or a mapped equivalent when the historical asset is available; do not substitute unrelated emoji. |
 
 ## Responsive rules
 
@@ -136,5 +140,6 @@ under `artifacts/gui-visual-acceptance/`. The screenshot diff is diagnostic and
 does not convert a visual gap into a pass; `layout-metrics.json` records the
 geometry/ribbon gates and the explicit `acceptance` state.
 
-Major layout metrics target 0–2px against the replacement-pack reference;
+Major layout metrics target 0–2px against the approved V2 v8 reference;
+historical Replacement Pack comparisons require an explicit mapped fixture and
 existing documented cross-platform allowances must be explicit.

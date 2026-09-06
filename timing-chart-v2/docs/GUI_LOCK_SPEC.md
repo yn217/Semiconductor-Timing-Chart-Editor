@@ -4,7 +4,9 @@ This specification is normative for the Production GUI.
 
 ## Locked structure
 
-- The left Signal / Group panel is locked to the Replacement Pack hierarchy.
+- The left Signal / Group panel is locked to the approved V2 v8 hierarchy;
+  historical Replacement Pack hierarchy is a mapped parity input only when
+  the external asset is supplied.
 - The Cycle View bottom editor contains Signal, Annotation, Problems, and JSON only.
 - The Transaction View bottom editor contains Transaction, Annotation, Problems, and JSON.
 - Split View may expose Signal, Transaction, Annotation, Problems, and JSON.
@@ -25,4 +27,8 @@ Role/name columns must remain visually separate from WaveDrom trace geometry.
 
 ## Acceptance
 
-Reference and Production are captured at 1672x941 / DPR 1. Major pane geometry must be within 0-2px. Screenshot existence alone is not acceptance; a Reference-vs-DUT visual diff and DOM geometry assertions are required.
+Approved V2 v8 Reference and Production are captured at 1672x941 / DPR 1.
+Major pane geometry must be within 0-2px. Screenshot existence alone is not
+acceptance; a Reference-vs-DUT visual diff and DOM geometry assertions are
+required. A historical Replacement Pack diff is separate and requires the
+external assets plus an explicitly mapped fixture/state.
