@@ -286,3 +286,47 @@ test("real Upper/Lower assignment produces a combined two-pane export: stacked b
   expect(validLower).toBeGreaterThan(readyYs[0]!);
   await dialog.getByRole("button", { name: "Close export", exact: true }).click();
 });
+
+// #200 Lower-local row interaction PR1: a plain click on Lower's own
+// waveform canvas selects that cycle, exactly like clicking Upper's does
+// (shared horizontal geometry, shared selectedCycle state) -- the one
+// interaction this issue's evidence named as still missing. Deliberately
+// narrower than Upper's full canvas interaction set: no drag-range-
+// selection, no annotation drag, no context menu yet (a further, separate
+// follow-up).
+test("clicking Lower's own waveform canvas selects a cycle, shared with Upper, without mutating Canonical/History/Dirty", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByTestId("view-panel-signal-split").click();
+  const lowerHost = page.getByTestId("cycle-surface-lower");
+  await expect(lowerHost).toBeVisible();
+
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
+
+  // Lower's own ruler only mirrors the playhead (see the previous test),
+  // not a full tick/label set -- the shared horizontal geometry means
+  // Upper's ruler ticks give the identical x pixel position for both
+  // panes, so use those for the click's x-coordinate.
+  const lowerWave = lowerHost.locator("[data-role='stable-waveform-surface']").locator("[data-signal-id='sig_cycle_clock']");
+  const tickBox = (await page.getByTestId("cycle-ruler").locator("[data-cycle='5']").boundingBox())!;
+  const waveBox = (await lowerWave.boundingBox())!;
+  await page.mouse.click(tickBox.x, waveBox.y + waveBox.height / 2);
+
+  await expect(host).toHaveAttribute("data-selected-cycle", "5");
+  await expect(lowerHost).toHaveAttribute("data-selected-cycle", "5");
+  // View-only: no Canonical/History/Dirty mutation.
+  await expect(host).toHaveAttribute("data-canonical-revision", revisionBefore!);
+  await expect(page.getByTestId("history-status")).toHaveText(historyBefore!);
+  await expect(page.getByTestId("dirty-status")).toHaveText(dirtyBefore!);
+
+  // A second click at a different cycle updates both panes again -- not a
+  // one-shot fluke.
+  const secondTickBox = (await page.getByTestId("cycle-ruler").locator("[data-cycle='9']").boundingBox())!;
+  await page.mouse.click(secondTickBox.x, waveBox.y + waveBox.height / 2);
+  await expect(host).toHaveAttribute("data-selected-cycle", "9");
+  await expect(lowerHost).toHaveAttribute("data-selected-cycle", "9");
+});

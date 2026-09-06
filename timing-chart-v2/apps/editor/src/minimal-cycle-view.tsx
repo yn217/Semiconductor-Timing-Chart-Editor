@@ -124,6 +124,17 @@ export function MinimalCycleView() {
   // `projection.setPane()` filter, without exposing Upper's internal
   // renderer/projection closures outside that effect.
   const forceUpperReprojectRef = useRef<() => void>(() => undefined);
+  // Signal Split View (#200) Lower-local row interaction PR1: clicking
+  // anywhere on Lower's own waveform canvas selects that cycle exactly
+  // like clicking Upper's does (shared horizontal geometry, shared
+  // selectedCycle/timelineRange state) -- set by the primary mount effect
+  // (which owns cycle-selection logic and the shared timeline geometry),
+  // called by the separate Lower mount effect below on its own click
+  // events, since the two are independent `useEffect`s with no shared
+  // closure. Deliberately narrower than Upper's full canvas interaction
+  // set: no drag-range-selection, no annotation drag, no context menu yet
+  // -- those remain a further, separate follow-up.
+  const lowerCanvasClickRef = useRef<(event: MouseEvent, targetHost: HTMLElement, targetViewport: HTMLElement) => void>(() => undefined);
   const timelineRuntimeRef = useRef<TimelineViewportRuntime | null>(null);
   const armArrowPick = useRef<(annotationType: "arrow" | "dependency") => void>(() => undefined);
   const selectAllRef = useRef<() => void>(() => undefined);
@@ -1125,6 +1136,42 @@ export function MinimalCycleView() {
       // are implementation details and must not be enumerated as hit areas.
       return target === viewportElement || viewportElement.contains(target);
     };
+    // Signal Split View (#200) Lower-local row interaction PR1 -- see the
+    // lowerCanvasClickRef declaration above for the cross-effect rationale.
+    // Generalized (host/viewport-parameterized) counterparts of
+    // cycleBoundaryAtX/isTimeDomainPointerTarget above, reusing the exact
+    // same shared horizontal geometry (timelineGeometry/timelineNavigation
+    // are the one authoritative instance for both panes) so a click
+    // resolves to the identical cycle Upper would have resolved at the
+    // same horizontal screen position.
+    const cycleBoundaryAtHostX = (targetHost: HTMLElement, clientX: number): number | undefined => {
+      const waveLayer = targetHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
+      if (!waveLayer) return undefined;
+      const bounds = waveLayer.getBoundingClientRect();
+      return timelineGeometry.cycleBoundaryAtScreenX(clientX, bounds.left, timelineNavigation.getZoom(), snapEnabledRef.current);
+    };
+    const isTimeDomainPointerTargetFor = (targetViewport: HTMLElement, event: MouseEvent): boolean => {
+      const target = event.target instanceof Element ? event.target : undefined;
+      if (!target || target.closest(timeDomainExclusions)) return false;
+      const viewportBounds = targetViewport.getBoundingClientRect();
+      const timeDomainLeft = viewportBounds.left + timelineOffset();
+      const insideViewport = event.clientX >= timeDomainLeft
+        && event.clientX <= viewportBounds.right
+        && event.clientY >= viewportBounds.top
+        && event.clientY <= viewportBounds.bottom;
+      if (!insideViewport) return false;
+      return target === targetViewport || targetViewport.contains(target);
+    };
+    lowerCanvasClickRef.current = (event, targetHost, targetViewport) => {
+      if (!isTimeDomainPointerTargetFor(targetViewport, event)) return;
+      const cycle = cycleBoundaryAtHostX(targetHost, event.clientX);
+      if (cycle === undefined) return;
+      const accepted = applyCanvasCycleSelection(cycle, event.shiftKey);
+      if (!accepted) return;
+      selectedEdgeRef.current = undefined;
+      targetHost.dataset.selectedCycle = String(cycle);
+      timelineRuntime.refreshOverlays();
+    };
     rangeInteractions = new TimelineRangeInteractionOwner({
       rendererHost,
       isTimeDomainPointerTarget,
@@ -1263,6 +1310,7 @@ export function MinimalCycleView() {
       active = false;
       applyCollapsedGroupsRef.current = () => undefined;
       refreshPlayhead.current = () => undefined;
+      lowerCanvasClickRef.current = () => undefined;
       detachTimelineNavigation();
       cancelAnimationFrame(frame);
       detachTimelineListeners();
@@ -1346,6 +1394,13 @@ export function MinimalCycleView() {
       rendererLower.update(lowerProjection);
     };
     viewportLowerElement.addEventListener("scroll", reprojectLowerViewportOnly, { passive: true });
+    // Lower-local row interaction PR1 (#200): a plain click anywhere on
+    // Lower's own waveform canvas selects that cycle, via the shared
+    // logic the primary mount effect exposes through lowerCanvasClickRef
+    // (see its declaration above for why a ref bridge is needed between
+    // these two independent effects).
+    const onLowerCanvasClick = (event: MouseEvent) => { lowerCanvasClickRef.current(event, hostLowerElement, viewportLowerElement); };
+    hostLowerElement.addEventListener("click", onLowerCanvasClick);
     signalSplitRuntimeRef.current = {
       onDocumentChanged: (result) => {
         if (!active) return;
@@ -1388,6 +1443,7 @@ export function MinimalCycleView() {
     return () => {
       active = false;
       viewportLowerElement.removeEventListener("scroll", reprojectLowerViewportOnly);
+      hostLowerElement.removeEventListener("click", onLowerCanvasClick);
       renderCoordinatorLower.dispose();
       if (signalSplitRuntimeRef.current) signalSplitRuntimeRef.current = null;
     };
