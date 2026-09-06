@@ -133,7 +133,7 @@ test("surfaces a rejected command in the Problems panel and clears it on the nex
   await expect(page.getByTestId("problems-panel")).not.toContainText("DUPLICATE_CHANGE_POINT");
 });
 
-test("surfaces recent-document storage stage when Save cannot persist", async ({ page }) => {
+test("keeps a successful file Save successful when Recent-document storage fails", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -144,12 +144,61 @@ test("surfaces recent-document storage stage when Save cannot persist", async ({
       return original.call(this, key, value);
     };
   });
+  const downloadPromise = page.waitForEvent("download");
   await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
-  await expect(page.getByTestId("editor-problem")).toContainText("Save document failed");
+  expect(await (await downloadPromise).path()).toBeTruthy();
+  await expect(page.getByTestId("editor-problem")).toContainText("Saved successfully");
+  await expect(page.getByTestId("editor-problem")).toContainText("Recent-document history could not be updated");
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems).toContainText("SAVE_RECENT_FAILED");
+  await expect(problems).toContainText("storage");
+  await expect(problems).toContainText("The file was saved successfully");
+  await expect(problems.getByTestId("problem-severity-warning")).toHaveCount(1);
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
+test("reports Recent-document storage read failures without crashing", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.evaluate(() => {
+    const original = Storage.prototype.getItem;
+    Storage.prototype.getItem = function (key: string) {
+      if (key === "timing-chart-v2.recent") throw new DOMException("Storage access denied", "SecurityError");
+      return original.call(this, key);
+    };
+  });
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Recent", exact: true }).click();
+  await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
+  const problems = page.getByTestId("problems-panel");
+  await expect(problems).toContainText("OPEN_RECENT_FAILED");
+  await problems.locator("summary").click();
+  await expect(problems).toContainText("Open recent document");
+  await expect(problems).toContainText("Storage access denied");
+  await expect(problems).toContainText("Sourceopen");
+  await expect(problems).toContainText("Stagestorage");
+  await expect(problems).toContainText("File > Open");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+});
+
+test("keeps a dirty document dirty when the authoritative file Save fails", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  const name = page.getByTestId("signal-editor").getByLabel("Signal name", { exact: true });
+  await name.fill("REQUEST_UNSAVED");
+  await name.press("Enter");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+  await page.evaluate(() => {
+    URL.createObjectURL = () => { throw new Error("download blocked"); };
+  });
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  await expect(page.getByTestId("editor-problem")).toContainText("Save document failed: download blocked");
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Problems" }).click();
   const problems = page.getByTestId("problems-panel");
   await expect(problems).toContainText("SAVE_FAILED");
   await expect(problems).toContainText("storage");
-  await expect(problems).toContainText("Retry the download or choose Save As");
-  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+  await expect(host).toHaveAttribute("data-history-depth", "1");
 });

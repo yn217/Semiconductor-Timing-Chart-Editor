@@ -36,6 +36,46 @@ function openProblems(problems: readonly DocumentProblem[]): readonly DocumentPr
   }));
 }
 
+function isSaveDiagnostic(item: DocumentProblem): boolean {
+  return item.detail?.startsWith("save-failure:") === true || item.detail?.startsWith("save-warning:") === true;
+}
+
+function errorReason(error: unknown, fallback: string): string {
+  return error instanceof Error ? error.message : fallback;
+}
+
+function recentSaveWarning(error: unknown): DocumentProblem {
+  const reason = errorReason(error, "Recent-document history could not be updated.");
+  return {
+    code: "SAVE_RECENT_FAILED",
+    path: "$.recentDocument",
+    message: `Recent-document history could not be updated: ${reason}`,
+    severity: "warning",
+    operation: "document.save.recent",
+    operationLabel: "Update recent-document history",
+    source: "save",
+    stage: "storage",
+    recommendation: "The file was saved successfully. Retry Save or choose Save As to update recent-document history.",
+    detail: "save-warning:recent-storage",
+  };
+}
+
+function recentOpenFailure(error: unknown): DocumentProblem {
+  const reason = errorReason(error, "Recent-document history is unavailable.");
+  return {
+    code: "OPEN_RECENT_FAILED",
+    path: "$.recentDocument",
+    message: `Open recent document failed: ${reason}`,
+    severity: "error",
+    operation: "document.open.recent",
+    operationLabel: "Open recent document",
+    source: "open",
+    stage: "storage",
+    recommendation: "Allow browser storage access or use File > Open instead.",
+    detail: "open-failure:recent-storage",
+  };
+}
+
 export function useDocumentLifecycle({
   application,
   productTemplate,
@@ -140,12 +180,12 @@ export function useDocumentLifecycle({
   const reportSaveFailure = useCallback((error: unknown, stage: "serialize" | "storage") => {
     const candidate = error as { problems?: unknown };
     const problems = Array.isArray(candidate?.problems) ? candidate.problems.filter((item): item is DocumentProblem => item !== null && typeof item === "object" && typeof (item as { code?: unknown }).code === "string" && typeof (item as { path?: unknown }).path === "string" && typeof (item as { message?: unknown }).message === "string") : [];
-    const reason = error instanceof Error ? error.message : "Save failed.";
+    const reason = errorReason(error, "Save failed.");
     const diagnostics: readonly DocumentProblem[] = problems.length > 0
       ? problems.map((item) => ({ ...item, severity: "error" as const, operation: "document.save", operationLabel: "Save document", source: "save" as const, stage, recommendation: "Fix the reported field and retry Save.", detail: `save-failure:${stage}:${item.code}` }))
       : [{ code: stage === "storage" ? "SAVE_FAILED" : "SAVE_SERIALIZE_FAILED", path: "$.document", message: `Save document failed: ${reason}`, severity: "error" as const, operation: "document.save", operationLabel: "Save document", source: "save" as const, stage, recommendation: stage === "storage" ? "Retry the download or choose Save As; the document remains unchanged." : "Fix the reported document problem, then retry Save.", detail: `save-failure:${stage}` }];
     application.setProblem(diagnostics.map((item) => item.message).join(" "));
-    application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("save-failure:")), ...diagnostics]);
+    application.setRuntimeDiagnostics((current) => [...current.filter((item) => !isSaveDiagnostic(item)), ...diagnostics]);
   }, [application]);
 
   const save = useCallback((filename: string) => {
@@ -156,12 +196,17 @@ export function useDocumentLifecycle({
     const persistedRevision = session.getSnapshot().revision;
     try { persistText(text, filename); }
     catch (error) { reportSaveFailure(error, "storage"); return false; }
-    try { localStorage.setItem("timing-chart-v2.recent", text); }
-    catch (error) { reportSaveFailure(error, "storage"); return false; }
     if (session.getSnapshot().revision === persistedRevision) session.markClean();
     application.publishHistory();
-    application.setRuntimeDiagnostics((current) => current.filter((item) => !item.detail?.startsWith("save-failure:")));
-    application.setProblem("");
+    application.setRuntimeDiagnostics((current) => current.filter((item) => !isSaveDiagnostic(item)));
+    try {
+      localStorage.setItem("timing-chart-v2.recent", text);
+      application.setProblem("");
+    } catch (error) {
+      const diagnostic = recentSaveWarning(error);
+      application.setRuntimeDiagnostics((current) => [...current, diagnostic]);
+      application.setProblem(`Saved successfully. ${diagnostic.message}`);
+    }
     return true;
   }, [application, persistText, reportSaveFailure]);
 
@@ -174,9 +219,17 @@ export function useDocumentLifecycle({
     return true;
   }, [pendingAction, performAction, save]);
   const openRecent = useCallback(() => {
-    const text = localStorage.getItem("timing-chart-v2.recent");
-    if (text) requestOpenText(text);
-    else application.setProblem("No recent document is available.");
+    let text: string | null;
+    try { text = localStorage.getItem("timing-chart-v2.recent"); }
+    catch (error) {
+      const diagnostic = recentOpenFailure(error);
+      application.setProblem(diagnostic.message);
+      application.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("open-failure:")), diagnostic]);
+      return false;
+    }
+    if (text) { requestOpenText(text); return true; }
+    application.setProblem("No recent document is available.");
+    return false;
   }, [application, requestOpenText]);
   const attachEffects = useCallback((effects: LifecycleEffects) => {
     effectsRef.current = effects;
