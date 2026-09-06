@@ -53,4 +53,86 @@ describe("selected Clock Edge Counter origin", () => {
     expect(metrics.edgeCounterCyclesProbed).toBe(0);
     expect(metrics.edgeCounterGeometryLookups).toBe(0);
   });
+
+  // #398: an edit that only touches one Clock's rendered waveform (a new
+  // LocalGeometryMap instance for that Clock) must rebuild only that
+  // Clock's edge index -- an unrelated Clock's already-indexed map must
+  // stay a cache hit, not get rebuilt just because *some* Clock changed.
+  it("rebuilds only the edited Clock's edge index; an unrelated Clock's index is reused", () => {
+    const base = canonicalFixture();
+    const clockA = { ...base.signals[0]!, id: "sig_clk_a" as typeof base.signals[0]["id"], edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const } };
+    const clockB = { ...base.signals[0]!, id: "sig_clk_b" as typeof base.signals[0]["id"], edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const } };
+    const document = { ...base, signals: [clockA, clockB] };
+    const makeMap = (id: string) => new ImmutableLocalGeometryMap(id as never, Array.from({ length: 4 }, (_, cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]).flat());
+    const mapA1 = makeMap("sig_clk_a");
+    const mapB = makeMap("sig_clk_b");
+    const metrics = createEdgeCounterProjectionMetrics();
+
+    // First refresh: both Clocks' indexes are built fresh.
+    projectEdgeCounters(document, projection(), new Map([["sig_clk_a", mapA1], ["sig_clk_b", mapB]]), { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    expect(metrics.edgeCounterEdgeIndexBuilds).toBe(2);
+    expect(metrics.edgeCounterEdgeIndexHits).toBe(0);
+
+    // Only Clock A's waveform changed -- a genuinely new LocalGeometryMap
+    // instance for A; Clock B keeps its already-indexed instance.
+    const mapA2 = makeMap("sig_clk_a");
+    projectEdgeCounters(document, projection(), new Map([["sig_clk_a", mapA2], ["sig_clk_b", mapB]]), { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    expect(metrics.edgeCounterEdgeIndexBuilds).toBe(3); // +1, for A's new map only
+    expect(metrics.edgeCounterEdgeIndexHits).toBe(1); // B's cached index reused
+    expect(metrics.edgeCounterCyclesProbed).toBe(0);
+    expect(metrics.edgeCounterGeometryLookups).toBe(0);
+  });
+
+  // #398: a refresh driven by something unrelated to any Clock (e.g. an
+  // unrelated Signal rename/style edit) reuses the exact same
+  // LocalGeometryMap instances -- so it must be all cache hits, zero
+  // rebuilds and zero cycle/geometry probing.
+  it("performs zero edge-index rebuilds and zero cycle probing when nothing Clock-related changed", () => {
+    const base = canonicalFixture();
+    const document = { ...base, signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const } }, base.signals[1]!] };
+    const map = new ImmutableLocalGeometryMap("sig_clk", Array.from({ length: 4 }, (_, cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]).flat());
+    const maps = new Map([["sig_clk", map]]);
+    const metrics = createEdgeCounterProjectionMetrics();
+    projectEdgeCounters(document, projection(), maps, { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    expect(metrics.edgeCounterEdgeIndexBuilds).toBe(1);
+
+    // Simulate an unrelated Signal rename: same document shape, same maps
+    // (the renamed signal's own geometry has nothing to do with this
+    // Clock's LocalGeometryMap instance, so it is untouched/reused).
+    const renamed = { ...document, signals: [document.signals[0]!, { ...document.signals[1]!, name: "DATA_RENAMED", display: { ...document.signals[1]!.display, name: "DATA_RENAMED" } }] };
+    projectEdgeCounters(renamed, projection(), maps, { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    expect(metrics.edgeCounterEdgeIndexBuilds).toBe(1); // unchanged
+    expect(metrics.edgeCounterEdgeIndexHits).toBe(1);
+    expect(metrics.edgeCounterCyclesProbed).toBe(0);
+    expect(metrics.edgeCounterGeometryLookups).toBe(0);
+  });
+
+  // #398: a gated/suppressed Clock interval produces no LocalGeometry edge
+  // entries for the suppressed cycles (upstream waveform generation never
+  // emits them) -- the edge index built from edgeEntries() must not invent
+  // edges for those cycles, and must never fall back to the O(cycleCount)
+  // per-cycle probe when edgeEntries() is available.
+  it("does not invent edges for a gated/suppressed Clock interval", () => {
+    const base = canonicalFixture();
+    const document = { ...base, signals: [{ ...base.signals[0]!, edgeCounter: { ...base.signals[0]!.edgeCounter, show: true, mode: "both" as const } }, base.signals[1]!] };
+    // Cycles 0-3 have real edges; cycle 2 is a suppressed/gated period, so
+    // upstream geometry generation emits no rising/falling entry for it.
+    const map = new ImmutableLocalGeometryMap("sig_clk", [0, 1, 3].flatMap((cycle) => [
+      { cycle, point: "rising-edge" as const, position: { x: cycle * 10, y: 0 } },
+      { cycle, point: "falling-edge" as const, position: { x: cycle * 10 + 5, y: 0 } },
+    ]));
+    const metrics = createEdgeCounterProjectionMetrics();
+    const overlays = projectEdgeCounters(document, projection(), new Map([["sig_clk", map]]), { start: 0, end: 4 }, 0, 1, undefined, metrics);
+    const cycles = overlays.map((overlay) => Number(overlay.id.split(":").at(-1)));
+    expect(cycles).not.toContain(2);
+    expect(cycles.sort((left, right) => left - right)).toEqual([0, 0, 1, 1, 3, 3]);
+    expect(metrics.edgeCounterCyclesProbed).toBe(0);
+    expect(metrics.edgeCounterGeometryLookups).toBe(0);
+  });
 });
