@@ -12,6 +12,7 @@
   },
   "scripts": {
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:runtime-owner-types": "node scripts/check-runtime-owner-types.mjs",
     "check:interactive-controls": "node scripts/check-interactive-controls.mjs",
     "check:legacy-css-budget": "node scripts/check-legacy-css-budget.mjs",
     "check:editor-complexity": "node scripts/check-editor-complexity.mjs",
@@ -29,7 +30,7 @@
     "harness:verify": "node scripts/run-harness-verify.mjs",
     "ai-bridge": "node scripts/ai-bridge-server.mjs",
     "build": "npm run typecheck && npm --workspace @timing-chart-v2/editor run build",
-    "check": "npm run check:boundaries && npm run check:interactive-controls && npm run check:legacy-css-budget && npm run check:editor-complexity && npm run check:performance-architecture && npm run check:production-presentation && npm run check:left-tree-icons && npm run check:parity && npm run test && npm run build",
+    "check": "npm run check:boundaries && npm run check:runtime-owner-types && npm run check:interactive-controls && npm run check:legacy-css-budget && npm run check:editor-complexity && npm run check:performance-architecture && npm run check:production-presentation && npm run check:left-tree-icons && npm run check:parity && npm run test && npm run build",
     "test:perf:pr": "playwright test tests/e2e/performance-closure.spec.ts --grep-invert nightly/manual",
     "test:perf:nightly": "playwright test tests/e2e/performance-closure.spec.ts",
     "check:ci": "npm run check && npm run check:parity && npm run test:e2e"
