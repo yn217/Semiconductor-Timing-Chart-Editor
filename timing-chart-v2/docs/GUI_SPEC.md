@@ -9,9 +9,10 @@ GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` �
 3. `docs/GUI_VISUAL_CONTRACT.md`
 4. `docs/GUI_IMPLEMENTATION_REFERENCE.md`
 5. v8 `index.html` / `styles.css` / `golden-home-cycle-1672x941.png`
-6. Existing Replacement Pack and Production GUI
+6. Existing Production GUI
+7. External historical Replacement Pack, only when supplied with an approved V2 mapping
 
-`TimingChart_GUI_Replacement_Pack` は「参考」ではなく、Productionへ移植する実装用DOM/CSS/Icon Reference。Productionはこれを基準にし、同じ機能を別レイアウトへ再設計してはならない。
+`TimingChart_GUI_Replacement_Pack` は、提供されている場合に限り、V1の履歴入力およびマッピング対象として扱う。現行V2では `references/v2-gui-reference-v8/` が実行可能なVisual Acceptance Contractであり、未trackedのReplacement Packを存在する前提で比較結果や実装判断を作ってはならない。
 
 ## 1. Main layout
 - Office/Ribbon風の上部UI。
@@ -24,7 +25,7 @@ GUIの見た目は単なる参考ではない。`docs/GUI_VISUAL_CONTRACT.md` �
 
 Bottom editorは原則 **Center column内だけ** に配置し、Left Signal Tree / Right Inspectorの下まで全幅に広げない。
 
-Golden viewport 1672x941 / DPR 1では、Replacement Packのpane位置・Ribbon境界・Bottom Editor境界を基準とし、主要geometry差は0-2px以内を目標とする。
+Golden viewport 1672x941 / DPR 1では、承認済みV2 v8のpane位置・Ribbon境界・Bottom Editor境界を基準とし、主要geometry差は0-2px以内を目標とする。外部Replacement Packを比較する場合は、対応するV2 fixture/stateと別途承認された比較条件を記録する。
 
 ## 2. Ribbon
 Ribbonは機能をグループ化して表示する。単純な横一列のボタン群は禁止。
@@ -39,7 +40,7 @@ Ribbonは機能をグループ化して表示する。単純な横一列のボ�
 
 Home/Insert等では関連commandをgroup化し、group separator / captionを持つ。
 
-RibbonのiconographyはReplacement Pack由来の`gui-mockup/icons.svg`を基本とする。絵文字や無関係なgeneric iconへ勝手に置換しない。
+Ribbonのiconographyは、現行V2でtrackedなsemantic SVG/icon実装を基本とする。外部Replacement Packの`gui-mockup/icons.svg`は、提供された場合の履歴比較入力であり、絵文字や無関係なgeneric iconへ勝手に置換する理由にはならない。
 
 ## 3. View mode and Bottom tabs
 Ribbon右側の同じ位置に`Cycle / Transaction / Split`のView Mode segmented controlを置く。
@@ -130,7 +131,7 @@ GUIはsignal/group background、selection、annotation、clock edge number等を
 ## 12. AI-readable reference
 Production用Referenceはsemantic HTML/CSS/SVGで表す。stable `data-testid` / `data-role` / `data-signal` / `data-anchor` を利用する。
 
-Replacement Packの`production/index.html`、`production/styles.css`、`production/icons.svg`、`production/app-ui.js`を見てProduction UIを移植すること。Golden PNGを毎回AIが再解釈して別のHTMLを作る運用は禁止。
+外部Replacement Packが提供された場合は、その`production/index.html`、`production/styles.css`、`production/icons.svg`、`production/app-ui.js`を履歴入力として参照できる。ただし現行V2の実装判断と比較は、承認済みv8 fixture/stateを基準に行う。Golden PNGを毎回AIが再解釈して別のHTMLを作る運用は禁止。
 
 ## 13. Visual regression requirement
 GUI visual acceptanceは screenshot file existenceではない。
@@ -138,7 +139,8 @@ GUI visual acceptanceは screenshot file existenceではない。
 同一Chromium / viewport 1672x941 / DPR 1 / deterministic fixtureで、
 
 Reference path:
-Replacement Pack reference -> screenshot
+Approved V2 v8 reference -> screenshot. A Replacement Pack reference is a
+separate, explicitly mapped historical comparison path.
 
 DUT path:
 Production app -> corresponding screenshot

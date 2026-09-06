@@ -1,17 +1,17 @@
 # GUI Implementation Reference Contract
 
 ## Purpose
-The generated PNG mockups are design sources, but production must not repeatedly reinterpret them. The checked-in `references/gui-replacement-pack/` images and the Replacement Pack's HTML/CSS/SVG assets are the deterministic implementation reference.
+The generated PNG mockups are design sources, but production must not repeatedly reinterpret them. The approved V2 v8 fixture under `references/v2-gui-reference-v8/` is the current executable implementation reference. The historical V1 Replacement Pack is an external input when supplied and mapped; it is not a tracked directory in the current V2 tree.
 
 ## Priority
 1. Product/behavior specifications
 2. Approved v8 overrides: `references/v2-gui-reference-v8/gui-reference.json`
 3. `docs/GUI_VISUAL_CONTRACT.md`
 4. v8 `index.html` + `styles.css` + `golden-home-cycle-1672x941.png`
-5. Replacement Pack `production/index.html` + `styles.css` + `icons.svg` + `app-ui.js`
-6. Existing production implementation
+5. Existing production implementation
+6. External historical Replacement Pack, only after a mapped V2 fixture/state and unchanged-reference comparison are supplied
 
-If production differs from the Replacement Pack without an approved spec change, production is wrong.
+If production differs from the approved V2 v8 contract without an approved spec change, production is wrong. A missing external Replacement Pack must not be silently treated as a passing or failing V2 comparison.
 
 ## Required reference geometry @ 1672x941 / DPR 1
 - title bar + app title/status
@@ -26,13 +26,15 @@ If production differs from the Replacement Pack without an approved spec change,
 - no dead blank region between waveform and Bottom Editor
 
 ## Icons
-`gui-mockup/icons.svg` is the Production SVG symbol sprite copied from the Replacement Pack. Production must render these symbols through `<svg><use href="icons.svg#...">`; do not substitute unrelated emoji or generic text symbols.
+When a legacy Replacement Pack is supplied, its `gui-mockup/icons.svg` is historical input for the mapped comparison. Current V2 production must use its tracked semantic SVG/icon implementation and must not substitute unrelated emoji or generic text symbols merely because the external pack is unavailable.
 
 ## Visual verification
 Run Reference and DUT in the same Chromium build at 1672x941 / DPR 1 with deterministic content.
 
 Reference:
-fixed Replacement Pack images and DOM/CSS structure
+the approved V2 v8 fixture and its DOM/CSS structure. A historical Replacement
+Pack comparison is a separate audit and requires the external assets plus an
+explicitly mapped V2 fixture/state.
 
 DUT:
 production application in the corresponding Golden state.
