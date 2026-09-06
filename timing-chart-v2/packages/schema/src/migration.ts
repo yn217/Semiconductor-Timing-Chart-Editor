@@ -339,6 +339,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
 
   const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings));
   const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings));
+  const transactionTimeScale = record(source.transactionTimeScale);
   const transactionGroups = list(source.transactionGroups).map((value, index) => { const item = record(value); return { id: text(item.id, deterministicId("transactionGroup", index)), name: text(item.name, `Transaction Group ${index + 1}`), ...(typeof item.color === "string" ? { color: item.color } : {}), order: Number.isInteger(item.order) && Number(item.order) >= 0 ? Number(item.order) : index }; });
   if (Array.isArray(transactionView.lanes) && transactionView.lanes.length > 0) {
     warnings.push({ code: "MIGRATION_TRANSACTION_LANES", path: "$.transactionView.lanes", message: "Lane IDs remain on transaction source/destination; legacy lane display names are not canonical fields." });
@@ -440,6 +441,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
       layout,
       transactions,
       ...(transactionGroups.length > 0 ? { transactionGroups: transactionGroups as unknown as NonNullable<CanonicalDocument["transactionGroups"]> } : {}),
+      ...(Number.isFinite(transactionTimeScale.clockCyclesPerTransactionCycle) && Number(transactionTimeScale.clockCyclesPerTransactionCycle) > 0 ? { transactionTimeScale: { clockCyclesPerTransactionCycle: Number(transactionTimeScale.clockCyclesPerTransactionCycle), majorInterval: Number.isInteger(transactionTimeScale.majorInterval) && Number(transactionTimeScale.majorInterval) > 0 ? Number(transactionTimeScale.majorInterval) : 1, minorInterval: Number.isInteger(transactionTimeScale.minorInterval) && Number(transactionTimeScale.minorInterval) > 0 ? Number(transactionTimeScale.minorInterval) : 1, ...(typeof transactionTimeScale.showSecondaryClock === "boolean" ? { showSecondaryClock: transactionTimeScale.showSecondaryClock } : {}) } } : {}),
       constraints,
       checkSettings: jsonObject(source.checkSettings) as CanonicalDocument["checkSettings"] ?? {},
     },

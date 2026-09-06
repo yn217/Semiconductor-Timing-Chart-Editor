@@ -1,11 +1,18 @@
 import { describe, expect, it } from "vitest";
-import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService } from "@timing-chart-v2/geometry";
+import { DefaultScreenGeometryProjector, ImmutableLocalGeometryMap, ImmutableSnapIndex, resolveTimeAxisGeometry, SemanticSnapCandidateService, createTransactionTimeTransform } from "@timing-chart-v2/geometry";
 import type { AnnotationId, SignalId, TimeGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const signalId = "sig_snap" as SignalId;
 
 describe("Screen Geometry and snapping", () => {
+  it("keeps Transaction Cycle conversion independent of origin and screen pixels", () => {
+    const transform = createTransactionTimeTransform(10);
+    expect(transform.transactionCycleToClock(7.25)).toBe(72.5);
+    expect(transform.clockToTransactionCycle(72.5)).toBe(7.25);
+    expect(transform.transactionCycleToWorldX(7.25, 140, 32)).toBe(372);
+    expect(transform.worldXToTransactionCycle(372, 140, 32)).toBe(7.25);
+  });
   it("resolves the first actually rendered axis owner without a Clock", () => {
     const source = canonicalFixture();
     const hiddenFirst = { ...source.signals[0]!, display: { ...source.signals[0]!.display, visible: false } };

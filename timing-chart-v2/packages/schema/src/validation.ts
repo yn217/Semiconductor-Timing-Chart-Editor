@@ -68,6 +68,7 @@ const RULE_DESCRIPTORS: readonly CanonicalRuleDescriptor[] = [
   canonicalRule("INVALID_STABLE_ID", "Entity identifiers must be stable IDs", "$.signals[*].id | $.signalGroups[*].id | $.annotations[*].id"),
   canonicalRule("INVALID_TIME_GROUP_RANGE", "Time Group must use a valid half-open range", "$.timeGroups[*]"),
   canonicalRule("INVALID_TRANSACTION_PHASE", "Transaction phases must fit their parent range", "$.transactions[*].phases[*]"),
+  canonicalRule("INVALID_TRANSACTION_TIME_SCALE", "Transaction time scale must use positive finite ratio and intervals", "$.transactionTimeScale"),
   canonicalRule("LABEL_ANCHOR_BOUNDARY_MISMATCH", "Resume label anchor must match group boundary", "$.timeline.labelAnchors[*].source"),
   canonicalRule("LABEL_ANCHOR_OWNER_MISMATCH", "Label anchor owner must reciprocate", "$.timeline.labelAnchors[*].ownerTimeGroupId"),
   canonicalRule("MISSING_ANNOTATION_ANCHOR", "Annotation must provide its required anchor", "$.annotations[*]"),
@@ -261,6 +262,8 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
 
   const signals = new Map<string, Signal>(document.signals.map((signal) => [signal.id, signal]));
   const transactionGroups = new Map((document.transactionGroups ?? []).map((group) => [group.id, group]));
+  const transactionScale = document.transactionTimeScale;
+  if (transactionScale !== undefined && (!Number.isFinite(transactionScale.clockCyclesPerTransactionCycle) || transactionScale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(transactionScale.majorInterval) || transactionScale.majorInterval < 1 || !Number.isInteger(transactionScale.minorInterval) || transactionScale.minorInterval < 1)) problems.push(problem("INVALID_TRANSACTION_TIME_SCALE", "$.transactionTimeScale", "Transaction time scale is invalid."));
   const spacerOwners = new Map<string, string>(document.signalGroups.flatMap((group) => (group.spacers ?? []).map((spacer) => [spacer.id, group.id] as const)));
   const spacers = new Set(spacerOwners.keys());
   const renderableRows = new Set<string>([...signals.keys(), ...spacers]);

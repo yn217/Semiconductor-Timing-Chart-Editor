@@ -1,6 +1,19 @@
 import { anchorTransitionFraction } from "@timing-chart-v2/schema";
 import type { AnchorPoint, Annotation, Bookmark, CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
 
+export interface TransactionTimeTransform {
+  readonly clockCyclesPerTransactionCycle: number;
+  transactionCycleToClock(transactionCycle: number): number;
+  clockToTransactionCycle(clockCycle: number): number;
+  transactionCycleToWorldX(transactionCycle: number, originX: number, unitsPerTransactionCycle: number): number;
+  worldXToTransactionCycle(worldX: number, originX: number, unitsPerTransactionCycle: number): number;
+}
+
+export function createTransactionTimeTransform(clockCyclesPerTransactionCycle = 1): TransactionTimeTransform {
+  if (!Number.isFinite(clockCyclesPerTransactionCycle) || clockCyclesPerTransactionCycle <= 0) throw new Error("Transaction time scale must be positive and finite.");
+  return Object.freeze({ clockCyclesPerTransactionCycle, transactionCycleToClock: (value: number) => value * clockCyclesPerTransactionCycle, clockToTransactionCycle: (value: number) => value / clockCyclesPerTransactionCycle, transactionCycleToWorldX: (value: number, originX: number, units: number) => originX + value * units, worldXToTransactionCycle: (worldX: number, originX: number, units: number) => (worldX - originX) / units });
+}
+
 export interface Point { readonly x: number; readonly y: number }
 export interface ViewTransform { readonly scrollX: number; readonly scrollY: number; readonly zoom: number }
 

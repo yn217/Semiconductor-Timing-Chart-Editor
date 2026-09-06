@@ -30,6 +30,7 @@ import type {
   TransactionPhase,
   TransactionId,
   TransactionGroup,
+  TransactionTimeScale,
   CommentRow,
   ValueSignal,
 } from "@timing-chart-v2/schema";
@@ -110,6 +111,7 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "transactionGroup.update"; groupId: TransactionGroup["id"]; name: string; color?: string; order: number }>
   | Readonly<{ id: CommandId; type: "transactionGroup.delete"; groupId: TransactionGroup["id"] }>
   | Readonly<{ id: CommandId; type: "transaction.moveToGroup"; transactionId: TransactionId; groupId?: TransactionGroup["id"] }>
+  | Readonly<{ id: CommandId; type: "transaction.setTimeScale"; scale: TransactionTimeScale }>
   | Readonly<{ id: CommandId; type: "timeline.setReferenceClock"; referenceClock?: SignalId }>
   | Readonly<{ id: CommandId; type: "timeline.setReferenceEdge"; edge: "rising" | "falling" }>
   | Readonly<{ id: CommandId; type: "annotation.updateAnchor"; annotationId: AnnotationId; anchor: SemanticAnchor }>
