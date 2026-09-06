@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("Inspector header has no inert overflow control", async ({ page }) => {
+test("Inspector header has no inert control besides the real Close button", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -11,10 +11,19 @@ test("Inspector header has no inert overflow control", async ({ page }) => {
     dirty: await page.getByTestId("dirty-status").textContent(),
   };
 
-  await expect(inspector.locator("header button, header [role='button']")).toHaveCount(0);
+  // Inspector redesign (Section 9): the header now carries one real,
+  // fully-wired Close button (hides the Inspector shell via the existing
+  // `inspectorVisible` workspace state) -- deliberately NOT a Pin button,
+  // since no "stop following Selection" mechanism exists yet. The guard
+  // below still catches any OTHER, inert control being added to the
+  // header (the original regression this test protects against).
+  const headerButtons = inspector.locator("header button, header [role='button']");
+  await expect(headerButtons).toHaveCount(1);
+  await expect(inspector.getByTestId("inspector-close")).toBeVisible();
   await expect(inspector.getByRole("button", { name: /overflow/i })).toHaveCount(0);
   await host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control'] [data-role='tree-branch']").click();
-  await expect(inspector.locator("header button, header [role='button']")).toHaveCount(0);
+  await expect(headerButtons).toHaveCount(1);
+  await expect(inspector.getByTestId("inspector-close")).toBeVisible();
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);
   expect(await page.getByTestId("history-status").textContent()).toBe(before.history);
   expect(await page.getByTestId("dirty-status").textContent()).toBe(before.dirty);

@@ -31,6 +31,8 @@
 .inspector > header b { color: #126bc0; font-size: 11px; font-weight: 700; }
 
 .inspector > header button { border: 0; background: transparent; }
+.inspector > header button[data-testid="inspector-close"] { width: 20px; height: 20px; padding: 0; border-radius: 3px; color: #52677d; font-size: 15px; line-height: 1; cursor: pointer; }
+.inspector > header button[data-testid="inspector-close"]:hover { background: var(--gui-hover-bg, #e7eef7); color: #263c58; }
 .inspector > form { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; overflow: auto; }
 .inspector section { padding: 9px 12px 10px; border-bottom: 1px solid #edf0f4; background: #fff; }
 
@@ -47,6 +49,21 @@
 .inspector .checkline input { width: auto; }
 
 .property-row { display: grid; grid-template-columns: 98px 1fr; margin: 7px 0; font-size: 11px; }
+
+/* Inspector redesign, Section 3: related properties (Start/End, Spacing
+   Before/After) placed side by side rather than stacking two full-width
+   98px-label rows -- each half keeps its own compact label|control pair so
+   text/control never overlap even at the Inspector's minimum width. */
+.inspector-property-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.inspector-property-pair label { grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 0; }
+
+/* Inspector redesign, Section 4: a Property's long explanation moves out of
+   the always-visible row into a small (i) affordance, shown on hover/focus
+   via the native title tooltip -- never a permanent inline paragraph. */
+.field-help { display: inline-flex; flex: 0 0 auto; align-items: center; justify-content: center; width: 15px; height: 15px; margin-left: 5px; border-radius: 50%; background: #e2e8f0; color: #52677d; font-size: 10px; font-style: normal; cursor: help; }
+.field-help:focus-visible { outline: var(--ds-focus-width) solid var(--ds-focus-color); outline-offset: 1px; }
+.inspector-field-with-help { display: flex; align-items: center; min-width: 0; }
+.inspector-field-with-help input { flex: 1 1 auto; min-width: 0; }
 .inspector .danger { height: 28px; border: 1px solid #d39b9b; border-radius: 3px; background: white; color: #a52b2b; }
 
 .document-properties { width: min(620px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; padding: 0 18px 18px; border: 1px solid #8da4bc; border-radius: 6px; background: white; box-shadow: 0 14px 42px #1d334c55; }
@@ -179,3 +196,53 @@
 .inspector-edge-counter label { min-width: 0; }
 
 .inspector-edge-counter input[type="number"], .inspector-edge-counter select { width: 100%; min-width: 0; }
+
+/* Inspector redesign (#Inspector-UX): SelectionHeader -- "what is selected,
+   and where does it sit" at a glance, before any Property. Sticky at the
+   top of the scrollable form so it survives scrolling past long sections.
+   Colors reuse the existing role-badge palette family (left-tree.css'
+   input/output/internal/comment swatches) rather than inventing a new one. */
+.inspector-selection-header { position: sticky; top: 0; z-index: 3; display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; border-bottom: 1px solid #d0d7e1; background: #eef3f9; }
+.inspector-selection-icon { flex: 0 0 auto; width: 22px; height: 22px; margin-top: 1px; border-radius: 4px; background: #e3f1ff; }
+.inspector-selection-icon[data-kind="signal"], .inspector-selection-icon[data-kind="bus"] { background: #e3f1ff; }
+.inspector-selection-icon[data-kind="transaction"] { background: #fdeecb; }
+.inspector-selection-icon[data-kind="annotation"] { background: #f2e6fb; }
+.inspector-selection-icon[data-kind="bookmark"] { background: #e4f6ec; }
+.inspector-selection-icon[data-kind="group"] { background: #eef1f5; }
+.inspector-selection-text { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.inspector-selection-title { overflow: hidden; color: #1c2b3f; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.inspector-selection-kind { color: #5a6f8a; font-size: 10px; font-weight: 600; }
+.inspector-selection-detail { overflow: hidden; color: #7c8ba0; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Inspector redesign: collapsible-section count badge + compact "+" add
+   affordance, so an empty Phases/Linked Signals section reads as one
+   compact "▶ Phases  0  +" row instead of an always-expanded empty block. */
+.editor-shell .inspector-section-heading { display: flex; align-items: center; margin: 0; padding: 0; }
+.editor-shell .inspector-section-heading .inspector-section-toggle { flex: 1 1 auto; width: auto; }
+.editor-shell .inspector-section-count { flex: 0 0 auto; margin-right: 6px; padding: 1px 6px; border-radius: 999px; background: #e2e8f0; color: #45566d; font-size: 10px; font-weight: 700; line-height: 1.4; }
+.editor-shell .inspector-section-add { flex: 0 0 auto; width: 20px; height: 20px; margin-right: 8px; padding: 0; border: 1px solid #aebccd; border-radius: 3px; background: #fff; color: #29425e; font-size: 12px; line-height: 1; cursor: pointer; }
+.editor-shell .inspector-section-add:hover { background: #eaf2fa; }
+.editor-shell .inspector-section-add:focus-visible { outline: var(--ds-focus-width) solid var(--ds-focus-color); outline-offset: -2px; }
+
+/* Inspector redesign: one shared sticky Apply/Cancel footer, replacing the
+   ad hoc full-width Cancel bar + wherever-the-form-ends Apply button. */
+.editor-shell .inspector-sticky-footer { position: sticky; bottom: 0; z-index: 3; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 7px 10px; border-top: 1px solid #d0d7e1; background: #f8fafc; }
+.editor-shell .inspector-sticky-footer .draft-unapplied-indicator { overflow: hidden; color: #a5670f; font-size: 10px; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.editor-shell .inspector-footer-buttons { display: flex; flex: 0 0 auto; gap: 6px; margin-left: auto; }
+.editor-shell .inspector-footer-buttons button { height: 26px; padding: 0 10px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #29425e; font-size: 11px; }
+.editor-shell .inspector-footer-buttons button[data-testid^="apply-"] { border-color: #1766aa; background: #2678bc; color: #fff; }
+.editor-shell .inspector-footer-buttons button:disabled { cursor: not-allowed; opacity: .5; }
+
+/* Inspector redesign, Section 7 (Reference v2): Boolean Properties render
+   as a compact toggle switch, not a checkbox -- the native checkbox input
+   stays in the DOM (visually hidden, still focusable/labelled) so nothing
+   about label/aria-label/checked semantics or existing
+   `getByLabel(...).check()` test calls changes, only the chrome around it. */
+.property-toggle-switch { position: relative; display: inline-flex; flex: 0 0 auto; width: 30px; height: 17px; }
+.property-toggle-switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.property-toggle-track { display: block; width: 100%; height: 100%; border-radius: 999px; background: #c3ceda; transition: background .12s ease; }
+.property-toggle-thumb { display: block; width: 13px; height: 13px; margin: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px #20365244; transition: transform .12s ease; }
+.property-toggle-switch[data-checked="true"] .property-toggle-track { background: #2678bc; }
+.property-toggle-switch[data-checked="true"] .property-toggle-thumb { transform: translateX(13px); }
+.property-toggle-switch input:focus-visible ~ .property-toggle-track { outline: var(--ds-focus-width) solid var(--ds-focus-color); outline-offset: 1px; }
+.inspector-style-checks .property-toggle { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
