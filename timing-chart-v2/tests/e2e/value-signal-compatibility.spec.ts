@@ -80,7 +80,15 @@ test("incompatible State to Binary conversion is rejected before canonical commi
   expect(await page.getByTestId("dirty-status").textContent()).toBe(beforeDirty);
 });
 
-test("compatible Logic to Pulse conversion supports Cancel, Apply, Undo/Redo, and Save/Open", async ({ page }) => {
+// #400: Pulse is no longer an independently creatable Signal type -- the
+// Type selector never offers it as a conversion *target* (not even from a
+// value-domain-compatible source like Level/`logic`, which is exactly what
+// the old "Logic to Pulse" version of this test exercised). It replaces
+// that removed conversion path with a positive assertion that Pulse is
+// truly absent from the list, plus a still-genuinely-compatible conversion
+// (Bus -> State, both data-domain, no value-token restriction) to keep this
+// file's actual "compatible conversion succeeds end to end" coverage alive.
+test("Pulse is never offered as a Type conversion target, even from a value-domain-compatible Level (logic) signal", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
@@ -88,15 +96,30 @@ test("compatible Logic to Pulse conversion supports Cancel, Apply, Undo/Redo, an
   await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
   const inspector = page.getByTestId("inspector");
   const type = inspector.getByLabel("Inspector signal type");
+  await expect(type.locator("option[value='pulse']")).toHaveCount(0);
+  await expect(type).toHaveValue("logic");
+  const bottom = page.getByTestId("bottom-editor");
+  await bottom.locator(".bottom-tabs").getByRole("tab", { name: "Signal", exact: true }).click();
+  await expect(bottom.locator(".signal-editor").getByLabel("Signal type").locator("option[value='pulse']")).toHaveCount(0);
+});
+
+test("compatible Bus to State conversion supports Cancel, Apply, Undo/Redo, and Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "compatibility.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(host).toHaveAttribute("data-editor-idle", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
+  const inspector = page.getByTestId("inspector");
+  const type = inspector.getByLabel("Inspector signal type");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
-  await type.selectOption("pulse");
+  await type.selectOption("state");
   await inspector.getByTestId("cancel-inspector-draft").click();
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
-  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("logic");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("bus");
 
   const nextInspector = page.getByTestId("inspector");
-  await nextInspector.getByLabel("Inspector signal type").selectOption("pulse");
+  await nextInspector.getByLabel("Inspector signal type").selectOption("state");
   await nextInspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(host).toHaveAttribute("data-canonical-revision", "1");
@@ -105,12 +128,12 @@ test("compatible Logic to Pulse conversion supports Cancel, Apply, Undo/Redo, an
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
-  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("logic");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("bus");
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
-  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("pulse");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("state");
 
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
@@ -119,8 +142,8 @@ test("compatible Logic to Pulse conversion supports Cancel, Apply, Undo/Redo, an
   expect(savedPath).toBeTruthy();
   await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_logic']").click();
-  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("pulse");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_bus']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Inspector signal type")).toHaveValue("state");
   await expect(page.getByTestId("wavedrom-status")).toHaveText("WaveDrom: Ready");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });

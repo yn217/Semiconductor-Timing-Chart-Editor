@@ -112,7 +112,12 @@ test("Left tree Add surface exposes real Signal/Clock/Bus/State/Group commands",
   await add.click();
   const menu = page.getByRole("menu", { name: "Add signal or group" });
   await expect(menu).toBeVisible();
-  await expect(menu.getByRole("menuitem")).toHaveText(["Signal", "Clock", "Bus", "State", "Group", "Comment Row"]);
+  // #400: Level replaces Logic in the UI, and Pulse is no longer offered as
+  // a creatable Signal type -- see event-pulse-lifecycle.spec.ts for the
+  // dedicated assertion. This full menu-content list was stale (missing
+  // Level/Event/Spacer/Bulk Signal Registration, which already existed
+  // before this change) -- corrected to the actual current menu.
+  await expect(menu.getByRole("menuitem")).toHaveText(["Signal", "Clock", "Bus", "State", "Level", "Event", "Spacer", "Group", "Bulk Signal Registration", "Comment Row"]);
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-tree-add-1280x720.png", animations: "disabled" });
   await menu.getByRole("menuitem", { name: "Bus", exact: true }).click();
   await expect(host).toHaveAttribute("data-canonical-revision", "1");

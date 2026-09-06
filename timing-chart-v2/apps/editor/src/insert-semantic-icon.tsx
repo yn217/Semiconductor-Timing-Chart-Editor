@@ -6,9 +6,12 @@ export function InsertSemanticIcon({ kind }: { readonly kind: InsertSemanticIcon
     clock: ["M2 7h4v10h4V7h4v10h4V7h4"],
     bus: ["M2 8h20M2 12h20M2 16h20", "M5 5v14M19 5v14"],
     state: ["M2 7h6v10H2z", "M8 7h6v10H8z", "M14 7h8v10h-8z"],
-    // AND-gate glyph: two inputs into a rounded gate body, one output --
-    // distinct from `state`'s stacked-block glyph, reads as digital logic.
-    logic: ["M4 5h6a7 7 0 0 1 0 14H4z", "M2 8h2M2 16h2M20 12h2"],
+    // #400: Level (canonical type `logic`) -- a held level plateau (not a
+    // multi-transition waveform like `signal`) with a small up-chevron
+    // above its rising edge and a down-chevron below its falling edge,
+    // evoking the weak pull-up (U) / pull-down (D) drive states Level
+    // adds on top of 0/1/X/Z, distinct from `state`'s stacked-block glyph.
+    logic: ["M2 18h4v-10h12v10h4", "M8 6V1M6 3l2-2 2 2", "M16 20v3M14 21l2 2 2-2"],
     event: ["M12 3v18", "m12 7 5 5-5 5-5-5z"],
     pulse: ["M2 15h5l2-8 3 10 2-6 2 4h6"],
     marker: ["M12 21 5 14a7 7 0 1 1 14 0z", "M12 7v7"],

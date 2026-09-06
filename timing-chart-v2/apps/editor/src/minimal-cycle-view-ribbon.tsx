@@ -111,11 +111,16 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     const frame = requestAnimationFrame(() => homeOverflowMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
     return () => cancelAnimationFrame(frame);
   }, [homeOverflowOpen]);
-  const insertValueSignal = (type: "binary" | "bus" | "state" | "logic" | "event" | "pulse") => {
+  // #400: Pulse is no longer an independently creatable Signal type -- single/
+  // finite/periodic pulses are produced through the Signal Generator instead.
+  // `type: "pulse"` remains fully supported for documents that already have
+  // it (schema/migration/rendering/export are all unchanged); this function
+  // is the *creation* path, which simply no longer offers it.
+  const insertValueSignal = (type: "binary" | "bus" | "state" | "logic" | "event") => {
     const target = resolveInsertionTarget(document, selectedInsertionSignalId, selectedGroupId);
     if (!target) return;
     const id = nextEntityId("signal", document);
-    const name = type === "event" || type === "pulse" ? `${type.toUpperCase()}_${document.signals.length + 1}` : `SIGNAL_${document.signals.length + 1}`;
+    const name = type === "event" ? `${type.toUpperCase()}_${document.signals.length + 1}` : `SIGNAL_${document.signals.length + 1}`;
     const signal = type === "bus" ? valueSignal(id, name, "internal", [{ start: 0, value: "00" }], { type: "bus", width: 8, displayFormat: "hex" })
       : type === "state" ? valueSignal(id, name, "internal", [{ start: 0, value: "IDLE" }], { type: "state" })
       : type === "event" ? valueSignal(id, name, "internal", [{ start: 0, value: "NONE" }], { type: "event" })
@@ -330,7 +335,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {homeOverflowMenu}
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
       <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><DsRibbonGroup ariaLabel="Signals" className="insert-signals-group" density="compact-grid" label="Signals">
-        <DsRibbonButton icon={<InsertSemanticIcon kind="signal" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="bus" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="logic" />} onClick={() => insertValueSignal("logic")}>Logic</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="pulse" />} onClick={() => insertValueSignal("pulse")}>Pulse</DsRibbonButton>
+        <DsRibbonButton icon={<InsertSemanticIcon kind="signal" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="bus" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="logic" />} onClick={() => insertValueSignal("logic")}>Level</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton>
       </DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><DsRibbonGroup ariaLabel="Structure" className="insert-structure-group" density="compact-grid" label="Structure"><DsRibbonButton icon={<RibbonIcon name="i-group" />} onClick={insertGroup}>Group</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-spacing" />} onClick={insertSpacer}>Spacer</DsRibbonButton></DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><DsRibbonGroup ariaLabel="Annotation" className="insert-annotation-group" density="compact-grid" label="Annotation">

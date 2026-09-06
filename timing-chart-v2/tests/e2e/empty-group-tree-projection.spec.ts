@@ -123,7 +123,7 @@ test("renders the first signal inserted into an initially empty group", async ({
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
   await page.getByLabel("Ribbon tabs").getByRole("button", { name: "Insert", exact: true }).click();
-  await page.getByTestId("insert-ribbon").getByRole("button", { name: "Pulse", exact: true }).click();
+  await page.getByTestId("insert-ribbon").getByRole("button", { name: "Event", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await revealTreeBottom(page);
 
