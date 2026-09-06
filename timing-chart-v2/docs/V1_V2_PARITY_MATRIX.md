@@ -361,6 +361,11 @@ History. A second current-main Chromium case opens a 220-cycle document with
 100 persisted Bookmarks, proves same-time entries remain distinct by stable ID,
 and performs repeated list navigation with zero WaveDrom/render-counter,
 Canonical or History mutation. The full bookmark visual matrix remains open.
+The Ruler context-menu creation path is also current-main Chromium verified
+1/1: a real right-click on the rendered cycle-4 tick opens the dedicated
+`ブックマークを追加` menu item, resolves the cycle through the shared geometry
+resolver, creates one canonical Bookmark/History entry, and opens the Bottom
+Bookmarks panel with the flag aligned to the same tick.
 
 The current-main Hierarchy/Full Path route is browser verified by the focused
 `full-gui.spec.ts` case (1/1, 2026-09-06): Scope breadcrumb, Group/Hierarchy

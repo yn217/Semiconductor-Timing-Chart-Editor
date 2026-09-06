@@ -4,7 +4,7 @@ import { computeViewportSafePosition, currentViewportBounds } from "./viewport-s
 
 type ContextMenuAnchor = Readonly<{ x: number; y: number }>;
 
-export function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "signal" | "group" | "annotation" | "transaction" }) {
+export function ContextMenuSurface({ anchor, children, label, target }: { readonly anchor: ContextMenuAnchor; readonly children: ReactNode; readonly label: string; readonly target: "ruler" | "signal" | "group" | "annotation" | "transaction" }) {
   const menuRef = useRef<HTMLDivElement>(null);
   const position = (reveal = true) => {
     const menu = menuRef.current;

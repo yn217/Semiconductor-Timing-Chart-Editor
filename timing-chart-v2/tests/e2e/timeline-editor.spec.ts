@@ -657,6 +657,38 @@ test("Previous/Next Bookmark navigation jumps to its geometry-backed cycle witho
   await expect(page.getByTestId(`bookmark-row-${bookmarkId}`)).toHaveAttribute("data-selected", "true");
 });
 
+test("creates a Bookmark from the Ruler context menu through shared semantic geometry", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  const ruler = page.getByTestId("cycle-ruler");
+  const cycle4 = ruler.locator("[data-source-cycle='4']");
+  await expect(cycle4).toHaveCount(1);
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  const beforeHistory = await page.getByTestId("history-status").textContent();
+
+  await cycle4.click({ button: "right" });
+  const menu = page.getByRole("menu", { name: "Ruler context menu" });
+  await expect(menu).toBeVisible();
+  await expect(menu.getByRole("menuitem", { name: "ブックマークを追加", exact: true })).toBeVisible();
+  expect(await host.getAttribute("data-canonical-revision")).toBe(beforeRevision);
+  await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
+
+  await menu.getByRole("menuitem", { name: "ブックマークを追加", exact: true }).click();
+  const marker = ruler.locator("[data-bookmark-id]");
+  await expect(marker).toHaveCount(1);
+  await expect(marker).toContainText("Bookmark 4");
+  await expect(page.getByTestId("bookmark-editor-panel")).toBeVisible();
+  await expect(page.getByTestId("bookmark-editor-panel").getByTestId(/bookmark-row-/)).toContainText("Bookmark 4");
+  const markerBox = await marker.boundingBox();
+  const tickBox = await cycle4.boundingBox();
+  expect(markerBox).not.toBeNull();
+  expect(tickBox).not.toBeNull();
+  expect(Math.abs(markerBox!.x - tickBox!.x)).toBeLessThanOrEqual(1);
+  await expect(host).toHaveAttribute("data-canonical-revision", String(Number(beforeRevision) + 1));
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+});
+
 test("edits a named Bookmark through the Bottom Bookmarks panel and preserves it through Save/Open", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");

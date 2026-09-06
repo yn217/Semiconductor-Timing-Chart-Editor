@@ -1136,6 +1136,15 @@ export function MinimalCycleView() {
       // are implementation details and must not be enumerated as hit areas.
       return target === viewportElement || viewportElement.contains(target);
     };
+    const onRulerContextMenu = (event: MouseEvent) => {
+      if (!isTimeDomainPointerTarget(event)) return;
+      const cycle = cycleBoundaryAtX(event.clientX);
+      if (cycle === undefined) return;
+      event.preventDefault();
+      event.stopPropagation();
+      menuOriginRef.current = event.target instanceof HTMLElement ? event.target : rulerElement;
+      setContextMenu({ x: event.clientX, y: event.clientY, target: "ruler", cycle });
+    };
     // Signal Split View (#200) Lower-local row interaction PR1 -- see the
     // lowerCanvasClickRef declaration above for the cross-effect rationale.
     // Generalized (host/viewport-parameterized) counterparts of
@@ -1295,6 +1304,7 @@ export function MinimalCycleView() {
       { target: viewportElement, type: "pointerup", listener: onRangePointerUp as EventListener },
       { target: viewportElement, type: "pointercancel", listener: onRangePointerCancel as EventListener },
       { target: rulerViewportElement, type: "click", listener: onRulerSelect as EventListener },
+      { target: rulerViewportElement, type: "contextmenu", listener: onRulerContextMenu as EventListener },
       { target: rulerViewportElement, type: "pointerdown", listener: onRangePointerDown as EventListener },
       { target: rulerViewportElement, type: "pointermove", listener: onRangePointerMove as EventListener },
       { target: rulerViewportElement, type: "pointerup", listener: onRangePointerUp as EventListener },
@@ -1625,6 +1635,17 @@ export function MinimalCycleView() {
   const [selectedBookmarkId, setSelectedBookmarkId] = useState<BookmarkId | undefined>(undefined);
   const selectedBookmark = selectedBookmarkId === undefined ? undefined : snapshot.document.bookmarks.find((item) => item.id === selectedBookmarkId);
   const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
+  const addBookmarkAtCycle = (cycle: number) => {
+    const maxCycle = Math.max(0, snapshot.document.timeline.cycleCount - 1);
+    const start = Math.max(0, Math.min(maxCycle, Math.trunc(cycle)));
+    const id = nextEntityId("bookmark", snapshot.document) as BookmarkId;
+    const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("ruler_bookmark_create"), type: "bookmark.create", bookmark: { id, name: `Bookmark ${start}`, start } });
+    if (result.ok) {
+      setSelectedBookmarkId(id);
+      setBottomTab("Bookmarks");
+      setBottomVisible(true);
+    }
+  };
   const revealBookmark = (start: number) => timelineNavigation.navigateToCycle(start);
   const bookmarksRef = useRef(snapshot.document.bookmarks);
   bookmarksRef.current = snapshot.document.bookmarks;
@@ -2309,7 +2330,7 @@ export function MinimalCycleView() {
       />}
        <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} /><InspectorPanel key={selectedSignal?.id ?? `${selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => { if (selectedGroup) refreshGroupStylePreview(host.current!, selectedGroup.id, selectedGroup.style); setInspectorResetToken((value) => value + 1); }} onGroupPreview={(groupId, style) => refreshGroupStylePreview(host.current!, groupId, style ?? snapshot.document.signalGroups.find((group) => group.id === groupId)?.style)} /></aside>
     </div>
-    <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} />
+    <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} addBookmarkAtCycle={addBookmarkAtCycle} />
     {renameDialogOpen && <RenameDialog dialogRef={renameDialogRef} draft={renameDraft} onDraftChange={(value) => { setRenameDraft(value); setRenameError(""); }} error={renameError} onApply={applyRename} onClose={() => setRenameDialogOpen(false)} />}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => application.executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
