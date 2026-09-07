@@ -64,6 +64,7 @@ const forbiddenOwners = [
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
 const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Inspector panel composition", "Timeline surface controller", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator"];
+const rootAllowListContract = /MinimalCycleView.*root allow-list:[\s\S]*ALLOW:[\s\S]*DENY:/;
 const requiredSourceContracts = [
   ["command router", /useEditorCommandRouter/],
   ["action owner", /useEditorActions/],
@@ -95,6 +96,7 @@ const requiredShellContracts = [
 const violations = [
   ...forbiddenOwners.filter(([, pattern]) => pattern.test(source)).map(([name]) => name),
   ...requiredOwners.filter((owner) => !ownership.includes(owner)).map((owner) => `ownership map missing: ${owner}`),
+  ...(!rootAllowListContract.test(ownership) ? ["ownership map missing MinimalCycleView root allow-list"] : []),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),

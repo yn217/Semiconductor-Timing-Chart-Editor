@@ -31,10 +31,10 @@ controllers are extracted incrementally.
 | Geometry grid DOM projection | `render-geometry-grid.ts` | view-only geometry projection | Phase 1 extracted utility |
 | Inspector accordion state | `inspector-accordion.ts` | view-only Inspector state | Phase 1 extracted utility |
 | Inspector section presentation | `inspector-section.tsx` | parent Inspector callback | Phase 1 extracted leaf |
-| Inspector annotation editor | `inspector-annotation-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
-| Inspector signal routing | `inspector-signal-router.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
+| Inspector annotation editor | `inspector-annotation-editor.tsx` | `EditorSurfaceCommandController` | Phase 1 extracted leaf; second-pass typed command boundary |
+| Inspector signal routing | `inspector-signal-router.tsx` | `EditorSurfaceCommandController` | Phase 1 extracted leaf; second-pass typed command boundary |
 | Inspector style readers | `inspector-style.ts` | view-only style projection | Phase 1 extracted utility |
-| Inspector clock editor | `inspector-clock-editor.tsx` | parent Inspector SemanticCommand callback | Phase 1 extracted leaf |
+| Inspector clock editor | `inspector-clock-editor.tsx` | `EditorSurfaceCommandController` | Phase 1 extracted leaf; second-pass typed command boundary |
 | Timeline / viewport runtime boundary | `runtime/timeline-viewport-runtime.ts` | parent application runtime callback; view-only geometry/navigation | Step 1 owner transfer |
 | Ribbon composition | `minimal-cycle-view-ribbon.tsx` | parent callback / existing command boundary | Physical Group 3 extraction |
 | Panels / editor composition | `editor-secondary-surfaces.tsx`, `editor-shell-view.tsx` | typed action/router/runtime callbacks | Group 4 extraction complete; second-pass owner boundaries enforced |
@@ -72,6 +72,14 @@ controllers are extracted incrementally.
 
 Rules:
 
+- `MinimalCycleView` root allow-list:
+  - ALLOW: top-level owner hooks, lightweight selected-entity/view-model
+    lookup, typed owner composition, and passing grouped view models to
+    `EditorShellView`.
+  - DENY: renderer/WaveDrom/geometry lifecycle, raw listener lifecycle,
+    semantic command implementation, clipboard/file parsing, bulk
+    parser/normalizer logic, large surface JSX, and feature-specific pointer
+    gesture implementation.
 - UI modules may request mutations only through the existing SemanticCommand
   and session/registry callbacks.
 - View-only state remains transient and is not persisted in CanonicalDocument.
