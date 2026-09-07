@@ -121,6 +121,9 @@ const runtimeOwnershipContracts = [
 ];
 const directReactRuntimeOwnerPattern = /new\s+(?:EditorApplicationRuntime|CommandHistorySession|TimelineGeometryOwner)|createWaveformSurfaceProvider\s*\(|runtime\.createRenderer\s*\(|new\s+ProductionWaveDromAdapter/;
 const presentationCommandSources = await Promise.all([
+  ["ribbon constructs semantic commands", "apps/editor/src/minimal-cycle-view-ribbon.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["find/replace panel constructs semantic commands", "apps/editor/src/find-replace-panel.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["transaction editor constructs semantic commands", "apps/editor/src/transaction-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["clock editor constructs semantic commands", "apps/editor/src/editors/clock-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["transaction lanes constructs semantic commands", "apps/editor/src/runtime/transaction-lanes.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["signal editor constructs semantic commands", "apps/editor/src/editors/signal-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
