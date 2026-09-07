@@ -16,6 +16,7 @@ import { parseBulkSignalDefinitions } from "../bulk-signal-parser.js";
 import { createAnnotation } from "../create-annotation.js";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { createFileActionController } from "./file-action-controller.js";
+import { createSelectionActions } from "./selection-actions.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -181,7 +182,8 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     type: "document.replace",
     document,
   });
-  const selectAnnotation = (id: AnnotationId) => input.selection.selectAnnotation(id);
+  const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
+  const { selectAnnotation, selectTransaction, clearSelection, selectAllSignals, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
   const deleteBottomSignal = () => {
     if (!input.bottomSignal) return;
     const result = input.editActions.deleteSignal(input.bottomSignal);
@@ -197,7 +199,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     const result = input.editActions.deleteTransaction(input.bottomTransaction.id);
     if (result.ok && !input.bottomPinnedRef.current && input.selectedTransactionRef.current === input.bottomTransaction.id) input.selection.clear();
   };
-  const selectTransaction = (id: TransactionId) => input.selection.selectTransaction(id);
   const toggleTransactionSignal = (transactionId: TransactionId, signalId: SignalId) => input.application.execute({
     id: input.nextCommandId("transaction_link"),
     type: input.document.transactions.find((item) => item.id === transactionId)?.linkedSignals?.includes(signalId) ? "transaction.unlinkSignal" : "transaction.linkSignal",
@@ -217,11 +218,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     const duplicate = { ...source, id: nextEntityId("annotation", input.document) as AnnotationId };
     const result = input.application.execute({ id: input.nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
     if (result.ok) input.selection.selectAnnotation(duplicate.id);
-  };
-  const clearSelection = () => input.selection.clear();
-  const selectAllSignals = () => {
-    const ids = input.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
-    input.selection.selectSignals(new Set(ids), ids[0]);
   };
   input.selectAllRef.current = selectAllSignals;
   const renameSelection = () => {
@@ -259,15 +255,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       ...(input.selectedTransactionId === undefined ? {} : { transactionId: input.selectedTransactionId }),
     });
     input.setBottomPinned(true);
-  };
-  const selectHierarchySignal = (id: SignalId) => {
-    if (input.document.signals.some((item) => item.id === id)) input.selection.selectSignal(id);
-  };
-  const revealSelectedInHierarchy = () => {
-    const id = input.selectedSignal?.id;
-    if (!id) return;
-    input.selection.selectSignal(id);
-    requestAnimationFrame(() => input.hostRef.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(id)}']`)?.scrollIntoView({ block: "nearest" }));
   };
   const createSignalGroup = () => {
     const id = groupId(nextEntityId("group", input.document));

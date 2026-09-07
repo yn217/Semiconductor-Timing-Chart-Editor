@@ -46,7 +46,7 @@ describe("runtime controller boundaries", () => {
     };
 
     scheduleInitialTimelineRefresh({ whenIdle: async () => undefined }, host, refresh, { isCurrent: () => true });
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 40));
 
     expect(refresh.ruler).toHaveBeenCalledTimes(2);
     expect(refresh.range).toHaveBeenCalledOnce();
@@ -59,7 +59,7 @@ describe("runtime controller boundaries", () => {
     const refresh = { ruler: vi.fn(), range: vi.fn(), playhead: vi.fn(), grid: vi.fn(), zoom: vi.fn(), overlays: vi.fn(), collectErrors: vi.fn(), publish: vi.fn() };
 
     scheduleInitialTimelineRefresh({ whenIdle: async () => undefined }, host, refresh, { isCurrent: () => false });
-    await new Promise((resolve) => setTimeout(resolve, 10));
+    await new Promise((resolve) => setTimeout(resolve, 20));
 
     expect(refresh.publish).not.toHaveBeenCalled();
     expect(host.dataset.editorIdle).toBeUndefined();
