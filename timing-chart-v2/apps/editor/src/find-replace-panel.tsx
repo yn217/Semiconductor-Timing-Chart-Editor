@@ -88,7 +88,11 @@ export function FindReplacePanel({ document, onCommandBatch }: { readonly docume
   };
 
   return <>
-    <button ref={triggerRef} type="button" className="ds-ribbon-button" aria-expanded={open} aria-haspopup="dialog" data-testid="find-replace-trigger" onClick={() => setOpen((value) => !value)}><span className="ds-icon-box" aria-hidden="true"><RibbonIcon name="i-search" /></span><span className="ds-ribbon-label">Find &amp; Replace</span></button>
+    {/* #439: "wide" -- "Replace" alone is right at the default Home button
+        width's limit; the margin is too thin to trust across font/kerning
+        variance, so this opts into the shared wide class like Duplicate/
+        Fit Selection rather than risk a mid-word break. */}
+    <button ref={triggerRef} type="button" className="ds-ribbon-button ds-ribbon-button--wide" aria-expanded={open} aria-haspopup="dialog" data-testid="find-replace-trigger" onClick={() => setOpen((value) => !value)}><span className="ds-icon-box" aria-hidden="true"><RibbonIcon name="i-search" /></span><span className="ds-ribbon-label">Find &amp; Replace</span></button>
     {open && createPortal(<div ref={panelRef} className="find-replace-panel" role="dialog" aria-label="Find and Replace" data-testid="find-replace-panel" style={{ left: `${position?.left ?? 0}px`, top: `${position?.top ?? 0}px`, maxHeight: `${position?.maxHeight ?? 200}px`, visibility: position ? "visible" : "hidden" }}>
       <label>Find<input aria-label="Find" data-testid="find-replace-find" value={findText} onChange={(event) => setFindText(event.target.value)} autoFocus /></label>
       <label>Replace with<input aria-label="Replace with" data-testid="find-replace-replace" value={replaceText} onChange={(event) => setReplaceText(event.target.value)} /></label>
