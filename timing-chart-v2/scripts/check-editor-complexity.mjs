@@ -12,6 +12,10 @@ const advancedJsonSource = await readFile(resolve(root, "apps/editor/src/advance
 const shellSource = await readFile(resolve(root, "apps/editor/src/editor-shell-view.tsx"), "utf8");
 const secondarySurfaceSource = await readFile(resolve(root, "apps/editor/src/editor-secondary-surfaces.tsx"), "utf8");
 const ribbonSource = await readFile(resolve(root, "apps/editor/src/minimal-cycle-view-ribbon.tsx"), "utf8");
+const applicationRuntimeSource = await readFile(resolve(root, "apps/editor/src/runtime/editor-application-runtime.ts"), "utf8");
+const timelineSurfaceSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
+const timelineRuntimeHookSource = await readFile(resolve(root, "apps/editor/src/runtime/use-timeline-surface-runtime.ts"), "utf8");
+const renderInvalidationSource = await readFile(resolve(root, "apps/editor/src/runtime/render-invalidation.ts"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
@@ -75,6 +79,19 @@ const requiredSourceContracts = [
   ["timeline presentation state owner", /useTimelinePresentationState/],
   ["secondary surface owner", /useEditorSecondarySurfaces/],
 ];
+const runtimeOwnershipContracts = [
+  ["application runtime owns document epoch", applicationRuntimeSource, /class EditorApplicationRuntime[\s\S]*documentEpoch\s*=\s*new DocumentEpoch/],
+  ["application runtime owns display mapping", applicationRuntimeSource, /displayMapping\s*=\s*new DisplayMappingCoordinator/],
+  ["application runtime owns geometry and projection", applicationRuntimeSource, /geometry\s*=\s*new GeometryRegistry[\s\S]*projection\s*=\s*new ProjectionCoordinator/],
+  ["application runtime creates renderer and WaveDrom adapter", applicationRuntimeSource, /createRenderer\([\s\S]*createWaveDromAdapter\(/],
+  ["timeline surface is a typed runtime owner", timelineRuntimeHookSource, /createTimelineSurfaceController\(input\)/],
+  ["timeline surface owns WaveDrom provider", timelineSurfaceSource, /createWaveformSurfaceProvider\(/],
+  ["timeline surface owns one geometry owner", timelineSurfaceSource, /new TimelineGeometryOwner\(/],
+  ["timeline surface owns renderer lifecycle", timelineSurfaceSource, /runtime\.createRenderer\([\s\S]*renderCoordinator\.dispose\(/],
+  ["timeline surface reads current session state", timelineSurfaceSource, /session\.getSnapshot\(\)|sessionController\.snapshot\(\)/],
+  ["timeline surface owns document epoch boundary", timelineSurfaceSource, /documentEpoch\.(?:current|advance|isCurrent)\(/],
+  ["render invalidation has one pure owner", renderInvalidationSource, /export function deriveRenderInvalidation\(/],
+];
 const presentationCommandSources = await Promise.all([
   ["clock editor constructs semantic commands", "apps/editor/src/editors/clock-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["transaction lanes constructs semantic commands", "apps/editor/src/runtime/transaction-lanes.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
@@ -98,6 +115,7 @@ const violations = [
   ...requiredOwners.filter((owner) => !ownership.includes(owner)).map((owner) => `ownership map missing: ${owner}`),
   ...(!rootAllowListContract.test(ownership) ? ["ownership map missing MinimalCycleView root allow-list"] : []),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
+  ...runtimeOwnershipContracts.filter(([, ownerSource, pattern]) => !pattern.test(ownerSource)).map(([name]) => `${name} contract missing`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
   ...(!/EditorSurfaceCommandController/.test(ribbonSource) || !/commands\.(?:createSignal|bringAnnotationsToFront|updateAnnotationStyle)/.test(ribbonSource) ? ["ribbon typed command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),
