@@ -483,7 +483,10 @@ test("exposes hierarchy paths, stable-ID reveal, and atomic bulk signal registra
   await expect(row).toHaveAttribute("data-full-path", "dut.data[7:0]");
   await expect(page.getByTestId("scope-breadcrumb")).toHaveText("Scope: dut");
   const beforeRevision = await host.getAttribute("data-canonical-revision");
-  await page.getByTestId("reveal-in-hierarchy").click();
+  // #470: the Inspector's own "Reveal in Hierarchy" entry point (and its
+  // whole "Source / Hierarchy" section) is hidden from normal use -- the
+  // Hierarchy Browser is still reachable via the Tree's "More tree actions"
+  // menu, opened below.
   await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
   await page.getByRole("button", { name: "More tree actions" }).click();
   await page.getByTestId("hierarchy-open").click();
@@ -1022,14 +1025,16 @@ test("applies Clock Generator Inspector drafts with editable duty and one histor
   await expect(inspector.getByLabel("Inspector clock polarity")).toHaveValue("negative");
 });
 
-test("Clock Inspector exposes common Signal Properties, hierarchy and style through one command", async ({ page }) => {
+test("Clock Inspector exposes common Signal Properties and style through one command", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const surface = host.locator("[data-role='timing-chart-surface']");
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const inspector = page.getByTestId("inspector");
   await expect(inspector.getByRole("heading", { name: "Signal Properties" })).toBeVisible();
-  await expect(inspector.getByRole("heading", { name: "Source / Hierarchy" })).toBeVisible();
+  // #470: "Source / Hierarchy" is hidden from the normal Inspector -- see
+  // the removal in apps/editor/src/inspector-clock-editor.tsx.
+  await expect(inspector.getByRole("heading", { name: "Source / Hierarchy" })).toHaveCount(0);
   await expect(inspector.getByRole("heading", { name: "Label Style" })).toBeVisible();
   await expect(inspector.getByRole("heading", { name: "Waveform / Timing" })).toBeVisible();
   const before = JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>;

@@ -46,8 +46,12 @@ test("Signal Inspector exposes parity fields and applies one transient draft com
     "Inspector label bold", "Inspector label align", "Inspector label overflow",
     "Inspector waveform color", "Inspector waveform background",
   ]) await expect(inspector.getByLabel(label, { exact: true })).toBeVisible();
-  await expect(inspector.getByText("Instance Path")).toBeVisible();
-  await expect(inspector.getByText("Full Path")).toBeVisible();
+  // #470: "Source / Hierarchy" (Instance Path / Full Path / Reveal in
+  // Hierarchy) is hidden from the normal Inspector -- there is no RTL/
+  // hierarchy import workflow yet, so it only advertised a non-actionable
+  // feature. `signal.source` metadata itself is untouched.
+  await expect(inspector.getByText("Instance Path")).toHaveCount(0);
+  await expect(inspector.getByText("Full Path")).toHaveCount(0);
 
   const surface = host.locator("[data-role='timing-chart-surface']");
   const before = {
