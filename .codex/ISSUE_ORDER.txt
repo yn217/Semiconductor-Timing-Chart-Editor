@@ -3,46 +3,44 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-07 JST
+# Last reconciled by ChatGPT: 2026-09-08 02:51 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
-# Observed state at reconciliation:
-#   main = 46a5f5e fix(schema): validate enum definition schema
-#   #456 completed/closed.
-#   #457 is actively in progress on main; foundation is implemented, lifecycle/history/round-trip evidence remains.
+# Observed live state at reconciliation:
+#   main = 517d1f9 Merge PR #492: #397 Sample D Signal Split dual-viewport acceptance suite
+#   completed/closed: #451 #452 #453 #457 #458 #473
+#   open: #454 #459 #460 #481 #397 #429 #414 #415
 #   #414 remains open; therefore #415 remains dependency-waiting.
+#   #481 is a bounded P0 Transaction runtime/interaction defect and is now safe to execute
+#   because #452 is completed/closed. It should be fixed before lower-priority analysis Core.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 # STATUS: ACTIVE
 #
-# 1) Finish Enum/State semantic lifecycle on the existing #457 implementation.
-# Already present on main: Canonical EnumDefinition, Signal enumId references,
-# shared resolveEnumValue, fallback behavior, duplicate value/label validation,
-# schema/reference-registry foundation.
-# Remaining closure work: rename lifecycle, delete/dependent-Signal policy,
-# Undo/Redo exact, Save/Open round-trip and migration/backward-compat evidence where required.
-# Do NOT reimplement the completed foundation.
-457
+# 1) P0 Transaction drag UX/performance defect.
+# Root cause from code audit: current TransactionLanes has pointerdown/pointerup commit flow
+# but no live pointermove preview; user perceives freeze/jank and drop-time jump.
+# Preserve current commit-side architecture: drag preview must remain transient, Canonical/
+# History/Dirty unchanged during pointermove, one semantic command on drop, exact cancel.
+# Avoid turning live preview into a 60Hz full-lane React/layout recomputation path.
+481
 
-# 2) Role-specific Clock/Reset semantics.
-# Canonical timing/reset metadata, shared validation/selectors, persistence/history.
-458
-
-# 3) Cursor A/B semantic workspace state.
-# View/workspace-only source-time cursor model + shared delta calculation/projection contract.
+# 2) Cursor A/B semantic workspace Core.
+# Workspace-only source-time cursors + shared delta calculation/projection contract.
+# Do not implement the final cursor GUI in this issue.
 459
 
-# 4) Timing/protocol diagnostic engine Core.
-# Deterministic derived Problems diagnostics; begin with Unknown/X and at least one handshake/stability rule.
-# Reuse #458 semantics when available, but do not block the entire issue on Reset-specific checks.
+# 3) Timing/protocol diagnostic engine Core.
+# Deterministic derived Problems diagnostics; Unknown/X + at least one handshake/stability rule.
+# Reuse completed #458 Clock/Reset semantics where useful.
 460
 #
-# After each issue, re-read this file and live GitHub state.
+# After every issue, re-read this file and live GitHub state.
 #
 # ============================================================================
 # HIGH-PRIORITY DEPENDENCY WAIT
@@ -52,9 +50,9 @@
 # Depends on: #414 completed/closed.
 # DO NOT start #415 while #414 is open.
 # When #414 closes:
-# - finish the currently in-progress bounded Codex issue safely;
+# - finish the currently active bounded Codex issue safely;
 # - reconcile this file;
-# - promote #415 ahead of remaining lower-priority entries because it unblocks #416.
+# - promote #415 ahead of remaining lower-priority work because it unblocks #416.
 #
 # Time Outline chain:
 #   DONE  #412 -> #413
@@ -63,18 +61,24 @@
 #   THEN  #416 closure
 #
 # ============================================================================
-# TRANSACTION PRODUCT / GUI — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
+# TRANSACTION PRODUCT / GUI STATUS
 # ============================================================================
-# Core prerequisites #430/#450/#455 are completed.
-# The following remain product/GUI/integration work, not Codex queue entries:
-#   #451 Transaction left Tree
-#   #452 Transaction central Lane workspace/integration
-#   #453 Transaction Bottom Table
-#   #454 Transaction Inspector
-#   #429 Transaction Mode parent/final product completion
-#   #397 Transaction/Split sample-driven final acceptance
+# Completed/closed:
+#   #430 Transaction semantic core
+#   #450 canonical model/groups/lanes/phases/colors/links
+#   #455 Transaction Time Scale / TC
+#   #451 left Transaction Tree
+#   #452 central Lane workspace
+#   #453 Bottom Transaction Table
 #
-# #452 is technically unblocked by #450/#455, but remains GUI/product integration ownership.
+# Still open / active product closure:
+#   #454 Transaction Inspector final product closure
+#   #481 Transaction live drag preview / UX-perf (Codex bounded defect; executable above)
+#   #397 Transaction + Split sample-driven final acceptance
+#   #429 Transaction Mode parent/final product completion
+#
+# #454/#397/#429 remain GUI/product/acceptance ownership, not whole-Issue Codex queue items.
+# #452 stays closed; #481 owns only the bounded drag-preview follow-up.
 # Do not rebuild a parallel Transaction semantic model.
 #
 # ============================================================================
@@ -91,19 +95,21 @@
 #   #205 Datasheet-grade annotation product completion
 #
 # A narrowly isolated Core/runtime defect discovered by GUI work may be split into a concrete
-# Codex child issue, but Codex must not consume the parent GUI issue merely to stay active.
+# Codex child issue. #481 is such a bounded defect. Codex must not consume parent GUI Issues
+# merely to stay active.
 #
 # ============================================================================
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
-#   #456
+#   #457 #458 #456
 #   #443
 #   #433 #450 #455 #448 #447 #435 #434 #442 #445 #446 #449 #444
 #   #430 #432 #412 #413
 #   #410 #399 #398 #237 #417 #428 #272
 #   #363 #269 #281 #372 #366 #369
 #   #221 #171 #170 #167 #161 #175
+#   #451 #452 #453 #473
 #
 # ============================================================================
 # EXTERNAL / PRODUCT HOLD
