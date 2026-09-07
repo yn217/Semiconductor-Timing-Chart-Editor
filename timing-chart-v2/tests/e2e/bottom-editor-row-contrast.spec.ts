@@ -40,7 +40,11 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // Transaction row (View Mode: Transaction), same unstyled-<button> shape.
     await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
     await page.getByRole("tab", { name: "Transaction", exact: true }).click();
-    await page.getByTestId("load-transaction-example").click();
+    // #453: "Load Example" was removed from the normal Bottom Panel empty
+    // state -- use the Ribbon's "Create Transaction" (Home tab), the same
+    // ordinary entry point a real user has.
+    await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+    await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
     const transactionRow = page.locator(".transaction-list > button[data-selected='true']");
     await expect(transactionRow).toBeVisible();
     const transactionStyle = await transactionRow.evaluate((element) => { const computed = getComputedStyle(element); return { color: computed.color, background: computed.backgroundColor }; });

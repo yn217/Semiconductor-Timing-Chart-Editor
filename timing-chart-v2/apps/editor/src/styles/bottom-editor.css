@@ -167,14 +167,16 @@
 .transaction-editor header .danger, .bookmark-editor-panel header .danger { border-color: #d39b9b; background: white; color: #a52b2b; }
 .transaction-editor header .danger:hover:not(:disabled), .bookmark-editor-panel header .danger:hover:not(:disabled) { border-color: #c07a7a; background: #fbeeee; color: #7e1f1f; }
 .transaction-editor header .danger:disabled, .bookmark-editor-panel header .danger:disabled { color: #c99; background: #f3f5f8; border-color: #e3cccc; }
-/* #393 item A/B: the empty-state explanation shown only while there are no
-   Transactions yet and no draft is open -- Load Example is a deliberate,
-   single-command action (see transaction-editor.tsx's
-   buildTransactionExampleCommand), not an automatic mode-switch insert. */
+/* #393 item A/B, #453: the empty-state explanation shown only while there
+   are no Transactions yet and no draft is open. #453 removed the "Load
+   Example" one-click affordance from this normal editing UI -- the Tree's
+   own "+ Add Transaction" (#451) and the Ribbon's "Create Transaction"
+   stay as the real entry points; example/sample content belongs in a
+   prepared document opened through the ordinary File > Open path, not a
+   button embedded in the production empty state. */
 .transaction-empty-state { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; max-width: 420px; padding: 14px 0 6px; }
 .transaction-empty-state strong { color: #233a59; font-size: 13px; }
 .transaction-empty-state p { margin: 0; color: #5c687c; font-size: 11px; line-height: 1.5; }
-.transaction-empty-state button { height: 27px; padding: 0 12px; border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; font-size: 11px; }
 /* #388: Bookmark's own Bottom Panel editor -- same shape as the
    Transaction editor above (header/form/list), see bookmark-editor.tsx. */
 .bookmark-editor-panel { min-height: 100%; padding: 8px 12px; }
