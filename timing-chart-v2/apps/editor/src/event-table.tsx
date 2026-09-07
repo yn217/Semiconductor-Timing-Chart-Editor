@@ -5,6 +5,23 @@ import type { ValueSignal } from "@timing-chart-v2/schema";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
 import { nextCommandId } from "./command-id.js";
 
+// #426: Value Helper's own label/hint were hardcoded to "(Signal)" / the
+// binary 0-1-X-Z blurb regardless of the actually-selected Signal's real
+// type -- a Bus or State Signal showed the right quick-value buttons
+// (QuickValues already resolves those from `signal.type`) underneath a
+// caption and hint describing a *different* type. Presentation-only, GUI
+// side: doesn't touch the schema-owned `quickValueOptions`/
+// `quickValueLiteral` this reads from indirectly via QuickValues.
+function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonly hint: string } {
+  switch (signal.type) {
+    case "bus": return { label: "Bus", hint: `Bus: ${signal.displayFormat ?? "hex"} · width ${signal.width ?? 1}-bit, validated · X / Z supported` };
+    case "state": return { label: "State", hint: "State: pick a defined state" };
+    case "logic": return { label: "Level", hint: "Level: 0 / 1 / X / Z (High-Z supported)" };
+    case "event": return { label: "Event", hint: "Event: NONE, or a named fire" };
+    default: return { label: "Signal", hint: "Signal: 0 / 1 / X / Z (High-Z supported)" };
+  }
+}
+
 export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
@@ -154,9 +171,9 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
         </div>
       </form>
       <div className="value-helper-panel">
-        <h2>Value Helper <span>(Signal)</span></h2>
+        <h2>Value Helper <span>({valueHelperCopy(signal).label})</span></h2>
         <QuickValues signal={signal} setValue={setValue} />
-        <span className="value-helper-hint">Signal: 0 / 1 / X / Z (High-Z supported)</span>
+        <span className="value-helper-hint">{valueHelperCopy(signal).hint}</span>
       </div>
       {generatorSlot}
     </div>
