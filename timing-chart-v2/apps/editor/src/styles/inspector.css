@@ -65,6 +65,12 @@
 .inspector-field-with-help { display: flex; align-items: center; min-width: 0; }
 .inspector-field-with-help input { flex: 1 1 auto; min-width: 0; }
 .inspector .danger { height: 28px; border: 1px solid #d39b9b; border-radius: 3px; background: white; color: #a52b2b; }
+/* GUI/UX Visual Quality Closure: Multi-Selection Inspector's bulk-action
+   row -- same button primitives as every other Inspector action, just
+   laid out side by side instead of stacked (no one-off button styling). */
+.inspector-multi-selection-actions { display: flex; flex-direction: column; gap: 8px; }
+.inspector-multi-selection-actions button { height: 28px; align-self: flex-start; padding: 0 12px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; }
+.inspector-multi-selection-actions button:hover:not(:disabled) { border-color: #9fc4e5; background: #eef4fb; }
 
 .document-properties { width: min(620px, calc(100vw - 48px)); max-height: calc(100vh - 48px); overflow: auto; padding: 0 18px 18px; border: 1px solid #8da4bc; border-radius: 6px; background: white; box-shadow: 0 14px 42px #1d334c55; }
 

@@ -561,7 +561,7 @@ export function MinimalCycleView() {
       executeBatch,
       nextCommandId,
     },
-    selected: { signal: selectedSignal, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, bookmark: selectedBookmark, transactionId: selectedTransactionId },
+    selected: { signal: selectedSignal, signalIds: selectedSignalIds, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, bookmark: selectedBookmark, transactionId: selectedTransactionId },
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
     workspace: { viewMode, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, setRibbonTab },
