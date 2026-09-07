@@ -45,7 +45,10 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     // ordinary entry point a real user has.
     await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
     await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-    const transactionRow = page.locator(".transaction-list > button[data-selected='true']");
+    // #453 (bulk operations): each row is now wrapped in a
+    // `.transaction-list-row` alongside its own bulk-select checkbox --
+    // the row itself is still the `<button>` this test cares about.
+    const transactionRow = page.locator(".transaction-list-row > button[data-selected='true']");
     await expect(transactionRow).toBeVisible();
     const transactionStyle = await transactionRow.evaluate((element) => { const computed = getComputedStyle(element); return { color: computed.color, background: computed.backgroundColor }; });
     expect(Math.abs(rgbToLuminanceLikeSum(transactionStyle.color) - rgbToLuminanceLikeSum(transactionStyle.background)), JSON.stringify(transactionStyle)).toBeGreaterThan(300);
