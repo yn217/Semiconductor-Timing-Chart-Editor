@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -45,7 +45,17 @@ export interface RibbonCommandActions {
   readonly createSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
   readonly insertTimeline: (at: number, count: number) => CommandResult;
   readonly deleteTimeline: (start: number, end: number) => CommandResult;
+  readonly duplicateTimeline: (start: number, end: number, at: number) => CommandResult;
+  readonly moveTimeline: (start: number, end: number, to: number) => CommandResult;
+  readonly createBookmark: (bookmark: Bookmark) => CommandResult;
+  readonly createLabelAnchor: (labelAnchor: TimelineLabelAnchor) => CommandResult;
+  readonly updateLabelAnchor: (labelAnchorId: LabelAnchorId, source: number, display: number) => CommandResult;
+  readonly deleteLabelAnchor: (labelAnchorId: LabelAnchorId) => CommandResult;
   readonly createTimeGroup: (timeGroup: TimeGroup) => CommandResult;
+  readonly updateTimeGroup: (payload: CommandPayload<"timeGroup.update">) => CommandResult;
+  readonly updateTimeGroupPresentation: (timeGroupId: TimeGroupId, presentation: NonNullable<TimeGroup["presentation"]>) => CommandResult;
+  readonly expandAllTimeGroups: (groups: readonly TimeGroup[]) => CommandResult;
+  readonly deleteTimeGroup: (timeGroupId: TimeGroupId) => CommandResult;
   readonly setAnnotationAlign: (annotationId: AnnotationId, align: Annotation["align"]) => CommandResult;
   readonly bringAnnotationsToFront: (annotationIds: readonly AnnotationId[]) => CommandResult;
   readonly sendAnnotationsToBack: (annotationIds: readonly AnnotationId[]) => CommandResult;
@@ -68,7 +78,7 @@ export function createEditorSurfaceCommandController(input: {
   readonly nextCommandId: (operation: string) => CommandId;
 }): EditorSurfaceCommandController {
   const dispatch = <T extends SemanticCommand["type"]>(operation: string, command: Omit<CommandOf<T>, "id">): CommandResult => input.execute({ id: input.nextCommandId(operation), ...command } as SemanticCommand);
-  const dispatchBatch = <T extends SemanticCommand["type"]>(operation: string, commands: readonly Omit<CommandOf<T>, "id">[]): CommandResult => input.executeBatch(input.nextCommandId("ribbon_annotation_arrange"), commands.map((command) => ({ id: input.nextCommandId(operation), ...command } as SemanticCommand)));
+  const dispatchBatch = <T extends SemanticCommand["type"]>(operation: string, commands: readonly Omit<CommandOf<T>, "id">[], batchOperation = "ribbon_annotation_arrange"): CommandResult => input.executeBatch(input.nextCommandId(batchOperation), commands.map((command) => ({ id: input.nextCommandId(operation), ...command } as SemanticCommand)));
   return {
     updateClockGenerator: (signalId, generator) => dispatch<"signal.updateClockGenerator">("clock", { type: "signal.updateClockGenerator", signalId, generator }),
     updateEdgeCounter: (signalId, edgeCounter) => dispatch<"signal.updateEdgeCounter">("edge_counter", { type: "signal.updateEdgeCounter", signalId, edgeCounter }),
@@ -101,7 +111,17 @@ export function createEditorSurfaceCommandController(input: {
     insertSpacer: (spacer, targetGroupId, index) => dispatch<"spacer.create">("insert_spacer", { type: "spacer.create", spacer, targetGroupId, index }),
     insertTimeline: (at, count) => dispatch<"timeline.insert">(count === 1 ? "timeline_insert_one" : "timeline_insert_many", { type: "timeline.insert", at, count }),
     deleteTimeline: (start, end) => dispatch<"timeline.delete">(end - start === 1 ? "timeline_delete_one" : "timeline_delete_many", { type: "timeline.delete", start, end }),
+    duplicateTimeline: (start, end, at) => dispatch<"timeline.duplicateRange">("timeline_duplicate", { type: "timeline.duplicateRange", start, end, at }),
+    moveTimeline: (start, end, to) => dispatch<"timeline.moveRange">("timeline_move", { type: "timeline.moveRange", start, end, to }),
+    createBookmark: (bookmark) => dispatch<"bookmark.create">("marker", { type: "bookmark.create", bookmark }),
+    createLabelAnchor: (labelAnchor) => dispatch<"labelAnchor.create">("label_anchor_create", { type: "labelAnchor.create", labelAnchor }),
+    updateLabelAnchor: (labelAnchorId, source, display) => dispatch<"labelAnchor.update">("label_anchor_update", { type: "labelAnchor.update", labelAnchorId, source, display }),
+    deleteLabelAnchor: (labelAnchorId) => dispatch<"labelAnchor.delete">("label_anchor_delete", { type: "labelAnchor.delete", labelAnchorId }),
     createTimeGroup: (timeGroup) => dispatch<"timeGroup.create">("home_time_group", { type: "timeGroup.create", timeGroup }),
+    updateTimeGroup: (payload) => dispatch<"timeGroup.update">("time_group_update", { type: "timeGroup.update", ...payload }),
+    updateTimeGroupPresentation: (timeGroupId, presentation) => dispatch<"timeGroup.updatePresentation">(presentation.collapsed ? "time_group_collapse" : "time_group_expand", { type: "timeGroup.updatePresentation", timeGroupId, presentation }),
+    expandAllTimeGroups: (groups) => dispatchBatch<"timeGroup.updatePresentation">("time_group_expand_all", groups.filter((group) => group.presentation?.collapsed).map((group) => ({ type: "timeGroup.updatePresentation", timeGroupId: group.id, presentation: { ...(group.presentation ?? {}), collapsed: false, foldStyle: "none" as const, foldLabel: group.presentation?.foldLabel || group.name } })), "time_group_expand_all"),
+    deleteTimeGroup: (timeGroupId) => dispatch<"timeGroup.delete">("gap_delete", { type: "timeGroup.delete", timeGroupId }),
     setAnnotationAlign: (annotationId, align) => dispatch<"annotation.setAlign">("annotation_align", { type: "annotation.setAlign", annotationId, align }),
     bringAnnotationsToFront: (annotationIds) => dispatchBatch<"annotation.bringToFront">("annotation_bring_front", annotationIds.map((annotationId) => ({ type: "annotation.bringToFront", annotationId }))),
     sendAnnotationsToBack: (annotationIds) => dispatchBatch<"annotation.sendToBack">("annotation_send_back", annotationIds.map((annotationId) => ({ type: "annotation.sendToBack", annotationId }))),
