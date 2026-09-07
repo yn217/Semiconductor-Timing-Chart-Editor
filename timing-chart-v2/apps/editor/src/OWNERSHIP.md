@@ -54,7 +54,7 @@ controllers are extracted incrementally.
 | Signal editor surface | `editors/signal-editor.tsx` | typed editor/action callbacks | second-pass surface boundary |
 | Clock generator editor surface | `editors/clock-generator-editor.tsx` | typed editor/action callbacks | second-pass surface boundary |
 | Editor surface command controller | `application/editor-surface-command-controller.ts` | SemanticCommand construction / command IDs | second-pass presentation boundary |
-| Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | parent command/router callbacks | PR5 presentation boundary |
+| Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | `EditorSurfaceCommandController` for Insert/Annotation operations; parent callbacks for frozen Home controls | second-pass typed command boundary; Home remains frozen |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |
 | Runtime presentation previews | `runtime/presentation-preview.ts` | view-only DOM/WaveDrom preview | PR6 helper split |

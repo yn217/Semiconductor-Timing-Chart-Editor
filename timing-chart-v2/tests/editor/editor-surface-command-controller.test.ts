@@ -5,7 +5,7 @@ import { createEditorSurfaceCommandController } from "../../apps/editor/src/appl
 describe("editor surface command controller", () => {
   it("owns clock command construction and command IDs outside the editor surface", () => {
     const execute = vi.fn(() => ({ ok: true } as never));
-    const controller = createEditorSurfaceCommandController({ execute, nextCommandId: (operation) => `test_${operation}` as never });
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch: (id, commands) => execute(commands[0]!) as never, nextCommandId: (operation) => `test_${operation}` as never });
 
     controller.updateClockGenerator("signal_1" as never, { kind: "periodic", period: 4, duty: 0.5, phase: 0, start: 0, repeat: "infinite" });
     controller.updateEdgeCounter("signal_1" as never, { show: true, mode: "rising", startNumber: 0, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: 0 } });
@@ -20,7 +20,7 @@ describe("editor surface command controller", () => {
 
   it("owns inspector command construction for grouped and annotated surfaces", () => {
     const execute = vi.fn(() => ({ ok: true } as never));
-    const controller = createEditorSurfaceCommandController({ execute, nextCommandId: (operation) => `test_${operation}` as never });
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch: (id, commands) => execute(commands[0]!) as never, nextCommandId: (operation) => `test_${operation}` as never });
 
     controller.updateGroupProperties({ groupId: "group_1" as never, name: "Group", spacingBefore: 0, spacingAfter: 0, style: { showBackground: false, background: "#fff", opacity: 1, extend: "both", showHeader: true } });
     controller.createSpacer({ id: "spacer_1" as never, height: 24 }, "group_1" as never, 0);

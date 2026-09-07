@@ -554,6 +554,7 @@ export function MinimalCycleView() {
   const shellRibbon = {
     tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
     main: {
+      commands: secondarySurfaces.surfaceCommands,
       tab: ribbonTab,
       document: snapshot.document,
       revision: snapshot.revision,
