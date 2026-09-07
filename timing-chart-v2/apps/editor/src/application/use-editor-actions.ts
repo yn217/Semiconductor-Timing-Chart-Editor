@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation-owner.js";
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
@@ -13,6 +13,7 @@ import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-he
 import { nextEntityId } from "../entity-id.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "../insertion-target.js";
 import { parseBulkSignalDefinitions } from "../bulk-signal-parser.js";
+import { createAnnotation } from "../create-annotation.js";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 
 export interface EditorActionsInput {
@@ -43,6 +44,8 @@ export interface EditorActionsInput {
   readonly selectedSignal: Signal | undefined;
   readonly selectedGroup: { readonly id: GroupId; readonly name: string } | undefined;
   readonly selectedTransactionName: string | undefined;
+  readonly annotationTargetSignalId: SignalId | undefined;
+  readonly timelineRange: Readonly<{ readonly start: number; readonly end: number }>;
   readonly menuOriginRef: MutableRefObject<HTMLElement | null>;
   readonly renameDialogOriginRef: MutableRefObject<HTMLElement | null>;
   readonly setRenameDraft: (value: string) => void;
@@ -77,11 +80,13 @@ export interface EditorActions {
   readonly navigateToBookmark: (cycle: number, bookmarkId?: BookmarkId) => void;
   readonly navigateProblem: (path: string) => void;
   readonly createSelectedAnnotation: (annotation: Annotation) => void;
+  readonly createSelectedAnnotationForType: (type: AnnotationType) => void;
   readonly selectAnnotation: (id: AnnotationId) => void;
   readonly deleteBottomSignal: () => void;
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
   readonly selectTransaction: (id: TransactionId) => void;
+  readonly createTransaction: () => void;
   readonly duplicateAnnotation: (annotation: Annotation) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
@@ -164,6 +169,10 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     });
     if (result.ok) input.selection.selectAnnotation(annotation.id);
   };
+  const createSelectedAnnotationForType = (type: AnnotationType) => {
+    if (!input.annotationTargetSignalId) return;
+    createSelectedAnnotation(createAnnotation(type, input.annotationTargetSignalId, input.timelineRange, input.document));
+  };
   const selectAnnotation = (id: AnnotationId) => input.selection.selectAnnotation(id);
   const deleteBottomSignal = () => {
     if (!input.bottomSignal) return;
@@ -181,6 +190,15 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     if (result.ok && !input.bottomPinnedRef.current && input.selectedTransactionRef.current === input.bottomTransaction.id) input.selection.clear();
   };
   const selectTransaction = (id: TransactionId) => input.selection.selectTransaction(id);
+  const createTransaction = () => {
+    const id = nextEntityId("transaction", input.document) as TransactionId;
+    const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
+      id: input.nextCommandId("tree_transaction_create"),
+      type: "transaction.create",
+      transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: 0, end: Math.min(4, input.document.timeline.cycleCount), laneId: "lane_0" },
+    });
+    if (result.ok) input.selection.selectTransaction(id);
+  };
   const duplicateAnnotation = (source: Annotation) => {
     const duplicate = { ...source, id: nextEntityId("annotation", input.document) as AnnotationId };
     const result = input.application.execute({ id: input.nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
@@ -395,11 +413,13 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     navigateToBookmark,
     navigateProblem,
     createSelectedAnnotation,
+    createSelectedAnnotationForType,
     selectAnnotation,
     deleteBottomSignal,
     deleteBottomAnnotation,
     deleteBottomTransaction,
     selectTransaction,
+    createTransaction,
     duplicateAnnotation,
     clearSelection,
     selectAllSignals,

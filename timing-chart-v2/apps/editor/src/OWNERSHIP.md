@@ -42,6 +42,7 @@ controllers are extracted incrementally.
 | Presentation-only editor toggles | `application/use-editor-presentation-state.ts`, `application/use-editor-resize-actions.ts`, `application/use-editor-workspace-actions.ts` | view-only React state | PR4 owner extraction |
 | Timeline transient presentation state | `workspace/use-timeline-presentation-state.ts` | view-only React state and synchronized refs | PR4 owner extraction |
 | Editor shell JSX | `editor-shell-view.tsx` | parent owner models and callbacks | PR5 shell extraction |
+| Secondary editor surfaces | `editor-secondary-surfaces.tsx` | typed action/router/runtime callbacks | PR5 D3 surface composition extraction |
 | Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | parent command/router callbacks | PR5 presentation boundary |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |

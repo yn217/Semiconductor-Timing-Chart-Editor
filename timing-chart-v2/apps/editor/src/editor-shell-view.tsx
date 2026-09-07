@@ -1,4 +1,7 @@
-import type { CSSProperties, ReactNode } from "react";
+import type { CSSProperties, ComponentProps, ReactNode } from "react";
+import { EditorRibbon, type EditorRibbonProps } from "./ribbon/editor-ribbon.js";
+import { EditorWorkspaceView, type EditorWorkspaceViewModel } from "./editor-workspace-view.js";
+import { EditorStatusBar } from "./minimal-cycle-view-panels.js";
 
 export interface EditorShellViewModel {
   readonly style: CSSProperties;
@@ -24,16 +27,25 @@ export interface EditorShellViewModel {
   readonly transactionCount: number;
 }
 
+export interface EditorShellRibbonViewModel {
+  readonly tabs: ReactNode;
+  readonly main: EditorRibbonProps;
+}
+
+export type EditorShellStatusViewModel = ComponentProps<typeof EditorStatusBar>;
+
 export interface EditorShellViewProps {
   readonly viewModel: EditorShellViewModel;
   readonly titleBar: ReactNode;
-  readonly ribbon: ReactNode;
-  readonly children: ReactNode;
+  readonly ribbon: EditorShellRibbonViewModel | ReactNode;
+  readonly workspace: EditorWorkspaceViewModel | ReactNode;
+  readonly dialogs: ReactNode;
+  readonly status: EditorShellStatusViewModel | ReactNode;
 }
 
 /** Owns the stable outer shell contract; feature owners supply its contents. */
 export function EditorShellView({
-  viewModel, titleBar, ribbon, children,
+  viewModel, titleBar, ribbon, workspace, dialogs, status,
 }: EditorShellViewProps) {
   const {
     style, density, workspacePreset, inspectorVisible, bottomVisible, rulerEnabled,
@@ -42,6 +54,15 @@ export function EditorShellView({
     frozenPaneWidth, bottomHeight, inspectorWidth, cycleCount, signalCount,
     transactionCount,
   } = viewModel;
+  const ribbonContent = typeof ribbon === "object" && ribbon !== null && "main" in ribbon
+    ? <>{ribbon.tabs}<EditorRibbon {...ribbon.main} /></>
+    : ribbon;
+  const workspaceContent = typeof workspace === "object" && workspace !== null && "view" in workspace
+    ? <EditorWorkspaceView viewModel={workspace} />
+    : workspace;
+  const statusContent = typeof status === "object" && status !== null && "toolStatus" in status
+    ? <EditorStatusBar {...status} />
+    : status;
   return <main
     className="editor-shell"
     style={style}
@@ -65,5 +86,5 @@ export function EditorShellView({
     data-cycle-count={cycleCount}
     data-signal-count={signalCount}
     data-transaction-count={transactionCount}
-  >{titleBar}{ribbon}{children}</main>;
+  >{titleBar}{ribbonContent}{workspaceContent}{dialogs}{statusContent}</main>;
 }

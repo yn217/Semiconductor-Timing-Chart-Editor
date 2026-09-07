@@ -24,6 +24,8 @@ const ownerBudgets = [
   ["apps/editor/src/runtime/use-timeline-surface-runtime.ts", 800],
   ["apps/editor/src/editor-workspace-view.tsx", 500],
   ["apps/editor/src/editor-dialog-layer.tsx", 500],
+  ["apps/editor/src/editor-secondary-surfaces.tsx", 500],
+  ["apps/editor/src/editor-shell-view.tsx", 300],
   ["apps/editor/src/runtime/presentation-preview.ts", 500],
 ];
 const forbiddenOwners = [
@@ -32,6 +34,8 @@ const forbiddenOwners = [
   ["renderer/WaveDrom/geometry construction in root", /new\s+(?:TimelineGeometryOwner|EditorApplicationRuntime|CommandHistorySession)|createWaveformSurfaceProvider\s*\(|runtime\.createRenderer|(?:renderer|renderCoordinator)\.dispose\s*\(/],
   ["pure parser/default factory in root", /parseBulkSignalDefinitions|parseOpenDocument|createNewDocumentFromProductTemplate/],
   ["batch mutation bypass in root", /application\.executeBatch\s*\(/],
+  ["semantic command construction in root", /create(?:Annotation|Transaction)\s*\(/],
+  ["large secondary surface JSX in root", /<(?:SignalEditor|AnnotationEditor|TransactionEditor|BookmarkEditor|InspectorPanel|BottomEditorPanel|AdvancedJsonPanel|AIOperationPanel)\b/],
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
 const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX"];
@@ -44,6 +48,7 @@ const requiredSourceContracts = [
   ["dialog shell owner", /EditorDialogLayer/],
   ["runtime DOM bridge split", /editor-dom-bridge/],
   ["timeline presentation state owner", /useTimelinePresentationState/],
+  ["secondary surface owner", /useEditorSecondarySurfaces/],
   ["ribbon presentation boundary", /EditorRibbon/],
 ];
 const violations = [
