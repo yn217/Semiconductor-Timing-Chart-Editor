@@ -872,7 +872,11 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   await inspector.getByRole("button", { name: "Label Style" }).click();
   await inspector.getByLabel("Inspector label align").selectOption("center");
   await inspector.getByLabel("Inspector label overflow").selectOption("wrap");
-  await inspector.getByLabel("Inspector waveform row style").fill('{"color":"#114477"}');
+  // #473: raw "Advanced Style JSON" editing is removed from normal
+  // Inspector use -- every style property it used to set here (color,
+  // later fontWeight) is set through the structured Label Style controls
+  // instead, same as a real user would.
+  await inspector.getByLabel("Inspector text color").fill("#114477");
   const before = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
@@ -883,10 +887,6 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   await expect(inspector.getByLabel("Inspector bus format")).toHaveValue("binary");
   await expect(inspector.getByLabel("Inspector label align")).toHaveValue("center");
   await expect(inspector.getByLabel("Inspector label overflow")).toHaveValue("wrap");
-  const appliedStyle = JSON.parse(await inspector.getByLabel("Inspector waveform row style").inputValue()) as Record<string, unknown>;
-  expect(appliedStyle.color).toBe("#114477");
-  expect(appliedStyle.fontFamily).toBe("Segoe UI");
-  expect(appliedStyle.fontSize).toBe(12);
   const styledRow = host.locator("[data-role='left-row'][data-row-id='sig_cycle_data']");
   await expect(styledRow).toHaveCSS("color", "rgb(17, 68, 119)");
   await expect(styledRow).toHaveCSS("text-align", "center");
@@ -894,7 +894,12 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   const after = JSON.parse(await host.locator("[data-role='timing-chart-surface']").getAttribute("data-render-counters") ?? "null") as Record<string, number>;
   expect(after.waveDromRenders).toBeGreaterThan(before.waveDromRenders);
   expect(after.localGeometryBuilds).toBeGreaterThan(before.localGeometryBuilds);
-  await inspector.getByLabel("Inspector waveform row style").fill('{"color":"#225588","fontWeight":"bold"}');
+  // Apply remounts the Inspector (it's keyed on canonical revision), but its
+  // accordion open/closed state is deliberately module-scoped (see
+  // `useInspectorAccordion`) so it survives the remount -- "Label Style" is
+  // still expanded from the toggle above, no re-click needed.
+  await inspector.getByLabel("Inspector text color").fill("#225588");
+  await inspector.getByLabel("Inspector label bold").check();
   await inspector.getByTestId("apply-inspector-signal").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
