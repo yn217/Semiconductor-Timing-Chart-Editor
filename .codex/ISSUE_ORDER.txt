@@ -3,19 +3,19 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-08 02:51 JST
+# Last reconciled by ChatGPT: 2026-09-08 05:01 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed live state at reconciliation:
-#   main = 517d1f9 Merge PR #492: #397 Sample D Signal Split dual-viewport acceptance suite
+#   main = a5d3fdb docs(editor): record transaction command ownership
 #   completed/closed: #451 #452 #453 #457 #458 #473
 #   open: #454 #459 #460 #481 #397 #429 #414 #415
 #   #414 remains open; therefore #415 remains dependency-waiting.
-#   #481 is a bounded P0 Transaction runtime/interaction defect and is now safe to execute
-#   because #452 is completed/closed. It should be fixed before lower-priority analysis Core.
+#   No queue-owned issue has closed since the previous reconciliation.
+#   #481 remains the highest-priority executable bounded runtime defect.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
@@ -23,10 +23,9 @@
 # STATUS: ACTIVE
 #
 # 1) P0 Transaction drag UX/performance defect.
-# Root cause from code audit: current TransactionLanes has pointerdown/pointerup commit flow
-# but no live pointermove preview; user perceives freeze/jank and drop-time jump.
-# Preserve current commit-side architecture: drag preview must remain transient, Canonical/
-# History/Dirty unchanged during pointermove, one semantic command on drop, exact cancel.
+# Re-audit latest main before editing because main has advanced since the original investigation.
+# Preserve the intended commit-side architecture: drag preview transient only; Canonical/
+# History/Dirty unchanged during pointermove; one semantic command on drop; exact cancel.
 # Avoid turning live preview into a 60Hz full-lane React/layout recomputation path.
 481
 
