@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import type { SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument } from "@timing-chart-v2/schema";
+import type { CommandResult } from "@timing-chart-v2/commands";
+import type { CanonicalDocument, SignalId } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
-import { nextCommandId } from "./command-id.js";
 
 function escapeRegExp(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -16,7 +15,7 @@ function escapeRegExp(text: string): string {
  * substring match/replace on Signal.display.name, mirroring the left
  * tree's existing "Filter signals..." matching convention -- no free-form
  * regex from user input, only an escaped literal. */
-export function FindReplacePanel({ document, onCommandBatch }: { readonly document: CanonicalDocument; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => void }) {
+export function FindReplacePanel({ document, onRenameSignals }: { readonly document: CanonicalDocument; readonly onRenameSignals: (items: readonly { readonly signalId: SignalId; readonly name: string }[]) => CommandResult }) {
   const [open, setOpen] = useState(false);
   const [findText, setFindText] = useState("");
   const [replaceText, setReplaceText] = useState("");
@@ -83,7 +82,7 @@ export function FindReplacePanel({ document, onCommandBatch }: { readonly docume
 
   const replaceAll = () => {
     if (preview.length === 0) return;
-    onCommandBatch(preview.map(({ signal, nextName }) => ({ id: nextCommandId("find_replace_rename"), type: "signal.rename" as const, signalId: signal.id, name: nextName })));
+    onRenameSignals(preview.map(({ signal, nextName }) => ({ signalId: signal.id, name: nextName })));
     setOpen(false);
   };
 

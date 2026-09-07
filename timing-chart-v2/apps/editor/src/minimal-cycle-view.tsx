@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
 import { quickValueLiteral, quickValueOptions, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type SignalId, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
@@ -623,7 +623,6 @@ export function MinimalCycleView() {
       onMoveDown: () => moveSelection(1),
       onVisibility: setSelectionVisibility,
       onRange: (range: { readonly start: number; readonly end: number }) => { setRangeSelectionActive(true); setTimelineRange(range); },
-      onCommandBatch: (commands: Parameters<typeof executeBatch>[1]) => executeBatch(nextCommandId("ribbon_annotation_arrange"), commands),
       onViewIntent: (intent: "fit-all" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); },
       onCreateAnnotation: createSelectedAnnotation,
       onArrowPick: (annotationType: Parameters<typeof armArrowPick.current>[0]) => armArrowPick.current(annotationType),
