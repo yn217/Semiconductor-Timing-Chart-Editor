@@ -25,7 +25,7 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
   return { rowOf, rowCount: Math.max(1, rowEnds.length) };
 }
 
-type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly top: number; readonly height: number; readonly rowOf: ReadonlyMap<TransactionId, number> };
+type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly top: number; readonly height: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
 type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined };
 
 export function TransactionLanes({ document: rawDocument, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, onCommand, onContextMenu }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly onCommand: (command: SemanticCommand) => void; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
@@ -114,8 +114,20 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
     for (const laneId of section.lanes) {
       const laneTransactions = document.transactions.filter((transaction) => transaction.groupId === section.groupId && (transaction.laneId ?? "lane_0") === laneId);
       const { rowOf, rowCount } = assignStackRows(laneTransactions);
-      const height = rowCount * LANE_ROW_HEIGHT;
-      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, top: cursor, height, rowOf });
+      // #451/#452: the Tree label list needs one row per Transaction
+      // ALWAYS (two Transactions that don't overlap in time still need
+      // two separate, independently-clickable list lines), whereas the
+      // central bars only need a new row when two Transactions actually
+      // overlap -- `rowOf` (time-based) is correct for bar placement but
+      // wrong for the Tree: two sequential, non-overlapping Transactions
+      // in one lane would both land on `rowOf=0` and render on top of
+      // each other in the label column. `treeRowOf` is a separate,
+      // always-one-row-per-Transaction sequence (stable start-then-id
+      // order), and the lane's height is whichever of the two needs more
+      // room, so neither the bars nor the Tree rows ever overlap.
+      const treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
+      const height = Math.max(rowCount, laneTransactions.length, 1) * LANE_ROW_HEIGHT;
+      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, top: cursor, height, rowOf, treeRowOf });
       cursor += height;
     }
   }
@@ -134,7 +146,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
         const laneTransactions = document.transactions.filter((transaction) => transaction.groupId === band.groupId && (transaction.laneId ?? "lane_0") === band.laneId);
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.top, height: band.height }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
-          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.rowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
