@@ -295,8 +295,14 @@
 /* Transaction presentation belongs to the center timing surface. */
 .transaction-track { position: absolute; top: 0; left: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px)); width: var(--wave-width, 640px); height: 100%; transform-origin: 0 0; scale: var(--transaction-zoom) 1; }
 .transaction-geometry-line { position: absolute; top: 0; bottom: 0; width: 1px; border-left: 1px solid #dce4ed; pointer-events: none; }
-.transaction-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(250px,1fr)); gap: 6px; }
-.transaction-list > button { height: 34px; display: grid; grid-template-columns: 1fr auto auto auto; align-items: center; gap: 10px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; }
+.transaction-list { display: grid; grid-template-columns: repeat(auto-fill,minmax(340px,1fr)); gap: 6px; }
+/* #453: Group/Duration/Phases were added onto this same row rather than a
+   new table component -- Group is conditional (only Transactions with a
+   groupId render that span), so the trailing columns simply go unused
+   for an Ungrouped row rather than needing a second row shape. */
+.transaction-list > button { height: 34px; display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto auto auto auto auto; align-items: center; gap: 7px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; padding-inline: 8px; overflow: hidden; }
+.transaction-list > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
+.transaction-row-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid #0000001a; }
 /* #388: Bookmark's Bottom Panel list -- Marker | Name | Cycle | Comment
    columns, one row per canonical Bookmark (never a second stored copy). */
 .bookmark-list { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
