@@ -186,6 +186,15 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     const result = onCommand({ id: nextCommandId("home_transaction_duplicate"), type: "transaction.create", transaction: { ...source, id, name: `${source.name} Copy` } });
     if (result.ok) onTransactionCreated(id);
   };
+  // #397 Transaction Mode GUI Closure Section 8: Ribbon-level parity for the
+  // Group header's own "Ungroup" button -- lets the user act on the
+  // selected Transaction's Group without hunting for the small header
+  // control, using the same already-existing `transactionGroup.delete`
+  // command (atomically ungroups every member Transaction).
+  const selectedTransactionGroupId = selectedTransactionId === undefined ? undefined : document.transactions.find((item) => item.id === selectedTransactionId)?.groupId;
+  const ungroupSelectedTransaction = () => {
+    if (selectedTransactionGroupId !== undefined) commands.deleteTransactionGroup(selectedTransactionGroupId);
+  };
   const homeOverflowMenu = homeOverflowOpen ? createPortal(<div ref={homeOverflowMenuRef} id="home-overflow-menu" className="home-overflow-menu" role="menu" aria-label="More Home Commands" style={{ left: `${homeOverflowPosition?.left ?? 0}px`, top: `${homeOverflowPosition?.top ?? 0}px`, height: homeOverflowPosition ? `${homeOverflowPosition.height}px` : "auto", maxHeight: `${homeOverflowPosition?.maxHeight ?? 120}px`, visibility: homeOverflowPosition ? "visible" : "hidden" }}>
     <strong>File</strong><button type="button" onClick={() => { onNew(); setHomeOverflowOpen(false); }}>New</button><button type="button" onClick={() => { onOpen(); setHomeOverflowOpen(false); }}>Open</button><button type="button" onClick={() => { onSave(); setHomeOverflowOpen(false); }}>Save</button><button type="button" onClick={() => { onSaveAs(); setHomeOverflowOpen(false); }}>Save As</button><button type="button" onClick={() => { onRecent(); setHomeOverflowOpen(false); }}>Recent</button>
     <strong>History</strong><button type="button" onClick={() => { onUndo(); setHomeOverflowOpen(false); }} disabled={!history.canUndo}>Undo</button><button type="button" onClick={() => { onRedo(); setHomeOverflowOpen(false); }} disabled={!history.canRedo}>Redo</button>
@@ -296,10 +305,12 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
         // #439: "wide" -- see the Clipboard group's "Duplicate" above.
         { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
-        // #397: Time Scale only makes sense once Transaction Mode is
-        // active -- unlike Create/Duplicate, this group renders in every
-        // view mode, so an unconditional entry would widen the Home tab
-        // even when nothing Transaction-related is visible.
+        // #397: Ungroup and Time Scale only make sense once Transaction
+        // Mode is active -- unlike Create/Duplicate, this group renders in
+        // every view mode, so unconditional entries here would widen the
+        // Home tab even when nothing Transaction-related is visible
+        // (caught by the gui-reference-v8 ribbon-overflow regression test).
+        ...(viewMode === "Transaction" ? [{ kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined }] as const : []),
         ...(viewMode === "Transaction" ? [{ kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onCommand={onCommand} /> }] as const : []),
       ],
     },
