@@ -8,8 +8,9 @@ import { InspectorSection } from "./inspector-section.js";
 import { MiniMap } from "./minimap.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { styleNumber, styleString } from "./inspector-style.js";
+import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
 
-function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal, onCancel }: { readonly signal: ClockSignal; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onReveal: () => void; readonly onCancel: () => void }) {
+function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal, onCancel, onClose }: { readonly signal: ClockSignal; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
   const [name, setName] = useState(signal.name);
   const [problem, setProblem] = useState("");
   const [role, setRole] = useState<SignalRole>(signal.role);
@@ -63,7 +64,9 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
     if (!result.ok) setProblem(result.problems[0]?.message ?? "Clock conversion was rejected.");
     else setConversionConfirm(false);
   };
-  return <aside className="inspector" data-testid="inspector" data-inspector-context="clock" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (conversionConfirm) setConversionConfirm(false); else onCancel(); } }}><header><span>Inspector</span><b>Clock</b></header><button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Cancel</button>
+  return <aside className="inspector" data-testid="inspector" data-inspector-context="clock" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); if (conversionConfirm) setConversionConfirm(false); else onCancel(); } }}>
+    <InspectorHeaderBar onClose={onClose} />
+    <InspectorSelectionHeader iconKind="signal" kind={`${signal.role.charAt(0).toUpperCase() + signal.role.slice(1)} · Clock`} title={signal.display.name} detail={[...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName} />
     <div className="inspector-scroll">
     <InspectorSection sectionId="signal-properties" title="Signal Properties" open={sections["signal-properties"] ?? true} onToggle={() => toggle("signal-properties")}><form className="inspector-clock-properties" aria-label="Inspector Clock Properties" onSubmit={applyProperties}>
        <label>Name<InlineNameInput target={signal} value={signal.display.name} ariaLabel="Inspector signal name" onRename={(nextName) => onCommand({ id: nextCommandId("inspector_clock_rename"), type: "signal.rename", signalId: signal.id, name: nextName })} onCommitted={setName} onDraftChange={setName} /></label>
@@ -87,7 +90,11 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
     <InspectorSection sectionId="edge-counter" title="Edge Counter" open={sections["edge-counter"] ?? true} onToggle={() => toggle("edge-counter")}><form className="inspector-edge-counter" aria-label="Inspector Edge Counter" onSubmit={(event) => { event.preventDefault(); onCommand({ id: nextCommandId("inspector_edge_counter"), type: "signal.updateEdgeCounter", signalId: signal.id, edgeCounter }); }}>
       <label className="checkline">Show<input aria-label="Inspector edge counter show" type="checkbox" checked={edgeCounter.show} onChange={(event) => setEdgeCounter({ ...edgeCounter, show: event.target.checked })} /></label><label>Mode<select aria-label="Inspector edge counter mode" value={edgeCounter.mode} onChange={(event) => setEdgeCounter({ ...edgeCounter, mode: event.target.value as EdgeCounterSettings["mode"] })}><option value="rising">Rising</option><option value="falling">Falling</option><option value="both">Both</option></select></label><label>Start Number<input aria-label="Inspector edge counter start" type="number" value={edgeCounter.startNumber} onChange={(event) => setEdgeCounter({ ...edgeCounter, startNumber: Number(event.target.value) })} /></label><label>Count From<select aria-label="Inspector edge counter count from" value={edgeCounter.countFrom} onChange={(event) => setCountFrom(event.target.value as EdgeCounterSettings["countFrom"])}><option value="signal-start">Signal start</option><option value="selected-edge">Selected edge</option><option value="marker" disabled={document.bookmarks.length === 0}>Marker</option><option value="visible-range-start">Visible range start</option></select></label>{edgeCounter.countFrom === "marker" && <label>Marker<select aria-label="Inspector edge counter marker" value={edgeCounter.anchorId ?? ""} onChange={(event) => setAnchorId(event.target.value || undefined)} disabled={document.bookmarks.length === 0}><option value="">Select Bookmark</option>{document.bookmarks.map((bookmark) => <option key={bookmark.id} value={bookmark.id}>{bookmark.name} · cycle {bookmark.start}</option>)}</select></label>}<label>Every N<input aria-label="Inspector edge counter every" type="number" min="1" value={edgeCounter.labelEvery} onChange={(event) => setEdgeCounter({ ...edgeCounter, labelEvery: Number(event.target.value) })} /></label><label>Position<select aria-label="Inspector edge counter position" value={edgeCounter.position} onChange={(event) => setEdgeCounter({ ...edgeCounter, position: event.target.value as EdgeCounterSettings["position"] })}><option value="above">Above</option><option value="below">Below</option></select></label><label>X offset<input aria-label="Inspector edge counter X offset" type="number" value={edgeCounter.offset.x} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, x: Number(event.target.value) } })} /></label><label>Y offset<input aria-label="Inspector edge counter Y offset" type="number" value={edgeCounter.offset.y} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, y: Number(event.target.value) } })} /></label><button type="submit" data-testid="apply-inspector-edge-counter">Apply Edge Counter</button>
     </form></InspectorSection>
-    {problem && <div className="editor-problem" role="alert" data-testid="clock-conversion-problem">{problem}</div>}</div><MiniMap document={document} viewport={viewport} />
+    {problem && <div className="editor-problem" role="alert" data-testid="clock-conversion-problem">{problem}</div>}</div>
+    <div className="inspector-sticky-footer">
+      <span className="inspector-footer-buttons"><button type="button" data-testid="cancel-inspector-draft" onClick={onCancel}>Revert</button></span>
+    </div>
+    <MiniMap document={document} viewport={viewport} />
   </aside>;
 }
 

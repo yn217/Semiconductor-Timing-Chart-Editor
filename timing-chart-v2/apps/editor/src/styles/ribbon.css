@@ -266,9 +266,16 @@
 
 .ds-ribbon-toggle span { white-space: nowrap; }
 
-.view-zoom-group > .ds-ribbon-select { align-self: flex-start; width: 48px; height: 24px; margin-top: 27px; }
-
-.view-workspace-group > label > .ds-ribbon-select { height: 24px; min-width: 0; }
+/* View tab visual-consistency fix: the shared Ribbon <select> control
+   (Zoom% picker, Workspace/Density) -- explicit background/color/border
+   so it renders in the light Ribbon palette instead of falling through to
+   the OS's `color-scheme: dark` default the way a bare unstyled <select>
+   does (the same class of bug this file's other color-scheme comments
+   already call out and fix for buttons/outputs -- this was the one
+   remaining unstyled native control). Sized and bordered like the
+   buttons around it rather than a cramped 9px/62px form field. */
+.ds-ribbon-select { height: 24px; padding: 0 5px; border: 1px solid #b5c2d0; border-radius: 3px; background: #fff; color: #263d58; font-size: 10px; }
+.ds-ribbon-select:hover, .ds-ribbon-select:focus-visible { border-color: #a8c8e6; background: #edf6ff; }
 
 .editor-shell .ribbon-tabs { height: 34px; }
 
@@ -548,8 +555,6 @@
 .editor-shell .timeline-bookmark-group .timeline-objects,
 .editor-shell .timeline-fold-group .timeline-objects { grid-column: 1 / -1; grid-row: 2; min-height: 0; overflow: auto; }
 
-.editor-shell .view-slot-group > .ds-ribbon-group > b { visibility: visible; }
-
 .editor-shell [data-ribbon-home] > .ds-ribbon-group > b { visibility: hidden; }
 
 /* Home packs more buttons per group than Insert/View -- one shared compact
@@ -578,23 +583,15 @@
 
 .editor-shell [data-ribbon-home][data-major-group="Zoom"] > .home-view-group { box-sizing: border-box; width: 100%; }
 
-.editor-shell .view-slot-group > .ribbon-group { box-sizing: border-box; width: 100%; min-width: 0; }
-
-.editor-shell .view-display-subgroup .ds-ribbon-toggle { min-width: 0; min-height: 0; height: 20px; flex-direction: row; justify-content: flex-start; gap: 3px; padding: 2px 3px; text-align: left; }
-
+/* View tab's Show group: the one place View legitimately needs a
+   second-level caption (Labels/Structure vs Overlays) that Home's
+   simpler groups don't -- everything else about these toggles (the
+   shared .ds-ribbon-toggle control, [data-ribbon-home]'s button/icon/
+   caption sizing) is identical to every other tab, not a View-only style. */
+.editor-shell .view-display-subgroup { display: flex; min-width: 0; flex-direction: column; gap: 1px; }
+.editor-shell .view-display-subgroup > span { overflow: hidden; color: #637083; font-size: 9px; font-weight: 700; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.editor-shell .view-display-subgroup .ds-ribbon-toggle { min-width: 0; min-height: 0; flex-direction: row; justify-content: flex-start; gap: 3px; padding: 1px 2px; text-align: left; }
 .editor-shell .view-display-subgroup .ds-ribbon-toggle span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-/* #293: compact-toggle density is a documented DsRibbonGroup contract
-   (design-system.tsx) owned by the Group primitive, not the View Tab. */
-.editor-shell .ds-ribbon-group[data-density="compact-toggle"] .ds-ribbon-button { min-height: 0; height: 40px; }
-
-.editor-shell .ds-ribbon-group[data-density="compact-toggle"] .ds-ribbon-label { min-height: 18px; font-size: 8px; line-height: 9px; }
-
-.editor-shell .view-guides-group .ds-ribbon-toggle { min-width: 0; padding-inline: 1px; }
-
-.editor-shell .view-workspace-settings .ds-ribbon-select { width: 111px; max-width: 111px; height: 27px; padding: 0 3px; font-size: 9px; }
-
-.editor-shell .view-zoom-group .ds-ribbon-select { width: 62px; min-width: 0; height: 27px; padding: 0 2px; font-size: 9px; }
 
 .editor-shell .home-edit-group > [data-testid="clipboard-status"] { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; }
 
@@ -605,35 +602,15 @@
 .editor-shell .arrange-group > b::after { content: "Arrange"; }
 .editor-shell .properties-group > b::after { content: "Options"; }
 
-/* View slot composition and accessible group captions. */
-.editor-shell .view-slot-group { box-sizing: border-box; flex: 0 0 auto; }
-.editor-shell .view-slot-group::after { content: none; }
-.editor-shell .view-slot-group[data-major-group="Show"] { width: 360px; }
-.editor-shell .view-slot-group[data-major-group="Panels"] { width: 330px; }
-.editor-shell .view-slot-group[data-major-group="Guides"] { width: 224px; }
-.editor-shell .view-slot-group[data-major-group="Zoom"] { width: 320px; }
-.editor-shell .view-slot-group[data-major-group="Workspace"] { width: 260px; }
-.editor-shell .view-slot-group[data-major-group="Layout"] { width: 177px; }
-.editor-shell .view-show-group { width: 100%; display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr); gap: 7px; align-content: center; padding: 7px 8px 17px; }
-.editor-shell .view-display-subgroup { display: grid; min-width: 0; align-content: center; gap: 1px; }
-.editor-shell .view-display-subgroup[data-display-kind="labels"] { grid-template-rows: 12px repeat(3, 1fr); }
-.editor-shell .view-display-subgroup[data-display-kind="overlays"] { grid-template-rows: 12px repeat(2, 1fr); }
-.editor-shell .view-display-subgroup > span { overflow: hidden; color: #637083; font-size: 8px; font-weight: 700; line-height: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.editor-shell .view-panels-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-rows: 40px 40px; gap: 3px 4px; align-content: center; padding: 7px 8px 17px; }
-.editor-shell .view-guides-group { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; align-content: center; padding: 7px 8px 17px; }
-.editor-shell .view-zoom-group { width: 100%; display: grid; grid-template-columns: 40px 52px 40px 40px minmax(0, 1fr); align-items: center; justify-content: center; gap: 2px; padding: 7px 6px 17px; }
-.editor-shell .view-zoom-fit-actions { display: flex; min-width: 76px; align-items: center; gap: 2px; padding-left: 4px; border-left: 1px solid #cfd8e4; }
-.editor-shell .view-zoom-fit-actions .view-mini-tool { flex: 1 1 0; min-width: 36px; }
-.editor-shell .view-workspace-group { width: 100%; display: flex; align-items: center; justify-content: center; gap: 4px; padding: 7px 5px 17px; }
-.editor-shell .view-layout-group { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: center; gap: 6px; padding: 7px 8px 17px; }
-.editor-shell .view-workspace-settings, .editor-shell .view-workspace-actions { display: flex; min-width: 0; align-items: center; justify-content: center; gap: 4px; }
-.editor-shell .view-workspace-settings > label { display: flex; min-width: 0; flex-direction: column; gap: 2px; color: #405269; font-size: 8px; white-space: nowrap; }
-.editor-shell .view-toggle { display: flex; min-width: 0; align-items: center; gap: 3px; overflow: hidden; color: #405269; font-size: 9px; line-height: 1.05; white-space: nowrap; text-overflow: ellipsis; }
-.editor-shell .view-toggle input { flex: 0 0 auto; margin: 0; }
-.editor-shell .view-mini-tool { min-width: 0; width: auto; height: 56px; padding: 3px 2px; gap: 3px; font-size: 8px; }
-.editor-shell .view-mini-tool svg { width: 18px; height: 18px; }
-.editor-shell .view-zoom-group output { min-width: 42px; color: #304b6b; font-size: 10px; text-align: center; }
-.editor-shell .view-zoom-group .view-zoom-status { min-width: 0; }
+/* View tab visual-consistency fix: the tab's groups now render through
+   the same RibbonGroup primitive Home's own schema-composed groups use
+   (see minimal-cycle-view-ribbon.tsx's `viewGroups`), so button/icon/
+   caption sizing comes from the shared [data-ribbon-home] rules above
+   for free -- only these two small wrappers (the Zoom% picker's own
+   status output, and each Workspace/Density label+select pair) still
+   need their own layout. */
+.view-zoom-preset { display: inline-flex; align-items: center; }
+.view-workspace-field { display: flex; min-width: 0; flex-direction: column; gap: 2px; color: #405269; font-size: 10px; white-space: nowrap; }
 
 /* Migrated from the compatibility layer: Ribbon-owned secondary toolbars and
    the View tab's fixed-slot composition live with the Ribbon owner. */
@@ -806,4 +783,3 @@
 
 .editor-shell .review-action-group { flex: 0 0 auto; margin-left: auto; }
 .editor-shell .review-action-group button[data-testid="review-refresh-checks"] { height: 24px; padding: 0 10px; border: 1px solid #6aa5d8; border-radius: 3px; background: #dceeff; color: #174d7c; font-size: 10px; font-weight: 600; }
-.view-workspace-group > label { display: grid; min-width: 84px; gap: 3px; color: #51657b; font-size: 10px; }
