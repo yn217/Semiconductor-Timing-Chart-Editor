@@ -310,9 +310,17 @@
 /* #453: Group/Duration/Phases were added onto this same row rather than a
    new table component -- Group is conditional (only Transactions with a
    groupId render that span), so the trailing columns simply go unused
-   for an Ungrouped row rather than needing a second row shape. */
-.transaction-list > button { height: 34px; display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto auto auto auto auto; align-items: center; gap: 7px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; padding-inline: 8px; overflow: hidden; }
-.transaction-list > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
+   for an Ungrouped row rather than needing a second row shape.
+   #453 (bulk operations): the row itself must stay a `<button>` (existing
+   tests and the Draft/select contract key off `.transaction-list > button`
+   / `getByRole("button", ...)`), and a checkbox can't validly nest inside
+   one -- so bulk-select's checkbox is a sibling in front of it, both
+   wrapped in one `.transaction-list-row` flex item that's now the actual
+   grid child instead of the button. */
+.transaction-list-row { display: flex; align-items: center; gap: 4px; }
+.transaction-list-row > input[type="checkbox"] { flex: 0 0 auto; }
+.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 34px; display: grid; grid-template-columns: 12px minmax(0,1fr) auto auto auto auto auto auto; align-items: center; gap: 7px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; padding-inline: 8px; overflow: hidden; }
+.transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
 .transaction-row-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid #0000001a; }
 /* #388: Bookmark's Bottom Panel list -- Marker | Name | Cycle | Comment
    columns, one row per canonical Bookmark (never a second stored copy). */
@@ -329,9 +337,9 @@
    of a Bookmark-only patch: every state (base/hover/selected/selected+hover/
    focus-visible/disabled) sets its own color, background and border,
    keeping border-width constant across states to avoid layout shift. */
-.transaction-list > button, .bookmark-list > button { color: #233a59; background: #fff; }
-.transaction-list > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: #9fc4e5; background: #f3f8fd; color: #163756; }
-.transaction-list > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; color: #163756; }
-.transaction-list > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
-.transaction-list > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
-.transaction-list > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
+.transaction-list-row > button, .bookmark-list > button { color: #233a59; background: #fff; }
+.transaction-list-row > button:hover:not([data-selected="true"]):not(:disabled), .bookmark-list > button:hover:not([data-selected="true"]):not(:disabled) { border-color: #9fc4e5; background: #f3f8fd; color: #163756; }
+.transaction-list-row > button[data-selected="true"], .bookmark-list > button[data-selected="true"] { border-color: #287ac0; background: #e5f2ff; color: #163756; }
+.transaction-list-row > button[data-selected="true"]:hover, .bookmark-list > button[data-selected="true"]:hover { background: #d8ecfd; }
+.transaction-list-row > button:focus-visible, .bookmark-list > button:focus-visible { outline: 2px solid var(--ds-focus-color, #1675d1); outline-offset: -2px; z-index: 1; }
+.transaction-list-row > button:disabled, .bookmark-list > button:disabled { color: #8b97a8; background: #f3f5f8; border-color: #d7dee7; cursor: not-allowed; }
