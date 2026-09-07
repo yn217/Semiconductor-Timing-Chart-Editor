@@ -85,3 +85,35 @@ test("Transaction Group can be renamed inline and deleted (ungrouping its Transa
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
 });
+
+test("Ribbon Ungroup acts on the selected Transaction's Group, disabled when not applicable", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+
+  const ribbonUngroup = page.getByTestId("ribbon").getByRole("button", { name: "Ungroup selected Transaction" });
+  // Not in Transaction Mode's Ribbon Transaction group at all outside a
+  // Group -- disabled once created too, since a fresh Transaction has no
+  // Group yet.
+  await page.getByTestId("add-transaction-group-tree").click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  await expect(ribbonUngroup).toBeDisabled();
+
+  const bottomEditor = page.getByTestId("transaction-editor");
+  await bottomEditor.getByLabel("Move selected transaction to group").selectOption({ label: "Group 1" });
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(ribbonUngroup).toBeEnabled();
+
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+  await ribbonUngroup.click();
+  await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(ribbonUngroup).toBeDisabled();
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("transaction-group-header")).toHaveCount(1);
+  await expect(ribbonUngroup).toBeEnabled();
+});
