@@ -913,6 +913,88 @@ test("applies Signal Inspector capability fields as one semantic operation", asy
   expect(afterStyleOnly.localGeometryBuilds).toBe(after.localGeometryBuilds);
 });
 
+test("#477: Label Style keeps a common dirty/Apply lifecycle across repeated edits and Background actually renders", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  const inspector = page.getByTestId("inspector");
+  await waitForInspectorPanel(inspector, "Signal Properties");
+  await inspector.getByRole("button", { name: "Label Style" }).click();
+  const apply = inspector.getByTestId("apply-inspector-signal");
+  const row = host.locator("[data-role='left-row'][data-row-id='sig_cycle_data']");
+
+  // Text Color: 3 consecutive edit/Apply cycles, each its own History step.
+  for (const [index, color] of ["#114477", "#225588", "#336699"].entries()) {
+    await inspector.getByLabel("Inspector text color").fill(color);
+    await expect(apply).toBeEnabled();
+    await apply.click();
+    await expect(host).toHaveAttribute("data-editor-idle", "true");
+    await expect(page.getByTestId("history-status")).toHaveText(`History ${index + 1} / Redo 0`);
+  }
+
+  // Bold: ON -> Apply -> OFF -> Apply -> ON -> Apply, each a real toggle.
+  await inspector.getByLabel("Inspector label bold").check();
+  await apply.click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await inspector.getByLabel("Inspector label bold").uncheck();
+  await apply.click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+  await inspector.getByLabel("Inspector label bold").check();
+  await apply.click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
+  await expect(row).toHaveCSS("font-weight", "700");
+
+  // Background: applied color renders on the row even while it stays
+  // selected (the normal state right after Apply) -- not just once
+  // deselected. The selection highlight rule must not fully mask a
+  // per-signal Background any more (see center-columns.css).
+  await inspector.getByLabel("Inspector label background").fill("#ffee00");
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 7 / Redo 0");
+  await expect(row).toHaveAttribute("data-selected", "true");
+  await expect(row).toHaveCSS("background-color", "rgb(255, 238, 0)");
+
+  // A second Background edit/Apply must also be a real, enabled change.
+  await inspector.getByLabel("Inspector label background").fill("#00ccff");
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 8 / Redo 0");
+  await expect(row).toHaveCSS("background-color", "rgb(0, 204, 255)");
+
+  // Undo/Redo stay exact, and further edits remain possible afterward.
+  await page.getByTestId("editor-undo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 7 / Redo 1");
+  await expect(row).toHaveCSS("background-color", "rgb(255, 238, 0)");
+  await page.getByTestId("editor-redo").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 8 / Redo 0");
+  await expect(row).toHaveCSS("background-color", "rgb(0, 204, 255)");
+
+  // Selecting a different Signal and back must load the latest Canonical
+  // style as the new baseline -- no stale draft, and Apply starts disabled.
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_data']").click();
+  // Both the Value-Signal and Clock Inspectors share a "Signal Properties"
+  // heading -- wait on the Value-Signal editor's own form testid, not the
+  // heading text, so this doesn't race against the just-closed Clock
+  // Inspector still being in the DOM.
+  await expect(inspector.getByTestId("inspector-signal-properties")).toBeVisible();
+  // "Label Style" is module-scoped open/closed state (shared across every
+  // Signal Inspector mount) -- it's still expanded from earlier in this
+  // test, don't toggle it closed by clicking unconditionally.
+  const labelStyleToggle = inspector.getByRole("button", { name: "Label Style", exact: true });
+  if (await labelStyleToggle.getAttribute("aria-expanded") !== "true") await labelStyleToggle.click();
+  await expect(inspector.getByLabel("Inspector label background")).toHaveValue("#00ccff");
+  await expect(apply).toBeDisabled();
+
+  // One more edit after reselection still works.
+  await inspector.getByLabel("Inspector label background").fill("#ff0066");
+  await expect(apply).toBeEnabled();
+  await apply.click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 9 / Redo 0");
+  await expect(row).toHaveCSS("background-color", "rgb(255, 0, 102)");
+});
+
 test("Signal Inspector properties survive Undo/Redo and Save/Open", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");

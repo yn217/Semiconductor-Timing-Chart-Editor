@@ -124,7 +124,18 @@
 
 .surface-host [data-role$="-row"] { background-color: var(--group-background, transparent); border-bottom-color: var(--group-border, #e7ebf0); }
 
-.surface-host [data-role$="-row"][data-selected="true"] { background-color: #dcecff !important; box-shadow: inset 3px 0 #2677c9; }
+/* #477: no `!important` here (unlike the rule below) -- a per-signal
+   Label Style Background is applied as an inline `background-color` by
+   the renderer (packages/renderer/src/stable-surface.ts's
+   `applyTextStyle`), and inline styles already always win over a plain
+   class rule. `!important` would additionally defeat that inline style,
+   which is exactly the bug this fixes: Apply-ing a custom Background
+   while the row stayed selected (the normal post-Apply state) rendered
+   the selection tint instead of the signal's own color. Rows with no
+   custom Background keep the same #dcecff tint as before -- nothing
+   else in the cascade changes, since specificity alone still lets this
+   rule beat the plain `[data-role$="-row"]` rule above it. */
+.surface-host [data-role$="-row"][data-selected="true"] { background-color: #dcecff; box-shadow: inset 3px 0 #2677c9; }
 
 .surface-host [data-role$="-row"][data-transaction-linked="true"] { background-color: #fff4d6 !important; box-shadow: inset 3px 0 #d59100; }
 
