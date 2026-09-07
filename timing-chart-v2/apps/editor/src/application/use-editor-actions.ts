@@ -8,6 +8,7 @@ import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
 import type { ClipboardActions } from "./use-clipboard-actions.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
+import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-helpers.js";
 import { nextEntityId } from "../entity-id.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "../insertion-target.js";
@@ -61,6 +62,9 @@ export interface EditorActionsInput {
   readonly setBulkRegistrationStatus: (value: string) => void;
   readonly setBulkRegistrationPreview: (value: ({ readonly sourceText: string } & ReturnType<typeof parseBulkSignalDefinitions>) | undefined) => void;
   readonly setBulkRegistrationVisible: (value: boolean) => void;
+  readonly documentLifecycle: DocumentLifecycleOwner;
+  readonly pendingFileOriginRef: MutableRefObject<HTMLElement | null>;
+  readonly documentTitle: string;
 }
 
 export interface EditorActions {
@@ -97,6 +101,12 @@ export interface EditorActions {
   readonly createCopiedSignals: ClipboardActions["createSignals"];
   readonly setSelectionVisibility: ClipboardActions["setVisibility"];
   readonly moveSelection: ClipboardActions["move"];
+  readonly restorePendingFileFocus: () => void;
+  readonly capturePendingFileOrigin: () => void;
+  readonly cancelPendingFileAction: () => void;
+  readonly continuePendingFileAction: () => void;
+  readonly saveAndContinuePendingFileAction: () => void;
+  readonly requestNewDocument: () => void;
 }
 
 export function useEditorActions(input: EditorActionsInput): EditorActions {
@@ -294,6 +304,20 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     input.setBulkRegistrationPreview({ sourceText: input.bulkRegistrationText, ...preview });
     input.setBulkRegistrationStatus(preview.errors.length === 0 ? `Preview ready: ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : preview.errors.join(" "));
   };
+  const restorePendingFileFocus = () => {
+    const origin = input.pendingFileOriginRef.current;
+    input.pendingFileOriginRef.current = null;
+    if (origin?.isConnected) requestAnimationFrame(() => origin.focus());
+  };
+  const capturePendingFileOrigin = () => {
+    if (input.pendingFileOriginRef.current === null) input.pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null;
+  };
+  const cancelPendingFileAction = () => { input.documentLifecycle.cancelPending(); restorePendingFileFocus(); };
+  const continuePendingFileAction = () => { input.documentLifecycle.discardPending(); restorePendingFileFocus(); };
+  const saveAndContinuePendingFileAction = () => {
+    if (input.documentLifecycle.savePendingAndContinue(`${input.documentTitle || "timing-chart"}.tcd`)) restorePendingFileFocus();
+  };
+  const requestNewDocument = () => { capturePendingFileOrigin(); input.documentLifecycle.requestNew(); };
 
   useEffect(() => {
     const rulerElement = input.rulerRef.current;
@@ -379,5 +403,11 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     createCopiedSignals: input.editActions.createSignals,
     setSelectionVisibility: input.editActions.setVisibility,
     moveSelection: input.editActions.move,
+    restorePendingFileFocus,
+    capturePendingFileOrigin,
+    cancelPendingFileAction,
+    continuePendingFileAction,
+    saveAndContinuePendingFileAction,
+    requestNewDocument,
   };
 }

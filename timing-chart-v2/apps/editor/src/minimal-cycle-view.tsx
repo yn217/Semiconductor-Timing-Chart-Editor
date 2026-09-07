@@ -41,8 +41,6 @@ import { AnnotationList } from "./annotation-list.js";
 import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
-import type { AIViewIntent } from "./ai-proposal-provider.js";
-import type { AIBridgeStatus } from "./ai-bridge-client.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
 import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon.js";
@@ -66,8 +64,13 @@ import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
+import { useEditorPresentationState } from "./application/use-editor-presentation-state.js";
+import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
+import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
+import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant-model.js";
+import { EditorShellView } from "./editor-shell-view.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
-import { deriveSelectionCapabilities, useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
+import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import type { SelectedClockEdge } from "./runtime/edge-counter-projection.js";
@@ -132,7 +135,6 @@ export function MinimalCycleView() {
   const transactionBoundaryX = useRef<(cycle: number) => number | undefined>(() => undefined);
   const fileInput = useRef<HTMLInputElement>(null);
   const selection = useSelectionOwner(visualReference ? signalId("sig_cycle_clock") : undefined);
-  const previousSelectionDecorationRef = useRef<SelectionState | undefined>(undefined);
   const editActions = useClipboardActions({ application, selection });
   const timelineNavigation = useTimelineNavigationOwner();
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId } = selection.state;
@@ -140,21 +142,21 @@ export function MinimalCycleView() {
   useEffect(() => {
     return attachDirtyUnloadGuard(history.dirty);
   }, [history.dirty]);
-  const [arrowPickStatus, setArrowPickStatus] = useState<"idle" | "from" | "to">("idle");
+  const presentation = useEditorPresentationState({ hostRef: host });
+  const {
+    arrowPickStatus, setArrowPickStatus,
+    gridEnabled, setGridEnabled, gridEnabledRef,
+    snapEnabled, setSnapEnabled, snapEnabledRef,
+    rulerEnabled, setRulerEnabled,
+    minimapEnabled, setMinimapEnabled,
+    showSignalNames, setShowSignalNames,
+    showRoles, setShowRoles,
+    showAnnotations, setShowAnnotations,
+    showTransactions, setShowTransactions,
+    showGroupBackground, setShowGroupBackground,
+    applySelectionDecorations,
+  } = presentation;
   const zoom = timelineNavigation.zoom;
-  const [gridEnabled, setGridEnabled] = useState(true);
-  const gridEnabledRef = useRef(true);
-  gridEnabledRef.current = gridEnabled;
-  const [snapEnabled, setSnapEnabled] = useState(true);
-  const snapEnabledRef = useRef(true);
-  snapEnabledRef.current = snapEnabled;
-  const [rulerEnabled, setRulerEnabled] = useState(true);
-  const [minimapEnabled, setMinimapEnabled] = useState(true);
-  const [showSignalNames, setShowSignalNames] = useState(true);
-  const [showRoles, setShowRoles] = useState(true);
-  const [showAnnotations, setShowAnnotations] = useState(true);
-  const [showTransactions, setShowTransactions] = useState(true);
-  const [showGroupBackground, setShowGroupBackground] = useState(true);
   const workspace = useWorkspaceUiState<SignalId, GroupId, AnnotationId, TransactionId>();
   const {
     ribbonTab, setRibbonTab,
@@ -181,6 +183,29 @@ export function MinimalCycleView() {
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
   } = workspace;
+  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
+    ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
+    : viewMode === "Transaction"
+      ? ["Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
+      : ["Signal", "Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
+  const workspaceActions = useEditorWorkspaceActions({
+    workspacePreset,
+    setWorkspacePreset,
+    waveformRestoreRef,
+    inspectorVisible,
+    setInspectorVisible,
+    bottomVisible,
+    setBottomVisible,
+    setViewMode,
+    setBottomTab,
+    setSignalTreeVisible,
+    setLeftPaneWidth,
+    setFrozenPaneWidth,
+    setInspectorWidth,
+    setBottomHeight,
+    bottomTabs,
+  });
+  const { applyWorkspacePreset, resetWorkspaceLayout, selectBottomTab, onBottomTabKeyDown } = workspaceActions;
   // Keep the transient splitter independent, but never let it collapse the
   // persisted Role/Signal columns and break the shared frozen/timing origin.
   // `frozenPaneMinWidth` is the actual achievable floor for the loaded
@@ -192,6 +217,31 @@ export function MinimalCycleView() {
   // smaller, unreachable minimum via ARIA.
   const frozenPaneMinWidth = Math.max(160, snapshot.document.layout.roleColumnWidth + snapshot.document.layout.signalNameWidth);
   const frozenPaneWidth = Math.max(frozenPaneWidthState, frozenPaneMinWidth);
+  const resizeActions = useEditorResizeActions({
+    bottomResizeRef,
+    bottomHeight,
+    setBottomHeight,
+    signalSplitResizeRef,
+    signalSplitRatio,
+    setSignalSplitRatio,
+    inspectorResizeRef,
+    inspectorWidth,
+    setInspectorWidth,
+    leftPaneResizeRef,
+    leftPaneWidth,
+    setLeftPaneWidth,
+    frozenPaneResizeRef,
+    frozenPaneWidth,
+    frozenPaneMinWidth,
+    setFrozenPaneWidth,
+  });
+  const {
+    startBottomResize, moveBottomResize, finishBottomResize, resizeBottomByKeyboard,
+    startSignalSplitResize, moveSignalSplitResize, finishSignalSplitResize, resizeSignalSplitByKeyboard,
+    startInspectorResize, moveInspectorResize, finishInspectorResize, resizeInspectorByKeyboard,
+    startLeftPaneResize, moveLeftPaneResize, finishLeftPaneResize, resizeLeftPaneByKeyboard,
+    startFrozenPaneResize, moveFrozenPaneResize, finishFrozenPaneResize, resizeFrozenPaneByKeyboard,
+  } = resizeActions;
   selection.configure({
     decorateSelection: applySelectionDecorations,
     synchronizeContext: (kind) => {
@@ -392,14 +442,11 @@ export function MinimalCycleView() {
     if (next.has(id)) next.delete(id); else next.add(id);
     setCollapsedGroups(next);
   };
-
   const commandRouter = useEditorCommandRouter({ application, selection, editActions, selectAllRef });
   const commandRegistry = commandRouter.commandRegistry;
-
   useEffect(() => {
     refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
   }, [rangeSelectionActive, timelineRange, rangePresentationRevision]);
-
   useEffect(() => {
     if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
     else applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
@@ -419,7 +466,6 @@ export function MinimalCycleView() {
     signalSplitEnabled,
     signalSplitRatio,
   });
-
   useEffect(() => {
     refreshPlayhead.current();
   }, [selectedCycle, playheadPresentationRevision, zoom, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
@@ -478,6 +524,9 @@ export function MinimalCycleView() {
     setBulkRegistrationStatus,
     setBulkRegistrationPreview,
     setBulkRegistrationVisible,
+    documentLifecycle,
+    pendingFileOriginRef,
+    documentTitle: snapshot.document.document.title,
   });
   const {
     selectedBookmarkId,
@@ -513,6 +562,12 @@ export function MinimalCycleView() {
     createCopiedSignals,
     setSelectionVisibility,
     moveSelection,
+    restorePendingFileFocus,
+    capturePendingFileOrigin,
+    cancelPendingFileAction,
+    continuePendingFileAction,
+    saveAndContinuePendingFileAction,
+    requestNewDocument,
   } = actions;
   const signalEditor = <SignalEditor
     key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
@@ -604,285 +659,34 @@ export function MinimalCycleView() {
     onDelete={deleteBottomBookmark}
     onCancel={() => setBottomResetToken((value) => value + 1)}
   />;
-  // #395 PR3: the local Agent Bridge's enable/token state is owned here
-  // (not inside AIOperationPanel) so the Ribbon's Provider status can
-  // show the same real, live connection state the Bottom AI Assistant's
-  // Settings section manages -- the actual polling connection
-  // (useAIBridgeClient) lives inside AIOperationPanel itself now (PR4),
-  // since propose_edit needs direct access to its own preview/validate
-  // state; it reports status back up here via onBridgeStatusChange. See
-  // ai-bridge-client.ts and scripts/ai-bridge-server.mjs for exactly what
-  // it can and cannot do (three read/view-only tools plus propose_edit,
-  // localhost-only, token-gated, no arbitrary Canonical JSON patch path,
-  // no bridge-side apply for a document-changing proposal).
-  const aiBridgeHost = "127.0.0.1";
-  const aiBridgePort = 4610;
-  const [aiBridgeEnabled, setAiBridgeEnabled] = useState(false);
-  const [aiBridgeToken, setAiBridgeToken] = useState("");
-  const [aiBridgeStatus, setAiBridgeStatus] = useState<AIBridgeStatus>("disabled");
-  const aiBridgeOnViewIntent = (intent: AIViewIntent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); };
-  // #395 PR1: the AI Ribbon tab used to host the entire query/preview/
-  // apply surface directly -- a narrow control competing for space with
-  // every other Ribbon tab's icon-button rows. It now lives here, as the
-  // Bottom Panel's own "AI Assistant" tab (opened via the Ribbon's Ask/
-  // Edit trigger, see onOpenAIAssistant below), the same relocation this
-  // codebase already uses for Transaction/Bookmarks. AIOperationPanel's
-  // own preview/validate/apply logic is completely unchanged -- this is
-  // still the one and only proposal/apply owner; only where it renders
-  // moved.
-  const aiAssistantPanel = <AIOperationPanel
-    document={snapshot.document}
-    revision={snapshot.revision}
-    selectedSignalId={annotationTargetSignalId}
-    selectedGroupId={selectedGroup?.id}
-    selectedAnnotationId={selectedAnnotation?.id}
-    selectedTransactionId={selectedTransactionId}
-    range={timelineRange}
-    onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
-    onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
-    onViewIntent={aiBridgeOnViewIntent}
-    getZoom={timelineNavigation.getZoom}
-    bridgeHost={aiBridgeHost}
-    bridgePort={aiBridgePort}
-    bridgeEnabled={aiBridgeEnabled}
-    onBridgeEnabledChange={setAiBridgeEnabled}
-    bridgeToken={aiBridgeToken}
-    onBridgeTokenChange={setAiBridgeToken}
-    onBridgeStatusChange={setAiBridgeStatus}
-    onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
-    icon={null}
-  />;
-  function applySelectionDecorations(next: SelectionState): void {
-    const rendererHost = host.current;
-    if (!rendererHost) return;
-    if (next.signalId) rendererHost.dataset.selectedSignalId = next.signalId;
-    else delete rendererHost.dataset.selectedSignalId;
-    const previous = previousSelectionDecorationRef.current;
-    const affectedSignalIds = new Set<string>([
-      ...(previous?.signalIds ?? []), ...(next.signalIds ?? []),
-      ...(previous?.spacerId ? [previous.spacerId] : []), ...(next.spacerId ? [next.spacerId] : []),
-    ]);
-    for (const id of affectedSignalIds) for (const row of rendererHost.querySelectorAll<HTMLElement>(`[data-row-id="${CSS.escape(id)}"], [data-signal-id="${CSS.escape(id)}"]`)) {
-      const isSelected = next.signalIds.has(id as SignalId) || id === next.spacerId;
-      row.dataset.selected = String(isSelected);
-      row.setAttribute("aria-selected", String(isSelected));
-    }
-    // Multi-select-aware version of the upstream perf fix: diff against the
-    // previous decoration (previous U next, not every [data-annotation-id]
-    // in the document) so only actually-changed rows get touched, same as
-    // upstream, but membership in `next.annotationIds` (not equality to a
-    // single `next.annotationId`) decides selected state so a multi-select
-    // Arrange target set still decorates correctly.
-    const affectedAnnotationIds = new Set([...(previous?.annotationIds ?? []), ...next.annotationIds]);
-    for (const id of affectedAnnotationIds) for (const owner of rendererHost.querySelectorAll<HTMLElement>(`[data-annotation-id="${CSS.escape(String(id))}"]`)) owner.dataset.selected = String(next.annotationIds.has(id));
-    const affectedGroupIds = new Set([previous?.groupId, next.groupId].filter(Boolean));
-    for (const id of affectedGroupIds) for (const treeItem of rendererHost.querySelectorAll<HTMLElement>(`[role="treeitem"][data-row-id="${CSS.escape(String(id))}:header"]`)) treeItem.setAttribute("aria-selected", String(id === next.groupId));
-    previousSelectionDecorationRef.current = next;
-  }
-
-  const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
-    ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
-    : viewMode === "Transaction"
-      ? ["Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
-      : ["Signal", "Transaction", "Annotation", "Bookmarks", "AI", "Problems", "JSON"];
-  const bottomTabLabels: Readonly<Record<typeof bottomTabs[number], string>> = { Signal: "Signal Editor", Annotation: "Annotations", Transaction: "Transactions", Bookmarks: "Bookmarks", AI: "AI Assistant", Problems: "Checks", JSON: "JSON" };
-  const startBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    bottomResizeRef.current = { startY: event.clientY, startHeight: bottomHeight };
-  };
-  const moveBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    const resize = bottomResizeRef.current;
-    if (!resize) return;
-    const nextHeight = Math.max(180, Math.min(420, resize.startHeight - (event.clientY - resize.startY)));
-    if (nextHeight !== bottomHeight) setBottomHeight(nextHeight);
-  };
-  const finishBottomResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!bottomResizeRef.current) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    bottomResizeRef.current = undefined;
-  };
-  const resizeBottomByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 40 : 10;
-    const delta = event.key === "ArrowUp" ? step : event.key === "ArrowDown" ? -step : 0;
-    if (delta === 0) return;
-    event.preventDefault();
-    setBottomHeight((current) => Math.max(180, Math.min(420, current + delta)));
-  };
-  // Signal Split View (#200) item D: view-only Upper/Lower height splitter.
-  // Ratio-based (not a fixed pixel height like Bottom's) since the two panes
-  // together always fill the same variable container height; dragging never
-  // touches canonical/history/dirty state, matching every other pane resize
-  // handle in this file.
-  const startSignalSplitResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    const container = event.currentTarget.parentElement;
-    if (!container) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
-    signalSplitResizeRef.current = { startY: event.clientY, startRatio: signalSplitRatio, containerHeight: container.getBoundingClientRect().height };
-  };
-  const moveSignalSplitResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    const resize = signalSplitResizeRef.current;
-    if (!resize || resize.containerHeight <= 0) return;
-    const nextRatio = Math.max(0.15, Math.min(0.85, resize.startRatio + (event.clientY - resize.startY) / resize.containerHeight));
-    if (nextRatio !== signalSplitRatio) setSignalSplitRatio(nextRatio);
-  };
-  const finishSignalSplitResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!signalSplitResizeRef.current) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    signalSplitResizeRef.current = undefined;
-  };
-  const resizeSignalSplitByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 0.1 : 0.02;
-    const delta = event.key === "ArrowUp" ? -step : event.key === "ArrowDown" ? step : 0;
-    if (delta === 0) return;
-    event.preventDefault();
-    setSignalSplitRatio((current) => Math.max(0.15, Math.min(0.85, current + delta)));
-  };
-  const startInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    inspectorResizeRef.current = { startX: event.clientX, startWidth: inspectorWidth };
-  };
-  const moveInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    const resize = inspectorResizeRef.current;
-    if (!resize) return;
-    const nextWidth = Math.max(240, Math.min(420, resize.startWidth - (event.clientX - resize.startX)));
-    if (nextWidth !== inspectorWidth) setInspectorWidth(nextWidth);
-  };
-  const finishInspectorResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!inspectorResizeRef.current) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    inspectorResizeRef.current = undefined;
-  };
-  const resizeInspectorByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 40 : 10;
-    const delta = event.key === "ArrowLeft" ? step : event.key === "ArrowRight" ? -step : 0;
-    if (delta === 0) return;
-    event.preventDefault();
-    setInspectorWidth((current) => Math.max(240, Math.min(420, current + delta)));
-  };
-  const startLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    leftPaneResizeRef.current = { startX: event.clientX, startWidth: leftPaneWidth };
-  };
-  const moveLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    const resize = leftPaneResizeRef.current;
-    if (!resize) return;
-    const nextWidth = Math.max(LEFT_PANE_MIN_WIDTH, Math.min(LEFT_PANE_MAX_WIDTH, resize.startWidth + (event.clientX - resize.startX)));
-    if (nextWidth !== leftPaneWidth) setLeftPaneWidth(nextWidth);
-  };
-  const finishLeftPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!leftPaneResizeRef.current) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    leftPaneResizeRef.current = undefined;
-  };
-  const resizeLeftPaneByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 40 : 10;
-    const delta = event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0;
-    if (delta === 0) return;
-    event.preventDefault();
-    setLeftPaneWidth((current) => Math.max(LEFT_PANE_MIN_WIDTH, Math.min(LEFT_PANE_MAX_WIDTH, current + delta)));
-  };
-  const startFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    event.currentTarget.setPointerCapture(event.pointerId);
-    frozenPaneResizeRef.current = { startX: event.clientX, startWidth: frozenPaneWidth };
-  };
-  const moveFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    const resize = frozenPaneResizeRef.current;
-    if (!resize) return;
-    const nextWidth = Math.max(frozenPaneMinWidth, Math.min(360, resize.startWidth + (event.clientX - resize.startX)));
-    if (nextWidth !== frozenPaneWidth) setFrozenPaneWidth(nextWidth);
-  };
-  const finishFrozenPaneResize = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (!frozenPaneResizeRef.current) return;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    frozenPaneResizeRef.current = undefined;
-  };
-  const resizeFrozenPaneByKeyboard = (event: React.KeyboardEvent<HTMLDivElement>) => {
-    const step = event.shiftKey ? 40 : 10;
-    const delta = event.key === "ArrowRight" ? step : event.key === "ArrowLeft" ? -step : 0;
-    if (delta === 0) return;
-    event.preventDefault();
-    // Base the delta on `frozenPaneWidth` (the derived, displayed value --
-    // Math.max(frozenPaneWidthState, layout.roleColumnWidth +
-    // layout.signalNameWidth), same as aria-valuenow), not the raw
-    // frozenPaneWidthState alone. Otherwise, whenever the document's own
-    // layout floor exceeds the raw resize state (the common case for the
-    // default demo document, where that floor is 240px against a 209px
-    // initial state), incrementing the raw state by the arrow-key step
-    // still resolves to the same effective/displayed width -- the key
-    // press silently does nothing, with no feedback that anything
-    // happened at all.
-    setFrozenPaneWidth(Math.max(frozenPaneMinWidth, Math.min(360, frozenPaneWidth + delta)));
-  };
-  const selectBottomTab = (tab: typeof bottomTabs[number]) => setBottomTab(tab);
-  const onBottomTabKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, tab: typeof bottomTabs[number]) => {
-    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft" && event.key !== "Home" && event.key !== "End") return;
-    event.preventDefault();
-    const index = bottomTabs.indexOf(tab);
-    const nextIndex = event.key === "Home" ? 0 : event.key === "End" ? bottomTabs.length - 1 : (index + (event.key === "ArrowRight" ? 1 : -1) + bottomTabs.length) % bottomTabs.length;
-    const next = bottomTabs[nextIndex];
-    if (!next) return;
-    selectBottomTab(next);
-    requestAnimationFrame(() => globalThis.document.querySelector<HTMLButtonElement>(`[data-bottom-tab="${next}"]`)?.focus());
-  };
-
+  const { aiBridgeStatus, ...aiAssistantPanel } = useEditorAiAssistantModel({
+    document: snapshot.document,
+    revision: snapshot.revision,
+    selectedSignalId: annotationTargetSignalId,
+    selectedGroupId: selectedGroup?.id,
+    selectedAnnotationId: selectedAnnotation?.id,
+    selectedTransactionId,
+    range: timelineRange,
+    onCommand: (command) => commandRegistry.current.execute("semantic.execute", command),
+    onCommandBatch: (commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands),
+    getZoom: timelineNavigation.getZoom,
+    onFitAll: timelineNavigation.fitAll,
+    onOpenTimeline: () => setRibbonTab("Timeline"),
+    setRuntimeDiagnostics,
+  });
   const capabilities = deriveSelectionCapabilities(snapshot.document, selection.state);
   const { hasSelectedSignal, hasSelectedEntity, hasSelectedClipboard, hasDeletableSelection, canMoveUp, canMoveDown } = capabilities;
   const canRenameSelection = capabilities.canRename;
   const canShowSelection = capabilities.canShow;
   const canHideSelection = capabilities.canHide;
-  const restorePendingFileFocus = () => {
-    const origin = pendingFileOriginRef.current;
-    pendingFileOriginRef.current = null;
-    if (origin?.isConnected) requestAnimationFrame(() => origin.focus());
-  };
-  const capturePendingFileOrigin = () => {
-    if (pendingFileOriginRef.current === null) pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null;
-  };
-  const cancelPendingFileAction = () => { documentLifecycle.cancelPending(); restorePendingFileFocus(); };
-  const continuePendingFileAction = () => { documentLifecycle.discardPending(); restorePendingFileFocus(); };
-  const saveAndContinuePendingFileAction = () => {
-    if (documentLifecycle.savePendingAndContinue(`${snapshot.document.document.title || "timing-chart"}.tcd`)) restorePendingFileFocus();
-  };
-  const requestNewDocument = () => { capturePendingFileOrigin(); documentLifecycle.requestNew(); };
-  const applyWorkspacePreset = (preset: WorkspacePreset) => {
-    if (preset === "waveform") {
-      if (workspacePreset !== "waveform") waveformRestoreRef.current = { inspectorVisible, bottomVisible };
-      setWorkspacePreset(preset);
-      setInspectorVisible(false);
-      setBottomVisible(false);
-      return;
-    }
-    setWorkspacePreset(preset);
-    if (workspacePreset === "waveform" && preset === "edit") {
-      const restored = waveformRestoreRef.current;
-      waveformRestoreRef.current = undefined;
-      setInspectorVisible(restored?.inspectorVisible ?? true);
-      setBottomVisible(restored?.bottomVisible ?? true);
-    } else {
-      waveformRestoreRef.current = undefined;
-      setInspectorVisible(true);
-      setBottomVisible(true);
-    }
-    if (preset === "review") setBottomTab("Problems");
-    else if (preset === "transaction") { setViewMode("Transaction"); setBottomTab("Transaction"); }
-    else setBottomTab("Signal");
-  };
-  const resetWorkspaceLayout = () => {
-    waveformRestoreRef.current = undefined;
-    setWorkspacePreset("edit");
-    setViewMode("Cycle");
-    setBottomTab("Signal");
-    setSignalTreeVisible(true);
-    setInspectorVisible(true);
-    setBottomVisible(true);
-    setLeftPaneWidth(LEFT_PANE_MIN_WIDTH);
-    setFrozenPaneWidth(209);
-    setInspectorWidth(297);
-    setBottomHeight(240);
-  };
-  return <main className="editor-shell" style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties} data-density={density} data-workspace-preset={workspacePreset} data-inspector-visible={String(inspectorVisible)} data-bottom-visible={String(bottomVisible)} data-ruler-enabled={String(rulerEnabled)} data-minimap-enabled={String(minimapEnabled)} data-signal-tree-visible={String(signalTreeVisible)} data-show-signal-names={String(showSignalNames)} data-show-roles={String(showRoles)} data-show-annotations={String(showAnnotations)} data-show-transactions={String(showTransactions)} data-show-group-background={String(showGroupBackground)} data-layout-overflow={snapshot.document.layout.overflow} data-left-pane-width={leftPaneWidth} data-frozen-pane-width={frozenPaneWidth} data-bottom-height={bottomHeight} data-inspector-width={inspectorWidth} data-cycle-count={snapshot.document.timeline.cycleCount} data-signal-count={snapshot.document.signals.length} data-transaction-count={snapshot.document.transactions.length}>
-    <MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />
-    <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />
+  return <EditorShellView
+    style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties}
+    density={density} workspacePreset={workspacePreset} inspectorVisible={inspectorVisible} bottomVisible={bottomVisible} rulerEnabled={rulerEnabled} minimapEnabled={minimapEnabled} signalTreeVisible={signalTreeVisible}
+    showSignalNames={showSignalNames} showRoles={showRoles} showAnnotations={showAnnotations} showTransactions={showTransactions} showGroupBackground={showGroupBackground}
+    layoutOverflow={snapshot.document.layout.overflow} leftPaneWidth={leftPaneWidth} frozenPaneWidth={frozenPaneWidth} bottomHeight={bottomHeight} inspectorWidth={inspectorWidth}
+    cycleCount={snapshot.document.timeline.cycleCount} signalCount={snapshot.document.signals.length} transactionCount={snapshot.document.transactions.length}
+    titleBar={<MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />} ribbon={<MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />}
+  >
     <Ribbon
       tab={ribbonTab}
       document={snapshot.document}
@@ -1048,7 +852,7 @@ export function MinimalCycleView() {
         pinned={bottomPinned}
         onTogglePinned={toggleBottomPin}
         summary={<div className="left-panel-tail"><span data-testid="left-tree-signal-count">{snapshot.document.signals.length} signals</span>{selectedSignal && <span className="scope-breadcrumb" data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}</div>}
-        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "AI" ? aiAssistantPanel : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
+        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "AI" ? <AIOperationPanel {...aiAssistantPanel} /> : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
       />}
        <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} />{/* Bug fix: `selectedSignal?.id ?? \`...:${revision}:${token}\`` short-circuited
     to *just* the signal id whenever a Signal was selected (operator
@@ -1092,5 +896,5 @@ export function MinimalCycleView() {
       waveDromHasError={waveDromHasError}
     />
     </MinimalCycleViewPanels>
-  </main>;
+  </EditorShellView>;
 }
