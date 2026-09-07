@@ -1,11 +1,11 @@
 import { useState } from "react";
 import type { GroupId } from "@timing-chart-v2/schema";
 import { ClockGeneratorEditor } from "./clock-generator-editor.js";
-import { CommentRowEditor } from "./comment-row-editor.js";
-import { EventTable } from "./event-table.js";
-import { SignalGeneratorEditor } from "./signal-generator-editor.js";
-import { nextCommandId } from "./command-id.js";
-import { type SignalEditorProps } from "./timeline-toolbar.js";
+import { CommentRowEditor } from "../comment-row-editor.js";
+import { EventTable } from "../event-table.js";
+import { SignalGeneratorEditor } from "../signal-generator-editor.js";
+import { nextCommandId } from "../command-id.js";
+import { type SignalEditorProps } from "../timeline-toolbar.js";
 
 export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview }: SignalEditorProps) {
   // #402: the Signal's *current* Group, derived from the live document

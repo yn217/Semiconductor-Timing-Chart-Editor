@@ -13,7 +13,7 @@ import { AIOperationPanel } from "./ai-operation-panel.js";
 import { AdvancedJsonPanel } from "./advanced-json-panel.js";
 import { BookmarkEditor } from "./bookmark-editor.js";
 import { BottomEditorPanel } from "./minimal-cycle-view-panels.js";
-import { SignalEditor } from "./signal-editor.js";
+import { SignalEditor } from "./editors/signal-editor.js";
 import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";

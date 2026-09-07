@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { Bookmark, ClockGenerator, ClockSignal, EdgeCounterSettings, SignalId } from "@timing-chart-v2/schema";
-import { parseSuppressedPeriods } from "./runtime/clock-input.js";
-import { nextCommandId } from "./command-id.js";
-import { serializeClockSettings } from "./runtime/clock-settings.js";
-import { RibbonIcon } from "./ribbon-icon.js";
+import { parseSuppressedPeriods } from "../runtime/clock-input.js";
+import { nextCommandId } from "../command-id.js";
+import { serializeClockSettings } from "../runtime/clock-settings.js";
+import { RibbonIcon } from "../ribbon-icon.js";
 
 export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate, onPreview }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void; readonly onPreview: (draft: ClockGenerator | undefined) => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);

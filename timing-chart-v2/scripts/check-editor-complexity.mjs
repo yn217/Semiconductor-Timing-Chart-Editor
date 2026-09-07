@@ -47,6 +47,8 @@ const ownerBudgets = [
   ["apps/editor/src/runtime/presentation-preview.ts", 500],
   ["apps/editor/src/panels/inspector-panel.tsx", 500],
   ["apps/editor/src/minimal-cycle-view-panels.tsx", 500],
+  ["apps/editor/src/editors/signal-editor.tsx", 500],
+  ["apps/editor/src/editors/clock-generator-editor.tsx", 500],
 ];
 const forbiddenOwners = [
   ["Canonical mutation outside command/session path", /setSnapshot\([^)]*document|validateCanonicalDocument\([^)]*setSnapshot/],

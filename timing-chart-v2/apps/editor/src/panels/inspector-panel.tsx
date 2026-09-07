@@ -60,13 +60,13 @@ import { InlineNameInput } from "../inline-name-input.js";
 import { SaveAsDialog } from "../save-as-dialog.js";
 import { ProblemsPanelLegacy } from "../problems-panel-legacy.js";
 import { EventTable } from "../event-table.js";
-import { ClockGeneratorEditor } from "../clock-generator-editor.js";
+import { ClockGeneratorEditor } from "../editors/clock-generator-editor.js";
 import { DocumentProperties } from "../document-properties.js";
 import { TimelineToolbar, type SignalEditorProps } from "../timeline-toolbar.js";
 import { LayoutInspector } from "../layout-inspector.js";
 import { AnnotationEditor } from "../annotation-editor.js";
 import { AdvancedJsonPanel } from "../advanced-json-panel.js";
-import { SignalEditor } from "../signal-editor.js";
+import { SignalEditor } from "../editors/signal-editor.js";
 import { InspectorAnnotationEditor } from "../inspector-annotation-editor.js";
 import { InspectorSignalRouter } from "../inspector-signal-router.js";
 import { InspectorClockEditor } from "../inspector-clock-editor.js";
@@ -372,4 +372,3 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
     <MiniMap document={document} viewport={viewport} />
   </aside>;
 }
-
