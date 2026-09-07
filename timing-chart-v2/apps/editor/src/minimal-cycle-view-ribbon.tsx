@@ -4,6 +4,7 @@ import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Anno
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { ArrangeGroup } from "./arrange-group.js";
 import { FindReplacePanel } from "./find-replace-panel.js";
+import { TransactionTimeScalePanel } from "./transaction-time-scale-panel.js";
 import { annotationPropertiesBase } from "./annotation-style-command.js";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
@@ -295,6 +296,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
         // #439: "wide" -- see the Clipboard group's "Duplicate" above.
         { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
+        // #397: Time Scale only makes sense once Transaction Mode is
+        // active -- unlike Create/Duplicate, this group renders in every
+        // view mode, so an unconditional entry would widen the Home tab
+        // even when nothing Transaction-related is visible.
+        ...(viewMode === "Transaction" ? [{ kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onCommand={onCommand} /> }] as const : []),
       ],
     },
   ];
