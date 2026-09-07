@@ -11,9 +11,12 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   const host = page.getByTestId("cycle-surface");
   await page.getByRole("button", { name: "Transaction", exact: true }).click();
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
-  await page.getByLabel("New Transaction name").fill(name);
-  await page.getByLabel("New Transaction start").fill(String(start));
-  await page.getByLabel("New Transaction end").fill(String(end));
+  // Create with the library's own placeholder defaults, then set the real
+  // name/start/end through the selected-Transaction editor below -- #426
+  // gave that editor's Apply a Draft/dirty gate (disabled when the draft
+  // exactly matches canonical), so creating with the final values directly
+  // would leave this second "set the exact values" edit as a no-op Apply
+  // that never enables.
   await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");

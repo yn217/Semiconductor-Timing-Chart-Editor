@@ -1,6 +1,6 @@
 import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
-import type { CommandResult } from "@timing-chart-v2/commands";
+import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { resolveProblemTarget } from "@timing-chart-v2/ui";
@@ -151,7 +151,7 @@ export function MinimalCycleView() {
     frozenPaneWidth: frozenPaneWidthState, setFrozenPaneWidth, frozenPaneResizeRef,
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
     bottomHeight, setBottomHeight, bottomResizeRef,
-    treeFilter, setTreeFilter,
+    treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter,
     treeTypeFilter, setTreeTypeFilter,
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
@@ -653,9 +653,9 @@ export function MinimalCycleView() {
     onExpandAllGroups={() => setCollapsedGroups(new Set())}
     onOpenHierarchy={() => setHierarchyVisible(true)}
     onCloseMoreMenu={closeTreeMoreMenu}
-    timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
+    timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"} transactionMode={viewMode === "Transaction" ? { filter: transactionTreeFilter, onFilterChange: setTransactionTreeFilter, onAdd: () => { const id = nextEntityId("transaction", snapshot.document) as TransactionId; const result = commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("tree_transaction_create"), type: "transaction.create", transaction: { id, name: `Transaction ${snapshot.document.transactions.length + 1}`, start: 0, end: Math.min(4, snapshot.document.timeline.cycleCount), laneId: "lane_0" } }) as CommandResult; if (result.ok) selectTransaction(id); } } : undefined}
   />;
-  const workspaceViewportContent = viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onContextMenu={(event) => openTransactionContextMenu(event)} />;
+  const workspaceViewportContent = viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} filter={viewMode === "Transaction" ? transactionTreeFilter : ""} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onContextMenu={(event) => openTransactionContextMenu(event)} />;
   const workspaceViewportLegend = <LegendView document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={bottomTabs}
