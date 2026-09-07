@@ -5,6 +5,21 @@ points remain intentional; every mutation is dispatched through the shared
 `UiCommandRegistry`/`SemanticCommand` path and is one canonical commit and one
 history entry.
 
+## Apply/Revert button wording (#431 P0-3)
+
+Every Inspector Draft+Apply row below shares one generic action pair --
+**Revert** / **Apply** -- via the shared `InspectorFooter` primitive
+(`apps/editor/src/inspector-section.tsx`), not a type-specific label like
+"Apply Signal Properties" or "Apply Transaction". The button's meaning is
+identical everywhere: Revert restores the draft to the last committed value
+(no command, no history entry); Apply dispatches exactly one
+`SemanticCommand` for whatever entity is selected. Only `data-testid`
+differs per entity (`apply-inspector-signal`, `apply-inspector-transaction`,
+...) so existing tests can still target the right button; the visible text
+and behavior contract are the same across Signal/Group/Transaction/
+Annotation/Bookmark. Delete lives in its own section above the sticky
+footer, never inside the Revert/Apply pair, on every entity that has one.
+
 | Surface | Property/editor | Class | SemanticCommand owner | Enter | Escape/Cancel | Selection change | Invalid input |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Inspector | Signal name | Inline commit | `selection.rename` | commits form/blur | restores draft | remounts editor and discards draft | no command |
