@@ -21,6 +21,7 @@ import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
 import { ProblemsPanel } from "./problems-panel.js";
 import { useWorkspaceUiState, type BottomTab, type TreeTypeFilter, type ViewMode } from "./workspace/use-workspace-ui-state.js";
+import { createEditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview } from "./runtime/presentation-preview.js";
 import type { ContextMenuState } from "./workspace/use-dialog-menu-state.js";
 
@@ -131,6 +132,7 @@ export interface EditorSecondarySurfacesOutput {
 
 export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput): EditorSecondarySurfacesOutput {
   const execute = input.command.execute;
+  const surfaceCommands = createEditorSurfaceCommandController(input.command);
   const undo = input.command.undo;
   const redo = input.command.redo;
   const { selected, bottom, workspace, dialog, refs } = input;
@@ -161,7 +163,6 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     history={input.history}
     groups={input.document.signalGroups}
     problem={input.problem}
-    onCommand={execute}
     onUndo={undo}
     onRedo={redo}
     onVisibility={input.editActions.setSignalVisibility}
@@ -174,6 +175,8 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
     onDropToGroup={input.actions.moveTreeItemToGroup}
     onClockPreview={(draft) => { const currentHost = refs.host.current; if (currentHost && bottom.signal?.type === "clock") refreshClockPreview(currentHost, bottom.signal, draft, input.document.timeline.cycleCount); }}
+    clockCommands={surfaceCommands}
+    signalCommands={surfaceCommands}
   />;
   const annotationEditor = bottom.annotation ? <AnnotationEditor
     key={`${bottom.annotation.id}:${input.revision}:${dialog.bottomResetToken}`}
@@ -239,7 +242,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     timeScaleLabel={input.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
     transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction } : undefined}
   />;
-  const workspaceViewportContent = workspace.viewMode !== "Cycle" && <TransactionLanes document={input.document} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} onCommand={execute} onContextMenu={openTransactionContextMenu} />;
+  const workspaceViewportContent = workspace.viewMode !== "Cycle" && <TransactionLanes document={input.document} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />;
   const workspaceViewportLegend = <LegendView document={input.document} onCommand={execute} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}

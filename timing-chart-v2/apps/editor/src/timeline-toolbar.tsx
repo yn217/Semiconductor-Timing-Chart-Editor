@@ -9,6 +9,7 @@ import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
 import { EditorIconButton } from "./editor-icon.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { DsRibbonButton, DsRibbonGroup, DsRibbonNumberInput } from "./design-system.js";
+import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 
 /** #388/#396: this file's own destination/range-edit summary + tooltip
  * helpers. `destinationSummary` covers the Duplicate/Move sentence shown
@@ -167,7 +168,6 @@ export interface SignalEditorProps {
   readonly history: HistoryState;
   readonly groups: readonly SignalGroup[];
   readonly problem: string;
-  readonly onCommand: (command: SemanticCommand) => CommandResult;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onVisibility: (signalId: SignalId, visible: boolean) => void;
@@ -176,4 +176,6 @@ export interface SignalEditorProps {
   readonly onDropToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
   readonly onCancel: () => void;
   readonly onClockPreview: (draft: ClockGenerator | undefined) => void;
+  readonly clockCommands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">;
+  readonly signalCommands: SignalEditorCommandActions;
 }

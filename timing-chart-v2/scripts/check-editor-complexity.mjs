@@ -10,6 +10,7 @@ const exportDialogSource = await readFile(resolve(root, "apps/editor/src/export-
 const linkedSignalsSource = await readFile(resolve(root, "apps/editor/src/transaction-linked-signals.tsx"), "utf8");
 const advancedJsonSource = await readFile(resolve(root, "apps/editor/src/advanced-json-panel.tsx"), "utf8");
 const shellSource = await readFile(resolve(root, "apps/editor/src/editor-shell-view.tsx"), "utf8");
+const secondarySurfaceSource = await readFile(resolve(root, "apps/editor/src/editor-secondary-surfaces.tsx"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
@@ -49,6 +50,7 @@ const ownerBudgets = [
   ["apps/editor/src/minimal-cycle-view-panels.tsx", 500],
   ["apps/editor/src/editors/signal-editor.tsx", 500],
   ["apps/editor/src/editors/clock-generator-editor.tsx", 500],
+  ["apps/editor/src/application/editor-surface-command-controller.ts", 300],
 ];
 const forbiddenOwners = [
   ["Canonical mutation outside command/session path", /setSnapshot\([^)]*document|validateCanonicalDocument\([^)]*setSnapshot/],
@@ -72,6 +74,15 @@ const requiredSourceContracts = [
   ["timeline presentation state owner", /useTimelinePresentationState/],
   ["secondary surface owner", /useEditorSecondarySurfaces/],
 ];
+const presentationCommandSources = await Promise.all([
+  ["clock editor constructs semantic commands", "apps/editor/src/editors/clock-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["transaction lanes constructs semantic commands", "apps/editor/src/runtime/transaction-lanes.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["signal editor constructs semantic commands", "apps/editor/src/editors/signal-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["event table constructs semantic commands", "apps/editor/src/event-table.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["event row constructs semantic commands", "apps/editor/src/event-table-components.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["signal generator constructs semantic commands", "apps/editor/src/signal-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["comment row constructs semantic commands", "apps/editor/src/comment-row-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+].map(async ([name, owner, pattern]) => [name, pattern, await readFile(resolve(root, owner), "utf8")]));
 const requiredShellContracts = [
   ["workspace shell owner", /EditorWorkspaceView/],
   ["ribbon presentation boundary", /EditorRibbon/],
@@ -80,6 +91,8 @@ const violations = [
   ...forbiddenOwners.filter(([, pattern]) => pattern.test(source)).map(([name]) => name),
   ...requiredOwners.filter((owner) => !ownership.includes(owner)).map((owner) => `ownership map missing: ${owner}`),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
+  ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
+  ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),
   ...requiredShellContracts.filter(([, pattern]) => !pattern.test(shellSource)).map(([name]) => `${name} contract missing`),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(actionOwner) ? ["use-editor-actions must remain JSX-free"] : []),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(presentationOwner) ? ["use-editor-presentation-state must remain JSX-free"] : []),

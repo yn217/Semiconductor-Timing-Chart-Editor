@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { CommandResult } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
+import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { defaultEventValue, EventRow, QuickValues, ValueEditorControl } from "./event-table-components.js";
-import { nextCommandId } from "./command-id.js";
 
 // #426: Value Helper's own label/hint were hardcoded to "(Signal)" / the
 // binary 0-1-X-Z blurb regardless of the actually-selected Signal's real
@@ -22,7 +22,7 @@ function valueHelperCopy(signal: ValueSignal): { readonly label: string; readonl
   }
 }
 
-export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly generatorSlot?: ReactNode }) {
+export function EventTable({ signal, cycleCount, commands, generatorSlot }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues" | "updateValue" | "replaceValue" | "removeValue">; readonly generatorSlot?: ReactNode }) {
   const [start, setStart] = useState(0);
   const [value, setValue] = useState(defaultEventValue(signal));
   const [comment, setComment] = useState("");
@@ -37,8 +37,8 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
   const fileInput = useRef<HTMLInputElement>(null);
   const selected = signal.values.find((change) => change.start === selectedStart);
   const nextStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle)) ?? Math.max(0, cycleCount - 1);
-  const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => onCommand({ id: nextCommandId("replace_values"), type: "signal.replaceValues", signalId: signal.id, values: nextValues });
-  const addRow = () => onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start: nextStart, value });
+  const emitValue = (nextValues: readonly ValueSignal["values"][number][]): CommandResult => commands.replaceValues(signal.id, nextValues);
+  const addRow = () => commands.updateValue(signal.id, nextStart, value);
   // Row Actions compaction follow-up: the toolbar's Duplicate (targets
   // `selected`) and each row's own Duplicate icon (targets that row
   // directly) are the same operation parametrized over which change point
@@ -47,7 +47,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
   const duplicateChange = (source: ValueSignal["values"][number]) => {
     const duplicateStart = Array.from({ length: cycleCount }, (_, cycle) => cycle).find((cycle) => !signal.values.some((item) => item.start === cycle));
     if (duplicateStart === undefined) return;
-    onCommand({ id: nextCommandId("duplicate_value"), type: "signal.updateValue", signalId: signal.id, start: duplicateStart, value: source.value, ...(source.comment === undefined ? {} : { comment: source.comment }) });
+    commands.updateValue(signal.id, duplicateStart, source.value, source.comment);
   };
   const duplicateRow = () => { if (selected) duplicateChange(selected); };
   const canDuplicate = nextStart < cycleCount;
@@ -89,7 +89,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
   // `signal.updateValue` command path.
   const previewEnd = signal.values.filter((change) => change.start > start).map((change) => change.start).sort((a, b) => a - b)[0] ?? cycleCount;
   const addAndContinue = () => {
-    onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
+    commands.updateValue(signal.id, start, value, comment);
     // Auto-advance Start to the next free cycle (excluding the one just
     // committed) so continuous entry doesn't need manual arithmetic each
     // time -- Value is kept (commonly the next transition reuses it),
@@ -115,7 +115,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
     if (!soleChecked) return;
     const target = soleChecked.start + delta;
     if (target < 0 || target >= cycleCount || signal.values.some((change) => change.start === target)) return;
-    onCommand({ id: nextCommandId("move_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: soleChecked.start, start: target, value: String(soleChecked.value), ...(soleChecked.comment === undefined ? {} : { comment: soleChecked.comment }) });
+    commands.replaceValue(signal.id, soleChecked.start, target, String(soleChecked.value), soleChecked.comment);
     setCheckedStarts(new Set([target]));
   };
   const canMoveUp = soleChecked !== undefined && soleChecked.start > 0 && !signal.values.some((change) => change.start === soleChecked.start - 1);
@@ -141,7 +141,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
     <div className="event-panels">
       <form className="transition-form-panel" onSubmit={(event) => {
         event.preventDefault();
-        onCommand({ id: nextCommandId("add_value"), type: "signal.updateValue", signalId: signal.id, start, value, ...(comment ? { comment } : {}) });
+        commands.updateValue(signal.id, start, value, comment);
       }}>
         <h2>Add / Edit Transition</h2>
         {/* Density fix (#402/#426 follow-up): Start/Value/Comment used to
@@ -188,7 +188,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
     <div className="event-toolbar" role="toolbar" aria-label="Signal event commands" data-testid="signal-event-toolbar">
       <button type="button" onClick={duplicateRow} disabled={!selected || !canDuplicate} data-testid="event-duplicate">Duplicate</button>
       <button type="button" onClick={addRow} data-testid="event-add-row">Add Row</button>
-      <button type="button" className="danger" onClick={() => selected && onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: selected.start })} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
+      <button type="button" className="danger" onClick={() => selected && commands.removeValue(signal.id, selected.start)} disabled={!selected || signal.values.length === 1} data-testid="event-delete-row">Delete</button>
     </div>
     <div className="event-table-scroll">
       <div className="event-table" role="table" aria-label="Signal events">
@@ -197,7 +197,7 @@ export function EventTable({ signal, cycleCount, onCommand, generatorSlot }: { r
             exact same `checkedStarts` set each row's own checkbox feeds --
             not a decorative header cell. */}
         <div className="event-row event-columns" role="row"><input ref={selectAllRef} type="checkbox" aria-label="Select all transitions" checked={allChecked} onChange={toggleAll} /><span>#</span><span>Start</span><span>End</span><span>Duration</span><span>Value</span><span>Comment</span><span>Actions</span></div>
-        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} onCommand={onCommand} nextCommandId={nextCommandId} />)}
+        {signal.values.map((change, index) => <EventRow key={change.start} index={index + 1} signal={signal} change={change} end={signal.values[index + 1]?.start ?? cycleCount} selected={change.start === selectedStart} checked={checkedStarts.has(change.start)} canDuplicate={canDuplicate} onToggleChecked={() => toggleChecked(change.start)} onSelect={setSelectedStart} onDuplicate={() => duplicateChange(change)} commands={commands} />)}
       </div>
     </div>
     <div className="event-table-footer">

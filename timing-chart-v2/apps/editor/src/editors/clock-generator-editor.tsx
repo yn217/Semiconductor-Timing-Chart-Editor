@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { Bookmark, ClockGenerator, ClockSignal, EdgeCounterSettings, SignalId } from "@timing-chart-v2/schema";
 import { parseSuppressedPeriods } from "../runtime/clock-input.js";
-import { nextCommandId } from "../command-id.js";
 import { serializeClockSettings } from "../runtime/clock-settings.js";
 import { RibbonIcon } from "../ribbon-icon.js";
+import type { SignalEditorCommandActions } from "../application/editor-surface-command-controller.js";
 
-export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate, onPreview }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDuplicate: (signalId: SignalId) => void; readonly onPreview: (draft: ClockGenerator | undefined) => void }) {
+export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate, onPreview }: { readonly signal: ClockSignal; readonly bookmarks: readonly Bookmark[]; readonly commands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">; readonly onDuplicate: (signalId: SignalId) => void; readonly onPreview: (draft: ClockGenerator | undefined) => void }) {
   const [generator, setGenerator] = useState<ClockGenerator>(signal.generator);
   const [edgeCounter, setEdgeCounter] = useState<EdgeCounterSettings>(signal.edgeCounter);
   const [suppressedPeriods, setSuppressedPeriods] = useState((signal.generator.suppressedPeriods ?? []).join(", "));
@@ -92,7 +91,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
         const parsedSuppressedPeriods = parseSuppressedPeriods(suppressedPeriods);
         const { suppressedPeriods: _previousSuppressedPeriods, ...generatorWithoutSuppression } = generator;
         const nextGenerator: ClockGenerator = parsedSuppressedPeriods.length === 0 ? generatorWithoutSuppression : { ...generatorWithoutSuppression, suppressedPeriods: parsedSuppressedPeriods };
-        const result = onCommand({ id: nextCommandId("clock"), type: "signal.updateClockGenerator", signalId: signal.id, generator: nextGenerator });
+        const result = commands.updateClockGenerator(signal.id, nextGenerator);
         if (result.ok) setGeneratorError("");
         else setGeneratorError(result.problems.map((problem) => `${problem.code}: ${problem.message}`).join(" ") || "Clock Generator update rejected.");
       } catch (error) {
@@ -113,7 +112,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
     </form>
     <form className="clock-edge-counter" aria-label="Clock Edge Counter" onSubmit={(event) => {
       event.preventDefault();
-      onCommand({ id: nextCommandId("edge_counter"), type: "signal.updateEdgeCounter", signalId: signal.id, edgeCounter });
+      commands.updateEdgeCounter(signal.id, edgeCounter);
     }}>
       <h2>Edge Counter</h2>
       <label className="check-label">Show<input aria-label="Clock edge counter show" type="checkbox" checked={edgeCounter.show} onChange={(event) => setEdgeCounter({ ...edgeCounter, show: event.target.checked })} /></label>
