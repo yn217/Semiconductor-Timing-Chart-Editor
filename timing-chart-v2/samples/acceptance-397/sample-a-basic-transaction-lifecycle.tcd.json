@@ -1,0 +1,41 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "doc_sample_a",
+    "title": "Sample A -- Basic Transaction Lifecycle",
+    "header": { "subtitle": "#397 focused acceptance sample", "description": "48-cycle AXI-like handshake: 2 lanes, 4 Transactions, 2-3 phases each, linked Signals.", "notes": "", "preconditions": [], "constraints": [], "exceptions": [] },
+    "footer": { "figureNumber": "397-A", "revision": "V2", "text": "" }
+  },
+  "timeline": { "start": 0, "end": 48, "cycleCount": 48, "timeBase": "cycle", "edge": "rising", "labelAnchors": [] },
+  "signalGroups": [
+    { "id": "grp_ctrl", "name": "Control", "rows": ["sig_clock", "sig_reset_n", "sig_request", "sig_ready"] },
+    { "id": "grp_data", "name": "Data", "rows": ["sig_valid", "sig_data", "sig_resp"] }
+  ],
+  "signals": [
+    { "id": "sig_clock", "name": "CLOCK", "type": "clock", "role": "input", "source": { "instancePath": [], "signalName": "clock" }, "display": { "name": "CLOCK" }, "generator": { "start": 0, "period": 2, "duty": 0.5, "phase": 0, "initial": 0, "polarity": "positive" }, "edgeCounter": { "show": false, "mode": "rising", "startNumber": 0, "countFrom": "signal-start", "labelEvery": 1, "position": "above", "offset": { "x": 0, "y": 0 } } },
+    { "id": "sig_reset_n", "name": "RESET_N", "type": "binary", "role": "input", "source": { "instancePath": [], "signalName": "reset_n" }, "display": { "name": "RESET_N" }, "values": [{ "start": 0, "value": 0 }, { "start": 4, "value": 1 }] },
+    { "id": "sig_request", "name": "REQUEST", "type": "binary", "role": "input", "source": { "instancePath": [], "signalName": "request" }, "display": { "name": "REQUEST" }, "values": [{ "start": 0, "value": 0 }, { "start": 6, "value": 1 }, { "start": 12, "value": 0 }, { "start": 20, "value": 1 }, { "start": 26, "value": 0 }, { "start": 32, "value": 1 }, { "start": 38, "value": 0 }, { "start": 40, "value": 1 }, { "start": 46, "value": 0 }] },
+    { "id": "sig_ready", "name": "READY", "type": "binary", "role": "output", "source": { "instancePath": [], "signalName": "ready" }, "display": { "name": "READY" }, "values": [{ "start": 0, "value": 0 }, { "start": 10, "value": 1 }, { "start": 12, "value": 0 }, { "start": 24, "value": 1 }, { "start": 26, "value": 0 }, { "start": 36, "value": 1 }, { "start": 38, "value": 0 }, { "start": 44, "value": 1 }, { "start": 46, "value": 0 }] },
+    { "id": "sig_valid", "name": "VALID", "type": "binary", "role": "output", "source": { "instancePath": [], "signalName": "valid" }, "display": { "name": "VALID" }, "values": [{ "start": 0, "value": 0 }, { "start": 10, "value": 1 }, { "start": 12, "value": 0 }, { "start": 24, "value": 1 }, { "start": 26, "value": 0 }, { "start": 36, "value": 1 }, { "start": 38, "value": 0 }, { "start": 44, "value": 1 }, { "start": 46, "value": 0 }] },
+    { "id": "sig_data", "name": "DATA", "type": "bus", "role": "output", "width": 8, "displayFormat": "hex", "source": { "instancePath": [], "signalName": "data", "msb": 7, "lsb": 0 }, "display": { "name": "DATA" }, "values": [{ "start": 0, "value": "0" }, { "start": 10, "value": "A5" }, { "start": 12, "value": "0" }, { "start": 24, "value": "B6" }, { "start": 26, "value": "0" }, { "start": 36, "value": "C7" }, { "start": 38, "value": "0" }, { "start": 44, "value": "D8" }, { "start": 46, "value": "0" }] },
+    { "id": "sig_resp", "name": "RESP", "type": "state", "role": "output", "source": { "instancePath": [], "signalName": "resp" }, "display": { "name": "RESP" }, "values": [{ "start": 0, "value": "IDLE" }, { "start": 10, "value": "OKAY" }, { "start": 12, "value": "IDLE" }, { "start": 24, "value": "OKAY" }, { "start": 26, "value": "IDLE" }, { "start": 36, "value": "ERROR" }, { "start": 38, "value": "IDLE" }, { "start": 44, "value": "OKAY" }, { "start": 46, "value": "IDLE" }] }
+  ],
+  "transactionGroups": [
+    { "id": "tgrp_reads", "name": "Reads", "color": "#2f7dc9", "order": 0 },
+    { "id": "tgrp_writes", "name": "Writes", "color": "#c97a2f", "order": 1 }
+  ],
+  "transactions": [
+    { "id": "txn_read0", "name": "Read_0", "start": 6, "end": 12, "laneId": "lane_0", "groupId": "tgrp_reads", "phases": [ { "name": "Address", "start": 6, "end": 8 }, { "name": "Wait", "start": 8, "end": 10 }, { "name": "Response", "start": 10, "end": 12 } ], "linkedSignals": ["sig_request", "sig_ready", "sig_data"] },
+    { "id": "txn_write0", "name": "Write_0", "start": 20, "end": 26, "laneId": "lane_1", "groupId": "tgrp_writes", "phases": [ { "name": "Address", "start": 20, "end": 22 }, { "name": "Data", "start": 22, "end": 24 }, { "name": "Response", "start": 24, "end": 26 } ], "linkedSignals": ["sig_request", "sig_valid", "sig_data", "sig_resp"] },
+    { "id": "txn_read1", "name": "Read_1", "start": 32, "end": 38, "laneId": "lane_0", "groupId": "tgrp_reads", "phases": [ { "name": "Address", "start": 32, "end": 35 }, { "name": "Response", "start": 35, "end": 38 } ], "linkedSignals": ["sig_request", "sig_ready", "sig_data"] },
+    { "id": "txn_write1", "name": "Write_1", "start": 40, "end": 46, "laneId": "lane_1", "groupId": "tgrp_writes", "phases": [ { "name": "Address", "start": 40, "end": 42 }, { "name": "Data", "start": 42, "end": 44 }, { "name": "Response", "start": 44, "end": 46 } ], "linkedSignals": ["sig_request", "sig_valid", "sig_resp"] }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [],
+  "annotationGroups": [],
+  "constraints": [],
+  "legend": { "show": true, "orientation": "horizontal", "usedRolesOnly": true, "position": { "x": 0, "y": 0 } },
+  "layout": { "roleColumnWidth": 62, "signalNameWidth": 178, "signalNameAlign": "left", "rowHeight": 30, "signalSpacing": 4, "overflow": "ellipsis" },
+  "checkSettings": {}
+}
