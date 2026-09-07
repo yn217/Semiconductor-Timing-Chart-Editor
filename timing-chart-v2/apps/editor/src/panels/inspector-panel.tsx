@@ -113,6 +113,13 @@ export function InspectorPanel({ signal, group, annotation, transaction, bookmar
   // so leaving this empty on Apply is what actually clears a previous
   // override back to inherited, not merely "didn't touch the field".
   const [transactionColor, setTransactionColor] = useState(transaction?.color ?? "");
+  // #454: General section's "Description/Comment" field -- Canonical
+  // already carries `Transaction.description` (round-tripped through
+  // Save/Open and the existing transaction.update command), it just had
+  // no Inspector control to read/write it. Same full-replace-from-command
+  // semantics as Color/Group above: an empty Draft clears a previously
+  // committed description, it isn't "leave whatever was there".
+  const [transactionDescription, setTransactionDescription] = useState(transaction?.description ?? "");
   // #393 item C: phaseRows (a structured Name/Start/End table) is the one
   // real source of truth for Apply Transaction below -- the Advanced/JSON
   // textarea is a secondary INPUT method that, via its own separate "Apply
@@ -175,6 +182,7 @@ export function InspectorPanel({ signal, group, annotation, transaction, bookmar
         <label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} /></label>
         <label>Group<select aria-label="Transaction group" value={transactionGroupId} onChange={(event) => setTransactionGroupId(event.target.value)}><option value="">Ungrouped</option>{document.transactionGroups?.map((groupOption) => <option key={groupOption.id} value={groupOption.id}>{groupOption.name}</option>)}</select></label>
         <label>Color<span className="inspector-field-with-help"><input aria-label="Transaction color" type="color" value={transactionColor || document.transactionGroups?.find((groupOption) => groupOption.id === (transactionGroupId || undefined))?.color || "#8895a7"} onChange={(event) => setTransactionColor(event.target.value)} />{transactionColor && <button type="button" data-testid="transaction-use-group-color" onClick={() => setTransactionColor("")}>Use Group Color</button>}</span></label>
+        <label>Description<textarea aria-label="Transaction description" rows={2} value={transactionDescription} onChange={(event) => setTransactionDescription(event.target.value)} /></label>
       </InspectorSection>
       <InspectorSection sectionId="timing" title="Timing" open={transactionSections.timing ?? true} onToggle={() => toggleTransactionSection("timing")}>
         <div className="inspector-property-pair"><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label></div>
@@ -189,7 +197,7 @@ export function InspectorPanel({ signal, group, annotation, transaction, bookmar
       </InspectorSection>
       {transactionStatus && <output role="status">{transactionStatus}</output>}
       <section><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>
-      <InspectorFooter onCancel={onCancel} onApply={() => { const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() })); if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transactionStart || phase.start >= phase.end || phase.end > transactionEnd)) { setTransactionStatus("Phases must be named integer-cycle half-open subranges within Start..End."); return; } setTransactionStatus(""); commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, phases, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}) }); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && JSON.stringify(phaseRows) === JSON.stringify(transaction.phases ?? [])} applyTestId="apply-inspector-transaction" />
+      <InspectorFooter onCancel={onCancel} onApply={() => { const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() })); if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transactionStart || phase.start >= phase.end || phase.end > transactionEnd)) { setTransactionStatus("Phases must be named integer-cycle half-open subranges within Start..End."); return; } setTransactionStatus(""); commands.updateTransaction({ transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, phases, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}), description: transactionDescription }); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && transactionDescription === (transaction.description ?? "") && JSON.stringify(phaseRows) === JSON.stringify(transaction.phases ?? [])} applyTestId="apply-inspector-transaction" />
     </>}
     <MiniMap document={document} viewport={viewport} />
   </aside>;

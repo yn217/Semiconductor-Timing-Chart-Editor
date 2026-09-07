@@ -36,6 +36,9 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await inspector.getByLabel("Transaction name").fill("AXI Burst");
   await inspector.getByLabel("Transaction name").blur();
   await inspector.getByLabel("Transaction lane").fill("lane_1");
+  // #454: General section's Description field -- same Draft/Apply gate
+  // and full-replace-on-command semantics as Color/Group.
+  await inspector.getByLabel("Transaction description").fill("AXI burst read across the shared bus");
   await inspector.getByTestId("apply-inspector-transaction").click();
   await linkSignal(inspector, "REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
@@ -53,6 +56,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await page.locator(".bottom-tabs").getByRole("tab", { name: "Transaction" }).click();
   await page.getByTestId("transaction-editor").getByRole("button", { name: /AXI Burst/ }).click();
   await expect(page.getByTestId("inspector").getByLabel("Transaction name")).toHaveValue("AXI Burst");
+  await expect(page.getByTestId("inspector").getByLabel("Transaction description")).toHaveValue("AXI burst read across the shared bus");
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
