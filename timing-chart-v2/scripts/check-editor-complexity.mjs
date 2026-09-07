@@ -1,9 +1,20 @@
-import { readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const file = "apps/editor/src/minimal-cycle-view.tsx";
 const ownershipMap = "apps/editor/src/OWNERSHIP.md";
+const deprecatedRuntimeBridge = resolve(root, "apps/editor/src/runtime/use-editor-runtime-bridge.ts");
+let deprecatedRuntimeBridgeExists = true;
+try { await access(deprecatedRuntimeBridge); } catch { deprecatedRuntimeBridgeExists = false; }
+async function collectSourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const target = resolve(directory, entry.name);
+    return entry.isDirectory() ? collectSourceFiles(target) : [target];
+  }));
+  return nested.flat();
+}
 const actionOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-actions.ts"), "utf8");
 const presentationOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-presentation-state.ts"), "utf8");
 const exportDialogSource = await readFile(resolve(root, "apps/editor/src/export-dialog.tsx"), "utf8");
@@ -12,7 +23,19 @@ const advancedJsonSource = await readFile(resolve(root, "apps/editor/src/advance
 const shellSource = await readFile(resolve(root, "apps/editor/src/editor-shell-view.tsx"), "utf8");
 const secondarySurfaceSource = await readFile(resolve(root, "apps/editor/src/editor-secondary-surfaces.tsx"), "utf8");
 const ribbonSource = await readFile(resolve(root, "apps/editor/src/minimal-cycle-view-ribbon.tsx"), "utf8");
+const applicationRuntimeSource = await readFile(resolve(root, "apps/editor/src/runtime/editor-application-runtime.ts"), "utf8");
+const timelineSurfaceSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
+const timelineInteractionsSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-interactions.ts"), "utf8");
+const timelineRuntimeHookSource = await readFile(resolve(root, "apps/editor/src/runtime/use-timeline-surface-runtime.ts"), "utf8");
+const renderInvalidationSource = await readFile(resolve(root, "apps/editor/src/runtime/render-invalidation.ts"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
+const editorReactSources = await Promise.all((await collectSourceFiles(resolve(root, "apps/editor/src")))
+  .filter((target) => target.endsWith(".tsx"))
+  .map(async (target) => [target, await readFile(target, "utf8")]));
+const isOptInProbe = (target) => {
+  const normalized = target.replaceAll("\\", "/");
+  return normalized.includes("/probes/") || normalized.endsWith("/minimal-cycle-view-next-probe.tsx");
+};
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
   "apps/editor/src/runtime/viewport-projection.ts",
@@ -75,6 +98,22 @@ const requiredSourceContracts = [
   ["timeline presentation state owner", /useTimelinePresentationState/],
   ["secondary surface owner", /useEditorSecondarySurfaces/],
 ];
+const runtimeOwnershipContracts = [
+  ["application runtime owns document epoch", applicationRuntimeSource, /class EditorApplicationRuntime[\s\S]*documentEpoch\s*=\s*new DocumentEpoch/],
+  ["application runtime owns display mapping", applicationRuntimeSource, /displayMapping\s*=\s*new DisplayMappingCoordinator/],
+  ["application runtime owns geometry and projection", applicationRuntimeSource, /geometry\s*=\s*new GeometryRegistry[\s\S]*projection\s*=\s*new ProjectionCoordinator/],
+  ["application runtime creates renderer and WaveDrom adapter", applicationRuntimeSource, /createRenderer\([\s\S]*createWaveDromAdapter\(/],
+  ["timeline surface is a typed runtime owner", timelineRuntimeHookSource, /createTimelineSurfaceController\(input\)/],
+  ["timeline surface owns WaveDrom provider", timelineSurfaceSource, /createWaveformSurfaceProvider\(/],
+  ["timeline surface owns one geometry owner", timelineSurfaceSource, /new TimelineGeometryOwner\(/],
+  ["timeline surface owns renderer lifecycle", timelineSurfaceSource, /runtime\.createRenderer\([\s\S]*renderCoordinator\.dispose\(/],
+  ["timeline surface reads current session state", timelineSurfaceSource, /session\.getSnapshot\(\)|sessionController\.snapshot\(\)/],
+  ["timeline interactions read replaceable session state", timelineInteractionsSource, /getSnapshot:\s*\(\)\s*=>|getSnapshot\(\)\.document/],
+  ["timeline interactions do not capture a mount-time session", timelineInteractionsSource, /readonly getSnapshot:/],
+  ["timeline surface owns document epoch boundary", timelineSurfaceSource, /documentEpoch\.(?:current|advance|isCurrent)\(/],
+  ["render invalidation has one pure owner", renderInvalidationSource, /export function deriveRenderInvalidation\(/],
+];
+const directReactRuntimeOwnerPattern = /new\s+(?:EditorApplicationRuntime|CommandHistorySession|TimelineGeometryOwner)|createWaveformSurfaceProvider\s*\(|runtime\.createRenderer\s*\(|new\s+ProductionWaveDromAdapter/;
 const presentationCommandSources = await Promise.all([
   ["clock editor constructs semantic commands", "apps/editor/src/editors/clock-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["transaction lanes constructs semantic commands", "apps/editor/src/runtime/transaction-lanes.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
@@ -98,6 +137,10 @@ const violations = [
   ...requiredOwners.filter((owner) => !ownership.includes(owner)).map((owner) => `ownership map missing: ${owner}`),
   ...(!rootAllowListContract.test(ownership) ? ["ownership map missing MinimalCycleView root allow-list"] : []),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
+  ...runtimeOwnershipContracts.filter(([, ownerSource, pattern]) => !pattern.test(ownerSource)).map(([name]) => `${name} contract missing`),
+  ...(/readonly session\s*:/.test(timelineInteractionsSource) ? ["timeline interactions must not capture a mount-time session"] : []),
+  ...(deprecatedRuntimeBridgeExists ? ["deprecated runtime compatibility bridge must not be restored"] : []),
+  ...editorReactSources.filter(([target, reactSource]) => !isOptInProbe(target) && directReactRuntimeOwnerPattern.test(reactSource)).map(([target]) => `React presentation directly owns long-lived runtime: ${target.replace(`${root}/`, "")}`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
   ...(!/EditorSurfaceCommandController/.test(ribbonSource) || !/commands\.(?:createSignal|bringAnnotationsToFront|updateAnnotationStyle)/.test(ribbonSource) ? ["ribbon typed command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),

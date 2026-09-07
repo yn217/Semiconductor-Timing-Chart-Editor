@@ -19,6 +19,7 @@ import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
 import { nextCommandId } from "../command-id.js";
 
 type Session = ReturnType<EditorApplicationOwner["runtime"]["session"]["current"]>;
+type SessionSnapshot = ReturnType<Session["getSnapshot"]>;
 type TimelineRange = Readonly<{ start: number; end: number }>;
 
 export interface TimelineSurfaceInteractionInput {
@@ -29,7 +30,8 @@ export interface TimelineSurfaceInteractionInput {
   readonly renderer: Pick<TimingChartRenderer, "updateSnapGuide" | "updateOverlays">;
   readonly timelineGeometry: TimelineGeometryOwner;
   readonly documentEpoch: Pick<DocumentEpoch, "current" | "isCurrent">;
-  readonly session: Session;
+  /** Read the replaceable document session at event time, never a mount-time session object. */
+  readonly getSnapshot: () => SessionSnapshot;
   readonly timelineNavigation: TimelineNavigationOwner;
   readonly timelineRuntime: Pick<TimelineViewportRuntime, "refreshOverlays" | "refreshPlayhead">;
   readonly getProjection: () => RenderProjection;
@@ -100,7 +102,7 @@ export function createTimelineCycleBoundaryResolver(input: Readonly<{ rendererHo
 export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteractionInput): TimelineSurfaceInteractionHandle {
   const {
     rendererHost, viewportElement, rulerElement, rulerViewportElement, renderer, timelineGeometry, documentEpoch,
-    session, timelineNavigation, timelineRuntime, getProjection, getTimelineOffset, getPendingArrow, clearPendingArrow,
+    getSnapshot, timelineNavigation, timelineRuntime, getProjection, getTimelineOffset, getPendingArrow, clearPendingArrow,
     applyCanvasCycleSelection, onSelect, onTreeKeyDown, onScroll, onViewportKeyDown,
     selection, execute, executeBatch, commandRegistry, snapEnabledRef, timelineRangeRef, selectedCycleRef, selectedEdgeRef,
     lowerCanvasClickRef, menuOriginRef, suppressCanvasClickRef, setRangeSelectionActive, setRange, setSelectedCycle,
@@ -143,12 +145,12 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
     if (!tick) return;
     const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-    if (!Number.isInteger(cycle) || cycle > session.getSnapshot().document.timeline.cycleCount) return;
+    if (!Number.isInteger(cycle) || cycle > getSnapshot().document.timeline.cycleCount) return;
     selectedEdgeRef.current = undefined;
     setRangeSelectionActive(true);
     setSelectedCycle(cycle);
     rendererHost.dataset.selectedCycle = String(cycle);
-    if (cycle === session.getSnapshot().document.timeline.cycleCount) {
+    if (cycle === getSnapshot().document.timeline.cycleCount) {
       setRange({ start: Math.max(0, cycle - 1), end: cycle });
       return;
     }
@@ -197,7 +199,7 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     rendererHost,
     isTimeDomainPointerTarget,
     cycleBoundaryAtX,
-    getCycleCount: () => session.getSnapshot().document.timeline.cycleCount,
+    getCycleCount: () => getSnapshot().document.timeline.cycleCount,
     getRange: () => timelineRangeRef.current,
     getSelectedCycle: () => selectedCycleRef.current,
     setSelectedCyclePreview: (cycle) => { selectedCycleRef.current = cycle; },
@@ -208,13 +210,13 @@ export function attachTimelineSurfaceInteractions(input: TimelineSurfaceInteract
     refreshRange: refreshRangePreview,
     refreshPlayhead: () => timelineRuntime.refreshPlayhead(),
   });
-  const treeDrag = new TreeDragInteractionOwner({ rendererHost, getDocument: () => session.getSnapshot().document, execute });
+  const treeDrag = new TreeDragInteractionOwner({ rendererHost, getDocument: () => getSnapshot().document, execute });
   const annotationInteraction = new AnnotationInteractionOwner({
     rendererHost, renderer, timelineGeometry, documentEpoch, getZoom: timelineNavigation.getZoom,
-    getDocument: () => session.getSnapshot().document, getProjection, isSnapEnabled: () => snapEnabledRef.current,
+    getDocument: () => getSnapshot().document, getProjection, isSnapEnabled: () => snapEnabledRef.current,
     execute, executeBatch,
     getDragTargets: (annotationId) => {
-      const document = session.getSnapshot().document;
+      const document = getSnapshot().document;
       const group = (document.annotationGroups ?? []).find((candidate) => candidate.annotationIds.includes(annotationId as AnnotationId));
       if (group) return new Set(group.annotationIds);
       const multi = selection.refs.annotationIds.current;
