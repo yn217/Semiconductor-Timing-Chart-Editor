@@ -1,14 +1,14 @@
 import type { RefObject, ReactNode } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, Signal } from "@timing-chart-v2/schema";
 import { MiniMap } from "./minimap.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
+import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 
 type InspectorSignalEditorBaseProps = {
   readonly signal: Signal;
   readonly document: Readonly<CanonicalDocument>;
   readonly viewport: RefObject<HTMLDivElement | null>;
-  readonly onCommand: (command: SemanticCommand) => CommandResult;
+  readonly commands: EditorSurfaceCommandController;
   readonly onReveal: () => void;
   readonly onCancel: () => void;
   readonly onClose: () => void;
@@ -18,8 +18,8 @@ type InspectorSignalEditorProps = InspectorSignalEditorBaseProps & {
   readonly renderValue: (props: InspectorSignalEditorBaseProps & { readonly signal: Exclude<Signal, { readonly type: "clock" | "commentRow" }> }) => ReactNode;
 };
 
-export function InspectorSignalRouter({ signal, document, viewport, onCommand, onReveal, onCancel, onClose, renderClock, renderValue }: InspectorSignalEditorProps) {
-  const props: InspectorSignalEditorBaseProps = { signal, document, viewport, onCommand, onReveal, onCancel, onClose };
+export function InspectorSignalRouter({ signal, document, viewport, commands, onReveal, onCancel, onClose, renderClock, renderValue }: InspectorSignalEditorProps) {
+  const props: InspectorSignalEditorBaseProps = { signal, document, viewport, commands, onReveal, onCancel, onClose };
   if (signal.type === "clock") return renderClock({ ...props, signal });
   if (signal.type === "commentRow") return <aside className="inspector" data-testid="inspector">
     <InspectorHeaderBar onClose={onClose} />

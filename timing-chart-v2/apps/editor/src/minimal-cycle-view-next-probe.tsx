@@ -10,6 +10,8 @@ import { createMinimalCycleApplicationSession } from "./minimal-cycle-view-appli
 import { ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
 import { InspectorPanel } from "./panels/inspector-panel.js";
 import { MinimalCycleViewBottomEditor, MinimalCycleViewNextStatusBar, MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
+import { createEditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
+import { nextCommandId } from "./command-id.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
 export function MinimalCycleViewNextProbe() {
@@ -30,6 +32,7 @@ export function MinimalCycleViewNextProbe() {
   const gridLayerRef = useRef<HTMLDivElement>(null);
   const localGeometryRef = useRef<LocalGeometryMap | undefined>(undefined);
   const registry = useMemo(() => new UiCommandRegistry(), []);
+  const surfaceCommands = useMemo(() => createEditorSurfaceCommandController({ execute: (command) => { const result = session.execute(command); refresh((value) => value + 1); return result; }, nextCommandId }), [session]);
   const snapshot = session.getSnapshot();
   useEffect(() => {
     const owner = surfaceHostRef.current;
@@ -71,9 +74,9 @@ export function MinimalCycleViewNextProbe() {
     ribbonUi: null,
     signalTreeAndCanvasUi: <MinimalCycleViewSignalTreeCanvas document={snapshot.document} selectedSignalId={nextSelectedSignalId} onSelect={setNextSelectedSignalId} surfaceHostRef={surfaceHostRef} rulerRef={rulerRef} gridLayerRef={gridLayerRef} />,
     bottomEditorUi: <MinimalCycleViewBottomEditor tab={nextBottomTab} onTabChange={setNextBottomTab} followSelection={followSelection} onFollowSelectionChange={setFollowSelection} pinned={bottomPinned} onPinnedChange={setBottomPinned} />,
-    inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} bookmark={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} onCommand={(command) => session.execute(command)} onReveal={() => undefined} onCancel={() => undefined} onClose={() => undefined} onDeleteBookmark={() => undefined} onToggleTransactionSignal={() => undefined} /></aside>,
+    inspectorShellUi: <aside data-testid="next-inspector"><InspectorPanel signal={undefined} group={undefined} annotation={undefined} transaction={undefined} bookmark={undefined} collapsedGroup={false} onToggleGroupCollapse={undefined} registry={registry} document={snapshot.document} viewport={viewportRef} commands={surfaceCommands} onReveal={() => undefined} onCancel={() => undefined} onClose={() => undefined} onDeleteBookmark={() => undefined} onToggleTransactionSignal={() => undefined} /></aside>,
     dialogsUi: <ContextMenuPanel contextMenu={undefined} hasSelectedClipboard={false} clipboardAvailable={false} hasSelectedEntity={false} hasSelectedSignal={false} hasDeletableSelection={false} copySelectedSignal={() => undefined} cutSelectedSignal={() => undefined} pasteSelectedEntity={() => undefined} duplicateSelectedEntity={() => undefined} moveSelection={() => undefined} setSelectionVisibility={() => undefined} renameSelection={() => undefined} closeContextMenu={() => undefined} deleteSelection={() => undefined} />,
     statusBarUi: <MinimalCycleViewNextStatusBar document={snapshot.document} revision={snapshot.revision} history={session.historyState()} />,
-  }), [snapshot, session, registry, ribbonTab, viewMode, bottomTab, zoom, selectedCycle, nextBottomTab, followSelection, bottomPinned, nextSelectedSignalId]);
+  }), [snapshot, session, registry, surfaceCommands, ribbonTab, viewMode, bottomTab, zoom, selectedCycle, nextBottomTab, followSelection, bottomPinned, nextSelectedSignalId]);
   return <MinimalCycleViewNext source={source} />;
 }
