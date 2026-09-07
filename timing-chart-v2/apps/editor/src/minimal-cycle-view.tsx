@@ -1172,6 +1172,8 @@ export function MinimalCycleView() {
       onExport={() => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); }}
       onToggleInspector={() => startTransition(() => setInspectorVisible((value) => !value))}
       onToggleBottom={() => startTransition(() => setBottomVisible((value) => !value))}
+      bottomHeight={bottomHeight}
+      onSetBottomSize={(size) => { if (size === "hidden") { setBottomVisible(false); return; } setBottomVisible(true); setBottomHeight(size === "compact" ? 180 : 420); }}
       onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
       onOpenTimeline={() => setRibbonTab("Timeline")}
       onOpenBookmarks={() => { setBottomTab("Bookmarks"); setBottomVisible(true); }}
