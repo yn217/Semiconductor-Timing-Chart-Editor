@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
-import { DeterministicExportService } from "@timing-chart-v2/export";
 import type { CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { DocumentProblem } from "@timing-chart-v2/schema";
+import type { EditorExportController } from "./application/editor-export-controller.js";
 
 function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, restoreFocusRef?: RefObject<HTMLElement | null>): void {
   useEffect(() => {
@@ -28,20 +28,11 @@ function useExportDialogFocusLoop(dialogRef: RefObject<HTMLElement | null>, rest
   }, [dialogRef, restoreFocusRef]);
 }
 
-function downloadBytes(bytes: Uint8Array, filename: string, type: string): void {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type }));
-  const anchor = globalThis.document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.click();
-  URL.revokeObjectURL(url);
-}
-
 function ExportCloseIcon(): ReactNode {
   return <svg aria-hidden="true" focusable="false" viewBox="0 0 24 24" width="16" height="16"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>;
 }
 
-export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, onClose }: { readonly snapshot: CanonicalSnapshot; readonly range: { start: number; end: number }; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onDiagnostic: (diagnostic: DocumentProblem | undefined) => void; readonly onClose: () => void }) {
+export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, onClose, controller }: { readonly snapshot: CanonicalSnapshot; readonly range: { start: number; end: number }; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onDiagnostic: (diagnostic: DocumentProblem | undefined) => void; readonly onClose: () => void; readonly controller: EditorExportController }) {
   const [format, setFormat] = useState<"svg" | "png" | "pdf">("svg");
   const [scope, setScope] = useState<"document" | "selected-range">("document");
   const [scale, setScale] = useState(2);
@@ -58,9 +49,9 @@ export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, o
   const exportNow = async () => {
     setStatus("Generating…");
     try {
-      const bytes = await new DeterministicExportService().export({ format, snapshot, settings: settings() });
+      const bytes = await controller.export({ format, snapshot, settings: settings() });
       try {
-        downloadBytes(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
+        controller.download(bytes, `${snapshot.document.document.title || "timing-chart"}.${format}`, format === "svg" ? "image/svg+xml" : format === "png" ? "image/png" : "application/pdf");
       } catch (error) {
         const reason = error instanceof Error ? error.message : "Browser download preparation failed.";
         onDiagnostic({ code: "EXPORT_FAILED", path: "$.export.download", message: `Export download failed: ${reason}`, severity: "error", operation: "document.export.download", operationLabel: `Download ${format.toUpperCase()} export`, source: "export", stage: "storage", recommendation: "Retry the download or choose another export format.", detail: "export-failure:download" });
@@ -78,13 +69,8 @@ export function ExportDialog({ snapshot, range, restoreFocusRef, onDiagnostic, o
   const copyNow = async (copyFormat: "svg" | "png") => {
     setStatus("Copying…");
     try {
-      const bytes = await new DeterministicExportService().export({ format: copyFormat, snapshot, settings: settings() });
-      if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") throw new Error("Clipboard API is unavailable in this browser.");
-      const mime = copyFormat === "svg" ? "image/svg+xml" : "image/png";
-      const blobBytes = bytes.slice().buffer as ArrayBuffer;
-      const blob = new Blob([blobBytes], { type: mime });
-      const items = copyFormat === "svg" ? { "image/svg+xml": blob, "text/plain": new Blob([new TextDecoder().decode(bytes)], { type: "text/plain" }) } : { "image/png": blob };
-      await navigator.clipboard.write([new ClipboardItem(items)]);
+      const bytes = await controller.export({ format: copyFormat, snapshot, settings: settings() });
+      await controller.copyImage(bytes, copyFormat);
       onDiagnostic(undefined);
       setStatus(`${copyFormat.toUpperCase()} copied`);
     } catch (error) {

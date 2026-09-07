@@ -37,6 +37,7 @@ import { useTimelinePresentationState } from "./workspace/use-timeline-presentat
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
 import { useEditorSecondarySurfaces } from "./editor-secondary-surfaces.js";
+import { createEditorExportController } from "./application/editor-export-controller.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { attachMenuKeyboardNavigation, refreshRendererOverlays } from "./runtime/use-editor-runtime-bridge.js";
 import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
@@ -46,6 +47,7 @@ export function MinimalCycleView() {
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
   const application = useEditorApplicationOwner(initialDocument);
   const documentLifecycle = useDocumentLifecycle({ application, productTemplate: cycleDocument, persistText: downloadText });
+  const exportController = useMemo(() => createEditorExportController(), []);
   const { snapshot, history, problem, validationDiagnostics, runtimeDiagnostics, setProblem, setRuntimeDiagnostics } = application;
   const host = useRef<HTMLDivElement>(null);
   const viewport = useRef<HTMLDivElement>(null);
@@ -708,7 +710,7 @@ export function MinimalCycleView() {
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
     {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
     {bulkRegistrationVisible && <BulkRegistrationDialog dialogRef={bulkRegistrationDialogRef} groups={snapshot.document.signalGroups} text={bulkRegistrationText} onTextChange={(value) => { setBulkRegistrationText(value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} groupId={bulkRegistrationGroupId} onGroupIdChange={setBulkRegistrationGroupId} status={bulkRegistrationStatus} preview={bulkRegistrationPreview} onPreview={previewBulkSignals} onApply={registerBulkSignals} onClose={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })} />}
-    {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
+    {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} controller={exportController} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
     </EditorDialogLayer>}
     status={<EditorStatusBar

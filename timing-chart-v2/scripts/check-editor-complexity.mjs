@@ -6,6 +6,8 @@ const file = "apps/editor/src/minimal-cycle-view.tsx";
 const ownershipMap = "apps/editor/src/OWNERSHIP.md";
 const actionOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-actions.ts"), "utf8");
 const presentationOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-presentation-state.ts"), "utf8");
+const exportDialogSource = await readFile(resolve(root, "apps/editor/src/export-dialog.tsx"), "utf8");
+const linkedSignalsSource = await readFile(resolve(root, "apps/editor/src/transaction-linked-signals.tsx"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
@@ -26,6 +28,7 @@ const ownerBudgets = [
   ["apps/editor/src/editor-dialog-layer.tsx", 500],
   ["apps/editor/src/editor-secondary-surfaces.tsx", 500],
   ["apps/editor/src/editor-shell-view.tsx", 300],
+  ["apps/editor/src/application/editor-export-controller.ts", 250],
   ["apps/editor/src/runtime/presentation-preview.ts", 500],
 ];
 const forbiddenOwners = [
@@ -57,6 +60,8 @@ const violations = [
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(actionOwner) ? ["use-editor-actions must remain JSX-free"] : []),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(presentationOwner) ? ["use-editor-presentation-state must remain JSX-free"] : []),
+  ...(exportDialogSource.includes("DeterministicExportService") ? ["ExportDialog must use EditorExportController"] : []),
+  ...(/nextCommandId|SemanticCommand|transaction\.(?:linkSignal|unlinkSignal)/.test(linkedSignalsSource) ? ["TransactionLinkedSignals must use an application callback"] : []),
   ...(source.includes("new TimelineGeometryOwner") || source.includes("createWaveformSurfaceProvider") || source.includes("attachEditorEventBindings") ? ["runtime lifecycle leaked into MinimalCycleView"] : []),
   ...runtimeHelperSources.flatMap(([helper, helperSource]) => helperSource.length === 0 ? [`empty runtime helper: ${helper}`] : []),
 ];

@@ -86,6 +86,7 @@ export interface EditorActions {
   readonly deleteBottomAnnotation: () => void;
   readonly deleteBottomTransaction: () => void;
   readonly selectTransaction: (id: TransactionId) => void;
+  readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: () => void;
   readonly duplicateAnnotation: (annotation: Annotation) => void;
   readonly clearSelection: () => void;
@@ -190,6 +191,12 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     if (result.ok && !input.bottomPinnedRef.current && input.selectedTransactionRef.current === input.bottomTransaction.id) input.selection.clear();
   };
   const selectTransaction = (id: TransactionId) => input.selection.selectTransaction(id);
+  const toggleTransactionSignal = (transactionId: TransactionId, signalId: SignalId) => input.application.execute({
+    id: input.nextCommandId("transaction_link"),
+    type: input.document.transactions.find((item) => item.id === transactionId)?.linkedSignals?.includes(signalId) ? "transaction.unlinkSignal" : "transaction.linkSignal",
+    transactionId,
+    signalId,
+  });
   const createTransaction = () => {
     const id = nextEntityId("transaction", input.document) as TransactionId;
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
@@ -419,6 +426,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     deleteBottomAnnotation,
     deleteBottomTransaction,
     selectTransaction,
+    toggleTransactionSignal,
     createTransaction,
     duplicateAnnotation,
     clearSelection,

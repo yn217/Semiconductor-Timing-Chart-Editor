@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
-import type { CommandId, Signal, Transaction } from "@timing-chart-v2/schema";
+import type { Signal, SignalId, Transaction } from "@timing-chart-v2/schema";
 
 type UnlinkButton = (label: string, onClick: () => void) => ReactNode;
 
-export function TransactionLinkedSignals({ transaction, document, onCommand, nextCommandId, renderUnlinkButton }: { readonly transaction: Transaction; readonly document: Readonly<CanonicalDocument>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly nextCommandId: (prefix: string) => CommandId; readonly renderUnlinkButton: UnlinkButton }) {
+export function TransactionLinkedSignals({ transaction, document, onToggle, renderUnlinkButton }: { readonly transaction: Transaction; readonly document: Readonly<CanonicalDocument>; readonly onToggle: (signalId: SignalId) => void; readonly renderUnlinkButton: UnlinkButton }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [linkedFilter, setLinkedFilter] = useState("");
@@ -21,7 +20,7 @@ export function TransactionLinkedSignals({ transaction, document, onCommand, nex
   const results = searchableSignals.filter((item) => !normalizedQuery || item.normalizedSearchText.includes(normalizedQuery)).slice(0, 50).map((item) => item.signal);
   const [activeIndex, setActiveIndex] = useState(0);
   useEffect(() => { setActiveIndex((index) => results.length === 0 ? 0 : Math.min(index, results.length - 1)); }, [results.length, normalizedQuery]);
-  const toggle = (signal: Signal) => onCommand({ id: nextCommandId("transaction_link"), type: linkedIds.has(signal.id) ? "transaction.unlinkSignal" : "transaction.linkSignal", transactionId: transaction.id, signalId: signal.id });
+  const toggle = (signal: Signal) => onToggle(signal.id);
   const handleResultsKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (results.length === 0) return;
     if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
