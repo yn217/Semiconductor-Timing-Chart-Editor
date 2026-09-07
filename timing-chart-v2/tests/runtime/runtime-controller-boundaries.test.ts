@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { attachEditorEventBindings, resolveTransactionSnapCycle } from "../../apps/editor/src/runtime/interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "../../apps/editor/src/runtime/document-lifecycle-controller.js";
+import { createSignalSplitSurfaceController } from "../../apps/editor/src/runtime/signal-split-surface-controller.js";
 import { createTimelineSurfaceController, type TimelineSurfaceRuntimeInput } from "../../apps/editor/src/runtime/timeline-surface-controller.js";
 
 describe("runtime controller boundaries", () => {
@@ -87,5 +88,28 @@ describe("runtime controller boundaries", () => {
     } as unknown as TimelineSurfaceRuntimeInput);
 
     expect(controller.mount()).toBeUndefined();
+  });
+
+  it("keeps the signal-split lifecycle behind a non-React owner", () => {
+    const dispose = vi.fn();
+    const setPane = vi.fn();
+    const forceUpperReproject = vi.fn();
+    const controller = createSignalSplitSurfaceController({
+      application: { runtime: { projection: { setPane }, session: {} } } as never,
+      dom: {
+        host: { current: null }, viewport: { current: null }, ruler: { current: null }, gridLayer: { current: null },
+        viewportLower: { current: null }, rulerLower: { current: null }, hostLower: { current: null }, gridLayerLower: { current: null },
+        signalSplitRuntimeRef: { current: { dispose } },
+      },
+      presentation: {
+        collapsedGroupIdsRef: { current: new Set() }, applyCollapsedGroupsRef: { current: () => undefined }, forceUpperReprojectRef: { current: forceUpperReproject }, lowerCanvasClickRef: { current: () => undefined }, timelineRuntimeRef: { current: null }, armArrowPick: { current: () => undefined }, snapTransactionCycle: { current: () => undefined }, transactionBoundaryX: { current: () => undefined }, refreshPlayhead: { current: () => undefined }, refreshRangeSelectionBand: { current: () => undefined }, publishStateRef: { current: () => undefined }, timelineRangeRef: { current: { start: 0, end: 1 } }, rangeSelectionActiveRef: { current: false }, selectedCycleRef: { current: 0 }, selectedEdgeRef: { current: undefined }, selectedAnnotationRef: { current: undefined }, gridEnabledRef: { current: false }, snapEnabledRef: { current: false }, treeFocusRowIdRef: { current: undefined }, suppressCanvasClickRef: { current: false }, menuOriginRef: { current: null },
+      },
+      signalSplitEnabled: false,
+    } as unknown as TimelineSurfaceRuntimeInput);
+
+    expect(controller.mount()).toBeUndefined();
+    expect(dispose).toHaveBeenCalledOnce();
+    expect(setPane).toHaveBeenCalledWith(undefined);
+    expect(forceUpperReproject).toHaveBeenCalledOnce();
   });
 });

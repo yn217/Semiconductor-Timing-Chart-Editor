@@ -26,6 +26,8 @@ const ribbonSource = await readFile(resolve(root, "apps/editor/src/minimal-cycle
 const applicationRuntimeSource = await readFile(resolve(root, "apps/editor/src/runtime/editor-application-runtime.ts"), "utf8");
 const timelineSurfaceSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
 const timelineInteractionsSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-interactions.ts"), "utf8");
+const signalSplitHookSource = await readFile(resolve(root, "apps/editor/src/runtime/use-signal-split-surface-runtime.ts"), "utf8");
+const signalSplitControllerSource = await readFile(resolve(root, "apps/editor/src/runtime/signal-split-surface-controller.ts"), "utf8");
 const timelineRuntimeHookSource = await readFile(resolve(root, "apps/editor/src/runtime/use-timeline-surface-runtime.ts"), "utf8");
 const renderInvalidationSource = await readFile(resolve(root, "apps/editor/src/runtime/render-invalidation.ts"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
@@ -55,6 +57,7 @@ const ownerBudgets = [
   ["apps/editor/src/application/use-editor-presentation-state.ts", 500],
   ["apps/editor/src/runtime/use-timeline-surface-runtime.ts", 800],
   ["apps/editor/src/runtime/timeline-surface-controller.ts", 800],
+  ["apps/editor/src/runtime/signal-split-surface-controller.ts", 800],
   ["apps/editor/src/editor-workspace-view.tsx", 500],
   ["apps/editor/src/editor-dialog-layer.tsx", 500],
   ["apps/editor/src/editor-secondary-surfaces.tsx", 500],
@@ -110,6 +113,8 @@ const runtimeOwnershipContracts = [
   ["timeline surface reads current session state", timelineSurfaceSource, /session\.getSnapshot\(\)|sessionController\.snapshot\(\)/],
   ["timeline interactions read replaceable session state", timelineInteractionsSource, /getSnapshot:\s*\(\)\s*=>|getSnapshot\(\)\.document/],
   ["timeline interactions do not capture a mount-time session", timelineInteractionsSource, /readonly getSnapshot:/],
+  ["signal split lifecycle is a non-React owner", signalSplitControllerSource, /createSignalSplitSurfaceController[\s\S]*createWaveformSurfaceProvider[\s\S]*runtime\.createRenderer/],
+  ["signal split hook is a thin lifecycle adapter", signalSplitHookSource, /createSignalSplitSurfaceController\(input\)/],
   ["timeline surface owns document epoch boundary", timelineSurfaceSource, /documentEpoch\.(?:current|advance|isCurrent)\(/],
   ["render invalidation has one pure owner", renderInvalidationSource, /export function deriveRenderInvalidation\(/],
 ];
@@ -139,6 +144,7 @@ const violations = [
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...runtimeOwnershipContracts.filter(([, ownerSource, pattern]) => !pattern.test(ownerSource)).map(([name]) => `${name} contract missing`),
   ...(/readonly session\s*:/.test(timelineInteractionsSource) ? ["timeline interactions must not capture a mount-time session"] : []),
+  ...(/createWaveformSurfaceProvider|runtime\.createRenderer|createWaveDromAdapter/.test(signalSplitHookSource) ? ["signal split hook must not own renderer lifecycle"] : []),
   ...(deprecatedRuntimeBridgeExists ? ["deprecated runtime compatibility bridge must not be restored"] : []),
   ...editorReactSources.filter(([target, reactSource]) => !isOptInProbe(target) && directReactRuntimeOwnerPattern.test(reactSource)).map(([target]) => `React presentation directly owns long-lived runtime: ${target.replace(`${root}/`, "")}`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),

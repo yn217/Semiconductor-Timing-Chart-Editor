@@ -1,7 +1,8 @@
-# Primary mount-effect capture inventory
+# Timeline surface mount-effect capture inventory
 
 This is the review inventory for the primary `useEffect(..., [])` in
-`minimal-cycle-view.tsx` (the effect beginning near the `rendererHost` lookup).
+`runtime/use-timeline-surface-runtime.ts` (the lifecycle owner whose
+non-React controller begins near the `rendererHost` lookup).
 It records every value intentionally captured by the effect's long-lived
 callbacks and the rule that makes the capture safe. Values in the final column
 are the only mutable values that a callback may read directly.
@@ -10,8 +11,8 @@ are the only mutable values that a callback may read directly.
 | --- | --- | --- |
 | `host`, `viewport`, `ruler`, `gridLayer` refs and the derived DOM elements | Immutable DOM handles for this mount | Bound once for this mounted view; all listeners and renderers are detached in the effect cleanup. |
 | `application`, `documentLifecycle`, `selection`, `editActions`, `timelineNavigation` | Stable typed controllers | Hook-owned controllers; callbacks call their current APIs, never a state snapshot. Their document-scoped state is reset by the lifecycle owner on replacement. |
-| `runtime`, `sessionController`, `projectionCoordinator`, `mappingCache`, `geometryRegistry`, `renderCoordinator`, `renderer`, `adapter` | Stable infrastructure owners | Created for this mount and disposed/cleared on cleanup or document replacement; current document identity comes from `sessionController.snapshot()` / `session`. |
-| `session` local binding | Current document/history owner handle | Initialized from `sessionController.current()` and replaced with `nextSession` in `applyReplacement`; callbacks read `session.getSnapshot()` at invocation time. |
+| `runtime`, `sessionController`, `projectionCoordinator`, `mappingCache`, `geometryRegistry`, `renderCoordinator`, `renderer`, `adapter` | Stable infrastructure owners | Created for this mount and disposed/cleared on cleanup or document replacement; current document identity comes from `sessionController.snapshot()` / `sessionController.current()`. |
+| `sessionController` current access | Current document/history owner handle | The replaceable `EditorSessionController` is stable for the mount; callbacks read `snapshot()` / `current()` at invocation time, so Open/New cannot leave a mount-time session object behind. |
 | `documentEpoch` | Current document generation owner | `advance()` is called for full replacement; async render and interaction owners compare their captured generation to `isCurrent`. |
 | `projection`, `window` | Current derived render/viewport state | Mutable only inside the mount effect; both are replaced after every projection/viewport calculation and never used as Canonical state. |
 | `timelineGeometry`, `timelineRuntime` | Current geometry and viewport owners | Their APIs resolve current mapping, metrics, and geometry; `reset()` / epoch update runs during replacement and `dispose()` runs during cleanup. |
@@ -27,7 +28,7 @@ are the only mutable values that a callback may read directly.
 
 ## Review invariants
 
-- Open/New replaces `session`, advances the document epoch, cancels all
+- Open/New replaces the session through `EditorSessionController`, advances the document epoch, cancels all
   document-scoped gestures, clears selection and transient range state, clears
   geometry caches, and projects the new snapshot before asynchronous follow-up
   presentation.
