@@ -1,9 +1,12 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
 const file = "apps/editor/src/minimal-cycle-view.tsx";
 const ownershipMap = "apps/editor/src/OWNERSHIP.md";
+const deprecatedRuntimeBridge = resolve(root, "apps/editor/src/runtime/use-editor-runtime-bridge.ts");
+let deprecatedRuntimeBridgeExists = true;
+try { await access(deprecatedRuntimeBridge); } catch { deprecatedRuntimeBridgeExists = false; }
 const actionOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-actions.ts"), "utf8");
 const presentationOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-presentation-state.ts"), "utf8");
 const exportDialogSource = await readFile(resolve(root, "apps/editor/src/export-dialog.tsx"), "utf8");
@@ -116,6 +119,7 @@ const violations = [
   ...(!rootAllowListContract.test(ownership) ? ["ownership map missing MinimalCycleView root allow-list"] : []),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...runtimeOwnershipContracts.filter(([, ownerSource, pattern]) => !pattern.test(ownerSource)).map(([name]) => `${name} contract missing`),
+  ...(deprecatedRuntimeBridgeExists ? ["deprecated runtime compatibility bridge must not be restored"] : []),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
   ...(!/EditorSurfaceCommandController/.test(ribbonSource) || !/commands\.(?:createSignal|bringAnnotationsToFront|updateAnnotationStyle)/.test(ribbonSource) ? ["ribbon typed command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),
