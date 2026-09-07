@@ -322,21 +322,46 @@ export function MinimalCycleView() {
   const selectedSpacer = selectedSpacerRef.current === undefined ? undefined : selectedGroup?.spacers?.find((spacer) => spacer.id === selectedSpacerRef.current);
   const selectedAnnotation = selectedAnnotationId === undefined ? undefined : annotationById.get(selectedAnnotationId);
   const selectedTransaction = selectedTransactionId === undefined ? undefined : transactionById.get(selectedTransactionId);
-  const bottomSignal = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.signalId === undefined ? undefined : signalById.get(pinnedBottomSelection.signalId)) : selectedSignal;
-  const bottomGroup = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.groupId === undefined ? undefined : groupById.get(pinnedBottomSelection.groupId)) : selectedGroup;
-  const bottomAnnotation = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.annotationId === undefined ? undefined : annotationById.get(pinnedBottomSelection.annotationId)) : selectedAnnotation;
-  const bottomTransaction = bottomPinned && pinnedBottomSelection ? (pinnedBottomSelection.transactionId === undefined ? undefined : transactionById.get(pinnedBottomSelection.transactionId)) : selectedTransaction;
+  // #426 Bottom Panel UX Closure (source of truth: the open Issue text, not
+  // this file's own prior behavior) -- "Follow Selection" OFF must keep the
+  // current Bottom editor target, exactly like Pin, until Follow Selection
+  // is turned back on. Previously only `bottomPinned` gated these four --
+  // Follow Selection OFF was a no-op for *which entity* Bottom shows (it
+  // only gated automatic Bottom-tab switching in selection.configure's
+  // synchronizeContext above), silently contradicting the issue's explicit
+  // contract. `frozen` covers both freeze sources through the one shared
+  // `pinnedBottomSelection` snapshot, captured by `setFollowSelectionWithFreeze`
+  // below the same way `toggleBottomPin` already captures it for Pin.
+  const frozen = (bottomPinned || !followSelection) && pinnedBottomSelection !== undefined;
+  const bottomSignal = frozen ? (pinnedBottomSelection!.signalId === undefined ? undefined : signalById.get(pinnedBottomSelection!.signalId)) : selectedSignal;
+  const bottomGroup = frozen ? (pinnedBottomSelection!.groupId === undefined ? undefined : groupById.get(pinnedBottomSelection!.groupId)) : selectedGroup;
+  const bottomAnnotation = frozen ? (pinnedBottomSelection!.annotationId === undefined ? undefined : annotationById.get(pinnedBottomSelection!.annotationId)) : selectedAnnotation;
+  const bottomTransaction = frozen ? (pinnedBottomSelection!.transactionId === undefined ? undefined : transactionById.get(pinnedBottomSelection!.transactionId)) : selectedTransaction;
+  const setFollowSelectionWithFreeze = (value: boolean) => {
+    if (!value && !bottomPinned) {
+      setPinnedBottomSelection({
+        ...(selectedId === undefined ? {} : { signalId: selectedId }),
+        ...(selectedGroupId === undefined ? {} : { groupId: selectedGroupId }),
+        ...(selectedAnnotationId === undefined ? {} : { annotationId: selectedAnnotationId }),
+        ...(selectedTransactionId === undefined ? {} : { transactionId: selectedTransactionId }),
+      });
+    } else if (value && !bottomPinned) {
+      setPinnedBottomSelection(undefined);
+    }
+    setFollowSelection(value);
+  };
   useEffect(() => {
-    if (!bottomPinned || !pinnedBottomSelection) return;
+    if (!pinnedBottomSelection) return;
     const targetExists = (pinnedBottomSelection.signalId === undefined || snapshot.document.signals.some((item) => item.id === pinnedBottomSelection.signalId))
       && (pinnedBottomSelection.groupId === undefined || snapshot.document.signalGroups.some((item) => item.id === pinnedBottomSelection.groupId))
       && (pinnedBottomSelection.annotationId === undefined || snapshot.document.annotations.some((item) => item.id === pinnedBottomSelection.annotationId))
       && (pinnedBottomSelection.transactionId === undefined || snapshot.document.transactions.some((item) => item.id === pinnedBottomSelection.transactionId));
     if (!targetExists) {
-      setBottomPinned(false);
+      if (bottomPinned) setBottomPinned(false);
+      if (!followSelection) setFollowSelection(true);
       setPinnedBottomSelection(undefined);
     }
-  }, [bottomPinned, pinnedBottomSelection, snapshot.revision]);
+  }, [bottomPinned, followSelection, pinnedBottomSelection, snapshot.revision]);
   useEffect(() => {
     refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
   }, [treePresentationRevision, treeFilter, treeTypeFilter, collapsedGroupIds]);
@@ -422,6 +447,8 @@ export function MinimalCycleView() {
     renameDraft,
     bottomPinned,
     setBottomPinned,
+    followSelection,
+    pinnedBottomSelection,
     setPinnedBottomSelection,
     selectedSignalId: selectedId,
     selectedGroupId,
@@ -537,7 +564,7 @@ export function MinimalCycleView() {
     selected: { signal: selectedSignal, group: selectedGroup, annotation: selectedAnnotation, transaction: selectedTransaction, bookmark: selectedBookmark, transactionId: selectedTransactionId },
     bottom: { signal: bottomSignal, group: bottomGroup, annotation: bottomAnnotation, transaction: bottomTransaction },
     timeline: { range: timelineRange, collapsedGroupIds, setCollapsedGroups, toggleCollapsedGroup },
-    workspace: { viewMode, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, setRibbonTab },
+    workspace: { viewMode, bottomTabs, bottomTab, setBottomTab, selectBottomTab, onBottomTabKeyDown, followSelection, setFollowSelection: setFollowSelectionWithFreeze, bottomPinned, toggleBottomPin, treeFilter, setTreeFilter, treeTypeFilter, setTreeTypeFilter: (value) => setTreeTypeFilter(value), transactionTreeFilter, setTransactionTreeFilter, setRibbonTab },
     dialog: { treeAddMenuOpen, setTreeAddMenuOpen, treeMoreMenuOpen, setTreeMoreMenuOpen, bulkRegistrationText, setBulkRegistrationText, bulkRegistrationGroupId, setBulkRegistrationGroupId, bulkRegistrationStatus, setBulkRegistrationStatus, setBulkRegistrationVisible, setHierarchyVisible, contextMenu, setContextMenu, closeTreeAddMenu, closeTreeMoreMenu, bottomResetToken, setBottomResetToken, inspectorResetToken, setInspectorResetToken, setInspectorVisible },
     annotationTargetSignalId,
     referenceClockName: referenceClockSignal?.display.name,

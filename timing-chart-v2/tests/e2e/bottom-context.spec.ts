@@ -5,7 +5,14 @@ async function ready(page: Page) {
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
 }
 
-test("Bottom Pin preserves the selected context independently from Follow Selection", async ({ page }) => {
+// #426 Bottom Panel UX Closure (source of truth: the Issue text, not this
+// suite's own prior behavior): "Follow Selection OFF" must keep the current
+// Bottom editor target, exactly like Pin, until Follow Selection is turned
+// back on. This used to be a no-op for *which entity* Bottom shows (it only
+// gated automatic Bottom-tab switching across entity kinds) -- unchecking
+// Follow Selection here now freezes Bottom at REQUEST; further Tree
+// selection changes move Inspector/selection-status but not Bottom.
+test("Follow Selection OFF freezes the Bottom target; Pin locks in whatever is currently shown, independent of live selection", async ({ page }) => {
   await ready(page);
   const host = page.getByTestId("cycle-surface");
   const bottom = page.getByTestId("bottom-editor");
@@ -13,16 +20,32 @@ test("Bottom Pin preserves the selected context independently from Follow Select
   await expect(bottom).toContainText("REQUEST · binary");
   await bottom.getByTestId("follow-selection").uncheck();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click();
-  await expect(bottom).toContainText("READY · binary");
+  await expect(page.getByTestId("selection-status")).toHaveText("READY");
+  // Follow Selection OFF: Bottom stays on REQUEST even though selection
+  // (and Inspector) moved to READY.
+  await expect(bottom).toContainText("REQUEST · binary");
   await expect(bottom.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+
+  // Pin locks in whatever Bottom is CURRENTLY showing (REQUEST, the frozen
+  // target) -- not the live selection (READY), which the user can no
+  // longer see in the panel.
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveText("Unpin");
-  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
-  await expect(page.getByTestId("selection-status")).toHaveText("REQUEST");
-  await expect(bottom).toContainText("READY · binary");
+  await expect(bottom).toContainText("REQUEST · binary");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_valid']").click();
+  await expect(page.getByTestId("selection-status")).toHaveText("VALID");
+  await expect(bottom).toContainText("REQUEST · binary");
+
+  // Unpin with Follow Selection still off: stays frozen at REQUEST (does
+  // not jump to the now-current VALID selection) -- Follow Selection OFF
+  // still means "don't move".
   await bottom.getByTestId("bottom-pin").click();
   await expect(bottom.getByTestId("bottom-pin")).toHaveText("Pin");
   await expect(bottom).toContainText("REQUEST · binary");
+
+  // Turning Follow Selection back on resumes live tracking.
+  await bottom.getByTestId("follow-selection").check();
+  await expect(bottom).toContainText("VALID · binary");
 });
 
 test("Bottom Pin preserves a selected Group JSON context without view mutation", async ({ page }) => {

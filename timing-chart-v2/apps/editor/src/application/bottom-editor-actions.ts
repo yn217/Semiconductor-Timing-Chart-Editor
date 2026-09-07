@@ -20,6 +20,8 @@ export interface BottomEditorActionsInput {
   readonly selectedTransactionRef: MutableRefObject<TransactionId | undefined>;
   readonly bottomPinned: boolean;
   readonly setBottomPinned: (value: boolean) => void;
+  readonly followSelection: boolean;
+  readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined;
   readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined) => void;
   readonly selectedSignalId: SignalId | undefined;
   readonly selectedGroupId: GroupId | undefined;
@@ -61,15 +63,28 @@ export function createBottomEditorActions(input: BottomEditorActionsInput): Bott
   const toggleBottomPin = () => {
     if (input.bottomPinned) {
       input.setBottomPinned(false);
-      input.setPinnedBottomSelection(undefined);
+      // #426: Follow Selection still OFF after Unpin means "don't move" --
+      // keep the existing frozen snapshot (the just-unpinned target) rather
+      // than clearing it and jumping to whatever is live-selected right
+      // now. Only drop the snapshot when Follow Selection is back on and
+      // there is nothing left to freeze against.
+      if (input.followSelection) input.setPinnedBottomSelection(undefined);
       return;
     }
-    input.setPinnedBottomSelection({
-      ...(input.selectedSignalId === undefined ? {} : { signalId: input.selectedSignalId }),
-      ...(input.selectedGroupId === undefined ? {} : { groupId: input.selectedGroupId }),
-      ...(input.selectedAnnotationId === undefined ? {} : { annotationId: input.selectedAnnotationId }),
-      ...(input.selectedTransactionId === undefined ? {} : { transactionId: input.selectedTransactionId }),
-    });
+    // #426: if Follow Selection is already OFF, a snapshot is already
+    // frozen at whatever the Bottom Panel is currently showing -- Pin
+    // must lock in THAT (what the user is looking at), not silently
+    // re-capture live selection (which may have moved on since Follow
+    // Selection was turned off, switching the visible target out from
+    // under the user the moment they click Pin).
+    if (!input.pinnedBottomSelection) {
+      input.setPinnedBottomSelection({
+        ...(input.selectedSignalId === undefined ? {} : { signalId: input.selectedSignalId }),
+        ...(input.selectedGroupId === undefined ? {} : { groupId: input.selectedGroupId }),
+        ...(input.selectedAnnotationId === undefined ? {} : { annotationId: input.selectedAnnotationId }),
+        ...(input.selectedTransactionId === undefined ? {} : { transactionId: input.selectedTransactionId }),
+      });
+    }
     input.setBottomPinned(true);
   };
   return { deleteBottomSignal, deleteBottomAnnotation, deleteBottomTransaction, toggleTransactionSignal, toggleBottomPin };
