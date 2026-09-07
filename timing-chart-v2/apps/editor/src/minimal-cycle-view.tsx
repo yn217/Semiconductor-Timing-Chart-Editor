@@ -623,7 +623,6 @@ export function MinimalCycleView() {
       onMoveDown: () => moveSelection(1),
       onVisibility: setSelectionVisibility,
       onRange: (range: { readonly start: number; readonly end: number }) => { setRangeSelectionActive(true); setTimelineRange(range); },
-      onCommand: (command: SemanticCommand): CommandResult => commandRegistry.current.execute("semantic.execute", command),
       onCommandBatch: (commands: Parameters<typeof executeBatch>[1]) => executeBatch(nextCommandId("ribbon_annotation_arrange"), commands),
       onViewIntent: (intent: "fit-all" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); },
       onCreateAnnotation: createSelectedAnnotation,

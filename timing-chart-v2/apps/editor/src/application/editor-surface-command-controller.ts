@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -27,6 +27,7 @@ export interface InspectorCommandActions {
   readonly setReferenceEdge: (edge: "rising" | "falling") => CommandResult;
   readonly updateBookmark: (payload: CommandPayload<"bookmark.update">) => CommandResult;
   readonly updateLayout: (layout: CanonicalDocument["layout"]) => CommandResult;
+  readonly normalizeLayout: (layout: CanonicalDocument["layout"]) => CommandResult;
   readonly renameGroup: (groupId: GroupId, name: string) => CommandResult;
   readonly updateGroupProperties: (payload: CommandPayload<"group.updateProperties">) => CommandResult;
   readonly insertSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
@@ -43,6 +44,8 @@ export interface RibbonCommandActions {
   readonly createCommentRow: (commentRow: CommentRow, targetGroupId: GroupId, index: number) => CommandResult;
   readonly createGroup: (group: SignalGroup, index: number) => CommandResult;
   readonly createSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly createTransaction: (transaction: Transaction) => CommandResult;
+  readonly duplicateTransaction: (transaction: Transaction) => CommandResult;
   readonly insertTimeline: (at: number, count: number) => CommandResult;
   readonly deleteTimeline: (start: number, end: number) => CommandResult;
   readonly duplicateTimeline: (start: number, end: number, at: number) => CommandResult;
@@ -96,9 +99,12 @@ export function createEditorSurfaceCommandController(input: {
     setReferenceEdge: (edge) => dispatch<"timeline.setReferenceEdge">("set_reference_edge", { type: "timeline.setReferenceEdge", edge }),
     updateBookmark: (payload) => dispatch<"bookmark.update">("inspector_bookmark_update", { type: "bookmark.update", ...payload }),
     updateLayout: (layout) => dispatch<"document.updateLayout">("layout_properties", { type: "document.updateLayout", layout }),
+    normalizeLayout: (layout) => dispatch<"document.updateLayout">("home_auto_layout", { type: "document.updateLayout", layout }),
     renameGroup: (groupId, name) => dispatch<"group.rename">("group_rename", { type: "group.rename", groupId, name }),
     updateGroupProperties: (payload) => dispatch<"group.updateProperties">("group_properties", { type: "group.updateProperties", ...payload }),
     createSpacer: (spacer, targetGroupId, index) => dispatch<"spacer.create">("spacer_create", { type: "spacer.create", spacer, targetGroupId, index }),
+    createTransaction: (transaction) => dispatch<"transaction.create">("home_transaction_create", { type: "transaction.create", transaction }),
+    duplicateTransaction: (transaction) => dispatch<"transaction.create">("home_transaction_duplicate", { type: "transaction.create", transaction }),
     moveSpacer: (spacerId, targetGroupId, index) => dispatch<"spacer.move">("spacer_move", { type: "spacer.move", spacerId, targetGroupId, index }),
     updateSpacer: (spacerId, height) => dispatch<"spacer.update">("spacer_update", { type: "spacer.update", spacerId, height }),
     deleteSpacer: (spacerId) => dispatch<"spacer.delete">("spacer_delete", { type: "spacer.delete", spacerId }),

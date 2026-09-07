@@ -10,11 +10,17 @@ describe("editor surface command controller", () => {
     controller.updateClockGenerator("signal_1" as never, { kind: "periodic", period: 4, duty: 0.5, phase: 0, start: 0, repeat: "infinite" });
     controller.updateEdgeCounter("signal_1" as never, { show: true, mode: "rising", startNumber: 0, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: 0 } });
     controller.move("transaction_1" as never, 3);
+    controller.createTransaction({ id: "transaction_2" as never, name: "Write", start: 4, end: 6, laneId: "lane_0" });
+    controller.duplicateTransaction({ id: "transaction_3" as never, name: "Write Copy", start: 4, end: 6, laneId: "lane_0" });
+    controller.normalizeLayout({ rowHeight: 24, signalSpacing: 2 } as never);
 
     expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
       expect.objectContaining({ id: "test_clock", type: "signal.updateClockGenerator", signalId: "signal_1" }),
       expect.objectContaining({ id: "test_edge_counter", type: "signal.updateEdgeCounter", signalId: "signal_1" }),
       expect.objectContaining({ id: "test_transaction_snap_move", type: "transaction.move", transactionId: "transaction_1", start: 3 }),
+      expect.objectContaining({ id: "test_home_transaction_create", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_2" }) }),
+      expect.objectContaining({ id: "test_home_transaction_duplicate", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_3" }) }),
+      expect.objectContaining({ id: "test_home_auto_layout", type: "document.updateLayout" }),
     ]);
   });
 
