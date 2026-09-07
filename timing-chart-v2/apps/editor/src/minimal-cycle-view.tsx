@@ -62,8 +62,9 @@ export function MinimalCycleView() {
   const hostLower = useRef<HTMLDivElement>(null);
   const gridLayerLower = useRef<HTMLDivElement>(null);
   // Signal Split View (#200) PR 4: the Lower pane's own renderer/adapter/
-  // geometry/projection pipeline, owned by the effect below (keyed on
-  // signalSplitEnabled) and consumed by the primary mount effect's document-
+  // geometry/projection pipeline, owned by the non-React split-surface
+  // controller invoked by the hook below (keyed on signalSplitEnabled) and
+  // consumed by the primary surface controller's document-
   // change handlers so both panes reproject on every canonical change from
   // one single source of truth. `null` whenever Split is off -- every
   // existing document-change path is then a no-op for Lower, unchanged from
