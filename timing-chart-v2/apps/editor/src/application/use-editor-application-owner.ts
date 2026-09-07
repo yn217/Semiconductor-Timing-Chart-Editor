@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalSnapshot } from "@timing-chart-v2/core";
+import { deriveTimingDiagnostics, type CanonicalSnapshot } from "@timing-chart-v2/core";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { validateCanonicalDocument, type CanonicalDocument, type CommandId, type DocumentProblem, type ParsedCanonicalDocument } from "@timing-chart-v2/schema";
 import { buildCommandRejectionDiagnostics } from "../command-diagnostics.js";
@@ -52,7 +52,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   // `publishRendererState` call) so an e2e test can assert the delta is 0
   // across Selection/Ribbon-tab/Zoom/Scroll/panel-resize.
   const validatorInvocationsRef = useRef(0);
-  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => { validatorInvocationsRef.current += 1; return validateCanonicalDocument(initialDocument); });
+  const [validationDiagnostics, setValidationDiagnostics] = useState<readonly DocumentProblem[]>(() => { validatorInvocationsRef.current += 1; return [...validateCanonicalDocument(initialDocument), ...deriveTimingDiagnostics(initialDocument)]; });
   const [runtimeDiagnostics, setRuntimeDiagnostics] = useState<readonly DocumentProblem[]>([]);
   const acceptedHandlerRef = useRef<AcceptedHandler | undefined>(undefined);
 
@@ -90,7 +90,8 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
     const session = runtime.session.replace(document);
     setSnapshot(session.getSnapshot());
     setHistory(session.historyState());
-    setValidationDiagnostics([]);
+    const canonical = "validated" in document ? document.document : document;
+    setValidationDiagnostics(deriveTimingDiagnostics(canonical));
     setProblem("");
     setRuntimeDiagnostics(diagnostics);
     return session;
@@ -101,7 +102,7 @@ export function useEditorApplicationOwner(initialDocument: CanonicalDocument) {
   // update above only clears/resets the array.
   const validateDocument = useCallback((document: CanonicalDocument) => {
     validatorInvocationsRef.current += 1;
-    const problems = validateCanonicalDocument(document);
+    const problems = [...validateCanonicalDocument(document), ...deriveTimingDiagnostics(document)];
     setValidationDiagnostics(problems);
     return problems;
   }, []);

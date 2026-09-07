@@ -10,6 +10,8 @@ import {
   type ParseDocumentResult,
 } from "@timing-chart-v2/schema";
 
+export { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_CODES, type TimingDiagnostic, type TimingDiagnosticCategory, type TimingDiagnosticCode, type TimingDiagnosticOptions } from "./diagnostics.js";
+
 export interface CanonicalSnapshot {
   readonly revision: number;
   readonly document: Readonly<CanonicalDocument>;
