@@ -16,11 +16,8 @@ import { ViewMetricsOwner } from "./view-metrics.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createEdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
 import { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
-import { TimelineRangeInteractionOwner } from "./timeline-range-interaction-owner.js";
-import { AnnotationInteractionOwner } from "./timeline-annotation-interaction-owner.js";
-import { TreeDragInteractionOwner } from "./tree-drag-interaction-owner.js";
-import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
-import { createWaveformSurfaceProvider, attachEditorEventBindings, createEditorTimelineRuntime, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererForReason, refreshTimelinePresentation, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll } from "./use-editor-runtime-bridge.js";
+import { createWaveformSurfaceProvider, createEditorTimelineRuntime, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererForReason, refreshTimelinePresentation, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll } from "./use-editor-runtime-bridge.js";
+import { attachTimelineSurfaceInteractions, createTimelineCycleBoundaryResolver, createTimelineViewportKeyDownHandler, type TimelineSurfaceInteractionHandle } from "./timeline-surface-interactions.js";
 import { collectWaveRenderErrors, createOpenPhaseTracker } from "./runtime-diagnostics.js";
 import { publishRendererState } from "./use-editor-runtime-bridge.js";
 import { applyRendererHostSizing } from "./editor-dom-bridge.js";
@@ -106,6 +103,7 @@ export interface TimelineSurfaceRuntimeInput {
   readonly editActions: ClipboardActions;
   readonly navigation: TimelineNavigationOwner;
   readonly commandRegistry: MutableRefObject<UiCommandRegistry>;
+  readonly executeBatch: EditorApplicationOwner["executeBatch"];
   readonly dom: TimelineSurfaceDomRefs;
   readonly presentation: TimelineSurfacePresentationPort;
   readonly state: TimelineSurfaceStatePort;
@@ -125,15 +123,13 @@ export interface TimelineSurfaceRuntimeOutput {
 }
 
 export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): TimelineSurfaceRuntimeOutput {
-  const { application, documentLifecycle, selection, navigation: timelineNavigation, editActions, commandRegistry } = input;
+  const { application, documentLifecycle, selection, navigation: timelineNavigation, commandRegistry, executeBatch } = input;
   const { host, viewport, ruler, gridLayer, viewportLower, rulerLower, hostLower, gridLayerLower, signalSplitRuntimeRef } = input.dom;
   const { collapsedGroupIdsRef, applyCollapsedGroupsRef, forceUpperReprojectRef, lowerCanvasClickRef, timelineRuntimeRef, armArrowPick, snapTransactionCycle, transactionBoundaryX, refreshPlayhead, refreshRangeSelectionBand, publishStateRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef, selectedAnnotationRef, gridEnabledRef, snapEnabledRef, treeFocusRowIdRef, suppressCanvasClickRef, menuOriginRef } = input.presentation;
   const { setRuntimeDiagnostics, setProblem, setTreePresentationRevision, setTransactionPresentationRevision, setRangePresentationRevision, setPlayheadPresentationRevision, setTimelineRange, setRangeSelectionActive, setSelectedCycle, setBottomPinned, setPinnedBottomSelection, setTreeFilter, setTreeTypeFilter, setTreeAddMenuOpen, setTreeMoreMenuOpen, setContextMenu, setArrowPickStatus, setRenameDialogOpen, setCollapsedGroups, toggleCollapsedGroup, closeContextMenu } = input.state;
   const viewMetricsOwner = input.viewMetricsOwner;
   const signalSplitEnabled = input.signalSplitEnabled;
   const signalSplitRatio = input.signalSplitRatio;
-  const zoom = timelineNavigation.zoom;
-  const selectAnnotation = (id: AnnotationId) => selection.selectAnnotation(id);
   useEffect(() => {
     let active = true;
     const rendererHost = host.current;
@@ -354,6 +350,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       publishState,
     });
     syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth);
+    const cycleBoundaryAtX = createTimelineCycleBoundaryResolver({ rendererHost, timelineGeometry, getZoom: timelineNavigation.getZoom, isSnapEnabled: () => snapEnabledRef.current });
     snapTransactionCycle.current = (clientX) => resolveTransactionSnapCycle({
       clientX,
       host: rendererHost,
@@ -364,7 +361,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       snapEnabled: snapEnabledRef.current,
       document: session.getSnapshot().document,
       currentSnapIndex: () => timelineGeometry.currentSnapIndex(),
-      cycleBoundaryAtPointerX,
+      cycleBoundaryAtPointerX: cycleBoundaryAtX,
       cycleBoundaryAtX,
       publishState,
     });
@@ -381,13 +378,6 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       collectErrors: () => { if (active) collectWaveErrors(); },
       publish: () => { if (active) publishState(); },
     }, { isCurrent: () => active && documentEpoch.isCurrent(initialDocumentEpoch) });
-
-    const upsertDiagnostic = (predicate: (item: DocumentProblem) => boolean, next: DocumentProblem | undefined) => {
-      setRuntimeDiagnostics((current) => {
-        const filtered = current.filter((item) => !predicate(item));
-        return next ? [...filtered, next] : filtered;
-      });
-    };
 
     const collectWaveErrors = () => {
       const failed = collectWaveRenderErrors(rendererHost);
@@ -407,7 +397,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       }
       if (changed.fullDocumentReplace === true) {
         timelineRuntime.onDocumentEpochChanged(documentEpoch.advance());
-        clearAnnotationPreview();
+        interactionHandle?.cancel();
       }
       const invalidation = deriveRenderInvalidation(changed, result.snapshot.document.timeline.referenceClock);
       const snapDependenciesChanged = invalidation.snapDependenciesChanged;
@@ -463,14 +453,13 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       timelineRuntime.refreshOverlays();
       publishState();
     };
+    let interactionHandle: TimelineSurfaceInteractionHandle | undefined;
     const detachDocumentLifecycle = documentLifecycle.attachEffects({
       beginOpenMeasurement,
       markOpenPhase,
       applyReplacement: ({ document: canonicalDocument, session: nextSession, documentEpoch: nextDocumentEpoch }) => {
       timelineRuntime.onDocumentEpochChanged(nextDocumentEpoch);
-      clearAnnotationPreview();
-      rangeInteractions.cancel();
-      treeDrag.cancel();
+       interactionHandle?.cancel();
       pendingArrow = undefined;
       pendingArrowAnnotationType = "arrow";
       delete rendererHost.dataset.arrowPick;
@@ -526,26 +515,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       },
     });
 
-    const onScroll = () => {
-      timelineRuntime.onViewportScroll();
-    };
-    const onViewportKeyDown = (event: KeyboardEvent) => {
-      const target = event.target instanceof Element ? event.target : null;
-      if (!target?.closest("[data-testid='cycle-viewport']") || target.closest("input, textarea, select, button, [contenteditable='true']")) return;
-      const horizontalStep = Math.max(48, Math.round(viewportElement.clientWidth * 0.18));
-      const verticalStep = Math.max(48, Math.round(viewportElement.clientHeight * 0.75));
-      let left: number | undefined;
-      let top: number | undefined;
-      if (event.key === "ArrowLeft") left = -horizontalStep;
-      else if (event.key === "ArrowRight") left = horizontalStep;
-      else if (event.key === "PageUp") top = -verticalStep;
-      else if (event.key === "PageDown") top = verticalStep;
-      else if (event.key === "Home") left = -viewportElement.scrollWidth;
-      else if (event.key === "End") left = viewportElement.scrollWidth;
-      if (left === undefined && top === undefined) return;
-      event.preventDefault();
-      viewportElement.scrollBy({ ...(left === undefined ? {} : { left }), ...(top === undefined ? {} : { top }), behavior: "auto" });
-    };
+    const onViewportKeyDown = createTimelineViewportKeyDownHandler(viewportElement);
     let pendingArrow: "armed" | SemanticAnchor | undefined;
     // #375: the picked-transitions workflow is shared by both line-shaped
     // types that need real geometry-anchored endpoints -- Arrow and
@@ -689,7 +659,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
         }
         const annotation: Annotation = { id: nextEntityId("annotation", session.getSnapshot().document) as AnnotationId, type: pendingArrowAnnotationType, label: "Transition", visible: true, color: "#d04a36", from: pendingArrow, to: snap.anchor, lineType: "straight", arrowhead: "end" };
         const result = application.execute({ id: nextCommandId("annotation_transition_arrow"), type: "annotation.create", annotation });
-        if (result.ok) selectAnnotation(annotation.id);
+      if (result.ok) selection.selectAnnotation(annotation.id);
         pendingArrow = undefined;
         setArrowPickStatus("idle");
         delete rendererHost.dataset.arrowPick;
@@ -714,7 +684,6 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       const signal = session.getSnapshot().document.signals.find((candidate) => candidate.id === id);
       if (!signal) return;
       startTransition(() => selection.selectSignal(signal.id, event.ctrlKey || event.metaKey));
-      const nextSelected = selection.refs.signalIds.current;
       const primary = selection.refs.signalId.current;
       if (primary) rendererHost.dataset.selectedSignalId = primary;
       focusTreeItem(target);
@@ -741,278 +710,46 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       publishState();
       return true;
     };
-    const selectedClockEdgeAtPointer = (event: MouseEvent): SelectedClockEdge | undefined => {
-      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-      if (!waveLayer) return undefined;
-      const bounds = waveLayer.getBoundingClientRect();
-      const currentZoom = timelineNavigation.getZoom();
-      const localPointer = timelineGeometry.screenToLocal({ x: event.clientX - bounds.left, y: event.clientY - bounds.top }, currentZoom);
-      const snap = timelineGeometry.currentSnapIndex().nearest({ x: localPointer.x, y: event.clientY - bounds.top }, 14 / currentZoom, ["clock-edge"]);
-      const signalId = snap?.anchor.signalId;
-      const point = snap?.anchor.point;
-      if (!signalId || (point !== "rising-edge" && point !== "falling-edge")) return undefined;
-      return { signalId, cycle: snap.anchor.cycle, kind: point === "rising-edge" ? "rising" : "falling" };
-    };
-    const selectCanvasCycle = (event: MouseEvent) => {
-      if (!isTimeDomainPointerTarget(event)) return false;
-      const cycle = cycleBoundaryAtX(event.clientX);
-      if (cycle === undefined) return false;
-      const selectedEdge = selectedClockEdgeAtPointer(event);
-      const accepted = applyCanvasCycleSelection(cycle, event.shiftKey);
-      if (accepted) {
-        selectedEdgeRef.current = selectedEdge;
-        timelineRuntime.refreshOverlays();
-      }
-      return accepted;
-    };
-    const onRulerSelect = (event: MouseEvent) => {
-      if (rangeInteractions.consumeRulerClickSuppression()) return;
-      const tick = event.target instanceof Element ? event.target.closest<HTMLElement>("[data-cycle]") : null;
-      if (!tick) return;
-      const cycle = Number(tick.dataset.sourceCycle ?? tick.dataset.cycle);
-      if (!Number.isInteger(cycle) || cycle > session.getSnapshot().document.timeline.cycleCount) return;
-      selectedEdgeRef.current = undefined;
-      setRangeSelectionActive(true);
-      setSelectedCycle(cycle);
-      rendererHost.dataset.selectedCycle = String(cycle);
-      if (cycle === session.getSnapshot().document.timeline.cycleCount) {
-        setTimelineRange({ start: Math.max(0, cycle - 1), end: cycle });
-        return;
-      }
-      if (event.shiftKey) {
-        const anchor = timelineRangeRef.current.start;
-        setTimelineRange({ start: Math.min(anchor, cycle), end: Math.max(anchor, cycle) + 1 });
-      } else setTimelineRange({ start: cycle, end: cycle + 1 });
-      timelineRuntime.refreshOverlays();
-    };
-    let rangeInteractions!: TimelineRangeInteractionOwner;
-    const cycleBoundaryAtX = (clientX: number): number | undefined => {
-      const waveLayer = rendererHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-      if (!waveLayer) return undefined;
-      const bounds = waveLayer.getBoundingClientRect();
-      return timelineGeometry.cycleBoundaryAtScreenX(clientX, bounds.left, timelineNavigation.getZoom(), snapEnabledRef.current);
-    };
-    // The ruler ticks are placed from the same LocalGeometryMap as the
-    // waveform. Their screen rectangles therefore provide the shared
-    // interaction-space boundary resolver for both drag surfaces.
-    // Ruler labels are a bounded presentation sample. Resolve pointer input
-    // from the complete waveform geometry so omitted labels never change the
-    // canonical cycle selected by a drag.
-    const cycleBoundaryAtPointerX = (clientX: number): number | undefined => cycleBoundaryAtX(clientX);
-    const timeDomainExclusions = [
-      "[data-role='left-tree-rows']",
-      "[data-role='frozen-label-rows']",
-      "[data-role='annotation-owner']",
-      "[data-role='annotation-body']",
-      "[data-role='annotation-label']",
-      "[data-role='annotation-handle']",
-      "[data-testid='transaction-lanes']",
-      "[data-transaction-id]",
-      ".transaction-lane",
-      "[data-testid='editor-legend']",
-      "[role='menu']",
-      "button",
-      "input",
-      "select",
-      "textarea",
-      "[contenteditable='true']",
-      "[role='separator']",
-      "[draggable='true']",
-    ].join(", ");
-    const isTimeDomainPointerTarget = (event: MouseEvent | PointerEvent): boolean => {
-      const target = event.target instanceof Element ? event.target : undefined;
-      if (!target || target.closest(timeDomainExclusions)) return false;
-      const viewportBounds = viewportElement.getBoundingClientRect();
-      const timeDomainLeft = viewportBounds.left + timelineOffset();
-      const insideViewport = event.clientX >= timeDomainLeft
-        && event.clientX <= viewportBounds.right
-        && event.clientY >= viewportBounds.top
-        && event.clientY <= viewportBounds.bottom;
-      if (!insideViewport) return false;
-      // The viewport is the interaction contract; the renderer/ruler layers
-      // are implementation details and must not be enumerated as hit areas.
-      return target === viewportElement || viewportElement.contains(target);
-    };
-    const onRulerContextMenu = (event: MouseEvent) => {
-      if (!isTimeDomainPointerTarget(event)) return;
-      const cycle = cycleBoundaryAtX(event.clientX);
-      if (cycle === undefined) return;
-      event.preventDefault();
-      event.stopPropagation();
-      menuOriginRef.current = event.target instanceof HTMLElement ? event.target : rulerElement;
-      setContextMenu({ x: event.clientX, y: event.clientY, target: "ruler", cycle });
-    };
-    // Signal Split View (#200) Lower-local row interaction PR1 -- see the
-    // lowerCanvasClickRef declaration above for the cross-effect rationale.
-    // Generalized (host/viewport-parameterized) counterparts of
-    // cycleBoundaryAtX/isTimeDomainPointerTarget above, reusing the exact
-    // same shared horizontal geometry (timelineGeometry/timelineNavigation
-    // are the one authoritative instance for both panes) so a click
-    // resolves to the identical cycle Upper would have resolved at the
-    // same horizontal screen position.
-    const cycleBoundaryAtHostX = (targetHost: HTMLElement, clientX: number): number | undefined => {
-      const waveLayer = targetHost.querySelector<HTMLElement>("[data-role='stable-waveform-surface']");
-      if (!waveLayer) return undefined;
-      const bounds = waveLayer.getBoundingClientRect();
-      return timelineGeometry.cycleBoundaryAtScreenX(clientX, bounds.left, timelineNavigation.getZoom(), snapEnabledRef.current);
-    };
-    const isTimeDomainPointerTargetFor = (targetViewport: HTMLElement, event: MouseEvent): boolean => {
-      const target = event.target instanceof Element ? event.target : undefined;
-      if (!target || target.closest(timeDomainExclusions)) return false;
-      const viewportBounds = targetViewport.getBoundingClientRect();
-      const timeDomainLeft = viewportBounds.left + timelineOffset();
-      const insideViewport = event.clientX >= timeDomainLeft
-        && event.clientX <= viewportBounds.right
-        && event.clientY >= viewportBounds.top
-        && event.clientY <= viewportBounds.bottom;
-      if (!insideViewport) return false;
-      return target === targetViewport || targetViewport.contains(target);
-    };
-    lowerCanvasClickRef.current = (event, targetHost, targetViewport) => {
-      if (!isTimeDomainPointerTargetFor(targetViewport, event)) return;
-      const cycle = cycleBoundaryAtHostX(targetHost, event.clientX);
-      if (cycle === undefined) return;
-      const accepted = applyCanvasCycleSelection(cycle, event.shiftKey);
-      if (!accepted) return;
-      selectedEdgeRef.current = undefined;
-      targetHost.dataset.selectedCycle = String(cycle);
-      timelineRuntime.refreshOverlays();
-    };
-    rangeInteractions = new TimelineRangeInteractionOwner({
+    interactionHandle = attachTimelineSurfaceInteractions({
       rendererHost,
-      isTimeDomainPointerTarget,
-      cycleBoundaryAtX: cycleBoundaryAtPointerX,
-      getCycleCount: () => session.getSnapshot().document.timeline.cycleCount,
-      getRange: () => timelineRangeRef.current,
-      getSelectedCycle: () => selectedCycleRef.current,
-      setSelectedCyclePreview: (cycle) => { selectedCycleRef.current = cycle; },
-      setRangeSelectionActive,
-      setRange: setTimelineRange,
-      setSelectedCycle,
-      applyCanvasCycleSelection,
-      refreshRange: refreshRangePreview,
-      refreshPlayhead: () => timelineRuntime.refreshPlayhead(),
-    });
-    const onRangePointerDown = rangeInteractions.pointerDown;
-    const onRangePointerMove = rangeInteractions.pointerMove;
-    const onRangePointerUp = rangeInteractions.pointerUp;
-    const onRangePointerCancel = rangeInteractions.pointerCancel;
-    const onRangeKeyDown = rangeInteractions.keyDown;
-    const treeDrag = new TreeDragInteractionOwner({
-      rendererHost,
-      getDocument: () => session.getSnapshot().document,
-      execute: (command) => { commandRegistry.current.execute<SemanticCommand>("semantic.execute", command); },
-    });
-    const onDragStart = treeDrag.onDragStart;
-    const onDragOver = treeDrag.onDragOver;
-    const onDrop = treeDrag.onDrop;
-    const onDragEnd = treeDrag.onDragEnd;
-    const annotationInteraction = new AnnotationInteractionOwner({
-      rendererHost,
+      viewportElement,
+      rulerElement,
+      rulerViewportElement,
       renderer,
       timelineGeometry,
       documentEpoch,
-      getZoom: () => timelineNavigation.getZoom(),
-      getDocument: () => session.getSnapshot().document,
+      session,
+      timelineNavigation,
+      timelineRuntime,
       getProjection: () => projection,
-      isSnapEnabled: () => snapEnabledRef.current,
+      getTimelineOffset: timelineOffset,
+      getPendingArrow: () => pendingArrow,
+      clearPendingArrow: () => { pendingArrow = undefined; },
+      applyCanvasCycleSelection,
+      onSelect,
+      onTreeKeyDown,
+      onScroll: () => timelineRuntime.onViewportScroll(),
+      onViewportKeyDown,
+      selection,
       execute: (command) => { commandRegistry.current.execute<SemanticCommand>("semantic.execute", command); },
-      executeBatch: (commands) => { application.executeBatch(nextCommandId("annotation_group_move"), commands); },
-      getDragTargets: (annotationId) => {
-        const document = session.getSnapshot().document;
-        const group = (document.annotationGroups ?? []).find((candidate) => candidate.annotationIds.includes(annotationId as AnnotationId));
-        if (group) return new Set(group.annotationIds);
-        const multi = selection.refs.annotationIds.current;
-        if (multi.size > 1 && multi.has(annotationId as AnnotationId)) return new Set(multi);
-        return new Set([annotationId]);
-      },
+      executeBatch: (commands) => { executeBatch(nextCommandId("annotation_group_move"), commands); },
+      commandRegistry,
+      snapEnabledRef,
+      timelineRangeRef,
+      selectedCycleRef,
+      selectedEdgeRef,
+      lowerCanvasClickRef,
+      menuOriginRef,
+      suppressCanvasClickRef,
+      setRangeSelectionActive,
+      setRange: setTimelineRange,
+      setSelectedCycle,
+      setContextMenu,
+      closeContextMenu,
+      setArrowPickStatus,
       publishState,
+      refreshRangePreview,
     });
-    const clearAnnotationPreview = annotationInteraction.cancel;
-    const onAnnotationPointerDown = annotationInteraction.onPointerDown;
-    const onAnnotationPointerMove = annotationInteraction.onPointerMove;
-    const onAnnotationPointerUp = annotationInteraction.onPointerUp;
-    const onGlobalKeyDown = (event: KeyboardEvent) => {
-      const handled = routeGlobalShortcut(event, {
-        isGestureActive: () => annotationInteraction.active,
-        execute: (name) => commandRegistry.current.execute(name),
-        cancel: () => {
-          closeContextMenu();
-          clearAnnotationPreview();
-          pendingArrow = undefined;
-          setArrowPickStatus("idle");
-          delete rendererHost.dataset.arrowPick;
-        },
-      });
-      if (!handled) annotationInteraction.nudge(event);
-    };
-    const onContextMenu = (event: MouseEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']")) return;
-       event.preventDefault();
-       const menuTarget = event.target.closest<HTMLElement>("[data-row-id], [data-annotation-id], [data-role='tree-more'], [data-role='tree-group-more']");
-       menuOriginRef.current = menuTarget ?? (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-       // #195: right-clicking a member that is already part of the current
-       // multi-selection must not collapse it down to just that member --
-       // only rebuild the selection when the target isn't already selected,
-       // so Context Menu commands keep operating on the full preserved set.
-       const rowId = menuTarget?.dataset.rowId;
-       const annotationId = menuTarget?.dataset.annotationId;
-       const alreadySelected = (rowId !== undefined && selection.refs.signalIds.current.has(rowId as SignalId))
-         || (annotationId !== undefined && selection.refs.annotationIds.current.has(annotationId as AnnotationId));
-       if (!alreadySelected) onSelect(event);
-       setContextMenu({ x: event.clientX, y: event.clientY, target: event.target instanceof Element && event.target.closest("[data-annotation-id]") ? "annotation" : event.target.closest("[data-role='tree-group-more']") ? "group" : "signal" });
-    };
-    const onCanvasClick = (event: MouseEvent) => {
-      if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
-      if (rangeInteractions.consumeCanvasClickSuppression()) return;
-      const target = event.target instanceof Element ? event.target : undefined;
-      // Renderer-owned command controls must win over the time-domain hit
-      // resolver, even when the browser reports an inner SVG path as target.
-      // Their actions are routed by onSelect into SemanticCommand.
-      if (target?.closest("[data-role='tree-visibility'], [data-role='tree-more'], [data-role='tree-collapse'], [data-role='tree-group-more']")) { onSelect(event); return; }
-      if (target?.closest("[data-row-id], [data-annotation-id], [data-transaction-id]")) { onSelect(event); return; }
-      if (rendererHost.dataset.arrowPick) onSelect(event); else if (!selectCanvasCycle(event)) onSelect(event);
-    };
-    const onViewportClick = (event: MouseEvent) => {
-      if (suppressCanvasClickRef.current) { suppressCanvasClickRef.current = false; return; }
-      const target = event.target instanceof Element ? event.target : undefined;
-      if (target && (rendererHost.contains(target) || target.closest("[data-testid='cycle-ruler']"))) return;
-      if (rangeInteractions.consumeCanvasClickSuppression()) return;
-      if (rendererHost.dataset.arrowPick) onSelect(event);
-      else selectCanvasCycle(event);
-    };
-    const detachTimelineListeners = attachEditorEventBindings([
-      ...(leftTree ? [{ target: leftTree, type: "keydown", listener: onTreeKeyDown as EventListener }] : []),
-      { target: viewportElement, type: "scroll", listener: onScroll as EventListener, options: { passive: true } },
-      { target: viewportElement, type: "keydown", listener: onViewportKeyDown as EventListener },
-      { target: rendererHost, type: "click", listener: onCanvasClick as EventListener },
-      { target: rendererHost, type: "pointerdown", listener: onRangePointerDown as EventListener },
-      { target: rendererHost, type: "pointermove", listener: onRangePointerMove as EventListener },
-      { target: rendererHost, type: "pointerup", listener: onRangePointerUp as EventListener },
-      { target: rendererHost, type: "pointercancel", listener: onRangePointerCancel as EventListener },
-      { target: rendererHost.ownerDocument, type: "keydown", listener: onRangeKeyDown as EventListener },
-      { target: rendererHost, type: "dragstart", listener: onDragStart as EventListener },
-      { target: rendererHost, type: "dragover", listener: onDragOver as EventListener },
-      { target: rendererHost, type: "drop", listener: onDrop as EventListener },
-      { target: rendererHost, type: "dragend", listener: onDragEnd as EventListener },
-      { target: viewportElement, type: "click", listener: onViewportClick as EventListener },
-      { target: viewportElement, type: "pointerdown", listener: onRangePointerDown as EventListener },
-      { target: viewportElement, type: "pointermove", listener: onRangePointerMove as EventListener },
-      { target: viewportElement, type: "pointerup", listener: onRangePointerUp as EventListener },
-      { target: viewportElement, type: "pointercancel", listener: onRangePointerCancel as EventListener },
-      { target: rulerViewportElement, type: "click", listener: onRulerSelect as EventListener },
-      { target: rulerViewportElement, type: "contextmenu", listener: onRulerContextMenu as EventListener },
-      { target: rulerViewportElement, type: "pointerdown", listener: onRangePointerDown as EventListener },
-      { target: rulerViewportElement, type: "pointermove", listener: onRangePointerMove as EventListener },
-      { target: rulerViewportElement, type: "pointerup", listener: onRangePointerUp as EventListener },
-      { target: rulerViewportElement, type: "pointercancel", listener: onRangePointerCancel as EventListener },
-      { target: rendererHost, type: "pointerdown", listener: onAnnotationPointerDown as EventListener },
-      { target: rendererHost, type: "pointermove", listener: onAnnotationPointerMove as EventListener },
-      { target: rendererHost, type: "pointerup", listener: onAnnotationPointerUp as EventListener },
-      { target: rendererHost, type: "pointercancel", listener: clearAnnotationPreview as EventListener },
-      { target: rendererHost, type: "contextmenu", listener: onContextMenu as EventListener },
-      { target: rendererHost.ownerDocument, type: "keydown", listener: onGlobalKeyDown as EventListener },
-    ]);
     return () => {
       active = false;
       applyCollapsedGroupsRef.current = () => undefined;
@@ -1020,7 +757,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       lowerCanvasClickRef.current = () => undefined;
       detachTimelineNavigation();
       cancelAnimationFrame(frame);
-      detachTimelineListeners();
+      interactionHandle?.detach();
       timelineRuntime.detach();
       timelineRuntime.dispose();
       timelineRuntimeRef.current = null;

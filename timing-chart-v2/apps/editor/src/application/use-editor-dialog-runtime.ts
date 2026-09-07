@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, type MutableRefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, type MutableRefObject } from "react";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { useDialogFocusLoop } from "../dialog-focus-loop.js";
 import { attachDialogOriginCapture, attachDirtyUnloadGuard, scheduleDialogFocusRestore, trapDialogTab } from "../runtime/editor-dom-bridge.js";
@@ -45,46 +45,50 @@ export interface EditorDialogRuntimeInput {
 
 /** Owns document-level dialog/menu listeners so the composition root remains listener-free. */
 export function useEditorDialogRuntime(input: EditorDialogRuntimeInput): void {
+  const inputRef = useRef(input);
+  inputRef.current = input;
   useEffect(() => attachDirtyUnloadGuard(input.dirty), [input.dirty]);
 
   useEffect(() => {
     const menuOpen = input.contextMenu !== undefined || input.treeAddMenuOpen || input.treeMoreMenuOpen;
     if (!menuOpen) return undefined;
     const onPointerDown = (event: PointerEvent) => {
+      const current = inputRef.current;
       const target = event.target instanceof Element ? event.target : undefined;
       if (target?.closest(".context-menu, .tree-add-menu, .tree-header-menu, .tree-add-button, .tree-more-button")) return;
       const canvasOutside = target !== undefined && target.closest("[data-testid='cycle-viewport'], [data-role='timing-chart-surface'], [data-testid='cycle-ruler']") !== null
         && target.closest("[data-row-id], [data-annotation-id], [data-transaction-id]") === null;
-      input.suppressCanvasClickRef.current = canvasOutside;
-      input.setContextMenu(undefined);
-      input.setTreeAddMenuOpen(false);
-      input.setTreeMoreMenuOpen(false);
+      current.suppressCanvasClickRef.current = canvasOutside;
+      current.setContextMenu(undefined);
+      current.setTreeAddMenuOpen(false);
+      current.setTreeMoreMenuOpen(false);
     };
     document.addEventListener("pointerdown", onPointerDown, true);
     return () => document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [input]);
+  }, [input.contextMenu, input.treeAddMenuOpen, input.treeMoreMenuOpen]);
 
-  useEffect(() => attachDialogOriginCapture(document, input.dialogOriginRef, input.dialogOriginLabelRef, input.menuOriginRef), [input]);
+  useEffect(() => attachDialogOriginCapture(document, input.dialogOriginRef, input.dialogOriginLabelRef, input.menuOriginRef), [input.dialogOriginRef, input.dialogOriginLabelRef, input.menuOriginRef]);
   useLayoutEffect(() => {
     if (input.propertiesVisible || input.exportVisible || input.saveAsVisible || input.hierarchyVisible || input.bulkRegistrationVisible) return undefined;
     return scheduleDialogFocusRestore(document, input.dialogOriginRef, input.dialogOriginLabelRef);
-  }, [input]);
+  }, [input.propertiesVisible, input.exportVisible, input.saveAsVisible, input.hierarchyVisible, input.bulkRegistrationVisible, input.dialogOriginRef, input.dialogOriginLabelRef]);
 
   useEffect(() => {
     const onDialogKeyDown = (event: KeyboardEvent) => {
+      const current = inputRef.current;
       if (trapDialogTab(document, event)) return;
-      if (event.key !== "Escape" || input.contextMenu || input.treeAddMenuOpen || input.treeMoreMenuOpen) return;
-      if (input.compatibilityPreview) { event.preventDefault(); input.documentLifecycle.closeCompatibility(); input.restorePendingFileFocus(); return; }
-      if (input.pendingFileAction) { event.preventDefault(); input.cancelPendingFileAction(); return; }
-      if (input.bulkRegistrationVisible) { event.preventDefault(); input.setBulkRegistrationVisible(false); input.setBulkRegistrationPreview(undefined); return; }
-      if (input.hierarchyVisible) { event.preventDefault(); input.setHierarchyVisible(false); return; }
-      if (input.propertiesVisible) { event.preventDefault(); input.setPropertiesVisible(false); return; }
-      if (input.exportVisible) { event.preventDefault(); input.setExportVisible(false); return; }
-      if (input.saveAsVisible) { event.preventDefault(); input.setSaveAsVisible(false); }
+      if (event.key !== "Escape" || current.contextMenu || current.treeAddMenuOpen || current.treeMoreMenuOpen) return;
+      if (current.compatibilityPreview) { event.preventDefault(); current.documentLifecycle.closeCompatibility(); current.restorePendingFileFocus(); return; }
+      if (current.pendingFileAction) { event.preventDefault(); current.cancelPendingFileAction(); return; }
+      if (current.bulkRegistrationVisible) { event.preventDefault(); current.setBulkRegistrationVisible(false); current.setBulkRegistrationPreview(undefined); return; }
+      if (current.hierarchyVisible) { event.preventDefault(); current.setHierarchyVisible(false); return; }
+      if (current.propertiesVisible) { event.preventDefault(); current.setPropertiesVisible(false); return; }
+      if (current.exportVisible) { event.preventDefault(); current.setExportVisible(false); return; }
+      if (current.saveAsVisible) { event.preventDefault(); current.setSaveAsVisible(false); }
     };
     document.addEventListener("keydown", onDialogKeyDown, true);
     return () => document.removeEventListener("keydown", onDialogKeyDown, true);
-  }, [input]);
+  }, [input.contextMenu, input.treeAddMenuOpen, input.treeMoreMenuOpen, input.compatibilityPreview, input.pendingFileAction, input.bulkRegistrationVisible, input.hierarchyVisible, input.propertiesVisible, input.exportVisible, input.saveAsVisible]);
 
   useDialogFocusLoop(input.renameDialogRef, input.renameDialogOriginRef, input.renameDialogOpen);
   useDialogFocusLoop(input.bulkRegistrationDialogRef, input.dialogOriginRef, input.bulkRegistrationVisible);
