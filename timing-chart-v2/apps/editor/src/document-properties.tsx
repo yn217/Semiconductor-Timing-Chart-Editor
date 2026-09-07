@@ -1,13 +1,11 @@
 import { useRef, useState } from "react";
 import type { RefObject } from "react";
-import type { CommandHistorySession } from "@timing-chart-v2/history";
-import type { SemanticCommand } from "@timing-chart-v2/commands";
 import type { CanonicalDocument, LegendEntry } from "@timing-chart-v2/schema";
-import { nextCommandId } from "./command-id.js";
+import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { EditorIconButton } from "./editor-icon.js";
 
-export function DocumentProperties({ document, onApplyProperties, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly onApplyProperties: (commands: readonly SemanticCommand[]) => ReturnType<CommandHistorySession["executeBatch"]>; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
+export function DocumentProperties({ document, commands, restoreFocusRef, onClose }: { readonly document: CanonicalDocument; readonly commands: Pick<EditorSurfaceCommandController, "updateDocumentProperties">; readonly restoreFocusRef?: RefObject<HTMLElement | null>; readonly onClose: () => void }) {
   const dialogRef = useRef<HTMLFormElement>(null);
   useDialogFocusLoop(dialogRef, restoreFocusRef);
   const [title, setTitle] = useState(document.document.title);
@@ -52,11 +50,8 @@ export function DocumentProperties({ document, onApplyProperties, restoreFocusRe
     const header = { subtitle, description, notes, preconditions: lines(preconditions), constraints: lines(constraints), exceptions: lines(exceptions) };
     const footer = { figureNumber, revision, text: footerText };
     const nextLegend = { ...document.legend, show: legendShow, orientation: legendOrientation, usedRolesOnly: legendUsedRolesOnly, position: { x: legendPositionX, y: legendPositionY }, items: parsed as NonNullable<typeof document.legend.items> };
-    const commands: SemanticCommand[] = [];
-    if (JSON.stringify(document.document) !== JSON.stringify({ ...document.document, title, header, footer })) commands.push({ id: nextCommandId("document_metadata"), type: "document.updateMetadata", title, header, footer });
-    if (JSON.stringify(document.legend) !== JSON.stringify(nextLegend)) commands.push({ id: nextCommandId("legend_update"), type: "legend.update", legend: nextLegend });
-    if (commands.length === 0) { setLegendStatus("No document properties changed"); return; }
-    const result = onApplyProperties(commands);
+    const result = commands.updateDocumentProperties(document, { title, header, footer, legend: nextLegend });
+    if (result === undefined) { setLegendStatus("No document properties changed"); return; }
     setLegendStatus(result.ok ? "Properties applied" : result.problems[0]?.message ?? "Properties could not be applied");
   }}>
     <header><h2>Document Properties</h2><EditorIconButton label="Close properties" icon="close" onClick={onClose} /></header>

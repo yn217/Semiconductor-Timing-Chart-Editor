@@ -47,6 +47,34 @@ describe("editor surface command controller", () => {
     ]);
   });
 
+  it("owns Document Properties command construction and keeps metadata/legend changes batched", () => {
+    const execute = vi.fn(() => ({ ok: true } as never));
+    const executeBatch = vi.fn(() => ({ ok: true } as never));
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch, nextCommandId: (operation) => `test_${operation}` as never });
+    const document = {
+      document: { title: "Before", header: { subtitle: "", description: "", notes: "", preconditions: [], constraints: [], exceptions: [] }, footer: { figureNumber: "", revision: "", text: "" } },
+      legend: { show: true, orientation: "horizontal", usedRolesOnly: false, position: { x: 0, y: 0 }, items: [] },
+    } as never;
+
+    expect(controller.updateDocumentProperties(document, {
+      title: "After",
+      header: document.document.header,
+      footer: document.document.footer,
+      legend: { ...document.legend, show: false },
+    })).toEqual({ ok: true });
+    expect(execute).not.toHaveBeenCalled();
+    expect(executeBatch).toHaveBeenCalledWith("test_document_properties", [
+      expect.objectContaining({ id: "test_document_metadata", type: "document.updateMetadata", title: "After" }),
+      expect.objectContaining({ id: "test_legend_update", type: "legend.update", legend: expect.objectContaining({ show: false }) }),
+    ]);
+    expect(controller.updateDocumentProperties(document, {
+      title: document.document.title,
+      header: document.document.header,
+      footer: document.document.footer,
+      legend: document.legend,
+    })).toBeUndefined();
+  });
+
   it("owns Bottom Transaction Editor command construction and batch routing", () => {
     const execute = vi.fn(() => ({ ok: true } as never));
     const executeBatch = vi.fn(() => ({ ok: true } as never));

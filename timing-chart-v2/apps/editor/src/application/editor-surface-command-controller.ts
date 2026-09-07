@@ -52,6 +52,15 @@ export interface InspectorCommandActions {
   readonly setAnnotationAnchor: (annotationId: AnnotationId, field: "anchor" | "start" | "end" | "from" | "to", anchor: SemanticAnchor) => CommandResult;
 }
 
+export interface DocumentPropertiesCommandActions {
+  readonly updateDocumentProperties: (document: CanonicalDocument, update: {
+    readonly title: string;
+    readonly header: CanonicalDocument["document"]["header"];
+    readonly footer: CanonicalDocument["document"]["footer"];
+    readonly legend: CanonicalDocument["legend"];
+  }) => CommandResult | undefined;
+}
+
 export interface RibbonCommandActions {
   readonly createSignal: (signal: Signal, targetGroupId: GroupId, index: number) => CommandResult;
   readonly createCommentRow: (commentRow: CommentRow, targetGroupId: GroupId, index: number) => CommandResult;
@@ -88,7 +97,7 @@ export interface RibbonCommandActions {
   readonly updateCommentRowStyle: (signalId: SignalId, commentRow: Pick<CommentRow, "title" | "body">, style: JsonObject) => CommandResult;
 }
 
-export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, TransactionEditorCommandActions, InspectorCommandActions, RibbonCommandActions {}
+export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, TransactionEditorCommandActions, InspectorCommandActions, DocumentPropertiesCommandActions, RibbonCommandActions {}
 
 export function createEditorSurfaceCommandController(input: {
   readonly execute: (command: SemanticCommand) => CommandResult;
@@ -97,6 +106,17 @@ export function createEditorSurfaceCommandController(input: {
 }): EditorSurfaceCommandController {
   const dispatch = <T extends SemanticCommand["type"]>(operation: string, command: Omit<CommandOf<T>, "id">): CommandResult => input.execute({ id: input.nextCommandId(operation), ...command } as SemanticCommand);
   const dispatchBatch = <T extends SemanticCommand["type"]>(operation: string, commands: readonly Omit<CommandOf<T>, "id">[], batchOperation = "ribbon_annotation_arrange"): CommandResult => input.executeBatch(input.nextCommandId(batchOperation), commands.map((command) => ({ id: input.nextCommandId(operation), ...command } as SemanticCommand)));
+  const updateDocumentProperties: DocumentPropertiesCommandActions["updateDocumentProperties"] = (document, update) => {
+    const commands: SemanticCommand[] = [];
+    const nextDocument = { ...document.document, title: update.title, header: update.header, footer: update.footer };
+    if (JSON.stringify(document.document) !== JSON.stringify(nextDocument)) {
+      commands.push({ id: input.nextCommandId("document_metadata"), type: "document.updateMetadata", title: update.title, header: update.header, footer: update.footer });
+    }
+    if (JSON.stringify(document.legend) !== JSON.stringify(update.legend)) {
+      commands.push({ id: input.nextCommandId("legend_update"), type: "legend.update", legend: update.legend });
+    }
+    return commands.length === 0 ? undefined : input.executeBatch(input.nextCommandId("document_properties"), commands);
+  };
   return {
     updateClockGenerator: (signalId, generator) => dispatch<"signal.updateClockGenerator">("clock", { type: "signal.updateClockGenerator", signalId, generator }),
     updateEdgeCounter: (signalId, edgeCounter) => dispatch<"signal.updateEdgeCounter">("edge_counter", { type: "signal.updateEdgeCounter", signalId, edgeCounter }),
@@ -138,6 +158,7 @@ export function createEditorSurfaceCommandController(input: {
     updateTransaction: (payload) => dispatch<"transaction.update">("transaction_update", { type: "transaction.update", ...payload }),
     updateAnnotationProperties: (payload) => dispatch<"annotation.updateProperties">("inspector_annotation_properties", { type: "annotation.updateProperties", ...payload }),
     setAnnotationAnchor: (annotationId, field, anchor) => dispatch<"annotation.setAnchor">("inspector_annotation_anchor", { type: "annotation.setAnchor", annotationId, field, anchor }),
+    updateDocumentProperties,
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
     createCommentRow: (commentRow, targetGroupId, index) => dispatch<"commentRow.create">("insert_comment_row", { type: "commentRow.create", commentRow, targetGroupId, index }),
     createGroup: (group, index) => dispatch<"group.create">("insert_group", { type: "group.create", group, index }),

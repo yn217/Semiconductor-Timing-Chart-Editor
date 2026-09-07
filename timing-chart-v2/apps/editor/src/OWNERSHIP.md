@@ -56,6 +56,7 @@ controllers are extracted incrementally.
 | Editor surface command controller | `application/editor-surface-command-controller.ts` | SemanticCommand construction / command IDs | second-pass presentation boundary |
 | Find/Replace presentation | `find-replace-panel.tsx` | `EditorSurfaceCommandController.renameSignals` | second-pass typed command boundary |
 | Bottom Transaction Editor | `transaction-editor.tsx` | `EditorSurfaceCommandController` transaction editor/bulk APIs | second-pass typed command boundary |
+| Document Properties presentation | `document-properties.tsx` | `EditorSurfaceCommandController.updateDocumentProperties` | second-pass typed command boundary |
 | Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | `EditorSurfaceCommandController` for Insert/Annotation operations; parent callbacks for frozen Home controls | second-pass typed command boundary; Home remains frozen |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |
