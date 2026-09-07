@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
@@ -34,7 +34,7 @@ import { AnnotationEditor } from "./annotation-editor.js";
 import { AdvancedJsonPanel } from "./advanced-json-panel.js";
 import { SignalEditor } from "./signal-editor.js";
 import { InspectorClockEditor } from "./inspector-clock-editor.js";
-import { Ribbon } from "./minimal-cycle-view-ribbon.js";
+import { EditorRibbon } from "./ribbon/editor-ribbon.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
@@ -49,8 +49,8 @@ import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
-import type { SelectedClockEdge } from "./runtime/edge-counter-projection.js";
 import { useWorkspaceUiState, type TreeTypeFilter } from "./workspace/use-workspace-ui-state.js";
+import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
@@ -59,7 +59,8 @@ import { BookmarkEditor } from "./bookmark-editor.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { attachMenuKeyboardNavigation, refreshRendererOverlays } from "./runtime/use-editor-runtime-bridge.js";
 import { refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview } from "./runtime/presentation-preview.js";
-import { applyRendererHostSizing, refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
+import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
+import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
@@ -261,13 +262,27 @@ export function MinimalCycleView() {
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
-  const [treePresentationRevision, setTreePresentationRevision] = useState(0);
-  const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
-  const [transactionPresentationRevision, setTransactionPresentationRevision] = useState(0);
-  const [rangePresentationRevision, setRangePresentationRevision] = useState(0);
-  const collapsedGroupIdsRef = useRef<ReadonlySet<GroupId>>(new Set());
-  const applyCollapsedGroupsRef = useRef<(ids: ReadonlySet<GroupId>) => void>(() => undefined);
+  const timelinePresentation = useTimelinePresentationState({ visualReference });
+  const {
+    collapsedGroupIds,
+    treePresentationRevision,
+    playheadPresentationRevision,
+    transactionPresentationRevision,
+    rangePresentationRevision,
+    timelineRange,
+    rangeSelectionActive,
+    selectedCycle,
+    setCollapsedGroups,
+    toggleCollapsedGroup,
+    setTreePresentationRevision,
+    setPlayheadPresentationRevision,
+    setTransactionPresentationRevision,
+    setRangePresentationRevision,
+    setTimelineRange,
+    setRangeSelectionActive,
+    setSelectedCycle,
+  } = timelinePresentation;
+  const { collapsedGroupIdsRef, applyCollapsedGroupsRef, timelineRangeRef, rangeSelectionActiveRef, selectedCycleRef, selectedEdgeRef } = timelinePresentation.refs;
   const treeFocusRowIdRef = useRef<string | undefined>(undefined);
   const menuOriginRef = useRef<HTMLElement | null>(null);
   const suppressCanvasClickRef = useRef(false);
@@ -296,14 +311,6 @@ export function MinimalCycleView() {
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   const clipboardStatus = editActions.status;
   const clipboardAvailable = editActions.available;
-  const [timelineRange, setTimelineRange] = useState(() => visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
-  const [rangeSelectionActive, setRangeSelectionActive] = useState(false);
-  const rangeSelectionActiveRef = useRef(false);
-  rangeSelectionActiveRef.current = rangeSelectionActive;
-  const [selectedCycle, setSelectedCycle] = useState(() => visualReference ? 0 : 2);
-  const selectedCycleRef = useRef(selectedCycle);
-  selectedCycleRef.current = selectedCycle;
-  const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
   const refreshPlayhead = useRef<() => void>(() => undefined);
   const refreshRangeSelectionBand = useRef<() => void>(() => undefined);
   // #175: lets an outside action (Refresh Checks) that only changes React
@@ -313,8 +320,6 @@ export function MinimalCycleView() {
   // after the click that incremented it rather than only at the next
   // unrelated render/publish.
   const publishStateRef = useRef<() => void>(() => undefined);
-  const timelineRangeRef = useRef(timelineRange);
-  timelineRangeRef.current = timelineRange;
   // View-only navigation updates zoom without replacing the canonical document.
   // Keep entity lookup work on the document boundary so large documents do not
   // linearly rescan every signal during each zoom render.
@@ -363,17 +368,6 @@ export function MinimalCycleView() {
   }, [treePresentationRevision, treeFilter, collapsedGroupIds, selectedId, selectedGroupId]);
   const diagnostics = useMemo(() => [...validationDiagnostics, ...runtimeDiagnostics], [runtimeDiagnostics, validationDiagnostics]);
   const waveDromHasError = runtimeDiagnostics.some((item) => item.code === "WAVE_RENDER_ERROR");
-  const setCollapsedGroups = (next: ReadonlySet<GroupId>) => {
-    const stable = new Set(next);
-    collapsedGroupIdsRef.current = stable;
-    setCollapsedGroupIds(stable);
-    applyCollapsedGroupsRef.current(stable);
-  };
-  const toggleCollapsedGroup = (id: GroupId) => {
-    const next = new Set(collapsedGroupIdsRef.current);
-    if (next.has(id)) next.delete(id); else next.add(id);
-    setCollapsedGroups(next);
-  };
   const commandRouter = useEditorCommandRouter({ application, selection, editActions, selectAllRef });
   const commandRegistry = commandRouter.commandRegistry;
   const executeBatch = commandRouter.executeBatch;
@@ -679,7 +673,7 @@ export function MinimalCycleView() {
     cycleCount={snapshot.document.timeline.cycleCount} signalCount={snapshot.document.signals.length} transactionCount={snapshot.document.transactions.length}
     titleBar={<MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />} ribbon={<MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />}
   >
-    <Ribbon
+    <EditorRibbon
       tab={ribbonTab}
       document={snapshot.document}
       revision={snapshot.revision}

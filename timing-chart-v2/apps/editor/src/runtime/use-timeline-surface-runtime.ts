@@ -16,11 +16,14 @@ import { ViewMetricsOwner } from "./view-metrics.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createEdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
 import { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
-import { createWaveformSurfaceProvider, createEditorTimelineRuntime, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererForReason, refreshTimelinePresentation, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll } from "./use-editor-runtime-bridge.js";
+import { createEditorTimelineRuntime, deriveRenderInvalidation, refreshRendererForReason, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh } from "./use-editor-runtime-bridge.js";
+import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
+import { mountInitialTimelineProjection, projectViewportWindow } from "./viewport-projection.js";
+import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshTimelinePresentation, syncFrozenColumnScroll, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
 import { attachTimelineSurfaceInteractions, createTimelineCycleBoundaryResolver, createTimelineViewportKeyDownHandler, type TimelineSurfaceInteractionHandle } from "./timeline-surface-interactions.js";
 import { collectWaveRenderErrors, createOpenPhaseTracker } from "./runtime-diagnostics.js";
-import { publishRendererState } from "./use-editor-runtime-bridge.js";
-import { applyRendererHostSizing } from "./editor-dom-bridge.js";
+import { publishRendererState } from "./runtime-diagnostics.js";
+import { applyRendererHostSizing } from "./renderer-host-sizing.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { nextCommandId } from "../command-id.js";
 import { nextEntityId } from "../entity-id.js";
@@ -341,7 +344,7 @@ export function useTimelineSurfaceRuntime(input: TimelineSurfaceRuntimeInput): T
       viewMetrics: viewMetricsOwner,
       timelineOffset,
       getPresentationScale: () => timelineGeometry.presentationScale,
-      syncPresentationScale: syncPresentationScaleDom,
+      syncPresentationScale,
       syncFrozenColumns: () => syncFrozenColumnScroll(viewportElement, rendererHost, viewMetricsOwner.snapshot().leftPaneWidth),
       getDocument: () => session.getSnapshot().document,
       getRange: () => timelineRangeRef.current,

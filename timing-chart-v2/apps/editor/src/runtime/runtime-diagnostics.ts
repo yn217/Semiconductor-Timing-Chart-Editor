@@ -1,8 +1,9 @@
 import type { CommandHistorySession } from "@timing-chart-v2/history";
-import type { DocumentProblem, CanonicalDocument } from "@timing-chart-v2/schema";
+import type { DocumentProblem } from "@timing-chart-v2/schema";
 import type { WaveDromAdapter } from "@timing-chart-v2/wavedrom-adapter";
 import type { TimingChartRenderer } from "@timing-chart-v2/renderer";
-import type { DisplayTimeMappingCache, RenderProjection } from "@timing-chart-v2/projection";
+import type { DisplayTimeMappingCache } from "@timing-chart-v2/projection";
+import type { EdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
 import type { ProjectionCoordinator } from "./projection-coordinator.js";
 import type { SemanticSnapCandidateService, ImmutableSnapIndex } from "@timing-chart-v2/geometry";
 import type { ViewMetricsOwner } from "./view-metrics.js";
@@ -21,6 +22,24 @@ export function collectWaveRenderErrors(host: HTMLElement): readonly DocumentPro
     recommendation: "Review the affected Signal values or type, then retry the operation or open a supported document.",
     detail: "waveform-render:localized-failure",
   }));
+}
+
+export function publishRendererState(host: HTMLElement, session: Pick<CommandHistorySession, "getSnapshot" | "historyState" | "metrics" | "historyMetrics">, viewMetricsOwner: Pick<ViewMetricsOwner, "snapshot">, adapter: WaveDromAdapter, geometryCache: unknown, projectionCoordinator: Pick<ProjectionCoordinator, "currentDocumentEpoch" | "diagnostics">, renderer: Pick<TimingChartRenderer, "diagnosticSummary">, mappingCache: Pick<DisplayTimeMappingCache, "metrics">, snapService: Pick<SemanticSnapCandidateService, "metrics">, snapIndex: ImmutableSnapIndex | undefined, rulerBuilds: number, edgeCounterResolvePasses: number, zoom: number, validatorInvocations: number, edgeCounterMetrics?: EdgeCounterProjectionMetrics): void {
+  host.dataset.canonicalRevision = String(session.getSnapshot().revision);
+  host.dataset.historyDepth = String(session.historyState().undoDepth);
+  const metrics = viewMetricsOwner.snapshot();
+  host.dataset.viewMetrics = JSON.stringify(metrics);
+  const { renderCallsBySignal: _renderCallsBySignal, ...waveAdapter } = adapter.metrics();
+  const { last: _lastGeometry, ...geometryExtraction } = adapter.geometryMetrics();
+  const projectionDocumentEpoch = projectionCoordinator.currentDocumentEpoch();
+  host.dataset.sessionCounters = JSON.stringify({
+    ...session.metrics(), ...session.historyMetrics(), ...projectionCoordinator.diagnostics(), projectionDocumentEpoch,
+    ...renderer.diagnosticSummary(), rulerBuilds, edgeCounterResolvePasses, ...edgeCounterMetrics, ...mappingCache.metrics(),
+    snapIndexBuilds: snapService.metrics().builds, snapCandidateCount: snapService.metrics().candidateCount,
+    snapQueries: snapIndex?.metrics().queries ?? 0, snapCandidatesVisited: snapIndex?.metrics().candidatesVisited ?? 0,
+    viewMetrics: metrics, waveAdapter, geometryExtraction, zoom, validatorInvocations,
+  });
+  void geometryCache;
 }
 export type OpenPhaseTracker = Readonly<{
   mark: (phase: string, phaseTimestamp?: number) => void;

@@ -1,7 +1,8 @@
 import { useEffect } from "react";
 import type { TimelineSurfaceRuntimeInput } from "./use-timeline-surface-runtime.js";
 import { buildViewportWindow } from "./viewport-window.js";
-import { createWaveformSurfaceProvider, mountInitialTimelineProjection } from "./use-editor-runtime-bridge.js";
+import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
+import { mountInitialTimelineProjection } from "./viewport-projection.js";
 export function useSignalSplitSurfaceRuntime(input: TimelineSurfaceRuntimeInput): void {
   const { application, dom, presentation } = input;
   const { viewportLower, hostLower, signalSplitRuntimeRef } = dom;

@@ -8,6 +8,13 @@ const actionOwner = await readFile(resolve(root, "apps/editor/src/application/us
 const presentationOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-presentation-state.ts"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
+const runtimeHelperSources = await Promise.all([
+  "apps/editor/src/runtime/viewport-projection.ts",
+  "apps/editor/src/runtime/waveform-surface-provider.ts",
+  "apps/editor/src/runtime/timeline-presentation-refresh.ts",
+  "apps/editor/src/runtime/renderer-host-sizing.ts",
+  "apps/editor/src/runtime/runtime-diagnostics.ts",
+].map(async (helper) => [helper, await readFile(resolve(root, helper), "utf8")]));
 const lines = source.split(/\r?\n/).length;
 const budget = 900;
 const ownerBudgets = [
@@ -36,6 +43,8 @@ const requiredSourceContracts = [
   ["workspace shell owner", /EditorWorkspaceView/],
   ["dialog shell owner", /EditorDialogLayer/],
   ["runtime DOM bridge split", /editor-dom-bridge/],
+  ["timeline presentation state owner", /useTimelinePresentationState/],
+  ["ribbon presentation boundary", /EditorRibbon/],
 ];
 const violations = [
   ...forbiddenOwners.filter(([, pattern]) => pattern.test(source)).map(([name]) => name),
@@ -44,6 +53,7 @@ const violations = [
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(actionOwner) ? ["use-editor-actions must remain JSX-free"] : []),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(presentationOwner) ? ["use-editor-presentation-state must remain JSX-free"] : []),
   ...(source.includes("new TimelineGeometryOwner") || source.includes("createWaveformSurfaceProvider") || source.includes("attachEditorEventBindings") ? ["runtime lifecycle leaked into MinimalCycleView"] : []),
+  ...runtimeHelperSources.flatMap(([helper, helperSource]) => helperSource.length === 0 ? [`empty runtime helper: ${helper}`] : []),
 ];
 const preferredWarnings = [];
 for (const [owner, max] of ownerBudgets) {
