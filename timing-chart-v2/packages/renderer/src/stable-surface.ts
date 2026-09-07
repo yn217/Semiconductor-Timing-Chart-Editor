@@ -264,6 +264,14 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         owner.dataset.groupId = row.groupId;
         owner.dataset.groupStart = String(firstTimingRowByGroup.get(row.groupId) === row.rowId);
         place(owner, row);
+        const waveformStyle = parseWaveformStyle(row.displayStyle);
+        applyWaveformStyle(owner, waveformStyle);
+        // #472: `mountWave`/`mountWaveBatch` replace `owner`'s children with
+        // a freshly-generated SVG, wiping the override applied above --
+        // stash the resolved color so it can be reapplied once that mount
+        // actually lands (see #flushWaveBatch), without threading display
+        // style through the wave-mount queue/provider contract.
+        if (waveformStyle.color) owner.dataset.waveformStyleColor = waveformStyle.color; else delete owner.dataset.waveformStyleColor;
       }
       if (isNew || this.#dirtyWaves.has(signalId)) this.#queueWave(signalId, owner);
     }
@@ -526,6 +534,10 @@ export class StableTimingChartRenderer implements TimingChartRenderer {
         this.#localGeometryBuildsBySignal.set(request.signalId, (this.#localGeometryBuildsBySignal.get(request.signalId) ?? 0) + delta.localGeometryBuilds);
         this.#diagnostics = { ...this.#diagnostics, waveRendersBySignalCount: this.#diagnostics.waveRendersBySignalCount + (firstWaveRenderForSignal ? 1 : 0), localGeometryBuildsBySignalCount: this.#diagnostics.localGeometryBuildsBySignalCount + (firstGeometryBuildForSignal ? 1 : 0) };
         request.owner.removeAttribute("data-wave-error");
+        // #472: the fresh SVG this mount just installed has no knowledge of
+        // any waveform color override -- reapply from the stashed value set
+        // by the main per-row loop above (see its own comment).
+        if (request.owner.dataset.waveformStyleColor) applyWaveformStyle(request.owner, { color: request.owner.dataset.waveformStyleColor });
         if ((this.#waveVersions.get(request.signalId) ?? 0) === request.version) this.#dirtyWaves.delete(request.signalId);
       } else {
         request.owner.replaceChildren();
@@ -1123,6 +1135,41 @@ function applyTextStyle(element: HTMLElement, parsed: ReturnType<typeof parseTex
   if (parsed.fontSize) element.style.fontSize = `${parsed.fontSize}px`; else element.style.removeProperty("font-size");
   if (parsed.textDecoration !== undefined) element.style.textDecoration = parsed.textDecoration; else element.style.removeProperty("text-decoration");
   if (parsed.lineHeight) element.style.lineHeight = String(parsed.lineHeight); else element.style.removeProperty("line-height");
+}
+
+/** #472: `Signal.display.style.waveformColor` was stored in Canonical and
+ * survived Save/Open, but nothing in the render pipeline ever read it --
+ * the WaveDrom-generated SVG's own embedded `<style>` hardcodes its wave
+ * stroke color (default `#000`) independent of Canonical presentation.
+ * This overrides it as a presentation-only repaint on the already-
+ * rendered SVG subtree, run on every row placement (cheap, alongside the
+ * existing `place()` call) -- never as a reason to regenerate WaveDrom
+ * semantics/geometry. Scoped per-owner by finding exactly which classes
+ * this *specific* SVG's own embedded style currently draws at the
+ * unstyled default stroke color, rather than assuming a fixed class
+ * number: WaveDrom numbers classes independently per render, so the same
+ * class name can mean a different visual role in a different Signal's
+ * SVG -- inspecting each owner's own embedded rules keeps this correct
+ * without hardcoding WaveDrom's internal numbering scheme. */
+function parseWaveformStyle(style: Record<string, unknown> | undefined): { readonly color?: string | undefined } {
+  const source = style ?? {};
+  return { color: typeof source.waveformColor === "string" && /^#[0-9a-f]{3,8}$/i.test(source.waveformColor) ? source.waveformColor : undefined };
+}
+const WAVEFORM_DEFAULT_STROKE = "#000";
+function applyWaveformStyle(owner: HTMLElement, parsed: ReturnType<typeof parseWaveformStyle>): void {
+  const OVERRIDE_ATTR = "data-waveform-style-override";
+  const existing = owner.querySelector(`style[${OVERRIDE_ATTR}]`);
+  if (!parsed.color) { existing?.remove(); return; }
+  const embedded = owner.querySelector("svg > style");
+  const defaultStrokePattern = new RegExp(`\\.(s\\d+)\\{[^}]*\\bstroke:${WAVEFORM_DEFAULT_STROKE.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b[^}]*\\}`, "g");
+  const classes = [...(embedded?.textContent ?? "").matchAll(defaultStrokePattern)].map((match) => match[1]);
+  if (classes.length === 0) { existing?.remove(); return; }
+  const signalId = owner.dataset.signalId ?? "";
+  const selector = classes.map((className) => `[data-role="wave-owner"][data-signal-id="${CSS.escape(signalId)}"] svg .${className}`).join(",");
+  const rule = `${selector}{stroke:${parsed.color} !important}`;
+  const style = existing ?? owner.ownerDocument.createElement("style");
+  if (!existing) { style.setAttribute(OVERRIDE_ATTR, ""); owner.append(style); }
+  if (style.textContent !== rule) style.textContent = rule;
 }
 
 function applyDisplayStyle(shell: HTMLElement, row: RowLayoutEntry): void {
