@@ -18,7 +18,8 @@ import { TimelineRangeInteractionOwner } from "./timeline-range-interaction-owne
 import { AnnotationInteractionOwner } from "./timeline-annotation-interaction-owner.js";
 import { TreeDragInteractionOwner } from "./tree-drag-interaction-owner.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
-import { createWaveformSurfaceProvider, attachEditorEventBindings, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererForReason, refreshTimelinePresentation, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll, applyRendererHostSizing } from "./use-editor-runtime-bridge.js";
+import { createWaveformSurfaceProvider, attachEditorEventBindings, collectWaveRenderErrors, createEditorTimelineRuntime, createOpenPhaseTracker, deriveRenderInvalidation, mountInitialTimelineProjection, projectViewportWindow, publishRendererState, refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshRendererForReason, refreshTimelinePresentation, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh, syncFrozenColumnScroll, syncPresentationScale as syncPresentationScaleDom, syncRulerScroll } from "./use-editor-runtime-bridge.js";
+import { applyRendererHostSizing } from "./editor-dom-bridge.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
 import { nextCommandId } from "../command-id.js";
 import { nextEntityId } from "../entity-id.js";

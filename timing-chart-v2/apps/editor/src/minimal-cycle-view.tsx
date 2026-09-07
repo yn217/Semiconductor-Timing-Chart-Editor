@@ -81,8 +81,8 @@ import { TransactionEditor } from "./transaction-editor.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
 import { BookmarkEditor } from "./bookmark-editor.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
-
+import { attachMenuKeyboardNavigation, refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview, refreshRendererOverlays } from "./runtime/use-editor-runtime-bridge.js";
+import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/editor-dom-bridge.js";
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
@@ -451,7 +451,6 @@ export function MinimalCycleView() {
     if (timelineRuntimeRef.current) timelineRuntimeRef.current.onViewportResize();
     else applyRendererHostSizing({ host, viewport, metrics: viewMetricsOwner.snapshot() });
   }, [viewMetricsOwner, leftPaneWidth, frozenPaneWidth, inspectorWidth]);
-
   useTimelineSurfaceRuntime({
     application,
     documentLifecycle,
