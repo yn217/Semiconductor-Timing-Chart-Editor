@@ -666,11 +666,13 @@ export function MinimalCycleView() {
   />;
   const workspaceInspector = <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? selectedBookmark?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} bookmark={selectedBookmark} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => { if (selectedGroup) refreshGroupStylePreview(host.current!, selectedGroup.id, selectedGroup.style); setInspectorResetToken((value) => value + 1); }} onClose={() => setInspectorVisible(false)} onDeleteBookmark={deleteBottomBookmark} onGroupPreview={(groupId, style) => refreshGroupStylePreview(host.current!, groupId, style ?? snapshot.document.signalGroups.find((group) => group.id === groupId)?.style)} />;
   return <EditorShellView
-    style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties}
-    density={density} workspacePreset={workspacePreset} inspectorVisible={inspectorVisible} bottomVisible={bottomVisible} rulerEnabled={rulerEnabled} minimapEnabled={minimapEnabled} signalTreeVisible={signalTreeVisible}
-    showSignalNames={showSignalNames} showRoles={showRoles} showAnnotations={showAnnotations} showTransactions={showTransactions} showGroupBackground={showGroupBackground}
-    layoutOverflow={snapshot.document.layout.overflow} leftPaneWidth={leftPaneWidth} frozenPaneWidth={frozenPaneWidth} bottomHeight={bottomHeight} inspectorWidth={inspectorWidth}
-    cycleCount={snapshot.document.timeline.cycleCount} signalCount={snapshot.document.signals.length} transactionCount={snapshot.document.transactions.length}
+    viewModel={{
+      style: { "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties,
+      density, workspacePreset, inspectorVisible, bottomVisible, rulerEnabled, minimapEnabled, signalTreeVisible,
+      showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground,
+      layoutOverflow: snapshot.document.layout.overflow, leftPaneWidth, frozenPaneWidth, bottomHeight, inspectorWidth,
+      cycleCount: snapshot.document.timeline.cycleCount, signalCount: snapshot.document.signals.length, transactionCount: snapshot.document.transactions.length,
+    }}
     titleBar={<MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />} ribbon={<MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />}
   >
     <EditorRibbon
@@ -781,54 +783,19 @@ export function MinimalCycleView() {
       aiBridgeStatus={aiBridgeStatus}
       onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
-    <EditorWorkspaceView
-      viewMode={viewMode}
-      signalSplitEnabled={signalSplitEnabled}
-      signalSplitRatio={signalSplitRatio}
-      gridEnabled={gridEnabled}
-      snapEnabled={snapEnabled}
-      rulerEnabled={rulerEnabled}
-      leftPaneWidth={leftPaneWidth}
-      frozenPaneMinWidth={frozenPaneMinWidth}
-      frozenPaneWidth={frozenPaneWidth}
-      bottomVisible={bottomVisible}
-      bottomHeight={bottomHeight}
-      inspectorVisible={inspectorVisible}
-      inspectorWidth={inspectorWidth}
-      viewport={viewport}
-      gridLayer={gridLayer}
-      ruler={ruler}
-      host={host}
-      viewportLower={viewportLower}
-      rulerLower={rulerLower}
-      hostLower={hostLower}
-      gridLayerLower={gridLayerLower}
-      header={workspaceHeader}
-      viewportContent={workspaceViewportContent}
-      viewportLegend={workspaceViewportLegend}
-      bottom={workspaceBottom}
-      inspector={workspaceInspector}
-      onInspectorKeyDown={resizeInspectorByKeyboard}
-      onInspectorPointerDown={startInspectorResize}
-      onInspectorPointerMove={moveInspectorResize}
-      onInspectorPointerUp={finishInspectorResize}
-      onLeftPaneKeyDown={resizeLeftPaneByKeyboard}
-      onLeftPanePointerDown={startLeftPaneResize}
-      onLeftPanePointerMove={moveLeftPaneResize}
-      onLeftPanePointerUp={finishLeftPaneResize}
-      onFrozenPaneKeyDown={resizeFrozenPaneByKeyboard}
-      onFrozenPanePointerDown={startFrozenPaneResize}
-      onFrozenPanePointerMove={moveFrozenPaneResize}
-      onFrozenPanePointerUp={finishFrozenPaneResize}
-      onBottomKeyDown={resizeBottomByKeyboard}
-      onBottomPointerDown={startBottomResize}
-      onBottomPointerMove={moveBottomResize}
-      onBottomPointerUp={finishBottomResize}
-      onSignalSplitKeyDown={resizeSignalSplitByKeyboard}
-      onSignalSplitPointerDown={startSignalSplitResize}
-      onSignalSplitPointerMove={moveSignalSplitResize}
-      onSignalSplitPointerUp={finishSignalSplitResize}
-    />
+    <EditorWorkspaceView viewModel={{
+      view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled },
+      layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
+      refs: { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower },
+      content: { header: workspaceHeader, viewportContent: workspaceViewportContent, viewportLegend: workspaceViewportLegend, bottom: workspaceBottom, inspector: workspaceInspector },
+      interactions: {
+        onInspectorKeyDown: resizeInspectorByKeyboard, onInspectorPointerDown: startInspectorResize, onInspectorPointerMove: moveInspectorResize, onInspectorPointerUp: finishInspectorResize,
+        onLeftPaneKeyDown: resizeLeftPaneByKeyboard, onLeftPanePointerDown: startLeftPaneResize, onLeftPanePointerMove: moveLeftPaneResize, onLeftPanePointerUp: finishLeftPaneResize,
+        onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
+        onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
+        onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
+      },
+    }} />
     <EditorDialogLayer
       compatibilityPreview={compatibilityPreview}
       compatibilityDialogRef={compatibilityDialogRef}

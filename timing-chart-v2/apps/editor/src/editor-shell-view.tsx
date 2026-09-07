@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 
-export interface EditorShellViewProps {
+export interface EditorShellViewModel {
   readonly style: CSSProperties;
   readonly density: string;
   readonly workspacePreset: string;
@@ -22,6 +22,10 @@ export interface EditorShellViewProps {
   readonly cycleCount: number;
   readonly signalCount: number;
   readonly transactionCount: number;
+}
+
+export interface EditorShellViewProps {
+  readonly viewModel: EditorShellViewModel;
   readonly titleBar: ReactNode;
   readonly ribbon: ReactNode;
   readonly children: ReactNode;
@@ -29,12 +33,15 @@ export interface EditorShellViewProps {
 
 /** Owns the stable outer shell contract; feature owners supply its contents. */
 export function EditorShellView({
-  style, density, workspacePreset, inspectorVisible, bottomVisible, rulerEnabled,
-  minimapEnabled, signalTreeVisible, showSignalNames, showRoles, showAnnotations,
-  showTransactions, showGroupBackground, layoutOverflow, leftPaneWidth,
-  frozenPaneWidth, bottomHeight, inspectorWidth, cycleCount, signalCount,
-  transactionCount, titleBar, ribbon, children,
+  viewModel, titleBar, ribbon, children,
 }: EditorShellViewProps) {
+  const {
+    style, density, workspacePreset, inspectorVisible, bottomVisible, rulerEnabled,
+    minimapEnabled, signalTreeVisible, showSignalNames, showRoles, showAnnotations,
+    showTransactions, showGroupBackground, layoutOverflow, leftPaneWidth,
+    frozenPaneWidth, bottomHeight, inspectorWidth, cycleCount, signalCount,
+    transactionCount,
+  } = viewModel;
   return <main
     className="editor-shell"
     style={style}
