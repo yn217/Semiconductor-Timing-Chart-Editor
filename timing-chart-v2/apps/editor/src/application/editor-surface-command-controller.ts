@@ -21,6 +21,17 @@ export interface TransactionLaneCommandActions {
   readonly deleteTransactionGroup: (groupId: TransactionGroup["id"]) => CommandResult;
 }
 
+export interface TransactionEditorCommandActions {
+  readonly createTransactionFromBottom: (transaction: Transaction) => CommandResult;
+  readonly duplicateTransactionById: (transactionId: TransactionId, newTransactionId: TransactionId, name: string) => CommandResult;
+  readonly deleteTransaction: (transactionId: TransactionId) => CommandResult;
+  readonly updateTransactionFromBottom: (payload: CommandPayload<"transaction.update">) => CommandResult;
+  readonly moveTransactionToGroup: (transactionId: TransactionId, groupId?: TransactionGroup["id"]) => CommandResult;
+  readonly bulkMoveTransactionsToGroup: (items: readonly { readonly transactionId: TransactionId; readonly groupId?: TransactionGroup["id"] }[]) => CommandResult;
+  readonly bulkUpdateTransactions: (payloads: readonly CommandPayload<"transaction.update">[]) => CommandResult;
+  readonly bulkDeleteTransactions: (transactionIds: readonly TransactionId[]) => CommandResult;
+}
+
 export interface InspectorCommandActions {
   readonly updateSignalProperties: (payload: CommandPayload<"signal.updateProperties">) => CommandResult;
   readonly renameSignal: (signalId: SignalId, name: string) => CommandResult;
@@ -77,7 +88,7 @@ export interface RibbonCommandActions {
   readonly updateCommentRowStyle: (signalId: SignalId, commentRow: Pick<CommentRow, "title" | "body">, style: JsonObject) => CommandResult;
 }
 
-export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, InspectorCommandActions, RibbonCommandActions {}
+export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, TransactionEditorCommandActions, InspectorCommandActions, RibbonCommandActions {}
 
 export function createEditorSurfaceCommandController(input: {
   readonly execute: (command: SemanticCommand) => CommandResult;
@@ -98,6 +109,14 @@ export function createEditorSurfaceCommandController(input: {
     resize: (transactionId, edge, value) => dispatch<"transaction.resize">("transaction_snap_resize", { type: "transaction.resize", transactionId, edge, value }),
     renameTransactionGroup: (groupId, name) => dispatch<"transactionGroup.rename">("transaction_group_rename", { type: "transactionGroup.rename", groupId, name }),
     deleteTransactionGroup: (groupId) => dispatch<"transactionGroup.delete">("transaction_group_delete", { type: "transactionGroup.delete", groupId }),
+    createTransactionFromBottom: (transaction) => dispatch<"transaction.create">("transaction_create", { type: "transaction.create", transaction }),
+    duplicateTransactionById: (transactionId, newTransactionId, name) => dispatch<"transaction.duplicate">("bottom_transaction_duplicate", { type: "transaction.duplicate", transactionId, newTransactionId, name }),
+    deleteTransaction: (transactionId) => dispatch<"transaction.delete">("bottom_transaction_delete", { type: "transaction.delete", transactionId }),
+    updateTransactionFromBottom: (payload) => dispatch<"transaction.update">("bottom_transaction_update", { type: "transaction.update", ...payload }),
+    moveTransactionToGroup: (transactionId, groupId) => dispatch<"transaction.moveToGroup">("bottom_transaction_group", { type: "transaction.moveToGroup", transactionId, ...(groupId === undefined ? {} : { groupId }) }),
+    bulkMoveTransactionsToGroup: (items) => dispatchBatch<"transaction.moveToGroup">("bottom_transaction_bulk_group", items.map(({ transactionId, groupId }) => ({ type: "transaction.moveToGroup", transactionId, ...(groupId === undefined ? {} : { groupId }) })), "bottom_transaction_bulk"),
+    bulkUpdateTransactions: (payloads) => dispatchBatch<"transaction.update">("bottom_transaction_bulk_color", payloads.map((payload) => ({ type: "transaction.update", ...payload })), "bottom_transaction_bulk"),
+    bulkDeleteTransactions: (transactionIds) => dispatchBatch<"transaction.delete">("bottom_transaction_bulk_delete", transactionIds.map((transactionId) => ({ type: "transaction.delete", transactionId })), "bottom_transaction_bulk"),
     updateSignalProperties: (payload) => dispatch<"signal.updateProperties">("inspector_signal_properties", { type: "signal.updateProperties", ...payload }),
     renameSignal: (signalId, name) => dispatch<"signal.rename">("inspector_signal_rename", { type: "signal.rename", signalId, name }),
     convertClock: (signalId, targetType) => dispatch<"signal.convertClock">("convert_clock", { type: "signal.convertClock", signalId, targetType }),

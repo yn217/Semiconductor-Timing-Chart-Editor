@@ -202,8 +202,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     document={input.document}
     history={input.history}
     onSelect={input.actions.selectTransaction}
-    onCommand={execute}
-    onCommandBatch={(commands) => input.command.executeBatch(input.command.nextCommandId("bottom_transaction_bulk"), commands)}
+    commands={surfaceCommands}
     onUndo={undo}
     onRedo={redo}
     onDelete={input.actions.deleteBottomTransaction}

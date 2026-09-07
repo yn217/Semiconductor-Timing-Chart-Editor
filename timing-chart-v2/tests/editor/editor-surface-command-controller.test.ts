@@ -47,6 +47,30 @@ describe("editor surface command controller", () => {
     ]);
   });
 
+  it("owns Bottom Transaction Editor command construction and batch routing", () => {
+    const execute = vi.fn(() => ({ ok: true } as never));
+    const executeBatch = vi.fn(() => ({ ok: true } as never));
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch, nextCommandId: (operation) => `test_${operation}` as never });
+
+    controller.createTransactionFromBottom({ id: "transaction_1" as never, name: "Read", start: 1, end: 3, laneId: "lane_0" });
+    controller.duplicateTransactionById("transaction_1" as never, "transaction_2" as never, "Read Copy");
+    controller.updateTransactionFromBottom({ transactionId: "transaction_1" as never, name: "Read", start: 2, end: 4 });
+    controller.moveTransactionToGroup("transaction_1" as never, "group_1" as never);
+    controller.bulkMoveTransactionsToGroup([{ transactionId: "transaction_1" as never }, { transactionId: "transaction_2" as never, groupId: "group_1" as never }]);
+    controller.bulkUpdateTransactions([{ transactionId: "transaction_1" as never, name: "Read", start: 2, end: 4, color: "#123456" }]);
+    controller.bulkDeleteTransactions(["transaction_1" as never, "transaction_2" as never]);
+
+    expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
+      expect.objectContaining({ id: "test_transaction_create", type: "transaction.create" }),
+      expect.objectContaining({ id: "test_bottom_transaction_duplicate", type: "transaction.duplicate" }),
+      expect.objectContaining({ id: "test_bottom_transaction_update", type: "transaction.update" }),
+      expect.objectContaining({ id: "test_bottom_transaction_group", type: "transaction.moveToGroup" }),
+    ]);
+    expect(executeBatch).toHaveBeenNthCalledWith(1, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.moveToGroup" }), expect.objectContaining({ id: "test_bottom_transaction_bulk_group", type: "transaction.moveToGroup" })]);
+    expect(executeBatch).toHaveBeenNthCalledWith(2, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_color", type: "transaction.update" })]);
+    expect(executeBatch).toHaveBeenNthCalledWith(3, "test_bottom_transaction_bulk", [expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.delete" }), expect.objectContaining({ id: "test_bottom_transaction_bulk_delete", type: "transaction.delete" })]);
+  });
+
   it("owns Timeline command construction and keeps range edits batched", () => {
     const execute = vi.fn(() => ({ ok: true } as never));
     const executeBatch = vi.fn(() => ({ ok: true } as never));
