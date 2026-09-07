@@ -4,10 +4,9 @@ import { ClockGeneratorEditor } from "./clock-generator-editor.js";
 import { CommentRowEditor } from "../comment-row-editor.js";
 import { EventTable } from "../event-table.js";
 import { SignalGeneratorEditor } from "../signal-generator-editor.js";
-import { nextCommandId } from "../command-id.js";
 import { type SignalEditorProps } from "../timeline-toolbar.js";
 
-export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands }: SignalEditorProps) {
+export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands, signalCommands }: SignalEditorProps) {
   // #402: the Signal's *current* Group, derived from the live document
   // every render (never cached) -- the single source of truth for both
   // the "current group" check-state and the safe fallback below.
@@ -68,7 +67,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
     {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>
       {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} commands={clockCommands} onDuplicate={onDuplicate} onPreview={onClockPreview} />
-        : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} />
+        : signal.type === "commentRow" ? <CommentRowEditor signal={signal} commands={signalCommands} onCancel={onCancel} />
         // Bottom Panel Visual Reference pass: Generator is no longer a
         // Manual/Generator *tab* that hides the Transition editor while
         // active -- it renders alongside Add/Edit Transition and Value
@@ -78,7 +77,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
         // to canonical type `binary` ("Signal") only, matching #400's own
         // scope; every other value-signal type keeps using the Event
         // Table alone exactly as before.
-        : <EventTable signal={signal} cycleCount={cycleCount} onCommand={onCommand} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} onCommand={onCommand} /> : undefined} />}
+        : <EventTable signal={signal} cycleCount={cycleCount} commands={signalCommands} generatorSlot={signal.type === "binary" ? <SignalGeneratorEditor signal={signal} cycleCount={cycleCount} commands={signalCommands} /> : undefined} />}
     </>}
   </section>;
 }

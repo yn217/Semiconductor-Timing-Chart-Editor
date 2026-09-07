@@ -168,7 +168,6 @@ export interface SignalEditorProps {
   readonly history: HistoryState;
   readonly groups: readonly SignalGroup[];
   readonly problem: string;
-  readonly onCommand: (command: SemanticCommand) => CommandResult;
   readonly onUndo: () => void;
   readonly onRedo: () => void;
   readonly onVisibility: (signalId: SignalId, visible: boolean) => void;
@@ -178,4 +177,5 @@ export interface SignalEditorProps {
   readonly onCancel: () => void;
   readonly onClockPreview: (draft: ClockGenerator | undefined) => void;
   readonly clockCommands: Pick<SignalEditorCommandActions, "updateClockGenerator" | "updateEdgeCounter">;
+  readonly signalCommands: SignalEditorCommandActions;
 }

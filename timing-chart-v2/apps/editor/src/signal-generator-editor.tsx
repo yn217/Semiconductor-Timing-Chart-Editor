@@ -1,9 +1,8 @@
 import { useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { ValueSignal } from "@timing-chart-v2/schema";
+import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { parseSuppressedPeriods } from "./runtime/clock-input.js";
 import { generateSignalPulseValues } from "./runtime/signal-generator.js";
-import { nextCommandId } from "./command-id.js";
 
 // #400: Signal Generator produces single/finite/periodic pulses. It is a
 // pure computation (see runtime/signal-generator.ts for why), committed as
@@ -11,7 +10,7 @@ import { nextCommandId } from "./command-id.js";
 // command the Manual Event Table already uses -- Generate replaces the
 // Signal's entire waveform in one atomic, undoable step, exactly like
 // Import already does.
-export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly onCommand: (command: SemanticCommand) => CommandResult }) {
+export function SignalGeneratorEditor({ signal, cycleCount, commands }: { readonly signal: ValueSignal; readonly cycleCount: number; readonly commands: Pick<SignalEditorCommandActions, "replaceValues"> }) {
   const [start, setStart] = useState(0);
   const [initial, setInitial] = useState<0 | 1>(0);
   const [active, setActive] = useState<0 | 1>(1);
@@ -53,7 +52,7 @@ export function SignalGeneratorEditor({ signal, cycleCount, onCommand }: { reado
       try {
         const parsedSuppressed = parseSuppressedPeriods(suppressedPeriods);
         const values = generateSignalPulseValues({ start, initial, active, width: effectiveWidth, period, repeat: repeatMode === "infinite" ? "infinite" : repeatCount, phase, suppressedPeriods: parsedSuppressed, cycleCount });
-        const result = onCommand({ id: nextCommandId("signal_generator"), type: "signal.replaceValues", signalId: signal.id, values });
+        const result = commands.replaceValues(signal.id, values);
         if (result.ok) { setError(""); setStatus(`Generated ${values.length} change point${values.length === 1 ? "" : "s"}.`); }
         else { setStatus(""); setError(result.problems.map((problem) => `${problem.code}: ${problem.message}`).join(" ") || "Signal Generator rejected."); }
       } catch (thrown) {

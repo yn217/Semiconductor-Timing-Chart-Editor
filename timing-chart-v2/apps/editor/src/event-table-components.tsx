@@ -1,10 +1,8 @@
 import { useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import { quickValueLiteral, quickValueOptions, type CommandId, type ValueSignal } from "@timing-chart-v2/schema";
+import { quickValueLiteral, quickValueOptions, type ValueSignal } from "@timing-chart-v2/schema";
+import type { SignalEditorCommandActions } from "./application/editor-surface-command-controller.js";
 import { RibbonIcon } from "./ribbon-icon.js";
 import { resolveValueEditorPolicy } from "./runtime/value-editor-policy.js";
-
-export type EventCommandIdFactory = (scope: string) => CommandId;
 
 // Value Editor Policy pass: the ONE control used everywhere a Signal's
 // `values` entries are edited -- Add/Edit Transition (event-table.tsx)
@@ -38,7 +36,7 @@ export function ValueEditorControl({ signal, value, onChange, ariaLabel, listId 
   </>;
 }
 
-export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, onCommand, nextCommandId }: {
+export function EventRow({ signal, change, end, index, selected, checked, canDuplicate, onToggleChecked, onSelect, onDuplicate, commands }: {
   readonly signal: ValueSignal;
   readonly change: ValueSignal["values"][number];
   readonly end: number;
@@ -55,8 +53,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   readonly onToggleChecked: () => void;
   readonly onSelect: (start: number) => void;
   readonly onDuplicate: () => void;
-  readonly onCommand: (command: SemanticCommand) => CommandResult;
-  readonly nextCommandId: EventCommandIdFactory;
+  readonly commands: Pick<SignalEditorCommandActions, "replaceValue" | "removeValue">;
 }) {
   const [start, setStart] = useState(change.start);
   const [value, setValue] = useState(String(change.value));
@@ -82,7 +79,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
   return <form className={`event-row${selected ? " selected" : ""}${isEditing ? " editing" : ""}`} role="row" data-event-start={change.start} onClick={() => onSelect(change.start)} onSubmit={(event) => {
     event.preventDefault();
     if (!hasChanges) return;
-    const result = onCommand({ id: nextCommandId("replace_value"), type: "signal.replaceValue", signalId: signal.id, fromStart: change.start, start, value, ...(comment ? { comment } : {}) });
+    const result = commands.replaceValue(signal.id, change.start, start, value, comment);
     // Only leave edit mode on a command the planner actually accepted --
     // a rejected Draft (e.g. a duplicate change point) stays open and
     // editable so the Problems banner's guidance can be acted on directly,
@@ -132,7 +129,7 @@ export function EventRow({ signal, change, end, index, selected, checked, canDup
         : <>
           <button type="button" className="icon-button" title="Edit transition" aria-label={`Edit transition at cycle ${change.start}`} onClick={(event) => { event.stopPropagation(); startEditing(); }}><RibbonIcon name="i-edit" /></button>
           <button type="button" className="icon-button" title="Duplicate transition" aria-label={`Duplicate transition at cycle ${change.start}`} disabled={!canDuplicate} onClick={(event) => { event.stopPropagation(); onDuplicate(); }}><RibbonIcon name="i-duplicate" /></button>
-          <button type="button" className="icon-button danger" title="Delete transition" aria-label={`Delete transition at cycle ${change.start}`} disabled={signal.values.length === 1} onClick={(event) => { event.stopPropagation(); onCommand({ id: nextCommandId("remove_value"), type: "signal.removeValue", signalId: signal.id, start: change.start }); }}><RibbonIcon name="i-delete" /></button>
+          <button type="button" className="icon-button danger" title="Delete transition" aria-label={`Delete transition at cycle ${change.start}`} disabled={signal.values.length === 1} onClick={(event) => { event.stopPropagation(); commands.removeValue(signal.id, change.start); }}><RibbonIcon name="i-delete" /></button>
         </>}
     </span>
   </form>;

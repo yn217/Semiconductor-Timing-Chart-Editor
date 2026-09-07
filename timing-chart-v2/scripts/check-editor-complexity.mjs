@@ -77,6 +77,11 @@ const requiredSourceContracts = [
 const presentationCommandSources = await Promise.all([
   ["clock editor constructs semantic commands", "apps/editor/src/editors/clock-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["transaction lanes constructs semantic commands", "apps/editor/src/runtime/transaction-lanes.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["signal editor constructs semantic commands", "apps/editor/src/editors/signal-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["event table constructs semantic commands", "apps/editor/src/event-table.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["event row constructs semantic commands", "apps/editor/src/event-table-components.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["signal generator constructs semantic commands", "apps/editor/src/signal-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["comment row constructs semantic commands", "apps/editor/src/comment-row-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
 ].map(async ([name, owner, pattern]) => [name, pattern, await readFile(resolve(root, owner), "utf8")]));
 const requiredShellContracts = [
   ["workspace shell owner", /EditorWorkspaceView/],
