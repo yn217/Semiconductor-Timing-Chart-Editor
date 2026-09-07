@@ -106,7 +106,17 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
     <button type="button" className="danger" data-testid="bulk-delete-transactions" onClick={bulkDelete}>Delete Selected</button>
     <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
   </div>}
-  <div className="transaction-list">{visibleTransactions.length > 0 && <label className="field-inline transaction-select-all"><input type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} />Select all</label>}{visibleTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
+  <div className="transaction-list">{visibleTransactions.length > 0 && <>
+    <label className="field-inline transaction-select-all"><input type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} />Select all</label>
+    {/* #397 Transaction Mode GUI Closure Section 6: column header row,
+        same shared pattern as .bookmark-list-header -- fixed labels over
+        the fixed 8-column grid every row below uses, so the list reads as
+        one aligned table rather than a wrapping card grid. The leading
+        spacer matches the row's checkbox column so the cell grid below it
+        lines up exactly with each row's button (same grid-template-columns
+        CSS rule, reused rather than duplicated). */}
+    <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span></span></div>
+  </>}{visibleTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
     <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
     <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
       {/* #453: every new field is appended AFTER the original 4 (name/
@@ -115,10 +125,14 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           expecting those 4 immediately adjacent (e.g. /Transaction A 1–4
           lane_0/), and inserting a new span between any of them broke that
           match. The swatch is `aria-hidden`, so it doesn't affect the name
-          at all regardless of position. */}
+          at all regardless of position. #397: Group is now always rendered
+          (an em dash when ungrouped) rather than only when present -- a
+          fixed 8-column table needs every row to occupy the same columns,
+          and a row silently skipping one grid child shifted Phases one
+          column left relative to rows that do have a Group. */}
       <i className="transaction-row-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} />
       <b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span>
-      <span>{item.end - item.start} cycles</span>{item.groupId !== undefined && <span>{groupNameById.get(item.groupId) ?? "Group"}</span>}<span>{item.phases?.length ?? 0} phases</span>
+      <span>{item.end - item.start} cycles</span><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.phases?.length ?? 0} phases</span>
     </button>
   </div>)}
   {visibleTransactions.length === 0 && <p className="inspector-note">No Transactions match this search.</p>}</div></section>;
