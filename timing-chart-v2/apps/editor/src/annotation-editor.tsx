@@ -250,9 +250,9 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
         at the right, not spread across the full bar width (Cancel far
         left, Apply far right) -- sticky regardless of how tall the List/
         Edit panels grow or how the Bottom Editor is resized. */}
-    <div className="annotation-sticky-actions">
+    <div className="bottom-sticky-actions">
       {hasChanges && <output className="draft-unapplied-indicator" data-testid="annotation-properties-unapplied">● Unapplied changes</output>}
-      <span className="annotation-sticky-buttons">
+      <span className="bottom-sticky-buttons">
         <button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button>
         <button type="submit" form="annotation-properties-form" data-testid="apply-annotation-properties" disabled={!hasChanges}>Apply Annotation</button>
       </span>

@@ -53,21 +53,43 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
     <header>
       <button type="button" aria-label="Previous bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(-1)}>◀ Previous</button>
       <button type="button" aria-label="Next bookmark" disabled={document.bookmarks.length === 0} onClick={() => navigate(1)}>Next ▶</button>
-      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button><button type="button" onClick={duplicate}>Duplicate</button><button type="button" data-testid="cancel-bottom-bookmark" onClick={onCancel}>Cancel</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
+      <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button><button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
     {bookmark
-      ? <form onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; onCommand({ id: nextCommandId("bottom_bookmark_update"), type: "bookmark.update", bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
-          <label>Name<input aria-label="Bottom Bookmark name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label>
-          <label>Cycle<input aria-label="Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label>
-          <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => setEditComment(event.target.value)} /></label>
-          {hasChanges && <output data-testid="bottom-bookmark-unapplied">● Unapplied changes</output>}
-          <button type="submit" data-testid="apply-bottom-bookmark" disabled={!hasChanges}>Apply Changes</button>
-        </form>
-      : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("bookmark", document) as BookmarkId; const result = onCommand({ id: nextCommandId("bottom_bookmark_create"), type: "bookmark.create", bookmark: { id, name: name.trim() || "Bookmark", start, ...(comment ? { comment } : {}) } }); if (result.ok) onSelect(id); }}>
-          <label>Name<input aria-label="New Bottom Bookmark name" value={name} onChange={(event) => setName(event.target.value)} /></label>
-          <label>Cycle<input aria-label="New Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
-          <label>Comment<input aria-label="New Bottom Bookmark comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
-          <button type="submit">Create Bookmark</button>
-        </form>}
+      ? <>
+          <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; onCommand({ id: nextCommandId("bottom_bookmark_update"), type: "bookmark.update", bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
+            <label>Name<input aria-label="Bottom Bookmark name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label>
+            <label>Cycle<input aria-label="Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label>
+            <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => setEditComment(event.target.value)} /></label>
+          </form>
+          <div className="bottom-sticky-actions">
+            {hasChanges && <output className="draft-unapplied-indicator" data-testid="bottom-bookmark-unapplied">● Unapplied changes</output>}
+            <span className="bottom-sticky-buttons">
+              <button type="button" data-testid="cancel-bottom-bookmark" onClick={onCancel}>Cancel</button>
+              <button type="submit" form="bookmark-properties-form" data-testid="apply-bottom-bookmark" disabled={!hasChanges}>Apply Changes</button>
+            </span>
+          </div>
+        </>
+      : <>
+          {/* Kept the same two-block shape (fields form + sticky action row)
+             as the editing branch above -- not just for visual consistency,
+             but because collapsing them back into one <form> here made the
+             Bottom panel's total height jump by the sticky bar's height at
+             the exact moment a Bookmark gets selected (e.g. the first click
+             half of a double-click on a list row), shifting every row below
+             it out from under an in-flight native double-click gesture and
+             silently swallowing the second click. Same fixed height in both
+             branches keeps row positions stable across that transition. */}
+          <form id="bookmark-create-form" onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("bookmark", document) as BookmarkId; const result = onCommand({ id: nextCommandId("bottom_bookmark_create"), type: "bookmark.create", bookmark: { id, name: name.trim() || "Bookmark", start, ...(comment ? { comment } : {}) } }); if (result.ok) onSelect(id); }}>
+            <label>Name<input aria-label="New Bottom Bookmark name" value={name} onChange={(event) => setName(event.target.value)} /></label>
+            <label>Cycle<input aria-label="New Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
+            <label>Comment<input aria-label="New Bottom Bookmark comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
+          </form>
+          <div className="bottom-sticky-actions">
+            <span className="bottom-sticky-buttons">
+              <button type="submit" form="bookmark-create-form">Create Bookmark</button>
+            </span>
+          </div>
+        </>}
     <div className="bookmark-list" data-testid="bookmark-list" role="table" aria-label="Bookmarks">
       <div className="bookmark-list-header" role="row"><span>Marker</span><span>Name</span><span>Cycle</span><span>Comment</span></div>
       {ordered.map((item) => <button type="button" role="row" key={item.id} data-testid={`bookmark-row-${item.id}`} data-selected={String(item.id === bookmark?.id)} onClick={() => onSelect(item.id)} onDoubleClick={() => onReveal(item.start)}>
