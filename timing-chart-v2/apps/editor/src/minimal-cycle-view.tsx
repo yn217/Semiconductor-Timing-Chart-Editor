@@ -3,11 +3,10 @@ import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
 import { createPortal } from "react-dom";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
-import { CommandHistorySession } from "@timing-chart-v2/history";
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type HardwareHierarchyView } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { resolveProblemTarget } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
@@ -32,11 +31,10 @@ import { renderGeometryGrid } from "./render-geometry-grid.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorSection } from "./inspector-section.js";
 import { MiniMap } from "./minimap.js";
-import { parseBulkSignalDefinitions } from "./bulk-signal-parser.js";
 import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog, SignalTreeColumnHeader, BottomEditorPanel, EditorStatusBar } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
-import { groupId, signalId, valueSignal } from "./minimal-cycle-view-fixture-helpers.js";
+import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
 import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
 import { useDialogFocusLoop } from "./dialog-focus-loop.js";
 import { AnnotationList } from "./annotation-list.js";
@@ -67,6 +65,7 @@ import { Ribbon } from "./minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
+import { useEditorActions } from "./application/use-editor-actions.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
@@ -78,11 +77,8 @@ import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
 import { BookmarkEditor } from "./bookmark-editor.js";
-import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-target.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
 import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, attachMenuKeyboardNavigation, refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview, refreshRendererOverlays, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/use-editor-runtime-bridge.js";
-
-const spacerId = (value: string) => value as SpacerId;
 
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
@@ -435,35 +431,89 @@ export function MinimalCycleView() {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
   }, [selectedTransactionId, transactionPresentationRevision]);
 
-  const createSelectedAnnotation = (annotation: Annotation) => {
-    const result = application.execute({ id: nextCommandId("annotation_create"), type: "annotation.create", annotation });
-    if (!result.ok) return;
-    selection.selectAnnotation(annotation.id);
-  };
-  const selectAnnotation = (id: AnnotationId) => {
-    selection.selectAnnotation(id);
-  };
-  const deleteBottomSignal = () => {
-    if (!bottomSignal) return;
-    const result = editActions.deleteSignal(bottomSignal.id);
-    if (result.ok && !bottomPinnedRef.current && selectedSignalRef.current === bottomSignal.id) {
-      selection.clear();
-    }
-  };
-  const deleteBottomAnnotation = () => {
-    if (!bottomAnnotation) return;
-    const result = editActions.deleteAnnotation(bottomAnnotation.id);
-    if (result.ok && !bottomPinnedRef.current && selectedAnnotationRef.current === bottomAnnotation.id) {
-      selection.clear();
-    }
-  };
-  const deleteBottomTransaction = () => {
-    if (!bottomTransaction) return;
-    const result = editActions.deleteTransaction(bottomTransaction.id);
-    if (result.ok && !bottomPinnedRef.current && selectedTransactionRef.current === bottomTransaction.id) {
-      selection.clear();
-    }
-  };
+  const actions = useEditorActions({
+    document: snapshot.document,
+    commandRegistry,
+    navigation: timelineNavigation,
+    rulerRef: ruler,
+    setBottomTab,
+    setBottomVisible,
+    createBookmarkId: () => nextEntityId("bookmark", snapshot.document) as BookmarkId,
+    nextCommandId,
+    selection,
+    diagnostics,
+    selectedCycleRef,
+    setSelectedCycle,
+    hostRef: host,
+    viewportRef: viewport,
+    application,
+    editActions,
+    bottomSignal: bottomSignal?.id,
+    bottomAnnotation,
+    bottomTransaction,
+    bottomPinnedRef,
+    selectedSignalRef,
+    selectedAnnotationRef,
+    selectedTransactionRef,
+    selectAllRef,
+    selectedSignal,
+    selectedGroup,
+    selectedTransactionName: selectedTransaction?.name,
+    menuOriginRef,
+    renameDialogOriginRef,
+    setRenameDraft,
+    setRenameError,
+    setRenameDialogOpen,
+    renameDraft,
+    bottomPinned,
+    setBottomPinned,
+    setPinnedBottomSelection,
+    selectedSignalId: selectedId,
+    selectedGroupId,
+    selectedAnnotationId,
+    selectedTransactionId,
+    bulkRegistrationText,
+    bulkRegistrationGroupId,
+    bulkRegistrationPreview,
+    setBulkRegistrationStatus,
+    setBulkRegistrationPreview,
+    setBulkRegistrationVisible,
+  });
+  const {
+    selectedBookmarkId,
+    selectedBookmark,
+    selectBookmark,
+    addBookmarkAtCycle,
+    revealBookmark,
+    deleteBottomBookmark,
+    navigateToBookmark,
+    navigateProblem,
+    createSelectedAnnotation,
+    selectAnnotation,
+    deleteBottomSignal,
+    deleteBottomAnnotation,
+    deleteBottomTransaction,
+    selectTransaction,
+    duplicateAnnotation,
+    clearSelection,
+    selectAllSignals,
+    renameSelection,
+    applyRename,
+    toggleBottomPin,
+    selectHierarchySignal,
+    revealSelectedInHierarchy,
+    createSignalGroup,
+    addTreeEntity,
+    registerBulkSignals,
+    previewBulkSignals,
+    copySelectedSignal,
+    cutSelectedSignal,
+    pasteSelectedEntity,
+    duplicateSelectedEntity,
+    createCopiedSignals,
+    setSelectionVisibility,
+    moveSelection,
+  } = actions;
   const signalEditor = <SignalEditor
     key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     signal={bottomSignal}
@@ -510,11 +560,7 @@ export function MinimalCycleView() {
     problem={problem}
     onSelect={selectAnnotation}
     onCreate={(type) => { if (annotationTargetSignalId) createSelectedAnnotation(createAnnotation(type, annotationTargetSignalId, timelineRange, snapshot.document)); }}
-    onDuplicate={(source) => {
-      const duplicate = { ...source, id: nextEntityId("annotation", snapshot.document) as AnnotationId };
-      const result = application.execute({ id: nextCommandId("annotation_duplicate"), type: "annotation.create", annotation: duplicate });
-      if (result.ok) selectAnnotation(duplicate.id);
-    }}
+    onDuplicate={duplicateAnnotation}
     onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
     onUndo={() => commandRegistry.current.execute("history.undo")}
     onRedo={() => commandRegistry.current.execute("history.redo")}
@@ -522,73 +568,6 @@ export function MinimalCycleView() {
     onCancel={() => setBottomResetToken((value) => value + 1)}
     onPreview={(draft) => refreshAnnotationPreview(host.current!, bottomAnnotation.id, draft, { label: bottomAnnotation.label, color: bottomAnnotation.color, opacity: bottomAnnotation.opacity })}
   /> : <><AnnotationList annotations={snapshot.document.annotations} selectedId={undefined} onSelect={selectAnnotation} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} /><div className="empty-editor">Select or create an Annotation.</div></>;
-  const selectTransaction = (id: TransactionId) => {
-    selection.selectTransaction(id);
-  };
-  // #388: Bookmark selection is its own lightweight view-only piece of
-  // state (not folded into the shared SelectionOwner, which drives
-  // clipboard/rename/delete-selection routing that Bookmark never
-  // participates in -- Bookmark already has its own dedicated
-  // bookmark.create/update/delete commands). One owner across Ribbon
-  // Previous/Next, the Bottom Bookmark list, and canvas ruler marker
-  // clicks -- never a second Bookmark collection copy (the list itself
-  // always reads live from `snapshot.document.bookmarks`).
-  const [selectedBookmarkId, setSelectedBookmarkId] = useState<BookmarkId | undefined>(undefined);
-  const selectedBookmark = selectedBookmarkId === undefined ? undefined : snapshot.document.bookmarks.find((item) => item.id === selectedBookmarkId);
-  const selectBookmark = (id: BookmarkId) => setSelectedBookmarkId(id);
-  const addBookmarkAtCycle = (cycle: number) => {
-    const maxCycle = Math.max(0, snapshot.document.timeline.cycleCount - 1);
-    const start = Math.max(0, Math.min(maxCycle, Math.trunc(cycle)));
-    const id = nextEntityId("bookmark", snapshot.document) as BookmarkId;
-    const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("ruler_bookmark_create"), type: "bookmark.create", bookmark: { id, name: `Bookmark ${start}`, start } });
-    if (result.ok) {
-      setSelectedBookmarkId(id);
-      setBottomTab("Bookmarks");
-      setBottomVisible(true);
-    }
-  };
-  const revealBookmark = (start: number) => timelineNavigation.navigateToCycle(start);
-  const bookmarksRef = useRef(snapshot.document.bookmarks);
-  bookmarksRef.current = snapshot.document.bookmarks;
-  const deleteBottomBookmark = () => {
-    if (!selectedBookmark) return;
-    const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("bookmark_delete"), type: "bookmark.delete", bookmarkId: selectedBookmark.id });
-    if (result.ok) setSelectedBookmarkId(undefined);
-  };
-  // #388: clicking a Bookmark marker on the ruler selects the same Bottom
-  // row -- a small, independent listener (not folded into the primary
-  // mount effect above) so it never touches the existing pointer-based
-  // range-selection/drag gesture owner. A marker click still resolves an
-  // ordinary cycle selection through that owner too (the marker has no
-  // `data-cycle`, so `rulerCycleAtTarget` falls through to the geometry-
-  // based boundary at that x position) -- both effects composing is
-  // intentional, not a conflict: selecting the cycle under a Bookmark
-  // while also selecting the Bookmark itself is the expected behavior.
-  useEffect(() => {
-    const rulerElement = ruler.current;
-    if (!rulerElement) return;
-    const markerAt = (event: MouseEvent) => event.target instanceof Element ? event.target.closest<HTMLElement>("[data-bookmark-id]") : null;
-    const onRulerClick = (event: MouseEvent) => {
-      const id = markerAt(event)?.dataset.bookmarkId;
-      if (id) setSelectedBookmarkId(id as BookmarkId);
-    };
-    // A double-click on the marker also reveals it (same Reveal contract as
-    // the Bottom Bookmark list's own row double-click), matching the single
-    // gesture the removed Ribbon "jump" button used to offer.
-    const onRulerDoubleClick = (event: MouseEvent) => {
-      const marker = markerAt(event);
-      const id = marker?.dataset.bookmarkId;
-      if (!id) return;
-      const bookmark = bookmarksRef.current.find((item) => item.id === id);
-      if (bookmark) timelineNavigation.navigateToCycle(bookmark.start);
-    };
-    rulerElement.addEventListener("click", onRulerClick);
-    rulerElement.addEventListener("dblclick", onRulerDoubleClick);
-    return () => {
-      rulerElement.removeEventListener("click", onRulerClick);
-      rulerElement.removeEventListener("dblclick", onRulerDoubleClick);
-    };
-  }, []);
   const openTransactionContextMenu = (event: ReactMouseEvent<HTMLButtonElement>) => {
     menuOriginRef.current = event.currentTarget;
     setContextMenu({ x: event.clientX, y: event.clientY, target: "transaction" });
@@ -610,7 +589,6 @@ export function MinimalCycleView() {
   // Previous/Next, so neither surface can drift into a second navigation
   // command path (both still resolve *which* Bookmark is adjacent via the
   // shared runtime/bookmark-navigation.js `findAdjacentBookmark`).
-  const navigateToBookmark = (cycle: number, bookmarkId?: BookmarkId) => { timelineNavigation.navigateToCycle(cycle); if (bookmarkId) selectBookmark(bookmarkId); };
   const bookmarkEditor = <BookmarkEditor
     key={`${selectedBookmark?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     bookmark={selectedBookmark}
@@ -674,33 +652,6 @@ export function MinimalCycleView() {
     onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
     icon={null}
   />;
-  const navigateProblem = (path: string) => {
-    const problem = diagnostics.find((item) => item.path === path);
-    const target = resolveProblemTarget(path, snapshot.document, problem);
-    const targetSignal = target.kind === "signal" ? snapshot.document.signals.find((signal) => signal.id === target.id) : undefined;
-    const valueIndex = /^\$\.signals\[\d+\]\.values\[(\d+)\]/.exec(path)?.[1];
-    const semanticCycle = valueIndex !== undefined && targetSignal && targetSignal.type !== "clock" && targetSignal.type !== "commentRow"
-      ? targetSignal.values[Number(valueIndex)]?.start
-      : target.kind === "transaction" ? snapshot.document.transactions.find((item) => item.id === target.id)?.start
-      : target.kind === "annotation" ? Object.values(snapshot.document.annotations.find((item) => item.id === target.id) ?? {}).find((value) => value && typeof value === "object" && "cycle" in value && typeof (value as { cycle?: unknown }).cycle === "number")?.cycle as number | undefined
-      : undefined;
-    const targetSignalId = target.kind === "signal" ? target.id as SignalId : undefined;
-    selection.selectTarget({
-      signalId: targetSignalId,
-      signalIds: targetSignalId ? new Set([targetSignalId]) : new Set(),
-      groupId: target.kind === "group" ? target.id as GroupId : undefined,
-      annotationId: target.kind === "annotation" ? target.id as AnnotationId : undefined,
-      transactionId: target.kind === "transaction" ? target.id as TransactionId : undefined,
-    });
-    if (semanticCycle !== undefined) {
-      const cycle = Math.max(0, Math.min(snapshot.document.timeline.cycleCount, semanticCycle));
-      selectedCycleRef.current = cycle;
-      setSelectedCycle(cycle);
-      if (host.current) host.current.dataset.selectedCycle = String(cycle);
-    }
-    if (target.kind === "timeline") viewport.current?.scrollTo({ left: 0, behavior: "smooth" });
-  };
-
   function applySelectionDecorations(next: SelectionState): void {
     const rendererHost = host.current;
     if (!rendererHost) return;
@@ -729,147 +680,6 @@ export function MinimalCycleView() {
     previousSelectionDecorationRef.current = next;
   }
 
-  const clearSelection = () => {
-    selection.clear();
-  };
-  const selectAllSignals = () => {
-    const ids = snapshot.document.signals.filter((signal) => signal.type !== "commentRow").map((signal) => signal.id);
-    const selected = new Set(ids);
-    const primary = ids[0];
-    selection.selectSignals(selected, primary);
-  };
-  selectAllRef.current = selectAllSignals;
-  const copySelectedSignal = editActions.copy;
-  const cutSelectedSignal = editActions.cut;
-  const pasteSelectedEntity = editActions.paste;
-  const duplicateSelectedEntity = editActions.duplicate;
-  const createCopiedSignals = editActions.createSignals;
-  const renameSelection = () => {
-    const current = selectedSignal?.display.name ?? selectedGroup?.name ?? selectedTransaction?.name;
-    if (current === undefined) return;
-    const active = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const homeOverflowTrigger = active?.closest<HTMLElement>("[role='menu']")?.getAttribute("aria-label") === "More Home Commands"
-      ? [...document.querySelectorAll<HTMLButtonElement>("[data-testid='ribbon'] button")].find((button) => button.textContent?.trim() === "More") ?? null
-      : null;
-    renameDialogOriginRef.current = menuOriginRef.current ?? homeOverflowTrigger ?? active;
-    setRenameDraft(current);
-    setRenameError("");
-    setRenameDialogOpen(true);
-  };
-  const applyRename = () => {
-    const name = renameDraft.trim();
-    if (!name) {
-      setRenameError("Name is required.");
-      return;
-    }
-    commandRegistry.current.execute("selection.rename", { name });
-    setRenameDialogOpen(false);
-    setRenameError("");
-  };
-  const setSelectionVisibility = editActions.setVisibility;
-  const moveSelection = editActions.move;
-  const toggleBottomPin = () => {
-    if (bottomPinned) {
-      setBottomPinned(false);
-      setPinnedBottomSelection(undefined);
-      return;
-    }
-    setPinnedBottomSelection({
-      ...(selectedId === undefined ? {} : { signalId: selectedId }),
-      ...(selectedGroupId === undefined ? {} : { groupId: selectedGroupId }),
-      ...(selectedAnnotationId === undefined ? {} : { annotationId: selectedAnnotationId }),
-      ...(selectedTransactionId === undefined ? {} : { transactionId: selectedTransactionId }),
-    });
-    setBottomPinned(true);
-  };
-  const selectHierarchySignal = (id: SignalId) => {
-    const signal = snapshot.document.signals.find((item) => item.id === id);
-    if (!signal) return;
-    selection.selectSignal(id);
-  };
-  const revealSelectedInHierarchy = () => {
-    if (!selectedSignal) return;
-    selection.selectSignal(selectedSignal.id);
-    requestAnimationFrame(() => host.current?.querySelector<HTMLElement>(`[data-role='left-tree-rows'] [data-row-id='${CSS.escape(selectedSignal.id)}']`)?.scrollIntoView({ block: "nearest" }));
-  };
-  const registerBulkSignals = () => {
-    const targetGroupId = bulkRegistrationGroupId ?? snapshot.document.signalGroups.at(-1)?.id;
-    if (!targetGroupId) return;
-    if (!bulkRegistrationPreview || bulkRegistrationPreview.sourceText !== bulkRegistrationText) {
-      setBulkRegistrationStatus("Preview the definitions before applying.");
-      return;
-    }
-    if (bulkRegistrationPreview.errors.length > 0 || bulkRegistrationPreview.definitions.length === 0) {
-      setBulkRegistrationStatus("Fix preview errors before applying.");
-      return;
-    }
-    const signals: Signal[] = [];
-    for (const [index, definition] of bulkRegistrationPreview.definitions.entries()) {
-      const id = signalId(`${nextEntityId("signal", snapshot.document)}_bulk_${index}`);
-      if (definition.kind === "clock") {
-        signals.push({ id, name: definition.signalName, type: "clock", role: "internal", source: { instancePath: definition.instancePath, signalName: definition.signalName }, display: { name: definition.signalName }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } });
-      } else {
-        const type = definition.kind;
-        const initialValue = type === "state" ? "IDLE" : type === "bus" ? "0" : type === "event" ? "NONE" : 0;
-        const signal = valueSignal(id, definition.signalName, "internal", [{ start: 0, value: initialValue }], type === "bus" ? { type, width: definition.width ?? 1, displayFormat: "hex" } : { type });
-        signals.push({ ...signal, source: { ...signal.source, instancePath: definition.instancePath } });
-      }
-    }
-    const result = commandRegistry.current.execute<SemanticCommand, ReturnType<CommandHistorySession["execute"]>>("semantic.execute", { id: nextCommandId("bulk_register_signals"), type: "signal.bulkCreate", signals, targetGroupId, index: snapshot.document.signalGroups.find((group) => group.id === targetGroupId)?.rows.length ?? 0 });
-    if (result.ok) { setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); setBulkRegistrationPreview(undefined); setBulkRegistrationVisible(false); }
-    else setBulkRegistrationStatus(result.problems.map((item) => item.message).join(" "));
-  };
-  const previewBulkSignals = () => {
-    const preview = parseBulkSignalDefinitions(bulkRegistrationText, snapshot.document);
-    setBulkRegistrationPreview({ sourceText: bulkRegistrationText, ...preview });
-    setBulkRegistrationStatus(preview.errors.length === 0 ? `Preview ready: ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : preview.errors.join(" "));
-  };
-  const createSignalGroup = () => {
-    const id = groupId(nextEntityId("group", snapshot.document));
-    const result = application.execute({ id: nextCommandId("group_create_tree"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index: snapshot.document.signalGroups.length });
-    if (result.ok) {
-      selection.selectGroup(id);
-    }
-  };
-  const addTreeEntity = (kind: "signal" | "clock" | "bus" | "state" | "logic" | "event" | "pulse" | "group" | "spacer" | "commentRow") => {
-    if (kind === "group") {
-      const id = groupId(nextEntityId("group", snapshot.document));
-      const index = resolveGroupInsertionIndex(snapshot.document, selectedId, selectedGroupId);
-      const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_group"), type: "group.create", group: { id, name: `Group ${snapshot.document.signalGroups.length + 1}`, rows: [] }, index });
-      if (result.ok) {
-        selection.selectGroup(id);
-      }
-      return;
-    }
-    const target = resolveInsertionTarget(snapshot.document, selectedId, selectedGroupId);
-    if (!target) return;
-    const { group: targetGroup, index } = target;
-    if (kind === "spacer") {
-      const spacer = { id: spacerId(nextEntityId("spacer", snapshot.document)), height: 24 };
-      const result = application.execute({ id: nextCommandId("tree_add_spacer"), type: "spacer.create", spacer, targetGroupId: targetGroup.id, index });
-      if (result.ok) {
-        selection.selectSpacer(targetGroup.id, spacer.id);
-      }
-      return;
-    }
-    const id = signalId(nextEntityId(kind === "commentRow" ? "commentRow" : "signal", snapshot.document));
-    if (kind === "commentRow") {
-      const name = `Comment ${snapshot.document.signals.length + 1}`;
-      const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_comment"), type: "commentRow.create", commentRow: { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" }, targetGroupId: targetGroup.id, index });
-      // Same "select the thing that was just created" contract as Group and
-      // Spacer just above: without it, adding a row leaves the PREVIOUS
-      // selection in place, so the newly added row isn't immediately
-      // reachable for rename/edit without an extra manual click.
-      if (result.ok) selection.selectSignal(id);
-      return;
-    }
-    const name = `${kind === "clock" ? "CLOCK" : kind.toUpperCase()}_${snapshot.document.signals.length + 1}`;
-    const signal = kind === "clock"
-      ? { id, name, type: "clock" as const, role: "internal" as const, source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0 as 0 | 1, polarity: "positive" as const }, edgeCounter: { show: false, mode: "both" as const, startNumber: 1, countFrom: "signal-start" as const, labelEvery: 1, position: "above" as const, offset: { x: 0, y: -6 } } }
-      : valueSignal(id, name, "internal", [{ start: 0, value: kind === "state" ? "IDLE" : kind === "bus" ? "00" : kind === "event" ? "NONE" : 0 }], kind === "bus" ? { type: "bus", width: 8, displayFormat: "hex" } : { type: kind === "signal" ? "binary" : kind });
-    const result = commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", { id: nextCommandId("tree_add_signal"), type: "signal.create", signal, targetGroupId: targetGroup.id, index });
-    if (result.ok) selection.selectSignal(id);
-  };
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
     : viewMode === "Transaction"
