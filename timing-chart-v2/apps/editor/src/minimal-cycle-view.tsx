@@ -26,7 +26,7 @@ import { EditorShellView } from "./editor-shell-view.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
-import { useClipboardActions } from "./application/use-clipboard-actions.js";
+import { useClipboardActions } from "./application/clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import { useWorkspaceUiState } from "./workspace/use-workspace-ui-state.js";
 import { useTimelinePresentationState } from "./workspace/use-timeline-presentation-state.js";

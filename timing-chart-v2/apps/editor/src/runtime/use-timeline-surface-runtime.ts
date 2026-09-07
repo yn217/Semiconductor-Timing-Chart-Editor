@@ -9,7 +9,7 @@ import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "../application/use-editor-application-owner.js";
 import { useDocumentLifecycle } from "../application/use-document-lifecycle.js";
 import type { SelectionOwner } from "../application/use-selection-owner.js";
-import type { ClipboardActions } from "../application/use-clipboard-actions.js";
+import type { ClipboardActions } from "../application/clipboard-actions.js";
 import type { TimelineNavigationOwner } from "./use-timeline-navigation-owner.js";
 import type { SelectedClockEdge } from "./edge-counter-projection.js";
 import { ViewMetricsOwner } from "./view-metrics.js";

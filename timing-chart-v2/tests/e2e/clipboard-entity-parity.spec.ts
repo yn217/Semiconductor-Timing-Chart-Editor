@@ -145,7 +145,7 @@ test("Annotation clipboard is view-only on Copy, creates a fresh entity on Paste
 
 // #221: Transaction had no dedicated clipboard e2e evidence beyond Duplicate
 // (transaction-export.spec.ts's Split View test) -- Copy/Cut/Paste through
-// the same shared use-clipboard-actions.ts owner as every other entity type
+// the same shared clipboard-actions.ts owner as every other entity type
 // were unverified. The production code already supports this (transactionRef/
 // createTransaction), so this closes a test-coverage gap, not a code gap.
 test("Transaction clipboard is view-only on Copy, creates a fresh entity on Paste, and cuts atomically", async ({ page }) => {

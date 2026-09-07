@@ -37,6 +37,8 @@ const ownerBudgets = [
   ["apps/editor/src/application/editor-export-controller.ts", 250],
   ["apps/editor/src/application/file-action-controller.ts", 200],
   ["apps/editor/src/application/selection-actions.ts", 200],
+  ["apps/editor/src/application/bottom-editor-actions.ts", 300],
+  ["apps/editor/src/application/clipboard-actions.ts", 350],
   ["apps/editor/src/runtime/viewport-controller.ts", 300],
   ["apps/editor/src/runtime/interaction-controller.ts", 300],
   ["apps/editor/src/runtime/document-lifecycle-controller.ts", 200],

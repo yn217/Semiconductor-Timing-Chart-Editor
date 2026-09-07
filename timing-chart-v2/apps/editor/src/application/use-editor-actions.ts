@@ -6,7 +6,7 @@ import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation-owner.js";
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
-import type { ClipboardActions } from "./use-clipboard-actions.js";
+import type { ClipboardActions } from "./clipboard-actions.js";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { DocumentLifecycleOwner } from "./use-document-lifecycle.js";
 import { groupId, signalId, valueSignal } from "../minimal-cycle-view-fixture-helpers.js";
@@ -17,6 +17,7 @@ import { createAnnotation } from "../create-annotation.js";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
 import { createFileActionController } from "./file-action-controller.js";
 import { createSelectionActions } from "./selection-actions.js";
+import { createBottomEditorActions } from "./bottom-editor-actions.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -184,27 +185,28 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
   });
   const selectionActions = createSelectionActions({ document: input.document, selection: input.selection, hostRef: input.hostRef, selectedSignalId: input.selectedSignal?.id });
   const { selectAnnotation, selectTransaction, clearSelection, selectAllSignals, selectHierarchySignal, revealSelectedInHierarchy } = selectionActions;
-  const deleteBottomSignal = () => {
-    if (!input.bottomSignal) return;
-    const result = input.editActions.deleteSignal(input.bottomSignal);
-    if (result.ok && !input.bottomPinnedRef.current && input.selectedSignalRef.current === input.bottomSignal) input.selection.clear();
-  };
-  const deleteBottomAnnotation = () => {
-    if (!input.bottomAnnotation) return;
-    const result = input.editActions.deleteAnnotation(input.bottomAnnotation.id);
-    if (result.ok && !input.bottomPinnedRef.current && input.selectedAnnotationRef.current === input.bottomAnnotation.id) input.selection.clear();
-  };
-  const deleteBottomTransaction = () => {
-    if (!input.bottomTransaction) return;
-    const result = input.editActions.deleteTransaction(input.bottomTransaction.id);
-    if (result.ok && !input.bottomPinnedRef.current && input.selectedTransactionRef.current === input.bottomTransaction.id) input.selection.clear();
-  };
-  const toggleTransactionSignal = (transactionId: TransactionId, signalId: SignalId) => input.application.execute({
-    id: input.nextCommandId("transaction_link"),
-    type: input.document.transactions.find((item) => item.id === transactionId)?.linkedSignals?.includes(signalId) ? "transaction.unlinkSignal" : "transaction.linkSignal",
-    transactionId,
-    signalId,
+  const bottomActions = createBottomEditorActions({
+    application: input.application,
+    editActions: input.editActions,
+    document: input.document,
+    nextCommandId: input.nextCommandId,
+    selection: input.selection,
+    bottomSignal: input.bottomSignal,
+    bottomAnnotation: input.bottomAnnotation,
+    bottomTransaction: input.bottomTransaction,
+    bottomPinnedRef: input.bottomPinnedRef,
+    selectedSignalRef: input.selectedSignalRef,
+    selectedAnnotationRef: input.selectedAnnotationRef,
+    selectedTransactionRef: input.selectedTransactionRef,
+    bottomPinned: input.bottomPinned,
+    setBottomPinned: input.setBottomPinned,
+    setPinnedBottomSelection: input.setPinnedBottomSelection,
+    selectedSignalId: input.selectedSignalId,
+    selectedGroupId: input.selectedGroupId,
+    selectedAnnotationId: input.selectedAnnotationId,
+    selectedTransactionId: input.selectedTransactionId,
   });
+  const { deleteBottomSignal, deleteBottomAnnotation, deleteBottomTransaction, toggleTransactionSignal, toggleBottomPin } = bottomActions;
   const createTransaction = () => {
     const id = nextEntityId("transaction", input.document) as TransactionId;
     const result = input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
@@ -241,20 +243,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     input.commandRegistry.current.execute("selection.rename", { name });
     input.setRenameDialogOpen(false);
     input.setRenameError("");
-  };
-  const toggleBottomPin = () => {
-    if (input.bottomPinned) {
-      input.setBottomPinned(false);
-      input.setPinnedBottomSelection(undefined);
-      return;
-    }
-    input.setPinnedBottomSelection({
-      ...(input.selectedSignalId === undefined ? {} : { signalId: input.selectedSignalId }),
-      ...(input.selectedGroupId === undefined ? {} : { groupId: input.selectedGroupId }),
-      ...(input.selectedAnnotationId === undefined ? {} : { annotationId: input.selectedAnnotationId }),
-      ...(input.selectedTransactionId === undefined ? {} : { transactionId: input.selectedTransactionId }),
-    });
-    input.setBottomPinned(true);
   };
   const createSignalGroup = () => {
     const id = groupId(nextEntityId("group", input.document));

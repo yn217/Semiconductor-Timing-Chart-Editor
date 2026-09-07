@@ -5,7 +5,7 @@ import type { Annotation, AnnotationId, Bookmark, CanonicalDocument, CommandId, 
 import type { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import type { EditorActions } from "./application/use-editor-actions.js";
-import type { ClipboardActions } from "./application/use-clipboard-actions.js";
+import type { ClipboardActions } from "./application/clipboard-actions.js";
 import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant-model.js";
 import { AnnotationEditor } from "./annotation-editor.js";
 import { AnnotationList } from "./annotation-list.js";

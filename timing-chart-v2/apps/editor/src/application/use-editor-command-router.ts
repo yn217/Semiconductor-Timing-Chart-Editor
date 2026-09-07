@@ -4,7 +4,7 @@ import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { EditorApplicationOwner } from "./use-editor-application-owner.js";
 import type { SelectionOwner } from "./use-selection-owner.js";
-import type { ClipboardActions } from "./use-clipboard-actions.js";
+import type { ClipboardActions } from "./clipboard-actions.js";
 
 export interface EditorCommandRouterInput {
   readonly application: EditorApplicationOwner;
