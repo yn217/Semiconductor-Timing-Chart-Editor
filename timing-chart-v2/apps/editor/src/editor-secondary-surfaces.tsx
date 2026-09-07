@@ -163,7 +163,6 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     history={input.history}
     groups={input.document.signalGroups}
     problem={input.problem}
-    onCommand={execute}
     onUndo={undo}
     onRedo={redo}
     onVisibility={input.editActions.setSignalVisibility}
@@ -177,6 +176,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onDropToGroup={input.actions.moveTreeItemToGroup}
     onClockPreview={(draft) => { const currentHost = refs.host.current; if (currentHost && bottom.signal?.type === "clock") refreshClockPreview(currentHost, bottom.signal, draft, input.document.timeline.cycleCount); }}
     clockCommands={surfaceCommands}
+    signalCommands={surfaceCommands}
   />;
   const annotationEditor = bottom.annotation ? <AnnotationEditor
     key={`${bottom.annotation.id}:${input.revision}:${dialog.bottomResetToken}`}
