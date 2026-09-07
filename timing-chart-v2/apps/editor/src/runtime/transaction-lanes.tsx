@@ -25,7 +25,7 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
 }
 
 type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly top: number; readonly height: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
-type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined };
+type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined; readonly count: number };
 
 export function TransactionLanes({ document: rawDocument, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   // #451: one shared filter narrows both the Tree rows (in the label
@@ -107,7 +107,8 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   let cursor = 0;
   for (const section of sections) {
     if (section.label !== undefined) {
-      groupHeaders.push({ key: `group:${section.groupId ?? "ungrouped"}`, top: cursor, label: section.label, color: section.color });
+      const count = document.transactions.filter((transaction) => transaction.groupId === section.groupId).length;
+      groupHeaders.push({ key: `group:${section.groupId ?? "ungrouped"}`, top: cursor, label: section.label, color: section.color, count });
       cursor += GROUP_HEADER_HEIGHT;
     }
     for (const laneId of section.lanes) {
@@ -134,7 +135,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
 
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
-      {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }}>{header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}{header.label}</div>)}
+      {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }}>{header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}{header.label}<span className="transaction-group-header-count">({header.count})</span></div>)}
       {laneBands.map((band) => {
         // #451/#452 convergence: the same per-Transaction rows the central
         // bars occupy are also listed here, by name, in this sticky label

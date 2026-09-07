@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { MutableRefObject } from "react";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionId } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationId, AnnotationType, Bookmark, BookmarkId, CanonicalDocument, CommandId, DocumentProblem, GroupId, Signal, SignalId, SpacerId, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
 import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import type { TimelineNavigationOwner } from "../runtime/use-timeline-navigation-owner.js";
 import type { BottomTab } from "../workspace/use-workspace-ui-state.js";
@@ -92,6 +92,7 @@ export interface EditorActions {
   readonly selectTransaction: (id: TransactionId) => void;
   readonly toggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => CommandResult;
   readonly createTransaction: () => void;
+  readonly createTransactionGroup: () => void;
   readonly duplicateAnnotation: (annotation: Annotation) => void;
   readonly clearSelection: () => void;
   readonly selectAllSignals: () => void;
@@ -215,6 +216,21 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
       transaction: { id, name: `Transaction ${input.document.transactions.length + 1}`, start: 0, end: Math.min(4, input.document.timeline.cycleCount), laneId: "lane_0" },
     });
     if (result.ok) input.selection.selectTransaction(id);
+  };
+  // #397 Transaction Mode GUI Closure: `transactionGroup.create` already
+  // existed at the command/planner layer (full create/rename/update/delete
+  // CRUD) with zero GUI entry point -- users could never actually build the
+  // Group hierarchy the Tree/Lane workspace already knows how to render.
+  // Same shape as `createTransaction` above: default name, next order index,
+  // one command, select nothing extra (Groups aren't a selectable entity).
+  const createTransactionGroup = () => {
+    const id = nextEntityId("transactionGroup", input.document) as TransactionGroup["id"];
+    const order = input.document.transactionGroups?.length ?? 0;
+    input.commandRegistry.current.execute<SemanticCommand, CommandResult>("semantic.execute", {
+      id: input.nextCommandId("tree_transaction_group_create"),
+      type: "transactionGroup.create",
+      group: { id, name: `Group ${order + 1}`, order },
+    });
   };
   const duplicateAnnotation = (source: Annotation) => {
     const duplicate = { ...source, id: nextEntityId("annotation", input.document) as AnnotationId };
@@ -398,6 +414,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectTransaction,
     toggleTransactionSignal,
     createTransaction,
+    createTransactionGroup,
     duplicateAnnotation,
     clearSelection,
     selectAllSignals,

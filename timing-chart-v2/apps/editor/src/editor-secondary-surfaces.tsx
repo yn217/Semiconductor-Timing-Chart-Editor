@@ -242,7 +242,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onOpenHierarchy={() => dialog.setHierarchyVisible(true)}
     onCloseMoreMenu={dialog.closeTreeMoreMenu}
     timeScaleLabel={input.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
-    transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction } : undefined}
+    transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction, onAddGroup: input.actions.createTransactionGroup } : undefined}
   />;
   const workspaceViewportContent = workspace.viewMode !== "Cycle" && <TransactionLanes document={input.document} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />;
   const workspaceViewportLegend = <LegendView document={input.document} onCommand={execute} />;
