@@ -32,7 +32,7 @@ export function MinimalCycleViewNextProbe() {
   const gridLayerRef = useRef<HTMLDivElement>(null);
   const localGeometryRef = useRef<LocalGeometryMap | undefined>(undefined);
   const registry = useMemo(() => new UiCommandRegistry(), []);
-  const surfaceCommands = useMemo(() => createEditorSurfaceCommandController({ execute: (command) => { const result = session.execute(command); refresh((value) => value + 1); return result; }, nextCommandId }), [session]);
+  const surfaceCommands = useMemo(() => createEditorSurfaceCommandController({ execute: (command) => { const result = session.execute(command); refresh((value) => value + 1); return result; }, executeBatch: (id, commands) => { const result = session.executeBatch(id, commands); refresh((value) => value + 1); return result; }, nextCommandId }), [session]);
   const snapshot = session.getSnapshot();
   useEffect(() => {
     const owner = surfaceHostRef.current;

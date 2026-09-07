@@ -11,6 +11,7 @@ const linkedSignalsSource = await readFile(resolve(root, "apps/editor/src/transa
 const advancedJsonSource = await readFile(resolve(root, "apps/editor/src/advanced-json-panel.tsx"), "utf8");
 const shellSource = await readFile(resolve(root, "apps/editor/src/editor-shell-view.tsx"), "utf8");
 const secondarySurfaceSource = await readFile(resolve(root, "apps/editor/src/editor-secondary-surfaces.tsx"), "utf8");
+const ribbonSource = await readFile(resolve(root, "apps/editor/src/minimal-cycle-view-ribbon.tsx"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
@@ -99,6 +100,7 @@ const violations = [
   ...(!rootAllowListContract.test(ownership) ? ["ownership map missing MinimalCycleView root allow-list"] : []),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
+  ...(!/EditorSurfaceCommandController/.test(ribbonSource) || !/commands\.(?:createSignal|bringAnnotationsToFront|updateAnnotationStyle)/.test(ribbonSource) ? ["ribbon typed command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),
   ...requiredShellContracts.filter(([, pattern]) => !pattern.test(shellSource)).map(([name]) => `${name} contract missing`),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(actionOwner) ? ["use-editor-actions must remain JSX-free"] : []),

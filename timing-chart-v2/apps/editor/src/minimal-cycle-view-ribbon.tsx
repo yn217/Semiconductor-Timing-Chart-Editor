@@ -4,7 +4,7 @@ import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Anno
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { ArrangeGroup } from "./arrange-group.js";
 import { FindReplacePanel } from "./find-replace-panel.js";
-import { buildAnnotationStyleCommand } from "./annotation-style-command.js";
+import { annotationPropertiesBase } from "./annotation-style-command.js";
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
 import { DsIconBox, DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
@@ -23,6 +23,7 @@ import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-target.js";
 import type { AIViewIntent } from "./ai-proposal-provider.js";
+import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -35,7 +36,7 @@ function valueSignal(id: string, name: string, role: SignalRole, values: ValueSi
 
 export { Ribbon };
 
-function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, onToggleSignalSplit, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, bottomHeight, onSetBottomSize, arrowPickStatus, selectedSignalId, selectedInsertionSignalId, selectedGroupId, selectedAnnotation, selectedAnnotationIds, selectedCommentRow, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, onDiagnostic, viewMode, activeContext, density, workspacePreset, onDensityChange, onWorkspacePresetChange, onResetLayout, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, onSignalCreated, onGroupCreated, onSpacerCreated, onTransactionCreated, onRange, onCommand, onCommandBatch, onViewIntent, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties, onOpenBookmarks, onOpenAIAssistant, aiBridgeStatus }: {
+function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, snapEnabled, rulerEnabled, minimapEnabled, signalSplitEnabled, onToggleSignalSplit, showSignalNames, showRoles, showAnnotations, showTransactions, showGroupBackground, signalTreeVisible, inspectorVisible, bottomVisible, bottomHeight, onSetBottomSize, arrowPickStatus, selectedSignalId, selectedInsertionSignalId, selectedGroupId, selectedAnnotation, selectedAnnotationIds, selectedCommentRow, problemsCount, diagnostics, onNavigateProblem, onRefreshChecks, onDiagnostic, viewMode, activeContext, density, workspacePreset, onDensityChange, onWorkspacePresetChange, onResetLayout, selectedTransactionId, clipboardStatus, clipboardAvailable, hasSelectedSignal, hasSelectedClipboard, hasSelectedEntity, hasDeletableSelection, canRenameSelection, canMoveUp, canMoveDown, canShowSelection, canHideSelection, onSignalCreated, onGroupCreated, onSpacerCreated, onTransactionCreated, onRange, onCommand, onCommandBatch, onViewIntent, onCreateAnnotation, onArrowPick, onZoom, onFitSelection, onFitAll, onSetZoom, onNavigateBookmark, onToggleGrid, onToggleSnap, onToggleRuler, onToggleMinimap, onToggleSignalNames, onToggleRoles, onToggleAnnotations, onToggleTransactions, onToggleGroupBackground, onToggleSignalTree, onUndo, onRedo, onDelete, onNew, onOpen, onSave, onSaveAs, onRecent, onProperties, onExport, onToggleInspector, onToggleBottom, onShowProblems, onCopy, onCut, onPaste, onDuplicate, onRename, onClearSelection, onSelectAll, onMoveUp, onMoveDown, onVisibility, onOpenTimeline, onOpenProperties, onOpenBookmarks, onOpenAIAssistant, aiBridgeStatus, commands }: {
   readonly tab: string; readonly document: CanonicalDocument; readonly revision: number; readonly range: { readonly start: number; readonly end: number }; readonly history: HistoryState; readonly zoom: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly minimapEnabled: boolean; readonly signalSplitEnabled: boolean; readonly onToggleSignalSplit: () => void; readonly showSignalNames: boolean; readonly showRoles: boolean; readonly showAnnotations: boolean; readonly showTransactions: boolean; readonly showGroupBackground: boolean; readonly signalTreeVisible: boolean; readonly inspectorVisible: boolean; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly onSetBottomSize: (size: "hidden" | "compact" | "expanded") => void; readonly arrowPickStatus: "idle" | "from" | "to"; readonly selectedSignalId: SignalId | undefined; readonly selectedInsertionSignalId: SignalId | undefined; readonly selectedGroupId: GroupId | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedAnnotationIds: ReadonlySet<AnnotationId>; readonly selectedCommentRow: CommentRow | undefined; readonly problemsCount: number; readonly diagnostics: readonly { readonly code: string; readonly path: string; readonly message: string }[]; readonly onNavigateProblem: (path: string) => void; readonly onRefreshChecks: () => void; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void; readonly viewMode: "Cycle" | "Transaction" | "Split"; readonly activeContext: ActiveContext; readonly density: DensityMode; readonly workspacePreset: WorkspacePreset; readonly onDensityChange: (density: DensityMode) => void; readonly onWorkspacePresetChange: (preset: WorkspacePreset) => void; readonly onResetLayout: () => void; readonly selectedTransactionId: TransactionId | undefined;
   readonly clipboardStatus: string; readonly clipboardAvailable: boolean; readonly hasSelectedSignal: boolean; readonly hasSelectedClipboard: boolean; readonly hasSelectedEntity: boolean; readonly hasDeletableSelection: boolean; readonly canRenameSelection: boolean; readonly canMoveUp: boolean; readonly canMoveDown: boolean; readonly canShowSelection: boolean; readonly canHideSelection: boolean;
   // Same "select the thing that was just created" contract the Left Tree's
@@ -43,7 +44,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // whatever was selected before in place, so the newly inserted row isn't
   // immediately reachable for rename/edit without an extra manual click.
   readonly onSignalCreated: (signalId: SignalId) => void; readonly onGroupCreated: (groupId: GroupId) => void; readonly onSpacerCreated: (groupId: GroupId, spacerId: SpacerId) => void; readonly onTransactionCreated: (transactionId: TransactionId) => void;
-  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent: (intent: AIViewIntent) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: (annotationType: "arrow" | "dependency") => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onFitAll: () => void; readonly onSetZoom: (zoom: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void;
+  readonly onRange: (range: { start: number; end: number }) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onCommandBatch: (commands: readonly SemanticCommand[]) => CommandResult; readonly onViewIntent: (intent: AIViewIntent) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: (annotationType: "arrow" | "dependency") => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onFitAll: () => void; readonly onSetZoom: (zoom: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: EditorSurfaceCommandController;
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void; readonly onToggleSignalNames: () => void; readonly onToggleRoles: () => void; readonly onToggleAnnotations: () => void; readonly onToggleTransactions: () => void; readonly onToggleGroupBackground: () => void; readonly onToggleSignalTree: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onSaveAs: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onSelectAll: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void; readonly onOpenTimeline: () => void; readonly onOpenProperties: () => void; readonly onOpenBookmarks: () => void; readonly onOpenAIAssistant: () => void; readonly aiBridgeStatus: "disabled" | "connecting" | "connected" | "error";
 }) {
   const [homeOverflowOpen, setHomeOverflowOpen] = useState(false);
@@ -127,7 +128,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       : type === "state" ? valueSignal(id, name, "internal", [{ start: 0, value: "IDLE" }], { type: "state" })
       : type === "event" ? valueSignal(id, name, "internal", [{ start: 0, value: "NONE" }], { type: "event" })
       : valueSignal(id, name, "internal", [{ start: 0, value: 0 }], { type });
-    const result = onCommand({ id: nextCommandId("insert_signal"), type: "signal.create", signal, targetGroupId: target.group.id, index: target.index });
+    const result = commands.createSignal(signal, target.group.id, target.index);
     if (result.ok) onSignalCreated(signalId(id));
   };
   const insertClockSignal = () => {
@@ -136,12 +137,12 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     const id = signalId(nextEntityId("signal", document));
     const name = `CLOCK_${document.signals.length + 1}`;
     const signal: ClockSignal = { id, name, type: "clock", role: "internal", source: { instancePath: [], signalName: name }, display: { name }, generator: { start: 0, period: 2, duty: 0.5, phase: 0, initial: 0, polarity: "positive" }, edgeCounter: { show: false, mode: "both", startNumber: 1, countFrom: "signal-start", labelEvery: 1, position: "above", offset: { x: 0, y: -6 } } };
-    const result = onCommand({ id: nextCommandId("insert_clock"), type: "signal.create", signal, targetGroupId: target.group.id, index: target.index });
+    const result = commands.createSignal(signal, target.group.id, target.index);
     if (result.ok) onSignalCreated(id);
   };
   const insertGroup = () => {
     const id = groupId(nextEntityId("group", document));
-    const result = onCommand({ id: nextCommandId("insert_group"), type: "group.create", group: { id, name: `Group ${document.signalGroups.length + 1}`, rows: [] }, index: resolveGroupInsertionIndex(document, selectedInsertionSignalId, selectedGroupId) });
+    const result = commands.createGroup({ id, name: `Group ${document.signalGroups.length + 1}`, rows: [] }, resolveGroupInsertionIndex(document, selectedInsertionSignalId, selectedGroupId));
     if (result.ok) onGroupCreated(id);
   };
   const insertCommentRow = () => {
@@ -150,14 +151,14 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     const id = signalId(nextEntityId("commentRow", document));
     const name = `Comment ${document.signals.length + 1}`;
     const commentRow: CommentRow = { id, type: "commentRow", name, role: "internal", source: { instancePath: [], signalName: name }, display: { name }, title: name, body: "" };
-    const result = onCommand({ id: nextCommandId("insert_comment_row"), type: "commentRow.create", commentRow, targetGroupId: target.group.id, index: target.index });
+    const result = commands.createCommentRow(commentRow, target.group.id, target.index);
     if (result.ok) onSignalCreated(id);
   };
   const insertSpacer = () => {
     const target = resolveInsertionTarget(document, selectedInsertionSignalId, selectedGroupId);
     if (!target) return;
     const id = spacerId(nextEntityId("spacer", document));
-    const result = onCommand({ id: nextCommandId("insert_spacer"), type: "spacer.create", spacer: { id, height: 24 }, targetGroupId: target.group.id, index: target.index });
+    const result = commands.insertSpacer({ id, height: 24 }, target.group.id, target.index);
     if (result.ok) onSpacerCreated(target.group.id, id);
   };
   const insertAnnotation = (type: AnnotationType) => {
@@ -420,12 +421,12 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     matchSpanUnavailableReason: arrangeTargetIds.length < 2 ? "Select at least 2 annotations" : "Select at least 2 compatible range annotations",
   };
   const arrangeHandlers = arrangeTargetIds.length === 0 ? {} : {
-    onBringToFront: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_bring_front"), type: "annotation.bringToFront" as const, annotationId }))),
-    onSendToBack: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_send_back"), type: "annotation.sendToBack" as const, annotationId }))),
-    onRotateRight: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_rotate"), type: "annotation.setRotation" as const, annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) + 90) % 360 + 360) % 360 }))),
-    onRotateLeft: () => onCommandBatch(arrangeTargetIds.map((annotationId) => ({ id: nextCommandId("annotation_rotate"), type: "annotation.setRotation" as const, annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) - 90) % 360 + 360) % 360 }))),
-    ...(arrangeTargetIds.length >= 2 && !arrangeGroup ? { onGroup: () => onCommand({ id: nextCommandId("annotation_group_create"), type: "annotationGroup.create", group: { id: nextEntityId("annotationGroup", document) as AnnotationGroupId, annotationIds: arrangeTargetIds } satisfies AnnotationGroup }) } : {}),
-    ...(arrangeGroup ? { onUngroup: () => onCommand({ id: nextCommandId("annotation_group_delete"), type: "annotationGroup.delete", groupId: arrangeGroup.id }) } : {}),
+    onBringToFront: () => commands.bringAnnotationsToFront(arrangeTargetIds),
+    onSendToBack: () => commands.sendAnnotationsToBack(arrangeTargetIds),
+    onRotateRight: () => commands.rotateAnnotations(arrangeTargetIds.map((annotationId) => ({ annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) + 90) % 360 + 360) % 360 }))),
+    onRotateLeft: () => commands.rotateAnnotations(arrangeTargetIds.map((annotationId) => ({ annotationId, rotation: (((document.annotations.find((item) => item.id === annotationId)?.rotation ?? 0) - 90) % 360 + 360) % 360 }))),
+    ...(arrangeTargetIds.length >= 2 && !arrangeGroup ? { onGroup: () => commands.createAnnotationGroup({ id: nextEntityId("annotationGroup", document) as AnnotationGroupId, annotationIds: arrangeTargetIds } satisfies AnnotationGroup) } : {}),
+    ...(arrangeGroup ? { onUngroup: () => commands.deleteAnnotationGroup(arrangeGroup.id) } : {}),
     // Align brings every selected Annotation's label onto the same row
     // (matches the first selected id's labelOffset.y) -- reuses the
     // existing single-annotation annotation.updateLabelOffset command,
@@ -435,7 +436,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       const reference = targets[0];
       if (targets.length < 2 || !reference) return;
       const referenceY = reference.labelOffset?.y ?? -14;
-      onCommandBatch(targets.map((annotation) => ({ id: nextCommandId("annotation_align"), type: "annotation.updateLabelOffset" as const, annotationId: annotation.id, labelOffset: { x: annotation.labelOffset?.x ?? 0, y: referenceY } })));
+      commands.alignAnnotationLabels(targets.map((annotation) => ({ annotationId: annotation.id, x: annotation.labelOffset?.x ?? 0, y: referenceY })));
     } } : {}),
     // #378: executeBatch is atomic (one no-op command fails the WHOLE
     // batch, packages/history/src/session.ts's executeBatch) -- a mixed
@@ -445,8 +446,8 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     // change, and disable+explain when every selected annotation is
     // already at the requested state, matching #332's disabled-reason
     // convention rather than presenting an enabled control with no effect.
-    ...(arrangeTargetIds.some((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)) ? { onLock: () => onCommandBatch(arrangeTargetIds.filter((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)).map((annotationId) => ({ id: nextCommandId("annotation_lock"), type: "annotation.setLocked" as const, annotationId, locked: true }))) } : { lockUnavailableReason: "Selected annotation(s) are already locked" }),
-    ...(arrangeTargetIds.some((id) => document.annotations.find((item) => item.id === id)?.locked ?? false) ? { onUnlock: () => onCommandBatch(arrangeTargetIds.filter((id) => document.annotations.find((item) => item.id === id)?.locked ?? false).map((annotationId) => ({ id: nextCommandId("annotation_unlock"), type: "annotation.setLocked" as const, annotationId, locked: false }))) } : { unlockUnavailableReason: "Selected annotation(s) are already unlocked" }),
+    ...(arrangeTargetIds.some((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)) ? { onLock: () => commands.setAnnotationsLocked(arrangeTargetIds.filter((id) => !(document.annotations.find((item) => item.id === id)?.locked ?? false)), true) } : { lockUnavailableReason: "Selected annotation(s) are already locked" }),
+    ...(arrangeTargetIds.some((id) => document.annotations.find((item) => item.id === id)?.locked ?? false) ? { onUnlock: () => commands.setAnnotationsLocked(arrangeTargetIds.filter((id) => document.annotations.find((item) => item.id === id)?.locked ?? false), false) } : { unlockUnavailableReason: "Selected annotation(s) are already unlocked" }),
     // Same width: match every OTHER selected annotation's start-end cycle
     // span to the first selected one's. Types without start/end (arrow,
     // callout, marker, ...) are silently skipped rather than failing the
@@ -456,7 +457,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       const reference = targets.find((item) => item.start && item.end);
       const spanCycles = reference?.start && reference.end ? reference.end.cycle - reference.start.cycle : undefined;
       const rest = spanCycles === undefined ? [] : targets.filter((item) => item.id !== reference?.id && item.start && item.end);
-      return spanCycles === undefined || rest.length === 0 ? {} : { onMatchSpan: () => onCommandBatch(rest.map((annotation) => ({ id: nextCommandId("annotation_match_span"), type: "annotation.matchSpan" as const, annotationId: annotation.id, spanCycles }))) };
+      return spanCycles === undefined || rest.length === 0 ? {} : { onMatchSpan: () => commands.matchAnnotationSpans(rest.map((annotation) => ({ annotationId: annotation.id, spanCycles }))) };
     })() : {}),
   };
   return <section className="ribbon" aria-label={`${tab} Ribbon`} data-testid="ribbon">
@@ -519,9 +520,9 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
               // buildAnnotationStyleCommand's live per-annotation lookup --
               // not just the primary/first selected one.
               if (selectedAnnotationIds.size > 1) {
-                onCommandBatch(document.annotations.filter((item) => selectedAnnotationIds.has(item.id)).map((item) => buildAnnotationStyleCommand(item, style, nextCommandId("ribbon_annotation_font_multi"))));
-              } else if (selectedAnnotation) onCommand(buildAnnotationStyleCommand(selectedAnnotation, style, nextCommandId("ribbon_annotation_font")));
-              else if (selectedCommentRow) onCommand({ id: nextCommandId("ribbon_comment_row_font"), type: "commentRow.update", signalId: selectedCommentRow.id, title: selectedCommentRow.title, body: selectedCommentRow.body, displayStyle: style });
+                commands.updateAnnotationStyles(document.annotations.filter((item) => selectedAnnotationIds.has(item.id)).map((item) => ({ annotationId: item.id, ...annotationPropertiesBase(item), style })));
+              } else if (selectedAnnotation) commands.updateAnnotationStyle({ annotationId: selectedAnnotation.id, ...annotationPropertiesBase(selectedAnnotation), style });
+              else if (selectedCommentRow) commands.updateCommentRowStyle(selectedCommentRow.id, selectedCommentRow, style);
             }}
           />
         </DsRibbonGroup>
@@ -540,9 +541,9 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       </div>
       <div className="ribbon-major-group" data-major-group="Paragraph" aria-label="Paragraph commands" title={selectedAnnotation ? undefined : "Select an Annotation to change alignment"}>
         <DsRibbonGroup ariaLabel="Paragraph" className="annotation-paragraph-group" label="Paragraph">
-          <DsRibbonButton ariaLabel="Align left" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-left" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "left" })}>Left</DsRibbonButton>
-          <DsRibbonButton ariaLabel="Align center" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-center" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "center" })}>Center</DsRibbonButton>
-          <DsRibbonButton ariaLabel="Align right" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-right" />} onClick={() => selectedAnnotation && onCommand({ id: nextCommandId("annotation_align"), type: "annotation.setAlign", annotationId: selectedAnnotation.id, align: "right" })}>Right</DsRibbonButton>
+          <DsRibbonButton ariaLabel="Align left" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-left" />} onClick={() => selectedAnnotation && commands.setAnnotationAlign(selectedAnnotation.id, "left")}>Left</DsRibbonButton>
+          <DsRibbonButton ariaLabel="Align center" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-center" />} onClick={() => selectedAnnotation && commands.setAnnotationAlign(selectedAnnotation.id, "center")}>Center</DsRibbonButton>
+          <DsRibbonButton ariaLabel="Align right" disabled={!selectedAnnotation} icon={<RibbonIcon name="i-align-right" />} onClick={() => selectedAnnotation && commands.setAnnotationAlign(selectedAnnotation.id, "right")}>Right</DsRibbonButton>
         </DsRibbonGroup>
       </div>
       <div className="ribbon-major-group" data-major-group="Arrange" aria-label="Arrange commands">

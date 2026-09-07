@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { AnnotationId, CanonicalDocument, ClockGenerator, EdgeCounterSettings, GroupId, SemanticAnchor, SignalId, SpacerId, SpacerRow, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -29,7 +29,7 @@ export interface InspectorCommandActions {
   readonly updateLayout: (layout: CanonicalDocument["layout"]) => CommandResult;
   readonly renameGroup: (groupId: GroupId, name: string) => CommandResult;
   readonly updateGroupProperties: (payload: CommandPayload<"group.updateProperties">) => CommandResult;
-  readonly createSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly insertSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
   readonly moveSpacer: (spacerId: SpacerId, targetGroupId: GroupId, index: number) => CommandResult;
   readonly updateSpacer: (spacerId: SpacerId, height: number) => CommandResult;
   readonly deleteSpacer: (spacerId: SpacerId) => CommandResult;
@@ -38,13 +38,37 @@ export interface InspectorCommandActions {
   readonly setAnnotationAnchor: (annotationId: AnnotationId, field: "anchor" | "start" | "end" | "from" | "to", anchor: SemanticAnchor) => CommandResult;
 }
 
-export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, InspectorCommandActions {}
+export interface RibbonCommandActions {
+  readonly createSignal: (signal: Signal, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly createCommentRow: (commentRow: CommentRow, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly createGroup: (group: SignalGroup, index: number) => CommandResult;
+  readonly createSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly insertTimeline: (at: number, count: number) => CommandResult;
+  readonly deleteTimeline: (start: number, end: number) => CommandResult;
+  readonly createTimeGroup: (timeGroup: TimeGroup) => CommandResult;
+  readonly setAnnotationAlign: (annotationId: AnnotationId, align: Annotation["align"]) => CommandResult;
+  readonly bringAnnotationsToFront: (annotationIds: readonly AnnotationId[]) => CommandResult;
+  readonly sendAnnotationsToBack: (annotationIds: readonly AnnotationId[]) => CommandResult;
+  readonly rotateAnnotations: (items: readonly { readonly annotationId: AnnotationId; readonly rotation: number }[]) => CommandResult;
+  readonly createAnnotationGroup: (group: AnnotationGroup) => CommandResult;
+  readonly deleteAnnotationGroup: (groupId: AnnotationGroupId) => CommandResult;
+  readonly alignAnnotationLabels: (items: readonly { readonly annotationId: AnnotationId; readonly y: number; readonly x: number }[]) => CommandResult;
+  readonly setAnnotationsLocked: (annotationIds: readonly AnnotationId[], locked: boolean) => CommandResult;
+  readonly matchAnnotationSpans: (items: readonly { readonly annotationId: AnnotationId; readonly spanCycles: number }[]) => CommandResult;
+  readonly updateAnnotationStyles: (payloads: readonly CommandPayload<"annotation.updateProperties">[]) => CommandResult;
+  readonly updateAnnotationStyle: (payload: CommandPayload<"annotation.updateProperties">) => CommandResult;
+  readonly updateCommentRowStyle: (signalId: SignalId, commentRow: Pick<CommentRow, "title" | "body">, style: JsonObject) => CommandResult;
+}
+
+export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, InspectorCommandActions, RibbonCommandActions {}
 
 export function createEditorSurfaceCommandController(input: {
   readonly execute: (command: SemanticCommand) => CommandResult;
+  readonly executeBatch: (id: CommandId, commands: readonly SemanticCommand[]) => CommandResult;
   readonly nextCommandId: (operation: string) => CommandId;
 }): EditorSurfaceCommandController {
   const dispatch = <T extends SemanticCommand["type"]>(operation: string, command: Omit<CommandOf<T>, "id">): CommandResult => input.execute({ id: input.nextCommandId(operation), ...command } as SemanticCommand);
+  const dispatchBatch = <T extends SemanticCommand["type"]>(operation: string, commands: readonly Omit<CommandOf<T>, "id">[]): CommandResult => input.executeBatch(input.nextCommandId("ribbon_annotation_arrange"), commands.map((command) => ({ id: input.nextCommandId(operation), ...command } as SemanticCommand)));
   return {
     updateClockGenerator: (signalId, generator) => dispatch<"signal.updateClockGenerator">("clock", { type: "signal.updateClockGenerator", signalId, generator }),
     updateEdgeCounter: (signalId, edgeCounter) => dispatch<"signal.updateEdgeCounter">("edge_counter", { type: "signal.updateEdgeCounter", signalId, edgeCounter }),
@@ -71,5 +95,24 @@ export function createEditorSurfaceCommandController(input: {
     updateTransaction: (payload) => dispatch<"transaction.update">("transaction_update", { type: "transaction.update", ...payload }),
     updateAnnotationProperties: (payload) => dispatch<"annotation.updateProperties">("inspector_annotation_properties", { type: "annotation.updateProperties", ...payload }),
     setAnnotationAnchor: (annotationId, field, anchor) => dispatch<"annotation.setAnchor">("inspector_annotation_anchor", { type: "annotation.setAnchor", annotationId, field, anchor }),
+    createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
+    createCommentRow: (commentRow, targetGroupId, index) => dispatch<"commentRow.create">("insert_comment_row", { type: "commentRow.create", commentRow, targetGroupId, index }),
+    createGroup: (group, index) => dispatch<"group.create">("insert_group", { type: "group.create", group, index }),
+    insertSpacer: (spacer, targetGroupId, index) => dispatch<"spacer.create">("insert_spacer", { type: "spacer.create", spacer, targetGroupId, index }),
+    insertTimeline: (at, count) => dispatch<"timeline.insert">(count === 1 ? "timeline_insert_one" : "timeline_insert_many", { type: "timeline.insert", at, count }),
+    deleteTimeline: (start, end) => dispatch<"timeline.delete">(end - start === 1 ? "timeline_delete_one" : "timeline_delete_many", { type: "timeline.delete", start, end }),
+    createTimeGroup: (timeGroup) => dispatch<"timeGroup.create">("home_time_group", { type: "timeGroup.create", timeGroup }),
+    setAnnotationAlign: (annotationId, align) => dispatch<"annotation.setAlign">("annotation_align", { type: "annotation.setAlign", annotationId, align }),
+    bringAnnotationsToFront: (annotationIds) => dispatchBatch<"annotation.bringToFront">("annotation_bring_front", annotationIds.map((annotationId) => ({ type: "annotation.bringToFront", annotationId }))),
+    sendAnnotationsToBack: (annotationIds) => dispatchBatch<"annotation.sendToBack">("annotation_send_back", annotationIds.map((annotationId) => ({ type: "annotation.sendToBack", annotationId }))),
+    rotateAnnotations: (items) => dispatchBatch<"annotation.setRotation">("annotation_rotate", items.map(({ annotationId, rotation }) => ({ type: "annotation.setRotation", annotationId, rotation }))),
+    createAnnotationGroup: (group) => dispatch<"annotationGroup.create">("annotation_group_create", { type: "annotationGroup.create", group }),
+    deleteAnnotationGroup: (groupId) => dispatch<"annotationGroup.delete">("annotation_group_delete", { type: "annotationGroup.delete", groupId }),
+    alignAnnotationLabels: (items) => dispatchBatch<"annotation.updateLabelOffset">("annotation_align", items.map(({ annotationId, x, y }) => ({ type: "annotation.updateLabelOffset", annotationId, labelOffset: { x, y } }))),
+    setAnnotationsLocked: (annotationIds, locked) => dispatchBatch<"annotation.setLocked">(locked ? "annotation_lock" : "annotation_unlock", annotationIds.map((annotationId) => ({ type: "annotation.setLocked", annotationId, locked }))),
+    matchAnnotationSpans: (items) => dispatchBatch<"annotation.matchSpan">("annotation_match_span", items.map(({ annotationId, spanCycles }) => ({ type: "annotation.matchSpan", annotationId, spanCycles }))),
+    updateAnnotationStyles: (payloads) => dispatchBatch<"annotation.updateProperties">("ribbon_annotation_font_multi", payloads.map((payload) => ({ type: "annotation.updateProperties", ...payload }))),
+    updateAnnotationStyle: (payload) => dispatch<"annotation.updateProperties">("ribbon_annotation_font", { type: "annotation.updateProperties", ...payload }),
+    updateCommentRowStyle: (signalId, commentRow, style) => dispatch<"commentRow.update">("ribbon_comment_row_font", { type: "commentRow.update", signalId, ...commentRow, displayStyle: style }),
   };
 }
