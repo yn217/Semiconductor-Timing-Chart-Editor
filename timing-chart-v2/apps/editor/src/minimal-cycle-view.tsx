@@ -1,16 +1,14 @@
 import { startTransition, useEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
-import type { CommandResult } from "@timing-chart-v2/commands";
+import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import { type Point } from "@timing-chart-v2/geometry";
 import { quickValueLiteral, quickValueOptions, type AnnotationId, type BookmarkId, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type GroupId, type SignalId, type TransactionId } from "@timing-chart-v2/schema";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
-import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
-import { JsonPanel } from "./json-panel.js";
 import { downloadText } from "./download-text.js";
 import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
-import { InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog, SignalTreeColumnHeader, BottomEditorPanel, EditorStatusBar } from "./minimal-cycle-view-panels.js";
+import { ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
@@ -18,7 +16,6 @@ import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
 import { DocumentProperties } from "./document-properties.js";
-import { EditorRibbon } from "./ribbon/editor-ribbon.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
@@ -26,7 +23,6 @@ import { useEditorPresentationState } from "./application/use-editor-presentatio
 import { useEditorResizeActions } from "./application/use-editor-resize-actions.js";
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { EditorShellView } from "./editor-shell-view.js";
-import { EditorWorkspaceView } from "./editor-workspace-view.js";
 import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
@@ -555,6 +551,150 @@ export function MinimalCycleView() {
   const canRenameSelection = capabilities.canRename;
   const canShowSelection = capabilities.canShow;
   const canHideSelection = capabilities.canHide;
+  const shellRibbon = {
+    tabs: <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />,
+    main: {
+      tab: ribbonTab,
+      document: snapshot.document,
+      revision: snapshot.revision,
+      range: timelineRange,
+      history,
+      zoom,
+      gridEnabled,
+      snapEnabled,
+      rulerEnabled,
+      minimapEnabled,
+      signalSplitEnabled,
+      onToggleSignalSplit: () => setSignalSplitEnabled((value) => !value),
+      showSignalNames,
+      showRoles,
+      showAnnotations,
+      showTransactions,
+      showGroupBackground,
+      signalTreeVisible,
+      inspectorVisible,
+      bottomVisible,
+      arrowPickStatus,
+      selectedSignalId: annotationTargetSignalId,
+      selectedInsertionSignalId: selectedSignal?.id,
+      selectedGroupId: selectedGroup?.id,
+      selectedAnnotation,
+      selectedAnnotationIds: selection.state.annotationIds,
+      selectedCommentRow: selectedSignal?.type === "commentRow" ? selectedSignal : undefined,
+      onSignalCreated: selection.selectSignal,
+      onGroupCreated: selection.selectGroup,
+      onSpacerCreated: selection.selectSpacer,
+      onTransactionCreated: selection.selectTransaction,
+      problemsCount: diagnostics.length,
+      diagnostics,
+      onNavigateProblem: navigateProblem,
+      onRefreshChecks: () => { application.validateDocument(snapshot.document); publishStateRef.current(); },
+      onDiagnostic: (next: DocumentProblem | readonly DocumentProblem[] | undefined) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); },
+      viewMode,
+      activeContext,
+      density,
+      workspacePreset,
+      onDensityChange: setDensity,
+      onWorkspacePresetChange: applyWorkspacePreset,
+      onResetLayout: resetWorkspaceLayout,
+      selectedTransactionId,
+      clipboardStatus,
+      clipboardAvailable,
+      hasSelectedSignal,
+      hasSelectedClipboard,
+      hasSelectedEntity,
+      hasDeletableSelection,
+      canRenameSelection,
+      canMoveUp,
+      canMoveDown,
+      canShowSelection,
+      canHideSelection,
+      onCopy: copySelectedSignal,
+      onCut: cutSelectedSignal,
+      onPaste: pasteSelectedEntity,
+      onDuplicate: duplicateSelectedEntity,
+      onRename: renameSelection,
+      onClearSelection: clearSelection,
+      onSelectAll: selectAllSignals,
+      onMoveUp: () => moveSelection(-1),
+      onMoveDown: () => moveSelection(1),
+      onVisibility: setSelectionVisibility,
+      onRange: (range: { readonly start: number; readonly end: number }) => { setRangeSelectionActive(true); setTimelineRange(range); },
+      onCommand: (command: SemanticCommand): CommandResult => commandRegistry.current.execute("semantic.execute", command),
+      onCommandBatch: (commands: Parameters<typeof executeBatch>[1]) => executeBatch(nextCommandId("ribbon_annotation_arrange"), commands),
+      onViewIntent: (intent: "fit-all" | "open-timeline") => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); },
+      onCreateAnnotation: createSelectedAnnotation,
+      onArrowPick: (annotationType: Parameters<typeof armArrowPick.current>[0]) => armArrowPick.current(annotationType),
+      onZoom: timelineNavigation.zoomBy,
+      onFitSelection: timelineNavigation.fitSelection,
+      onNavigateBookmark: navigateToBookmark,
+      onFitAll: timelineNavigation.fitAll,
+      onSetZoom: timelineNavigation.setZoom,
+      onToggleGrid: () => setGridEnabled((value) => !value),
+      onToggleSnap: () => setSnapEnabled((value) => !value),
+      onToggleRuler: () => setRulerEnabled((value) => !value),
+      onToggleMinimap: () => setMinimapEnabled((value) => !value),
+      onToggleSignalNames: () => setShowSignalNames((value) => !value),
+      onToggleRoles: () => setShowRoles((value) => !value),
+      onToggleAnnotations: () => setShowAnnotations((value) => !value),
+      onToggleTransactions: () => setShowTransactions((value) => !value),
+      onToggleGroupBackground: () => setShowGroupBackground((value) => !value),
+      onToggleSignalTree: () => setSignalTreeVisible((value) => !value),
+      onUndo: () => commandRegistry.current.execute("history.undo"),
+      onRedo: () => commandRegistry.current.execute("history.redo"),
+      onDelete: () => commandRegistry.current.execute("selection.delete"),
+      onNew: requestNewDocument,
+      onOpen: () => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); },
+      onSave: () => { documentLifecycle.save(`${snapshot.document.document.title || "timing-chart"}.tcd`); },
+      onSaveAs: () => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); },
+      onRecent: documentLifecycle.openRecent,
+      onProperties: () => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); },
+      onExport: () => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); },
+      onToggleInspector: () => startTransition(() => setInspectorVisible((value) => !value)),
+      onToggleBottom: () => startTransition(() => setBottomVisible((value) => !value)),
+      bottomHeight,
+      onSetBottomSize: (size: "hidden" | "compact" | "expanded") => { if (size === "hidden") { setBottomVisible(false); return; } setBottomVisible(true); setBottomHeight(size === "compact" ? 180 : 420); },
+      onShowProblems: () => { setBottomTab("Problems"); setBottomVisible(true); },
+      onOpenTimeline: () => setRibbonTab("Timeline"),
+      onOpenBookmarks: () => { setBottomTab("Bookmarks"); setBottomVisible(true); },
+      onOpenAIAssistant: () => { setBottomTab("AI"); setBottomVisible(true); },
+      aiBridgeStatus: secondarySurfaces.aiBridgeStatus,
+      onOpenProperties: () => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); },
+    },
+  };
+  const shellWorkspace = {
+    view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled },
+    layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
+    refs: { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower },
+    content: { header: secondarySurfaces.workspaceHeader, viewportContent: secondarySurfaces.workspaceViewportContent, viewportLegend: secondarySurfaces.workspaceViewportLegend, bottom: secondarySurfaces.workspaceBottom, inspector: secondarySurfaces.workspaceInspector },
+    interactions: {
+      onInspectorKeyDown: resizeInspectorByKeyboard, onInspectorPointerDown: startInspectorResize, onInspectorPointerMove: moveInspectorResize, onInspectorPointerUp: finishInspectorResize,
+      onLeftPaneKeyDown: resizeLeftPaneByKeyboard, onLeftPanePointerDown: startLeftPaneResize, onLeftPanePointerMove: moveLeftPaneResize, onLeftPanePointerUp: finishLeftPaneResize,
+      onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
+      onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
+      onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
+    },
+  };
+  const shellStatus = {
+    toolStatus: arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`,
+    selectionStatus: selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None",
+    signalCount: snapshot.document.signals.length,
+    annotationCount: snapshot.document.annotations.length,
+    rangeStatus: visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`,
+    selectedCycle,
+    zoom,
+    snapEnabled,
+    viewMode,
+    statusContext: `Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`,
+    hideRevisionDetail: visualReference,
+    revision: snapshot.revision,
+    undoDepth: history.undoDepth,
+    redoDepth: history.redoDepth,
+    timeAxisStatus: `Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`,
+    dirty: history.dirty,
+    problemsCount: diagnostics.length,
+    waveDromHasError,
+  };
   return <EditorShellView
     viewModel={{
       style: { "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties,
@@ -564,132 +704,8 @@ export function MinimalCycleView() {
       cycleCount: snapshot.document.timeline.cycleCount, signalCount: snapshot.document.signals.length, transactionCount: snapshot.document.transactions.length,
     }}
     titleBar={<MinimalCycleViewTitleBar title={snapshot.document.document.title} dirty={history.dirty} viewMode={viewMode} />}
-    ribbon={<>
-      <MinimalCycleViewRibbonTabs ribbonTab={ribbonTab} setRibbonTab={setRibbonTab} viewMode={viewMode} setViewMode={setViewMode} bottomTab={bottomTab} setBottomTab={setBottomTab} />
-      <EditorRibbon
-      tab={ribbonTab}
-      document={snapshot.document}
-      revision={snapshot.revision}
-      range={timelineRange}
-      history={history}
-      zoom={zoom}
-      gridEnabled={gridEnabled}
-      snapEnabled={snapEnabled}
-      rulerEnabled={rulerEnabled}
-      minimapEnabled={minimapEnabled}
-      signalSplitEnabled={signalSplitEnabled}
-      onToggleSignalSplit={() => setSignalSplitEnabled((value) => !value)}
-      showSignalNames={showSignalNames}
-      showRoles={showRoles}
-      showAnnotations={showAnnotations}
-      showTransactions={showTransactions}
-      showGroupBackground={showGroupBackground}
-       signalTreeVisible={signalTreeVisible}
-       inspectorVisible={inspectorVisible}
-       bottomVisible={bottomVisible}
-      arrowPickStatus={arrowPickStatus}
-      selectedSignalId={annotationTargetSignalId}
-      selectedInsertionSignalId={selectedSignal?.id}
-      selectedGroupId={selectedGroup?.id}
-      selectedAnnotation={selectedAnnotation}
-      selectedAnnotationIds={selection.state.annotationIds}
-      selectedCommentRow={selectedSignal?.type === "commentRow" ? selectedSignal : undefined}
-      onSignalCreated={selection.selectSignal}
-      onGroupCreated={selection.selectGroup}
-      onSpacerCreated={selection.selectSpacer}
-      onTransactionCreated={selection.selectTransaction}
-      problemsCount={diagnostics.length}
-      diagnostics={diagnostics}
-      onNavigateProblem={navigateProblem}
-      onRefreshChecks={() => { application.validateDocument(snapshot.document); publishStateRef.current(); }}
-      onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("ai-proposal:")), ...nextDiagnostics]); }}
-       viewMode={viewMode}
-       activeContext={activeContext}
-       density={density}
-       workspacePreset={workspacePreset}
-       onDensityChange={setDensity}
-       onWorkspacePresetChange={applyWorkspacePreset}
-       onResetLayout={resetWorkspaceLayout}
-      selectedTransactionId={selectedTransactionId}
-      clipboardStatus={clipboardStatus}
-      clipboardAvailable={clipboardAvailable}
-      hasSelectedSignal={hasSelectedSignal}
-      hasSelectedClipboard={hasSelectedClipboard}
-      hasSelectedEntity={hasSelectedEntity}
-      hasDeletableSelection={hasDeletableSelection}
-      canRenameSelection={canRenameSelection}
-      canMoveUp={canMoveUp}
-      canMoveDown={canMoveDown}
-      canShowSelection={canShowSelection}
-      canHideSelection={canHideSelection}
-      onCopy={copySelectedSignal}
-      onCut={cutSelectedSignal}
-      onPaste={pasteSelectedEntity}
-      onDuplicate={duplicateSelectedEntity}
-      onRename={renameSelection}
-      onClearSelection={clearSelection}
-      onSelectAll={selectAllSignals}
-      onMoveUp={() => moveSelection(-1)}
-      onMoveDown={() => moveSelection(1)}
-      onVisibility={setSelectionVisibility}
-      onRange={(range) => { setRangeSelectionActive(true); setTimelineRange(range); }}
-      onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
-      onCommandBatch={(commands) => executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
-      onViewIntent={(intent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); }}
-      onCreateAnnotation={createSelectedAnnotation}
-      onArrowPick={(annotationType) => armArrowPick.current(annotationType)}
-      onZoom={timelineNavigation.zoomBy}
-      onFitSelection={timelineNavigation.fitSelection}
-      onNavigateBookmark={navigateToBookmark}
-      onFitAll={timelineNavigation.fitAll}
-      onSetZoom={timelineNavigation.setZoom}
-      onToggleGrid={() => setGridEnabled((value) => !value)}
-      onToggleSnap={() => setSnapEnabled((value) => !value)}
-      onToggleRuler={() => setRulerEnabled((value) => !value)}
-      onToggleMinimap={() => setMinimapEnabled((value) => !value)}
-      onToggleSignalNames={() => setShowSignalNames((value) => !value)}
-      onToggleRoles={() => setShowRoles((value) => !value)}
-      onToggleAnnotations={() => setShowAnnotations((value) => !value)}
-      onToggleTransactions={() => setShowTransactions((value) => !value)}
-      onToggleGroupBackground={() => setShowGroupBackground((value) => !value)}
-      onToggleSignalTree={() => setSignalTreeVisible((value) => !value)}
-      onUndo={() => commandRegistry.current.execute("history.undo")}
-      onRedo={() => commandRegistry.current.execute("history.redo")}
-      onDelete={() => commandRegistry.current.execute("selection.delete")}
-       onNew={requestNewDocument}
-       onOpen={() => { pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null; fileInput.current?.click(); }}
-      onSave={() => { documentLifecycle.save(`${snapshot.document.document.title || "timing-chart"}.tcd`); }}
-      onSaveAs={() => { dialogOriginLabelRef.current = "Save As"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setSaveAsVisible(true); }}
-      onRecent={documentLifecycle.openRecent}
-      onProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
-      onExport={() => { dialogOriginLabelRef.current = "Export"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setExportVisible(true); }}
-      onToggleInspector={() => startTransition(() => setInspectorVisible((value) => !value))}
-      onToggleBottom={() => startTransition(() => setBottomVisible((value) => !value))}
-      bottomHeight={bottomHeight}
-      onSetBottomSize={(size) => { if (size === "hidden") { setBottomVisible(false); return; } setBottomVisible(true); setBottomHeight(size === "compact" ? 180 : 420); }}
-      onShowProblems={() => { setBottomTab("Problems"); setBottomVisible(true); }}
-      onOpenTimeline={() => setRibbonTab("Timeline")}
-      onOpenBookmarks={() => { setBottomTab("Bookmarks"); setBottomVisible(true); }}
-      onOpenAIAssistant={() => { setBottomTab("AI"); setBottomVisible(true); }}
-      aiBridgeStatus={secondarySurfaces.aiBridgeStatus}
-      onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
-      />
-    </>}
-    workspace={<>
-      <EditorWorkspaceView viewModel={{
-      view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled },
-      layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
-      refs: { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower },
-      content: { header: secondarySurfaces.workspaceHeader, viewportContent: secondarySurfaces.workspaceViewportContent, viewportLegend: secondarySurfaces.workspaceViewportLegend, bottom: secondarySurfaces.workspaceBottom, inspector: secondarySurfaces.workspaceInspector },
-      interactions: {
-        onInspectorKeyDown: resizeInspectorByKeyboard, onInspectorPointerDown: startInspectorResize, onInspectorPointerMove: moveInspectorResize, onInspectorPointerUp: finishInspectorResize,
-        onLeftPaneKeyDown: resizeLeftPaneByKeyboard, onLeftPanePointerDown: startLeftPaneResize, onLeftPanePointerMove: moveLeftPaneResize, onLeftPanePointerUp: finishLeftPaneResize,
-        onFrozenPaneKeyDown: resizeFrozenPaneByKeyboard, onFrozenPanePointerDown: startFrozenPaneResize, onFrozenPanePointerMove: moveFrozenPaneResize, onFrozenPanePointerUp: finishFrozenPaneResize,
-        onBottomKeyDown: resizeBottomByKeyboard, onBottomPointerDown: startBottomResize, onBottomPointerMove: moveBottomResize, onBottomPointerUp: finishBottomResize,
-        onSignalSplitKeyDown: resizeSignalSplitByKeyboard, onSignalSplitPointerDown: startSignalSplitResize, onSignalSplitPointerMove: moveSignalSplitResize, onSignalSplitPointerUp: finishSignalSplitResize,
-      },
-      }} />
-    </>}
+    ribbon={shellRibbon}
+    workspace={shellWorkspace}
     dialogs={<EditorDialogLayer
       compatibilityPreview={compatibilityPreview}
       compatibilityDialogRef={compatibilityDialogRef}
@@ -713,25 +729,6 @@ export function MinimalCycleView() {
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} controller={exportController} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
     </EditorDialogLayer>}
-    status={<EditorStatusBar
-      toolStatus={arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}
-      selectionStatus={selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}
-      signalCount={snapshot.document.signals.length}
-      annotationCount={snapshot.document.annotations.length}
-      rangeStatus={visualReference ? `Time Range: ${snapshot.document.timeline.start} – ${snapshot.document.timeline.end} cycles` : `Range: [${timelineRange.start}, ${timelineRange.end})`}
-      selectedCycle={selectedCycle}
-      zoom={zoom}
-      snapEnabled={snapEnabled}
-      viewMode={viewMode}
-      statusContext={`Workspace: ${workspacePreset} · ${bottomPinned ? "Bottom: Pinned" : followSelection ? "Bottom: Follow" : "Bottom: Fixed"}${selectedSignal ? ` · Scope: ${selectedSignal.source.instancePath.length > 0 ? selectedSignal.source.instancePath.join("/") : "root"}` : ""}`}
-      hideRevisionDetail={visualReference}
-      revision={snapshot.revision}
-      undoDepth={history.undoDepth}
-      redoDepth={history.redoDepth}
-      timeAxisStatus={`Time Axis: ${snapshot.document.timeline.referenceClock ? `Clock · ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time · No Clock Reference"}`}
-      dirty={history.dirty}
-      problemsCount={diagnostics.length}
-      waveDromHasError={waveDromHasError}
-    />}
+    status={shellStatus}
   />;
 }

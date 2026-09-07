@@ -8,6 +8,7 @@ const actionOwner = await readFile(resolve(root, "apps/editor/src/application/us
 const presentationOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-presentation-state.ts"), "utf8");
 const exportDialogSource = await readFile(resolve(root, "apps/editor/src/export-dialog.tsx"), "utf8");
 const linkedSignalsSource = await readFile(resolve(root, "apps/editor/src/transaction-linked-signals.tsx"), "utf8");
+const shellSource = await readFile(resolve(root, "apps/editor/src/editor-shell-view.tsx"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
@@ -39,6 +40,7 @@ const forbiddenOwners = [
   ["batch mutation bypass in root", /application\.executeBatch\s*\(/],
   ["semantic command construction in root", /create(?:Annotation|Transaction)\s*\(/],
   ["large secondary surface JSX in root", /<(?:SignalEditor|AnnotationEditor|TransactionEditor|BookmarkEditor|InspectorPanel|BottomEditorPanel|AdvancedJsonPanel|AIOperationPanel)\b/],
+  ["shell slot JSX leaked into root", /<(?:EditorRibbon|EditorWorkspaceView|EditorStatusBar)\b/],
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
 const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX"];
@@ -47,17 +49,20 @@ const requiredSourceContracts = [
   ["action owner", /useEditorActions/],
   ["presentation owner", /useEditorPresentationState/],
   ["shell owner", /EditorShellView/],
-  ["workspace shell owner", /EditorWorkspaceView/],
   ["dialog shell owner", /EditorDialogLayer/],
   ["runtime DOM bridge split", /editor-dom-bridge/],
   ["timeline presentation state owner", /useTimelinePresentationState/],
   ["secondary surface owner", /useEditorSecondarySurfaces/],
+];
+const requiredShellContracts = [
+  ["workspace shell owner", /EditorWorkspaceView/],
   ["ribbon presentation boundary", /EditorRibbon/],
 ];
 const violations = [
   ...forbiddenOwners.filter(([, pattern]) => pattern.test(source)).map(([name]) => name),
   ...requiredOwners.filter((owner) => !ownership.includes(owner)).map((owner) => `ownership map missing: ${owner}`),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
+  ...requiredShellContracts.filter(([, pattern]) => !pattern.test(shellSource)).map(([name]) => `${name} contract missing`),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(actionOwner) ? ["use-editor-actions must remain JSX-free"] : []),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(presentationOwner) ? ["use-editor-presentation-state must remain JSX-free"] : []),
   ...(exportDialogSource.includes("DeterministicExportService") ? ["ExportDialog must use EditorExportController"] : []),
