@@ -12,6 +12,7 @@ describe("editor surface command controller", () => {
     controller.move("transaction_1" as never, 3);
     controller.createTransaction({ id: "transaction_2" as never, name: "Write", start: 4, end: 6, laneId: "lane_0" });
     controller.duplicateTransaction({ id: "transaction_3" as never, name: "Write Copy", start: 4, end: 6, laneId: "lane_0" });
+    controller.setTransactionTimeScale({ clockCyclesPerTransactionCycle: 2, majorInterval: 5, minorInterval: 1 });
     controller.normalizeLayout({ rowHeight: 24, signalSpacing: 2 } as never);
 
     expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
@@ -20,6 +21,7 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_transaction_snap_move", type: "transaction.move", transactionId: "transaction_1", start: 3 }),
       expect.objectContaining({ id: "test_home_transaction_create", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_2" }) }),
       expect.objectContaining({ id: "test_home_transaction_duplicate", type: "transaction.create", transaction: expect.objectContaining({ id: "transaction_3" }) }),
+      expect.objectContaining({ id: "test_transaction_time_scale_set", type: "transaction.setTimeScale", scale: { clockCyclesPerTransactionCycle: 2, majorInterval: 5, minorInterval: 1 } }),
       expect.objectContaining({ id: "test_home_auto_layout", type: "document.updateLayout" }),
     ]);
   });

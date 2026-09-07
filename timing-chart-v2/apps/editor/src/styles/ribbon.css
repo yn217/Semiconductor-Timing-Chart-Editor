@@ -764,6 +764,17 @@
 .find-replace-actions button:disabled { opacity: .4; }
 .find-replace-actions button[data-testid="find-replace-apply"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
 
+/* #397 Transaction Mode GUI Closure Section 4: Time Scale panel, same
+   fixed/portal shell as .find-replace-panel above. */
+.transaction-time-scale-panel { position: fixed; z-index: 1000; display: flex; flex-direction: column; gap: 6px; width: 260px; max-width: calc(100vw - 16px); padding: 10px; border: 1px solid #aebdce; border-radius: 4px; background: #fff; box-shadow: 0 8px 22px #20365244; overflow: auto; font-size: 11px; }
+.transaction-time-scale-panel label { display: flex; flex-direction: column; gap: 2px; color: #405875; font-size: 10px; font-weight: 650; }
+.transaction-time-scale-panel input { height: 26px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; font-size: 11px; }
+.transaction-time-scale-panel output { color: #b2382c; font-size: 10px; }
+.transaction-time-scale-actions { display: flex; gap: 6px; }
+.transaction-time-scale-actions button { height: 26px; padding: 3px 10px; border: 1px solid #c4cfdb; border-radius: 3px; background: #f9fbfd; color: #29425e; }
+.transaction-time-scale-actions button:disabled { opacity: .4; }
+.transaction-time-scale-actions button[data-testid="transaction-time-scale-apply"] { border-color: #6aa5d8; background: #dceeff; color: #174d7c; }
+
 /* #394: Check Ribbon header ("Review" tab) -- Filter / Navigation / Summary
    / Selection-Status / Action previously ran as one flat row of bare inline
    elements with no group boundaries of their own, so labels, buttons and

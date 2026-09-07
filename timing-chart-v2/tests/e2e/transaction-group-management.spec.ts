@@ -32,7 +32,9 @@ test("Add Transaction Group creates a real Group selectable from the Bottom Pane
 
   const header = page.getByTestId("transaction-group-header");
   await expect(header).toHaveCount(1);
-  await expect(header).toContainText("Group 1");
+  // The Group name is an inline-editable input (rename affordance), not
+  // plain text -- assert its value, not textContent.
+  await expect(header.getByLabel("Rename Group Group 1")).toHaveValue("Group 1");
   await expect(header).toContainText("(1)");
 
   // A second Add Group creates a distinct, independently selectable Group.
@@ -45,4 +47,41 @@ test("Add Transaction Group creates a real Group selectable from the Bottom Pane
   await expect(groupSelect).not.toContainText("Group 2");
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(groupSelect).toContainText("Group 2");
+});
+
+test("Transaction Group can be renamed inline and deleted (ungrouping its Transactions), both exact-Undo/Redo", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+
+  await page.getByTestId("add-transaction-group-tree").click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const bottomEditor = page.getByTestId("transaction-editor");
+  const groupSelect = bottomEditor.getByLabel("Move selected transaction to group");
+  await groupSelect.selectOption({ label: "Group 1" });
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+
+  const header = page.getByTestId("transaction-group-header");
+  const nameInput = header.getByLabel("Rename Group Group 1");
+  await nameInput.fill("Memory");
+  await nameInput.press("Enter");
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(header.getByLabel("Rename Group Memory")).toHaveValue("Memory");
+  await expect(groupSelect).toContainText("Memory");
+
+  // Delete (Ungroup): removes the Group, keeps its Transaction (ungrouped),
+  // one History entry, exact Undo/Redo.
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+  await header.getByRole("button", { name: "Ungroup Memory" }).click();
+  await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("transaction-group-header")).toHaveCount(1);
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
 });
