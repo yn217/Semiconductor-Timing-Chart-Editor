@@ -50,6 +50,7 @@ controllers are extracted incrementally.
 | Selection action controller | `application/selection-actions.ts` | SelectionOwner | second-pass action boundary |
 | Bottom editor action controller | `application/bottom-editor-actions.ts` | SemanticCommand / SelectionOwner | second-pass action boundary |
 | Clipboard action controller | `application/clipboard-actions.ts` | SemanticCommand / CommandHistorySession | second-pass action boundary |
+| Inspector panel composition | `panels/inspector-panel.tsx` | typed command/selection callbacks | second-pass surface boundary |
 | Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | parent command/router callbacks | PR5 presentation boundary |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |

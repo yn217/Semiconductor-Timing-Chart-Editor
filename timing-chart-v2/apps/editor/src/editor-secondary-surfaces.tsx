@@ -17,7 +17,7 @@ import { SignalEditor } from "./signal-editor.js";
 import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
-import { InspectorPanel } from "./minimal-cycle-view-panels.js";
+import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
 import { ProblemsPanel } from "./problems-panel.js";
 import { useWorkspaceUiState, type BottomTab, type TreeTypeFilter, type ViewMode } from "./workspace/use-workspace-ui-state.js";

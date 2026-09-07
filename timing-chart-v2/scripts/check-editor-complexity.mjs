@@ -44,6 +44,8 @@ const ownerBudgets = [
   ["apps/editor/src/runtime/document-lifecycle-controller.ts", 200],
   ["apps/editor/src/runtime/render-coordinator.ts", 300],
   ["apps/editor/src/runtime/presentation-preview.ts", 500],
+  ["apps/editor/src/panels/inspector-panel.tsx", 500],
+  ["apps/editor/src/minimal-cycle-view-panels.tsx", 500],
 ];
 const forbiddenOwners = [
   ["Canonical mutation outside command/session path", /setSnapshot\([^)]*document|validateCanonicalDocument\([^)]*setSnapshot/],
@@ -56,7 +58,7 @@ const forbiddenOwners = [
   ["shell slot JSX leaked into root", /<(?:EditorRibbon|EditorWorkspaceView|EditorStatusBar)\b/],
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
-const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator"];
+const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Inspector panel composition", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator"];
 const requiredSourceContracts = [
   ["command router", /useEditorCommandRouter/],
   ["action owner", /useEditorActions/],

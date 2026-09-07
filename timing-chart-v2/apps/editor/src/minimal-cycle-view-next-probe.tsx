@@ -7,7 +7,8 @@ import { UiCommandRegistry } from "@timing-chart-v2/ui";
 import { cycleDocument } from "./fixtures-cycle-reference-documents.js";
 import { MinimalCycleViewNext } from "./minimal-cycle-view-next.js";
 import { createMinimalCycleApplicationSession } from "./minimal-cycle-view-application.js";
-import { ContextMenuPanel, InspectorPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
+import { ContextMenuPanel, MinimalCycleViewTitleBar } from "./minimal-cycle-view-panels.js";
+import { InspectorPanel } from "./panels/inspector-panel.js";
 import { MinimalCycleViewBottomEditor, MinimalCycleViewNextStatusBar, MinimalCycleViewRibbonTabs, MinimalCycleViewSignalTreeCanvas } from "./minimal-cycle-view-ui.js";
 
 /** Phase-1 mount for the parallel replacement. It is deliberately opt-in. */
