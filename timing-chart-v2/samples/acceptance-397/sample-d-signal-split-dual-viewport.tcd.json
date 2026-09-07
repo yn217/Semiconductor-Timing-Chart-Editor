@@ -1,0 +1,742 @@
+{
+  "formatVersion": 2,
+  "document": {
+    "id": "doc_sample_d",
+    "title": "Sample D -- Signal Split dual-viewport",
+    "header": {
+      "subtitle": "#397 focused acceptance sample",
+      "description": "24-Signal Cycle-only document for Signal Split (Upper/Lower dual viewport of the same Signal list) acceptance.",
+      "notes": "",
+      "preconditions": [],
+      "constraints": [],
+      "exceptions": []
+    },
+    "footer": {
+      "figureNumber": "397-D",
+      "revision": "V2",
+      "text": ""
+    }
+  },
+  "timeline": {
+    "start": 0,
+    "end": 32,
+    "cycleCount": 32,
+    "timeBase": "cycle",
+    "edge": "rising",
+    "labelAnchors": []
+  },
+  "signalGroups": [
+    {
+      "id": "grp_control",
+      "name": "Control",
+      "rows": [
+        "sig_clock",
+        "sig_reset_n",
+        "sig_request",
+        "sig_ready"
+      ]
+    },
+    {
+      "id": "grp_pipeline",
+      "name": "Pipeline",
+      "rows": [
+        "sig_pipe_0",
+        "sig_pipe_1",
+        "sig_pipe_2",
+        "sig_pipe_3",
+        "sig_pipe_4",
+        "sig_pipe_5",
+        "sig_pipe_6",
+        "sig_pipe_7",
+        "sig_pipe_8",
+        "sig_pipe_9",
+        "sig_pipe_10",
+        "sig_pipe_11",
+        "sig_pipe_12",
+        "sig_pipe_13",
+        "sig_pipe_14",
+        "sig_pipe_15",
+        "sig_pipe_16",
+        "sig_pipe_17",
+        "sig_pipe_18",
+        "sig_pipe_19"
+      ]
+    }
+  ],
+  "signals": [
+    {
+      "id": "sig_clock",
+      "name": "CLOCK",
+      "type": "clock",
+      "role": "input",
+      "source": {
+        "instancePath": [],
+        "signalName": "clock"
+      },
+      "display": {
+        "name": "CLOCK"
+      },
+      "generator": {
+        "start": 0,
+        "period": 2,
+        "duty": 0.5,
+        "phase": 0,
+        "initial": 0,
+        "polarity": "positive"
+      },
+      "edgeCounter": {
+        "show": false,
+        "mode": "rising",
+        "startNumber": 0,
+        "countFrom": "signal-start",
+        "labelEvery": 1,
+        "position": "above",
+        "offset": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    {
+      "id": "sig_reset_n",
+      "name": "RESET_N",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [],
+        "signalName": "reset_n"
+      },
+      "display": {
+        "name": "RESET_N"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        }
+      ]
+    },
+    {
+      "id": "sig_request",
+      "name": "REQUEST",
+      "type": "binary",
+      "role": "input",
+      "source": {
+        "instancePath": [],
+        "signalName": "request"
+      },
+      "display": {
+        "name": "REQUEST"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 6,
+          "value": 1
+        },
+        {
+          "start": 20,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_ready",
+      "name": "READY",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "ready"
+      },
+      "display": {
+        "name": "READY"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 10,
+          "value": 1
+        },
+        {
+          "start": 24,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_0",
+      "name": "PIPE_00",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_00"
+      },
+      "display": {
+        "name": "PIPE_00"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 2,
+          "value": 1
+        },
+        {
+          "start": 10,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_1",
+      "name": "PIPE_01",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_01"
+      },
+      "display": {
+        "name": "PIPE_01"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 3,
+          "value": 1
+        },
+        {
+          "start": 11,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_2",
+      "name": "PIPE_02",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_02"
+      },
+      "display": {
+        "name": "PIPE_02"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        },
+        {
+          "start": 12,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_3",
+      "name": "PIPE_03",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_03"
+      },
+      "display": {
+        "name": "PIPE_03"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 5,
+          "value": 1
+        },
+        {
+          "start": 13,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_4",
+      "name": "PIPE_04",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_04"
+      },
+      "display": {
+        "name": "PIPE_04"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 6,
+          "value": 1
+        },
+        {
+          "start": 14,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_5",
+      "name": "PIPE_05",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_05"
+      },
+      "display": {
+        "name": "PIPE_05"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 7,
+          "value": 1
+        },
+        {
+          "start": 15,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_6",
+      "name": "PIPE_06",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_06"
+      },
+      "display": {
+        "name": "PIPE_06"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 8,
+          "value": 1
+        },
+        {
+          "start": 16,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_7",
+      "name": "PIPE_07",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_07"
+      },
+      "display": {
+        "name": "PIPE_07"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 9,
+          "value": 1
+        },
+        {
+          "start": 17,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_8",
+      "name": "PIPE_08",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_08"
+      },
+      "display": {
+        "name": "PIPE_08"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 2,
+          "value": 1
+        },
+        {
+          "start": 10,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_9",
+      "name": "PIPE_09",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_09"
+      },
+      "display": {
+        "name": "PIPE_09"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 3,
+          "value": 1
+        },
+        {
+          "start": 11,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_10",
+      "name": "PIPE_10",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_10"
+      },
+      "display": {
+        "name": "PIPE_10"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        },
+        {
+          "start": 12,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_11",
+      "name": "PIPE_11",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_11"
+      },
+      "display": {
+        "name": "PIPE_11"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 5,
+          "value": 1
+        },
+        {
+          "start": 13,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_12",
+      "name": "PIPE_12",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_12"
+      },
+      "display": {
+        "name": "PIPE_12"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 6,
+          "value": 1
+        },
+        {
+          "start": 14,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_13",
+      "name": "PIPE_13",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_13"
+      },
+      "display": {
+        "name": "PIPE_13"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 7,
+          "value": 1
+        },
+        {
+          "start": 15,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_14",
+      "name": "PIPE_14",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_14"
+      },
+      "display": {
+        "name": "PIPE_14"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 8,
+          "value": 1
+        },
+        {
+          "start": 16,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_15",
+      "name": "PIPE_15",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_15"
+      },
+      "display": {
+        "name": "PIPE_15"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 9,
+          "value": 1
+        },
+        {
+          "start": 17,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_16",
+      "name": "PIPE_16",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_16"
+      },
+      "display": {
+        "name": "PIPE_16"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 2,
+          "value": 1
+        },
+        {
+          "start": 10,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_17",
+      "name": "PIPE_17",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_17"
+      },
+      "display": {
+        "name": "PIPE_17"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 3,
+          "value": 1
+        },
+        {
+          "start": 11,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_18",
+      "name": "PIPE_18",
+      "type": "binary",
+      "role": "output",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_18"
+      },
+      "display": {
+        "name": "PIPE_18"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 4,
+          "value": 1
+        },
+        {
+          "start": 12,
+          "value": 0
+        }
+      ]
+    },
+    {
+      "id": "sig_pipe_19",
+      "name": "PIPE_19",
+      "type": "binary",
+      "role": "internal",
+      "source": {
+        "instancePath": [],
+        "signalName": "pipe_19"
+      },
+      "display": {
+        "name": "PIPE_19"
+      },
+      "values": [
+        {
+          "start": 0,
+          "value": 0
+        },
+        {
+          "start": 5,
+          "value": 1
+        },
+        {
+          "start": 13,
+          "value": 0
+        }
+      ]
+    }
+  ],
+  "bookmarks": [],
+  "timeGroups": [],
+  "annotations": [],
+  "annotationGroups": [],
+  "constraints": [],
+  "transactions": [],
+  "legend": {
+    "show": true,
+    "orientation": "horizontal",
+    "usedRolesOnly": true,
+    "position": {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "layout": {
+    "roleColumnWidth": 62,
+    "signalNameWidth": 178,
+    "signalNameAlign": "left",
+    "rowHeight": 28,
+    "signalSpacing": 2,
+    "overflow": "ellipsis"
+  },
+  "checkSettings": {}
+}
