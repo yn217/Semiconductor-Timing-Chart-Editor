@@ -24,6 +24,7 @@ import type {
   SpacerId,
   SpacerRow,
   SignalRole,
+  ResetSemantics,
   TimeGroupId,
   TimeGroup,
   Transaction,
@@ -42,6 +43,8 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "document.updateMetadata"; title: string; header: CanonicalDocument["document"]["header"]; footer: CanonicalDocument["document"]["footer"] }>
   | Readonly<{ id: CommandId; type: "document.updateLayout"; layout: Layout }>
   | Readonly<{ id: CommandId; type: "legend.update"; legend: CanonicalDocument["legend"] }>
+  | Readonly<{ id: CommandId; type: "enum.rename"; enumId: string; name: string }>
+  | Readonly<{ id: CommandId; type: "enum.delete"; enumId: string }>
   | Readonly<{ id: CommandId; type: "signal.create"; signal: Signal; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.bulkCreate"; signals: readonly Signal[]; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "signal.delete"; signalId: SignalId }>
@@ -53,13 +56,14 @@ export type SemanticCommand =
   | Readonly<{ id: CommandId; type: "signal.replaceValue"; signalId: SignalId; fromStart: number; start: number; value: SignalValue; comment?: string }>
   | Readonly<{ id: CommandId; type: "signal.moveValue"; signalId: SignalId; fromStart: number; toStart: number }>
   | Readonly<{ id: CommandId; type: "signal.removeValue"; signalId: SignalId; start: number }>
-  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: "hex" | "binary" | "symbolic"; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number; splitPane?: Signal["display"]["splitPane"] }>
+  | Readonly<{ id: CommandId; type: "signal.updateProperties"; signalId: SignalId; name: string; role: SignalRole; signalType?: ValueSignal["type"]; width?: number; displayFormat?: ValueSignal["displayFormat"]; visible?: boolean; displayAlign?: Signal["display"]["align"]; displayOverflow?: Signal["display"]["overflow"]; displayStyle?: Signal["display"]["style"]; spacingBefore?: number; spacingAfter?: number; splitPane?: Signal["display"]["splitPane"] }>
   | Readonly<{ id: CommandId; type: "signal.convertClock"; signalId: SignalId; targetType: "binary" | "bus" | "state" }>
   | Readonly<{ id: CommandId; type: "commentRow.create"; commentRow: CommentRow; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "commentRow.update"; signalId: SignalId; title: string; body: string; spacingBefore?: number; spacingAfter?: number; displayStyle?: CommentRow["display"]["style"] }>
   | Readonly<{ id: CommandId; type: "commentRow.delete"; signalId: SignalId }>
   | Readonly<{ id: CommandId; type: "signal.updateClockGenerator"; signalId: SignalId; generator: ClockGenerator }>
   | Readonly<{ id: CommandId; type: "signal.updateEdgeCounter"; signalId: SignalId; edgeCounter: EdgeCounterSettings }>
+  | Readonly<{ id: CommandId; type: "signal.updateResetSemantics"; signalId: SignalId; resetSemantics?: ResetSemantics }>
   | Readonly<{ id: CommandId; type: "spacer.create"; spacer: SpacerRow; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "spacer.move"; spacerId: SpacerId; targetGroupId: GroupId; index: number }>
   | Readonly<{ id: CommandId; type: "spacer.update"; spacerId: SpacerId; height: number }>

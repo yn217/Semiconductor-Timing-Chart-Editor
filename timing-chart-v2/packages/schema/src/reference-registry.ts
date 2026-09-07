@@ -1,8 +1,9 @@
 import type { CanonicalDocument } from "./types.js";
 
-export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spacer" | "bookmark";
+export type CanonicalReferenceTarget = "signal" | "time-group" | "group" | "spacer" | "bookmark" | "enum";
 
 export type CanonicalReferenceKind =
+  | "signal.enum"
   | "timeline.referenceClock"
   | "timeGroup.parent"
   | "signal.edgeCounter.marker"
@@ -30,6 +31,10 @@ export interface CanonicalReference {
  */
 export function canonicalReferences(document: CanonicalDocument): readonly CanonicalReference[] {
   const references: CanonicalReference[] = [];
+  const enumIds = new Set((document.enumDefinitions ?? []).map((definition) => definition.id));
+  document.signals.forEach((signal, index) => {
+    if (signal.type !== "clock" && signal.type !== "commentRow" && signal.enumId !== undefined && enumIds.has(signal.enumId)) references.push({ kind: "signal.enum", ownerId: signal.id, targetId: signal.enumId, targetType: "enum", path: `$.signals[${index}].enumId` });
+  });
   document.timeGroups.forEach((group, index) => {
     if (group.parentId !== undefined) references.push({ kind: "timeGroup.parent", ownerId: group.id, targetId: group.parentId, targetType: "time-group", path: `$.timeGroups[${index}].parentId` });
   });

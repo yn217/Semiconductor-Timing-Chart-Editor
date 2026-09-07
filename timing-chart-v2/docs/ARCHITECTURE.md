@@ -63,6 +63,7 @@ does not own the next layer's policy.
 | Schema / structural | `schema` Ajv boundary | persisted shape, primitive types, required fields, enums, and JSON grammar | `SCHEMA_<AJV_KEYWORD>` document problem |
 | Canonical invariant | `schema` canonical validator | IDs, references, row membership, source-time ranges, and cross-object semantics | `CanonicalRuleDescriptor` for every `CANONICAL_PROBLEM_CODES` entry |
 | Command policy | `commands` planner | operation-specific reject/no-op decisions and preflight context | `CommandPolicyDescriptor` for every `COMMAND_POLICY_CODES` entry |
+| Derived timing/protocol | `core` diagnostic engine | advisory Unknown/X, handshake acknowledgement, and stability checks | `TimingDiagnosticCode` warning; never a commit rejection |
 
 `canonicalRuleDescriptors()` and `commandPolicyDescriptors()` are the
 machine-readable inventories. Their `ruleVersion` is compatibility metadata;
@@ -70,8 +71,10 @@ changing a code or its meaning requires an explicit migration decision.
 The validator remains authoritative for candidate canonical validity, while a
 planner may use canonical helpers without copying their invariant semantics.
 Problems consumers use `code`, `path`, and `entityId` rather than parsing the
-human-readable message. Failed or no-op commands never create a canonical
-commit or History entry.
+human-readable message. `deriveTimingDiagnostics()` is pure, deterministic,
+and non-persistent; its warnings are recomputed from canonical data and never
+enter `DocumentSession` validation or History. Failed or no-op commands never
+create a canonical commit or History entry.
 
 Phase 6's Minimal Cycle View composes these ports in `apps/editor`. Its row
 selection and viewport are transient view state: they do not dispatch a

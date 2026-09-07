@@ -855,6 +855,15 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const changeSet: ChangeSet = { rowPresentation: [signal.id], edgeCounter: [signal.id] };
       return { ok: true, document: replaceSignal(document, index, { ...signal, edgeCounter: settings }), changeSet, inverseChangeSet: changeSet };
     }
+    case "signal.updateResetSemantics": {
+      const index = document.signals.findIndex((signal) => signal.id === command.signalId);
+      const signal = document.signals[index];
+      if (!signal || signal.type === "clock" || signal.type === "commentRow") return fail("invalid", "SIGNAL_PROPERTIES_NOT_SUPPORTED", "$.signalId", "Reset semantics require a value signal.");
+      const reset = command.resetSemantics;
+      if (reset && ( !["active-high", "active-low"].includes(reset.polarity) || !["synchronous", "asynchronous"].includes(reset.synchronization) || (reset.assertCycle !== undefined && (!Number.isInteger(reset.assertCycle) || reset.assertCycle < 0)) || (reset.deassertCycle !== undefined && (!Number.isInteger(reset.deassertCycle) || reset.deassertCycle < 0)))) return fail("invalid", "INVALID_EDGE_COUNTER", "$.resetSemantics", "Reset semantics are invalid.");
+      if (JSON.stringify(signal.resetSemantics) === JSON.stringify(reset)) return fail("no-op", "NO_OP", "$", "Reset semantics are unchanged.");
+      return { ok: true, document: replaceSignal(document, index, reset === undefined ? (() => { const { resetSemantics: _reset, ...rest } = signal; return rest; })() : { ...signal, resetSemantics: reset }), changeSet: { waveSemantics: [signal.id] }, inverseChangeSet: { waveSemantics: [signal.id] } };
+    }
     case "spacer.create": {
       const groupIndex = document.signalGroups.findIndex((group) => group.id === command.targetGroupId);
       const group = document.signalGroups[groupIndex];
@@ -898,6 +907,23 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       const nextDocument = { ...document, signalGroups: groups };
       const changeSet: ChangeSet = { rowOrder: [spacer.id], geometryScreenY: geometryRowsFrom(document, spacer.id), minimapOverview: true };
       return { ok: true, document: nextDocument, changeSet, inverseChangeSet: changeSet };
+    }
+    case "enum.rename": {
+      const index = (document.enumDefinitions ?? []).findIndex((definition) => definition.id === command.enumId);
+      const name = command.name.trim();
+      if (index < 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      if (!name) return fail("invalid", "INVALID_NAME", "$.name", "Enum name cannot be empty.");
+      const current = document.enumDefinitions![index]!;
+      if (current.name === name) return fail("no-op", "NO_OP", "$", "Enum already has this name.");
+      const definitions = [...document.enumDefinitions!]; definitions[index] = { ...current, name };
+      return { ok: true, document: { ...document, enumDefinitions: definitions }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
+    }
+    case "enum.delete": {
+      const definitions = document.enumDefinitions ?? [];
+      if (!definitions.some((definition) => definition.id === command.enumId)) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' does not exist.`);
+      const dependent = document.signals.filter((signal) => signal.type !== "clock" && signal.type !== "commentRow" && signal.enumId === command.enumId).map((signal) => signal.id);
+      if (dependent.length > 0) return fail("invalid", "MISSING_CROSS_REFERENCE", "$.enumId", `Enum '${command.enumId}' is referenced by ${dependent.length} Signal(s): ${dependent.join(", ")}.`);
+      return { ok: true, document: { ...document, enumDefinitions: definitions.filter((definition) => definition.id !== command.enumId) }, changeSet: { fullDocumentReplace: true }, inverseChangeSet: { fullDocumentReplace: true } };
     }
     case "group.create": {
       if (command.group.rows.length > 0 || (command.group.spacers?.length ?? 0) > 0) return fail("invalid", "GROUP_CREATE_NOT_EMPTY", "$.group", "Group creation cannot implicitly move existing rows.");

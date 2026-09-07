@@ -392,7 +392,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
   const [role, setRole] = useState<SignalRole>(signal.role);
   const [signalType, setSignalType] = useState<ValueSignal["type"]>(signal.type);
   const [width, setWidth] = useState(signal.width ?? 1);
-  const [format, setFormat] = useState<"hex" | "binary" | "symbolic">(signal.displayFormat ?? "hex");
+  const [format, setFormat] = useState<NonNullable<ValueSignal["displayFormat"]>>(signal.displayFormat ?? "hex");
   const [visible, setVisible] = useState(signal.display.visible !== false);
   const [spacingBefore, setSpacingBefore] = useState(signal.spacingBefore ?? 0);
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
@@ -529,7 +529,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
           // than silently losing its own current value from this list.
           signal.type === "pulse" && <option value="pulse">Pulse (legacy)</option>
         }</select></label>
-        {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="symbolic">Symbol</option></select></label></>}
+        {signalType === "bus" && <><label>Width<input aria-label="Inspector signal width" type="number" min="1" step="1" value={width} onChange={(event) => setWidth(Number(event.target.value))} /></label><label>Bus format<select aria-label="Inspector bus format" value={format} onChange={(event) => setFormat(event.target.value as typeof format)}><option value="hex">Hex</option><option value="binary">Binary</option><option value="decimal">Decimal</option><option value="signed">Signed</option><option value="unsigned">Unsigned</option><option value="symbolic">Symbol</option></select></label></>}
         <PropertyToggle label="Visible" ariaLabel="Inspector signal visible" checked={visible} onChange={setVisible} />
         <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
         <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>

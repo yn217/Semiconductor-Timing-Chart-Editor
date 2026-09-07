@@ -349,11 +349,11 @@ export function validateCanonicalDocument(input: unknown): readonly CanonicalDoc
     const targetExists = reference.targetType === "signal" ? signals.has(reference.targetId)
       : reference.targetType === "time-group" ? timeGroups.has(reference.targetId)
       : reference.targetType === "group" ? groups.has(reference.targetId)
-      : reference.targetType === "spacer" ? spacers.has(reference.targetId) : bookmarks.has(reference.targetId);
+      : reference.targetType === "spacer" ? spacers.has(reference.targetId) : reference.targetType === "enum" ? new Set((document.enumDefinitions ?? []).map((definition) => definition.id)).has(reference.targetId) : bookmarks.has(reference.targetId);
     if (!targetExists) {
       const targetLabel = reference.targetType === "signal" ? "Signal"
         : reference.targetType === "time-group" ? "Time Group"
-        : reference.targetType === "group" ? "Signal Group" : reference.targetType === "spacer" ? "Spacer" : "Bookmark";
+        : reference.targetType === "group" ? "Signal Group" : reference.targetType === "spacer" ? "Spacer" : reference.targetType === "enum" ? "Enum" : "Bookmark";
       problems.push(problem("MISSING_CROSS_REFERENCE", reference.path, targetLabel + " '" + reference.targetId + "' does not exist.", reference.ownerId));
     }
   }

@@ -19,6 +19,13 @@ Migration tests use immutable regression inputs and separately cover chained reg
 - `timeline.labelAnchors[]`: stable `id`, source-time `source`, authored ruler `display`, optional `ownerTimeGroupId`.
 - `checkSettings`: validator configuration only; Problems results and filters are derived.
 
+The Core diagnostic engine currently recognizes a `constraints[]` entry with
+`type: "handshake"` and data containing `requestSignalId`,
+`acknowledgeSignalId`, and optional `stableSignalIds`. It derives advisory
+warnings for explicit or uninitialized Unknown/X values, missing acknowledge
+assertions, and stable-signal changes before acknowledge. These Problems are
+not persisted and do not make an otherwise canonical document uncommittable.
+
 All v2 additions are owned by the canonical serializer/validator. IDs and cross references are checked before Save/Open, non-finite numbers are rejected, and arrays retain semantic order.
 
 ## Signal change-point model

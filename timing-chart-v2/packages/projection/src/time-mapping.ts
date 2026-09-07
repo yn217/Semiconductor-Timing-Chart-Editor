@@ -8,6 +8,21 @@ export interface DisplayTimeMapping {
   readonly labelFor: (displayCycle: number) => number;
 }
 
+export type HiddenSourcePositionPolicy = "floor" | "ceil" | "omit";
+
+/** Resolve a source position without inventing display-cycle zero for folded input. */
+export function resolveSourcePosition(mapping: DisplayTimeMapping, sourceCycle: number, policy: HiddenSourcePositionPolicy = "omit"): number | undefined {
+  if (!Number.isFinite(sourceCycle)) return undefined;
+  if (sourceCycle >= mapping.sourceToDisplay.length) return mapping.displayCycleCount;
+  const clamped = Math.max(0, sourceCycle);
+  if (Number.isInteger(clamped) && mapping.sourceToDisplay[clamped] !== undefined) return mapping.sourceToDisplay[clamped];
+  if (policy === "omit") return undefined;
+  const index = Math.floor(clamped);
+  if (policy === "floor") for (let cycle = Math.min(index, mapping.sourceToDisplay.length - 1); cycle >= 0; cycle -= 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
+  if (policy === "ceil") for (let cycle = Math.max(0, index); cycle < mapping.sourceToDisplay.length; cycle += 1) if (mapping.sourceToDisplay[cycle] !== undefined) return mapping.sourceToDisplay[cycle];
+  return undefined;
+}
+
 function labelForSourceCycle(timeline: Pick<Timeline, "labelAnchors">, sourceCycle: number): number {
   const anchors = [...timeline.labelAnchors].sort((left, right) => left.source - right.source);
   let active = undefined as (typeof anchors)[number] | undefined;
