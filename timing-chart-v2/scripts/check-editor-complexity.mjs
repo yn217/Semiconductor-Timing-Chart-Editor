@@ -25,6 +25,7 @@ const secondarySurfaceSource = await readFile(resolve(root, "apps/editor/src/edi
 const ribbonSource = await readFile(resolve(root, "apps/editor/src/minimal-cycle-view-ribbon.tsx"), "utf8");
 const applicationRuntimeSource = await readFile(resolve(root, "apps/editor/src/runtime/editor-application-runtime.ts"), "utf8");
 const timelineSurfaceSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-controller.ts"), "utf8");
+const timelineInteractionsSource = await readFile(resolve(root, "apps/editor/src/runtime/timeline-surface-interactions.ts"), "utf8");
 const timelineRuntimeHookSource = await readFile(resolve(root, "apps/editor/src/runtime/use-timeline-surface-runtime.ts"), "utf8");
 const renderInvalidationSource = await readFile(resolve(root, "apps/editor/src/runtime/render-invalidation.ts"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
@@ -107,6 +108,8 @@ const runtimeOwnershipContracts = [
   ["timeline surface owns one geometry owner", timelineSurfaceSource, /new TimelineGeometryOwner\(/],
   ["timeline surface owns renderer lifecycle", timelineSurfaceSource, /runtime\.createRenderer\([\s\S]*renderCoordinator\.dispose\(/],
   ["timeline surface reads current session state", timelineSurfaceSource, /session\.getSnapshot\(\)|sessionController\.snapshot\(\)/],
+  ["timeline interactions read replaceable session state", timelineInteractionsSource, /getSnapshot:\s*\(\)\s*=>|getSnapshot\(\)\.document/],
+  ["timeline interactions do not capture a mount-time session", timelineInteractionsSource, /readonly getSnapshot:/],
   ["timeline surface owns document epoch boundary", timelineSurfaceSource, /documentEpoch\.(?:current|advance|isCurrent)\(/],
   ["render invalidation has one pure owner", renderInvalidationSource, /export function deriveRenderInvalidation\(/],
 ];
@@ -135,6 +138,7 @@ const violations = [
   ...(!rootAllowListContract.test(ownership) ? ["ownership map missing MinimalCycleView root allow-list"] : []),
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...runtimeOwnershipContracts.filter(([, ownerSource, pattern]) => !pattern.test(ownerSource)).map(([name]) => `${name} contract missing`),
+  ...(/readonly session\s*:/.test(timelineInteractionsSource) ? ["timeline interactions must not capture a mount-time session"] : []),
   ...(deprecatedRuntimeBridgeExists ? ["deprecated runtime compatibility bridge must not be restored"] : []),
   ...editorReactSources.filter(([target, reactSource]) => !isOptInProbe(target) && directReactRuntimeOwnerPattern.test(reactSource)).map(([target]) => `React presentation directly owns long-lived runtime: ${target.replace(`${root}/`, "")}`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),

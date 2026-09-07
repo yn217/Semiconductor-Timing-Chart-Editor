@@ -729,7 +729,7 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
       renderer,
       timelineGeometry,
       documentEpoch,
-      session,
+      getSnapshot: () => sessionController.snapshot(),
       timelineNavigation,
       timelineRuntime,
       getProjection: () => projection,
