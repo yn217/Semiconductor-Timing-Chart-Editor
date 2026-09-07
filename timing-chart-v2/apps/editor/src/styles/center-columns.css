@@ -216,8 +216,13 @@
    40px-block-per-lane flow with explicit top/height per band (computed in
    transaction-lanes.tsx) -- every band is its own absolutely-positioned
    element now rather than a document-flow sibling. */
-.transaction-lane-labels span { position: absolute; left: 0; right: 0; border-bottom: 1px solid #d9e1ea; color: #53677c; font-size: 10px; }
-.transaction-lane-labels span > em { position: absolute; inset: 0; display: flex; align-items: center; padding-left: 12px; font-style: normal; opacity: .7; }
+/* #397: scoped to the `.transaction-lane-label` class (not a bare `span`
+   selector) -- a bare-`span` selector also matched the Group header's
+   name/count `<span>`s, absolutely-positioning the count span across the
+   header's full width and silently intercepting clicks meant for the
+   adjacent Ungroup button. */
+.transaction-lane-labels .transaction-lane-label { position: absolute; left: 0; right: 0; border-bottom: 1px solid #d9e1ea; color: #53677c; font-size: 10px; }
+.transaction-lane-labels .transaction-lane-label > em { position: absolute; inset: 0; display: flex; align-items: center; padding-left: 12px; font-style: normal; opacity: .7; }
 /* #451: one row per Transaction, positioned to line up with that same
    Transaction's stacked bar in the track column (`top` is the identical
    `4 + row * 40` the bar itself uses) -- clicking either one drives the
@@ -232,6 +237,13 @@
 /* #397: Reference shows a count alongside each Group name ("Memory (2)")
    -- muted/non-bold so it doesn't compete with the Group name itself. */
 .transaction-group-header-count { font-weight: 400; text-transform: none; letter-spacing: 0; color: #5c6f84; }
+/* #397: rename input replaces the plain label text, same visual weight/
+   case as the header around it -- editing a Group name shouldn't look
+   like a different control was dropped in. */
+.transaction-group-header input { flex: 0 1 auto; min-width: 0; height: 16px; padding: 0 4px; border: 1px solid transparent; border-radius: 2px; background: transparent; color: inherit; font: inherit; text-transform: inherit; letter-spacing: inherit; }
+.transaction-group-header input:hover, .transaction-group-header input:focus { border-color: #9fb3c7; background: #fff; }
+.transaction-group-header-delete { flex: none; margin-left: auto; width: 16px; height: 16px; padding: 0; border: 0; background: transparent; color: #8a97a8; font-size: 12px; line-height: 1; cursor: pointer; }
+.transaction-group-header-delete:hover { color: #b2382c; }
 .transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; }
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #d9e1ea; }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }

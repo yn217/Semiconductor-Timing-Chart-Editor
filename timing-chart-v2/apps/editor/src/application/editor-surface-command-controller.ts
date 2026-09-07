@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, TransactionGroup, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -17,6 +17,8 @@ export interface SignalEditorCommandActions {
 export interface TransactionLaneCommandActions {
   readonly move: (transactionId: TransactionId, start: number) => CommandResult;
   readonly resize: (transactionId: TransactionId, edge: "start" | "end", value: number) => CommandResult;
+  readonly renameTransactionGroup: (groupId: TransactionGroup["id"], name: string) => CommandResult;
+  readonly deleteTransactionGroup: (groupId: TransactionGroup["id"]) => CommandResult;
 }
 
 export interface InspectorCommandActions {
@@ -89,6 +91,8 @@ export function createEditorSurfaceCommandController(input: {
     updateCommentRow: (signalId, payload) => dispatch<"commentRow.update">("comment_row_update", { type: "commentRow.update", signalId, ...payload }),
     move: (transactionId, start) => dispatch<"transaction.move">("transaction_snap_move", { type: "transaction.move", transactionId, start }),
     resize: (transactionId, edge, value) => dispatch<"transaction.resize">("transaction_snap_resize", { type: "transaction.resize", transactionId, edge, value }),
+    renameTransactionGroup: (groupId, name) => dispatch<"transactionGroup.rename">("transaction_group_rename", { type: "transactionGroup.rename", groupId, name }),
+    deleteTransactionGroup: (groupId) => dispatch<"transactionGroup.delete">("transaction_group_delete", { type: "transactionGroup.delete", groupId }),
     updateSignalProperties: (payload) => dispatch<"signal.updateProperties">("inspector_signal_properties", { type: "signal.updateProperties", ...payload }),
     renameSignal: (signalId, name) => dispatch<"signal.rename">("inspector_signal_rename", { type: "signal.rename", signalId, name }),
     convertClock: (signalId, targetType) => dispatch<"signal.convertClock">("convert_clock", { type: "signal.convertClock", signalId, targetType }),
