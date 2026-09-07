@@ -153,7 +153,11 @@ test("preserves canonical Split View content through Save/Open", async ({ page }
   await ready(page);
   await createTransaction(page, "Split Persisted", 2, 6);
   await page.getByRole("button", { name: "Split", exact: true }).click();
-  await expect(page.getByTestId("transaction-lanes").getByText("Split Persisted")).toBeVisible();
+  // #451: the same name now also appears in the Lane workspace's own Tree
+  // rows (transaction-lane-label-row) alongside the central bar -- scope to
+  // the bar specifically, since a plain getByText would ambiguously match
+  // both by design.
+  await expect(page.getByTestId("transaction-lanes").locator(".transaction-lane > button").getByText("Split Persisted")).toBeVisible();
 
   const save = page.waitForEvent("download");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();

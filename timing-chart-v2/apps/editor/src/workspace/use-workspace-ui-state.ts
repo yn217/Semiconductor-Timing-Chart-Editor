@@ -89,6 +89,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const bottomResizeRef = useRef<VerticalResizeGesture | undefined>(undefined);
 
   const [treeFilter, setTreeFilter] = useState("");
+  const [transactionTreeFilter, setTransactionTreeFilter] = useState("");
   const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
 
   const [followSelection, setFollowSelection] = useState(true);
@@ -118,7 +119,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     frozenPaneWidth, setFrozenPaneWidth, frozenPaneResizeRef,
     inspectorWidth, setInspectorWidth, inspectorResizeRef,
     bottomHeight, setBottomHeight, bottomResizeRef,
-    treeFilter, setTreeFilter,
+    treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter,
     treeTypeFilter, setTreeTypeFilter,
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
