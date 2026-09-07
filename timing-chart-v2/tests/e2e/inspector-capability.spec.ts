@@ -44,7 +44,7 @@ test("Signal Inspector exposes parity fields and applies one transient draft com
     "Inspector signal width", "Inspector signal visible", "Inspector text color",
     "Inspector label background", "Inspector label font", "Inspector label size",
     "Inspector label bold", "Inspector label align", "Inspector label overflow",
-    "Inspector waveform color", "Inspector waveform background", "Inspector waveform row style",
+    "Inspector waveform color", "Inspector waveform background",
   ]) await expect(inspector.getByLabel(label, { exact: true })).toBeVisible();
   await expect(inspector.getByText("Instance Path")).toBeVisible();
   await expect(inspector.getByText("Full Path")).toBeVisible();
@@ -65,7 +65,6 @@ test("Signal Inspector exposes parity fields and applies one transient draft com
   await inspector.getByLabel("Inspector label font").fill("Arial");
   await inspector.getByLabel("Inspector label size").fill("14");
   await inspector.getByLabel("Inspector label bold").check();
-  await inspector.getByLabel("Inspector waveform row style").fill("{}");
 
   // Draft typing is transient and must not enter the canonical session.
   expect(await host.getAttribute("data-canonical-revision")).toBe(before.revision);

@@ -304,7 +304,16 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
     setProblem("");
     const parsedStyle = parsed ?? {};
     const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
-    const structuredStyle = { color: typeof parsedStyle.color === "string" ? parsedStyle.color : textColor, background: typeof parsedStyle.background === "string" ? parsedStyle.background : rowBackground, fontFamily: typeof parsedStyle.fontFamily === "string" ? parsedStyle.fontFamily : fontFamily, fontSize: typeof parsedStyle.fontSize === "number" ? parsedStyle.fontSize : fontSize, fontWeight: typeof parsedStyle.fontWeight === "string" ? parsedStyle.fontWeight : (bold ? "bold" : "normal"), fontStyle: typeof parsedStyle.fontStyle === "string" ? parsedStyle.fontStyle : (italic ? "italic" : "normal"), textDecoration: typeof parsedStyle.textDecoration === "string" ? parsedStyle.textDecoration : decorations, waveformColor: typeof parsedStyle.waveformColor === "string" ? parsedStyle.waveformColor : waveformColor, waveformBackground: typeof parsedStyle.waveformBackground === "string" ? parsedStyle.waveformBackground : waveformBackground };
+    // #473: `style`/`parsedStyle` is no longer user-editable raw JSON -- it's
+    // just a passive mirror of the already-committed signal style (kept only
+    // so unknown/legacy keys survive Apply, see the comment on the removed
+    // textarea above). It must therefore never shadow a live structured-field
+    // edit: once any Apply has ever set e.g. `color`, `parsedStyle.color`
+    // would be a string forever, permanently overriding every subsequent
+    // `textColor` edit if it were preferred here (this was the #473 NO_OP
+    // regression). The structured fields (current control state) always win;
+    // `parsedStyle` only fills in for keys these controls don't cover.
+    const structuredStyle = { color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground };
     const originalStyle = signal.display.style ?? {};
     const styleDraftChanged = JSON.stringify(parsedStyle) !== JSON.stringify(originalStyle)
       || textColor !== styleString(originalStyle, "color", "#152033")
@@ -342,7 +351,16 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
       </InspectorSection>
       <InspectorSection sectionId="hierarchy" title="Source / Hierarchy" open={sections.hierarchy ?? true} onToggle={() => toggle("hierarchy")}><div className="property-row"><span>Instance Path</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><div className="property-row"><span>Signal Name</span><span>{signal.source.signalName}</span></div><div className="property-row"><span>Full Path</span><span title={fullPath}>{fullPath}</span></div><div className="property-row"><span>Bus Range</span><span>{signal.source.msb === undefined ? "—" : `[${signal.source.msb}:${signal.source.lsb ?? 0}]`}</span></div><button type="button" data-testid="reveal-in-hierarchy" onClick={onReveal}>Reveal in Hierarchy</button></InspectorSection>
       <InspectorSection sectionId="label-style" title="Label Style" open={sections["label-style"] ?? false} onToggle={() => toggle("label-style")}><label>Text Color<input aria-label="Inspector text color" type="color" value={textColor} onChange={(event) => setTextColor(event.target.value)} /></label><label>Background<input aria-label="Inspector label background" type="color" value={rowBackground} onChange={(event) => setRowBackground(event.target.value)} /></label><label>Font<input aria-label="Inspector label font" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)} /></label><label>Size<input aria-label="Inspector label size" type="number" min="6" max="48" step="1" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /></label><div className="inspector-style-checks"><PropertyToggle label="Bold" ariaLabel="Inspector label bold" checked={bold} onChange={setBold} /><PropertyToggle label="Italic" ariaLabel="Inspector label italic" checked={italic} onChange={setItalic} /><PropertyToggle label="Underline" ariaLabel="Inspector label underline" checked={underline} onChange={setUnderline} /><PropertyToggle label="Strikethrough" ariaLabel="Inspector label strikethrough" checked={strikethrough} onChange={setStrikethrough} /></div><label>Align<select aria-label="Inspector label align" value={align} onChange={(event) => setAlign(event.target.value as typeof align)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Overflow<select aria-label="Inspector label overflow" value={overflow} onChange={(event) => setOverflow(event.target.value as typeof overflow)}><option value="ellipsis">Ellipsis</option><option value="expand">Expand</option><option value="wrap">Wrap</option></select></label></InspectorSection>
-      <InspectorSection sectionId="waveform" title="Waveform / Row Style" open={sections.waveform ?? true} onToggle={() => toggle("waveform")}><label>Waveform Color<input aria-label="Inspector waveform color" type="color" value={waveformColor} onChange={(event) => setWaveformColor(event.target.value)} /></label><label>Row Background<input aria-label="Inspector waveform background" type="color" value={waveformBackground} onChange={(event) => setWaveformBackground(event.target.value)} /></label><label>Advanced Style JSON<textarea aria-label="Inspector waveform row style" value={style} onChange={(event) => setStyle(event.target.value)} rows={3} /></label></InspectorSection>
+      {/* #473: the raw "Advanced Style JSON" textarea is removed from
+          normal Inspector use -- every style property it could set is
+          already reachable through this section's own structured
+          controls (or Label Style's, above). `style`/`setStyle` stay as
+          local state (still round-tripped through `apply()`'s merge
+          below) purely so a document that already has extra/legacy
+          style keys on this Signal keeps them intact through Apply --
+          removing the UI must not silently drop data, only the raw-JSON
+          editing affordance itself. */}
+      <InspectorSection sectionId="waveform" title="Waveform / Row Style" open={sections.waveform ?? true} onToggle={() => toggle("waveform")}><label>Waveform Color<input aria-label="Inspector waveform color" type="color" value={waveformColor} onChange={(event) => setWaveformColor(event.target.value)} /></label><label>Row Background<input aria-label="Inspector waveform background" type="color" value={waveformBackground} onChange={(event) => setWaveformBackground(event.target.value)} /></label></InspectorSection>
       {problem && <div className="editor-problem" role="alert">{problem}</div>}
       {/* Kept as its own hidden `<output>` (not just InspectorFooter's
           generic counter) so the established
