@@ -40,6 +40,7 @@ import { renderGeometryGrid } from "../render-geometry-grid.js";
 import { useInspectorAccordion } from "../inspector-accordion.js";
 import { InspectorSection, InspectorFooter, PropertyToggle } from "../inspector-section.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "../inspector-selection-header.js";
+import { InspectorMultiSelection } from "../inspector-multi-selection.js";
 import { InspectorBookmarkEditor } from "../inspector-bookmark-editor.js";
 import { canonicalDocumentOf, createNewDocumentFromProductTemplate, MAX_OPEN_FILE_BYTES, openFileByteBudgetProblem, parseOpenDocument, serializeSaveDocument } from "../file-document-controller.js";
 import { MiniMap } from "../minimap.js";
@@ -82,7 +83,8 @@ import { createTimelineViewportRuntime } from "../runtime/timeline-viewport-runt
 
 const spacerId = (value: string) => value as SpacerId;
 
-export function InspectorPanel({ signal, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview }: { readonly signal: Signal | undefined; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void }) {
+export function InspectorPanel({ signal, selectedSignalIds, group, annotation, transaction, bookmark, collapsedGroup, onToggleGroupCollapse, registry, document, viewport, commands, onReveal, onCancel, onClose, onDeleteBookmark, onToggleTransactionSignal, onGroupPreview }: { readonly signal: Signal | undefined; readonly selectedSignalIds?: ReadonlySet<SignalId>; readonly group: SignalGroup | undefined; readonly annotation: Annotation | undefined; readonly transaction: Transaction | undefined; readonly bookmark: Bookmark | undefined; readonly collapsedGroup: boolean; readonly onToggleGroupCollapse: (() => void) | undefined; readonly registry: UiCommandRegistry; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: EditorSurfaceCommandController; readonly onReveal: () => void; readonly onCancel: () => void; readonly onClose: () => void; readonly onDeleteBookmark: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void; readonly onGroupPreview?: (groupId: GroupId, style: SignalGroupStyle | undefined) => void }) {
+  if ((selectedSignalIds?.size ?? 0) > 1) return <InspectorMultiSelection count={selectedSignalIds!.size} registry={registry} document={document} viewport={viewport} onCancel={onCancel} onClose={onClose} />;
   const [name, setName] = useState(signal?.name ?? "");
   const [groupName, setGroupName] = useState(group?.name ?? "");
   const [spacingBefore, setSpacingBefore] = useState(group?.spacingBefore ?? 0);
