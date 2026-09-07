@@ -115,6 +115,7 @@ const runtimeOwnershipContracts = [
   ["timeline interactions do not capture a mount-time session", timelineInteractionsSource, /readonly getSnapshot:/],
   ["signal split lifecycle is a non-React owner", signalSplitControllerSource, /createSignalSplitSurfaceController[\s\S]*createWaveformSurfaceProvider[\s\S]*runtime\.createRenderer/],
   ["signal split hook is a thin lifecycle adapter", signalSplitHookSource, /createSignalSplitSurfaceController\(input\)/],
+  ["signal split controller has no React lifecycle dependency", signalSplitControllerSource, /^(?![\s\S]*from [\"']react[\"'])/],
   ["timeline surface owns document epoch boundary", timelineSurfaceSource, /documentEpoch\.(?:current|advance|isCurrent)\(/],
   ["render invalidation has one pure owner", renderInvalidationSource, /export function deriveRenderInvalidation\(/],
 ];
