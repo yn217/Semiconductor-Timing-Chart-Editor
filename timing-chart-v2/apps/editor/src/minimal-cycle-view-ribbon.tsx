@@ -496,7 +496,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         <DsRibbonButton disabled={!selectedSignalId} icon={<InsertSemanticIcon kind="verticalLine" />} onClick={() => insertAnnotation("verticalLine")}>Vertical Line</DsRibbonButton>
       </DsRibbonGroup></div>
     </div>}
-    {tab === "Timeline" && <TimelineToolbar document={document} range={range} history={history} onUndo={onUndo} onRedo={onRedo} onRange={onRange} onCommand={onCommand} onCommandBatch={onCommandBatch} onNavigateBookmark={onNavigateBookmark} onOpenBookmarks={onOpenBookmarks} />}
+    {tab === "Timeline" && <TimelineToolbar document={document} range={range} history={history} onUndo={onUndo} onRedo={onRedo} onRange={onRange} commands={commands} onNavigateBookmark={onNavigateBookmark} onOpenBookmarks={onOpenBookmarks} />}
     {tab === "Annotation" && <>
       <div className="ribbon-group annotation-group"><AnnotationToolbar document={document} range={range} signalId={selectedSignalId} onCreate={onCreateAnnotation} arrowPickStatus={arrowPickStatus} onArmArrow={onArrowPick} /><b>Annotation</b></div>
       {/* Scope decision (#331): Ribbon Font intentionally edits only the

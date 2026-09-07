@@ -36,4 +36,36 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_inspector_annotation_anchor", type: "annotation.setAnchor" }),
     ]);
   });
+
+  it("owns Timeline command construction and keeps range edits batched", () => {
+    const execute = vi.fn(() => ({ ok: true } as never));
+    const executeBatch = vi.fn(() => ({ ok: true } as never));
+    const controller = createEditorSurfaceCommandController({ execute, executeBatch, nextCommandId: (operation) => `test_${operation}` as never });
+
+    controller.insertTimeline(4, 2);
+    controller.duplicateTimeline(1, 3, 8);
+    controller.moveTimeline(1, 3, 6);
+    controller.createBookmark({ id: "bookmark_1" as never, name: "Marker 1", start: 1 });
+    controller.createLabelAnchor({ id: "anchor_1" as never, source: 2, display: 10 });
+    controller.updateLabelAnchor("anchor_1" as never, 3, 11);
+    controller.deleteLabelAnchor("anchor_1" as never);
+    controller.createTimeGroup({ id: "time_1" as never, name: "Group", start: 1, end: 3, presentation: { collapsed: false, foldStyle: "none" } });
+    controller.updateTimeGroupPresentation("time_1" as never, { collapsed: true, foldStyle: "axis-break", foldLabel: "Group" });
+    controller.expandAllTimeGroups([{ id: "time_1" as never, name: "Group", start: 1, end: 3, presentation: { collapsed: true, foldStyle: "axis-break", foldLabel: "Group" } }]);
+    controller.deleteTimeGroup("time_1" as never);
+
+    expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
+      expect.objectContaining({ id: "test_timeline_insert_many", type: "timeline.insert", at: 4, count: 2 }),
+      expect.objectContaining({ id: "test_timeline_duplicate", type: "timeline.duplicateRange", start: 1, end: 3, at: 8 }),
+      expect.objectContaining({ id: "test_timeline_move", type: "timeline.moveRange", start: 1, end: 3, to: 6 }),
+      expect.objectContaining({ id: "test_marker", type: "bookmark.create" }),
+      expect.objectContaining({ id: "test_label_anchor_create", type: "labelAnchor.create" }),
+      expect.objectContaining({ id: "test_label_anchor_update", type: "labelAnchor.update" }),
+      expect.objectContaining({ id: "test_label_anchor_delete", type: "labelAnchor.delete" }),
+      expect.objectContaining({ id: "test_home_time_group", type: "timeGroup.create" }),
+      expect.objectContaining({ id: "test_time_group_collapse", type: "timeGroup.updatePresentation" }),
+      expect.objectContaining({ id: "test_gap_delete", type: "timeGroup.delete" }),
+    ]);
+    expect(executeBatch).toHaveBeenCalledWith("test_time_group_expand_all", [expect.objectContaining({ id: "test_time_group_expand_all", type: "timeGroup.updatePresentation", timeGroupId: "time_1" })]);
+  });
 });
