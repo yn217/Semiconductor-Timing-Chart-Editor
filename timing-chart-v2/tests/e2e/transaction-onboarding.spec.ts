@@ -1,17 +1,60 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 // #393 items A/B: Transaction Mode used to drop a first-time user straight
-// into a transaction bar plus raw fields with no explanation and no
-// discoverable example. This exercises the real-browser acceptance list's
-// core path: empty state -> Load Example (one command, one History entry)
-// -> Undo/Redo -> Save/Open exactness -> Inspector/Bottom convergence.
+// into a transaction bar plus raw fields with no explanation. This exercises
+// the real-browser acceptance list's core path: explanatory empty state ->
+// Create Transaction -> Undo/Redo -> Save/Open exactness -> Inspector/Bottom
+// convergence.
+//
+// #453 removed the "Load Example" one-click fixture affordance from the
+// normal Bottom Panel empty state (Transaction JSON with a rich example is
+// meant to come through the ordinary File > Open path instead, same as any
+// other document). The tests below that used to click it now build the
+// same "Read Request" shape (Start 2/End 12, Request/Processing/Response
+// phases, optionally linked to REQUEST/READY) through the real Create
+// Transaction + Inspector Phase table + Linked Signals UI.
 
-async function openTransactionMode(page: import("@playwright/test").Page) {
+async function openTransactionMode(page: Page) {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
   await page.getByLabel("Workspace preset").selectOption("transaction");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+}
+
+async function createReadRequestTransaction(page: Page, { withLinks = false }: { withLinks?: boolean } = {}) {
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const bottomEditor = page.getByTestId("transaction-editor");
+  await bottomEditor.getByLabel("Transaction name", { exact: true }).fill("Read Request");
+  await bottomEditor.getByLabel("Transaction start", { exact: true }).fill("2");
+  await bottomEditor.getByLabel("Transaction end", { exact: true }).fill("12");
+  await bottomEditor.getByTestId("apply-transaction-properties").click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+
+  const inspector = page.getByTestId("inspector");
+  const phases: readonly [string, number, number][] = [["Request", 2, 5], ["Processing", 5, 9], ["Response", 9, 12]];
+  for (let i = 0; i < phases.length; i++) await inspector.getByTestId("add-transaction-phase").click();
+  for (let i = 0; i < phases.length; i++) {
+    const [name, start, end] = phases[i]!;
+    await inspector.getByLabel(`Phase ${i + 1} name`).fill(name);
+    await inspector.getByLabel(`Phase ${i + 1} start`).fill(String(start));
+    await inspector.getByLabel(`Phase ${i + 1} end`).fill(String(end));
+  }
+  await inspector.getByTestId("apply-inspector-transaction").click();
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+
+  if (withLinks) {
+    // Linking a signal dispatches transaction.linkSignal immediately, which
+    // bumps canonical revision and remounts the whole Inspector -- the
+    // picker's open/closed flag is module-scoped (see
+    // transaction-linked-signals.tsx) so it survives that remount, same as
+    // Label Style's accordion state; no need to re-open between picks.
+    await inspector.getByTestId("open-linked-signal-picker").click();
+    for (const name of ["REQUEST", "READY"]) {
+      await inspector.getByLabel("Search linked signals").fill(name);
+      await inspector.getByRole("option", { name: new RegExp(name) }).click();
+    }
+  }
 }
 
 test("Transaction Mode shows an explanatory empty state and does not mutate the document merely by entering it", async ({ page }) => {
@@ -29,36 +72,16 @@ test("Transaction Mode shows an explanatory empty state and does not mutate the 
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
 });
 
-test("Load Example inserts one complete Transaction as a single History entry, and Undo/Redo restores it exactly", async ({ page }) => {
+test("Create Transaction removes the empty state as a single History entry, and Undo/Redo restores it exactly", async ({ page }) => {
   await openTransactionMode(page);
-  const host = page.getByTestId("cycle-surface");
-  const before = {
-    revision: await host.getAttribute("data-canonical-revision"),
-    history: await page.getByTestId("history-status").textContent(),
-  };
 
-  await page.getByTestId("load-transaction-example").click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
 
-  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first();
-  await expect(transaction).toContainText("Read Request");
-
-  const inspector = page.getByTestId("inspector");
-  await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read Request");
-  await expect(inspector.getByLabel("Transaction start")).toHaveValue("2");
-  await expect(inspector.getByLabel("Transaction end")).toHaveValue("12");
-  const linked = inspector.getByTestId("transaction-linked-signals");
-  await expect(linked).toContainText("Linked Signals (2)");
-  await expect(linked).toContainText("REQUEST");
-  await expect(linked).toContainText("READY");
-  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Request/);
-  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Processing/);
-  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Response/);
-
-  // Undo removes the whole example cleanly -- back to the exact pre-example
-  // empty state, not a partially-reverted transaction.
+  // Undo removes the created Transaction cleanly -- back to the exact
+  // pre-creation empty state, not a partially-reverted one.
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(0);
@@ -67,18 +90,23 @@ test("Load Example inserts one complete Transaction as a single History entry, a
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
-  await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first()).toContainText("Read Request");
 });
 
-test("Loaded example survives Save/Open exactly, and Inspector/Bottom edits stay synchronized", async ({ page }) => {
+test("A Transaction built with phases and Linked Signals survives Save/Open exactly, and Inspector/Bottom edits stay synchronized", async ({ page }) => {
   await openTransactionMode(page);
-  await page.getByTestId("load-transaction-example").click();
+  await createReadRequestTransaction(page, { withLinks: true });
   const host = page.getByTestId("cycle-surface");
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(1);
   const transactionId = await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().getAttribute("data-transaction-id");
 
-  // Edit through the Inspector, confirm the Bottom editor reflects it.
   const inspector = page.getByTestId("inspector");
+  await expect(inspector.getByLabel("Transaction name")).toHaveValue("Read Request");
+  const linked = inspector.getByTestId("transaction-linked-signals");
+  await expect(linked).toContainText("Linked Signals (2)");
+  await expect(linked).toContainText("REQUEST");
+  await expect(linked).toContainText("READY");
+
+  // Edit through the Inspector, confirm the Bottom editor reflects it.
   await inspector.getByLabel("Transaction name").fill("Read Request v2");
   await inspector.getByTestId("apply-inspector-transaction").click();
   const bottomEditor = page.getByTestId("transaction-editor");
@@ -112,15 +140,18 @@ test("Loaded example survives Save/Open exactly, and Inspector/Bottom edits stay
 // directly (it only rewrites the table).
 test("Phases are added, edited, and deleted through the structured table without raw JSON, and Advanced JSON stays a secondary path", async ({ page }) => {
   await openTransactionMode(page);
-  await page.getByTestId("load-transaction-example").click();
+  await createReadRequestTransaction(page);
   const inspector = page.getByTestId("inspector");
   const table = inspector.getByTestId("transaction-phase-editor");
   await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(3);
+  // createReadRequestTransaction is 3 commands: the Ribbon's one-click
+  // Create, the Bottom Panel's Name/Start/End Apply, then the phase Apply.
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
 
   // Edit an existing phase's name through the structured table alone.
   await inspector.getByLabel("Phase 1 name").fill("Setup");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
   const bottomEditor = page.getByTestId("transaction-editor");
   // Re-select to force the Inspector/Bottom editors to re-read the committed document.
   await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().click();
@@ -130,7 +161,7 @@ test("Phases are added, edited, and deleted through the structured table without
   await inspector.getByLabel("Delete phase 3").click();
   await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(2);
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 5 / Redo 0");
 
   // Add a new phase through "Add Phase" -- no JSON typed anywhere.
   await inspector.getByTestId("add-transaction-phase").click();
@@ -138,7 +169,7 @@ test("Phases are added, edited, and deleted through the structured table without
   await expect(rows).toHaveCount(3);
   await inspector.getByLabel("Phase 3 name").fill("Cooldown");
   await inspector.getByTestId("apply-inspector-transaction").click();
-  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
 
   const advanced = inspector.getByTestId("transaction-phase-editor").locator("details");
   await expect(advanced).not.toHaveAttribute("open", "");
@@ -147,5 +178,5 @@ test("Phases are added, edited, and deleted through the structured table without
   await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Cooldown/);
   // Advanced JSON never submitted a command of its own -- it only rewrites
   // the table via "Apply JSON to table"; opening/reading it changed nothing.
-  await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
+  await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
 });
