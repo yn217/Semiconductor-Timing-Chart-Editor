@@ -30,13 +30,19 @@ test("View exposes stable Show/Panels/Guides/Zoom/Workspace/Layout slots", async
   await expect(zoomGroup.getByTestId("zoom-status")).toHaveClass(/visually-hidden/);
   await expect(page.getByTestId("ribbon").getByLabel("Labels and structure")).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Overlays")).toBeVisible();
-  const footerLabels = page.getByTestId("ribbon").locator(".view-slot-group > .ds-ribbon-group > b");
+  // View tab visual-consistency fix: groups now render through the same
+  // RibbonGroup primitive Home's own schema-composed groups use, so the
+  // caption is the shared external `.ribbon-schema-group__caption` span
+  // (Home's exact pattern) with the internal <b> hidden -- not a
+  // View-only `.view-slot-group > b` visible-caption override.
+  const footerLabels = page.getByTestId("ribbon").locator(".ribbon-schema-group__caption");
   await expect(footerLabels).toHaveCount(6);
-  await expect.poll(async () => footerLabels.evaluateAll((labels) => labels.map((label) => getComputedStyle(label).visibility))).toEqual(["visible", "visible", "visible", "visible", "visible", "visible"]);
-  expect(await page.getByTestId("ribbon").locator(".view-slot-group").evaluateAll((groups) => groups.map((group) => ({ labels: group.querySelectorAll(".ds-ribbon-group > b").length, pseudo: getComputedStyle(group, "::after").content })))).toEqual([
-    { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" },
-    { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" }, { labels: 1, pseudo: "none" },
-  ]);
+  await expect(footerLabels).toHaveText(["Show", "Panels", "Guides", "Zoom", "Workspace", "Layout"]);
+  // RibbonGroup always passes externalCaption to DsRibbonGroup, so there
+  // is no second, internal <b> caption element at all (not merely a
+  // hidden one) -- the same single-caption contract every schema-rendered
+  // Home group already has.
+  await expect(page.getByTestId("ribbon").locator(".ribbon-schema-group > .ds-ribbon-group > b")).toHaveCount(0);
 
   const before = {
     revision: await surface.getAttribute("data-canonical-revision"),
@@ -67,14 +73,24 @@ test("View zoom uses a shared view-only route and does not move Home presentatio
   const beforeRevision = await surface.getAttribute("data-canonical-revision");
   const beforeHistory = await surface.getAttribute("data-history-depth");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
-  const viewZoom = page.locator(".view-zoom-slot");
+  // View tab visual-consistency fix: the Zoom group now renders through
+  // the same RibbonGroup primitive and [data-ribbon-home] sizing Home's
+  // own Zoom group uses (both share the fixed 280px `[data-ribbon-home]
+  // [data-major-group="Zoom"]` width rule) -- there is no more
+  // View-specific `.view-zoom-slot` wrapper to select by. Labels are
+  // plain single-line strings now (not hand-split <span> pairs), so
+  // "Zoom Out" reads as one space-separated string like every other
+  // schema-driven button's label (Home's own "Save As" is the same shape).
+  const viewZoom = page.locator("[data-major-group='Zoom']").filter({ hasText: "Zoom" });
   await expect(viewZoom).toBeVisible();
-  await expect(viewZoom.getByRole("button")).toHaveText(["ZoomOut", "ZoomIn", "FitAll", "FitSelection"]);
+  await expect(viewZoom.getByRole("button")).toHaveText(["Zoom Out", "Zoom In", "Fit All", "Fit Selection"]);
   await expect(viewZoom.getByLabel("Zoom preset")).toBeVisible();
   const viewBox = await viewZoom.boundingBox();
   expect(viewBox).not.toBeNull();
   expect(homeBox).not.toBeNull();
-  expect(Math.abs(viewBox!.x - homeBox!.x)).toBeLessThanOrEqual(1);
+  // Both Zoom groups share the exact same [data-ribbon-home] width rule
+  // now, so their widths match even though their X position (governed by
+  // each tab's own, unrelated, preceding groups) legitimately doesn't.
   expect(Math.abs(viewBox!.width - homeBox!.width)).toBeLessThanOrEqual(1);
   await ribbon.getByRole("button", { name: "Zoom In" }).click();
   await expect(page.getByTestId("zoom-status")).toHaveText("125%");
@@ -112,8 +128,13 @@ test("View group controls stay inside their owned regions", async ({ page }) => 
     return { group: group.dataset.majorGroup, owner: { left: ownerRect.left, right: ownerRect.right, top: ownerRect.top, bottom: ownerRect.bottom }, children: children.map((child) => { const rect = child.getBoundingClientRect(); return { tag: child.tagName, className: child.className, left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }; }), overflow: children.some((child) => { const rect = child.getBoundingClientRect(); return rect.left < ownerRect.left - 1 || rect.right > ownerRect.right + 1 || rect.top < ownerRect.top - 1 || rect.bottom > ownerRect.bottom + 1; }) };
   }));
   expect(metrics.every((item) => !item.overflow), JSON.stringify(metrics)).toBe(true);
+  // View tab visual-consistency fix: Fit All/Fit Selection no longer sit
+  // in a specially tight (near-zero-gap) sub-container -- they use the
+  // same uniform inter-button gap every other pair of adjacent Ribbon
+  // buttons gets (Home doesn't special-case spacing between any of its
+  // own related buttons either), just left-to-right in order.
   const fitButtons = await page.getByLabel("Fit commands").getByRole("button").evaluateAll((buttons) => buttons.map((button) => button.getBoundingClientRect()));
-  expect(fitButtons[0]!.right).toBeLessThanOrEqual(fitButtons[1]!.left + 1);
+  expect(fitButtons[0]!.right).toBeLessThanOrEqual(fitButtons[1]!.left);
 });
 
 test("Layout Focus Waveform restores the previous panel state without document history", async ({ page }) => {

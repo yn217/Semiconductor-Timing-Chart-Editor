@@ -239,7 +239,12 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "paste", icon: "i-paste", label: "Paste", v1Label: "貼付", onClick: onPaste, disabled: !clipboardAvailable, title: clipboardStatus },
         { kind: "button", id: "delete", icon: "i-delete", label: "Delete", v1Label: "削除", onClick: onDelete, disabled: !hasDeletableSelection },
         { kind: "button", id: "duplicate", icon: "i-duplicate", label: "Duplicate", v1Label: "複製", onClick: onDuplicate, disabled: !hasSelectedClipboard },
-        { kind: "button", id: "select-all", icon: "i-select-all", label: "Select All Signals", ariaLabel: "Select All Signals", onClick: onSelectAll, disabled: !hasSelectableSignals },
+        // #439: "Select All Signals" wrapped to 3 stacked one-word lines at
+        // the standard 44px Home button width (Select / All / Signals) --
+        // over the issue's own 2-line limit. Shortened to the 2-word "Select
+        // All" (wraps cleanly to 2 lines, matching "Fit Selection"'s shape);
+        // the full meaning stays on the accessible name/tooltip.
+        { kind: "button", id: "select-all", icon: "i-select-all", label: "Select All", ariaLabel: "Select All Signals", title: "Select All Signals", onClick: onSelectAll, disabled: !hasSelectableSignals },
         { kind: "custom", id: "find-replace", render: () => <FindReplacePanel key="find-replace" document={document} onCommandBatch={onCommandBatch} /> },
         { kind: "custom", id: "clipboard-status", render: () => <small key="clipboard-status" data-testid="clipboard-status">{clipboardStatus}</small> },
       ],
@@ -294,6 +299,67 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // the ActiveContext plumbing again.
   const transactionRibbonGroups: readonly RibbonGroupSpec[] = [];
   const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "layout", "display"]);
+  // View tab visual-consistency fix: previously hand-written per-button
+  // JSX with its own one-off sizing (tile-shaped toggle buttons, a fixed
+  // 3-column grid, an unstyled native <select> that fell through to the
+  // OS's `color-scheme: dark` default) -- none of it routed through the
+  // same RibbonGroup/DsRibbonButton primitives every other tab (File/
+  // Edit/Zoom/Annotation/...) already shares. Rebuilt as ordinary
+  // RibbonGroupSpec groups so View gets the exact same button width/
+  // icon size/caption placement as Home for free, with no second style
+  // to keep in sync. Item kinds without a direct schema equivalent
+  // (icon-toggle buttons, the Zoom% picker, the Workspace/Density
+  // selects) use `kind: "custom"`, the same escape hatch Edit's Find &
+  // Replace panel already uses -- not a new pattern.
+  const viewGroups: readonly RibbonGroupSpec[] = [
+    {
+      id: "view-show", majorGroup: "Show", caption: "Show", items: [
+        { kind: "custom", id: "show-labels", render: () => <div key="show-labels" className="view-display-subgroup" data-display-kind="labels" aria-label="Labels and structure"><span>Labels / Structure</span><DsRibbonToggle dataTestId="view-show-signal-names" checked={showSignalNames} label="Signal Names" onChange={onToggleSignalNames} /><DsRibbonToggle dataTestId="view-show-roles" checked={showRoles} label="Roles" onChange={onToggleRoles} /><DsRibbonToggle dataTestId="view-show-group-background" checked={showGroupBackground} label="Group Background" onChange={onToggleGroupBackground} /></div> },
+        { kind: "custom", id: "show-overlays", render: () => <div key="show-overlays" className="view-display-subgroup" data-display-kind="overlays" aria-label="Overlays"><span>Overlays</span><DsRibbonToggle dataTestId="view-show-annotations" checked={showAnnotations} label="Annotations" onChange={onToggleAnnotations} /><DsRibbonToggle dataTestId="view-show-transactions" checked={showTransactions} label="Transactions" onChange={onToggleTransactions} /></div> },
+      ],
+    },
+    {
+      id: "view-panels", majorGroup: "Panels", caption: "Panels", items: [
+        { kind: "custom", id: "panel-inspector", render: () => <DsRibbonToggleButton key="panel-inspector" ariaLabel="Inspector" checked={inspectorVisible} icon={<RibbonIcon name="i-settings" />} onClick={onToggleInspector}>Inspector</DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-bottom", render: () => <DsRibbonToggleButton key="panel-bottom" ariaLabel="Bottom Editor" checked={bottomVisible} icon={<RibbonIcon name="i-preview" />} onClick={onToggleBottom}><span>Bottom</span><span>Editor</span></DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-tree", render: () => <DsRibbonToggleButton key="panel-tree" dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton> },
+        { kind: "custom", id: "panel-minimap", render: () => <DsRibbonToggleButton key="panel-minimap" dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-preview" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton> },
+        ...(viewMode === "Cycle" ? [{ kind: "custom", id: "panel-signal-split", render: () => <DsRibbonToggleButton key="panel-signal-split" dataTestId="view-panel-signal-split" ariaLabel="Signal Split" checked={signalSplitEnabled} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalSplit}><span>Signal</span><span>Split</span></DsRibbonToggleButton> }] as const : []),
+      ],
+    },
+    {
+      id: "view-guides", majorGroup: "Guides", caption: "Guides", items: [
+        { kind: "toggle", id: "grid", label: "Grid", testId: "grid-toggle", checked: gridEnabled, onChange: onToggleGrid },
+        { kind: "toggle", id: "snap", label: "Snap", testId: "snap-toggle", checked: snapEnabled, onChange: onToggleSnap },
+        { kind: "toggle", id: "ruler", label: "Ruler", testId: "ruler-toggle", checked: rulerEnabled, onChange: onToggleRuler },
+      ],
+    },
+    {
+      id: "view-zoom", majorGroup: "Zoom", caption: "Zoom", items: [
+        { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", onClick: () => onZoom(-0.25) },
+        { kind: "custom", id: "zoom-preset", render: () => <span key="zoom-preset" className="view-zoom-preset"><DsRibbonSelect ariaLabel="Zoom preset" value={String(Math.round(zoom * 100))} onChange={(event) => onSetZoom(Number(event.target.value) / 100)}><option value="50">50%</option><option value="100">100%</option><option value="150">150%</option><option value="200">200%</option><option value="400">400%</option><option value="800">800%</option></DsRibbonSelect><output className="visually-hidden" data-testid="zoom-status" aria-label="Current zoom">{Math.round(zoom * 100)}%</output></span> },
+        { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", onClick: () => onZoom(0.25) },
+        { kind: "custom", id: "fit-actions", render: () => <div key="fit-actions" aria-label="Fit commands" style={{ display: "flex", gap: "5px" }}><DsRibbonButton icon={<RibbonIcon name="i-fit" />} onClick={onFitAll}>Fit All</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-select-fit" />} onClick={onFitSelection}>Fit Selection</DsRibbonButton></div> },
+      ],
+    },
+    {
+      id: "view-workspace", majorGroup: "Workspace", caption: "Workspace", items: [
+        { kind: "custom", id: "workspace-preset", render: () => <label key="workspace-preset" className="view-workspace-field">Workspace<DsRibbonSelect ariaLabel="Workspace preset" value={workspacePreset} onChange={(event) => onWorkspacePresetChange(event.target.value as WorkspacePreset)}><option value="edit">Edit</option><option value="waveform">Waveform Focus</option><option value="review">Review</option><option value="transaction">Transaction</option></DsRibbonSelect></label> },
+        { kind: "custom", id: "workspace-density", render: () => <label key="workspace-density" className="view-workspace-field">Density<DsRibbonSelect ariaLabel="UI density" value={density} onChange={(event) => onDensityChange(event.target.value as DensityMode)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></DsRibbonSelect></label> },
+      ],
+    },
+    {
+      id: "view-layout", majorGroup: "Layout", caption: "Layout", items: [
+        { kind: "button", id: "reset-layout", icon: "i-settings", label: "Reset Layout", onClick: onResetLayout },
+        // Accessible name stays the fixed "Focus Waveform" regardless of
+        // toggled state (only the visible label flips to "Restore
+        // Panels") -- a stable name for this one control across both
+        // states, same as the pre-migration button's own hardcoded
+        // ariaLabel.
+        { kind: "button", id: "focus-waveform", icon: "i-preview", label: workspacePreset === "waveform" ? "Restore Panels" : "Focus Waveform", ariaLabel: "Focus Waveform", onClick: () => onWorkspacePresetChange(workspacePreset === "waveform" ? "edit" : "waveform") },
+      ],
+    },
+  ];
   // Arrange group targets: the current multi-selection if there is one,
   // otherwise the single selected Annotation, otherwise nothing (every
   // Arrange handler stays undefined -> ArrangeGroup renders disabled).
@@ -441,14 +507,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         </DsRibbonGroup>
       </div>
     </>}
-    {tab === "View" && <>
-      <div className="ribbon-major-group view-slot-group" data-major-group="Show" aria-label="Show commands"><DsRibbonGroup ariaLabel="Show" className="view-show-group" label="Show"><div className="view-display-subgroup" data-display-kind="labels" aria-label="Labels and structure"><span>Labels / Structure</span><DsRibbonToggle dataTestId="view-show-signal-names" checked={showSignalNames} label="Signal Names" onChange={onToggleSignalNames} /><DsRibbonToggle dataTestId="view-show-roles" checked={showRoles} label="Roles" onChange={onToggleRoles} /><DsRibbonToggle dataTestId="view-show-group-background" checked={showGroupBackground} label="Group Background" onChange={onToggleGroupBackground} /></div><div className="view-display-subgroup" data-display-kind="overlays" aria-label="Overlays"><span>Overlays</span><DsRibbonToggle dataTestId="view-show-annotations" checked={showAnnotations} label="Annotations" onChange={onToggleAnnotations} /><DsRibbonToggle dataTestId="view-show-transactions" checked={showTransactions} label="Transactions" onChange={onToggleTransactions} /></div></DsRibbonGroup></div>
-       <div className="ribbon-major-group view-slot-group" data-major-group="Panels" aria-label="Panels commands"><DsRibbonGroup ariaLabel="Panels" className="view-panels-group" density="compact-toggle" label="Panels"><DsRibbonToggleButton className="view-mini-tool" ariaLabel="Inspector" checked={inspectorVisible} icon={<RibbonIcon name="i-settings" />} onClick={onToggleInspector}>Inspector</DsRibbonToggleButton><DsRibbonToggleButton className="view-mini-tool" ariaLabel="Bottom Editor" checked={bottomVisible} icon={<RibbonIcon name="i-preview" />} onClick={onToggleBottom}><span>Bottom</span><span>Editor</span></DsRibbonToggleButton><DsRibbonToggleButton dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton><DsRibbonToggleButton dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-preview" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton>{viewMode === "Cycle" && <DsRibbonToggleButton dataTestId="view-panel-signal-split" ariaLabel="Signal Split" checked={signalSplitEnabled} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalSplit}><span>Signal</span><span>Split</span></DsRibbonToggleButton>}</DsRibbonGroup></div>
-      <div className="ribbon-major-group view-slot-group" data-major-group="Guides" aria-label="Guides commands"><DsRibbonGroup ariaLabel="Guides" className="view-guides-group" label="Guides"><DsRibbonToggle dataTestId="grid-toggle" checked={gridEnabled} label="Grid" onChange={onToggleGrid} /><DsRibbonToggle dataTestId="snap-toggle" checked={snapEnabled} label="Snap" onChange={onToggleSnap} /><DsRibbonToggle dataTestId="ruler-toggle" checked={rulerEnabled} label="Ruler" onChange={onToggleRuler} /></DsRibbonGroup></div>
-      <div className="ribbon-major-group view-slot-group view-zoom-slot" data-major-group="Zoom" aria-label="Zoom commands"><DsRibbonGroup ariaLabel="Zoom" className="view-zoom-group" label="Zoom"><DsRibbonButton className="view-mini-tool" ariaLabel="Zoom Out" icon={<RibbonIcon name="i-zoom-out" />} onClick={() => onZoom(-0.25)}><span>Zoom</span><span>Out</span></DsRibbonButton><DsRibbonSelect ariaLabel="Zoom preset" value={String(Math.round(zoom * 100))} onChange={(event) => onSetZoom(Number(event.target.value) / 100)}><option value="50">50%</option><option value="100">100%</option><option value="150">150%</option><option value="200">200%</option><option value="400">400%</option><option value="800">800%</option></DsRibbonSelect><output className="view-zoom-status visually-hidden" data-testid="zoom-status" aria-label="Current zoom">{Math.round(zoom * 100)}%</output><DsRibbonButton className="view-mini-tool" ariaLabel="Zoom In" icon={<RibbonIcon name="i-zoom-in" />} onClick={() => onZoom(0.25)}><span>Zoom</span><span>In</span></DsRibbonButton><div className="view-zoom-fit-actions" aria-label="Fit commands"><DsRibbonButton className="view-mini-tool" ariaLabel="Fit All" icon={<RibbonIcon name="i-fit" />} onClick={onFitAll}><span>Fit</span><span>All</span></DsRibbonButton><DsRibbonButton className="view-mini-tool" ariaLabel="Fit Selection" icon={<RibbonIcon name="i-fit" />} onClick={onFitSelection}><span>Fit</span><span>Selection</span></DsRibbonButton></div></DsRibbonGroup></div>
-      <div className="ribbon-major-group view-slot-group" data-major-group="Workspace" aria-label="Workspace commands"><DsRibbonGroup ariaLabel="Workspace" className="view-workspace-group" label="Workspace"><div className="view-workspace-settings" aria-label="Workspace settings"><label>Workspace<DsRibbonSelect ariaLabel="Workspace preset" value={workspacePreset} onChange={(event) => onWorkspacePresetChange(event.target.value as WorkspacePreset)}><option value="edit">Edit</option><option value="waveform">Waveform Focus</option><option value="review">Review</option><option value="transaction">Transaction</option></DsRibbonSelect></label><label>Density<DsRibbonSelect ariaLabel="UI density" value={density} onChange={(event) => onDensityChange(event.target.value as DensityMode)}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></DsRibbonSelect></label></div></DsRibbonGroup></div>
-      <div className="ribbon-major-group view-slot-group" data-major-group="Layout" aria-label="Layout commands"><DsRibbonGroup ariaLabel="Layout" className="view-layout-group" label="Layout"><DsRibbonButton className="view-mini-tool" ariaLabel="Reset Layout" icon={<RibbonIcon name="i-settings" />} onClick={onResetLayout}><span>Reset</span><span>Layout</span></DsRibbonButton><DsRibbonButton className="view-mini-tool" ariaLabel="Focus Waveform" icon={<RibbonIcon name="i-preview" />} onClick={() => onWorkspacePresetChange(workspacePreset === "waveform" ? "edit" : "waveform")}><span>{workspacePreset === "waveform" ? "Restore" : "Focus"}</span><span>{workspacePreset === "waveform" ? "Panels" : "Waveform"}</span></DsRibbonButton></DsRibbonGroup></div>
-    </>}
+    {tab === "View" && viewGroups.map((group) => <RibbonGroup key={group.id} spec={group} />)}
     {tab === "Review" && <div className="ribbon-group review-group"><ReviewWorkflow diagnostics={diagnostics} document={document} selectedSignalId={selectedSignalId} selectedGroupId={selectedGroupId} onNavigate={onNavigateProblem} onShowProblems={onShowProblems} onRefreshChecks={onRefreshChecks} /><output data-testid="review-problems-count">{problemsCount}</output><b>Review</b></div>}
     {tab === "AI" && <>
       {/* #395 PR1: the full query/preview/apply surface (AIOperationPanel)

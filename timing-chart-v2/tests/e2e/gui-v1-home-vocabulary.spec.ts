@@ -16,8 +16,13 @@ test("restores V1 Ribbon button vocabulary while preserving command names", asyn
   await expect(visibleLabel("Delete")).resolves.toBe("削除");
   // Move Down lives in the Home overflow menu, not the main strip -- it never
   // carried a v1Label there (only the always-visible ribbon buttons do).
-  await expect(ribbon.locator(".home-file-group > b")).toHaveCSS("visibility", "hidden");
-  await expect(ribbon.locator(".home-file-group > b")).toHaveText("File");
+  // Ribbon layout refactor: RibbonGroup always renders the group caption as
+  // the shared external `.ribbon-schema-group__caption` span (Home's own
+  // schema-composed groups included) -- there is no second, internal <b>
+  // caption inside `.home-file-group` to hide anymore, only the one visible
+  // external label.
+  await expect(ribbon.locator(".home-file-group > b")).toHaveCount(0);
+  await expect(ribbon.locator("[data-major-group='File'] .ribbon-schema-group__caption")).toHaveText("File");
   await expect(page.getByTestId("revision-status")).toHaveText(before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
