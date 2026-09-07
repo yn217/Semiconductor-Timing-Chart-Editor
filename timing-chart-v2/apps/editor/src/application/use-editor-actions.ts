@@ -81,6 +81,7 @@ export interface EditorActions {
   readonly navigateProblem: (path: string) => void;
   readonly createSelectedAnnotation: (annotation: Annotation) => void;
   readonly createSelectedAnnotationForType: (type: AnnotationType) => void;
+  readonly replaceDocument: (document: CanonicalDocument) => CommandResult;
   readonly selectAnnotation: (id: AnnotationId) => void;
   readonly deleteBottomSignal: () => void;
   readonly deleteBottomAnnotation: () => void;
@@ -174,6 +175,11 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     if (!input.annotationTargetSignalId) return;
     createSelectedAnnotation(createAnnotation(type, input.annotationTargetSignalId, input.timelineRange, input.document));
   };
+  const replaceDocument = (document: CanonicalDocument) => input.application.execute({
+    id: input.nextCommandId("json_replace"),
+    type: "document.replace",
+    document,
+  });
   const selectAnnotation = (id: AnnotationId) => input.selection.selectAnnotation(id);
   const deleteBottomSignal = () => {
     if (!input.bottomSignal) return;
@@ -421,6 +427,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     navigateProblem,
     createSelectedAnnotation,
     createSelectedAnnotationForType,
+    replaceDocument,
     selectAnnotation,
     deleteBottomSignal,
     deleteBottomAnnotation,

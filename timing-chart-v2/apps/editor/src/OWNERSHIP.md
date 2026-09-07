@@ -45,6 +45,7 @@ controllers are extracted incrementally.
 | Secondary editor surfaces | `editor-secondary-surfaces.tsx` | typed action/router/runtime callbacks | PR5 D3 surface composition extraction |
 | Export service and browser delivery | `application/editor-export-controller.ts` | export service / browser download / clipboard adapter | second-pass controller boundary |
 | Transaction linked-signal operation | `application/use-editor-actions.ts` | SemanticCommand / CommandHistorySession | second-pass presentation callback boundary |
+| Advanced JSON replacement | `application/use-editor-actions.ts` | SemanticCommand / CommandHistorySession | second-pass presentation callback boundary |
 | Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | parent command/router callbacks | PR5 presentation boundary |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |

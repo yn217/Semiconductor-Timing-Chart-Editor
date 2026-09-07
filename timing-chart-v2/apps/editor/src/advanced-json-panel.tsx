@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { CommandResult } from "@timing-chart-v2/commands";
 import type { Annotation, CanonicalDocument, DocumentProblem, Signal, SignalGroup, Transaction } from "@timing-chart-v2/schema";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
-import { nextCommandId } from "./command-id.js";
 import { replaceSelectedJsonObject } from "./json-selection.js";
 import { selectedJsonProblem } from "./json-problems.js";
 
-export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onCommand, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
+export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, selectedAnnotation, selectedTransaction, onReplaceDocument, onDiagnostic }: { readonly document: CanonicalDocument; readonly selectedSignal: Signal | undefined; readonly selectedGroup: SignalGroup | undefined; readonly selectedAnnotation: Annotation | undefined; readonly selectedTransaction: Transaction | undefined; readonly onReplaceDocument: (document: CanonicalDocument) => CommandResult; readonly onDiagnostic: (diagnostic: DocumentProblem | readonly DocumentProblem[] | undefined) => void }) {
   const text = useMemo(() => serializeCanonicalDocument(document), [document]);
   const [advanced, setAdvanced] = useState(false);
   const [scope, setScope] = useState<"selected" | "document">("document");
@@ -71,7 +70,7 @@ export function AdvancedJsonPanel({ document, selectedSignal, selectedGroup, sel
       return;
     }
     onDiagnostic(undefined);
-    const result = onCommand({ id: nextCommandId("json_replace"), type: "document.replace", document: next });
+    const result = onReplaceDocument(next);
     if (!result.ok) { setStatus(`Apply failed: ${result.reason}`); return; }
     setAdvanced(false);
     setStatus("Applied");
