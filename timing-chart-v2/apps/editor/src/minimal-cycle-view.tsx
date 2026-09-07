@@ -8,7 +8,7 @@ import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type HardwareHi
 import { type AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type SpacerId, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
-import { resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
+import { resolveProblemTarget } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
 import { createEdgeCounterProjectionMetrics, projectEdgeCounters } from "./runtime/edge-counter-projection.js";
@@ -66,6 +66,7 @@ import { InspectorClockEditor } from "./inspector-clock-editor.js";
 import { Ribbon } from "./minimal-cycle-view-ribbon.js";
 import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
+import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner, type SelectionState } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
@@ -317,7 +318,6 @@ export function MinimalCycleView() {
   useDialogFocusLoop(compatibilityDialogRef, pendingFileOriginRef, compatibilityPreview !== undefined);
   const clipboardStatus = editActions.status;
   const clipboardAvailable = editActions.available;
-  const commandRegistry = useRef(new UiCommandRegistry());
   const [timelineRange, setTimelineRange] = useState(() => visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
   const [rangeSelectionActive, setRangeSelectionActive] = useState(false);
   const rangeSelectionActiveRef = useRef(false);
@@ -397,43 +397,8 @@ export function MinimalCycleView() {
     setCollapsedGroups(next);
   };
 
-  // #211: Canonical restoration alone isn't UX parity -- if Undo brings a
-  // deleted Signal back (or Redo removes it again), the selection should
-  // follow rather than silently staying at "None"/pointing at a since-gone
-  // ID. Scoped to Signals for now (signal.create/delete are the only
-  // commands with distinct addedSignals/removedSignals changeSet fields;
-  // Annotation/Group/Spacer create+delete share one symmetric field name,
-  // so telling "added" from "removed" for them needs a different check --
-  // left for a follow-up rather than guessed at here).
-  const repairSelectionAfterHistoryChange = (result: CommandResult) => {
-    if (!result.ok) return;
-    const removedIds = result.changeSet.removedSignals ?? [];
-    const currentSignalId = selection.refs.signalId.current;
-    if (currentSignalId && removedIds.includes(currentSignalId)) {
-      selection.clear();
-      return;
-    }
-    const addedIds = result.changeSet.addedSignals ?? [];
-    const nothingSelected = !selection.refs.signalId.current && !selection.refs.groupId.current && !selection.refs.spacerId.current && !selection.refs.annotationId.current && !selection.refs.transactionId.current;
-    if (nothingSelected && addedIds.length === 1) selection.selectSignal(addedIds[0]!);
-  };
-  useEffect(() => {
-    const registry = commandRegistry.current;
-    const unregister = [
-      registry.register<SemanticCommand>("semantic.execute", (command) => application.execute(command)),
-      registry.register("selection.delete", editActions.deleteSelection),
-      registry.register<{ readonly name: string }>("selection.rename", ({ name }) => editActions.rename(name)),
-      registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => editActions.setVisibility(visible)),
-      registry.register("history.undo", () => { const result = application.undo(); repairSelectionAfterHistoryChange(result); return result; }),
-      registry.register("history.redo", () => { const result = application.redo(); repairSelectionAfterHistoryChange(result); return result; }),
-      registry.register("clipboard.copy", editActions.copy),
-      registry.register("clipboard.cut", editActions.cut),
-      registry.register("clipboard.paste", editActions.paste),
-      registry.register("clipboard.duplicate", editActions.duplicate),
-      registry.register("selection.selectAll", () => selectAllRef.current()),
-    ];
-    return () => unregister.forEach((dispose) => dispose());
-  }, []);
+  const commandRouter = useEditorCommandRouter({ application, selection, editActions, selectAllRef });
+  const commandRegistry = commandRouter.commandRegistry;
 
   useEffect(() => {
     refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
