@@ -138,6 +138,11 @@ const requiredShellContracts = [
   ["workspace shell owner", /EditorWorkspaceView/],
   ["ribbon presentation boundary", /EditorRibbon/],
 ];
+const forbiddenShellOwnership = [
+  ["EditorShellView semantic mutation ownership", /(?:SemanticCommand|commandRegistry|(?:application|session)\.(?:execute|replace)|executeBatch)/],
+  ["EditorShellView runtime lifecycle ownership", /(?:EditorApplicationRuntime|CommandHistorySession|TimelineGeometryOwner|createWaveformSurfaceProvider|createWaveDromAdapter|runtime\.createRenderer)/],
+  ["EditorShellView imperative listener lifecycle", /(?:addEventListener|removeEventListener)\s*\(/],
+];
 const violations = [
   ...forbiddenOwners.filter(([, pattern]) => pattern.test(source)).map(([name]) => name),
   ...requiredOwners.filter((owner) => !ownership.includes(owner)).map((owner) => `ownership map missing: ${owner}`),
@@ -152,6 +157,7 @@ const violations = [
   ...(!/EditorSurfaceCommandController/.test(ribbonSource) || !/commands\.(?:createSignal|bringAnnotationsToFront|updateAnnotationStyle)/.test(ribbonSource) ? ["ribbon typed command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),
   ...requiredShellContracts.filter(([, pattern]) => !pattern.test(shellSource)).map(([name]) => `${name} contract missing`),
+  ...forbiddenShellOwnership.filter(([, pattern]) => pattern.test(shellSource)).map(([name]) => name),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(actionOwner) ? ["use-editor-actions must remain JSX-free"] : []),
   ...(/<(?:div|main|section|button|AIOperationPanel|EditorShellView)\b/.test(presentationOwner) ? ["use-editor-presentation-state must remain JSX-free"] : []),
   ...(exportDialogSource.includes("DeterministicExportService") ? ["ExportDialog must use EditorExportController"] : []),
