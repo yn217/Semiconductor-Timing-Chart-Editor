@@ -19,7 +19,6 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
   const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
   const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
-  const [splitPane, setSplitPane] = useState<NonNullable<Signal["display"]["splitPane"]>>(signal.display.splitPane ?? "both");
   const styleObject = signal.display.style ?? {};
   const [textColor, setTextColor] = useState(styleString(styleObject, "color", "#152033"));
   const [rowBackground, setRowBackground] = useState(styleString(styleObject, "background", "#ffffff"));
@@ -57,7 +56,7 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
   const applyProperties = (event: FormEvent) => {
     event.preventDefault();
     const decorations = [underline ? "underline" : "", strikethrough ? "line-through" : ""].filter(Boolean).join(" ");
-     onCommand({ id: nextCommandId("inspector_clock_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, visible, spacingBefore, spacingAfter, displayAlign: align, displayOverflow: overflow, splitPane, displayStyle: { ...styleObject, color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground } });
+     onCommand({ id: nextCommandId("inspector_clock_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, visible, spacingBefore, spacingAfter, displayAlign: align, displayOverflow: overflow, displayStyle: { ...styleObject, color: textColor, background: rowBackground, fontFamily, fontSize, fontWeight: bold ? "bold" : "normal", fontStyle: italic ? "italic" : "normal", textDecoration: decorations, waveformColor, waveformBackground } });
   };
   const convertClock = () => {
     const result = onCommand({ id: nextCommandId("convert_clock"), type: "signal.convertClock", signalId: signal.id, targetType: conversionTarget });
@@ -77,7 +76,6 @@ function InspectorClockEditor({ signal, document, viewport, onCommand, onReveal,
       <label>Reference Edge<select aria-label="Reference Edge" value={referenceEdge} onChange={(event) => setReferenceEdge(event.target.value as "rising" | "falling")}><option value="rising">Rising</option><option value="falling">Falling</option></select></label><button type="button" data-testid="apply-reference-edge" onClick={() => onCommand({ id: nextCommandId("set_reference_edge"), type: "timeline.setReferenceEdge", edge: referenceEdge })}>Apply Reference Edge</button>
       <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
       <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
-      <label>Split Pane<select aria-label="Inspector signal split pane" value={splitPane} onChange={(event) => setSplitPane(event.target.value as typeof splitPane)}><option value="both">Both</option><option value="upper">Upper</option><option value="lower">Lower</option></select></label>
       <button type="submit" data-testid="apply-inspector-clock-properties">Apply Properties</button>
     </form></InspectorSection>
     <section data-testid="clock-convert-section"><h3>Convert Type</h3><p className="inspector-note">Converting discards the Clock generator, enable waveform, and Edge Counter state.</p>{!conversionConfirm ? <><label>Target Type<select aria-label="Clock conversion target" value={conversionTarget} onChange={(event) => setConversionTarget(event.target.value as "binary" | "bus" | "state")}><option value="binary">Binary</option><option value="bus">Bus</option><option value="state">State</option></select></label><button type="button" data-testid="open-clock-conversion" onClick={() => setConversionConfirm(true)}>Convert Clock</button></> : <div role="alertdialog" aria-label="Confirm Clock conversion"><p>Clock-only generator, enable waveform, and Edge Counter state will be discarded.</p>{convertsReferenceClock && <p data-testid="reference-clock-conversion-warning">This is the document Reference Clock. Converting it also removes the Reference Clock designation and switches the timeline to clockless mode; no replacement Clock is selected automatically.</p>}<button type="button" data-testid="confirm-clock-conversion" onClick={convertClock}>Apply Conversion</button><button type="button" data-testid="cancel-clock-conversion" onClick={() => setConversionConfirm(false)}>Cancel</button></div>}</section>

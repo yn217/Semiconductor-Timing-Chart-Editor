@@ -405,7 +405,6 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
   const [spacingAfter, setSpacingAfter] = useState(signal.spacingAfter ?? 0);
   const [align, setAlign] = useState<NonNullable<Signal["display"]["align"]>>(signal.display.align ?? "left");
   const [overflow, setOverflow] = useState<NonNullable<Signal["display"]["overflow"]>>(signal.display.overflow ?? "ellipsis");
-  const [splitPane, setSplitPane] = useState<NonNullable<Signal["display"]["splitPane"]>>(signal.display.splitPane ?? "both");
   const [style, setStyle] = useState(JSON.stringify(signal.display.style ?? {}));
   const styleObject = signal.display.style ?? {};
   const [textColor, setTextColor] = useState(styleString(styleObject, "color", "#152033"));
@@ -433,7 +432,6 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
     setSpacingAfter((current) => current === (signal.spacingAfter ?? 0) ? current : signal.spacingAfter ?? 0);
     setAlign((current) => current === (signal.display.align ?? "left") ? current : signal.display.align ?? "left");
     setOverflow((current) => current === (signal.display.overflow ?? "ellipsis") ? current : signal.display.overflow ?? "ellipsis");
-    setSplitPane((current) => current === (signal.display.splitPane ?? "both") ? current : signal.display.splitPane ?? "both");
     setStyle((current) => current === nextStyleJson ? current : nextStyleJson);
     setTextColor((current) => current === styleString(nextStyle, "color", "#152033") ? current : styleString(nextStyle, "color", "#152033"));
     setRowBackground((current) => current === styleString(nextStyle, "background", "#ffffff") ? current : styleString(nextStyle, "background", "#ffffff"));
@@ -475,7 +473,6 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
     spacingAfter !== (signal.spacingAfter ?? 0),
     align !== (signal.display.align ?? "left"),
     overflow !== (signal.display.overflow ?? "ellipsis"),
-    splitPane !== (signal.display.splitPane ?? "both"),
     style !== JSON.stringify(originalStyleForCompare),
     textColor !== styleString(originalStyleForCompare, "color", "#152033"),
     rowBackground !== styleString(originalStyleForCompare, "background", "#ffffff"),
@@ -518,7 +515,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
       || strikethrough !== styleString(originalStyle, "textDecoration", "").includes("line-through")
       || waveformColor !== styleString(originalStyle, "waveformColor", "#111111")
       || waveformBackground !== styleString(originalStyle, "waveformBackground", "#ffffff");
-     onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, splitPane, ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
+     onCommand({ id: nextCommandId("inspector_signal_properties"), type: "signal.updateProperties", signalId: signal.id, name, role, signalType, ...(signalType === "bus" ? { width, displayFormat: format } : {}), visible, ...(signal.spacingBefore === undefined && spacingBefore === 0 ? {} : { spacingBefore }), ...(signal.spacingAfter === undefined && spacingAfter === 0 ? {} : { spacingAfter }), displayAlign: align, displayOverflow: overflow, ...(styleDraftChanged ? { displayStyle: { ...parsedStyle, ...structuredStyle } } : {}) });
   };
   const fullPath = [...signal.source.instancePath, signal.source.signalName].join(".") || signal.source.signalName;
   const signalTypeLabel = signal.type === "binary" ? "Signal" : signal.type === "bus" ? "Bus" : signal.type === "logic" ? "Level" : signal.type === "pulse" ? "Pulse" : signal.type.charAt(0).toUpperCase() + signal.type.slice(1);
@@ -540,7 +537,6 @@ export function InspectorValueSignalEditor({ signal, document, viewport, onComma
         <PropertyToggle label="Visible" ariaLabel="Inspector signal visible" checked={visible} onChange={setVisible} />
         <label>Spacing Before<input aria-label="Inspector signal spacing before" type="number" min="0" step="1" value={spacingBefore} onChange={(event) => setSpacingBefore(Number(event.target.value))} /></label>
         <label>Spacing After<input aria-label="Inspector signal spacing after" type="number" min="0" step="1" value={spacingAfter} onChange={(event) => setSpacingAfter(Number(event.target.value))} /></label>
-        <label>Split Pane<select aria-label="Inspector signal split pane" value={splitPane} onChange={(event) => setSplitPane(event.target.value as typeof splitPane)}><option value="both">Both</option><option value="upper">Upper</option><option value="lower">Lower</option></select></label>
       </InspectorSection>
       <InspectorSection sectionId="hierarchy" title="Source / Hierarchy" open={sections.hierarchy ?? true} onToggle={() => toggle("hierarchy")}><div className="property-row"><span>Instance Path</span><span>{signal.source.instancePath.join(".") || "(root)"}</span></div><div className="property-row"><span>Signal Name</span><span>{signal.source.signalName}</span></div><div className="property-row"><span>Full Path</span><span title={fullPath}>{fullPath}</span></div><div className="property-row"><span>Bus Range</span><span>{signal.source.msb === undefined ? "—" : `[${signal.source.msb}:${signal.source.lsb ?? 0}]`}</span></div><button type="button" data-testid="reveal-in-hierarchy" onClick={onReveal}>Reveal in Hierarchy</button></InspectorSection>
       <InspectorSection sectionId="label-style" title="Label Style" open={sections["label-style"] ?? false} onToggle={() => toggle("label-style")}><label>Text Color<input aria-label="Inspector text color" type="color" value={textColor} onChange={(event) => setTextColor(event.target.value)} /></label><label>Background<input aria-label="Inspector label background" type="color" value={rowBackground} onChange={(event) => setRowBackground(event.target.value)} /></label><label>Font<input aria-label="Inspector label font" value={fontFamily} onChange={(event) => setFontFamily(event.target.value)} /></label><label>Size<input aria-label="Inspector label size" type="number" min="6" max="48" step="1" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /></label><div className="inspector-style-checks"><PropertyToggle label="Bold" ariaLabel="Inspector label bold" checked={bold} onChange={setBold} /><PropertyToggle label="Italic" ariaLabel="Inspector label italic" checked={italic} onChange={setItalic} /><PropertyToggle label="Underline" ariaLabel="Inspector label underline" checked={underline} onChange={setUnderline} /><PropertyToggle label="Strikethrough" ariaLabel="Inspector label strikethrough" checked={strikethrough} onChange={setStrikethrough} /></div><label>Align<select aria-label="Inspector label align" value={align} onChange={(event) => setAlign(event.target.value as typeof align)}><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select></label><label>Overflow<select aria-label="Inspector label overflow" value={overflow} onChange={(event) => setOverflow(event.target.value as typeof overflow)}><option value="ellipsis">Ellipsis</option><option value="expand">Expand</option><option value="wrap">Wrap</option></select></label></InspectorSection>

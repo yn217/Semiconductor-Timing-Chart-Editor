@@ -5,6 +5,27 @@ import { expect, test } from "@playwright/test";
 // Assigns CLOCK -> Upper, DATA[7:0] -> Lower, RESET_N left at the default
 // (Both), and verifies each pane's own DOM only ever mounts its own rows --
 // not just that the toggle/scroll mechanics work.
+//
+// Product decision update (GUI/UX Closure Goal, 2026-09-07): Signal Split
+// is redefined as "the same Cycle signal list shown in two independently-
+// scrolling viewports" -- the per-signal Upper/Lower/Both assignment this
+// file drives through the Inspector's "Split Pane" select is deprecated
+// and that control has been removed from every Inspector (Signal, Clock)
+// per that decision (see minimal-cycle-view-panels.tsx /
+// inspector-clock-editor.tsx). The underlying `signal.display.splitPane`
+// schema field, planner validation, row-layout filter and export routing
+// this file exercises are architecture-owned (schema/commands/projection/
+// export) and intentionally left untouched here -- removing them is a
+// separate, Codex-scoped decision this GUI pass does not make.
+// The two tests below that assign a Split Pane entirely through the
+// now-removed Inspector control (`test.skip`, not deleted, so this
+// coverage is easy to restore -- or retarget at whatever new entry
+// point, if any, replaces it -- once that decision is made) can no
+// longer run through any GUI surface. One other test had its own final
+// assertion trimmed for the same reason but is otherwise still valid
+// dual-viewport-shell coverage and stays running; the export- and
+// canvas-click-sharing tests don't touch per-signal assignment at all
+// and are unaffected.
 
 async function assignSplitPane(page: import("@playwright/test").Page, host: import("@playwright/test").Locator, rowId: string, pane: "upper" | "lower" | "both", context: "signal" | "clock") {
   const row = host.locator(`[data-role='frozen-row'][data-row-id='${rowId}']`);
@@ -33,7 +54,7 @@ async function assignSplitPane(page: import("@playwright/test").Page, host: impo
   await expect(page.getByTestId("history-status")).not.toHaveText(historyBefore ?? "");
 }
 
-test("assigns Signals to Upper/Lower/Both and routes real rows to each pane's own DOM, keeping one stable ID for a Both Signal", async ({ page }) => {
+test.skip("assigns Signals to Upper/Lower/Both and routes real rows to each pane's own DOM, keeping one stable ID for a Both Signal", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -141,7 +162,7 @@ test("assigns Signals to Upper/Lower/Both and routes real rows to each pane's ow
   await expect(reopenedLowerHost.locator("[data-role='timing-row'][data-row-id='sig_cycle_data']")).toHaveCount(1);
 });
 
-test("mirrors grid, playhead and range-selection band into Lower from the one shared time mapping, and assigning a Split Pane never regenerates any waveform", async ({ page }) => {
+test("mirrors grid, playhead and range-selection band into Lower from the one shared time mapping", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
@@ -197,14 +218,9 @@ test("mirrors grid, playhead and range-selection band into Lower from the one sh
   const upperStyle = await bandUpper.evaluate((el: HTMLElement) => ({ left: el.style.left, width: el.style.width }));
   const lowerStyle = await bandLower.evaluate((el: HTMLElement) => ({ left: el.style.left, width: el.style.width }));
   expect(lowerStyle).toEqual(upperStyle);
-
-  // Assigning a Split Pane is a rowPresentation-bucket change, not
-  // waveSemantics -- it must never regenerate any Signal's WaveDrom row,
-  // Both-assigned or otherwise (no unnecessary double WaveDrom generation).
-  const countersBeforeAssign = await surface.getAttribute("data-render-counters");
-  await assignSplitPane(page, host, "sig_cycle_data", "lower", "signal");
-  const countersAfterAssign = await surface.getAttribute("data-render-counters");
-  expect(JSON.parse(countersAfterAssign!).waveDromRenders).toBe(JSON.parse(countersBeforeAssign!).waveDromRenders);
+  // The former closing assertion here ("assigning a Split Pane never
+  // regenerates any waveform") drove the assignment through the now-
+  // removed Inspector "Split Pane" control -- see the file header note.
 });
 
 test("default full-document export contains one row per Signal even when a Signal is assigned to Both panes", async ({ page }) => {
@@ -249,7 +265,7 @@ test("default full-document export contains one row per Signal even when a Signa
 // real two-block layout -- Upper's rows, then Lower's, stacked -- and
 // duplicate a "Both" Signal once per pane rather than pretending the
 // split doesn't exist.
-test("real Upper/Lower assignment produces a combined two-pane export: stacked blocks, and a Both Signal renders once per pane", async ({ page }) => {
+test.skip("real Upper/Lower assignment produces a combined two-pane export: stacked blocks, and a Both Signal renders once per pane", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
   await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
