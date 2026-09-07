@@ -1,7 +1,8 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { ClockGenerator, EdgeCounterSettings, SignalId, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, ClockGenerator, EdgeCounterSettings, SignalId, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
+type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
 
 export interface SignalEditorCommandActions {
   readonly updateClockGenerator: (signalId: SignalId, generator: ClockGenerator) => CommandResult;
@@ -18,7 +19,17 @@ export interface TransactionLaneCommandActions {
   readonly resize: (transactionId: TransactionId, edge: "start" | "end", value: number) => CommandResult;
 }
 
-export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions {}
+export interface InspectorCommandActions {
+  readonly updateSignalProperties: (payload: CommandPayload<"signal.updateProperties">) => CommandResult;
+  readonly renameSignal: (signalId: SignalId, name: string) => CommandResult;
+  readonly convertClock: (signalId: SignalId, targetType: "binary" | "bus" | "state") => CommandResult;
+  readonly setReferenceClock: (referenceClock: SignalId) => CommandResult;
+  readonly setReferenceEdge: (edge: "rising" | "falling") => CommandResult;
+  readonly updateBookmark: (payload: CommandPayload<"bookmark.update">) => CommandResult;
+  readonly updateLayout: (layout: CanonicalDocument["layout"]) => CommandResult;
+}
+
+export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, InspectorCommandActions {}
 
 export function createEditorSurfaceCommandController(input: {
   readonly execute: (command: SemanticCommand) => CommandResult;
@@ -35,5 +46,12 @@ export function createEditorSurfaceCommandController(input: {
     updateCommentRow: (signalId, payload) => dispatch<"commentRow.update">("comment_row_update", { type: "commentRow.update", signalId, ...payload }),
     move: (transactionId, start) => dispatch<"transaction.move">("transaction_snap_move", { type: "transaction.move", transactionId, start }),
     resize: (transactionId, edge, value) => dispatch<"transaction.resize">("transaction_snap_resize", { type: "transaction.resize", transactionId, edge, value }),
+    updateSignalProperties: (payload) => dispatch<"signal.updateProperties">("inspector_signal_properties", { type: "signal.updateProperties", ...payload }),
+    renameSignal: (signalId, name) => dispatch<"signal.rename">("inspector_signal_rename", { type: "signal.rename", signalId, name }),
+    convertClock: (signalId, targetType) => dispatch<"signal.convertClock">("convert_clock", { type: "signal.convertClock", signalId, targetType }),
+    setReferenceClock: (referenceClock) => dispatch<"timeline.setReferenceClock">("set_reference_clock", { type: "timeline.setReferenceClock", referenceClock }),
+    setReferenceEdge: (edge) => dispatch<"timeline.setReferenceEdge">("set_reference_edge", { type: "timeline.setReferenceEdge", edge }),
+    updateBookmark: (payload) => dispatch<"bookmark.update">("inspector_bookmark_update", { type: "bookmark.update", ...payload }),
+    updateLayout: (layout) => dispatch<"document.updateLayout">("layout_properties", { type: "document.updateLayout", layout }),
   };
 }

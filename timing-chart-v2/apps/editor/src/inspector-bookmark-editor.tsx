@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { RefObject } from "react";
 import type { Bookmark, CanonicalDocument } from "@timing-chart-v2/schema";
-import { nextCommandId } from "./command-id.js";
+import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { InspectorSection, InspectorFooter } from "./inspector-section.js";
 import { useInspectorAccordion } from "./inspector-accordion.js";
 import { InspectorHeaderBar, InspectorSelectionHeader } from "./inspector-selection-header.js";
@@ -14,7 +13,7 @@ import { MiniMap } from "./minimap.js";
  * (`bookmark.update`, disabled-when-unchanged Apply) rather than inventing
  * a second mutation path; creation/navigation/list stay Bottom-only, this
  * is purely a confirm/edit surface for whichever Bookmark is selected. */
-export function InspectorBookmarkEditor({ bookmark, document, viewport, onCommand, onDelete, onCancel, onClose }: { readonly bookmark: Bookmark; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onDelete: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
+export function InspectorBookmarkEditor({ bookmark, document, viewport, commands, onDelete, onCancel, onClose }: { readonly bookmark: Bookmark; readonly document: Readonly<CanonicalDocument>; readonly viewport: RefObject<HTMLDivElement | null>; readonly commands: Pick<EditorSurfaceCommandController, "updateBookmark">; readonly onDelete: () => void; readonly onCancel: () => void; readonly onClose: () => void }) {
   const [editName, setEditName] = useState(bookmark.name);
   const [editStart, setEditStart] = useState(bookmark.start);
   const [editComment, setEditComment] = useState(bookmark.comment ?? "");
@@ -27,7 +26,7 @@ export function InspectorBookmarkEditor({ bookmark, document, viewport, onComman
   const changedFields = [editName !== bookmark.name, editStart !== bookmark.start, editComment !== (bookmark.comment ?? "")];
   const changeCount = changedFields.filter(Boolean).length;
   const hasChanges = changeCount > 0;
-  const apply = (event?: React.FormEvent) => { event?.preventDefault(); if (!hasChanges) return; onCommand({ id: nextCommandId("inspector_bookmark_update"), type: "bookmark.update", bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); };
+  const apply = (event?: React.FormEvent) => { event?.preventDefault(); if (!hasChanges) return; commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); };
   return <aside className="inspector" data-testid="inspector" data-inspector-context="bookmark" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}>
     <InspectorHeaderBar onClose={onClose} />
     <InspectorSelectionHeader kind="Bookmark" title={bookmark.name} detail={`Cycle ${bookmark.start}`} />
