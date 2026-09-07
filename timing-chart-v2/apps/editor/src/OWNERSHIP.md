@@ -36,7 +36,7 @@ controllers are extracted incrementally.
 | Inspector style readers | `inspector-style.ts` | view-only style projection | Phase 1 extracted utility |
 | Inspector clock editor | `inspector-clock-editor.tsx` | `EditorSurfaceCommandController` | Phase 1 extracted leaf; second-pass typed command boundary |
 | Timeline / viewport runtime boundary | `runtime/timeline-viewport-runtime.ts` | parent application runtime callback; view-only geometry/navigation | Step 1 owner transfer |
-| Ribbon composition | `minimal-cycle-view-ribbon.tsx` | parent callback / existing command boundary | Physical Group 3 extraction |
+| Ribbon composition | `minimal-cycle-view-ribbon.tsx` | `EditorSurfaceCommandController` for mutation commands; parent callbacks for frozen Home controls | Physical Group 3 extraction; second-pass typed command boundary |
 | Panels / editor composition | `editor-secondary-surfaces.tsx`, `editor-shell-view.tsx` | typed action/router/runtime callbacks | Group 4 extraction complete; second-pass owner boundaries enforced |
 | UI action composition | `application/use-editor-actions.ts` | `EditorApplicationOwner` / `UiCommandRegistry` | PR3 owner extraction |
 | Presentation-only editor toggles | `application/use-editor-presentation-state.ts`, `application/use-editor-resize-actions.ts`, `application/use-editor-workspace-actions.ts` | view-only React state | PR4 owner extraction |
@@ -54,6 +54,8 @@ controllers are extracted incrementally.
 | Signal editor surface | `editors/signal-editor.tsx` | typed editor/action callbacks | second-pass surface boundary |
 | Clock generator editor surface | `editors/clock-generator-editor.tsx` | typed editor/action callbacks | second-pass surface boundary |
 | Editor surface command controller | `application/editor-surface-command-controller.ts` | SemanticCommand construction / command IDs | second-pass presentation boundary |
+| Find/Replace presentation | `find-replace-panel.tsx` | `EditorSurfaceCommandController.renameSignals` | second-pass typed command boundary |
+| Bottom Transaction Editor | `transaction-editor.tsx` | `EditorSurfaceCommandController` transaction editor/bulk APIs | second-pass typed command boundary |
 | Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | `EditorSurfaceCommandController` for Insert/Annotation operations; parent callbacks for frozen Home controls | second-pass typed command boundary; Home remains frozen |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |
