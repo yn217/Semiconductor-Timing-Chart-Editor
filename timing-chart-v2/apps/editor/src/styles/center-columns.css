@@ -241,8 +241,15 @@
 
 .cycle-panel.mode-transaction .surface-host { visibility: hidden; }
 .cycle-panel.mode-transaction .transaction-lanes { min-height: calc(100% - 34px); }
-.cycle-panel.mode-split .transaction-lanes { max-height: 112px; overflow: hidden; }
-.cycle-panel.mode-split .surface-host { padding-top: 120px; }
+/* #397: `.surface-host`'s padding-top must clear `.transaction-lanes`'s own
+   bottom edge (its `top` from the base rule above + this max-height) or a
+   multi-Group/multi-lane Transaction set (more content than one lane needs)
+   renders the Lanes region's bottom ~26px into the waveform surface below
+   it -- reproduced with a real 2-Group/2-lane sample in Split mode. Kept as
+   one shared var so the two rules can't drift apart again. */
+.cycle-panel.mode-split { --split-lanes-height: 112px; }
+.cycle-panel.mode-split .transaction-lanes { max-height: var(--split-lanes-height); overflow: hidden; }
+.cycle-panel.mode-split .surface-host { padding-top: calc(34px + var(--split-lanes-height)); }
 
 /* Signal Split View (#200): Upper/Lower panes each keep the ruler's
    existing `position: sticky` behavior (native to each pane's own
