@@ -250,6 +250,18 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       ],
     },
     {
+      // #437 command ownership matrix: Zoom In/Out/100%/Fit All/Fit
+      // Selection are DUPLICATED between Home and View by explicit design,
+      // not oversight -- View/Panels is the conceptual "Workspace display"
+      // owner (visibility/zoom/layout settings live there), Home keeps a
+      // quick-access copy so zooming/fitting doesn't force a tab switch
+      // mid-edit (the same "frequent command stays on Home" reasoning
+      // Edit/Cut/Copy/Paste already follow). Both routes bind the exact
+      // same onZoom/onSetZoom/onFitAll/onFitSelection callbacks and the
+      // same `zoom` value -- one state owner, never a second Zoom/Fit
+      // implementation to drift out of sync. Removing either route
+      // entirely is a product decision (which tab loses a control users
+      // already rely on) out of this pass's scope -- see #437.
       id: "view", majorGroup: "Zoom", caption: "Zoom", items: [
         { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", v1Label: "ズーム−", onClick: () => onZoom(-0.25) },
         { kind: "button", id: "zoom-reset", icon: "i-zoom-reset", label: "100%", ariaLabel: "Reset zoom to 100%", onClick: () => onSetZoom(1) },
@@ -259,6 +271,13 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       ],
     },
     {
+      // #437: Grid/Snap/Ruler/MiniMap are ALSO duplicated on View's own
+      // Guides/Panels groups (minimal-cycle-view-ribbon.tsx's `viewGroups`
+      // below) -- same reasoning as the Zoom group above, and the same
+      // guarantee: `checked`/`onChange` here are the identical
+      // gridEnabled/snapEnabled/rulerEnabled/minimapEnabled props and
+      // onToggle* callbacks View's own toggles use, so a stale
+      // checked-here-unchecked-there state can't happen by construction.
       id: "display", majorGroup: "Display", caption: "Display", items: [
         { kind: "toggle", id: "grid", label: "Grid", testId: "home-grid-toggle", checked: gridEnabled, onChange: onToggleGrid },
         { kind: "toggle", id: "minimap", label: "MiniMap", testId: "home-minimap-toggle", checked: minimapEnabled, onChange: onToggleMinimap },
@@ -336,10 +355,10 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     },
     {
       id: "view-zoom", majorGroup: "Zoom", caption: "Zoom", items: [
-        { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", onClick: () => onZoom(-0.25) },
+        { kind: "button", id: "zoom-out", icon: "i-zoom-out", label: "Zoom Out", v1Label: "ズーム−", onClick: () => onZoom(-0.25) },
         { kind: "custom", id: "zoom-preset", render: () => <span key="zoom-preset" className="view-zoom-preset"><DsRibbonSelect ariaLabel="Zoom preset" value={String(Math.round(zoom * 100))} onChange={(event) => onSetZoom(Number(event.target.value) / 100)}><option value="50">50%</option><option value="100">100%</option><option value="150">150%</option><option value="200">200%</option><option value="400">400%</option><option value="800">800%</option></DsRibbonSelect><output className="visually-hidden" data-testid="zoom-status" aria-label="Current zoom">{Math.round(zoom * 100)}%</output></span> },
-        { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", onClick: () => onZoom(0.25) },
-        { kind: "custom", id: "fit-actions", render: () => <div key="fit-actions" aria-label="Fit commands" style={{ display: "flex", gap: "5px" }}><DsRibbonButton icon={<RibbonIcon name="i-fit" />} onClick={onFitAll}>Fit All</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-select-fit" />} onClick={onFitSelection}>Fit Selection</DsRibbonButton></div> },
+        { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", v1Label: "ズーム＋", onClick: () => onZoom(0.25) },
+        { kind: "custom", id: "fit-actions", render: () => <div key="fit-actions" aria-label="Fit commands" style={{ display: "flex", gap: "5px" }}><DsRibbonButton icon={<RibbonIcon name="i-fit" />} v1Label="全体表示" onClick={onFitAll}>Fit All</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-select-fit" />} onClick={onFitSelection}>Fit Selection</DsRibbonButton></div> },
       ],
     },
     {
