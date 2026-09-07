@@ -36,6 +36,7 @@
 
 .bottom-tabs > span { flex: 1; }
 .bottom-tabs label { align-self: center; font-size: 10px; }
+.bottom-follow-status { align-self: center; margin-right: 8px; padding: 2px 7px; border-radius: 9px; background: #eef3f9; color: #45566d; font-size: 9px; font-weight: 650; white-space: nowrap; }
 
 .bottom-content { flex: 1; min-height: 0; overflow: auto; }
 

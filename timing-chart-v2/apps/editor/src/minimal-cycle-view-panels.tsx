@@ -238,6 +238,13 @@ export function BottomEditorPanel<Tab extends string>({ tabs, activeTab, onSelec
         return <button type="button" role="tab" key={tab} id={tabId} data-bottom-tab={tab} tabIndex={active ? 0 : -1} aria-label={tab} aria-selected={active} aria-controls="bottom-context-content" className={active ? "active" : ""} onClick={() => onSelectTab(tab)} onKeyDown={(event) => onTabKeyDown(event, tab)}>{tab}</button>;
       })}
       <span />
+      {/* #440: a Selection change can silently leave the Bottom Editor
+          showing a DIFFERENT entity than what's now selected (Pin holds
+          the active tab's own target on purpose) -- this status text
+          makes that state explicit instead of leaving "Pin"/"Unpin" as
+          the only clue, so a Transaction-selected-while-Bottom-still-
+          shows-Bookmark moment reads as intentional, not stale. */}
+      <output className="bottom-follow-status" data-testid="bottom-follow-status">{pinned ? `Pinned: ${activeTab}` : "Following Selection"}</output>
       <label><input data-testid="follow-selection" type="checkbox" checked={followSelection} onChange={(event) => onFollowSelectionChange(event.target.checked)} /> Follow Selection</label>
       <button type="button" data-testid="bottom-pin" aria-label={pinned ? "Unpin" : "Pin"} aria-pressed={pinned} onClick={onTogglePinned}><span className="bottom-pin-label" data-v1-label={pinned ? "Unpin" : "Pin"}>{pinned ? "Unpin" : "Pin"}</span></button>
     </nav>
