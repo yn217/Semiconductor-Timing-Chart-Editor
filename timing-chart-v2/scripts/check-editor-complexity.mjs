@@ -85,6 +85,8 @@ const presentationCommandSources = await Promise.all([
   ["inspector clock constructs semantic commands", "apps/editor/src/inspector-clock-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["inspector bookmark constructs semantic commands", "apps/editor/src/inspector-bookmark-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["layout inspector constructs semantic commands", "apps/editor/src/layout-inspector.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["inspector annotation constructs semantic commands", "apps/editor/src/inspector-annotation-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["inspector panel constructs semantic commands", "apps/editor/src/panels/inspector-panel.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
 ].map(async ([name, owner, pattern]) => [name, pattern, await readFile(resolve(root, owner), "utf8")]));
 const requiredShellContracts = [
   ["workspace shell owner", /EditorWorkspaceView/],

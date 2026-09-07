@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { CanonicalDocument, ClockGenerator, EdgeCounterSettings, SignalId, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
+import type { AnnotationId, CanonicalDocument, ClockGenerator, EdgeCounterSettings, GroupId, SemanticAnchor, SignalId, SpacerId, SpacerRow, TransactionId, CommandId, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -27,6 +27,15 @@ export interface InspectorCommandActions {
   readonly setReferenceEdge: (edge: "rising" | "falling") => CommandResult;
   readonly updateBookmark: (payload: CommandPayload<"bookmark.update">) => CommandResult;
   readonly updateLayout: (layout: CanonicalDocument["layout"]) => CommandResult;
+  readonly renameGroup: (groupId: GroupId, name: string) => CommandResult;
+  readonly updateGroupProperties: (payload: CommandPayload<"group.updateProperties">) => CommandResult;
+  readonly createSpacer: (spacer: SpacerRow, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly moveSpacer: (spacerId: SpacerId, targetGroupId: GroupId, index: number) => CommandResult;
+  readonly updateSpacer: (spacerId: SpacerId, height: number) => CommandResult;
+  readonly deleteSpacer: (spacerId: SpacerId) => CommandResult;
+  readonly updateTransaction: (payload: CommandPayload<"transaction.update">) => CommandResult;
+  readonly updateAnnotationProperties: (payload: CommandPayload<"annotation.updateProperties">) => CommandResult;
+  readonly setAnnotationAnchor: (annotationId: AnnotationId, field: "anchor" | "start" | "end" | "from" | "to", anchor: SemanticAnchor) => CommandResult;
 }
 
 export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, InspectorCommandActions {}
@@ -53,5 +62,14 @@ export function createEditorSurfaceCommandController(input: {
     setReferenceEdge: (edge) => dispatch<"timeline.setReferenceEdge">("set_reference_edge", { type: "timeline.setReferenceEdge", edge }),
     updateBookmark: (payload) => dispatch<"bookmark.update">("inspector_bookmark_update", { type: "bookmark.update", ...payload }),
     updateLayout: (layout) => dispatch<"document.updateLayout">("layout_properties", { type: "document.updateLayout", layout }),
+    renameGroup: (groupId, name) => dispatch<"group.rename">("group_rename", { type: "group.rename", groupId, name }),
+    updateGroupProperties: (payload) => dispatch<"group.updateProperties">("group_properties", { type: "group.updateProperties", ...payload }),
+    createSpacer: (spacer, targetGroupId, index) => dispatch<"spacer.create">("spacer_create", { type: "spacer.create", spacer, targetGroupId, index }),
+    moveSpacer: (spacerId, targetGroupId, index) => dispatch<"spacer.move">("spacer_move", { type: "spacer.move", spacerId, targetGroupId, index }),
+    updateSpacer: (spacerId, height) => dispatch<"spacer.update">("spacer_update", { type: "spacer.update", spacerId, height }),
+    deleteSpacer: (spacerId) => dispatch<"spacer.delete">("spacer_delete", { type: "spacer.delete", spacerId }),
+    updateTransaction: (payload) => dispatch<"transaction.update">("transaction_update", { type: "transaction.update", ...payload }),
+    updateAnnotationProperties: (payload) => dispatch<"annotation.updateProperties">("inspector_annotation_properties", { type: "annotation.updateProperties", ...payload }),
+    setAnnotationAnchor: (annotationId, field, anchor) => dispatch<"annotation.setAnchor">("inspector_annotation_anchor", { type: "annotation.setAnchor", annotationId, field, anchor }),
   };
 }
