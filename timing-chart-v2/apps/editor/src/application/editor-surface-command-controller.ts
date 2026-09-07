@@ -61,6 +61,10 @@ export interface DocumentPropertiesCommandActions {
   }) => CommandResult | undefined;
 }
 
+export interface LegendCommandActions {
+  readonly updateLegend: (legend: CanonicalDocument["legend"]) => CommandResult;
+}
+
 export interface RibbonCommandActions {
   readonly createSignal: (signal: Signal, targetGroupId: GroupId, index: number) => CommandResult;
   readonly createCommentRow: (commentRow: CommentRow, targetGroupId: GroupId, index: number) => CommandResult;
@@ -97,7 +101,7 @@ export interface RibbonCommandActions {
   readonly updateCommentRowStyle: (signalId: SignalId, commentRow: Pick<CommentRow, "title" | "body">, style: JsonObject) => CommandResult;
 }
 
-export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, TransactionEditorCommandActions, InspectorCommandActions, DocumentPropertiesCommandActions, RibbonCommandActions {}
+export interface EditorSurfaceCommandController extends SignalEditorCommandActions, TransactionLaneCommandActions, TransactionEditorCommandActions, InspectorCommandActions, DocumentPropertiesCommandActions, LegendCommandActions, RibbonCommandActions {}
 
 export function createEditorSurfaceCommandController(input: {
   readonly execute: (command: SemanticCommand) => CommandResult;
@@ -159,6 +163,7 @@ export function createEditorSurfaceCommandController(input: {
     updateAnnotationProperties: (payload) => dispatch<"annotation.updateProperties">("inspector_annotation_properties", { type: "annotation.updateProperties", ...payload }),
     setAnnotationAnchor: (annotationId, field, anchor) => dispatch<"annotation.setAnchor">("inspector_annotation_anchor", { type: "annotation.setAnchor", annotationId, field, anchor }),
     updateDocumentProperties,
+    updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
     createCommentRow: (commentRow, targetGroupId, index) => dispatch<"commentRow.create">("insert_comment_row", { type: "commentRow.create", commentRow, targetGroupId, index }),
     createGroup: (group, index) => dispatch<"group.create">("insert_group", { type: "group.create", group, index }),

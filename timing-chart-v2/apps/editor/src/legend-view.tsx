@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
-import type { SemanticCommand } from "@timing-chart-v2/commands";
 import { effectiveLegendEntries, type CanonicalDocument } from "@timing-chart-v2/schema";
-import { nextCommandId } from "./command-id.js";
+import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 
-export function LegendView({ document, onCommand }: { readonly document: CanonicalDocument; readonly onCommand: (command: SemanticCommand) => void }) {
+export function LegendView({ document, commands }: { readonly document: CanonicalDocument; readonly commands: Pick<EditorSurfaceCommandController, "updateLegend"> }) {
   const [position, setPosition] = useState(document.legend.position);
   const dragRef = useRef<{ readonly offsetX: number; readonly offsetY: number } | undefined>(undefined);
   useEffect(() => setPosition(document.legend.position), [document.legend.position.x, document.legend.position.y]);
@@ -12,7 +11,7 @@ export function LegendView({ document, onCommand }: { readonly document: Canonic
   const entries = effectiveLegendEntries(document);
   const commitPosition = (next: { readonly x: number; readonly y: number }) => {
     if (next.x === document.legend.position.x && next.y === document.legend.position.y) return;
-    onCommand({ id: nextCommandId("legend_position"), type: "legend.update", legend: { ...document.legend, position: next } });
+    commands.updateLegend({ ...document.legend, position: next });
   };
   const nudge = (event: KeyboardEvent<HTMLElement>) => {
     if (!(event.key === "ArrowLeft" || event.key === "ArrowRight" || event.key === "ArrowUp" || event.key === "ArrowDown")) return;

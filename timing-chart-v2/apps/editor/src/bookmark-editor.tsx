@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { Bookmark, BookmarkId, CanonicalDocument } from "@timing-chart-v2/schema";
-import { nextCommandId } from "./command-id.js";
+import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
 import { nextEntityId } from "./entity-id.js";
 import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
 
@@ -12,7 +11,7 @@ import { findAdjacentBookmark } from "./runtime/bookmark-navigation.js";
  * TransactionEditor already uses. Reuses the canonical `bookmark.create/
  * update/delete` SemanticCommands as its only mutation path -- no second
  * Bookmark list/store. */
-export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, onCommand, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly onCommand: (command: SemanticCommand) => CommandResult; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+export function BookmarkEditor({ bookmark, document, history, range, onSelect, onReveal, onNavigateBookmark, commands, onUndo, onRedo, onDelete, onCancel }: { readonly bookmark: Bookmark | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly range: { readonly start: number; readonly end: number }; readonly onSelect: (id: BookmarkId) => void; readonly onReveal: (start: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: Pick<EditorSurfaceCommandController, "createBookmark" | "updateBookmark">; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
   const [name, setName] = useState("Bookmark");
   const [start, setStart] = useState(0);
   const [comment, setComment] = useState("");
@@ -28,7 +27,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
   const duplicate = () => {
     if (!bookmark) return;
     const id = nextEntityId("bookmark", document) as BookmarkId;
-    const result = onCommand({ id: nextCommandId("bookmark_duplicate"), type: "bookmark.create", bookmark: { id, name: `${bookmark.name} Copy`, start: bookmark.start, ...(bookmark.comment === undefined ? {} : { comment: bookmark.comment }) } });
+    const result = commands.createBookmark({ id, name: `${bookmark.name} Copy`, start: bookmark.start, ...(bookmark.comment === undefined ? {} : { comment: bookmark.comment }) });
     if (result.ok) onSelect(id);
   };
   // #422: Previous/Next reuse the exact same resolver the Timeline Ribbon's
@@ -56,7 +55,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
       <strong>{bookmark ? `Editing: ${bookmark.name}` : "Bookmark Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{bookmark && <><button type="button" onClick={() => onReveal(bookmark.start)}>Reveal</button><button type="button" onClick={duplicate}>Duplicate</button><button type="button" className="danger" data-testid="delete-bottom-bookmark" onClick={onDelete}>Delete Bookmark</button></>}</header>
     {bookmark
       ? <>
-          <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; onCommand({ id: nextCommandId("bottom_bookmark_update"), type: "bookmark.update", bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
+          <form id="bookmark-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateBookmark({ bookmarkId: bookmark.id, name: editName.trim() || "Bookmark", start: editStart, comment: editComment }); }}>
             <label>Name<input aria-label="Bottom Bookmark name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label>
             <label>Cycle<input aria-label="Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label>
             <label>Comment<input aria-label="Bottom Bookmark comment" value={editComment} onChange={(event) => setEditComment(event.target.value)} /></label>
@@ -79,7 +78,7 @@ export function BookmarkEditor({ bookmark, document, history, range, onSelect, o
              it out from under an in-flight native double-click gesture and
              silently swallowing the second click. Same fixed height in both
              branches keeps row positions stable across that transition. */}
-          <form id="bookmark-create-form" onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("bookmark", document) as BookmarkId; const result = onCommand({ id: nextCommandId("bottom_bookmark_create"), type: "bookmark.create", bookmark: { id, name: name.trim() || "Bookmark", start, ...(comment ? { comment } : {}) } }); if (result.ok) onSelect(id); }}>
+          <form id="bookmark-create-form" onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("bookmark", document) as BookmarkId; const result = commands.createBookmark({ id, name: name.trim() || "Bookmark", start, ...(comment ? { comment } : {}) }); if (result.ok) onSelect(id); }}>
             <label>Name<input aria-label="New Bottom Bookmark name" value={name} onChange={(event) => setName(event.target.value)} /></label>
             <label>Cycle<input aria-label="New Bottom Bookmark cycle" type="number" min="0" max={document.timeline.cycleCount - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label>
             <label>Comment<input aria-label="New Bottom Bookmark comment" value={comment} onChange={(event) => setComment(event.target.value)} /></label>
