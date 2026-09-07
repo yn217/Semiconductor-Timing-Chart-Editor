@@ -18,6 +18,11 @@ export type RibbonItemSpec =
       readonly testId?: string;
       readonly disabled?: boolean;
       readonly title?: string;
+      /** #439: opt into the one shared "wide" size class (see ribbon.css)
+       * when `label` contains a single word that won't fit the default
+       * Home button width without breaking mid-word. Omit for the default
+       * width -- most labels need nothing here. */
+      readonly size?: "wide";
       readonly onClick: () => void;
     }
   | {

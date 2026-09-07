@@ -238,7 +238,9 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "copy", icon: "i-copy", label: "Copy", v1Label: "コピー", onClick: onCopy, disabled: !hasSelectedClipboard, title: "Copy is view-only" },
         { kind: "button", id: "paste", icon: "i-paste", label: "Paste", v1Label: "貼付", onClick: onPaste, disabled: !clipboardAvailable, title: clipboardStatus },
         { kind: "button", id: "delete", icon: "i-delete", label: "Delete", v1Label: "削除", onClick: onDelete, disabled: !hasDeletableSelection },
-        { kind: "button", id: "duplicate", icon: "i-duplicate", label: "Duplicate", v1Label: "複製", onClick: onDuplicate, disabled: !hasSelectedClipboard },
+        // #439: "wide" -- "Duplicate" is one word that doesn't fit the
+        // default Home button width without breaking mid-word.
+        { kind: "button", id: "duplicate", icon: "i-duplicate", label: "Duplicate", v1Label: "複製", size: "wide", onClick: onDuplicate, disabled: !hasSelectedClipboard },
         // #439: "Select All Signals" wrapped to 3 stacked one-word lines at
         // the standard 44px Home button width (Select / All / Signals) --
         // over the issue's own 2-line limit. Shortened to the 2-word "Select
@@ -267,7 +269,9 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "zoom-reset", icon: "i-zoom-reset", label: "100%", ariaLabel: "Reset zoom to 100%", onClick: () => onSetZoom(1) },
         { kind: "button", id: "zoom-in", icon: "i-zoom-in", label: "Zoom In", v1Label: "ズーム＋", onClick: () => onZoom(0.25) },
         { kind: "button", id: "fit-all", icon: "i-fit", label: "Fit All", v1Label: "全体表示", onClick: onFitAll },
-        { kind: "button", id: "fit-selection", icon: "i-select-fit", label: "Fit Selection", onClick: onFitSelection },
+        // #439: "wide" -- "Selection" doesn't fit the default Home button
+        // width without breaking mid-word.
+        { kind: "button", id: "fit-selection", icon: "i-select-fit", label: "Fit Selection", size: "wide", onClick: onFitSelection },
       ],
     },
     {
@@ -288,7 +292,8 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {
       id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
         { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
-        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", onClick: duplicateTransaction, disabled: !selectedTransactionId },
+        // #439: "wide" -- see the Clipboard group's "Duplicate" above.
+        { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
       ],
     },
   ];
@@ -306,8 +311,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     {
       id: "layout", majorGroup: "Layout", caption: "Layout", items: [
         { kind: "button", id: "edit-interval", icon: "i-align-interval", label: "Edit Interval", ariaLabel: "Open Timeline interval editor", title: "Open Timeline to edit the selected interval.", onClick: onOpenTimeline },
-        { kind: "button", id: "time-group", icon: "i-group", label: "Create Time Group", ariaLabel: "Create Time Group", title: "Create a Time Group for the selected timeline range.", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
-        { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Normalize Spacing", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
+        // #439: visible label shortened to fit 2 lines at the default Home
+        // button width without a mid-word break ("Create Time Group" wraps
+        // to 3-4 lines) -- full meaning kept in ariaLabel/title.
+        { kind: "button", id: "time-group", icon: "i-group", label: "Time Group", ariaLabel: "Create Time Group", title: "Create a Time Group for the selected timeline range.", onClick: () => onCommand({ id: nextCommandId("home_time_group"), type: "timeGroup.create", timeGroup: { id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } } }) },
+        { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Auto Space", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => onCommand({ id: nextCommandId("home_auto_layout"), type: "document.updateLayout", layout: { ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) } }) },
       ],
     },
   ];

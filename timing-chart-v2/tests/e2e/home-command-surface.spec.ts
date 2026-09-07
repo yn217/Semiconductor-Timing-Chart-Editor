@@ -507,3 +507,52 @@ test("Rename uses the shared app-owned dialog with atomic Apply and view-only Ca
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 1");
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
 });
+
+// #439: label wrapping / button width standardization.
+async function homeButtonLineTexts(page: Page, label: string) {
+  const ribbon = page.getByTestId("ribbon");
+  const button = ribbon.locator("[data-major-group] button, [data-testid='find-replace-trigger']").filter({ hasText: label }).first();
+  return button.evaluate((el) => {
+    const labelSpan = el.querySelector(".ds-ribbon-label");
+    const textNode = [...labelSpan!.childNodes].find((node) => node.nodeType === 3) ?? labelSpan!.firstChild!;
+    const lines: string[] = [];
+    let current = "";
+    let lastTop: number | null = null;
+    for (let i = 0; i < textNode.textContent!.length; i++) {
+      const range = document.createRange();
+      range.setStart(textNode, i);
+      range.setEnd(textNode, i + 1);
+      const top = range.getBoundingClientRect().top;
+      const ch = textNode.textContent![i];
+      if (lastTop === null || Math.abs(top - lastTop) < 2) current += ch;
+      else { lines.push(current); current = ch; }
+      lastTop = top;
+    }
+    lines.push(current);
+    return lines;
+  });
+}
+
+for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720 }]) {
+  test(`Home Ribbon labels wrap at word boundaries only, within 2 lines, no overflow at ${viewport.width}x${viewport.height}`, async ({ page }) => {
+    await page.setViewportSize(viewport);
+    await ready(page);
+    const ribbon = page.getByTestId("ribbon");
+    // Every one of these previously either broke mid-word (e.g.
+    // "Duplicate" -> "Duplica"/"te", "Normalize" -> "Normal"/"ize") or
+    // wrapped to 3-4 lines ("Create Time Group") -- see #439.
+    const labels = ["Duplicate", "Select All", "Zoom In", "Find & Replace", "Fit Selection", "Time Group", "Auto Space"];
+    for (const label of labels) {
+      const lines = await homeButtonLineTexts(page, label);
+      expect(lines.length, `"${label}" line count`).toBeLessThanOrEqual(2);
+      // A wrapped label's lines, rejoined with a single space and trimmed,
+      // must reconstruct the full label exactly -- the only way that holds
+      // is if every break fell on a real word boundary (a mid-word break
+      // instead splits a word into two fragments neither of which matches
+      // the original tokens, e.g. "Duplica" + "te").
+      const rejoined = lines.map((line) => line.trim()).filter(Boolean).join(" ");
+      expect(rejoined, `"${label}" wrapped lines must rejoin to the exact label`).toBe(label);
+    }
+    await expect(ribbon).toHaveJSProperty("scrollWidth", await ribbon.evaluate((el) => el.clientWidth));
+  });
+}

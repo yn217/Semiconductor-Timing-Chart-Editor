@@ -562,12 +562,28 @@
    same tighter size instead of drifting group by group. */
 .editor-shell [data-ribbon-home] .ds-ribbon-button { width: 44px; min-width: 44px; padding-inline: 3px; font-size: 9px; }
 
-.editor-shell [data-ribbon-home] > .ds-ribbon-group { gap: 3px; padding-inline: 4px; }
+/* #439: the one shared size class a Home label can opt into (via
+   RibbonItemSpec's `size: "wide"`) when its label contains a single word
+   that doesn't fit `.ds-ribbon-button`'s default 44px without either
+   breaking mid-word or overflowing it -- e.g. "Duplicate"/"Selection".
+   Not a per-button ad hoc width: every button asking for more room goes
+   through this one token, same as the default width above. */
+.editor-shell [data-ribbon-home] .ds-ribbon-button.ds-ribbon-button--wide { width: 58px; min-width: 58px; }
 
-/* Auto-wrap long labels instead of forcing single-line buttons wide (or
-   requiring callers to hand-split labels into multiple <span> children,
-   the fragile pattern View/Insert use today). */
-.editor-shell [data-ribbon-home] .ds-ribbon-label { white-space: normal; overflow-wrap: anywhere; text-align: center; }
+/* #439: padding-inline trimmed 4px -> 2px to give the "wide" buttons
+   above room without pushing the last Home group (Options/More) past the
+   1280/1672 viewport edge -- `.ribbon` clips overflow-x, so that group
+   would otherwise silently disappear rather than visibly wrap. */
+.editor-shell [data-ribbon-home] > .ds-ribbon-group { gap: 3px; padding-inline: 1px; }
+
+/* #439: wrap at word boundaries only -- `overflow-wrap: anywhere` let the
+   browser fragment a label mid-word whenever the button was too narrow
+   for it (e.g. "Duplicate" -> "Duplica"/"te", "Normalize" -> "Normal"/
+   "ize"), which is exactly the defect this issue reports. A label that
+   still doesn't fit within 2 lines at the default width must either use
+   `size: "wide"` above or get a shorter approved label -- not a wider
+   permission to fragment words. */
+.editor-shell [data-ribbon-home] .ds-ribbon-label { white-space: normal; overflow-wrap: normal; word-break: normal; text-align: center; }
 
 .editor-shell [data-ribbon-home] .ds-icon-box, .editor-shell [data-ribbon-home] .ds-icon-box > svg { width: 16px; height: 16px; }
 
