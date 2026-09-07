@@ -10,8 +10,8 @@ export function DsRibbonButton({ ariaLabel, children, className, dataTestId, dis
   return <button type="button" className={`ds-control ds-ribbon-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} data-testid={dataTestId} disabled={disabled} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label" data-v1-label={v1Label}>{children}</span></button>;
 }
 
-export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void }) {
-  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-testid={dataTestId} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
+export function DsRibbonToggleButton({ ariaLabel, checked, children, className, dataTestId, icon, onClick, title }: { readonly ariaLabel?: string; readonly checked: boolean; readonly children: ReactNode; readonly className?: ClassName; readonly dataTestId?: string; readonly icon: ReactNode; readonly onClick: () => void; readonly title?: string | undefined }) {
+  return <button type="button" className={`ds-control ds-ribbon-button ds-ribbon-toggle-button${className ? ` ${className}` : ""}`} aria-label={ariaLabel} aria-pressed={checked} data-testid={dataTestId} title={title} onClick={onClick}><DsIconBox>{icon}</DsIconBox><span className="ds-ribbon-label">{children}</span></button>;
 }
 
 export function DsRibbonSelect({ ariaLabel, children, className, onChange, value }: { readonly ariaLabel: string; readonly children: ReactNode; readonly className?: ClassName; readonly onChange: (event: ChangeEvent<HTMLSelectElement>) => void; readonly value: string }) {

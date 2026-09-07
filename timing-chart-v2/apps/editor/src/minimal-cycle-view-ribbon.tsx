@@ -356,7 +356,11 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "custom", id: "bottom-size-expanded", render: () => <DsRibbonToggleButton key="bottom-size-expanded" dataTestId="view-panel-bottom-expanded" ariaLabel="Bottom Expanded" checked={bottomVisible && bottomHeight === 420} icon={<RibbonIcon name="i-preview" />} onClick={() => onSetBottomSize("expanded")}>Expanded</DsRibbonToggleButton> },
         { kind: "custom", id: "panel-tree", render: () => <DsRibbonToggleButton key="panel-tree" dataTestId="view-panel-tree" ariaLabel="Signal Tree" checked={signalTreeVisible} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalTree}>Signal Tree</DsRibbonToggleButton> },
         { kind: "custom", id: "panel-minimap", render: () => <DsRibbonToggleButton key="panel-minimap" dataTestId="view-panel-minimap" ariaLabel="MiniMap" checked={minimapEnabled} icon={<RibbonIcon name="i-preview" />} onClick={onToggleMinimap}>MiniMap</DsRibbonToggleButton> },
-        ...(viewMode === "Cycle" ? [{ kind: "custom", id: "panel-signal-split", render: () => <DsRibbonToggleButton key="panel-signal-split" dataTestId="view-panel-signal-split" ariaLabel="Signal Split" checked={signalSplitEnabled} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalSplit}><span>Signal</span><span>Split</span></DsRibbonToggleButton> }] as const : []),
+        // Named "Signal Split" (not just "Split") specifically to stay
+        // distinct from the unrelated Cycle/Transaction/Split ViewMode tab
+        // group -- this toggles two independent-scroll viewports over the
+        // *same* Cycle signal list, not a different view mode.
+        ...(viewMode === "Cycle" ? [{ kind: "custom", id: "panel-signal-split", render: () => <DsRibbonToggleButton key="panel-signal-split" dataTestId="view-panel-signal-split" ariaLabel="Signal Split" title="Show two vertically independent views of the same Cycle signal list." checked={signalSplitEnabled} icon={<RibbonIcon name="i-group" />} onClick={onToggleSignalSplit}><span>Signal</span><span>Split</span></DsRibbonToggleButton> }] as const : []),
       ],
     },
     {

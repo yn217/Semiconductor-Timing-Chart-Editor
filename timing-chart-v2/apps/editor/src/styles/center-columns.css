@@ -223,10 +223,26 @@
    default 0.5) is the one drag-resizable splitter ratio; Lower always gets
    the complement, so the two panes' heights never drift out of sync with
    each other or with the container. */
-.cycle-panel[data-signal-split="true"] .cycle-viewport:not(.signal-split-lower) { height: calc(var(--gui-signal-split-upper-ratio, 0.5) * 100% - 37px - 2px); }
-.cycle-panel[data-signal-split="true"] .signal-split-lower { height: calc((1 - var(--gui-signal-split-upper-ratio, 0.5)) * 100% - 37px - 2px); }
-.signal-split-divider { height: 4px; background: #cbd4df; border-top: 1px solid #b7c2d1; border-bottom: 1px solid #b7c2d1; cursor: row-resize; }
+.cycle-panel[data-signal-split="true"] .cycle-viewport:not(.signal-split-lower) { height: calc(var(--gui-signal-split-upper-ratio, 0.5) * 100% - 37px - 3.5px); }
+.cycle-panel[data-signal-split="true"] .signal-split-lower { height: calc((1 - var(--gui-signal-split-upper-ratio, 0.5)) * 100% - 37px - 3.5px); }
+/* #200: deliberately NOT a copy of `.bottom-resize-track`'s own
+   horizontal-pill grip (bottom-editor.css) -- distinct height (7px vs
+   the Bottom resizer's 10px) and a row of 3 dots rather than one bar,
+   so the two draggable dividers read as different controls even though
+   both use the same row-resize affordance/hover-highlight pattern. */
+.signal-split-divider { position: relative; height: 7px; background: #eef2f7; border-top: 1px solid #bfc8d4; border-bottom: 1px solid #d7dfe9; cursor: row-resize; touch-action: none; }
+.signal-split-divider::after { content: ""; position: absolute; top: 50%; left: 50%; width: 20px; height: 3px; transform: translate(-50%, -50%); border-radius: 2px; background: radial-gradient(circle, #9aaabd 1.1px, transparent 1.2px) 0 0 / 6px 3px repeat-x; opacity: .85; }
+.signal-split-divider:hover::after, .signal-split-divider:focus-visible::after { background: radial-gradient(circle, var(--ds-focus-color) 1.1px, transparent 1.2px) 0 0 / 6px 3px repeat-x; opacity: 1; }
+.signal-split-divider:focus-visible { outline: 2px solid var(--ds-focus-color); outline-offset: -2px; }
 .signal-split-lower .surface-host { min-height: 100%; }
+/* #200 Task 2.5: horizontal scroll is shared (Upper is the sole
+   horizontal-scroll authority -- see use-timeline-surface-runtime.ts),
+   so showing Lower's own native horizontal scrollbar too would read as
+   two independent time scrollbars even though they're always in
+   lockstep. Lower keeps its own vertical scrollbar (its vertical
+   position is genuinely independent) -- only the horizontal one is
+   hidden here; scrollLeft mirroring still works on a hidden axis. */
+.signal-split-lower { overflow-x: hidden; }
 
 .clock-edge-counter {
   display: grid;
