@@ -30,6 +30,7 @@ const ownerBudgets = [
   ["apps/editor/src/application/use-editor-presentation-state.ts", 500],
   ["apps/editor/src/runtime/use-editor-runtime-bridge.ts", 800],
   ["apps/editor/src/runtime/use-timeline-surface-runtime.ts", 800],
+  ["apps/editor/src/runtime/timeline-surface-controller.ts", 800],
   ["apps/editor/src/editor-workspace-view.tsx", 500],
   ["apps/editor/src/editor-dialog-layer.tsx", 500],
   ["apps/editor/src/editor-secondary-surfaces.tsx", 500],
@@ -58,7 +59,7 @@ const forbiddenOwners = [
   ["shell slot JSX leaked into root", /<(?:EditorRibbon|EditorWorkspaceView|EditorStatusBar)\b/],
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
-const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Inspector panel composition", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator"];
+const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Inspector panel composition", "Timeline surface controller", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator"];
 const requiredSourceContracts = [
   ["command router", /useEditorCommandRouter/],
   ["action owner", /useEditorActions/],

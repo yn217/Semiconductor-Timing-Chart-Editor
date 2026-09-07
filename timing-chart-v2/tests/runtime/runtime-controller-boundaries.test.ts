@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { canonicalFixture } from "../fixtures/canonical.js";
 import { attachEditorEventBindings, resolveTransactionSnapCycle } from "../../apps/editor/src/runtime/interaction-controller.js";
 import { scheduleInitialTimelineRefresh } from "../../apps/editor/src/runtime/document-lifecycle-controller.js";
+import { createTimelineSurfaceController, type TimelineSurfaceRuntimeInput } from "../../apps/editor/src/runtime/timeline-surface-controller.js";
 
 describe("runtime controller boundaries", () => {
   it("attaches and disposes interaction bindings symmetrically", () => {
@@ -63,5 +64,28 @@ describe("runtime controller boundaries", () => {
 
     expect(refresh.publish).not.toHaveBeenCalled();
     expect(host.dataset.editorIdle).toBeUndefined();
+  });
+
+  it("keeps the timeline mount lifecycle behind a typed non-React owner", () => {
+    const nullRef = { current: null };
+    const controller = createTimelineSurfaceController({
+      dom: { host: nullRef, viewport: nullRef, ruler: nullRef, gridLayer: nullRef, viewportLower: nullRef, rulerLower: nullRef, hostLower: nullRef, gridLayerLower: nullRef, signalSplitRuntimeRef: { current: null } },
+      presentation: {
+        collapsedGroupIdsRef: { current: new Set() }, applyCollapsedGroupsRef: { current: () => undefined }, forceUpperReprojectRef: { current: () => undefined }, lowerCanvasClickRef: { current: () => undefined }, timelineRuntimeRef: { current: null }, armArrowPick: { current: () => undefined }, snapTransactionCycle: { current: () => undefined }, transactionBoundaryX: { current: () => undefined }, refreshPlayhead: { current: () => undefined }, refreshRangeSelectionBand: { current: () => undefined }, publishStateRef: { current: () => undefined }, timelineRangeRef: { current: { start: 0, end: 1 } }, rangeSelectionActiveRef: { current: false }, selectedCycleRef: { current: 0 }, selectedEdgeRef: { current: undefined }, selectedAnnotationRef: { current: undefined }, gridEnabledRef: { current: false }, snapEnabledRef: { current: false }, treeFocusRowIdRef: { current: undefined }, suppressCanvasClickRef: { current: false }, menuOriginRef: { current: null },
+      },
+      state: {} as never,
+      application: {} as never,
+      documentLifecycle: {} as never,
+      selection: {} as never,
+      editActions: {} as never,
+      navigation: {} as never,
+      commandRegistry: { current: {} as never },
+      executeBatch: (() => undefined) as never,
+      viewMetricsOwner: {} as never,
+      signalSplitEnabled: false,
+      signalSplitRatio: 0.5,
+    } as unknown as TimelineSurfaceRuntimeInput);
+
+    expect(controller.mount()).toBeUndefined();
   });
 });

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { TimelineSurfaceRuntimeInput } from "./use-timeline-surface-runtime.js";
+import type { TimelineSurfaceRuntimeInput } from "./timeline-surface-controller.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
 import { mountInitialTimelineProjection } from "./viewport-projection.js";
