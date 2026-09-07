@@ -167,7 +167,7 @@ export type SignalTreeColumnHeaderProps = {
   // header (title/+Add/search) instead of the Signal one -- one shared
   // component so both stay visually identical (row density, Add-button
   // placement, filter-input styling) without a second header primitive.
-  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly onAdd: () => void } | undefined;
+  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly onAdd: () => void; readonly onAddGroup: () => void } | undefined;
 };
 
 /** The Signal/Group tree's column header: type/text filter, the Add and
@@ -186,6 +186,7 @@ export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange,
       </label>
       <span className="left-column-actions">
         <button type="button" className="tree-add-button" aria-label="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
+        <button type="button" className="tree-more-button" aria-label="Add Transaction Group" title="Add Transaction Group" data-testid="add-transaction-group-tree" onClick={transactionMode.onAddGroup}><EditorIcon name="plus" /></button>
       </span>
     </span>
     <span className="role-column-heading" aria-label="Group">Group</span>

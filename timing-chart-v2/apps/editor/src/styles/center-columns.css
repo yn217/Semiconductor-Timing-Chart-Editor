@@ -229,6 +229,9 @@
 .transaction-group-header, .transaction-group-header-band { position: absolute; left: 0; right: 0; }
 .transaction-group-header { display: flex; align-items: center; gap: 6px; padding: 0 12px; border-bottom: 1px solid #c7d2de; background: #eef2f7; color: #2c4257; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 .transaction-group-swatch { flex: none; width: 8px; height: 8px; border-radius: 2px; }
+/* #397: Reference shows a count alongside each Group name ("Memory (2)")
+   -- muted/non-bold so it doesn't compete with the Group name itself. */
+.transaction-group-header-count { font-weight: 400; text-transform: none; letter-spacing: 0; color: #5c6f84; }
 .transaction-group-header-band { background: #eef2f7ad; border-bottom: 1px solid #c7d2de; }
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #d9e1ea; }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
