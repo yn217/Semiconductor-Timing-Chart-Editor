@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { LocalGeometryMap } from "@timing-chart-v2/geometry";
 import type { RenderProjection } from "@timing-chart-v2/projection";
-import { refreshRendererForReason } from "../../apps/editor/src/runtime/use-editor-runtime-bridge.js";
+import { refreshRendererForReason } from "../../apps/editor/src/runtime/render-coordinator.js";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 function projection(): RenderProjection {

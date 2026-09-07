@@ -15,6 +15,7 @@ import { resolveGroupInsertionIndex, resolveInsertionTarget } from "../insertion
 import { parseBulkSignalDefinitions } from "../bulk-signal-parser.js";
 import { createAnnotation } from "../create-annotation.js";
 import type { CommandHistorySession } from "@timing-chart-v2/history";
+import { createFileActionController } from "./file-action-controller.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
@@ -351,20 +352,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     input.setBulkRegistrationPreview({ sourceText: input.bulkRegistrationText, ...preview });
     input.setBulkRegistrationStatus(preview.errors.length === 0 ? `Preview ready: ${preview.definitions.length} signal${preview.definitions.length === 1 ? "" : "s"}` : preview.errors.join(" "));
   };
-  const restorePendingFileFocus = () => {
-    const origin = input.pendingFileOriginRef.current;
-    input.pendingFileOriginRef.current = null;
-    if (origin?.isConnected) requestAnimationFrame(() => origin.focus());
-  };
-  const capturePendingFileOrigin = () => {
-    if (input.pendingFileOriginRef.current === null) input.pendingFileOriginRef.current = globalThis.document.activeElement instanceof HTMLElement ? globalThis.document.activeElement : null;
-  };
-  const cancelPendingFileAction = () => { input.documentLifecycle.cancelPending(); restorePendingFileFocus(); };
-  const continuePendingFileAction = () => { input.documentLifecycle.discardPending(); restorePendingFileFocus(); };
-  const saveAndContinuePendingFileAction = () => {
-    if (input.documentLifecycle.savePendingAndContinue(`${input.documentTitle || "timing-chart"}.tcd`)) restorePendingFileFocus();
-  };
-  const requestNewDocument = () => { capturePendingFileOrigin(); input.documentLifecycle.requestNew(); };
+  const fileActions = createFileActionController({ documentLifecycle: input.documentLifecycle, pendingFileOriginRef: input.pendingFileOriginRef, documentTitle: input.documentTitle });
 
   useEffect(() => {
     const rulerElement = input.rulerRef.current;
@@ -455,11 +443,6 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     createCopiedSignals: input.editActions.createSignals,
     setSelectionVisibility: input.editActions.setVisibility,
     moveSelection: input.editActions.move,
-    restorePendingFileFocus,
-    capturePendingFileOrigin,
-    cancelPendingFileAction,
-    continuePendingFileAction,
-    saveAndContinuePendingFileAction,
-    requestNewDocument,
+    ...fileActions,
   };
 }
