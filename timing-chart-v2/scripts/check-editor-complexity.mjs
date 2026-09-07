@@ -1,4 +1,4 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 const root = resolve(import.meta.dirname, "..");
@@ -7,6 +7,14 @@ const ownershipMap = "apps/editor/src/OWNERSHIP.md";
 const deprecatedRuntimeBridge = resolve(root, "apps/editor/src/runtime/use-editor-runtime-bridge.ts");
 let deprecatedRuntimeBridgeExists = true;
 try { await access(deprecatedRuntimeBridge); } catch { deprecatedRuntimeBridgeExists = false; }
+async function collectSourceFiles(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const nested = await Promise.all(entries.map(async (entry) => {
+    const target = resolve(directory, entry.name);
+    return entry.isDirectory() ? collectSourceFiles(target) : [target];
+  }));
+  return nested.flat();
+}
 const actionOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-actions.ts"), "utf8");
 const presentationOwner = await readFile(resolve(root, "apps/editor/src/application/use-editor-presentation-state.ts"), "utf8");
 const exportDialogSource = await readFile(resolve(root, "apps/editor/src/export-dialog.tsx"), "utf8");
@@ -20,6 +28,13 @@ const timelineSurfaceSource = await readFile(resolve(root, "apps/editor/src/runt
 const timelineRuntimeHookSource = await readFile(resolve(root, "apps/editor/src/runtime/use-timeline-surface-runtime.ts"), "utf8");
 const renderInvalidationSource = await readFile(resolve(root, "apps/editor/src/runtime/render-invalidation.ts"), "utf8");
 const source = await readFile(resolve(root, file), "utf8");
+const editorReactSources = await Promise.all((await collectSourceFiles(resolve(root, "apps/editor/src")))
+  .filter((target) => target.endsWith(".tsx"))
+  .map(async (target) => [target, await readFile(target, "utf8")]));
+const isOptInProbe = (target) => {
+  const normalized = target.replaceAll("\\", "/");
+  return normalized.includes("/probes/") || normalized.endsWith("/minimal-cycle-view-next-probe.tsx");
+};
 const ownership = await readFile(resolve(root, ownershipMap), "utf8");
 const runtimeHelperSources = await Promise.all([
   "apps/editor/src/runtime/viewport-projection.ts",
@@ -95,6 +110,7 @@ const runtimeOwnershipContracts = [
   ["timeline surface owns document epoch boundary", timelineSurfaceSource, /documentEpoch\.(?:current|advance|isCurrent)\(/],
   ["render invalidation has one pure owner", renderInvalidationSource, /export function deriveRenderInvalidation\(/],
 ];
+const directReactRuntimeOwnerPattern = /new\s+(?:EditorApplicationRuntime|CommandHistorySession|TimelineGeometryOwner)|createWaveformSurfaceProvider\s*\(|runtime\.createRenderer\s*\(|new\s+ProductionWaveDromAdapter/;
 const presentationCommandSources = await Promise.all([
   ["clock editor constructs semantic commands", "apps/editor/src/editors/clock-generator-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["transaction lanes constructs semantic commands", "apps/editor/src/runtime/transaction-lanes.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
@@ -120,6 +136,7 @@ const violations = [
   ...requiredSourceContracts.filter(([, pattern]) => !pattern.test(source)).map(([name]) => `${name} contract missing`),
   ...runtimeOwnershipContracts.filter(([, ownerSource, pattern]) => !pattern.test(ownerSource)).map(([name]) => `${name} contract missing`),
   ...(deprecatedRuntimeBridgeExists ? ["deprecated runtime compatibility bridge must not be restored"] : []),
+  ...editorReactSources.filter(([target, reactSource]) => !isOptInProbe(target) && directReactRuntimeOwnerPattern.test(reactSource)).map(([target]) => `React presentation directly owns long-lived runtime: ${target.replace(`${root}/`, "")}`),
   ...(!/createEditorSurfaceCommandController/.test(secondarySurfaceSource) ? ["surface command controller contract missing"] : []),
   ...(!/EditorSurfaceCommandController/.test(ribbonSource) || !/commands\.(?:createSignal|bringAnnotationsToFront|updateAnnotationStyle)/.test(ribbonSource) ? ["ribbon typed command controller contract missing"] : []),
   ...presentationCommandSources.filter(([, pattern, ownerSource]) => pattern.test(ownerSource)).map(([name]) => name),
