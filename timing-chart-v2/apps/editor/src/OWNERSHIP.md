@@ -53,6 +53,7 @@ controllers are extracted incrementally.
 | Inspector panel composition | `panels/inspector-panel.tsx` | typed command/selection callbacks | second-pass surface boundary |
 | Signal editor surface | `editors/signal-editor.tsx` | typed editor/action callbacks | second-pass surface boundary |
 | Clock generator editor surface | `editors/clock-generator-editor.tsx` | typed editor/action callbacks | second-pass surface boundary |
+| Editor surface command controller | `application/editor-surface-command-controller.ts` | SemanticCommand construction / command IDs | second-pass presentation boundary |
 | Ribbon presentation boundary | `ribbon/editor-ribbon.tsx`, `minimal-cycle-view-ribbon.tsx` | parent command/router callbacks | PR5 presentation boundary |
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |

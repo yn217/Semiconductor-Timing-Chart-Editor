@@ -7,7 +7,7 @@ import { SignalGeneratorEditor } from "../signal-generator-editor.js";
 import { nextCommandId } from "../command-id.js";
 import { type SignalEditorProps } from "../timeline-toolbar.js";
 
-export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview }: SignalEditorProps) {
+export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, problem, onCommand, onUndo, onRedo, onVisibility, onDelete, onDuplicate, onDropToGroup, onCancel, onClockPreview, clockCommands }: SignalEditorProps) {
   // #402: the Signal's *current* Group, derived from the live document
   // every render (never cached) -- the single source of truth for both
   // the "current group" check-state and the safe fallback below.
@@ -67,7 +67,7 @@ export function SignalEditor({ signal, cycleCount, bookmarks, history, groups, p
     </div>
     {problem && <div className="editor-problem" role="alert" data-testid="editor-problem">{problem}</div>}
     {!signal ? <div className="editor-empty">Choose a row in Signal Tree or Role / Signal to open its canonical data.</div> : <>
-      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} onCommand={onCommand} onDuplicate={onDuplicate} onPreview={onClockPreview} />
+      {signal.type === "clock" ? <ClockGeneratorEditor signal={signal} bookmarks={bookmarks} commands={clockCommands} onDuplicate={onDuplicate} onPreview={onClockPreview} />
         : signal.type === "commentRow" ? <CommentRowEditor signal={signal} onCommand={onCommand} onCancel={onCancel} nextCommandId={nextCommandId} />
         // Bottom Panel Visual Reference pass: Generator is no longer a
         // Manual/Generator *tab* that hides the Transition editor while
