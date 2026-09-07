@@ -18,6 +18,10 @@ const runtimeHelperSources = await Promise.all([
   "apps/editor/src/runtime/timeline-presentation-refresh.ts",
   "apps/editor/src/runtime/renderer-host-sizing.ts",
   "apps/editor/src/runtime/runtime-diagnostics.ts",
+  "apps/editor/src/runtime/viewport-controller.ts",
+  "apps/editor/src/runtime/interaction-controller.ts",
+  "apps/editor/src/runtime/document-lifecycle-controller.ts",
+  "apps/editor/src/runtime/render-coordinator.ts",
 ].map(async (helper) => [helper, await readFile(resolve(root, helper), "utf8")]));
 const lines = source.split(/\r?\n/).length;
 const budget = 900;
@@ -31,6 +35,10 @@ const ownerBudgets = [
   ["apps/editor/src/editor-secondary-surfaces.tsx", 500],
   ["apps/editor/src/editor-shell-view.tsx", 300],
   ["apps/editor/src/application/editor-export-controller.ts", 250],
+  ["apps/editor/src/runtime/viewport-controller.ts", 300],
+  ["apps/editor/src/runtime/interaction-controller.ts", 300],
+  ["apps/editor/src/runtime/document-lifecycle-controller.ts", 200],
+  ["apps/editor/src/runtime/render-coordinator.ts", 300],
   ["apps/editor/src/runtime/presentation-preview.ts", 500],
 ];
 const forbiddenOwners = [
@@ -44,7 +52,7 @@ const forbiddenOwners = [
   ["shell slot JSX leaked into root", /<(?:EditorRibbon|EditorWorkspaceView|EditorStatusBar)\b/],
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
-const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX"];
+const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator"];
 const requiredSourceContracts = [
   ["command router", /useEditorCommandRouter/],
   ["action owner", /useEditorActions/],
