@@ -9,7 +9,7 @@ import { CommandHistorySession, type HistoryState } from "@timing-chart-v2/histo
 import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type DisplayTimeMapping, type HardwareHierarchyView, type RenderProjection, type VirtualizationWindow } from "@timing-chart-v2/projection";
 import { type AnnotationOverlayPrimitive, type WaveformSurfaceProvider } from "@timing-chart-v2/renderer";
 import { scanJsonSyntax, serializeCanonicalDocument, validateCanonicalDocument, validateDocumentResourceBudget } from "@timing-chart-v2/schema";
-import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
+import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type ParsedCanonicalDocument, type SemanticAnchor, type Signal, type SignalGroup, type SignalGroupStyle, type SignalId, type SignalRole, type SpacerId, type SpacerRow, type TimeGroupId, type Transaction, type TransactionGroup, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { mayRouteGlobalShortcut, resolveProblemTarget, UiCommandRegistry } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
 import { buildViewportWindow } from "./runtime/viewport-window.js";
@@ -340,6 +340,19 @@ export function InspectorPanel({ signal, group, annotation, transaction, bookmar
   const [transactionStart, setTransactionStart] = useState(transaction?.start ?? 0);
   const [transactionEnd, setTransactionEnd] = useState(transaction?.end ?? 1);
   const [transactionLane, setTransactionLane] = useState(transaction?.laneId ?? "lane_0");
+  // #454: Group and Color had no Inspector entry point at all -- the
+  // canonical model (#430/#450) and the Bottom list/Lane workspace
+  // (#452/#453) already read/write both via the shared
+  // `transaction.update`/`transaction.moveToGroup` commands; this only
+  // adds the missing GUI surface, same commands, same Draft->Apply gate
+  // as every other Inspector field on this Transaction.
+  const [transactionGroupId, setTransactionGroupId] = useState(transaction?.groupId ?? "");
+  // Empty string = "no override, inherit the Group's color" (the reference's
+  // "Use Group Color" option) -- `transaction.update` fully replaces color
+  // from whatever the command provides (nothing committed stays committed),
+  // so leaving this empty on Apply is what actually clears a previous
+  // override back to inherited, not merely "didn't touch the field".
+  const [transactionColor, setTransactionColor] = useState(transaction?.color ?? "");
   // #393 item C: phaseRows (a structured Name/Start/End table) is the one
   // real source of truth for Apply Transaction below -- the Advanced/JSON
   // textarea is a secondary INPUT method that, via its own separate "Apply
@@ -397,9 +410,15 @@ export function InspectorPanel({ signal, group, annotation, transaction, bookmar
       <InspectorFooter onCancel={onCancel} onApply={() => onCommand({ id: nextCommandId("group_properties"), type: "group.updateProperties", groupId: group.id, name: groupName, spacingBefore, spacingAfter, style: { showBackground: groupShowBackground, background: groupBackground, opacity: groupOpacity, extend: groupExtend, ...(groupShowBorder ? { border: groupBorder } : {}), showHeader: groupShowHeader } })} applyDisabled={false} applyTestId="apply-group-properties" />
     </>}
     {transaction && <>
-      <InspectorSection sectionId="general" title="General" open={transactionSections.general ?? true} onToggle={() => toggleTransactionSection("general")}><label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} /></label></InspectorSection>
+      <InspectorSection sectionId="general" title="General" open={transactionSections.general ?? true} onToggle={() => toggleTransactionSection("general")}>
+        <div className="property-row"><span>ID</span><code title={transaction.id}>{transaction.id}</code></div>
+        <label>Name<input aria-label="Transaction name" value={transactionName} onChange={(event) => setTransactionName(event.target.value)} /></label>
+        <label>Group<select aria-label="Transaction group" value={transactionGroupId} onChange={(event) => setTransactionGroupId(event.target.value)}><option value="">Ungrouped</option>{document.transactionGroups?.map((groupOption) => <option key={groupOption.id} value={groupOption.id}>{groupOption.name}</option>)}</select></label>
+        <label>Color<span className="inspector-field-with-help"><input aria-label="Transaction color" type="color" value={transactionColor || document.transactionGroups?.find((groupOption) => groupOption.id === (transactionGroupId || undefined))?.color || "#8895a7"} onChange={(event) => setTransactionColor(event.target.value)} />{transactionColor && <button type="button" data-testid="transaction-use-group-color" onClick={() => setTransactionColor("")}>Use Group Color</button>}</span></label>
+      </InspectorSection>
       <InspectorSection sectionId="timing" title="Timing" open={transactionSections.timing ?? true} onToggle={() => toggleTransactionSection("timing")}>
         <div className="inspector-property-pair"><label>Start<input aria-label="Transaction start" type="number" min="0" max={transactionEnd - 1} value={transactionStart} onChange={(event) => setTransactionStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={transactionStart + 1} max={document.timeline.cycleCount} value={transactionEnd} onChange={(event) => setTransactionEnd(Number(event.target.value))} /></label></div>
+        <div className="property-row"><span>Duration</span><span>{transactionEnd - transactionStart} cycles</span></div>
         <label>Lane<span className="inspector-field-with-help"><input aria-label="Transaction lane" value={transactionLane} onChange={(event) => setTransactionLane(event.target.value)} /><span className="field-help" tabIndex={0} title="A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track." aria-label="About Lane">ⓘ</span></span></label>
       </InspectorSection>
       <InspectorSection sectionId="phases" title="Phases" count={phaseRows.length} onAdd={() => setPhaseRows((rows) => { const last = rows.at(-1); const start = last ? last.end : transactionStart; return [...rows, { name: `Phase ${rows.length + 1}`, start, end: Math.min(start + 1, transactionEnd) }]; })} open={transactionSections.phases ?? true} onToggle={() => toggleTransactionSection("phases")}>
@@ -410,7 +429,7 @@ export function InspectorPanel({ signal, group, annotation, transaction, bookmar
       </InspectorSection>
       {transactionStatus && <output role="status">{transactionStatus}</output>}
       <section><button type="button" className="danger" onClick={() => registry.execute("selection.delete")}>Delete Transaction</button></section>
-      <InspectorFooter onCancel={onCancel} onApply={() => { const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() })); if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transactionStart || phase.start >= phase.end || phase.end > transactionEnd)) { setTransactionStatus("Phases must be named integer-cycle half-open subranges within Start..End."); return; } setTransactionStatus(""); onCommand({ id: nextCommandId("transaction_update"), type: "transaction.update", transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, phases }); }} applyDisabled={false} applyTestId="apply-transaction-properties" />
+      <InspectorFooter onCancel={onCancel} onApply={() => { const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() })); if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < transactionStart || phase.start >= phase.end || phase.end > transactionEnd)) { setTransactionStatus("Phases must be named integer-cycle half-open subranges within Start..End."); return; } setTransactionStatus(""); onCommand({ id: nextCommandId("transaction_update"), type: "transaction.update", transactionId: transaction.id, name: transactionName, start: transactionStart, end: transactionEnd, laneId: transactionLane, phases, ...(transactionGroupId ? { groupId: transactionGroupId as TransactionGroup["id"] } : {}), ...(transactionColor ? { color: transactionColor } : {}) }); }} applyDisabled={transactionName === transaction.name && transactionStart === transaction.start && transactionEnd === transaction.end && transactionLane === (transaction.laneId ?? "lane_0") && transactionGroupId === (transaction.groupId ?? "") && transactionColor === (transaction.color ?? "") && JSON.stringify(phaseRows) === JSON.stringify(transaction.phases ?? [])} applyTestId="apply-transaction-properties" />
     </>}
     <MiniMap document={document} viewport={viewport} />
   </aside>;
