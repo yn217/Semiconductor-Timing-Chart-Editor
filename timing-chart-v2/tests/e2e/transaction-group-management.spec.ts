@@ -86,6 +86,37 @@ test("Transaction Group can be renamed inline and deleted (ungrouping its Transa
   await expect(page.getByTestId("transaction-group-header")).toHaveCount(0);
 });
 
+test("Transaction Group header collapses and expands its Lanes, view-only (zero History delta) throughout", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+
+  await page.getByTestId("add-transaction-group-tree").click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const bottomEditor = page.getByTestId("transaction-editor");
+  await bottomEditor.getByLabel("Move selected transaction to group").selectOption({ label: "Group 1" });
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+
+  const header = page.getByTestId("transaction-group-header");
+  const chevron = header.getByRole("button", { name: "Collapse Group 1" });
+  const lanes = page.getByTestId("transaction-lanes");
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+
+  await chevron.click();
+  await expect(header).toHaveAttribute("data-collapsed", "true");
+  await expect(header.getByRole("button", { name: "Expand Group 1" })).toHaveAttribute("aria-expanded", "false");
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(0);
+  // View-only: no History delta from collapsing, and the Transaction
+  // itself is untouched (still exists, just not laid out).
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+
+  await header.getByRole("button", { name: "Expand Group 1" }).click();
+  await expect(header).toHaveAttribute("data-collapsed", "false");
+  await expect(lanes.locator("[data-transaction-id]")).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+});
+
 test("Ribbon Ungroup acts on the selected Transaction's Group, disabled when not applicable", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");

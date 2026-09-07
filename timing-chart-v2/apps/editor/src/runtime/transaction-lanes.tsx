@@ -26,7 +26,7 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
 }
 
 type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly top: number; readonly height: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
-type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined };
+type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
 export function TransactionLanes({ document: rawDocument, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   // #451: one shared filter narrows both the Tree rows (in the label
@@ -40,6 +40,13 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   const groupNameById = new Map((rawDocument.transactionGroups ?? []).map((group) => [group.id, group.name]));
   const document: CanonicalDocument = needle.length === 0 ? rawDocument : { ...rawDocument, transactions: rawDocument.transactions.filter((transaction) => transaction.id === selectedId || transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
   const [drag, setDrag] = useState<{ id: TransactionId; edge: "body" | "start" | "end"; startX: number }>();
+  // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
+  // local, transient presentation state (never persisted, never touches
+  // Canonical), same "view-only toggle" shape as the Signal Tree's own
+  // Group collapse. Kept local to this component rather than lifted into
+  // shared workspace state since nothing else needs to read it.
+  const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
+  const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
   // Escape must cancel an in-progress drag without committing a semantic
   // command; the listener is only attached while a drag is active so it
@@ -107,11 +114,17 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   const laneBands: LaneBand[] = [];
   let cursor = 0;
   for (const section of sections) {
+    const sectionKey = section.groupId ?? "ungrouped";
+    const collapsed = section.label !== undefined && collapsedGroups.has(sectionKey);
     if (section.label !== undefined) {
       const count = document.transactions.filter((transaction) => transaction.groupId === section.groupId).length;
-      groupHeaders.push({ key: `group:${section.groupId ?? "ungrouped"}`, top: cursor, label: section.label, color: section.color, count, groupId: section.groupId });
+      groupHeaders.push({ key: `group:${sectionKey}`, top: cursor, label: section.label, color: section.color, count, groupId: section.groupId, collapsed });
       cursor += GROUP_HEADER_HEIGHT;
     }
+    // #397: a collapsed Group's Lanes contribute zero height and render
+    // nothing -- Transactions inside stay fully intact in the document
+    // (view-only), just not laid out while their Group is collapsed.
+    if (collapsed) continue;
     for (const laneId of section.lanes) {
       const laneTransactions = document.transactions.filter((transaction) => transaction.groupId === section.groupId && (transaction.laneId ?? "lane_0") === laneId);
       const { rowOf, rowCount } = assignStackRows(laneTransactions);
@@ -138,7 +151,8 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
     <div className="transaction-lane-labels">
       {groupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : document.transactionGroups?.find((item) => item.id === header.groupId);
-        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }}>
+        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-collapsed={String(header.collapsed)} style={{ top: header.top, height: GROUP_HEADER_HEIGHT }}>
+          <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}>{header.collapsed ? "▶" : "▼"}</button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
           {/* #397 Transaction Mode GUI Closure: rename/delete had zero GUI
               entry point (commands already existed) -- "Ungrouped" is a
