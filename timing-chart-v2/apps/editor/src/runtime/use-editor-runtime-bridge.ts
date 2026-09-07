@@ -30,129 +30,7 @@ import { clampTimelineZoom, createTimelineViewportRuntime, type TimelineViewport
 
 export { applyRendererHostSizing, refreshRulerRangeSelection, refreshTransactionLinkedRows, attachDirtyUnloadGuard, attachDialogOriginCapture, scheduleDialogFocusRestore, trapDialogTab, type RendererHostSizingContext } from "./editor-dom-bridge.js";
 
-function groupStyleAppliesToSurface(style: SignalGroupStyle | undefined, surface: "left" | "frozen" | "timing"): boolean {
-  const scope = style?.extend ?? "both";
-  return scope === "both" || (scope === "waveform" ? surface === "timing" : surface !== "timing");
-}
-
-/** Applies an Inspector-only Group style draft directly to the mounted shells.
- * This is intentionally DOM-only: preview input must not create a Canonical,
- * History, or Dirty transition. The next projection update reasserts the
- * canonical style after Apply, while Cancel passes the canonical style back. */
-export function refreshGroupStylePreview(host: HTMLElement, groupId: GroupId, style: SignalGroupStyle | undefined): void {
-  const surfaces = [
-    ["left", "left-row", "left-group-header"],
-    ["frozen", "frozen-row", "frozen-group-header"],
-    ["timing", "timing-row", "timing-group-header"],
-  ] as const;
-  for (const [surface, rowRole, headerRole] of surfaces) {
-    const applies = groupStyleAppliesToSurface(style, surface);
-    for (const element of host.querySelectorAll<HTMLElement>(`[data-role='${rowRole}'][data-group-id='${CSS.escape(groupId)}'], [data-role='${headerRole}'][data-group-id='${CSS.escape(groupId)}']`)) {
-      if (applies && style?.showBackground && style.background) element.style.setProperty("--group-background", style.background);
-      else element.style.removeProperty("--group-background");
-      if (applies && style?.opacity !== undefined) element.style.opacity = String(style.opacity);
-      else element.style.removeProperty("opacity");
-      if (applies && style?.border) element.style.setProperty("--group-border", style.border);
-      else element.style.removeProperty("--group-border");
-      element.dataset.groupStylePreview = style === undefined ? "false" : "true";
-    }
-  }
-}
-
-/** Applies an Annotation editor's draft Label/Color/Opacity directly to the
- * mounted overlay (packages/renderer/src/stable-surface.ts's renderOverlay
- * output -- see its own `[data-role='annotation-label']` text content and
- * `--annotation-color` custom property), the same DOM-only pattern
- * refreshGroupStylePreview above already uses: no Canonical/History/Dirty
- * transition, since nothing here touches Canonical state -- only the
- * already-mounted, stable overlay element's own text/style. The next real
- * projection update (any document/selection change, or Apply) reasserts
- * the canonical presentation; passing `undefined` for a field restores its
- * live canonical value (used on Cancel/selection change). Anchor-derived
- * geometry (position, shape) is unaffected -- this only previews the
- * fields that don't require re-deriving screen geometry from projection/
- * scale/mapping. */
-export function refreshAnnotationPreview(host: HTMLElement, annotationId: AnnotationId, draft: { readonly label?: string | undefined; readonly color?: string | undefined; readonly opacity?: number | undefined } | undefined, canonical: { readonly label: string; readonly color: string | undefined; readonly opacity: number | undefined }): void {
-  const owner = host.querySelector<HTMLElement>(`[data-role='annotation-owner'][data-annotation-id='${CSS.escape(annotationId)}']`);
-  if (!owner) return;
-  const label = owner.querySelector<HTMLElement>("[data-role='annotation-label']");
-  const nextLabel = draft?.label ?? canonical.label;
-  if (label && label.textContent !== nextLabel) label.textContent = nextLabel;
-  // aria-label is renderer-owned and its format varies by annotation type
-  // (e.g. Measurement includes its threshold percentages) -- this preview
-  // must not clobber that with a generic reconstruction. Only override it
-  // while actively previewing a different label, caching the exact original
-  // string first so reverting (draft undefined) restores it verbatim
-  // instead of guessing a replacement format.
-  if (draft?.label !== undefined) {
-    if (owner.dataset.annotationAriaLabelOriginal === undefined) owner.dataset.annotationAriaLabelOriginal = owner.getAttribute("aria-label") ?? "";
-    owner.setAttribute("aria-label", `${owner.dataset.annotationType}: ${nextLabel}`);
-  } else if (owner.dataset.annotationAriaLabelOriginal !== undefined) {
-    owner.setAttribute("aria-label", owner.dataset.annotationAriaLabelOriginal);
-    delete owner.dataset.annotationAriaLabelOriginal;
-  }
-  const nextColor = draft?.color ?? canonical.color;
-  if (nextColor) owner.style.setProperty("--annotation-color", nextColor); else owner.style.removeProperty("--annotation-color");
-  const nextOpacity = draft?.opacity ?? canonical.opacity;
-  if (nextOpacity !== undefined) owner.style.opacity = String(nextOpacity); else owner.style.removeProperty("opacity");
-  owner.dataset.annotationPreview = draft === undefined ? "false" : "true";
-}
-
-/**
- * Applies a Clock Generator draft (Start/Period/Duty/Phase/Initial/Polarity/
- * Suppressed periods) as a real transient waveform preview for the selected
- * Clock row -- unlike refreshGroupStylePreview/refreshAnnotationPreview above,
- * a generator draft changes the wave SHAPE (edge positions), not just a CSS
- * property on the existing mounted SVG, so this renders a genuinely separate
- * preview <svg> via the pinned WaveDrom conversion/render pipeline
- * (toWaveJson + renderWaveJsonMarkup, both pure functions -- see
- * packages/wavedrom-adapter) called DIRECTLY, bypassing
- * ProductionWaveDromAdapter entirely. This is deliberate: the adapter's
- * `#active`/`#markupCache` maps are keyed by signalId and own the real
- * canonical mount (renderer.ts:107-146) -- routing a draft through them would
- * either evict or poison the canonical entry. Instead, the canonical SVG
- * (already mounted by the real renderer/adapter pair) is only hidden via
- * `display:none` -- never removed -- and the preview SVG is appended as a
- * sibling, so Canonical/History/Dirty never change and reverting (draft
- * undefined) is an exact, lossless restore of the untouched canonical node. */
-export function refreshClockPreview(host: HTMLElement, signal: ClockSignal, draftGenerator: ClockGenerator | undefined, cycleCount: number): void {
-  const mount = host.querySelector<HTMLElement>(`[data-role='wave-owner'][data-signal-id='${CSS.escape(signal.id)}']`);
-  if (!mount) return;
-  const canonicalSvg = mount.querySelector<SVGElement>(":scope > svg:not([data-clock-preview-svg])");
-  const existingPreview = mount.querySelector<SVGElement>("[data-clock-preview-svg]");
-  const restoreCanonical = () => {
-    existingPreview?.remove();
-    canonicalSvg?.style.removeProperty("display");
-    delete mount.dataset.clockPreview;
-  };
-  if (draftGenerator === undefined) { restoreCanonical(); return; }
-  try {
-    const waveJson = toWaveJson({ signal: { ...signal, generator: draftGenerator }, cycleCount });
-    // A fixed high render index keeps this preview's generated element ids
-    // (WaveDrom's gradient/pattern defs) from colliding with the real
-    // adapter's own monotonic per-signal indices, which start at 0.
-    const markup = renderWaveJsonMarkup(waveJson, 0xC10CC, []);
-    const template = mount.ownerDocument.createElement("template");
-    template.innerHTML = markup.trim();
-    const svg = template.content.firstElementChild;
-    if (!svg || svg.namespaceURI !== "http://www.w3.org/2000/svg" || svg.localName !== "svg") { restoreCanonical(); return; }
-    assertSafeWaveDromSvg(svg);
-    svg.setAttribute("data-clock-preview-svg", "true");
-    svg.setAttribute("preserveAspectRatio", "none");
-    existingPreview?.remove();
-    canonicalSvg?.style.setProperty("display", "none");
-    mount.appendChild(svg);
-    mount.dataset.clockPreview = "true";
-  } catch (error) {
-    // An in-progress draft can be transiently unrepresentable (e.g. duty not
-    // aligned to a half cycle) -- Apply's own command-layer validation
-    // (INVALID_CLOCK_GENERATOR) is the real gate, so a draft-conversion
-    // rejection here just falls back to showing the canonical waveform
-    // rather than surfacing a crash from a best-effort visual preview.
-    if (!(error instanceof WaveDromAdapterError)) throw error;
-    restoreCanonical();
-  }
-}
+export { refreshGroupStylePreview, refreshAnnotationPreview, refreshClockPreview } from "./presentation-preview.js";
 
 export function createEditorRuntimeBridge(initialDocument: Readonly<CanonicalDocument>): EditorApplicationRuntime {
   return new EditorApplicationRuntime(initialDocument);
@@ -405,23 +283,7 @@ export function mountInitialTimelineProjection(context: { readonly coordinator: 
   return { window, projection };
 }
 
-export function collectWaveRenderErrors(host: HTMLElement): readonly DocumentProblem[] {
-  return [...host.querySelectorAll<HTMLElement>("[data-wave-error]")].map((owner) => ({
-    code: "WAVE_RENDER_ERROR",
-    path: `$.signals[${owner.dataset.signalId}]`,
-    message: owner.dataset.waveError ?? "WaveDrom render failed.",
-    severity: "error" as const,
-    operation: "waveform.render",
-    operationLabel: "Render waveform",
-    objectType: "signal",
-    ...(owner.dataset.signalId ? { objectId: owner.dataset.signalId } : {}),
-    source: "renderer" as const,
-    stage: "render" as const,
-    recommendation: "Review the affected Signal values or type, then retry the operation or open a supported document.",
-    detail: "waveform-render:localized-failure",
-  }));
-}
-
+export { collectWaveRenderErrors } from "./runtime-diagnostics.js";
 export function createEditorTimelineRuntime(context: Parameters<typeof createTimelineViewportRuntime>[0]): TimelineViewportRuntime {
   return createTimelineViewportRuntime(context);
 }
@@ -520,48 +382,7 @@ export function createWaveformSurfaceProvider(context: WaveformProviderContext):
   };
 }
 
-export type OpenPhaseTracker = Readonly<{
-  mark: (phase: string, phaseTimestamp?: number) => void;
-  begin: (commandStartedAt?: number, fileReadStartedAt?: number) => void;
-}>;
-
-/** Owns open/first-paint instrumentation for the editor runtime bridge. */
-export function createOpenPhaseTracker(rendererHost: HTMLElement): OpenPhaseTracker {
-  const marks: Record<string, number> = {};
-  let active = false;
-  let rowShellPainted = false;
-  let referenceGeometryReady = false;
-  let rulerPainted = false;
-  const mark = (phase: string, phaseTimestamp = globalThis.performance.now()): void => {
-    if (!active || marks[phase] !== undefined) return;
-    marks[phase] = phaseTimestamp;
-    globalThis.performance.mark(`timing-chart-v2:${phase}`);
-    rendererHost.dataset.openPhaseMarks = JSON.stringify(marks);
-    const fileReadDurationMs = marks["file-read-start"] !== undefined && marks["file-read-complete"] !== undefined
-      ? Math.max(0, marks["file-read-complete"] - marks["file-read-start"]) : undefined;
-    rendererHost.dataset.openPhaseDurations = JSON.stringify(fileReadDurationMs === undefined ? {} : { fileReadDurationMs });
-    if (phase === "row-shell-painted") rowShellPainted = true;
-    if (phase === "reference-geometry-ready") referenceGeometryReady = true;
-    if (phase === "ruler-painted") rulerPainted = true;
-    if (rowShellPainted && referenceGeometryReady && rulerPainted) mark("first-correct-paint");
-  };
-  return {
-    mark,
-    begin(commandStartedAt = globalThis.performance.now(), fileReadStartedAt) {
-      active = true;
-      rowShellPainted = false;
-      referenceGeometryReady = false;
-      rulerPainted = false;
-      for (const key of Object.keys(marks)) delete marks[key];
-      delete rendererHost.dataset.openPhaseMarks;
-      delete rendererHost.dataset.openPhaseDurations;
-      mark("open-command-start", commandStartedAt);
-      mark("open-start", commandStartedAt);
-      if (fileReadStartedAt !== undefined) mark("file-read-start", fileReadStartedAt);
-    },
-  };
-}
-
+export { createOpenPhaseTracker, type OpenPhaseTracker } from "./runtime-diagnostics.js";
 export function refreshRendererEdgeCounters(renderer: Pick<TimingChartRenderer, "updateEdgeCounters">, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, range: { readonly start: number; readonly end: number }, selectedCycle: number, screenGeometryScale: number, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateEdgeCounters(projectEdgeCounters(document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics)); }
 
 export function refreshRendererOverlays(renderer: Pick<TimingChartRenderer, "updateOverlays" | "updateEdgeCounters">, host: RefObject<HTMLDivElement | null>, document: CanonicalDocument, projection: RenderProjection, geometryMaps: ReadonlyMap<SignalId, LocalGeometryMap>, mappingCache: Pick<DisplayTimeMappingCache, "get">, screenGeometryScale: number, range: { readonly start: number; readonly end: number }, selectedCycle: number, selectedAnnotationId: string | undefined, selectedEdge?: SelectedClockEdge, metrics?: EdgeCounterProjectionMetrics): void { renderer.updateOverlays(projectAnnotationOverlays(document, projection, geometryMaps, mappingCache.get(document.timeline, document.timeGroups), screenGeometryScale)); refreshRendererEdgeCounters(renderer, document, projection, geometryMaps, range, selectedCycle, screenGeometryScale, selectedEdge, metrics); for (const owner of host.current?.querySelectorAll<HTMLElement>("[data-annotation-id]") ?? []) owner.dataset.selected = String(owner.dataset.annotationId === selectedAnnotationId); }

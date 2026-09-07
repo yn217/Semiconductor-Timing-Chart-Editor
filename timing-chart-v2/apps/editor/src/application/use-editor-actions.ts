@@ -92,6 +92,7 @@ export interface EditorActions {
   readonly revealSelectedInHierarchy: () => void;
   readonly createSignalGroup: () => void;
   readonly addTreeEntity: (kind: "signal" | "clock" | "bus" | "state" | "logic" | "event" | "pulse" | "group" | "spacer" | "commentRow") => void;
+  readonly moveTreeItemToGroup: (kind: "signal" | "group", id: string, targetGroupId: GroupId) => void;
   readonly registerBulkSignals: () => void;
   readonly previewBulkSignals: () => void;
   readonly copySelectedSignal: ClipboardActions["copy"];
@@ -299,6 +300,21 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     if (result.ok) { input.setBulkRegistrationStatus(`Registered ${signals.length} signal${signals.length === 1 ? "" : "s"} in one operation`); input.setBulkRegistrationPreview(undefined); input.setBulkRegistrationVisible(false); }
     else input.setBulkRegistrationStatus(result.problems.map((item) => item.message).join(" "));
   };
+  const moveTreeItemToGroup = (kind: "signal" | "group", id: string, targetGroupId: GroupId) => {
+    const targetGroup = input.document.signalGroups.find((group) => group.id === targetGroupId);
+    if (!targetGroup) return;
+    if (kind === "signal") {
+      const sourceGroup = input.document.signalGroups.find((group) => group.rows.includes(id as SignalId));
+      let index = targetGroup.rows.length;
+      if (sourceGroup?.id === targetGroup.id) index = Math.max(0, index - 1);
+      input.commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: input.nextCommandId("drop_group_target"), type: "signal.move", signalId: id as SignalId, targetGroupId, index });
+      return;
+    }
+    const sourceIndex = input.document.signalGroups.findIndex((group) => group.id === id);
+    const targetIndex = input.document.signalGroups.findIndex((group) => group.id === targetGroupId);
+    if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+    input.commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: input.nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
+  };
   const previewBulkSignals = () => {
     const preview = parseBulkSignalDefinitions(input.bulkRegistrationText, input.document);
     input.setBulkRegistrationPreview({ sourceText: input.bulkRegistrationText, ...preview });
@@ -394,6 +410,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     revealSelectedInHierarchy,
     createSignalGroup,
     addTreeEntity,
+    moveTreeItemToGroup,
     registerBulkSignals,
     previewBulkSignals,
     copySelectedSignal: input.editActions.copy,

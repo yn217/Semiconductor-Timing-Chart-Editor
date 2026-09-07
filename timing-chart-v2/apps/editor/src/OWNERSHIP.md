@@ -40,6 +40,10 @@ controllers are extracted incrementally.
 | UI action composition | `application/use-editor-actions.ts` | `EditorApplicationOwner` / `UiCommandRegistry` | PR3 owner extraction |
 | Presentation-only editor toggles | `application/use-editor-presentation-state.ts`, `application/use-editor-resize-actions.ts`, `application/use-editor-workspace-actions.ts` | view-only React state | PR4 owner extraction |
 | Editor shell JSX | `editor-shell-view.tsx` | parent owner models and callbacks | PR5 shell extraction |
+| Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
+| Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |
+| Runtime presentation previews | `runtime/presentation-preview.ts` | view-only DOM/WaveDrom preview | PR6 helper split |
+| Runtime helper barrel | `runtime/use-editor-runtime-bridge.ts` | existing runtime owners | PR6 compatibility barrel |
 
 Rules:
 

@@ -1,0 +1,34 @@
+import type { ChangeEvent, MutableRefObject, ReactNode } from "react";
+import type { DocumentLifecycleOwner } from "./application/use-document-lifecycle.js";
+
+export interface EditorDialogLayerProps {
+  readonly compatibilityPreview: DocumentLifecycleOwner["compatibilityPreview"];
+  readonly compatibilityDialogRef: MutableRefObject<HTMLElement | null>;
+  readonly closeCompatibility: () => void;
+  readonly restorePendingFileFocus: () => void;
+  readonly enterCompatibilityReadOnly: () => void;
+  readonly pendingFileAction: DocumentLifecycleOwner["pendingAction"];
+  readonly unsavedFileDialogRef: MutableRefObject<HTMLElement | null>;
+  readonly unsavedCancelRef: MutableRefObject<HTMLButtonElement | null>;
+  readonly cancelPendingFileAction: () => void;
+  readonly continuePendingFileAction: () => void;
+  readonly saveAndContinuePendingFileAction: () => void;
+  readonly fileInputRef: MutableRefObject<HTMLInputElement | null>;
+  readonly onFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
+  readonly children?: ReactNode;
+}
+
+/** Owns modal/document replacement markup; lifecycle and focus policy remain in application owners. */
+export function EditorDialogLayer({
+  compatibilityPreview, compatibilityDialogRef, closeCompatibility, restorePendingFileFocus,
+  enterCompatibilityReadOnly, pendingFileAction, unsavedFileDialogRef, cancelPendingFileAction,
+  continuePendingFileAction, saveAndContinuePendingFileAction, fileInputRef, onFileChange, unsavedCancelRef, children,
+}: EditorDialogLayerProps) {
+  const onPreview = () => enterCompatibilityReadOnly();
+  return <>
+    {children}
+    {compatibilityPreview && <div className="modal-backdrop" data-testid="compatibility-dialog"><section ref={compatibilityDialogRef} className="document-properties compatibility-dialog" role="dialog" aria-modal="true" aria-labelledby="compatibility-dialog-title"><header><h2 id="compatibility-dialog-title">Compatibility Mode</h2></header><p>Format version {compatibilityPreview.sourceFormatVersion} is newer than this editor supports. The current document has not been replaced.</p><p className="inspector-note">Unknown fields are preserved in the original source below. Compatibility Mode is read-only and cannot Save or overwrite this file.</p><textarea aria-label="Compatibility source" readOnly value={compatibilityPreview.sourceText} rows={14} />{compatibilityPreview.readOnly && <output role="status">Read-only Compatibility Mode active</output>}<footer><button type="button" onClick={() => { closeCompatibility(); restorePendingFileFocus(); }}>{compatibilityPreview.readOnly ? "Close" : "Cancel"}</button>{!compatibilityPreview.readOnly && <button type="button" data-testid="compatibility-read-only" onClick={() => onPreview()}>View Read-Only</button>}</footer></section></div>}
+    {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={continuePendingFileAction}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
+    <input ref={fileInputRef} hidden type="file" accept=".json,.tcd" onChange={onFileChange} />
+  </>;
+}

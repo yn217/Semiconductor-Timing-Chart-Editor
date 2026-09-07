@@ -1,18 +1,10 @@
-import { memo, startTransition, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent, RefObject } from "react";
-import { createPortal } from "react-dom";
-import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
+import type { CommandResult } from "@timing-chart-v2/commands";
 import { type Point, type SnapKind } from "@timing-chart-v2/geometry";
-import { buildHardwareHierarchyEntries, hardwareHierarchyScopes, type HardwareHierarchyView } from "@timing-chart-v2/projection";
-import { type AnnotationOverlayPrimitive } from "@timing-chart-v2/renderer";
-import { scanJsonSyntax, serializeCanonicalDocument } from "@timing-chart-v2/schema";
 import { documentProblemRuleDescriptor, quickValueLiteral, quickValueOptions, type Annotation, type AnnotationId, type AnnotationType, type Bookmark, type BookmarkId, type CanonicalDocument, type ClockGenerator, type ClockSignal, type CommandId, type CommentRow, type DocumentProblem, type EdgeCounterSettings, type GroupId, type LegendEntry, type SemanticAnchor, type Signal, type SignalId, type SignalRole, type TimeGroupId, type Transaction, type TransactionId, type ValueSignal } from "@timing-chart-v2/schema";
 import { resolveProblemTarget } from "@timing-chart-v2/ui";
 import { ViewMetricsOwner } from "./runtime/view-metrics.js";
-import { buildViewportWindow } from "./runtime/viewport-window.js";
-import { createEdgeCounterProjectionMetrics, projectEdgeCounters } from "./runtime/edge-counter-projection.js";
-import { referenceSvgScreenScale } from "./runtime/screen-scale.js";
-import { DsRibbonButton, DsRibbonGroup, DsRibbonSelect, DsRibbonToggle, DsRibbonToggleButton } from "./design-system.js";
 import { ContextMenuSurface } from "./context-menu-surface.js";
 import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 import { ExportDialog } from "./export-dialog.js";
@@ -27,40 +19,22 @@ import { nextCommandId } from "./command-id.js";
 import { nextEntityId } from "./entity-id.js";
 import { createAnnotation } from "./create-annotation.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
-import { renderGeometryGrid } from "./render-geometry-grid.js";
-import { useInspectorAccordion } from "./inspector-accordion.js";
-import { InspectorSection } from "./inspector-section.js";
-import { MiniMap } from "./minimap.js";
-import { MinimalCycleViewPanels, InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog, SignalTreeColumnHeader, BottomEditorPanel, EditorStatusBar } from "./minimal-cycle-view-panels.js";
+import { InspectorPanel, ContextMenuPanel, MinimalCycleViewTitleBar, RenameDialog, BulkRegistrationDialog, SignalTreeColumnHeader, BottomEditorPanel, EditorStatusBar } from "./minimal-cycle-view-panels.js";
 import { MinimalCycleViewRibbonTabs, refreshTreeCollapsedMetadata, refreshTreeFilterPresentation, refreshTreeRovingFocus } from "./minimal-cycle-view-ui.js";
 import { cycleDocument, v1ReferenceDocument } from "./fixtures-cycle-reference-documents.js";
 import { signalId } from "./minimal-cycle-view-fixture-helpers.js";
-import { defaultEventValue, EventRow, QuickValues } from "./event-table-components.js";
-import { useDialogFocusLoop } from "./dialog-focus-loop.js";
+import { useEditorDialogRuntime } from "./application/use-editor-dialog-runtime.js";
 import { AnnotationList } from "./annotation-list.js";
-import { CommentRowEditor } from "./comment-row-editor.js";
 import { LegendView } from "./legend-view.js";
 import { AIOperationPanel } from "./ai-operation-panel.js";
-import { RibbonIcon } from "./ribbon-icon.js";
-import { InsertSemanticIcon, type InsertSemanticIconKind } from "./insert-semantic-icon.js";
-import { EditorIcon, EditorIconButton, type EditorIconName } from "./editor-icon.js";
 import { HardwareHierarchyBrowser } from "./hardware-hierarchy-browser.js";
-import { InlineNameInput } from "./inline-name-input.js";
 import { SaveAsDialog } from "./save-as-dialog.js";
-import { ProblemsPanelLegacy } from "./problems-panel-legacy.js";
-import { EventTable } from "./event-table.js";
-import { ClockGeneratorEditor } from "./clock-generator-editor.js";
 import { DocumentProperties } from "./document-properties.js";
-import { TimelineToolbar, type SignalEditorProps } from "./timeline-toolbar.js";
-import { LayoutInspector } from "./layout-inspector.js";
 import { AnnotationEditor } from "./annotation-editor.js";
 import { AdvancedJsonPanel } from "./advanced-json-panel.js";
 import { SignalEditor } from "./signal-editor.js";
-import { InspectorAnnotationEditor } from "./inspector-annotation-editor.js";
-import { InspectorSignalRouter } from "./inspector-signal-router.js";
 import { InspectorClockEditor } from "./inspector-clock-editor.js";
 import { Ribbon } from "./minimal-cycle-view-ribbon.js";
-import { styleNumber, styleString } from "./inspector-style.js";
 import { useEditorApplicationOwner } from "./application/use-editor-application-owner.js";
 import { useEditorCommandRouter } from "./application/use-editor-command-router.js";
 import { useEditorActions } from "./application/use-editor-actions.js";
@@ -69,20 +43,23 @@ import { useEditorResizeActions } from "./application/use-editor-resize-actions.
 import { useEditorWorkspaceActions } from "./application/use-editor-workspace-actions.js";
 import { useEditorAiAssistantModel } from "./application/use-editor-ai-assistant-model.js";
 import { EditorShellView } from "./editor-shell-view.js";
+import { EditorWorkspaceView } from "./editor-workspace-view.js";
+import { EditorDialogLayer } from "./editor-dialog-layer.js";
 import { useDocumentLifecycle } from "./application/use-document-lifecycle.js";
 import { deriveSelectionCapabilities, useSelectionOwner } from "./application/use-selection-owner.js";
 import { useClipboardActions } from "./application/use-clipboard-actions.js";
 import { useTimelineNavigationOwner } from "./runtime/use-timeline-navigation-owner.js";
 import type { SelectedClockEdge } from "./runtime/edge-counter-projection.js";
-import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH, useWorkspaceUiState, type TreeTypeFilter, type WorkspacePreset } from "./workspace/use-workspace-ui-state.js";
+import { useWorkspaceUiState, type TreeTypeFilter } from "./workspace/use-workspace-ui-state.js";
 import { useDialogMenuState } from "./workspace/use-dialog-menu-state.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtime.js";
 import { BookmarkEditor } from "./bookmark-editor.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { attachMenuKeyboardNavigation, refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview, refreshRendererOverlays } from "./runtime/use-editor-runtime-bridge.js";
-import { applyRendererHostSizing, attachDialogOriginCapture, attachDirtyUnloadGuard, refreshRulerRangeSelection, refreshTransactionLinkedRows, scheduleDialogFocusRestore, trapDialogTab } from "./runtime/editor-dom-bridge.js";
+import { attachMenuKeyboardNavigation, refreshRendererOverlays } from "./runtime/use-editor-runtime-bridge.js";
+import { refreshAnnotationPreview, refreshClockPreview, refreshGroupStylePreview } from "./runtime/presentation-preview.js";
+import { applyRendererHostSizing, refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
 export function MinimalCycleView() {
   const visualReference = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("visual-reference");
   const initialDocument = visualReference ? v1ReferenceDocument : cycleDocument;
@@ -139,9 +116,6 @@ export function MinimalCycleView() {
   const timelineNavigation = useTimelineNavigationOwner();
   const { signalId: selectedId, signalIds: selectedSignalIds, groupId: selectedGroupId, annotationId: selectedAnnotationId, transactionId: selectedTransactionId } = selection.state;
   const { signalId: selectedSignalRef, signalIds: selectedSignalIdsRef, groupId: selectedGroupRef, spacerId: selectedSpacerRef, annotationId: selectedAnnotationRef, transactionId: selectedTransactionRef } = selection.refs;
-  useEffect(() => {
-    return attachDirtyUnloadGuard(history.dirty);
-  }, [history.dirty]);
   const presentation = useEditorPresentationState({ hostRef: host });
   const {
     arrowPickStatus, setArrowPickStatus,
@@ -315,53 +289,11 @@ export function MinimalCycleView() {
     previousMenuOpenRef.current = menuOpen;
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   useEffect(() => {
-    if (contextMenu === undefined && !treeAddMenuOpen && !treeMoreMenuOpen) return undefined;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target instanceof Element ? event.target : undefined;
-      if (target?.closest(".context-menu, .tree-add-menu, .tree-header-menu, .tree-add-button, .tree-more-button")) return;
-      const canvasOutside = target !== undefined && target.closest("[data-testid='cycle-viewport'], [data-role='timing-chart-surface'], [data-testid='cycle-ruler']") !== null
-        && target?.closest("[data-row-id], [data-annotation-id], [data-transaction-id]") === null;
-      suppressCanvasClickRef.current = canvasOutside;
-      setContextMenu(undefined);
-      setTreeAddMenuOpen(false);
-      setTreeMoreMenuOpen(false);
-    };
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
-  useEffect(() => {
-    return attachDialogOriginCapture(document, dialogOriginRef, dialogOriginLabelRef, menuOriginRef);
-  }, []);
-  useLayoutEffect(() => {
-    if (propertiesVisible || exportVisible || saveAsVisible || hierarchyVisible || bulkRegistrationVisible) return undefined;
-    return scheduleDialogFocusRestore(document, dialogOriginRef, dialogOriginLabelRef);
-  }, [bulkRegistrationVisible, exportVisible, hierarchyVisible, propertiesVisible, saveAsVisible]);
-  useEffect(() => {
-    const onDialogKeyDown = (event: KeyboardEvent) => {
-      if (trapDialogTab(document, event)) return;
-      if (event.key !== "Escape") return;
-      if (contextMenu || treeAddMenuOpen || treeMoreMenuOpen) return;
-      if (compatibilityPreview) { event.preventDefault(); documentLifecycle.closeCompatibility(); restorePendingFileFocus(); return; }
-      if (pendingFileAction) { event.preventDefault(); cancelPendingFileAction(); return; }
-      if (bulkRegistrationVisible) { event.preventDefault(); closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); }); return; }
-      if (hierarchyVisible) { event.preventDefault(); closeDialog(() => setHierarchyVisible(false)); return; }
-      if (propertiesVisible) { event.preventDefault(); closeDialog(() => setPropertiesVisible(false)); return; }
-      if (exportVisible) { event.preventDefault(); closeDialog(() => setExportVisible(false)); return; }
-      if (saveAsVisible) { event.preventDefault(); closeDialog(() => setSaveAsVisible(false)); }
-    };
-    document.addEventListener("keydown", onDialogKeyDown, true);
-    return () => document.removeEventListener("keydown", onDialogKeyDown, true);
-  }, [bulkRegistrationVisible, closeDialog, compatibilityPreview, contextMenu, exportVisible, hierarchyVisible, pendingFileAction, propertiesVisible, saveAsVisible, treeAddMenuOpen, treeMoreMenuOpen]);
-  useEffect(() => {
     const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
     const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
     menu?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     return attachMenuKeyboardNavigation(document, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu);
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
-  useDialogFocusLoop(renameDialogRef, renameDialogOriginRef, renameDialogOpen);
-  useDialogFocusLoop(bulkRegistrationDialogRef, dialogOriginRef, bulkRegistrationVisible);
-  useDialogFocusLoop(unsavedFileDialogRef, pendingFileOriginRef, pendingFileAction !== undefined);
-  useDialogFocusLoop(compatibilityDialogRef, pendingFileOriginRef, compatibilityPreview !== undefined);
   const clipboardStatus = editActions.status;
   const clipboardAvailable = editActions.available;
   const [timelineRange, setTimelineRange] = useState(() => visualReference ? { start: 0, end: 1 } : { start: 2, end: 4 });
@@ -444,6 +376,7 @@ export function MinimalCycleView() {
   };
   const commandRouter = useEditorCommandRouter({ application, selection, editActions, selectAllRef });
   const commandRegistry = commandRouter.commandRegistry;
+  const executeBatch = commandRouter.executeBatch;
   useEffect(() => {
     refreshRulerRangeSelection(ruler, rangeSelectionActive, timelineRange);
   }, [rangeSelectionActive, timelineRange, rangePresentationRevision]);
@@ -552,6 +485,7 @@ export function MinimalCycleView() {
     revealSelectedInHierarchy,
     createSignalGroup,
     addTreeEntity,
+    moveTreeItemToGroup,
     registerBulkSignals,
     previewBulkSignals,
     copySelectedSignal,
@@ -568,6 +502,45 @@ export function MinimalCycleView() {
     saveAndContinuePendingFileAction,
     requestNewDocument,
   } = actions;
+  useEditorDialogRuntime({
+    dirty: history.dirty,
+    documentLifecycle,
+    contextMenu,
+    treeAddMenuOpen,
+    treeMoreMenuOpen,
+    propertiesVisible,
+    exportVisible,
+    saveAsVisible,
+    hierarchyVisible,
+    bulkRegistrationVisible,
+    setContextMenu,
+    setTreeAddMenuOpen,
+    setTreeMoreMenuOpen,
+    setPropertiesVisible,
+    setExportVisible,
+    setSaveAsVisible,
+    setHierarchyVisible,
+    setBulkRegistrationVisible,
+    setBulkRegistrationPreview,
+    suppressCanvasClickRef,
+    dialogOriginRef,
+    dialogOriginLabelRef,
+    menuOriginRef,
+    pendingFileOriginRef,
+    renameDialogRef,
+    renameDialogOriginRef,
+    bulkRegistrationDialogRef,
+    unsavedFileDialogRef,
+    compatibilityDialogRef,
+    renameDialogOpen,
+    pendingFileAction,
+    compatibilityPreview,
+    restorePendingFileFocus,
+    cancelPendingFileAction,
+    closeContextMenu,
+    closeTreeAddMenu,
+    closeTreeMoreMenu,
+  });
   const signalEditor = <SignalEditor
     key={`${bottomSignal?.id ?? "none"}:${snapshot.revision}:${bottomResetToken}`}
     signal={bottomSignal}
@@ -587,22 +560,7 @@ export function MinimalCycleView() {
       if (source && group) createCopiedSignals([{ signal: source, groupId: group.id, index: group.rows.indexOf(signalId) }], "duplicate", "source-group");
     }}
     onCancel={() => setBottomResetToken((value) => value + 1)}
-    onDropToGroup={(kind, id, targetGroupId) => {
-      const document = snapshot.document;
-      const targetGroup = document.signalGroups.find((group) => group.id === targetGroupId);
-      if (!targetGroup) return;
-      if (kind === "signal") {
-        const sourceGroup = document.signalGroups.find((group) => group.rows.includes(id as SignalId));
-        let index = targetGroup.rows.length;
-        if (sourceGroup?.id === targetGroup.id) index = Math.max(0, index - 1);
-        commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drop_group_target"), type: "signal.move", signalId: id as SignalId, targetGroupId, index });
-        return;
-      }
-      const sourceIndex = document.signalGroups.findIndex((group) => group.id === id);
-      const targetIndex = document.signalGroups.findIndex((group) => group.id === targetGroupId);
-      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
-      commandRegistry.current.execute<SemanticCommand>("semantic.execute", { id: nextCommandId("drop_group_target"), type: "group.move", groupId: id as GroupId, index: sourceIndex < targetIndex ? targetIndex - 1 : targetIndex });
-    }}
+    onDropToGroup={moveTreeItemToGroup}
     onClockPreview={(draft) => { const currentHost = host.current; if (currentHost && bottomSignal?.type === "clock") refreshClockPreview(currentHost, bottomSignal, draft, snapshot.document.timeline.cycleCount); }}
   />;
   const annotationEditor = bottomAnnotation ? <AnnotationEditor
@@ -667,7 +625,7 @@ export function MinimalCycleView() {
     selectedTransactionId,
     range: timelineRange,
     onCommand: (command) => commandRegistry.current.execute("semantic.execute", command),
-    onCommandBatch: (commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands),
+    onCommandBatch: (commands) => executeBatch(nextCommandId("ribbon_annotation_arrange"), commands),
     getZoom: timelineNavigation.getZoom,
     onFitAll: timelineNavigation.fitAll,
     onOpenTimeline: () => setRibbonTab("Timeline"),
@@ -678,6 +636,40 @@ export function MinimalCycleView() {
   const canRenameSelection = capabilities.canRename;
   const canShowSelection = capabilities.canShow;
   const canHideSelection = capabilities.canHide;
+  const workspaceHeader = <SignalTreeColumnHeader
+    treeTypeFilter={treeTypeFilter}
+    onTreeTypeFilterChange={(value) => setTreeTypeFilter(value as TreeTypeFilter)}
+    treeFilter={treeFilter}
+    onTreeFilterChange={setTreeFilter}
+    onClearTreeFilter={() => setTreeFilter("")}
+    addMenuOpen={treeAddMenuOpen}
+    onToggleAddMenu={(origin) => { menuOriginRef.current = origin; setTreeAddMenuOpen((value) => !value); }}
+    moreMenuOpen={treeMoreMenuOpen}
+    onToggleMoreMenu={(origin) => { menuOriginRef.current = origin; setTreeMoreMenuOpen((value) => !value); }}
+    onAddEntity={addTreeEntity}
+    onCloseAddMenu={closeTreeAddMenu}
+    onOpenBulkRegistration={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}
+    onCollapseAllGroups={() => setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id)))}
+    onExpandAllGroups={() => setCollapsedGroups(new Set())}
+    onOpenHierarchy={() => setHierarchyVisible(true)}
+    onCloseMoreMenu={closeTreeMoreMenu}
+    timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
+  />;
+  const workspaceViewportContent = viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onContextMenu={(event) => openTransactionContextMenu(event)} />;
+  const workspaceViewportLegend = <LegendView document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />;
+  const workspaceBottom = <BottomEditorPanel
+    tabs={bottomTabs}
+    activeTab={bottomTab}
+    onSelectTab={selectBottomTab}
+    onTabKeyDown={onBottomTabKeyDown}
+    followSelection={followSelection}
+    onFollowSelectionChange={setFollowSelection}
+    pinned={bottomPinned}
+    onTogglePinned={toggleBottomPin}
+    summary={<div className="left-panel-tail"><span data-testid="left-tree-signal-count">{snapshot.document.signals.length} signals</span>{selectedSignal && <span className="scope-breadcrumb" data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}</div>}
+    content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "AI" ? <AIOperationPanel {...aiAssistantPanel} /> : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
+  />;
+  const workspaceInspector = <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? selectedBookmark?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} bookmark={selectedBookmark} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => { if (selectedGroup) refreshGroupStylePreview(host.current!, selectedGroup.id, selectedGroup.style); setInspectorResetToken((value) => value + 1); }} onClose={() => setInspectorVisible(false)} onDeleteBookmark={deleteBottomBookmark} onGroupPreview={(groupId, style) => refreshGroupStylePreview(host.current!, groupId, style ?? snapshot.document.signalGroups.find((group) => group.id === groupId)?.style)} />;
   return <EditorShellView
     style={{ "--gui-left-width": `${leftPaneWidth}px`, "--gui-frozen-width": `${frozenPaneWidth}px`, "--gui-bottom-height": `${bottomHeight}px`, "--gui-inspector-width": `${inspectorWidth}px`, "--gui-role-width": `${snapshot.document.layout.roleColumnWidth}px`, "--gui-signal-width": `${snapshot.document.layout.signalNameWidth}px`, "--gui-signal-align": snapshot.document.layout.signalNameAlign, "--gui-signal-split-upper-ratio": String(signalSplitRatio) } as React.CSSProperties}
     density={density} workspacePreset={workspacePreset} inspectorVisible={inspectorVisible} bottomVisible={bottomVisible} rulerEnabled={rulerEnabled} minimapEnabled={minimapEnabled} signalTreeVisible={signalTreeVisible}
@@ -754,7 +746,7 @@ export function MinimalCycleView() {
       onVisibility={setSelectionVisibility}
       onRange={(range) => { setRangeSelectionActive(true); setTimelineRange(range); }}
       onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)}
-      onCommandBatch={(commands) => application.executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
+      onCommandBatch={(commands) => executeBatch(nextCommandId("ribbon_annotation_arrange"), commands)}
       onViewIntent={(intent) => { if (intent === "fit-all") timelineNavigation.fitAll(); else setRibbonTab("Timeline"); }}
       onCreateAnnotation={createSelectedAnnotation}
       onArrowPick={(annotationType) => armArrowPick.current(annotationType)}
@@ -794,86 +786,77 @@ export function MinimalCycleView() {
       aiBridgeStatus={aiBridgeStatus}
       onOpenProperties={() => { dialogOriginLabelRef.current = "Properties"; dialogOriginRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; setPropertiesVisible(true); }}
     />
-    <MinimalCycleViewPanels>
-    <div className="desktop-workspace">
-      <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
-         <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={resizeLeftPaneByKeyboard} onPointerDown={startLeftPaneResize} onPointerMove={moveLeftPaneResize} onPointerUp={finishLeftPaneResize} onPointerCancel={finishLeftPaneResize} />
-          <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={resizeFrozenPaneByKeyboard} onPointerDown={startFrozenPaneResize} onPointerMove={moveFrozenPaneResize} onPointerUp={finishFrozenPaneResize} onPointerCancel={finishFrozenPaneResize} />
-        <SignalTreeColumnHeader
-          treeTypeFilter={treeTypeFilter}
-          onTreeTypeFilterChange={(value) => setTreeTypeFilter(value as TreeTypeFilter)}
-          treeFilter={treeFilter}
-          onTreeFilterChange={setTreeFilter}
-          onClearTreeFilter={() => setTreeFilter("")}
-          addMenuOpen={treeAddMenuOpen}
-          onToggleAddMenu={(origin) => { menuOriginRef.current = origin; setTreeAddMenuOpen((value) => !value); }}
-          moreMenuOpen={treeMoreMenuOpen}
-          onToggleMoreMenu={(origin) => { menuOriginRef.current = origin; setTreeMoreMenuOpen((value) => !value); }}
-          onAddEntity={addTreeEntity}
-          onCloseAddMenu={closeTreeAddMenu}
-          onOpenBulkRegistration={() => { setBulkRegistrationGroupId(snapshot.document.signalGroups.at(-1)?.id); setBulkRegistrationVisible(true); }}
-          onCollapseAllGroups={() => setCollapsedGroups(new Set(snapshot.document.signalGroups.map((group) => group.id)))}
-          onExpandAllGroups={() => setCollapsedGroups(new Set())}
-          onOpenHierarchy={() => setHierarchyVisible(true)}
-          onCloseMoreMenu={closeTreeMoreMenu}
-          timeScaleLabel={snapshot.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${referenceClockSignal?.display.name ?? snapshot.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
-        />
-        <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
-          {viewMode !== "Cycle" && <TransactionLanes document={snapshot.document} zoom={zoom} selectedId={selectedTransactionId} getBoundaryX={(cycle) => transactionBoundaryX.current(cycle)} onSelect={selectTransaction} onSnap={(clientX) => snapTransactionCycle.current(clientX)} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onContextMenu={(event) => openTransactionContextMenu(event)} />}
-          <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
-          <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}>
-            <div className="cycle-ruler-content" ref={ruler} />
-          </div>
-          <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band" aria-hidden="true" hidden />
-          <LegendView document={snapshot.document} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} />
-      <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
-        </div>
-        {signalSplitEnabled && viewMode === "Cycle" && <>
-          <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={resizeSignalSplitByKeyboard} onPointerDown={startSignalSplitResize} onPointerMove={moveSignalSplitResize} onPointerUp={finishSignalSplitResize} onPointerCancel={finishSignalSplitResize} />
-          <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation">
-            <div className="geometry-grid" ref={gridLayerLower} data-testid="geometry-grid-lower" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
-            <div className="cycle-ruler" data-testid="cycle-ruler-lower" aria-label="Lower pane cycle ruler" hidden={!rulerEnabled}>
-              <div className="cycle-ruler-content" ref={rulerLower} />
-            </div>
-            <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band-lower" aria-hidden="true" hidden />
-            <div className="surface-host" ref={hostLower} data-testid="cycle-surface-lower" />
-          </div>
-        </>}
-      </section>
-       {bottomVisible && <div className="bottom-resize-track" data-testid="bottom-resizer" role="separator" aria-label="Resize bottom editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={420} aria-valuenow={bottomHeight} tabIndex={0} onKeyDown={resizeBottomByKeyboard} onPointerDown={startBottomResize} onPointerMove={moveBottomResize} onPointerUp={finishBottomResize} onPointerCancel={finishBottomResize} />}
-      {bottomVisible && <BottomEditorPanel
-        tabs={bottomTabs}
-        activeTab={bottomTab}
-        onSelectTab={selectBottomTab}
-        onTabKeyDown={onBottomTabKeyDown}
-        followSelection={followSelection}
-        onFollowSelectionChange={setFollowSelection}
-        pinned={bottomPinned}
-        onTogglePinned={toggleBottomPin}
-        summary={<div className="left-panel-tail"><span data-testid="left-tree-signal-count">{snapshot.document.signals.length} signals</span>{selectedSignal && <span className="scope-breadcrumb" data-testid="scope-breadcrumb">Scope: {selectedSignal.source.instancePath.length ? selectedSignal.source.instancePath.join(" / ") : "(root)"}</span>}</div>}
-        content={bottomTab === "Signal" ? signalEditor : bottomTab === "Annotation" ? annotationEditor : bottomTab === "Transaction" ? transactionEditor : bottomTab === "Bookmarks" ? bookmarkEditor : bottomTab === "AI" ? <AIOperationPanel {...aiAssistantPanel} /> : bottomTab === "Problems" ? <ProblemsPanel diagnostics={diagnostics} onNavigate={navigateProblem} /> : <AdvancedJsonPanel document={snapshot.document} selectedSignal={bottomSignal} selectedGroup={bottomGroup} selectedAnnotation={bottomAnnotation} selectedTransaction={bottomTransaction} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
-      />}
-       <aside hidden={!inspectorVisible} className="inspector-shell" data-testid="inspector-shell"><div className="inspector-resize-handle" data-testid="inspector-resizer" role="separator" aria-label="Resize Inspector" aria-orientation="vertical" aria-valuemin={240} aria-valuemax={420} aria-valuenow={inspectorWidth} tabIndex={0} onKeyDown={resizeInspectorByKeyboard} onPointerDown={startInspectorResize} onPointerMove={moveInspectorResize} onPointerUp={finishInspectorResize} onPointerCancel={finishInspectorResize} />{/* Bug fix: `selectedSignal?.id ?? \`...:${revision}:${token}\`` short-circuited
-    to *just* the signal id whenever a Signal was selected (operator
-    precedence -- `??`'s left side already being truthy skips the whole
-    template on the right), so bumping inspectorResetToken via Cancel never
-    changed a Signal's own key and therefore never remounted/reset its
-    Inspector draft state (Group/Annotation/Transaction were unaffected,
-    since their id is only ever the *fallback* inside that same template).
-    One template literal now always appends :revision:token regardless of
-    which kind of selection it is. */}
-       <InspectorPanel key={`${selectedSignal?.id ?? selectedGroup?.id ?? selectedAnnotation?.id ?? selectedTransaction?.id ?? selectedBookmark?.id ?? "none"}:${snapshot.revision}:${inspectorResetToken}`} signal={selectedSignal} group={selectedGroup} annotation={selectedAnnotation} transaction={selectedTransaction} bookmark={selectedBookmark} collapsedGroup={selectedGroup !== undefined && collapsedGroupIds.has(selectedGroup.id)} onToggleGroupCollapse={selectedGroup === undefined ? undefined : () => toggleCollapsedGroup(selectedGroup.id)} registry={commandRegistry.current} document={snapshot.document} viewport={viewport} onCommand={(command) => commandRegistry.current.execute("semantic.execute", command)} onReveal={revealSelectedInHierarchy} onCancel={() => { if (selectedGroup) refreshGroupStylePreview(host.current!, selectedGroup.id, selectedGroup.style); setInspectorResetToken((value) => value + 1); }} onClose={() => setInspectorVisible(false)} onDeleteBookmark={deleteBottomBookmark} onGroupPreview={(groupId, style) => refreshGroupStylePreview(host.current!, groupId, style ?? snapshot.document.signalGroups.find((group) => group.id === groupId)?.style)} /></aside>
-    </div>
+    <EditorWorkspaceView
+      viewMode={viewMode}
+      signalSplitEnabled={signalSplitEnabled}
+      signalSplitRatio={signalSplitRatio}
+      gridEnabled={gridEnabled}
+      snapEnabled={snapEnabled}
+      rulerEnabled={rulerEnabled}
+      leftPaneWidth={leftPaneWidth}
+      frozenPaneMinWidth={frozenPaneMinWidth}
+      frozenPaneWidth={frozenPaneWidth}
+      bottomVisible={bottomVisible}
+      bottomHeight={bottomHeight}
+      inspectorVisible={inspectorVisible}
+      inspectorWidth={inspectorWidth}
+      viewport={viewport}
+      gridLayer={gridLayer}
+      ruler={ruler}
+      host={host}
+      viewportLower={viewportLower}
+      rulerLower={rulerLower}
+      hostLower={hostLower}
+      gridLayerLower={gridLayerLower}
+      header={workspaceHeader}
+      viewportContent={workspaceViewportContent}
+      viewportLegend={workspaceViewportLegend}
+      bottom={workspaceBottom}
+      inspector={workspaceInspector}
+      onInspectorKeyDown={resizeInspectorByKeyboard}
+      onInspectorPointerDown={startInspectorResize}
+      onInspectorPointerMove={moveInspectorResize}
+      onInspectorPointerUp={finishInspectorResize}
+      onLeftPaneKeyDown={resizeLeftPaneByKeyboard}
+      onLeftPanePointerDown={startLeftPaneResize}
+      onLeftPanePointerMove={moveLeftPaneResize}
+      onLeftPanePointerUp={finishLeftPaneResize}
+      onFrozenPaneKeyDown={resizeFrozenPaneByKeyboard}
+      onFrozenPanePointerDown={startFrozenPaneResize}
+      onFrozenPanePointerMove={moveFrozenPaneResize}
+      onFrozenPanePointerUp={finishFrozenPaneResize}
+      onBottomKeyDown={resizeBottomByKeyboard}
+      onBottomPointerDown={startBottomResize}
+      onBottomPointerMove={moveBottomResize}
+      onBottomPointerUp={finishBottomResize}
+      onSignalSplitKeyDown={resizeSignalSplitByKeyboard}
+      onSignalSplitPointerDown={startSignalSplitResize}
+      onSignalSplitPointerMove={moveSignalSplitResize}
+      onSignalSplitPointerUp={finishSignalSplitResize}
+    />
+    <EditorDialogLayer
+      compatibilityPreview={compatibilityPreview}
+      compatibilityDialogRef={compatibilityDialogRef}
+      closeCompatibility={documentLifecycle.closeCompatibility}
+      restorePendingFileFocus={restorePendingFileFocus}
+      enterCompatibilityReadOnly={documentLifecycle.enterCompatibilityReadOnly}
+      pendingFileAction={pendingFileAction}
+      unsavedFileDialogRef={unsavedFileDialogRef}
+      unsavedCancelRef={unsavedCancelRef}
+      cancelPendingFileAction={cancelPendingFileAction}
+      continuePendingFileAction={continuePendingFileAction}
+      saveAndContinuePendingFileAction={saveAndContinuePendingFileAction}
+      fileInputRef={fileInput}
+      onFileChange={(event) => { const file = event.currentTarget.files?.[0]; if (file) { capturePendingFileOrigin(); void documentLifecycle.readFile(file); } event.currentTarget.value = ""; }}
+    >
     <ContextMenuPanel contextMenu={contextMenu} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasSelectedEntity={hasSelectedEntity} hasSelectedSignal={hasSelectedSignal} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} copySelectedSignal={copySelectedSignal} cutSelectedSignal={cutSelectedSignal} pasteSelectedEntity={pasteSelectedEntity} duplicateSelectedEntity={duplicateSelectedEntity} moveSelection={moveSelection} setSelectionVisibility={setSelectionVisibility} renameSelection={renameSelection} closeContextMenu={closeContextMenu} deleteSelection={() => commandRegistry.current.execute("selection.delete")} addBookmarkAtCycle={addBookmarkAtCycle} />
     {renameDialogOpen && <RenameDialog dialogRef={renameDialogRef} draft={renameDraft} onDraftChange={(value) => { setRenameDraft(value); setRenameError(""); }} error={renameError} onApply={applyRename} onClose={() => setRenameDialogOpen(false)} />}
     {hierarchyVisible && <HardwareHierarchyBrowser document={snapshot.document} selectedSignalId={selectedSignal?.id} onSelect={selectHierarchySignal} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setHierarchyVisible(false))} />}
-    {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => application.executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
+    {propertiesVisible && <DocumentProperties document={snapshot.document} onApplyProperties={(commands) => executeBatch(nextCommandId("document_properties"), commands)} restoreFocusRef={dialogOriginRef} onClose={() => closeDialog(() => setPropertiesVisible(false))} />}
     {bulkRegistrationVisible && <BulkRegistrationDialog dialogRef={bulkRegistrationDialogRef} groups={snapshot.document.signalGroups} text={bulkRegistrationText} onTextChange={(value) => { setBulkRegistrationText(value); setBulkRegistrationPreview(undefined); setBulkRegistrationStatus(""); }} groupId={bulkRegistrationGroupId} onGroupIdChange={setBulkRegistrationGroupId} status={bulkRegistrationStatus} preview={bulkRegistrationPreview} onPreview={previewBulkSignals} onApply={registerBulkSignals} onClose={() => closeDialog(() => { setBulkRegistrationVisible(false); setBulkRegistrationPreview(undefined); })} />}
     {exportVisible && <ExportDialog snapshot={snapshot} range={timelineRange} restoreFocusRef={dialogOriginRef} onDiagnostic={(next) => setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("export-failure:")), ...(next ? [next] : [])])} onClose={() => closeDialog(() => setExportVisible(false))} />}
      {saveAsVisible && <SaveAsDialog defaultName={snapshot.document.document.title || "timing-chart"} restoreFocusRef={dialogOriginRef} onSave={(name) => { const saved = documentLifecycle.saveAs(name); if (saved) closeDialog(() => setSaveAsVisible(false)); return saved; }} onClose={() => closeDialog(() => setSaveAsVisible(false))} />}
-     {compatibilityPreview && <div className="modal-backdrop" data-testid="compatibility-dialog"><section ref={compatibilityDialogRef} className="document-properties compatibility-dialog" role="dialog" aria-modal="true" aria-labelledby="compatibility-dialog-title"><header><h2 id="compatibility-dialog-title">Compatibility Mode</h2></header><p>Format version {compatibilityPreview.sourceFormatVersion} is newer than this editor supports. The current document has not been replaced.</p><p className="inspector-note">Unknown fields are preserved in the original source below. Compatibility Mode is read-only and cannot Save or overwrite this file.</p><textarea aria-label="Compatibility source" readOnly value={compatibilityPreview.sourceText} rows={14} />{compatibilityPreview.readOnly && <output role="status">Read-only Compatibility Mode active</output>}<footer><button type="button" onClick={() => { documentLifecycle.closeCompatibility(); restorePendingFileFocus(); }}>{compatibilityPreview.readOnly ? "Close" : "Cancel"}</button>{!compatibilityPreview.readOnly && <button type="button" data-testid="compatibility-read-only" onClick={documentLifecycle.enterCompatibilityReadOnly}>View Read-Only</button>}</footer></section></div>}
-     {pendingFileAction && <div className="modal-backdrop" data-testid="unsaved-file-dialog"><section ref={unsavedFileDialogRef} className="document-properties unsaved-file-dialog" role="dialog" aria-modal="true" aria-labelledby="unsaved-file-dialog-title" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); cancelPendingFileAction(); } }}><header><h2 id="unsaved-file-dialog-title">Unsaved Changes</h2></header><p>Save changes before {pendingFileAction.kind === "new" ? "creating a new document" : "opening another document"}?</p><p className="inspector-note">Your current document has unsaved changes.</p><footer><button type="button" ref={unsavedCancelRef} autoFocus data-testid="unsaved-cancel" onClick={cancelPendingFileAction}>Cancel</button><button type="button" data-testid="unsaved-discard" onClick={continuePendingFileAction}>Discard</button><button type="button" data-testid="unsaved-save" onClick={saveAndContinuePendingFileAction}>Save</button></footer></section></div>}
-     <input ref={fileInput} hidden type="file" accept=".json,.tcd" onChange={(event) => { const file = event.target.files?.[0]; if (file) { capturePendingFileOrigin(); void documentLifecycle.readFile(file); } event.currentTarget.value = ""; }} />
+    </EditorDialogLayer>
     <EditorStatusBar
       toolStatus={arrowPickStatus === "idle" ? (rangeSelectionActive ? "Range select active" : "Ready · Tool: Select") : `Arrow pick · ${arrowPickStatus}`}
       selectionStatus={selectedSignalIds.size > 1 ? `${selectedSignalIds.size} signals` : selectedTransaction?.name ?? selectedAnnotation?.label ?? selectedSignal?.display.name ?? selectedGroup?.name ?? "None"}
@@ -894,6 +877,5 @@ export function MinimalCycleView() {
       problemsCount={diagnostics.length}
       waveDromHasError={waveDromHasError}
     />
-    </MinimalCycleViewPanels>
   </EditorShellView>;
 }

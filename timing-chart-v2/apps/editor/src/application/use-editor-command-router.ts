@@ -15,6 +15,7 @@ export interface EditorCommandRouterInput {
 
 export interface EditorCommandRouter {
   readonly commandRegistry: MutableRefObject<UiCommandRegistry>;
+  readonly executeBatch: EditorApplicationOwner["executeBatch"];
 }
 
 export function useEditorCommandRouter(input: EditorCommandRouterInput): EditorCommandRouter {
@@ -55,5 +56,5 @@ export function useEditorCommandRouter(input: EditorCommandRouterInput): EditorC
     return () => unregister.forEach((dispose) => dispose());
   }, []);
 
-  return { commandRegistry };
+  return { commandRegistry, executeBatch: input.application.executeBatch };
 }
