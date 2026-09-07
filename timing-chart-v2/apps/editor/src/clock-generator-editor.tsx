@@ -49,6 +49,31 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
     }
     return { ...current, anchorId };
   });
+  // #426: neither form here had any Draft/dirty gating at all -- both
+  // Apply buttons were always enabled regardless of whether the draft
+  // actually differed from the committed Signal, and neither showed the
+  // "unapplied changes" indicator every other Bottom editor's own Draft
+  // now shows. Generator and Edge Counter stay two independent Applies
+  // (they commit two different SemanticCommand types onto one Signal,
+  // not one shared Draft), so each gets its own dirty check rather than
+  // a single combined one. The generator comparison mirrors the exact
+  // normalization the submit handler below performs (parsed suppressed
+  // periods, `suppressedPeriods` present only when non-empty) so the
+  // button disables precisely when Apply would be a no-op.
+  const normalizedDraftGenerator = (() => {
+    try {
+      const parsedSuppressedPeriods = parseSuppressedPeriods(suppressedPeriods);
+      const { suppressedPeriods: _previousSuppressedPeriods, ...generatorWithoutSuppression } = generator;
+      return parsedSuppressedPeriods.length === 0 ? generatorWithoutSuppression : { ...generatorWithoutSuppression, suppressedPeriods: parsedSuppressedPeriods };
+      // An unparseable "Suppressed periods" draft is, definitionally, not
+      // equal to whatever is committed -- fall through to `null`, which
+      // JSON.stringify never equals the committed generator's JSON, so
+      // Apply stays enabled and clicking it surfaces the same parse error
+      // via the existing try/catch in the submit handler below.
+    } catch { return null; }
+  })();
+  const generatorChanged = JSON.stringify(normalizedDraftGenerator) !== JSON.stringify(signal.generator);
+  const edgeCounterChanged = JSON.stringify(edgeCounter) !== JSON.stringify(signal.edgeCounter);
   return <div className="clock-editor">
     <div className="event-toolbar" role="toolbar" aria-label="Clock context commands" data-testid="clock-context-toolbar">
       <span className="clock-context-label">Signal: {signal.display.name}    Type: Clock</span>
@@ -83,7 +108,8 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
       <label>Polarity<select aria-label="Clock polarity" value={generator.polarity} onChange={(event) => setGenerator({ ...generator, polarity: event.target.value as ClockGenerator["polarity"] })}><option value="positive">Positive</option><option value="negative">Negative</option></select></label>
       <label>Suppressed periods<input aria-label="Clock suppressed periods" value={suppressedPeriods} placeholder="e.g. 1, 3" onChange={(event) => setSuppressedPeriods(event.target.value)} /></label>
       {generatorError && <output className="editor-problem" role="alert" data-testid="clock-generator-error">{generatorError}</output>}
-      <button type="submit" data-testid="apply-clock-generator">Apply generator</button>
+      {generatorChanged && <output className="draft-unapplied-indicator" data-testid="clock-generator-unapplied">● Unapplied changes</output>}
+      <button type="submit" data-testid="apply-clock-generator" disabled={!generatorChanged}>Apply generator</button>
     </form>
     <form className="clock-edge-counter" aria-label="Clock Edge Counter" onSubmit={(event) => {
       event.preventDefault();
@@ -99,7 +125,8 @@ export function ClockGeneratorEditor({ signal, bookmarks, onCommand, onDuplicate
       <label>Position<select aria-label="Clock edge counter position" value={edgeCounter.position} onChange={(event) => setEdgeCounter({ ...edgeCounter, position: event.target.value as EdgeCounterSettings["position"] })}><option value="above">Above</option><option value="below">Below</option></select></label>
       <label>X Offset<input aria-label="Clock edge counter X offset" type="number" value={edgeCounter.offset.x} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, x: Number(event.target.value) } })} /></label>
       <label>Y Offset<input aria-label="Clock edge counter Y offset" type="number" value={edgeCounter.offset.y} onChange={(event) => setEdgeCounter({ ...edgeCounter, offset: { ...edgeCounter.offset, y: Number(event.target.value) } })} /></label>
-      <button type="submit" data-testid="apply-clock-edge-counter">Apply edge counter</button>
+      {edgeCounterChanged && <output className="draft-unapplied-indicator" data-testid="clock-edge-counter-unapplied">● Unapplied changes</output>}
+      <button type="submit" data-testid="apply-clock-edge-counter" disabled={!edgeCounterChanged}>Apply edge counter</button>
     </form>
   </div>;
 }
