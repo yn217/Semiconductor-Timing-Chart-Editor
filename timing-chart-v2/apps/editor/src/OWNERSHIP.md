@@ -60,6 +60,7 @@ controllers are extracted incrementally.
 | Runtime interaction controller | `runtime/interaction-controller.ts` | pointer/keyboard binding and transaction snap callbacks | second-pass owner boundary |
 | Runtime document refresh lifecycle | `runtime/document-lifecycle-controller.ts` | current document epoch/lifecycle guard | second-pass owner boundary |
 | Runtime render coordinator | `runtime/render-coordinator.ts` | renderer overlay and edge-counter refresh | second-pass owner boundary |
+| Timeline surface controller | `runtime/timeline-surface-controller.ts` | renderer/projection/geometry/gesture lifecycle | explicit non-React runtime owner |
 | Runtime viewport projection | `runtime/viewport-projection.ts` | projection/renderer owners | PR6 helper split |
 | Runtime waveform provider | `runtime/waveform-surface-provider.ts` | WaveDrom adapter and geometry registry | PR6 helper split |
 | Runtime timeline presentation refresh | `runtime/timeline-presentation-refresh.ts` | view-only DOM/geometry presentation | PR6 helper split |

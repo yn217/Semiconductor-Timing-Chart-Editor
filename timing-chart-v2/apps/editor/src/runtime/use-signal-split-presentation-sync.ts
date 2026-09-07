@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import type { TimelineSurfaceRuntimeInput } from "./use-timeline-surface-runtime.js";
+import type { TimelineSurfaceRuntimeInput } from "./timeline-surface-controller.js";
 export function useSignalSplitPresentationSync(input: TimelineSurfaceRuntimeInput): void {
   const { viewport, viewportLower, ruler, rulerLower, host, hostLower } = input.dom;
   const signalSplitEnabled = input.signalSplitEnabled;
