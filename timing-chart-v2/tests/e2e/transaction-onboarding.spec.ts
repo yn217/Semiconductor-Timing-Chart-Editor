@@ -80,7 +80,7 @@ test("Loaded example survives Save/Open exactly, and Inspector/Bottom edits stay
   // Edit through the Inspector, confirm the Bottom editor reflects it.
   const inspector = page.getByTestId("inspector");
   await inspector.getByLabel("Transaction name").fill("Read Request v2");
-  await inspector.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   const bottomEditor = page.getByTestId("transaction-editor");
   await expect(bottomEditor.getByLabel("Transaction name")).toHaveValue("Read Request v2");
 
@@ -119,7 +119,7 @@ test("Phases are added, edited, and deleted through the structured table without
 
   // Edit an existing phase's name through the structured table alone.
   await inspector.getByLabel("Phase 1 name").fill("Setup");
-  await inspector.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   const bottomEditor = page.getByTestId("transaction-editor");
   // Re-select to force the Inspector/Bottom editors to re-read the committed document.
@@ -129,7 +129,7 @@ test("Phases are added, edited, and deleted through the structured table without
   // Delete the last phase.
   await inspector.getByLabel("Delete phase 3").click();
   await expect(table.locator(".transaction-phase-row:not(.transaction-phase-row-header)")).toHaveCount(2);
-  await inspector.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
 
   // Add a new phase through "Add Phase" -- no JSON typed anywhere.
@@ -137,7 +137,7 @@ test("Phases are added, edited, and deleted through the structured table without
   const rows = table.locator(".transaction-phase-row:not(.transaction-phase-row-header)");
   await expect(rows).toHaveCount(3);
   await inspector.getByLabel("Phase 3 name").fill("Cooldown");
-  await inspector.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
 
   const advanced = inspector.getByTestId("transaction-phase-editor").locator("details");

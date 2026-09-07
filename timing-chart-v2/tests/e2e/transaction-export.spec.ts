@@ -36,7 +36,7 @@ test("creates, edits, links, saves and reopens one canonical Transaction", async
   await inspector.getByLabel("Transaction name").fill("AXI Burst");
   await inspector.getByLabel("Transaction name").blur();
   await inspector.getByLabel("Transaction lane").fill("lane_1");
-  await inspector.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await linkSignal(inspector, "REQUEST");
   await expect(page.getByTestId("history-status")).toHaveText("History 4 / Redo 0");
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();

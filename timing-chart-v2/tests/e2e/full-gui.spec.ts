@@ -1079,7 +1079,7 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   await inspector.getByLabel("Phase 2 name").fill("Data");
   await inspector.getByLabel("Phase 2 start").fill("4");
   await inspector.getByLabel("Phase 2 end").fill("7");
-  await inspector.getByTestId("apply-transaction-properties").click();
+  await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await inspector.locator(".transaction-phase-advanced summary").click();
