@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { createTimelineNavigationController } from "../../apps/editor/src/runtime/use-editor-runtime-bridge.js";
+import { createTimelineNavigationController } from "../../apps/editor/src/runtime/viewport-controller.js";
 
 function documentFixture() {
   return { timeline: { cycleCount: 24 } } as never;

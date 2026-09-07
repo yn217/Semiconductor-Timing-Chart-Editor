@@ -14,7 +14,7 @@ import { TimelineRangeInteractionOwner } from "./timeline-range-interaction-owne
 import { AnnotationInteractionOwner } from "./timeline-annotation-interaction-owner.js";
 import { TreeDragInteractionOwner } from "./tree-drag-interaction-owner.js";
 import type { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
-import { attachEditorEventBindings } from "./use-editor-runtime-bridge.js";
+import { attachEditorEventBindings } from "./interaction-controller.js";
 import { routeGlobalShortcut } from "./keyboard-shortcut-router.js";
 import { nextCommandId } from "../command-id.js";
 

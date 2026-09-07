@@ -30,7 +30,6 @@ const budget = 900;
 const ownerBudgets = [
   ["apps/editor/src/application/use-editor-actions.ts", 500],
   ["apps/editor/src/application/use-editor-presentation-state.ts", 500],
-  ["apps/editor/src/runtime/use-editor-runtime-bridge.ts", 800],
   ["apps/editor/src/runtime/use-timeline-surface-runtime.ts", 800],
   ["apps/editor/src/runtime/timeline-surface-controller.ts", 800],
   ["apps/editor/src/editor-workspace-view.tsx", 500],

@@ -10,7 +10,7 @@ controllers are extracted incrementally.
 | Viewport, timeline, ruler and grid lifecycle | `runtime/timeline-viewport-runtime.ts`, `runtime/timeline-geometry-owner.ts`, `runtime/view-metrics.ts` | parent `UiCommandRegistry` callback | explicit runtime owners; `minimal-cycle-view.tsx` integrates them |
 | Timeline surface input interactions | `runtime/timeline-surface-interactions.ts` | `UiCommandRegistry` / `EditorApplicationOwner` callbacks | explicit pointer, keyboard, context-menu, and tree-drag owner |
 | File open/save/export lifecycle | `application/use-document-lifecycle.ts` | `CommandHistorySession` / SemanticCommand | explicit lifecycle owner; `minimal-cycle-view.tsx` integrates effects |
-| Canonical session and renderer bridge | `application/use-editor-application-owner.ts`, `runtime/editor-application-runtime.ts`, `runtime/use-editor-runtime-bridge.ts` | `CommandHistorySession` | explicit application/renderer boundary |
+| Canonical session and renderer bridge | `application/use-editor-application-owner.ts`, `runtime/editor-application-runtime.ts`, `runtime/waveform-surface-provider.ts`, `runtime/render-coordinator.ts` | `CommandHistorySession` | explicit application/renderer boundary |
 | Document replacement and async render generation | `runtime/document-epoch.ts`, `projection`, `renderer` | `DocumentEpoch` / current session | explicit epoch propagation; stale wave results are dropped |
 | Event table row editing and quick values | `event-table-components.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Comment Row editor | `comment-row-editor.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
@@ -58,7 +58,7 @@ controllers are extracted incrementally.
 | Editor workspace shell | `editor-workspace-view.tsx` | typed runtime/view callbacks | PR5 workspace extraction |
 | Editor dialog layer | `editor-dialog-layer.tsx`, `application/use-editor-dialog-runtime.ts` | document lifecycle / command router | PR5 dialog extraction |
 | Runtime presentation previews | `runtime/presentation-preview.ts` | view-only DOM/WaveDrom preview | PR6 helper split |
-| Runtime helper barrel | `runtime/use-editor-runtime-bridge.ts` | existing runtime owners | PR6 compatibility barrel |
+| Runtime helper boundaries | `runtime/render-invalidation.ts`, `runtime/editor-dom-bridge.ts`, `runtime/viewport-projection.ts`, `runtime/waveform-surface-provider.ts`, `runtime/timeline-presentation-refresh.ts`, `runtime/runtime-diagnostics.ts` | existing runtime owners | PR6 helper split; no compatibility barrel |
 | Runtime viewport controller | `runtime/viewport-controller.ts` | view-only viewport/navigation callbacks | second-pass owner boundary |
 | Runtime interaction controller | `runtime/interaction-controller.ts` | pointer/keyboard binding and transaction snap callbacks | second-pass owner boundary |
 | Runtime document refresh lifecycle | `runtime/document-lifecycle-controller.ts` | current document epoch/lifecycle guard | second-pass owner boundary |

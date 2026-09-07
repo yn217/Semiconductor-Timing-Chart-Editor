@@ -35,7 +35,8 @@ import { useTimelineSurfaceRuntime } from "./runtime/use-timeline-surface-runtim
 import { useEditorSecondarySurfaces } from "./editor-secondary-surfaces.js";
 import { createEditorExportController } from "./application/editor-export-controller.js";
 import type { TimelineViewportRuntime } from "./runtime/timeline-viewport-runtime.js";
-import { attachMenuKeyboardNavigation, refreshRendererOverlays } from "./runtime/use-editor-runtime-bridge.js";
+import { attachMenuKeyboardNavigation } from "./runtime/interaction-controller.js";
+import { refreshRendererOverlays } from "./runtime/render-coordinator.js";
 import { applyRendererHostSizing } from "./runtime/renderer-host-sizing.js";
 import { refreshRulerRangeSelection, refreshTransactionLinkedRows } from "./runtime/editor-dom-bridge.js";
 export function MinimalCycleView() {

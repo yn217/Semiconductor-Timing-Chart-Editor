@@ -2,7 +2,7 @@ import { startTransition, useEffect, useMemo, useRef, useState } from "react";
 import type { CanonicalDocument } from "@timing-chart-v2/schema";
 import type { ViewMetricsOwner } from "./view-metrics.js";
 import type { TimelineViewportRuntime } from "./timeline-viewport-runtime.js";
-import { createTimelineNavigationController, createTimelineZoomController } from "./use-editor-runtime-bridge.js";
+import { createTimelineNavigationController, createTimelineZoomController } from "./viewport-controller.js";
 
 type TimelineRange = Readonly<{ start: number; end: number }>;
 

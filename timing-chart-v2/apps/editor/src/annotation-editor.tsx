@@ -92,7 +92,7 @@ export function AnnotationEditor({ annotation, annotations, document, history, p
   const applyFontStyle = (style: JsonObject) => onCommand(buildAnnotationStyleCommand(annotation, style, nextCommandId("annotation_font")));
   // Preview reflects the CURRENT draft Label/Color/Opacity on the real
   // renderer-owned overlay via a pure DOM-only path (see
-  // refreshAnnotationPreview in runtime/use-editor-runtime-bridge.ts) --
+  // refreshAnnotationPreview in runtime/presentation-preview.ts) --
   // Canonical/History/Dirty stay untouched; nothing here calls onCommand.
   // Distinct from Apply Annotation (which does commit): this button's own
   // label and the hint beside it say so explicitly (Section 8), rather

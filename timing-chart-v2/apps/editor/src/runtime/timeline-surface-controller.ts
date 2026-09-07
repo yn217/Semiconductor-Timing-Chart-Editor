@@ -14,7 +14,11 @@ import { ViewMetricsOwner } from "./view-metrics.js";
 import { buildViewportWindow } from "./viewport-window.js";
 import { createEdgeCounterProjectionMetrics } from "./edge-counter-projection.js";
 import { TimelineGeometryOwner } from "./timeline-geometry-owner.js";
-import { createEditorTimelineRuntime, deriveRenderInvalidation, refreshRendererForReason, resolveTransactionSnapCycle, scheduleInitialTimelineRefresh } from "./use-editor-runtime-bridge.js";
+import { deriveRenderInvalidation } from "./render-invalidation.js";
+import { createTimelineViewportRuntime } from "./timeline-viewport-runtime.js";
+import { resolveTransactionSnapCycle } from "./interaction-controller.js";
+import { scheduleInitialTimelineRefresh } from "./document-lifecycle-controller.js";
+import { refreshRendererForReason } from "./render-coordinator.js";
 import { createWaveformSurfaceProvider } from "./waveform-surface-provider.js";
 import { mountInitialTimelineProjection, projectViewportWindow } from "./viewport-projection.js";
 import { refreshGridPresentation, refreshPlayheadPresentation, refreshRangeBandPresentation, refreshTimelinePresentation, syncFrozenColumnScroll, syncPresentationScale, syncRulerScroll } from "./timeline-presentation-refresh.js";
@@ -242,11 +246,11 @@ export function createTimelineSurfaceController(input: TimelineSurfaceRuntimeInp
     publishState = () => publishRendererState(rendererHost, session, viewMetricsOwner, adapter, geometryRegistry, projectionCoordinator, renderer, mappingCache, timelineGeometry.snapService, timelineGeometry.snapIndex, rulerBuilds, edgeCounterResolvePasses, timelineNavigation.getZoom(), application.validatorInvocationsRef.current, edgeCounterMetrics);
     publishStateRef.current = () => publishState();
     let frame = 0;
-    // Definite-assignment: assigned below before createEditorTimelineRuntime's
+    // Definite-assignment: assigned below before the viewport runtime's
     // returned closures can ever be invoked (matches this file's rangeInteractions/
     // treeDrag forward-declaration convention); no dummy body is reachable.
     let timelineRender!: (reason: string) => void;
-    const timelineRuntime = createEditorTimelineRuntime({
+    const timelineRuntime = createTimelineViewportRuntime({
       dom: { viewportRef: { current: viewportElement }, waveformRef: { current: rendererHost }, rulerRef: { current: rulerElement }, gridRef: { current: gridElement }, overlayRef: { current: rendererHost.querySelector<HTMLElement>("[data-role='annotation-overlay-surface']") }, rangeBandRef: { current: viewportElement.querySelector<HTMLElement>("[data-role='range-selection-band']") }, playheadRef: { current: rulerElement.querySelector<HTMLElement>("[data-role='playhead']") } },
       geometry: {
         getDisplayTimeMapping: () => timelineGeometry.displayMapping,

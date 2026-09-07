@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyTimelineZoom, type TimelineZoomSurfaceContext } from "../../apps/editor/src/runtime/use-editor-runtime-bridge.js";
+import { applyTimelineZoom, type TimelineZoomSurfaceContext } from "../../apps/editor/src/runtime/viewport-controller.js";
 
 // #417 (Codex's fix): applyTimelineZoom's syncRulerScroll now reads
 // `getComputedStyle(ruler).transform` to recover the ruler's current

@@ -52,7 +52,7 @@ function closingButtonTagIndex(source, openTagEnd) {
  * callback-prop-shaped identifier (`onXxx(...)`) at all -- the shape every
  * real preview effect in this codebase uses to delegate out to renderer-level
  * DOM work (see refreshClockPreview/refreshAnnotationPreview/
- * refreshGroupStylePreview in runtime/use-editor-runtime-bridge.ts), whether
+ * refreshGroupStylePreview in runtime/presentation-preview.ts), whether
  * called directly from the click handler or from a `useEffect` reacting to
  * the toggled state. This is intentionally whole-source, not per-button,
  * scoped: precise per-button attribution of an effect that may be wired

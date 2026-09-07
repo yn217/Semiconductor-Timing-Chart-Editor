@@ -21,7 +21,7 @@ export function ClockGeneratorEditor({ signal, bookmarks, commands, onDuplicate,
   }, [signal.id, signal.generator, signal.edgeCounter]);
   // Preview reflects the CURRENT draft generator on the real, selected Clock
   // row's waveform via a pure DOM-only path (see refreshClockPreview in
-  // runtime/use-editor-runtime-bridge.ts) -- Canonical/History/Dirty stay
+  // runtime/presentation-preview.ts) -- Canonical/History/Dirty stay
   // untouched; nothing here calls onCommand. Toggling Preview off, editing a
   // different Signal (this component remounts on signal.id, see the parent's
   // `key`), or any canonical revision change (Apply/Undo/Redo/Open/New --
