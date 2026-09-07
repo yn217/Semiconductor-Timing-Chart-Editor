@@ -81,21 +81,25 @@
 .annotation-quick-presets button { text-align: left; height: var(--ds-control-height); padding: 3px 10px; border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; font-size: 10px; font-weight: 650; }
 .annotation-quick-presets button:hover:not(:disabled) { border-color: #2c78bb; background: #eaf3fb; }
 .annotation-quick-presets button:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
-/* Section 3/9: Cancel + the one primary Apply action, sticky at the
-   bottom of the Annotation tab regardless of how the List/Edit panels
-   scroll or how tall the Bottom Editor is resized. */
-/* Visual/UX Closure pass, Section 9: Cancel and Apply Annotation are one
-   grouped unit at the right end of the bar -- the "unapplied changes"
-   indicator is the side that grows (margin-right: auto on it, not
-   margin-left: auto on Apply), so the two buttons never end up stranded
-   at opposite ends of a full-width bar the way "Cancel far left, Apply
-   far right" was before. */
-.annotation-sticky-actions { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #cad3df; background: #f4f7fa; }
-.annotation-sticky-actions .draft-unapplied-indicator { margin-right: auto; }
-.annotation-sticky-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-.annotation-sticky-buttons button[data-testid="apply-annotation-properties"] { height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 16px; font-weight: 650; }
-.annotation-sticky-buttons button[data-testid="apply-annotation-properties"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
-.annotation-sticky-buttons button[data-testid="cancel-bottom-draft"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
+/* #426: one shared sticky Draft/Apply/Cancel action bar every Bottom
+   Editor tab with a Draft (Signal/Annotation/Bookmark/Transaction) uses
+   -- not a per-tab copy of the same rule under a different class name.
+   Sticky at the bottom of the tab regardless of how tall its List/Edit
+   panels grow or how the Bottom Editor itself is resized, so Apply is
+   never scrolled out of reach. Cancel and Apply are one grouped unit at
+   the right end of the bar (margin-left: auto on the pair, not on Apply
+   alone) -- the "unapplied changes" indicator is the side that grows
+   instead, so the two buttons never end up stranded at opposite ends of
+   a full-width bar. The primary/Apply style targets `[type="submit"]`
+   generically (true for every tab's own Apply button) rather than one
+   entity's specific data-testid, so a new tab gets the same look for
+   free instead of needing its own copy of this rule. */
+.bottom-sticky-actions { position: sticky; bottom: 0; z-index: 4; display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-top: 1px solid #cad3df; background: #f4f7fa; }
+.bottom-sticky-actions .draft-unapplied-indicator { margin-right: auto; }
+.bottom-sticky-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.bottom-sticky-buttons button[type="submit"] { height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 16px; font-weight: 650; }
+.bottom-sticky-buttons button[type="submit"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
+.bottom-sticky-buttons button[data-testid="cancel-bottom-draft"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
 /* Section 7: List management sits at the top of the List panel it
    manages. */
 .annotation-list-actions { display: flex; gap: 6px; margin-bottom: 6px; }
@@ -391,7 +395,8 @@
    but CSS still treats it as *a* scroll container for `position: sticky`
    purposes -- any sticky descendant sticks relative to *this* box instead
    of continuing up to `.bottom-content` (the Bottom Editor's real,
-   visibly-clipped scrollport), which made `.annotation-sticky-actions`
+   visibly-clipped scrollport), which made the sticky action bar (now
+   `.bottom-sticky-actions`, shared with Transaction/Bookmark below)
    just scroll away with everything else instead of staying pinned
    (confirmed empirically: scrolling `.bottom-content` moved a sticky-top
    element by the exact scroll delta, i.e. it wasn't sticking at all).
