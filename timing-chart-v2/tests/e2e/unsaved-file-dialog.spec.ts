@@ -236,6 +236,30 @@ test("Open discards an entity-keyed Inspector draft when the replacement documen
   await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
 });
 
+test("Open resets the independent Bookmark selection when the replacement document reuses the ID", async ({ page }) => {
+  await page.goto("/");
+  const makeDocument = (title: string, bookmarkName: string) => {
+    const document = canonicalFixture();
+    document.document.title = title;
+    document.bookmarks = [{ id: "bookmark_shared", name: bookmarkName, start: 2 }];
+    return document;
+  };
+  const open = async (document: ReturnType<typeof makeDocument>, filename: string) => {
+    await page.locator("input[accept='.json,.tcd']").setInputFiles({ name: filename, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  };
+
+  await open(makeDocument("Document A", "A Bookmark"), "bookmark-a.tcd");
+  await page.getByRole("tab", { name: "Bookmarks", exact: true }).click();
+  await page.getByTestId("bookmark-row-bookmark_shared").click();
+  await expect(page.getByTestId("bookmark-editor-panel")).toContainText("Editing: A Bookmark");
+
+  await open(makeDocument("Document B", "B Bookmark"), "bookmark-b.tcd");
+  await expect(page.getByTestId("bookmark-row-bookmark_shared")).toHaveAttribute("data-selected", "false");
+  await page.getByTestId("bookmark-row-bookmark_shared").click();
+  await expect(page.getByTestId("bookmark-editor-panel")).toContainText("Editing: B Bookmark");
+});
+
 test("future format opens a source-preserving read-only Compatibility Mode", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
