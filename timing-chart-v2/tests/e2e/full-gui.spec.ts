@@ -140,9 +140,9 @@ test("Group header chevron collapses derived rows without mutating Canonical or 
   const counters = await surface.getAttribute("data-render-counters");
   const initialCounters = JSON.parse(counters!);
   const controlHeader = host.locator("[data-role='left-group-header'][data-group-id='grp_cycle_control']");
-  await expect(host.locator("[data-role='left-group-header']")).toHaveCount(2);
-  await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(2);
-  await expect(host.locator("[data-role='timing-group-header']")).toHaveCount(2);
+  await expect(host.locator("[data-role='left-group-header']")).toHaveCount(3);
+  await expect(host.locator("[data-role='frozen-group-header']")).toHaveCount(3);
+  await expect(host.locator("[data-role='timing-group-header']")).toHaveCount(3);
   await expect(controlHeader).toHaveAttribute("data-group-name", "Control");
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-group-headers-1672x941.png" });
   await expect(controlHeader).toBeVisible();
