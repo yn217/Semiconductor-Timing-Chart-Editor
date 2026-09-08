@@ -142,4 +142,27 @@ describe("migrateV1", () => {
     expect(document.signals[1]!.display.splitPane).toBeUndefined();
     expect(validateCanonicalDocument(document)).toHaveLength(0);
   });
+
+  it("allocates fallback IDs against one document-wide explicit-ID set", () => {
+    const source = v1Document({
+      signals: [{ name: "DATA", type: "binary", role: "input", values: [{ start: 0, value: 0 }] }],
+      annotations: [{ id: "signal_001", type: "text", label: "collision", anchor: { cycle: 0, point: "cycle-start" } }],
+      transactions: [{ name: "Read", start: 0, end: 2 }],
+      transactionGroups: [{ id: "transaction_001", name: "Collision Group", order: 0 }],
+    });
+    const first = migrateV1(source).document;
+    const second = migrateV1(source).document;
+    const ids = [
+      ...first.signals.map((item) => item.id), ...first.signalGroups.map((item) => item.id),
+      ...first.annotations.map((item) => item.id), ...first.transactions.map((item) => item.id),
+      ...(first.transactionGroups ?? []).map((item) => item.id), ...first.bookmarks.map((item) => item.id),
+      ...first.timeGroups.map((item) => item.id), ...first.constraints.map((item) => item.id),
+      ...first.timeline.labelAnchors.map((item) => item.id),
+    ];
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(first.signals[0]!.id).not.toBe("signal_001");
+    expect(first.transactions[0]!.id).not.toBe("transaction_001");
+    expect(first).toEqual(second);
+    expect(validateCanonicalDocument(first)).toHaveLength(0);
+  });
 });

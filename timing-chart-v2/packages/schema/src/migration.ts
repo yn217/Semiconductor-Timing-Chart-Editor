@@ -26,6 +26,18 @@ function list(value: unknown): unknown[] {
   return Array.isArray(value) ? value : [];
 }
 
+function collectExplicitIds(value: unknown, usedIds: Set<string>): void {
+  if (Array.isArray(value)) { for (const entry of value) collectExplicitIds(entry, usedIds); return; }
+  if (value === null || typeof value !== "object") return;
+  const object = value as Record<string, unknown>;
+  if (typeof object.id === "string") usedIds.add(object.id);
+  for (const entry of Object.values(object)) collectExplicitIds(entry, usedIds);
+}
+
+function migrationId(source: MutableRecord, prefix: string, index: number, usedIds: Set<string>): string {
+  return typeof source.id === "string" ? source.id : allocateMigrationId(prefix, index, usedIds);
+}
+
 function text(value: unknown, fallback = ""): string {
   return typeof value === "string" ? value : fallback;
 }
@@ -209,13 +221,13 @@ function normalizeAnchor(value: unknown, fallbackSignal: SignalId | undefined, e
   };
 }
 
-function normalizeAnnotation(value: unknown, index: number, fallbackSignal: SignalId | undefined, warnings: MigrationWarning[]): Annotation {
+function normalizeAnnotation(value: unknown, index: number, fallbackSignal: SignalId | undefined, warnings: MigrationWarning[], usedIds: Set<string>): Annotation {
   const source = record(value);
   const typeMap: Readonly<Record<string, string>> = { dependencyArrow: "dependency", vline: "verticalLine", "vertical-line": "verticalLine" };
   const sourceType = text(source.type, "text");
   const type = typeMap[sourceType] ?? sourceType;
   const result: MutableRecord = {
-    id: text(source.id, deterministicId("annotation", index)),
+    id: migrationId(source, "annotation", index, usedIds),
     type,
     label: text(source.label, text(source.text)),
     visible: source.visible !== false,
@@ -252,14 +264,14 @@ function normalizeAnnotation(value: unknown, index: number, fallbackSignal: Sign
   return result as unknown as Annotation;
 }
 
-function normalizeTransaction(value: unknown, index: number, warnings: MigrationWarning[]): Transaction {
+function normalizeTransaction(value: unknown, index: number, warnings: MigrationWarning[], usedIds: Set<string>): Transaction {
   const source = record(value);
   const phases = list(source.phases).map((phase, phaseIndex) => {
     const item = record(phase);
     return { name: text(item.name), start: roundCycle(item.start, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].start`), end: roundCycle(item.end, 0, warnings, `$.transactions[${index}].phases[${phaseIndex}].end`) };
   });
   const result: MutableRecord = {
-    id: text(source.id, deterministicId("transaction", index)),
+    id: migrationId(source, "transaction", index, usedIds),
     name: text(source.name, `Transaction ${index + 1}`),
     start: roundCycle(source.start, 0, warnings, `$.transactions[${index}].start`),
     end: roundCycle(source.end, 0, warnings, `$.transactions[${index}].end`),
@@ -282,6 +294,8 @@ function normalizeTransaction(value: unknown, index: number, warnings: Migration
 
 export function migrateV1(input: unknown): { document: CanonicalDocument; warnings: MigrationWarning[] } {
   const source = record(input);
+  const usedIds = new Set<string>();
+  collectExplicitIds(source, usedIds);
   const warnings: MigrationWarning[] = [{ code: "MIGRATED_V1_TO_V2", path: "$.formatVersion", message: "Format version 1 was deterministically migrated to version 2." }];
   const sourceDocument = record(source.document);
   const cycleView = record(source.cycleView);
@@ -290,8 +304,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const timebase = { ...record(sourceDocument.timebase), ...sourceTimeline };
   const cycleCount = Math.max(1, Math.trunc(number(timebase.cycleCount, number(sourceDocument.cycleCount, 10))));
   const legacySignals = list(source.signals ?? cycleView.signals);
-  const usedSignalIds = new Set(legacySignals.map((value) => record(value).id).filter((id): id is string => typeof id === "string"));
-  const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedSignalIds));
+  const signals = legacySignals.map((value, index) => normalizeSignal(value, index, warnings, usedIds));
   const signalIds = new Set(signals.map((signal) => signal.id));
   const fallbackSignal = signals.find((signal) => signal.type === "clock")?.id ?? signals[0]?.id;
   const referenceClockSignal = signals.find((signal) => signal.type === "clock")?.id;
@@ -305,7 +318,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     const group = record(value);
     const rows = list(group.rows ?? group.signals).filter((id): id is SignalId => typeof id === "string");
     const result: MutableRecord = {
-      id: text(group.id, deterministicId("group", index)),
+      id: migrationId(group, "group", index, usedIds),
       name: text(group.name, `Group ${index + 1}`),
       rows,
     };
@@ -315,7 +328,11 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     if (Array.isArray(group.spacers)) result.spacers = structuredJson(group.spacers);
     return result as unknown as SignalGroup;
   });
-  if (groups.length === 0) groups.push({ id: "group_default" as SignalGroup["id"], name: "Signals", rows: signals.map((signal) => signal.id) });
+  if (groups.length === 0) {
+    const defaultGroupId = usedIds.has("group_default") ? allocateMigrationId("group", 0, usedIds) : "group_default";
+    usedIds.add(defaultGroupId);
+    groups.push({ id: defaultGroupId as SignalGroup["id"], name: "Signals", rows: signals.map((signal) => signal.id) });
+  }
 
   const legacyLayout = record(source.layout);
   for (const [spacerIndex, value] of list(legacyLayout.spacers).entries()) {
@@ -328,7 +345,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     }
     const group = groups[groupIndex];
     if (!group) continue;
-    const spacerId = text(spacer.id, deterministicId("spacer", spacerIndex));
+    const spacerId = migrationId(spacer, "spacer", spacerIndex, usedIds);
     const rows = [...group.rows];
     rows.splice(rows.indexOf(afterSignal as SignalId) + 1, 0, spacerId as SignalGroup["rows"][number]);
     const spacers = [...(group.spacers ?? []), { id: spacerId, height: number(spacer.height, 28) }];
@@ -339,10 +356,10 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
     if (!groups.some((group) => group.rows.includes(id))) warnings.push({ code: "MIGRATION_ORPHAN_ROW", path: "$.signalGroups", message: `Signal '${id}' remains orphaned and will be rejected by validation.` });
   }
 
-  const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings));
-  const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings));
+  const annotations = list(source.annotations ?? cycleView.annotations).map((value, index) => normalizeAnnotation(value, index, fallbackSignal, warnings, usedIds));
+  const transactions = list(source.transactions ?? transactionView.transactions).map((value, index) => normalizeTransaction(value, index, warnings, usedIds));
   const transactionTimeScale = record(source.transactionTimeScale);
-  const transactionGroups = list(source.transactionGroups).map((value, index) => { const item = record(value); return { id: text(item.id, deterministicId("transactionGroup", index)), name: text(item.name, `Transaction Group ${index + 1}`), ...(typeof item.color === "string" ? { color: item.color } : {}), order: Number.isInteger(item.order) && Number(item.order) >= 0 ? Number(item.order) : index }; });
+  const transactionGroups = list(source.transactionGroups).map((value, index) => { const item = record(value); return { id: migrationId(item, "transactionGroup", index, usedIds), name: text(item.name, `Transaction Group ${index + 1}`), ...(typeof item.color === "string" ? { color: item.color } : {}), order: Number.isInteger(item.order) && Number(item.order) >= 0 ? Number(item.order) : index }; });
   if (Array.isArray(transactionView.lanes) && transactionView.lanes.length > 0) {
     warnings.push({ code: "MIGRATION_TRANSACTION_LANES", path: "$.transactionView.lanes", message: "Lane IDs remain on transaction source/destination; legacy lane display names are not canonical fields." });
   }
@@ -350,7 +367,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const labelAnchors = list(sourceTimeline.labelAnchors).map((value, index) => {
     const anchor = record(value);
     return {
-      id: text(anchor.id, deterministicId("label_anchor", index)),
+      id: migrationId(anchor, "label_anchor", index, usedIds),
       source: roundCycle(anchor.source, 0, warnings, `$.timeline.labelAnchors[${index}].source`),
       display: roundCycle(anchor.display, 0, warnings, `$.timeline.labelAnchors[${index}].display`),
       ...(typeof anchor.ownerTimeGroupId === "string" ? { ownerTimeGroupId: anchor.ownerTimeGroupId } : {}),
@@ -358,15 +375,15 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   });
   const bookmarks = list(source.bookmarks).map((value, index) => {
     const bookmark = record(value);
-    return { id: text(bookmark.id, deterministicId("bookmark", index)), name: text(bookmark.name, `Bookmark ${index + 1}`), start: roundCycle(bookmark.start, 0, warnings, `$.bookmarks[${index}].start`), ...(typeof bookmark.comment === "string" ? { comment: bookmark.comment } : {}) };
+    return { id: migrationId(bookmark, "bookmark", index, usedIds), name: text(bookmark.name, `Bookmark ${index + 1}`), start: roundCycle(bookmark.start, 0, warnings, `$.bookmarks[${index}].start`), ...(typeof bookmark.comment === "string" ? { comment: bookmark.comment } : {}) };
   });
   const timeGroups: MutableRecord[] = list(source.timeGroups).map((value, index) => {
     const group = record(value);
-    return { ...(group.parentId !== undefined ? { parentId: group.parentId } : {}), id: text(group.id, deterministicId("time_group", index)), name: text(group.name, `Time Group ${index + 1}`), start: roundCycle(group.start, 0, warnings, `$.timeGroups[${index}].start`), end: roundCycle(group.end, cycleCount, warnings, `$.timeGroups[${index}].end`), ...(typeof group.category === "string" ? { category: group.category } : {}), ...(typeof group.comment === "string" ? { comment: group.comment } : {}), ...(jsonObject(group.presentation) ? { presentation: jsonObject(group.presentation) } : {}) };
+    return { ...(group.parentId !== undefined ? { parentId: group.parentId } : {}), id: migrationId(group, "time_group", index, usedIds), name: text(group.name, `Time Group ${index + 1}`), start: roundCycle(group.start, 0, warnings, `$.timeGroups[${index}].start`), end: roundCycle(group.end, cycleCount, warnings, `$.timeGroups[${index}].end`), ...(typeof group.category === "string" ? { category: group.category } : {}), ...(typeof group.comment === "string" ? { comment: group.comment } : {}), ...(jsonObject(group.presentation) ? { presentation: jsonObject(group.presentation) } : {}) };
   });
   for (const [gapIndex, value] of list(sourceTimeline.gaps).entries()) {
     const gap = record(value);
-    timeGroups.push({ id: deterministicId("time_gap", gapIndex), name: text(gap.label, `Gap ${gapIndex + 1}`), start: roundCycle(gap.start, 0, warnings, `$.timeline.gaps[${gapIndex}].start`), end: roundCycle(gap.end, cycleCount, warnings, `$.timeline.gaps[${gapIndex}].end`), presentation: { collapsed: true, foldStyle: "axis-break", ...(typeof gap.label === "string" ? { foldLabel: gap.label } : {}) } });
+    timeGroups.push({ id: typeof gap.id === "string" ? gap.id : allocateMigrationId("time_gap", gapIndex, usedIds), name: text(gap.label, `Gap ${gapIndex + 1}`), start: roundCycle(gap.start, 0, warnings, `$.timeline.gaps[${gapIndex}].start`), end: roundCycle(gap.end, cycleCount, warnings, `$.timeline.gaps[${gapIndex}].end`), presentation: { collapsed: true, foldStyle: "axis-break", ...(typeof gap.label === "string" ? { foldLabel: gap.label } : {}) } });
   }
   for (const anchor of labelAnchors) {
     if (anchor.ownerTimeGroupId === undefined) continue;
@@ -394,7 +411,7 @@ export function migrateV1(input: unknown): { document: CanonicalDocument; warnin
   const constraints: Constraint[] = list(source.constraints ?? sourceDocument.constraints).map((value, index) => {
     const constraint = record(value);
     const data = jsonObject(constraint.data);
-    return { id: text(constraint.id, deterministicId("constraint", index)) as Constraint["id"], type: text(constraint.type, "generic"), ...(data ? { data } : {}) };
+    return { id: migrationId(constraint, "constraint", index, usedIds) as Constraint["id"], type: text(constraint.type, "generic"), ...(data ? { data } : {}) };
   });
 
   for (const key of ["verificationCoverage", "testOperations", "viewTests", "exportTest"]) {
