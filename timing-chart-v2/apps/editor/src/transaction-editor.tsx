@@ -85,6 +85,14 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
     setTransactionListScrollTop(0);
     if (transactionListViewportRef.current) transactionListViewportRef.current.scrollTop = 0;
   }, [search, document.transactions]);
+  useEffect(() => {
+    if (!shouldVirtualizeTransactions || transaction === undefined) return;
+    const selectedIndex = visibleTransactions.findIndex((item) => item.id === transaction.id);
+    if (selectedIndex < 0) return;
+    const nextScrollTop = Math.max(0, selectedIndex * transactionRowHeight - transactionOverscan * transactionRowHeight);
+    setTransactionListScrollTop(nextScrollTop);
+    if (transactionListViewportRef.current) transactionListViewportRef.current.scrollTop = nextScrollTop;
+  }, [shouldVirtualizeTransactions, transaction?.id, visibleTransactions, transactionOverscan, transactionRowHeight]);
   const duplicateSelected = () => {
     if (!transaction) return;
     const newTransactionId = nextEntityId("transaction", document) as TransactionId;
