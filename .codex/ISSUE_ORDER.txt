@@ -3,41 +3,34 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-09 03:55 JST
+# Last reconciled by ChatGPT: 2026-09-09 05:24 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed live state at reconciliation:
-#   main = 673f911 Merge PR #527: unify Annotation toolbar onto shared Design System (#403)
-#   completed/closed from prior Codex queue: #481 #459 #460
+#   main = 572277e fix(transaction): preserve time scale optional fields
+#   completed/closed from prior independent Codex queue: #461 #328 #464 #462
+#   #530 implementation is on main and focused tests/typecheck/build/Playwright were reported PASS,
+#   but the Issue remains OPEN because explicit Save/Open persistence evidence is still unchecked.
 #   #414 remains OPEN; therefore #415 remains dependency-waiting and MUST NOT start.
-#   Independent bounded Core/data-integrity work is available and may proceed while #414 is open.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
 # STATUS: ACTIVE
 #
-# 1) Prevent partial Transaction updates from silently dropping unrelated fields.
-# Re-audit latest main first; preserve recent Transaction GUI/command ownership changes.
-# Fix the shared Semantic Command contract, not only one caller.
-461
+# 1) Finish closure of #530. Do NOT reimplement the already-landed fix.
+# Verify explicit Save/Open round-trip for TransactionTimeScale including showSecondaryClock and
+# future optional-field preservation through the production persistence path. If PASS, add evidence,
+# verify main == origin/main, close #530, then re-read this queue.
+530
 
-# 2) Enforce Product Resource Budget at the authoritative Canonical mutation/replacement boundary.
-# Atomic reject when a command/batch/replacement would exceed product limits.
-# Keep schema validity / canonical invariants / product policy as separate layers.
-328
-
-# 3) Make migration fallback ID allocation document-wide and collision-free across entity kinds.
-# Re-audit current migration code; if already satisfied, collect evidence and close without code churn.
-464
-
-# 4) Restore the json-syntax test gate / duplicate import defect if it still exists on latest main.
-# This is intentionally last because current main may already have resolved the stale source defect.
-# If satisfied, run the real gate, attach evidence, close; do not manufacture changes.
-462
+# 2) Scope document-relative transient UI state to the document generation / documentEpoch.
+# Prevent same-ID retargeting across Open/New/document.replace for checked IDs, pinned targets,
+# collapsed groups, drag/resize/context-menu targets, and drafts. Reuse one generation owner.
+529
 #
 # After every issue, re-read this file and live GitHub state.
 #
@@ -53,7 +46,7 @@
 # - finish the currently active bounded Codex issue safely;
 # - reconcile this file against live GitHub state;
 # - promote #415 ahead of remaining lower-priority queue work because it unblocks #416;
-# - do not infer readiness from code alone; live #414 must be completed/closed.
+# - live #414 completed/closed is mandatory; do not infer readiness from code alone.
 #
 # Time Outline chain:
 #   DONE  #412 -> #413
@@ -66,38 +59,19 @@
 # ============================================================================
 # #463 Transaction lane virtualization/performance is independent of #414, but it touches the
 # active Transaction lane presentation/runtime currently being visually closed by Claude.
-# Do NOT queue #463 yet unless Transaction GUI work is quiescent or ownership is explicitly transferred.
+# Keep deferred until that surface is quiescent or ownership is explicitly transferred.
 #
-# #258 broad MinimalCycleView decomposition is also intentionally not queued while multiple GUI/product
-# agents are actively modifying editor surfaces; avoid turning architecture refactoring into merge conflict churn.
+# #258 broad MinimalCycleView decomposition remains deferred while GUI/product agents are
+# actively editing shared editor surfaces; avoid refactor-driven merge conflict churn.
 #
-# #495 mixes Reset Core semantics with production GUI work; split/transfer a bounded Core child before Codex
-# consumes it, rather than taking the whole mixed Issue.
-#
-# ============================================================================
-# TRANSACTION PRODUCT / GUI STATUS
-# ============================================================================
-# Completed/closed foundations and GUI children:
-#   #430 Transaction semantic core
-#   #450 canonical model/groups/lanes/phases/colors/links
-#   #455 Transaction Time Scale / TC
-#   #451 left Transaction Tree
-#   #452 central Lane workspace
-#   #453 Bottom Transaction Table
-#   #481 Transaction drag live preview / commit-on-drop
-#
-# Product/final acceptance remains outside the Codex whole-Issue queue unless explicitly transferred:
-#   #454 Transaction Inspector final product closure
-#   #397 Transaction + Split sample-driven final acceptance
-#   #429 Transaction Mode parent/final product completion
-#
-# #461 is a bounded data-integrity command-contract defect and is executable above.
-# Do not rebuild a parallel Transaction semantic model.
+# #495 mixes Reset Core semantics with production GUI work; split/transfer a bounded Core child
+# before Codex consumes it wholesale.
 #
 # ============================================================================
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
+#   #461 #328 #464 #462
 #   #481 #459 #460
 #   #457 #458 #456
 #   #443
@@ -125,12 +99,6 @@
 # If a concrete bounded Core/runtime defect is discovered, create/transfer a narrow child Issue first.
 #
 # ============================================================================
-# EXTERNAL / PRODUCT HOLD
-# ============================================================================
-# #177 remains external/product-decision hold. Do not repeatedly re-audit unchanged blocker state.
-# #250 remains product-decision hold.
-#
-# ============================================================================
 # EXECUTION POLICY
 # ============================================================================
 # For each executable issue:
@@ -146,8 +114,6 @@
 # 10. verify main == origin/main;
 # 11. add evidence to the Issue and close only when acceptance is satisfied;
 # 12. re-read this queue before taking the next issue.
-#
-# GitHub Actions availability alone is not a global blocker when local required gates can run.
 #
 # ============================================================================
 # SINGLE-WORKTREE / DIRTY-WORK SAFETY
