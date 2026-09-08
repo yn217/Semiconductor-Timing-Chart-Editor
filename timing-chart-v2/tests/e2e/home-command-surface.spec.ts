@@ -66,17 +66,24 @@ test("Home exposes grouped command surfaces and provides stable-ID Select All", 
   await expect(page.getByTestId("history-status")).toHaveText(beforeHistory!);
 });
 
+// #416 Home Ribbon cleanup: "Edit Interval" (a pure `setRibbonTab("Timeline")`
+// duplicate of the already-present Timeline tab) and "Time Group" (a
+// duplicate of the Timeline Ribbon's own "Create" button, since TimeGroup
+// is Timeline-domain, not Home's) were removed from this group entirely --
+// not kept as disabled/hidden. "Normalize Spacing" is a different feature
+// (layout clamp) and stays.
 test("Home command labels describe their observable action", async ({ page }) => {
   await ready(page);
   await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   const layout = page.getByTestId("ribbon").locator(".home-layout-group");
-  await expect(layout.getByRole("button", { name: "Open Timeline interval editor", exact: true })).toHaveAttribute("title", "Open Timeline to edit the selected interval.");
-  await expect(layout.getByRole("button", { name: "Create Time Group", exact: true })).toHaveAttribute("title", "Create a Time Group for the selected timeline range.");
   await expect(layout.getByRole("button", { name: "Normalize row spacing", exact: true })).toHaveAttribute("title", "Normalize row height and signal spacing to the supported minimums.");
+  await expect(layout.getByRole("button", { name: "Open Timeline interval editor", exact: true })).toHaveCount(0);
+  await expect(layout.getByRole("button", { name: "Create Time Group", exact: true })).toHaveCount(0);
   await expect(layout.getByRole("button", { name: "Align interval", exact: true })).toHaveCount(0);
   await expect(layout.getByRole("button", { name: "Group", exact: true })).toHaveCount(0);
   await expect(layout.getByRole("button", { name: "Auto Layout", exact: true })).toHaveCount(0);
-  await layout.getByRole("button", { name: "Open Timeline interval editor", exact: true }).click();
+  // The real, non-duplicate route to Timeline is the tab itself.
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true })).toHaveClass(/active/);
 });
 
@@ -540,8 +547,9 @@ for (const viewport of [{ width: 1672, height: 941 }, { width: 1280, height: 720
     const ribbon = page.getByTestId("ribbon");
     // Every one of these previously either broke mid-word (e.g.
     // "Duplicate" -> "Duplica"/"te", "Normalize" -> "Normal"/"ize") or
-    // wrapped to 3-4 lines ("Create Time Group") -- see #439.
-    const labels = ["Duplicate", "Select All", "Zoom In", "Find & Replace", "Fit Selection", "Time Group", "Auto Space"];
+    // wrapped to 3-4 lines ("Create Time Group", removed from Home
+    // entirely by #416 -- see the Home Ribbon cleanup note above).
+    const labels = ["Duplicate", "Select All", "Zoom In", "Find & Replace", "Fit Selection", "Auto Space"];
     for (const label of labels) {
       const lines = await homeButtonLineTexts(page, label);
       expect(lines.length, `"${label}" line count`).toBeLessThanOrEqual(2);
