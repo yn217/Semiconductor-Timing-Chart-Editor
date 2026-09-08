@@ -89,6 +89,10 @@ Rules:
   and session/registry callbacks.
 - View-only state remains transient and is not persisted in CanonicalDocument.
 - Renderer and WaveDrom ownership remains in their existing packages.
+- The deprecated `runtime/use-editor-runtime-bridge.ts` compatibility bridge is
+  intentionally absent. Its former lifecycle boundary is owned by the typed
+  `useTimelineSurfaceRuntime` / `timeline-surface-controller` pair; restoring
+  the old filename would create a second, ambiguous runtime owner.
 - `MinimalCycleView` is the composition/integration layer for these owners; its
   long-lived callbacks may access mutable product/view state only through the
   current owner APIs and refs. Do not add a second state system or split the
