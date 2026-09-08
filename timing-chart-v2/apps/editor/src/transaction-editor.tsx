@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
-import type { CanonicalDocument, Transaction, TransactionGroup, TransactionId } from "@timing-chart-v2/schema";
+import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
 import type { TransactionEditorCommandActions } from "./application/editor-surface-command-controller.js";
+import { EditorIconButton } from "./editor-icon.js";
+import { TransactionLinkedSignals } from "./transaction-linked-signals.js";
 
-export function TransactionEditor({ transaction, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void }) {
+export function TransactionEditor({ transaction, document, history, onSelect, commands, onUndo, onRedo, onDelete, onCancel, onToggleTransactionSignal }: { readonly transaction: Transaction | undefined; readonly document: CanonicalDocument; readonly history: HistoryState; readonly onSelect: (id: TransactionId) => void; readonly commands: TransactionEditorCommandActions; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onCancel: () => void; readonly onToggleTransactionSignal: (transactionId: TransactionId, signalId: SignalId) => void }) {
   const [name, setName] = useState("Transaction");
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
@@ -13,19 +15,45 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   const [editStart, setEditStart] = useState(transaction?.start ?? 0);
   const [editEnd, setEditEnd] = useState(transaction?.end ?? 1);
   const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "lane_0");
+  // #426 Bottom Panel Consolidation: the Goal's own target structure for
+  // this tab is "List / Timing / Phase / Linked Signals" -- Phase and
+  // Linked Signal editing previously existed only in the Inspector
+  // (#454), leaving the Bottom Panel's own primary/detailed editing
+  // surface without them. Same command owner as Inspector throughout:
+  // `phaseRows` feeds the same `transaction.update` command (via
+  // `updateTransactionFromBottom`, already used for Name/Start/End/Lane
+  // above) Inspector's own Apply uses, and Linked Signals reuses the
+  // exact same `TransactionLinkedSignals` component + `onToggle` handler
+  // Inspector passes -- never a second Phase/LinkedSignal model or a
+  // second selection/command owner.
+  const [phaseRows, setPhaseRows] = useState<TransactionPhase[]>(() => (transaction?.phases ?? []).map((phase) => ({ ...phase })));
+  const [phaseError, setPhaseError] = useState("");
   useEffect(() => {
     setEditName(transaction?.name ?? "");
     setEditStart(transaction?.start ?? 0);
     setEditEnd(transaction?.end ?? 1);
     setEditLaneId(transaction?.laneId ?? "lane_0");
-  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId]);
+    setPhaseRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
+    setPhaseError("");
+  }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.phases]);
   // #426: Apply had no Draft/dirty gating at all (always enabled, no
   // "unapplied changes" indicator) and Cancel lived in the header while
   // Apply lived at the end of the form -- two different locations for
   // one Draft's two actions, the exact split-placement inconsistency the
   // Epic calls out. Both now live together in one sticky bottom action
   // bar, same shared classes Annotation's own bar already uses.
-  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || editLaneId !== transaction.laneId);
+  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || editLaneId !== transaction.laneId || JSON.stringify(phaseRows) !== JSON.stringify(transaction.phases ?? []));
+  const addPhaseRow = () => setPhaseRows((rows) => { const last = rows.at(-1); const rowStart = last ? last.end : editStart; return [...rows, { name: `Phase ${rows.length + 1}`, start: rowStart, end: Math.min(rowStart + 1, editEnd) }]; });
+  const applyTransactionDraft = () => {
+    if (!transaction || !hasChanges) return;
+    const phases = phaseRows.map((phase) => ({ ...phase, name: phase.name.trim() }));
+    if (phases.some((phase) => !phase.name || !Number.isInteger(phase.start) || !Number.isInteger(phase.end) || phase.start < editStart || phase.start >= phase.end || phase.end > editEnd)) {
+      setPhaseError("Phases must be named integer-cycle half-open subranges within Start..End.");
+      return;
+    }
+    setPhaseError("");
+    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, phases });
+  };
   // #453: Group/Color had zero GUI entry point at all before this (schema/
   // commands already supported both via #430/#450) -- added here, scoped to
   // whichever Transaction is currently selected, reusing the exact same
@@ -145,5 +173,34 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
     </div>)}
     {visibleTransactions.length === 0 && <p className="inspector-note">No Transactions match this search.</p>}</div>
   </>;
-  return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{transaction && <button type="button" className="danger" data-testid="delete-bottom-transaction" onClick={onDelete}>Delete Transaction</button>}</header>{!transaction && document.transactions.length === 0 && <div className="transaction-empty-state" data-testid="transaction-empty-state"><strong>No Transactions yet</strong><p>Transactions describe a named time span, optional phases, and the waveform Signals related to that operation. Use "+ Add" in the Tree above, or the Ribbon's "Create Transaction", to add one.</p></div>}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(transaction.phases === undefined ? {} : { phases: transaction.phases }) }); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label></form><div className="bottom-sticky-actions">{hasChanges && <output className="draft-unapplied-indicator" data-testid="transaction-properties-unapplied">● Unapplied changes</output>}<span className="bottom-sticky-buttons"><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="submit" form="transaction-properties-form" data-testid="apply-transaction-properties" disabled={!hasChanges}>Apply Transaction</button></span></div></> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: name.trim() || "Transaction", start, end, laneId }); if (result.ok) onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label><button type="submit">Create Transaction</button></form>}</section>;
+  return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{transaction && <button type="button" className="danger" data-testid="delete-bottom-transaction" onClick={onDelete}>Delete Transaction</button>}</header>{!transaction && document.transactions.length === 0 && <div className="transaction-empty-state" data-testid="transaction-empty-state"><strong>No Transactions yet</strong><p>Transactions describe a named time span, optional phases, and the waveform Signals related to that operation. Use "+ Add" in the Tree above, or the Ribbon's "Create Transaction", to add one.</p></div>}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); applyTransactionDraft(); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label>
+        {/* #426: Phase editing, same `.transaction-phase-*` classes/markup
+            shape Inspector's own Phase table already uses (packages/schema's
+            TransactionPhase, same `transaction.update` command via
+            `applyTransactionDraft` above) -- distinct testid/aria-labels
+            from Inspector's ("Bottom Phase N ..." vs "Phase N ...") since
+            both editors can be on screen at once for the same Transaction. */}
+        <div className="transaction-phase-editor" data-testid="transaction-bottom-phase-editor">
+          <h4>Phases ({phaseRows.length})</h4>
+          <div className="transaction-phase-table">
+            {phaseRows.length > 0 && <div className="transaction-phase-row transaction-phase-row-header" aria-hidden="true"><span>Phase</span><span>Start</span><span>End</span><span /></div>}
+            {phaseRows.map((phase, index) => <div className="transaction-phase-row" key={index} data-phase-index={index}>
+              <input aria-label={`Bottom Phase ${index + 1} name`} value={phase.name} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, name: event.target.value } : row))} />
+              <input aria-label={`Bottom Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, start: Number(event.target.value) } : row))} />
+              <input aria-label={`Bottom Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, end: Number(event.target.value) } : row))} />
+              <button type="button" aria-label={`Delete bottom phase ${index + 1}`} onClick={() => setPhaseRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}>×</button>
+            </div>)}
+            {phaseRows.length === 0 && <span className="inspector-note">No phases -- the whole Start..End span is one unnamed phase.</span>}
+          </div>
+          <button type="button" data-testid="add-bottom-transaction-phase" onClick={addPhaseRow}>Add Phase</button>
+          {phaseError && <p className="inspector-note" data-testid="transaction-bottom-phase-error" role="alert">{phaseError}</p>}
+        </div>
+      </form>
+      {/* #426: Linked Signals -- the exact same component + immediate-commit
+          `onToggle` handler Inspector passes (never a second selection/
+          command owner); intentionally outside the Draft/Apply form since
+          each toggle is already its own committed semantic operation, same
+          as Inspector's own placement below its Apply-gated Phases. */}
+      <TransactionLinkedSignals transaction={transaction} document={document} onToggle={(signalId) => onToggleTransactionSignal(transaction.id, signalId)} renderUnlinkButton={(label, onClick) => <EditorIconButton label={label} icon="close" onClick={onClick} />} />
+      <div className="bottom-sticky-actions">{hasChanges && <output className="draft-unapplied-indicator" data-testid="transaction-properties-unapplied">● Unapplied changes</output>}<span className="bottom-sticky-buttons"><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="submit" form="transaction-properties-form" data-testid="apply-transaction-properties" disabled={!hasChanges}>Apply Transaction</button></span></div></> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: name.trim() || "Transaction", start, end, laneId }); if (result.ok) onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label><button type="submit">Create Transaction</button></form>}</section>;
 }
