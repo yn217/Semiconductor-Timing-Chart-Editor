@@ -200,6 +200,9 @@ test("Open resets entity-keyed Transaction bulk selection and Bottom pin across 
   await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   await page.getByLabel("Select Shared Transaction", { exact: true }).check();
   await expect(page.getByTestId("transaction-bulk-count")).toHaveText("1 selected");
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").dispatchEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 240, clientY: 180 });
+  await expect(page.getByTestId("signal-context-menu")).toBeVisible();
+  await expect(page.getByTestId("signal-context-menu")).toHaveAttribute("data-context-target", "transaction");
   await page.getByTestId("bottom-pin").click();
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
 
@@ -208,6 +211,7 @@ test("Open resets entity-keyed Transaction bulk selection and Bottom pin across 
   await expect(page.getByLabel("Select Shared Transaction", { exact: true })).not.toBeChecked();
   await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+  await expect(page.getByTestId("signal-context-menu")).toBeHidden();
 });
 
 test("Open discards an entity-keyed Inspector draft when the replacement document reuses the ID", async ({ page }) => {
