@@ -25,8 +25,8 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
   return { rowOf, rowCount: Math.max(1, rowEnds.length) };
 }
 
-type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly top: number; readonly height: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
-type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
+type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
+type GroupHeaderBand = { readonly key: string; readonly labelTop: number; readonly trackTop: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
 type TransactionDragEdge = "body" | "start" | "end";
 type TransactionPreview = Readonly<{ start: number; end: number }>;
@@ -196,14 +196,16 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
 
   const groupHeaders: GroupHeaderBand[] = [];
   const laneBands: LaneBand[] = [];
-  let cursor = 0;
+  let labelCursor = 0;
+  let trackCursor = 0;
   for (const section of sections) {
     const sectionKey = section.groupId ?? "ungrouped";
     const collapsed = section.label !== undefined && collapsedGroups.has(sectionKey);
     if (section.label !== undefined) {
       const count = transactionCountByGroup.get(section.groupId) ?? 0;
-      groupHeaders.push({ key: `group:${sectionKey}`, top: cursor, label: section.label, color: section.color, count, groupId: section.groupId, collapsed });
-      cursor += GROUP_HEADER_HEIGHT;
+      groupHeaders.push({ key: `group:${sectionKey}`, labelTop: labelCursor, trackTop: trackCursor, label: section.label, color: section.color, count, groupId: section.groupId, collapsed });
+      labelCursor += GROUP_HEADER_HEIGHT;
+      trackCursor += GROUP_HEADER_HEIGHT;
     }
     // #397: a collapsed Group's Lanes contribute zero height and render
     // nothing -- Transactions inside stay fully intact in the document
@@ -224,18 +226,20 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       // order), and the lane's height is whichever of the two needs more
       // room, so neither the bars nor the Tree rows ever overlap.
       const treeRowOf = new Map([...laneTransactions].sort((left, right) => left.start - right.start || left.id.localeCompare(right.id)).map((transaction, index) => [transaction.id, index] as const));
-      const height = Math.max(rowCount, laneTransactions.length, 1) * LANE_ROW_HEIGHT;
-      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, top: cursor, height, rowOf, treeRowOf });
-      cursor += height;
+      const labelHeight = Math.max(laneTransactions.length, 1) * LANE_ROW_HEIGHT;
+      const trackHeight = Math.max(rowCount, 1) * LANE_ROW_HEIGHT;
+      laneBands.push({ key: `lane:${section.groupId ?? "ungrouped"}:${laneId}`, laneId, groupId: section.groupId, labelTop: labelCursor, trackTop: trackCursor, labelHeight, trackHeight, rowOf, treeRowOf });
+      labelCursor += labelHeight;
+      trackCursor += trackHeight;
     }
   }
-  const totalHeight = Math.max(cursor, LANE_ROW_HEIGHT);
+  const totalHeight = Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT);
 
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {groupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
-        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-collapsed={String(header.collapsed)} style={{ top: header.top, height: GROUP_HEADER_HEIGHT }}>
+        return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}>{header.collapsed ? "▶" : "▼"}</button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
           {/* #397 Transaction Mode GUI Closure: rename/delete had zero GUI
@@ -256,7 +260,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
         // reading one shared `document.transactions` + `selectedId`/
         // `onSelect`, not a second selection-owning tree.
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
-        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.top, height: band.height }}>
+        return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.labelTop, height: band.labelHeight }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
           {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
@@ -264,8 +268,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     </div>
     <div className="transaction-track" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
-      {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }} />)}
-      {laneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.top, height: band.height }}>
+      {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
+      {laneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
         {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
