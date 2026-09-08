@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { canonicalFixture } from "../fixtures/canonical";
 
 // #397 Transaction Mode GUI Closure Section 4: `transaction.setTimeScale`
 // already existed at the command/planner layer with zero GUI entry point --
@@ -56,4 +57,23 @@ test("Transaction Time Scale panel rejects an invalid ratio and Cancel/Escape di
   await expect(panel).toHaveCount(0);
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
   await expect(page.locator("span", { hasText: /^Time Scale:/ })).toHaveText("Time Scale: 1 TC = 1 Cycle");
+});
+
+test("GUI Apply preserves an existing secondary clock when editing an unrelated time-scale field", async ({ page }) => {
+  await page.goto("/");
+  const document = canonicalFixture();
+  document.document.title = "Secondary Clock Fixture";
+  document.transactionTimeScale = { clockCyclesPerTransactionCycle: 2, majorInterval: 5, minorInterval: 1, showSecondaryClock: true };
+  await page.locator("input[accept='.json,.tcd']").setInputFiles({ name: "secondary-clock.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+
+  await page.getByTestId("transaction-time-scale-trigger").click();
+  const panel = page.getByTestId("transaction-time-scale-panel");
+  await expect(panel.getByLabel("Show secondary clock")).toBeChecked();
+  await panel.getByLabel("Major tick interval").fill("8");
+  await page.getByTestId("transaction-time-scale-apply").click();
+
+  await page.getByTestId("transaction-time-scale-trigger").click();
+  await expect(page.getByTestId("transaction-time-scale-panel").getByLabel("Show secondary clock")).toBeChecked();
 });
