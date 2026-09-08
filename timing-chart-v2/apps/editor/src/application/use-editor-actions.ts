@@ -21,6 +21,7 @@ import { createBottomEditorActions } from "./bottom-editor-actions.js";
 
 export interface EditorActionsInput {
   readonly document: CanonicalDocument;
+  readonly documentEpoch: number;
   readonly commandRegistry: MutableRefObject<UiCommandRegistry>;
   readonly navigation: TimelineNavigationOwner;
   readonly rulerRef: MutableRefObject<HTMLDivElement | null>;
@@ -126,6 +127,12 @@ export interface EditorActions {
 
 export function useEditorActions(input: EditorActionsInput): EditorActions {
   const [selectedBookmarkId, setSelectedBookmarkId] = useState<BookmarkId | undefined>(undefined);
+  const previousDocumentEpochRef = useRef(input.documentEpoch);
+  useEffect(() => {
+    if (previousDocumentEpochRef.current === input.documentEpoch) return;
+    previousDocumentEpochRef.current = input.documentEpoch;
+    setSelectedBookmarkId(undefined);
+  }, [input.documentEpoch]);
   const bookmarksRef = useRef(input.document.bookmarks);
   bookmarksRef.current = input.document.bookmarks;
 

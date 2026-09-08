@@ -451,6 +451,7 @@ export function MinimalCycleView() {
 
   const actions = useEditorActions({
     document: snapshot.document,
+    documentEpoch,
     commandRegistry,
     navigation: timelineNavigation,
     rulerRef: ruler,
