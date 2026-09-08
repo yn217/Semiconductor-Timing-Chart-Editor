@@ -596,12 +596,15 @@ test("View controls expose functional Ruler and MiniMap visibility toggles witho
     counters: JSON.parse(await surface.getAttribute("data-render-counters") ?? "null") as Record<string, number>,
   };
   await page.getByTestId("ruler-toggle").uncheck();
-  await page.getByTestId("minimap-toggle").uncheck();
+  const minimapToggle = page.getByTestId("view-panel-minimap");
+  await minimapToggle.click();
+  await expect(minimapToggle).toHaveAttribute("aria-pressed", "false");
   await expect(page.getByTestId("cycle-ruler")).toBeHidden();
   await expect(page.getByTestId("minimap")).toBeHidden();
   await page.screenshot({ path: ".tmp_gui_reference/gui-batch-view-toggles-1280x720.png", animations: "disabled" });
   await page.getByTestId("ruler-toggle").check();
-  await page.getByTestId("minimap-toggle").check();
+  await minimapToggle.click();
+  await expect(minimapToggle).toHaveAttribute("aria-pressed", "true");
   await expect(page.getByTestId("cycle-ruler")).toBeVisible();
   await expect(page.getByTestId("minimap")).toBeVisible();
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
