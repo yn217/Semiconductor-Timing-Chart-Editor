@@ -70,7 +70,7 @@ it("preserves parent links during property edits and rejects invalid containment
   expect(session.execute({ id: "rename" as CommandId, type: "timeGroup.update", timeGroupId: "child" as TimeGroupId, name: "renamed", start: 2, end: 5 }).ok).toBe(true);
   expect(groups(session)[1]?.parentId).toBe("parent");
   const before = session.getSnapshot();
-  expect(session.execute({ id: "bad" as CommandId, type: "timeGroup.update", timeGroupId: "child" as TimeGroupId, name: "outside", start: 0, end: 8 }).ok).toBe(false);
+  expect(session.execute({ id: "bad" as CommandId, type: "timeGroup.update", timeGroupId: "child" as TimeGroupId, name: "outside", start: 0, end: 6 }).ok).toBe(false);
   expect(session.getSnapshot()).toBe(before);
 });
 
