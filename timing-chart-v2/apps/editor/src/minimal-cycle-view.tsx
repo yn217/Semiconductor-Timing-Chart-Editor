@@ -138,6 +138,7 @@ export function MinimalCycleView() {
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
+    cursorA, cursorB, cursorDelta,
   } = workspace;
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
@@ -692,7 +693,7 @@ export function MinimalCycleView() {
     },
   };
   const shellWorkspace = {
-    view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled },
+    view: { viewMode, signalSplitEnabled, signalSplitRatio, gridEnabled, snapEnabled, rulerEnabled, cursor: { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }), ...(cursorDelta.cycles === undefined ? {} : { deltaCycles: cursorDelta.cycles }) } },
     layout: { leftPaneWidth, frozenPaneMinWidth, frozenPaneWidth, bottomVisible, bottomHeight, inspectorVisible, inspectorWidth },
     refs: { viewport, gridLayer, ruler, host, viewportLower, rulerLower, hostLower, gridLayerLower },
     content: { header: secondarySurfaces.workspaceHeader, viewportContent: secondarySurfaces.workspaceViewportContent, viewportLegend: secondarySurfaces.workspaceViewportLegend, bottom: secondarySurfaces.workspaceBottom, inspector: secondarySurfaces.workspaceInspector },

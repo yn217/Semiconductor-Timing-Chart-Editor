@@ -2,7 +2,7 @@ import type { KeyboardEventHandler, PointerEventHandler, ReactNode, RefObject } 
 import { LEFT_PANE_MAX_WIDTH, LEFT_PANE_MIN_WIDTH } from "./workspace/use-workspace-ui-state.js";
 
 export interface EditorWorkspaceViewModel {
-  readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean };
+  readonly view: { readonly viewMode: string; readonly signalSplitEnabled: boolean; readonly signalSplitRatio: number; readonly gridEnabled: boolean; readonly snapEnabled: boolean; readonly rulerEnabled: boolean; readonly cursor: { readonly a?: number; readonly b?: number; readonly deltaCycles?: number } };
   readonly layout: { readonly leftPaneWidth: number; readonly frozenPaneMinWidth: number; readonly frozenPaneWidth: number; readonly bottomVisible: boolean; readonly bottomHeight: number; readonly inspectorVisible: boolean; readonly inspectorWidth: number };
   readonly refs: { readonly viewport: RefObject<HTMLDivElement | null>; readonly gridLayer: RefObject<HTMLDivElement | null>; readonly ruler: RefObject<HTMLDivElement | null>; readonly host: RefObject<HTMLDivElement | null>; readonly viewportLower: RefObject<HTMLDivElement | null>; readonly rulerLower: RefObject<HTMLDivElement | null>; readonly hostLower: RefObject<HTMLDivElement | null>; readonly gridLayerLower: RefObject<HTMLDivElement | null> };
   readonly content: { readonly header: ReactNode; readonly viewportContent: ReactNode; readonly viewportLegend: ReactNode; readonly bottom: ReactNode; readonly inspector: ReactNode };

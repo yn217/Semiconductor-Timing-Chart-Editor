@@ -1,11 +1,12 @@
 import { resolveSourcePosition, type DisplayTimeMapping } from "./time-mapping.js";
 
 export interface SemanticCursorState { readonly a?: number; readonly b?: number }
-export interface CursorDelta { readonly cycles?: number; readonly displayCycles?: number }
+export interface CursorDelta { readonly cycles?: number; readonly displayCycles?: number; readonly physicalTime?: number }
 
-export function cursorDelta(state: SemanticCursorState): CursorDelta {
+export function cursorDelta(state: SemanticCursorState, physicalTimePerCycle?: number): CursorDelta {
   if (state.a === undefined || state.b === undefined) return {};
-  return { cycles: state.b - state.a };
+  const cycles = state.b - state.a;
+  return { cycles, ...(physicalTimePerCycle === undefined ? {} : { physicalTime: cycles * physicalTimePerCycle }) };
 }
 
 export function projectCursor(state: SemanticCursorState, mapping: DisplayTimeMapping): { readonly a?: number; readonly b?: number } {

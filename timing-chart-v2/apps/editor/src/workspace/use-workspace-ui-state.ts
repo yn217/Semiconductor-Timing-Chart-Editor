@@ -1,10 +1,13 @@
 import { useRef, useState } from "react";
+import { cursorDelta, type SemanticCursorState } from "@timing-chart-v2/projection";
 
 export type DensityMode = "compact" | "comfortable";
 export type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
 export type TreeTypeFilter = "all" | "input" | "output" | "wire" | "comment";
 export type BottomTab = "Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON";
 export type ViewMode = "Cycle" | "Transaction" | "Split";
+
+export type SemanticCursor = number | undefined;
 
 /** #403/#404: which pane/entity family the Ribbon and other chrome should
  * treat as "active" for contextual command surfaces -- deliberately its
@@ -71,6 +74,22 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const signalSplitResizeRef = useRef<RatioResizeGesture | undefined>(undefined);
   const [density, setDensity] = useState<DensityMode>("comfortable");
   const [workspacePreset, setWorkspacePreset] = useState<WorkspacePreset>("edit");
+  // #459: Cursor A/B are source-time workspace state. They are deliberately
+  // independent of Canonical/Selection/History and therefore never enter
+  // document save/open payloads or semantic commands.
+  const [cursorA, setCursorA] = useState<SemanticCursor>();
+  const [cursorB, setCursorB] = useState<SemanticCursor>();
+  const cursorState: SemanticCursorState = { ...(cursorA === undefined ? {} : { a: cursorA }), ...(cursorB === undefined ? {} : { b: cursorB }) };
+  const setCursor = (which: "a" | "b", sourceTime: number | undefined) => {
+    if (sourceTime !== undefined && !Number.isFinite(sourceTime)) return;
+    if (which === "a") setCursorA(sourceTime); else setCursorB(sourceTime);
+  };
+  const clearCursor = (which: "a" | "b") => setCursor(which, undefined);
+  const moveCursor = (which: "a" | "b", deltaCycles: number) => {
+    if (!Number.isFinite(deltaCycles)) return;
+    setCursor(which, (which === "a" ? cursorA : cursorB) === undefined ? undefined : (which === "a" ? cursorA : cursorB)! + deltaCycles);
+  };
+  const swapCursors = () => { setCursorA(cursorB); setCursorB(cursorA); };
 
   const [signalTreeVisible, setSignalTreeVisible] = useState(true);
   const [inspectorVisible, setInspectorVisible] = useState(true);
@@ -119,6 +138,8 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
     density, setDensity,
     workspacePreset, setWorkspacePreset,
+    cursorA, cursorB, cursorState, cursorDelta: cursorDelta(cursorState),
+    setCursor, clearCursor, moveCursor, swapCursors,
     waveformRestoreRef,
     signalTreeVisible, setSignalTreeVisible,
     inspectorVisible, setInspectorVisible,
