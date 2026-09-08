@@ -17,7 +17,12 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   // exactly matches canonical), so creating with the final values directly
   // would leave this second "set the exact values" edit as a no-op Apply
   // that never enables.
-  await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const createButton = page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true });
+  if (await createButton.count() > 0) {
+    await createButton.click();
+  } else {
+    await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  }
   await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");
   await lane.locator("[data-transaction-id]").first().click();
@@ -38,10 +43,20 @@ test("moves a whole Transaction by dragging its body to a snapped cycle with one
   const transaction = lane.locator("[data-transaction-id]");
   const before = (await transaction.boundingBox())!;
   const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
   await transaction.locator("span").hover();
   await page.mouse.down();
+  await page.mouse.move(cycle10.x - 30, y);
+  await page.mouse.move(cycle10.x - 10, y);
   await page.mouse.move(cycle10.x, y);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "true");
+  const preview = (await transaction.boundingBox())!;
+  expect(Math.abs(preview.x - before.x)).toBeGreaterThan(1);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirtyBefore);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const after = (await transaction.boundingBox())!;
@@ -64,10 +79,18 @@ test("resizes a Transaction's start/end edge with snap and keeps start < end", a
   const transaction = lane.locator("[data-transaction-id]");
   const before = (await transaction.boundingBox())!;
   const cycle2 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='2']").boundingBox())!;
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
   await transaction.locator("[data-edge='start']").hover();
   await page.mouse.down();
   await page.mouse.move(cycle2.x, y);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "true");
+  expect((await transaction.boundingBox())!.width).toBeGreaterThan(before.width);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirtyBefore);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const resized = (await transaction.boundingBox())!;
@@ -83,10 +106,18 @@ test("clamps a Transaction edge drag at the terminal boundary and cannot cross t
   const transaction = lane.locator("[data-transaction-id]");
   const before = (await transaction.boundingBox())!;
   const terminal = (await page.getByTestId("cycle-ruler").locator("[data-cycle='24']").boundingBox())!;
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const dirtyBefore = await page.getByTestId("dirty-status").textContent();
   const y = before.y + before.height / 2;
   await transaction.locator("[data-edge='end']").hover();
   await page.mouse.down();
   await page.mouse.move(terminal.x + 30, y);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "true");
+  expect((await transaction.boundingBox())!.width).toBeGreaterThan(before.width);
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(await page.getByTestId("dirty-status").textContent()).toBe(dirtyBefore);
   await page.mouse.up();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   const clamped = (await transaction.boundingBox())!;
@@ -107,12 +138,56 @@ test("Escape cancels an in-progress Transaction drag without any semantic mutati
   await transaction.locator("span").hover();
   await page.mouse.down();
   await page.mouse.move(cycle10.x, y);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "true");
   await page.keyboard.press("Escape");
   await page.mouse.up();
   expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
   expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
   const after = (await transaction.boundingBox())!;
   expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "false");
+});
+
+test("pointercancel discards a live Transaction preview without semantic mutation", async ({ page }) => {
+  await ready(page);
+  const host = page.getByTestId("cycle-surface");
+  await createTransaction(page, "Pointer cancel", 2, 6);
+  const transaction = page.getByTestId("transaction-lanes").locator("[data-transaction-id]");
+  const before = (await transaction.boundingBox())!;
+  const revisionBefore = await host.getAttribute("data-canonical-revision");
+  const historyBefore = await page.getByTestId("history-status").textContent();
+  const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
+  await transaction.locator("span").hover();
+  await page.mouse.down();
+  await page.mouse.move(cycle10.x, before.y + before.height / 2);
+  await expect(transaction).toHaveAttribute("data-drag-preview", "true");
+  await transaction.dispatchEvent("pointercancel");
+  await expect(transaction).toHaveAttribute("data-drag-preview", "false");
+  expect(await host.getAttribute("data-canonical-revision")).toBe(revisionBefore);
+  expect(await page.getByTestId("history-status").textContent()).toBe(historyBefore);
+  expect(Math.abs((await transaction.boundingBox())!.x - before.x)).toBeLessThanOrEqual(1);
+  await page.mouse.up();
+});
+
+test("live drag keeps unrelated overlapping Transaction stack rows and positions stable", async ({ page }) => {
+  await ready(page);
+  await createTransaction(page, "Dragged", 2, 6);
+  await createTransaction(page, "Stable", 3, 7);
+  const lane = page.getByTestId("transaction-lanes");
+  const dragged = lane.locator("[data-transaction-id]").filter({ hasText: "Dragged" });
+  const stable = lane.locator("[data-transaction-id]").filter({ hasText: "Stable" });
+  const stableBefore = await stable.boundingBox();
+  const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
+  const draggedBox = (await dragged.boundingBox())!;
+  await dragged.locator("span").hover();
+  await page.mouse.down();
+  await page.mouse.move(cycle10.x, draggedBox.y + draggedBox.height / 2);
+  await expect(dragged).toHaveAttribute("data-drag-preview", "true");
+  const stableDuring = await stable.boundingBox();
+  expect(stableDuring?.x).toBe(stableBefore?.x);
+  expect(stableDuring?.y).toBe(stableBefore?.y);
+  await expect(stable).toHaveAttribute("data-drag-preview", "false");
+  await page.mouse.up();
 });
 
 test("Transaction context menu exposes only transaction-supported capabilities", async ({ page }) => {

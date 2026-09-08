@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
@@ -28,6 +28,96 @@ function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf
 type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly top: number; readonly height: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };
 type GroupHeaderBand = { readonly key: string; readonly top: number; readonly label: string; readonly color: string | undefined; readonly count: number; readonly groupId: string | undefined; readonly collapsed: boolean };
 
+type TransactionDragEdge = "body" | "start" | "end";
+type TransactionPreview = Readonly<{ start: number; end: number }>;
+
+function previewTransaction(transaction: Transaction, edge: TransactionDragEdge, value: number, cycleCount: number): TransactionPreview {
+  if (edge === "body") {
+    const duration = transaction.end - transaction.start;
+    const start = Math.max(0, Math.min(cycleCount - duration, value));
+    return { start, end: start + duration };
+  }
+  return edge === "start"
+    ? { start: Math.max(0, Math.min(value, transaction.end - 1)), end: transaction.end }
+    : { start: transaction.start, end: Math.min(cycleCount, Math.max(value, transaction.start + 1)) };
+}
+
+function previewPhases(transaction: Transaction, preview: TransactionPreview, edge: TransactionDragEdge): readonly NonNullable<Transaction["phases"]>[number][] | undefined {
+  if (!transaction.phases) return undefined;
+  if (edge === "body") {
+    const delta = preview.start - transaction.start;
+    return transaction.phases.map((phase) => ({ ...phase, start: phase.start + delta, end: phase.end + delta }));
+  }
+  return transaction.phases.map((phase) => ({ ...phase, start: Math.max(preview.start, phase.start), end: Math.min(preview.end, phase.end) })).filter((phase) => phase.start < phase.end);
+}
+
+function TransactionBar({ transaction, row, color, selected, cycleCount, getBoundaryX, onSnap, onSelect, commands, onContextMenu }: {
+  readonly transaction: Transaction;
+  readonly row: number;
+  readonly color: string | undefined;
+  readonly selected: boolean;
+  readonly cycleCount: number;
+  readonly getBoundaryX: (cycle: number) => number | undefined;
+  readonly onSnap: (clientX: number) => number | undefined;
+  readonly onSelect: (id: TransactionId) => void;
+  readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
+  readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void;
+}) {
+  const [drag, setDrag] = useState<{ edge: TransactionDragEdge }>();
+  const [preview, setPreview] = useState<TransactionPreview>();
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const current = preview ?? { start: transaction.start, end: transaction.end };
+  const startX = getBoundaryX(current.start);
+  const endX = getBoundaryX(current.end);
+  const phases = preview === undefined ? transaction.phases : previewPhases(transaction, preview, drag?.edge ?? "body");
+
+  useEffect(() => {
+    if (!drag) return undefined;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setDrag(undefined);
+        setPreview(undefined);
+      }
+    };
+    window.document.addEventListener("keydown", onKeyDown);
+    return () => window.document.removeEventListener("keydown", onKeyDown);
+  }, [drag]);
+
+  if (startX === undefined || endX === undefined) return null;
+  const updatePreview = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!drag) return;
+    const cycle = onSnap(event.clientX);
+    if (cycle === undefined) return;
+    setPreview(previewTransaction(transaction, drag.edge, cycle, cycleCount));
+  };
+  const begin = (event: ReactPointerEvent<HTMLElement>, edge: TransactionDragEdge) => {
+    event.preventDefault();
+    event.stopPropagation();
+    buttonRef.current?.setPointerCapture(event.pointerId);
+    setDrag({ edge });
+    setPreview({ start: transaction.start, end: transaction.end });
+  };
+  const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
+    event?.preventDefault();
+    setDrag(undefined);
+    setPreview(undefined);
+  };
+  const finish = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (!drag) return;
+    event.preventDefault();
+    const cycle = onSnap(event.clientX);
+    const final = cycle === undefined ? preview : previewTransaction(transaction, drag.edge, cycle, cycleCount);
+    setDrag(undefined);
+    setPreview(undefined);
+    if (!final || (final.start === transaction.start && final.end === transaction.end)) return;
+    if (drag.edge === "body") commands.move(transaction.id, final.start);
+    else commands.resize(transaction.id, drag.edge, drag.edge === "start" ? final.start : final.end);
+  };
+
+  return <button ref={buttonRef} type="button" data-transaction-id={transaction.id} data-selected={String(selected)} data-drag-preview={String(preview !== undefined)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(color ? { "--transaction-color": color } as CSSProperties : {}) }} onClick={() => onSelect(transaction.id)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerMove={updatePreview} onPointerUp={finish} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => begin(event, "start")} /><span onPointerDown={(event) => begin(event, "body")}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{phases?.map((phase) => { const from = getBoundaryX(phase.start); const to = getBoundaryX(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => begin(event, "end")} /></button>;
+}
+
 export function TransactionLanes({ document: rawDocument, zoom, selectedId, filter = "", getBoundaryX, onSelect, onSnap, commands, onContextMenu }: { readonly document: CanonicalDocument; readonly zoom: number; readonly selectedId: TransactionId | undefined; readonly filter?: string; readonly getBoundaryX: (cycle: number) => number | undefined; readonly onSelect: (id: TransactionId) => void; readonly onSnap: (clientX: number) => number | undefined; readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize" | "renameTransactionGroup" | "deleteTransactionGroup">; readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void }) {
   // #451: one shared filter narrows both the Tree rows (in the label
   // column below) and the central bars together -- searching never hides
@@ -39,7 +129,6 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   const needle = filter.trim().toLocaleLowerCase();
   const groupNameById = new Map((rawDocument.transactionGroups ?? []).map((group) => [group.id, group.name]));
   const document: CanonicalDocument = needle.length === 0 ? rawDocument : { ...rawDocument, transactions: rawDocument.transactions.filter((transaction) => transaction.id === selectedId || transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
-  const [drag, setDrag] = useState<{ id: TransactionId; edge: "body" | "start" | "end"; startX: number }>();
   // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
   // local, transient presentation state (never persisted, never touches
   // Canonical), same "view-only toggle" shape as the Signal Tree's own
@@ -48,34 +137,8 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
   const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
-  // Escape must cancel an in-progress drag without committing a semantic
-  // command; the listener is only attached while a drag is active so it
-  // never competes with unrelated Escape handling elsewhere in the app.
-  useEffect(() => {
-    if (!drag) return undefined;
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") setDrag(undefined); };
-    window.document.addEventListener("keydown", onKeyDown);
-    return () => window.document.removeEventListener("keydown", onKeyDown);
-  }, [drag]);
-  const cancel = () => setDrag(undefined);
   const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
   const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
-  const finish = (event: React.PointerEvent, transaction: Transaction) => {
-    if (!drag || drag.id !== transaction.id) return;
-    setDrag(undefined);
-    if (event.clientX === drag.startX) return;
-    const cycle = onSnap(event.clientX);
-    if (cycle === undefined) return;
-    if (drag.edge === "body") {
-      const duration = transaction.end - transaction.start;
-      const start = Math.max(0, Math.min(document.timeline.cycleCount - duration, cycle));
-      if (start !== transaction.start) commands.move(transaction.id, start);
-    } else {
-      const value = drag.edge === "start" ? Math.min(cycle, transaction.end - 1) : Math.max(cycle, transaction.start + 1);
-      if (value !== transaction[drag.edge]) commands.resize(transaction.id, drag.edge, value);
-    }
-  };
-  const capture = (event: React.PointerEvent, next: { id: TransactionId; edge: "body" | "start" | "end" }) => { event.stopPropagation(); event.currentTarget.parentElement?.setPointerCapture(event.pointerId); setDrag({ ...next, startX: event.clientX }); };
   const x = (cycle: number) => cycleXs.find((value) => value.cycle === cycle)?.x;
 
   // #452: Group headers only appear once real Groups are in use -- a
@@ -198,7 +261,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color;
-          return <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(resolvedColor ? { "--transaction-color": resolvedColor } as CSSProperties : {}) }} onClick={() => onSelect(transaction.id)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerUp={(event) => finish(event, transaction)} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{transaction.phases?.map((phase) => { const from = x(phase.start); const to = x(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>;
+          return <TransactionBar key={transaction.id} transaction={transaction} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>
