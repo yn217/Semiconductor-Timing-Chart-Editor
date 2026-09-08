@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { parseDocument } from "../../packages/schema/src/serialization.js";
 import { parseDocument, scanJsonSyntax } from "@timing-chart-v2/schema";
 
 describe("deterministic JSON syntax diagnostics", () => {
