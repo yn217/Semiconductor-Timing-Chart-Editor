@@ -138,7 +138,7 @@ test("A Transaction built with phases and Linked Signals survives Save/Open exac
 // Delete through the structured table, with raw JSON only reachable as a
 // secondary Advanced disclosure that itself never submits a command
 // directly (it only rewrites the table).
-test("Phases are added, edited, and deleted through the structured table without raw JSON, and Advanced JSON stays a secondary path", async ({ page }) => {
+test("Phases are added, edited, and deleted through the structured table -- raw JSON editing is not part of normal Transaction editing", async ({ page }) => {
   await openTransactionMode(page);
   await createReadRequestTransaction(page);
   const inspector = page.getByTestId("inspector");
@@ -171,13 +171,12 @@ test("Phases are added, edited, and deleted through the structured table without
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
 
-  const advanced = inspector.getByTestId("transaction-phase-editor").locator("details");
-  await expect(advanced).not.toHaveAttribute("open", "");
-  await advanced.locator("summary").click();
-  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Setup/);
-  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Cooldown/);
-  // Advanced JSON never submitted a command of its own -- it only rewrites
-  // the table via "Apply JSON to table"; opening/reading it changed nothing.
+  // #429/#397: no raw "Advanced: edit as JSON" disclosure exists any more
+  // -- verify the final committed state through the structured table
+  // itself instead.
+  await expect(inspector.getByTestId("transaction-phase-editor").locator("details")).toHaveCount(0);
+  await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Setup");
+  await expect(inspector.getByLabel("Phase 3 name")).toHaveValue("Cooldown");
   await expect(page.getByTestId("history-status")).toHaveText("History 6 / Redo 0");
 });
 
