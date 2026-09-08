@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { HistoryState } from "@timing-chart-v2/history";
 import type { CanonicalDocument, SignalId, Transaction, TransactionGroup, TransactionId, TransactionPhase } from "@timing-chart-v2/schema";
 import { nextEntityId } from "./entity-id.js";
@@ -72,6 +72,19 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   const groupNameById = new Map(document.transactionGroups?.map((group) => [group.id, group.name]) ?? []);
   const needle = search.trim().toLocaleLowerCase();
   const visibleTransactions = needle.length === 0 ? document.transactions : document.transactions.filter((item) => item.name.toLocaleLowerCase().includes(needle) || (item.groupId !== undefined && (groupNameById.get(item.groupId) ?? "").toLocaleLowerCase().includes(needle)));
+  const transactionRowHeight = 38;
+  const shouldVirtualizeTransactions = visibleTransactions.length > 200;
+  const transactionListViewportRef = useRef<HTMLDivElement>(null);
+  const [transactionListScrollTop, setTransactionListScrollTop] = useState(0);
+  const transactionViewportHeight = 360;
+  const transactionOverscan = 12;
+  const transactionFirstVisibleIndex = shouldVirtualizeTransactions ? Math.max(0, Math.floor(transactionListScrollTop / transactionRowHeight) - transactionOverscan) : 0;
+  const transactionLastVisibleIndex = shouldVirtualizeTransactions ? Math.min(visibleTransactions.length, Math.ceil((transactionListScrollTop + transactionViewportHeight) / transactionRowHeight) + transactionOverscan) : visibleTransactions.length;
+  const renderedTransactions = visibleTransactions.slice(transactionFirstVisibleIndex, transactionLastVisibleIndex);
+  useEffect(() => {
+    setTransactionListScrollTop(0);
+    if (transactionListViewportRef.current) transactionListViewportRef.current.scrollTop = 0;
+  }, [search, document.transactions]);
   const duplicateSelected = () => {
     if (!transaction) return;
     const newTransactionId = nextEntityId("transaction", document) as TransactionId;
@@ -158,7 +171,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
       <button type="button" className="danger" data-testid="bulk-delete-transactions" onClick={bulkDelete}>Delete Selected</button>
       <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
     </div>}
-    <div className="transaction-list">{visibleTransactions.length > 0 && <>
+    <div ref={transactionListViewportRef} className="transaction-list" onScroll={shouldVirtualizeTransactions ? (event) => setTransactionListScrollTop(event.currentTarget.scrollTop) : undefined} style={shouldVirtualizeTransactions ? { maxHeight: transactionViewportHeight, overflowY: "auto" } : undefined}>{visibleTransactions.length > 0 && <>
       <label className="field-inline transaction-select-all"><input type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} />Select all</label>
       {/* #397 Transaction Mode GUI Closure Section 6: column header row,
           same shared pattern as .bookmark-list-header -- fixed labels over
@@ -168,7 +181,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
       <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span></span></div>
-    </>}{visibleTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
+    </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
       <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
         {/* #453: every new field is appended AFTER the original 4 (name/
@@ -186,7 +199,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
         <b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span>
         <span>{item.end - item.start} cycles</span><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.phases?.length ?? 0} phases</span>
       </button>
-    </div>)}
+    </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (visibleTransactions.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
     {visibleTransactions.length === 0 && <p className="inspector-note">No Transactions match this search.</p>}</div>
   </>;
   return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{transaction && <button type="button" className="danger" data-testid="delete-bottom-transaction" onClick={onDelete}>Delete Transaction</button>}</header>{!transaction && document.transactions.length === 0 && <div className="transaction-empty-state" data-testid="transaction-empty-state"><strong>No Transactions yet</strong><p>Transactions describe a named time span, optional phases, and the waveform Signals related to that operation. Use "+ Add" in the Tree above, or the Ribbon's "Create Transaction", to add one.</p></div>}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); applyTransactionDraft(); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label>

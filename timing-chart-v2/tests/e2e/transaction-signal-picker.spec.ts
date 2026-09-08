@@ -90,3 +90,29 @@ test("10k Signal Transaction Inspector keeps picker DOM bounded and preserves hi
   await expect(result).toContainText("top.block_09999");
   expect(await picker.locator("button").count()).toBeLessThanOrEqual(50);
 });
+
+test("10k Transaction Bottom table mounts only a bounded viewport slice", async ({ page }) => {
+  test.setTimeout(120_000);
+  await page.goto("/");
+  const source = largeTransactionDocument(1);
+  const document = {
+    ...source,
+    document: { ...source.document, id: "large-transactions" },
+    timeline: { ...source.timeline, cycleCount: 20_000, end: 20_000 },
+    transactions: Array.from({ length: 10_000 }, (_, index) => ({
+      id: `txn_bulk_${String(index).padStart(5, "0")}`,
+      name: `Transaction ${index}`,
+      start: index,
+      end: index + 1,
+      laneId: "lane_0",
+    })),
+  };
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: "large-transactions.tcd.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+  await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", "10000", { timeout: 60_000 });
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+  await page.getByLabel("Workspace preset").selectOption("transaction");
+  const list = page.getByTestId("transaction-editor").locator(".transaction-list");
+  await expect.poll(() => list.locator(".transaction-list-row").count()).toBeLessThan(100);
+  await list.evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
+  await expect.poll(() => list.locator(".transaction-list-row").count()).toBeLessThan(100);
+});
