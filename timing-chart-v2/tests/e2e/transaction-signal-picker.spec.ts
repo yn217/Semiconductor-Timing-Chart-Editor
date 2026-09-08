@@ -116,3 +116,38 @@ test("10k Transaction Bottom table mounts only a bounded viewport slice", async 
   await list.evaluate((element) => { element.scrollTop = element.scrollHeight; element.dispatchEvent(new Event("scroll", { bubbles: true })); });
   await expect.poll(() => list.locator(".transaction-list-row").count()).toBeLessThan(100);
 });
+
+test("Transaction Bottom table stays viewport-bounded across 1k, 5k, and 10k fixtures", async ({ page }) => {
+  test.setTimeout(180_000);
+  await page.goto("/");
+  const source = largeTransactionDocument(1);
+  const measurements: { count: number; loadMs: number; mountedRows: number }[] = [];
+  for (const count of [1_000, 5_000, 10_000]) {
+    const document = {
+      ...source,
+      document: { ...source.document, id: `perf-transactions-${count}` },
+      timeline: { ...source.timeline, cycleCount: count * 2, end: count * 2 },
+      transactions: Array.from({ length: count }, (_, index) => ({
+        id: `txn_perf_${String(index).padStart(5, "0")}`,
+        name: `Transaction ${index}`,
+        start: index,
+        end: index + 1,
+        laneId: `lane_${index % 8}`,
+      })),
+    };
+    const started = await page.evaluate(() => performance.now());
+    await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles({ name: `perf-transactions-${count}.tcd.json`, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    await expect(page.locator(".editor-shell")).toHaveAttribute("data-transaction-count", String(count), { timeout: 60_000 });
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true", { timeout: 60_000 });
+    if (count === 1_000) {
+      await page.locator(".ribbon-tabs").getByRole("button", { name: "View", exact: true }).click();
+      await page.getByLabel("Workspace preset").selectOption("transaction");
+    }
+    const list = page.getByTestId("transaction-editor").locator(".transaction-list");
+    const mountedRows = await list.locator(".transaction-list-row").count();
+    const finished = await page.evaluate(() => performance.now());
+    measurements.push({ count, loadMs: Math.round(finished - started), mountedRows });
+    expect(mountedRows).toBeLessThan(100);
+  }
+  console.log(`[transaction-table-performance] ${JSON.stringify(measurements)}`);
+});
