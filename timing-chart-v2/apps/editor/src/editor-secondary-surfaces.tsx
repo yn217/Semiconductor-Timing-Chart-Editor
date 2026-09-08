@@ -17,6 +17,7 @@ import { SignalEditor } from "./editors/signal-editor.js";
 import { SignalTreeColumnHeader } from "./minimal-cycle-view-panels.js";
 import { TransactionEditor } from "./transaction-editor.js";
 import { TransactionLanes } from "./runtime/transaction-lanes.js";
+import { TransactionSignalTree } from "./transaction-signal-tree.js";
 import { InspectorPanel } from "./panels/inspector-panel.js";
 import { LegendView } from "./legend-view.js";
 import { ProblemsPanel } from "./problems-panel.js";
@@ -87,6 +88,8 @@ export interface EditorSecondarySurfacesInput {
     readonly setTreeTypeFilter: (value: TreeTypeFilter) => void;
     readonly transactionTreeFilter: string;
     readonly setTransactionTreeFilter: (value: string) => void;
+    readonly transactionTreeTab: "transactions" | "signals";
+    readonly setTransactionTreeTab: (tab: "transactions" | "signals") => void;
     readonly setRibbonTab: (tab: string) => void;
   };
   readonly dialog: {
@@ -247,9 +250,16 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
         ? `Time Scale: 1 TC = ${input.document.transactionTimeScale.clockCyclesPerTransactionCycle} Cycle${input.document.transactionTimeScale.clockCyclesPerTransactionCycle === 1 ? "" : "s"}`
         : "Time Scale: 1 TC = 1 Cycle")
       : input.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
-    transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction, onAddGroup: input.actions.createTransactionGroup } : undefined}
+    transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction, onAddGroup: input.actions.createTransactionGroup, tab: workspace.transactionTreeTab, onTabChange: workspace.setTransactionTreeTab } : undefined}
   />;
-  const workspaceViewportContent = workspace.viewMode !== "Cycle" && <TransactionLanes document={input.document} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />;
+  // #429/#397 P0-2: Transaction Mode's "Transactions | Signals" tabs -- the
+  // Signals tab swaps in a real, separate Signal browse/select list (never
+  // a fork of the Cycle Mode tree's own rendering, never a second selection
+  // owner -- see TransactionSignalTree's own doc comment) in place of
+  // TransactionLanes, at the exact same DOM slot.
+  const workspaceViewportContent = workspace.viewMode !== "Cycle" && (workspace.viewMode === "Transaction" && workspace.transactionTreeTab === "signals"
+    ? <TransactionSignalTree document={input.document} selectedSignalId={selected.signal?.id} onSelectSignal={input.actions.selectHierarchySignal} />
+    : <TransactionLanes document={input.document} zoom={input.zoom} selectedId={selected.transactionId} filter={workspace.viewMode === "Transaction" ? workspace.transactionTreeFilter : ""} getBoundaryX={(cycle) => refs.transactionBoundaryX.current(cycle)} onSelect={input.actions.selectTransaction} onSnap={(clientX) => refs.snapTransactionCycle.current(clientX)} commands={surfaceCommands} onContextMenu={openTransactionContextMenu} />);
   const workspaceViewportLegend = <LegendView document={input.document} commands={surfaceCommands} />;
   const workspaceBottom = <BottomEditorPanel
     tabs={workspace.bottomTabs}
