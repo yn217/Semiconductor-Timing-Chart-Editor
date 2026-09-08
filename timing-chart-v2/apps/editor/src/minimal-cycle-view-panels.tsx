@@ -243,15 +243,22 @@ export type EditorStatusBarProps = {
   // caller, same "pure display, no logic of its own" contract as every
   // other field here.
   readonly cursorStatus: string | undefined;
+  // #407: which of Split's two existing regions (Signal surface vs
+  // `.transaction-lanes`) is active -- "常に判別可能" (always
+  // distinguishable) per the issue's own acceptance criteria means a
+  // textual indicator, not the CSS border alone. `undefined` outside
+  // Split mode.
+  readonly activePaneStatus: string | undefined;
 };
 
 /** The editor's bottom status bar. Purely a display of values already
  * computed by their owners (Application/History, Selection, Timeline
  * Geometry/Navigation, Workspace UI State) -- no state or logic of its own. */
-export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError, cursorStatus }: EditorStatusBarProps) {
+export function EditorStatusBar({ toolStatus, selectionStatus, signalCount, annotationCount, rangeStatus, selectedCycle, zoom, snapEnabled, viewMode, statusContext, hideRevisionDetail, revision, undoDepth, redoDepth, timeAxisStatus, dirty, problemsCount, waveDromHasError, cursorStatus, activePaneStatus }: EditorStatusBarProps) {
   return <footer className="status-bar" aria-label="Editor status">
     <span data-testid="tool-status">{toolStatus}</span>
     {cursorStatus && <span data-testid="cursor-status">{cursorStatus}</span>}
+    {activePaneStatus && <span data-testid="active-pane-status">{activePaneStatus}</span>}
     <span>Selected: <strong data-testid="selection-status">{selectionStatus}</strong></span>
     <span data-testid="signal-count-status">Signals: {signalCount}</span><span data-testid="annotation-count-status">Annotations: {annotationCount}</span><span data-testid="range-status">{rangeStatus}</span><span data-testid="cycle-status">Cycle {selectedCycle}</span><span data-testid="zoom-status-bar">Zoom: {Math.round(zoom * 100)}%</span><span data-testid="snap-status">Snap: {snapEnabled ? "On" : "Off"}</span><span data-testid="view-mode-status">Mode: {viewMode}</span>
     <span className="status-context" data-testid="status-context">{statusContext}</span>
