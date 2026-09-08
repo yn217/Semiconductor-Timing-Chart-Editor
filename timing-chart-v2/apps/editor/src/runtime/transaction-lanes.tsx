@@ -136,8 +136,24 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   // Group collapse. Kept local to this component rather than lifted into
   // shared workspace state since nothing else needs to read it.
   const [collapsedGroups, setCollapsedGroups] = useState<ReadonlySet<string>>(new Set());
+  const [visibleY, setVisibleY] = useState<readonly [number, number]>([0, 900]);
   const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const root = owner.current;
+    const scrollParent = root?.parentElement;
+    if (!root || !scrollParent) return undefined;
+    const update = () => {
+      const rootRect = root.getBoundingClientRect();
+      const parentRect = scrollParent.getBoundingClientRect();
+      const top = Math.max(0, scrollParent.scrollTop + parentRect.top - rootRect.top - 200);
+      setVisibleY([top, top + scrollParent.clientHeight + 400]);
+    };
+    update();
+    scrollParent.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => { scrollParent.removeEventListener("scroll", update); window.removeEventListener("resize", update); };
+  }, [document.transactions.length, filter]);
   const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
   const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
   const x = (cycle: number) => cycleXs.find((value) => value.cycle === cycle)?.x;
@@ -219,6 +235,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
     }
   }
   const totalHeight = Math.max(cursor, LANE_ROW_HEIGHT);
+  const isVisible = (top: number, height = LANE_ROW_HEIGHT) => top + height >= visibleY[0] && top <= visibleY[1];
 
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
@@ -247,7 +264,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.top, height: band.height }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
-          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {laneTransactions.filter((transaction) => isVisible(band.top + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color) ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
@@ -255,7 +272,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
       {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }} />)}
       {laneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.top, height: band.height }}>
         {cycleXs.map((value) => <i className="transaction-geometry-line" aria-hidden="true" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}
-        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).map((transaction) => {
+        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => isVisible(band.top + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;
