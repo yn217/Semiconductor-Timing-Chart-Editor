@@ -830,7 +830,7 @@ test("Canvas range drag supports reverse and Shift extension while Escape cancel
   expect((await preview.boundingBox())!.width).toBeGreaterThan(0);
   await page.keyboard.press("Escape");
   await expect(host).not.toHaveAttribute("data-range-drag");
-  await expect(preview).toHaveCount(0);
+  await expect(host).not.toHaveAttribute("data-range-preview");
   await page.mouse.up();
   await expect(page.getByTestId("range-status")).toHaveText("Range: [3, 9)");
   await expect(page.getByTestId("revision-status")).toHaveText("Canonical revision 0");
