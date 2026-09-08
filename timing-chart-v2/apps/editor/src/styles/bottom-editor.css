@@ -158,7 +158,13 @@
 .transaction-editor > header strong { margin-right: auto; }
 .transaction-editor form { display: flex; align-items: end; gap: 9px; padding: 9px 0; }
 .transaction-editor label { display: grid; gap: 3px; color: #5c687c; font-size: 10px; }
-.transaction-editor input { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
+/* #429/#397 P0-6/P0-7: excludes checkboxes, same precedent as
+   .annotation-properties's own `input:not([type="checkbox"])` above --
+   this rule's 7px horizontal padding alone exceeds a checkbox's intended
+   13px total box-sizing:border-box width, silently forcing it (and its
+   height, via the explicit 27px here) up to a much larger size than the
+   shared checkbox primitive (controls.css) declares. */
+.transaction-editor input:not([type="checkbox"]) { height: 27px; border: 1px solid #b9c5d3; border-radius: 3px; padding: 3px 7px; }
 /* #420: same unstyled-<button> UA `ButtonText`-under-`color-scheme:dark`
    root cause as the list-row fix in center-columns.css -- these plain
    toolbar buttons (Undo/Redo/Reveal/Duplicate/Cancel/Delete) never set an
