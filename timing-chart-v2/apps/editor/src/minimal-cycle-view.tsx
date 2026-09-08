@@ -138,7 +138,7 @@ export function MinimalCycleView() {
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
-    cursorA, cursorB, cursorDelta,
+    cursorA, cursorB, cursorDelta, setCursor, clearCursor, swapCursors,
   } = workspace;
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
@@ -598,6 +598,17 @@ export function MinimalCycleView() {
       minimapEnabled,
       signalSplitEnabled,
       onToggleSignalSplit: () => setSignalSplitEnabled((value) => !value),
+      // #431/#459: Cursor A/B had a fully-built view-only state API
+      // (use-workspace-ui-state.ts) with zero GUI anywhere -- these set a
+      // cursor to whatever cycle is currently selected, same "current
+      // cycle" the status bar's own "Cycle N" reads.
+      selectedCycle,
+      cursorA,
+      cursorB,
+      onSetCursorA: () => setCursor("a", selectedCycle),
+      onSetCursorB: () => setCursor("b", selectedCycle),
+      onClearCursors: () => { clearCursor("a"); clearCursor("b"); },
+      onSwapCursors: swapCursors,
       showSignalNames,
       showRoles,
       showAnnotations,
@@ -724,6 +735,11 @@ export function MinimalCycleView() {
     dirty: history.dirty,
     problemsCount: diagnostics.length,
     waveDromHasError,
+    // #431/#459: `cursorA`/`cursorB` are source-time cycle numbers; empty
+    // string formatting stays out of EditorStatusBar per its own "pure
+    // display" contract, so the readout is fully assembled here.
+    cursorStatus: cursorA === undefined && cursorB === undefined ? undefined
+      : `Cursor: ${cursorA === undefined ? "A —" : `A ${cursorA}`} · ${cursorB === undefined ? "B —" : `B ${cursorB}`}${cursorDelta.cycles === undefined ? "" : ` · Δ ${cursorDelta.cycles} cycles`}`,
   };
   return <EditorShellView
     viewModel={{
