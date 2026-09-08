@@ -53,6 +53,7 @@ export interface InspectorCommandActions {
   readonly updateAnnotationLabelOffset: (annotationId: AnnotationId, labelOffset: CommandPayload<"annotation.updateLabelOffset">["labelOffset"]) => CommandResult;
   readonly resetAnnotationOffsets: (annotationId: AnnotationId) => CommandResult;
   readonly updateAnnotationMeasurement: (payload: CommandPayload<"annotation.updateMeasurement">) => CommandResult;
+  readonly updateAnnotationVerticalSpan: (payload: CommandPayload<"annotation.updateVerticalSpan">) => CommandResult;
 }
 
 export interface DocumentPropertiesCommandActions {
@@ -170,6 +171,7 @@ export function createEditorSurfaceCommandController(input: {
     updateAnnotationLabelOffset: (annotationId, labelOffset) => dispatch<"annotation.updateLabelOffset">("annotation_label_offset", { type: "annotation.updateLabelOffset", annotationId, labelOffset }),
     resetAnnotationOffsets: (annotationId) => dispatch<"annotation.resetOffsets">("annotation_reset_offsets", { type: "annotation.resetOffsets", annotationId }),
     updateAnnotationMeasurement: (payload) => dispatch<"annotation.updateMeasurement">("annotation_measurement", { type: "annotation.updateMeasurement", ...payload }),
+    updateAnnotationVerticalSpan: (payload) => dispatch<"annotation.updateVerticalSpan">("annotation_vertical_span", { type: "annotation.updateVerticalSpan", ...payload }),
     updateDocumentProperties,
     updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
