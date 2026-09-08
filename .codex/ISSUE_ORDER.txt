@@ -3,17 +3,17 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-09 05:24 JST
+# Last reconciled by ChatGPT: 2026-09-09 07:35 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed live state at reconciliation:
-#   main = 572277e fix(transaction): preserve time scale optional fields
-#   completed/closed from prior independent Codex queue: #461 #328 #464 #462
-#   #530 implementation is on main and focused tests/typecheck/build/Playwright were reported PASS,
-#   but the Issue remains OPEN because explicit Save/Open persistence evidence is still unchecked.
+#   main = 3d62d1a test(transaction): use stable ribbon create path in drag specs
+#   #530 Transaction time-scale optional field / Secondary Clock / Save-Open = CLOSED
+#   #529 DocumentEpoch transient-state generation boundary = CLOSED
+#   prior independent queue #461 #328 #464 #462 = CLOSED
 #   #414 remains OPEN; therefore #415 remains dependency-waiting and MUST NOT start.
 #
 # ============================================================================
@@ -21,16 +21,12 @@
 # ============================================================================
 # STATUS: ACTIVE
 #
-# 1) Finish closure of #530. Do NOT reimplement the already-landed fix.
-# Verify explicit Save/Open round-trip for TransactionTimeScale including showSecondaryClock and
-# future optional-field preservation through the production persistence path. If PASS, add evidence,
-# verify main == origin/main, close #530, then re-read this queue.
-530
-
-# 2) Scope document-relative transient UI state to the document generation / documentEpoch.
-# Prevent same-ID retargeting across Open/New/document.replace for checked IDs, pinned targets,
-# collapsed groups, drag/resize/context-menu targets, and drafts. Reuse one generation owner.
-529
+# 1) Finish the remaining stable validation/rule-contract closure work.
+# Existing comments show substantial typed descriptor/inventory groundwork already exists.
+# Re-audit latest main first; do not rebuild completed foundations.
+# Focus on machine-checked emitted-code inventory/drift protection, cross-layer compatibility,
+# locale-independent structured diagnostics, and stable code/path/entityId evidence.
+282
 #
 # After every issue, re-read this file and live GitHub state.
 #
@@ -44,33 +40,34 @@
 #
 # When #414 closes:
 # - finish the currently active bounded Codex issue safely;
-# - reconcile this file against live GitHub state;
-# - promote #415 ahead of remaining lower-priority queue work because it unblocks #416;
+# - re-read live GitHub state and this file;
+# - promote #415 ahead of lower-priority independent work because it unblocks #416;
 # - live #414 completed/closed is mandatory; do not infer readiness from code alone.
 #
 # Time Outline chain:
 #   DONE  #412 -> #413
 #   NOW   Claude/product GUI #414
 #   WAIT  Codex #415
-#   THEN  #416 closure
+#   THEN  Claude #416 closure
 #
 # ============================================================================
 # DEFERRED TO AVOID CROSS-AGENT CONFLICT
 # ============================================================================
-# #463 Transaction lane virtualization/performance is independent of #414, but it touches the
-# active Transaction lane presentation/runtime currently being visually closed by Claude.
+# #463 Transaction lane virtualization/performance is independent of #414, but touches the
+# Transaction lane runtime being exercised by Claude/product acceptance #397/#429.
 # Keep deferred until that surface is quiescent or ownership is explicitly transferred.
 #
-# #258 broad MinimalCycleView decomposition remains deferred while GUI/product agents are
-# actively editing shared editor surfaces; avoid refactor-driven merge conflict churn.
+# #258 broad MinimalCycleView decomposition remains deferred while Claude/product agents are
+# actively modifying shared editor surfaces. Avoid refactor-driven merge conflict churn.
 #
-# #495 mixes Reset Core semantics with production GUI work; split/transfer a bounded Core child
+# #495 mixes Reset Core semantics with production GUI work. Split/transfer a bounded Core child
 # before Codex consumes it wholesale.
 #
 # ============================================================================
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
+#   #530 #529
 #   #461 #328 #464 #462
 #   #481 #459 #460
 #   #457 #458 #456
@@ -80,13 +77,15 @@
 #   #410 #399 #398 #237 #417 #428 #272
 #   #363 #269 #281 #372 #366 #369
 #   #221 #171 #170 #167 #161 #175
-#   #451 #452 #453 #473
+#   #451 #452 #453 #454 #473
 #
 # ============================================================================
-# OTHER GUI / PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
+# GUI / PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
 # ============================================================================
-#   #414 Time Outline GUI
-#   #416 Time Outline final Ribbon/export/E2E closure
+#   #414 Time Outline GUI — Claude NOW
+#   #397 Transaction + Split sample-driven final acceptance — Claude/product
+#   #429 Transaction parent closure — Claude/product; close after #397 evidence
+#   #416 Time Outline final Ribbon/export/E2E closure — Claude after #415
 #   #424 Marker vertical-span GUI/product completion
 #   #419 Highlight Snap/Free GUI/product completion
 #   #426 Bottom Panel consolidation
