@@ -1,3 +1,4 @@
+import path from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 async function ready(page: Page) {
@@ -171,11 +172,13 @@ test("pointercancel discards a live Transaction preview without semantic mutatio
 
 test("live drag keeps unrelated overlapping Transaction stack rows and positions stable", async ({ page }) => {
   await ready(page);
-  await createTransaction(page, "Dragged", 2, 6);
-  await createTransaction(page, "Stable", 3, 7);
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(path.resolve(process.cwd(), "samples/acceptance-397/sample-a-basic-transaction-lifecycle.tcd.json"));
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");
-  const dragged = lane.locator("[data-transaction-id]").filter({ hasText: "Dragged" });
-  const stable = lane.locator("[data-transaction-id]").filter({ hasText: "Stable" });
+  const dragged = lane.locator("[data-transaction-id='txn_read0']");
+  const stable = lane.locator("[data-transaction-id='txn_read1']");
   const stableBefore = await stable.boundingBox();
   const cycle10 = (await page.getByTestId("cycle-ruler").locator("[data-cycle='10']").boundingBox())!;
   const draggedBox = (await dragged.boundingBox())!;
