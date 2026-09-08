@@ -1,5 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useMemo, useState } from "react";
 import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { ArrangeGroup } from "./arrange-group.js";
@@ -23,6 +22,7 @@ import { nextEntityId } from "./entity-id.js";
 import { resolveGroupInsertionIndex, resolveInsertionTarget } from "./insertion-target.js";
 import type { AIViewIntent } from "./ai-proposal-provider.js";
 import type { EditorSurfaceCommandController } from "./application/editor-surface-command-controller.js";
+import { HomeOverflow } from "./ribbon/home-overflow.js";
 
 type DensityMode = "compact" | "comfortable";
 type WorkspacePreset = "waveform" | "edit" | "review" | "transaction";
@@ -46,73 +46,8 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   readonly onRange: (range: { start: number; end: number }) => void; readonly onViewIntent: (intent: AIViewIntent) => void; readonly onCreateAnnotation: (annotation: Annotation) => void; readonly onArrowPick: (annotationType: "arrow" | "dependency") => void; readonly onZoom: (delta: number) => void; readonly onFitSelection: () => void; readonly onFitAll: () => void; readonly onSetZoom: (zoom: number) => void; readonly onNavigateBookmark: (cycle: number, bookmarkId?: BookmarkId) => void; readonly commands: EditorSurfaceCommandController;
   readonly onToggleGrid: () => void; readonly onToggleSnap: () => void; readonly onToggleRuler: () => void; readonly onToggleMinimap: () => void; readonly onToggleSignalNames: () => void; readonly onToggleRoles: () => void; readonly onToggleAnnotations: () => void; readonly onToggleTransactions: () => void; readonly onToggleGroupBackground: () => void; readonly onToggleSignalTree: () => void; readonly onUndo: () => void; readonly onRedo: () => void; readonly onDelete: () => void; readonly onNew: () => void; readonly onOpen: () => void; readonly onSave: () => void; readonly onSaveAs: () => void; readonly onRecent: () => void; readonly onProperties: () => void; readonly onExport: () => void; readonly onToggleInspector: () => void; readonly onToggleBottom: () => void; readonly onShowProblems: () => void; readonly onCopy: () => void; readonly onCut: () => void; readonly onPaste: () => void; readonly onDuplicate: () => void; readonly onRename: () => void; readonly onClearSelection: () => void; readonly onSelectAll: () => void; readonly onMoveUp: () => void; readonly onMoveDown: () => void; readonly onVisibility: (visible: boolean) => void; readonly onOpenTimeline: () => void; readonly onOpenProperties: () => void; readonly onOpenBookmarks: () => void; readonly onOpenAIAssistant: () => void; readonly aiBridgeStatus: "disabled" | "connecting" | "connected" | "error";
 }) {
-  const [homeOverflowOpen, setHomeOverflowOpen] = useState(false);
-  const [homeOverflowPosition, setHomeOverflowPosition] = useState<{ readonly left: number; readonly top: number; readonly height: number; readonly maxHeight: number }>();
-  const homeOverflowTriggerRef = useRef<HTMLButtonElement>(null);
-  const homeOverflowMenuRef = useRef<HTMLDivElement>(null);
   const [compactCycleCount] = useState(2);
   const hasSelectableSignals = useMemo(() => document.signals.some((signal) => signal.type !== "commentRow"), [document]);
-  useLayoutEffect(() => {
-    if (!homeOverflowOpen) {
-      setHomeOverflowPosition(undefined);
-      return;
-    }
-    const updatePosition = () => {
-      const trigger = homeOverflowTriggerRef.current;
-      const menu = homeOverflowMenuRef.current;
-      if (!trigger || !menu) return;
-      const margin = 8;
-      const triggerRect = trigger.getBoundingClientRect();
-      const menuRect = menu.getBoundingClientRect();
-      const maxHeight = Math.max(120, window.innerHeight - margin * 2);
-      const menuHeight = Math.min(menu.scrollHeight, maxHeight);
-      const menuWidth = Math.min(menuRect.width, Math.max(220, window.innerWidth - margin * 2));
-      const left = Math.max(margin, Math.min(triggerRect.right - menuWidth, window.innerWidth - margin - menuWidth));
-      const belowTop = triggerRect.bottom + margin;
-      const aboveTop = triggerRect.top - margin - menuHeight;
-      const top = belowTop + menuHeight <= window.innerHeight - margin
-        ? belowTop
-        : Math.max(margin, aboveTop);
-      setHomeOverflowPosition({ left, top, height: menuHeight, maxHeight });
-    };
-    updatePosition();
-    window.addEventListener("resize", updatePosition);
-    window.addEventListener("scroll", updatePosition, true);
-    window.visualViewport?.addEventListener("resize", updatePosition);
-    window.visualViewport?.addEventListener("scroll", updatePosition);
-    return () => {
-      window.removeEventListener("resize", updatePosition);
-      window.removeEventListener("scroll", updatePosition, true);
-      window.visualViewport?.removeEventListener("resize", updatePosition);
-      window.visualViewport?.removeEventListener("scroll", updatePosition);
-    };
-  }, [homeOverflowOpen]);
-  useEffect(() => {
-    if (!homeOverflowOpen) return;
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (homeOverflowMenuRef.current?.contains(target) || homeOverflowTriggerRef.current?.contains(target)) return;
-      setHomeOverflowOpen(false);
-    };
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setHomeOverflowOpen(false);
-      requestAnimationFrame(() => homeOverflowTriggerRef.current?.focus());
-    };
-    window.document.addEventListener("pointerdown", onPointerDown, true);
-    window.document.addEventListener("keydown", onKeyDown, true);
-    return () => {
-      window.document.removeEventListener("pointerdown", onPointerDown, true);
-      window.document.removeEventListener("keydown", onKeyDown, true);
-    };
-  }, [homeOverflowOpen]);
-  useEffect(() => {
-    if (!homeOverflowOpen) return;
-    const frame = requestAnimationFrame(() => homeOverflowMenuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
-    return () => cancelAnimationFrame(frame);
-  }, [homeOverflowOpen]);
   // #400: Pulse is no longer an independently creatable Signal type -- single/
   // finite/periodic pulses are produced through the Signal Generator instead.
   // `type: "pulse"` remains fully supported for documents that already have
@@ -193,15 +128,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   const ungroupSelectedTransaction = () => {
     if (selectedTransactionGroupId !== undefined) commands.deleteTransactionGroup(selectedTransactionGroupId);
   };
-  const homeOverflowMenu = homeOverflowOpen ? createPortal(<div ref={homeOverflowMenuRef} id="home-overflow-menu" className="home-overflow-menu" role="menu" aria-label="More Home Commands" style={{ left: `${homeOverflowPosition?.left ?? 0}px`, top: `${homeOverflowPosition?.top ?? 0}px`, height: homeOverflowPosition ? `${homeOverflowPosition.height}px` : "auto", maxHeight: `${homeOverflowPosition?.maxHeight ?? 120}px`, visibility: homeOverflowPosition ? "visible" : "hidden" }}>
-    <strong>File</strong><button type="button" onClick={() => { onNew(); setHomeOverflowOpen(false); }}>New</button><button type="button" onClick={() => { onOpen(); setHomeOverflowOpen(false); }}>Open</button><button type="button" onClick={() => { onSave(); setHomeOverflowOpen(false); }}>Save</button><button type="button" onClick={() => { onSaveAs(); setHomeOverflowOpen(false); }}>Save As</button><button type="button" onClick={() => { onRecent(); setHomeOverflowOpen(false); }}>Recent</button>
-    <strong>History</strong><button type="button" onClick={() => { onUndo(); setHomeOverflowOpen(false); }} disabled={!history.canUndo}>Undo</button><button type="button" onClick={() => { onRedo(); setHomeOverflowOpen(false); }} disabled={!history.canRedo}>Redo</button>
-    <strong>Clipboard</strong><button type="button" onClick={() => { onCopy(); setHomeOverflowOpen(false); }} disabled={!hasSelectedClipboard}>Copy</button><button type="button" onClick={() => { onCut(); setHomeOverflowOpen(false); }} disabled={!hasSelectedClipboard}>Cut</button><button type="button" onClick={() => { onPaste(); setHomeOverflowOpen(false); }} disabled={!clipboardAvailable}>Paste</button><button type="button" onClick={() => { onDuplicate(); setHomeOverflowOpen(false); }} disabled={!hasSelectedClipboard}>Duplicate</button>
-    <strong>Edit / Selection</strong><button type="button" onClick={() => { onDelete(); setHomeOverflowOpen(false); }} disabled={!hasDeletableSelection}>Delete</button><button type="button" onClick={() => { onRename(); setHomeOverflowOpen(false); }} disabled={!canRenameSelection}>Rename</button><button type="button" onClick={() => { onClearSelection(); setHomeOverflowOpen(false); }}>Clear Selection</button><button type="button" onClick={() => { onSelectAll(); setHomeOverflowOpen(false); }} disabled={!hasSelectableSignals}>Select All Signals</button>
-    <strong>Visibility / Arrange</strong><button type="button" onClick={() => { onVisibility(true); setHomeOverflowOpen(false); }} disabled={!canShowSelection}>Show</button><button type="button" onClick={() => { onVisibility(false); setHomeOverflowOpen(false); }} disabled={!canHideSelection}>Hide</button><button type="button" onClick={() => { onMoveUp(); setHomeOverflowOpen(false); }} disabled={!canMoveUp}>Move Up</button><button type="button" onClick={() => { onMoveDown(); setHomeOverflowOpen(false); }} disabled={!canMoveDown}>Move Down</button>
-    <strong>View</strong><button type="button" onClick={() => { onZoom(-0.25); setHomeOverflowOpen(false); }}>Zoom −</button><button type="button" onClick={() => { onZoom(0.25); setHomeOverflowOpen(false); }}>Zoom +</button><button type="button" onClick={() => { onSetZoom(0.5); setHomeOverflowOpen(false); }}>Zoom 50%</button><button type="button" onClick={() => { onSetZoom(1); setHomeOverflowOpen(false); }}>Zoom 100%</button><button type="button" onClick={() => { onSetZoom(1.5); setHomeOverflowOpen(false); }}>Zoom 150%</button><button type="button" onClick={() => { onSetZoom(2); setHomeOverflowOpen(false); }}>Zoom 200%</button><button type="button" onClick={() => { onSetZoom(4); setHomeOverflowOpen(false); }}>Zoom 400%</button><button type="button" onClick={() => { onSetZoom(8); setHomeOverflowOpen(false); }}>Zoom 800%</button><button type="button" onClick={() => { onFitSelection(); setHomeOverflowOpen(false); }}>Fit Selection</button><button type="button" onClick={() => { onFitAll(); setHomeOverflowOpen(false); }}>Fit All</button><button type="button" onClick={() => { onToggleGrid(); setHomeOverflowOpen(false); }}>Grid</button><button type="button" onClick={() => { onToggleSnap(); setHomeOverflowOpen(false); }}>Snap</button><button type="button" onClick={() => { onToggleRuler(); setHomeOverflowOpen(false); }}>Ruler</button><button type="button" onClick={() => { onToggleMinimap(); setHomeOverflowOpen(false); }}>MiniMap</button>
-    <strong>Document</strong><button type="button" role="menuitem" onClick={() => { onProperties(); setHomeOverflowOpen(false); }}>Document Properties</button><button type="button" role="menuitem" onClick={() => { onShowProblems(); setHomeOverflowOpen(false); }}>Problems</button><button type="button" role="menuitem" onClick={() => { onExport(); setHomeOverflowOpen(false); }}>SVG / PNG / PDF</button><strong>Timeline</strong><button type="button" role="menuitem" onClick={() => { onOpenTimeline(); setHomeOverflowOpen(false); }}>Timeline Editor</button>
-  </div>, window.document.body) : null;
   // #406: Home Ribbon's group set now depends on ActiveContext (#404/#405)
   // rather than always showing every group regardless of Cycle/Transaction
   // ViewMode. Time/Layout (Cycle-specific row/timeline-range commands) only
@@ -485,11 +411,10 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       {homeGroups.map((group) => <RibbonGroup key={group.id} spec={group} />)}
       <div className="ribbon-major-group" data-major-group="Options" data-ribbon-home aria-label="Options commands">
         <DsRibbonGroup ariaLabel="Options" className="home-options-group" label="Options">
-          <button ref={homeOverflowTriggerRef} type="button" className="ds-ribbon-button home-overflow-trigger" aria-expanded={homeOverflowOpen} aria-controls={homeOverflowOpen ? "home-overflow-menu" : undefined} onClick={() => setHomeOverflowOpen((value) => !value)}><DsIconBox><RibbonIcon name="i-more" /></DsIconBox><span className="ds-ribbon-label">More</span></button>
+          <HomeOverflow history={history} hasSelectableSignals={hasSelectableSignals} hasSelectedClipboard={hasSelectedClipboard} clipboardAvailable={clipboardAvailable} hasDeletableSelection={hasDeletableSelection} canRenameSelection={canRenameSelection} canMoveUp={canMoveUp} canMoveDown={canMoveDown} canShowSelection={canShowSelection} canHideSelection={canHideSelection} onNew={onNew} onOpen={onOpen} onSave={onSave} onSaveAs={onSaveAs} onRecent={onRecent} onUndo={onUndo} onRedo={onRedo} onCopy={onCopy} onCut={onCut} onPaste={onPaste} onDuplicate={onDuplicate} onDelete={onDelete} onRename={onRename} onClearSelection={onClearSelection} onSelectAll={onSelectAll} onVisibility={onVisibility} onMoveUp={onMoveUp} onMoveDown={onMoveDown} onZoom={onZoom} onSetZoom={onSetZoom} onFitSelection={onFitSelection} onFitAll={onFitAll} onToggleGrid={onToggleGrid} onToggleSnap={onToggleSnap} onToggleRuler={onToggleRuler} onToggleMinimap={onToggleMinimap} onProperties={onProperties} onShowProblems={onShowProblems} onExport={onExport} onOpenTimeline={onOpenTimeline} />
         </DsRibbonGroup>
       </div>
     </>}
-    {homeOverflowMenu}
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
       <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><DsRibbonGroup ariaLabel="Signals" className="insert-signals-group" density="compact-grid" label="Signals">
         <DsRibbonButton icon={<InsertSemanticIcon kind="signal" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="bus" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="logic" />} onClick={() => insertValueSignal("logic")}>Level</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton>
