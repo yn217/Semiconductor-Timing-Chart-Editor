@@ -52,7 +52,15 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
       return;
     }
     setPhaseError("");
-    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, phases });
+    // #461: `transaction.update` reconstructs the entity and only preserves
+    // groupId/color/description when the command itself carries them --
+    // this Apply used to send just name/start/end/laneId/phases, so editing
+    // e.g. Start-only here silently wiped a previously set Group/Color/
+    // Description (set via the Inspector's own Apply, which already carries
+    // all three). Every field this editor doesn't expose its own control
+    // for must still round-trip the currently committed value, exactly like
+    // colorSelected below already does for groupId/phases.
+    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, phases, ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.color === undefined ? {} : { color: transaction.color }), ...(transaction.description === undefined ? {} : { description: transaction.description }) });
   };
   // #453: Group/Color had zero GUI entry point at all before this (schema/
   // commands already supported both via #430/#450) -- added here, scoped to
@@ -76,7 +84,9 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   };
   const colorSelected = (color: string) => {
     if (!transaction) return;
-    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), color });
+    // #461: same round-trip requirement as applyTransactionDraft above --
+    // this already preserved groupId/laneId/phases but not description.
+    commands.updateTransactionFromBottom({ transactionId: transaction.id, name: transaction.name, start: transaction.start, end: transaction.end, ...(transaction.laneId === undefined ? {} : { laneId: transaction.laneId }), ...(transaction.phases === undefined ? {} : { phases: transaction.phases }), ...(transaction.groupId === undefined ? {} : { groupId: transaction.groupId }), ...(transaction.description === undefined ? {} : { description: transaction.description }), color });
   };
   // #453 (bulk operations): a distinct "checked for bulk action" set,
   // independent of `transaction` (the single row currently open for
@@ -108,7 +118,9 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   };
   const bulkColor = (color: string) => {
     if (checkedTransactions.length === 0) return;
-    commands.bulkUpdateTransactions(checkedTransactions.map((item) => ({ transactionId: item.id, name: item.name, start: item.start, end: item.end, ...(item.laneId === undefined ? {} : { laneId: item.laneId }), ...(item.phases === undefined ? {} : { phases: item.phases }), ...(item.groupId === undefined ? {} : { groupId: item.groupId }), color })));
+    // #461: same round-trip requirement as applyTransactionDraft/
+    // colorSelected above -- description was still missing here.
+    commands.bulkUpdateTransactions(checkedTransactions.map((item) => ({ transactionId: item.id, name: item.name, start: item.start, end: item.end, ...(item.laneId === undefined ? {} : { laneId: item.laneId }), ...(item.phases === undefined ? {} : { phases: item.phases }), ...(item.groupId === undefined ? {} : { groupId: item.groupId }), ...(item.description === undefined ? {} : { description: item.description }), color })));
   };
   const bulkDelete = () => {
     if (checkedTransactions.length === 0) return;
