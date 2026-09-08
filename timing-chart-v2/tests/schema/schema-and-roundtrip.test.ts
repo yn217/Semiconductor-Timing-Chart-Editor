@@ -103,6 +103,13 @@ describe("semantic validation", () => {
     }
   });
 
+  it("budgets every persistent collection added to the Canonical model", () => {
+    const base = canonicalFixture();
+    expect(validateDocumentResourceBudget({ ...base, transactionGroups: new Array(DOCUMENT_RESOURCE_BUDGET.transactionGroupCount + 1).fill({}) } as unknown as CanonicalDocument)).toEqual(expect.arrayContaining([expect.objectContaining({ path: "$.transactionGroups", value: DOCUMENT_RESOURCE_BUDGET.transactionGroupCount + 1 })]));
+    expect(validateDocumentResourceBudget({ ...base, enumDefinitions: [{ entries: new Array(DOCUMENT_RESOURCE_BUDGET.enumEntryCount + 1).fill({}) }] } as unknown as CanonicalDocument)).toEqual(expect.arrayContaining([expect.objectContaining({ path: "$.enumDefinitions[*].entries", value: DOCUMENT_RESOURCE_BUDGET.enumEntryCount + 1 })]));
+    expect(validateDocumentResourceBudget({ ...base, timeline: { ...base.timeline, labelAnchors: new Array(DOCUMENT_RESOURCE_BUDGET.labelAnchorCount + 1).fill({}) } } as unknown as CanonicalDocument)).toEqual(expect.arrayContaining([expect.objectContaining({ path: "$.timeline.labelAnchors", value: DOCUMENT_RESOURCE_BUDGET.labelAnchorCount + 1 })]));
+  });
+
   it("round-trips presentation displayLabel without changing the semantic value", () => {
     const original = canonicalFixture();
     const data = original.signals[1]!;
