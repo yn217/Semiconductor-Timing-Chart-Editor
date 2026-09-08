@@ -64,3 +64,34 @@ test("Inspector Multi-Selection Delete Selected removes every selected Signal as
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("signal-count-status")).toHaveText("Signals: 8");
 });
+
+// #431 item 9 ("Signal Tree productivity"): "show only selected" was a
+// listed, unimplemented acceptance item. Composes the existing
+// `signal.setVisibility` command across the whole document (visible for
+// selected, hidden for everyone else) as one atomic batch -- no new
+// command or Canonical field, same shape as Show/Hide All above.
+test("Inspector Multi-Selection Show Only Selected hides every other Signal as one atomic operation", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-cycle-view-ready", "true");
+  const host = page.getByTestId("cycle-surface");
+  const inspector = page.getByTestId("inspector");
+
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_ready']").click({ modifiers: ["Control"] });
+  await expect(inspector).toHaveAttribute("data-inspector-context", "multi-selection");
+
+  const selectedOwners = host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_request'], [data-role='wave-owner'][data-signal-id='sig_cycle_ready']");
+  const otherOwner = host.locator("[data-role='wave-owner'][data-signal-id='sig_cycle_clock']");
+  await expect(selectedOwners).toHaveCount(2);
+  await expect(otherOwner).toHaveCount(1);
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
+
+  await inspector.getByTestId("multi-selection-isolate").click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await expect(selectedOwners).toHaveCount(2);
+  await expect(otherOwner).toHaveCount(0);
+
+  await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
+  await expect(otherOwner).toHaveCount(1);
+});

@@ -45,6 +45,7 @@ export function useEditorCommandRouter(input: EditorCommandRouterInput): EditorC
       registry.register("selection.delete", input.editActions.deleteSelection),
       registry.register<{ readonly name: string }>("selection.rename", ({ name }) => input.editActions.rename(name)),
       registry.register<{ readonly visible: boolean }>("selection.visibility", ({ visible }) => input.editActions.setVisibility(visible)),
+      registry.register("selection.isolate", () => input.editActions.isolateSelection()),
       registry.register("history.undo", () => { const result = input.application.undo(); repairSelectionAfterHistoryChange(result); return result; }),
       registry.register("history.redo", () => { const result = input.application.redo(); repairSelectionAfterHistoryChange(result); return result; }),
       registry.register("clipboard.copy", input.editActions.copy),
