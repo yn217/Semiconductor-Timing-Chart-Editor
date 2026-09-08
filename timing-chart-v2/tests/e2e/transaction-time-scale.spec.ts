@@ -76,4 +76,16 @@ test("GUI Apply preserves an existing secondary clock when editing an unrelated 
 
   await page.getByTestId("transaction-time-scale-trigger").click();
   await expect(page.getByTestId("transaction-time-scale-panel").getByLabel("Show secondary clock")).toBeChecked();
+
+  const download = page.waitForEvent("download");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const savedPath = await (await download).path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-time-scale-trigger").click();
+  await expect(page.getByTestId("transaction-time-scale-panel").getByLabel("Show secondary clock")).toBeChecked();
 });
