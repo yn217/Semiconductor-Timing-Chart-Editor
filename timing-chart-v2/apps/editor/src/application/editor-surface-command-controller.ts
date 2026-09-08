@@ -54,6 +54,7 @@ export interface InspectorCommandActions {
   readonly resetAnnotationOffsets: (annotationId: AnnotationId) => CommandResult;
   readonly updateAnnotationMeasurement: (payload: CommandPayload<"annotation.updateMeasurement">) => CommandResult;
   readonly updateAnnotationVerticalSpan: (payload: CommandPayload<"annotation.updateVerticalSpan">) => CommandResult;
+  readonly setAnnotationPositionMode: (annotationId: AnnotationId, positionMode: "cycle-snap" | "free") => CommandResult;
 }
 
 export interface DocumentPropertiesCommandActions {
@@ -172,6 +173,7 @@ export function createEditorSurfaceCommandController(input: {
     resetAnnotationOffsets: (annotationId) => dispatch<"annotation.resetOffsets">("annotation_reset_offsets", { type: "annotation.resetOffsets", annotationId }),
     updateAnnotationMeasurement: (payload) => dispatch<"annotation.updateMeasurement">("annotation_measurement", { type: "annotation.updateMeasurement", ...payload }),
     updateAnnotationVerticalSpan: (payload) => dispatch<"annotation.updateVerticalSpan">("annotation_vertical_span", { type: "annotation.updateVerticalSpan", ...payload }),
+    setAnnotationPositionMode: (annotationId, positionMode) => dispatch<"annotation.setPositionMode">("annotation_position_mode", { type: "annotation.setPositionMode", annotationId, positionMode }),
     updateDocumentProperties,
     updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),
