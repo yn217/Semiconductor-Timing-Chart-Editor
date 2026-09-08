@@ -31,6 +31,7 @@ type Ref<T> = RefObject<T | null>;
 
 export interface EditorSecondarySurfacesInput {
   readonly document: CanonicalDocument;
+  readonly documentEpoch: number;
   readonly revision: number;
   readonly history: HistoryState;
   readonly problem: string;
@@ -202,7 +203,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onPreview={(draft) => refreshAnnotationPreview(refs.host.current!, bottom.annotation!.id, draft, { label: bottom.annotation!.label, color: bottom.annotation!.color, opacity: bottom.annotation!.opacity })}
   /> : <><AnnotationList annotations={input.document.annotations} selectedId={undefined} onSelect={input.actions.selectAnnotation} commands={surfaceCommands} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const transactionEditor = <TransactionEditor
-    key={`${bottom.transaction?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
+    key={`${input.documentEpoch}:${bottom.transaction?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
     transaction={bottom.transaction}
     document={input.document}
     history={input.history}

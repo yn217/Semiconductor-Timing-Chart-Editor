@@ -245,7 +245,8 @@ export function MinimalCycleView() {
   const bulkRegistrationDialogRef = useRef<HTMLElement>(null);
   const unsavedFileDialogRef = useRef<HTMLElement>(null);
   const compatibilityDialogRef = useRef<HTMLElement>(null);
-  const timelinePresentation = useTimelinePresentationState({ visualReference });
+  const documentEpoch = application.runtime.documentEpoch.current();
+  const timelinePresentation = useTimelinePresentationState({ visualReference, documentEpoch });
   const {
     collapsedGroupIds,
     treePresentationRevision,
@@ -365,6 +366,12 @@ export function MinimalCycleView() {
       setPinnedBottomSelection(undefined);
     }
   }, [bottomPinned, followSelection, pinnedBottomSelection, snapshot.revision]);
+  useEffect(() => {
+    setPinnedBottomSelection(undefined);
+    if (bottomPinned) setBottomPinned(false);
+    if (!followSelection) setFollowSelection(true);
+    setContextMenu(undefined);
+  }, [documentEpoch]);
   useEffect(() => {
     refreshTreeFilterPresentation(host, treeFilter, treeTypeFilter);
   }, [treePresentationRevision, treeFilter, treeTypeFilter, collapsedGroupIds]);
@@ -581,6 +588,7 @@ export function MinimalCycleView() {
   });
   const secondarySurfaces = useEditorSecondarySurfaces({
     document: snapshot.document,
+    documentEpoch,
     revision: snapshot.revision,
     history,
     problem,

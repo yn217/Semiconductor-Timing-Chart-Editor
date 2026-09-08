@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, MutableRefObject, SetStateAction } from "react";
 import type { GroupId } from "@timing-chart-v2/schema";
 import type { SelectedClockEdge } from "../runtime/edge-counter-projection.js";
@@ -36,7 +36,7 @@ export interface TimelinePresentationState {
   };
 }
 
-export function useTimelinePresentationState(input: { readonly visualReference: boolean }): TimelinePresentationState {
+export function useTimelinePresentationState(input: { readonly visualReference: boolean; readonly documentEpoch?: number }): TimelinePresentationState {
   const [collapsedGroupIds, setCollapsedGroupIds] = useState<ReadonlySet<GroupId>>(new Set());
   const [treePresentationRevision, setTreePresentationRevision] = useState(0);
   const [playheadPresentationRevision, setPlayheadPresentationRevision] = useState(0);
@@ -51,6 +51,15 @@ export function useTimelinePresentationState(input: { readonly visualReference: 
   const rangeSelectionActiveRef = useRef(rangeSelectionActiveState);
   const selectedCycleRef = useRef(selectedCycleState);
   const selectedEdgeRef = useRef<SelectedClockEdge | undefined>(undefined);
+  const previousDocumentEpochRef = useRef(input.documentEpoch);
+  useEffect(() => {
+    if (previousDocumentEpochRef.current === input.documentEpoch) return;
+    previousDocumentEpochRef.current = input.documentEpoch;
+    const empty = new Set<GroupId>();
+    collapsedGroupIdsRef.current = empty;
+    setCollapsedGroupIds(empty);
+    applyCollapsedGroupsRef.current(empty);
+  }, [input.documentEpoch]);
 
   const setCollapsedGroups = useCallback((next: ReadonlySet<GroupId>) => {
     const stable = new Set(next);
