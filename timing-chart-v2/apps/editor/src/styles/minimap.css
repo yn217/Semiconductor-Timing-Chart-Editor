@@ -53,15 +53,17 @@
 
 .editor-shell[data-minimap-enabled="false"] .inspector > .minimap { display: none; }
 
-/* #397 Transaction Mode GUI Closure Section 9: the MiniMap is built purely
-   from Signal/SignalGroup data (buildMiniMapOverview) with zero Transaction
-   awareness -- in pure Transaction Mode this always rendered stale/
-   irrelevant Signal rows regardless of what Transactions actually exist, a
-   "giant empty (or wrong) box" the issue explicitly calls out. Per the
-   issue's own stated resolution ("show a real Transaction overview, or be
-   default-off"), and since a genuine Transaction-aware overview is a
-   projection-layer change out of this GUI-only pass's safe scope, this
-   hides it in Transaction Mode only -- Cycle and Split (which still show
-   real Signal content) are unaffected. Pure CSS sibling selector: no
-   Architecture/shell-decomposition file needs to know about this. */
-.desktop-workspace:has(.cycle-panel.mode-transaction) .inspector > .minimap { display: none; }
+/* #429/#397 Transaction Mode Product Closure P1: the earlier #397 fix
+   (hiding the MiniMap outright in Transaction Mode, since it had zero
+   Transaction awareness -- see the removed `:has()` rule this replaces)
+   was an explicit stop-gap; a real Transaction-aware overview
+   (buildMiniMapTransactionOverview, MiniMapTransactionOverviewRows) now
+   exists, so the MiniMap stays visible in every view mode. Its segments
+   carry each Transaction's own resolved color as a custom property
+   (`--minimap-segment-color`, set per-segment in minimap-overview-rows.tsx)
+   -- this compound selector (both classes, same element) intentionally
+   outranks the flat `.minimap-segment { background: #dceafe }` override
+   two rules above (itself deliberately flattening every Signal tone to one
+   shade for this dense a MiniMap), so Transaction color stays visible
+   here regardless of source order. */
+.editor-shell .inspector > .minimap .minimap-segment.minimap-segment-transaction { background: var(--minimap-segment-color, #527fa6); }
