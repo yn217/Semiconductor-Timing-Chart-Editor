@@ -79,6 +79,7 @@ import { displayBoundaryForSource } from "../runtime/display-boundary.js";
 import { buildSnapIndex } from "../runtime/snap-index.js";
 import { annotationFields, projectAnnotationOverlays } from "../runtime/annotation-overlays.js";
 import { createTimelineViewportRuntime } from "../runtime/timeline-viewport-runtime.js";
+import { SIGNAL_TYPE_OPTIONS } from "../runtime/signal-type-registry.js";
 
 
 const spacerId = (value: string) => value as SpacerId;
@@ -363,7 +364,7 @@ export function InspectorValueSignalEditor({ signal, document, viewport, command
       <InspectorSection sectionId="signal-properties" title="Signal Properties" open={sections["signal-properties"] ?? true} onToggle={() => toggle("signal-properties")}>
          <label>Display Name<InlineNameInput target={signal} value={signal.display.name} ariaLabel="Inspector signal name" onRename={(nextName) => commands.renameSignal(signal.id, nextName)} onCommitted={setName} onDraftChange={setName} /></label>
         <label>Role<select aria-label="Inspector signal role" value={role} onChange={(event) => setRole(event.target.value as SignalRole)}><option value="input">Input</option><option value="output">Output</option><option value="internal">Internal</option></select></label>
-        <label>Type<select aria-label="Inspector signal type" value={signalType} onChange={(event) => setSignalType(event.target.value as ValueSignal["type"])}><option value="binary">Signal</option><option value="bus">Bus</option><option value="state">State</option><option value="logic">Level</option><option value="event">Event</option>{
+        <label>Type<select aria-label="Inspector signal type" value={signalType} onChange={(event) => setSignalType(event.target.value as ValueSignal["type"])}>{SIGNAL_TYPE_OPTIONS.map((option) => <option key={option.type} value={option.type}>{option.label}</option>)}{
           // #400: Pulse is legacy-only -- never offered as a type to switch
           // *into*, but a signal that already is Pulse must stay editable
           // (including its own Type field staying visibly "Pulse") rather
