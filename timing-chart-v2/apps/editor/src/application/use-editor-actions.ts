@@ -114,6 +114,7 @@ export interface EditorActions {
   readonly duplicateSelectedEntity: ClipboardActions["duplicate"];
   readonly createCopiedSignals: ClipboardActions["createSignals"];
   readonly setSelectionVisibility: ClipboardActions["setVisibility"];
+  readonly isolateSelection: ClipboardActions["isolateSelection"];
   readonly moveSelection: ClipboardActions["move"];
   readonly restorePendingFileFocus: () => void;
   readonly capturePendingFileOrigin: () => void;
@@ -438,6 +439,7 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     duplicateSelectedEntity: input.editActions.duplicate,
     createCopiedSignals: input.editActions.createSignals,
     setSelectionVisibility: input.editActions.setVisibility,
+    isolateSelection: input.editActions.isolateSelection,
     moveSelection: input.editActions.move,
     ...fileActions,
   };

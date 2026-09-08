@@ -241,6 +241,23 @@ export function useClipboardActions({ application, selection }: { application: E
     if (commands.length === 1) return application.execute(commands[0]!);
     return undefined;
   };
+  // #431 item 9 ("Signal Tree productivity" -- "show only selected"): a
+  // genuinely missing composition of the existing `signal.setVisibility`
+  // command (already used one-at-a-time by setSignalVisibility and batched
+  // uniformly by setVisibility above) -- no new command, no new Canonical
+  // field. Selected signals/comment rows go visible, everything else in
+  // the document goes hidden, as one atomic batch/History entry.
+  const isolateSelection = () => {
+    const value = selected();
+    const selectedIds = new Set(value.signals.map(({ signal }) => signal.id));
+    if (selectedIds.size === 0) return undefined;
+    const commands = value.document.signals
+      .filter((signal) => (signal.display.visible !== false) !== selectedIds.has(signal.id))
+      .map((signal) => ({ id: nextCommandId("route_isolate"), type: "signal.setVisibility" as const, signalId: signal.id, visible: selectedIds.has(signal.id) }));
+    if (commands.length > 1) return application.executeBatch(nextCommandId("route_isolate_selection"), commands);
+    if (commands.length === 1) return application.execute(commands[0]!);
+    return undefined;
+  };
   const move = (direction: -1 | 1) => {
     const value = selected();
     if (value.signals.length === 1 && value.state.signalId) {
@@ -259,7 +276,7 @@ export function useClipboardActions({ application, selection }: { application: E
   const deleteTransaction = (transactionId: TransactionId) => application.execute({ id: nextCommandId("delete_transaction"), type: "transaction.delete", transactionId });
   const setSignalVisibility = (signalId: SignalId, visible: boolean) => application.execute({ id: nextCommandId("signal_visibility"), type: "signal.setVisibility", signalId, visible });
 
-  return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, move, createSignals } as const;
+  return { status, available, copy, cut, paste, duplicate, deleteSelection, deleteSignal, deleteAnnotation, deleteTransaction, rename, setVisibility, setSignalVisibility, isolateSelection, move, createSignals } as const;
 }
 
 export type ClipboardActions = ReturnType<typeof useClipboardActions>;
