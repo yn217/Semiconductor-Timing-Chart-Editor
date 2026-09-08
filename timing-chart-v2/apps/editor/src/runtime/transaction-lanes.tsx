@@ -127,7 +127,8 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   // box), matching how the Signal Tree's own text filter never touches
   // Inspector/Bottom's own current selection.
   const needle = filter.trim().toLocaleLowerCase();
-  const groupNameById = new Map((rawDocument.transactionGroups ?? []).map((group) => [group.id, group.name]));
+  const transactionGroupById = new Map<string, NonNullable<CanonicalDocument["transactionGroups"]>[number]>((rawDocument.transactionGroups ?? []).map((group) => [group.id, group]));
+  const groupNameById = new Map([...transactionGroupById].map(([id, group]) => [id, group.name]));
   const document: CanonicalDocument = needle.length === 0 ? rawDocument : { ...rawDocument, transactions: rawDocument.transactions.filter((transaction) => transaction.id === selectedId || transaction.name.toLocaleLowerCase().includes(needle) || (transaction.groupId !== undefined && (groupNameById.get(transaction.groupId) ?? "").toLocaleLowerCase().includes(needle))) };
   // #397 Transaction Mode GUI Closure: Group collapse/expand -- purely
   // local, transient presentation state (never persisted, never touches
@@ -150,6 +151,15 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   // tracks, not one shared one), matching the approved reference's
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
   const groups = document.transactionGroups ?? [];
+  const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
+  const laneTransactionsByKey = new Map<string, Transaction[]>();
+  for (const transaction of document.transactions) {
+    const laneId = transaction.laneId ?? "lane_0";
+    const key = laneKey(transaction.groupId, laneId);
+    const laneTransactions = laneTransactionsByKey.get(key);
+    if (laneTransactions) laneTransactions.push(transaction);
+    else laneTransactionsByKey.set(key, [transaction]);
+  }
   const hasGroups = groups.length > 0 && document.transactions.some((transaction) => transaction.groupId !== undefined);
   type Section = { readonly groupId: string | undefined; readonly label: string | undefined; readonly color: string | undefined; readonly lanes: readonly string[] };
   const sections: readonly Section[] = hasGroups
@@ -189,7 +199,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
     // (view-only), just not laid out while their Group is collapsed.
     if (collapsed) continue;
     for (const laneId of section.lanes) {
-      const laneTransactions = document.transactions.filter((transaction) => transaction.groupId === section.groupId && (transaction.laneId ?? "lane_0") === laneId);
+      const laneTransactions = laneTransactionsByKey.get(laneKey(section.groupId, laneId)) ?? [];
       const { rowOf, rowCount } = assignStackRows(laneTransactions);
       // #451/#452: the Tree label list needs one row per Transaction
       // ALWAYS (two Transactions that don't overlap in time still need
@@ -213,7 +223,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
       {groupHeaders.map((header) => {
-        const group = header.groupId === undefined ? undefined : document.transactionGroups?.find((item) => item.id === header.groupId);
+        const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
         return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-collapsed={String(header.collapsed)} style={{ top: header.top, height: GROUP_HEADER_HEIGHT }}>
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}>{header.collapsed ? "▶" : "▼"}</button>
           {header.color && <i className="transaction-group-swatch" aria-hidden="true" style={{ background: header.color }} />}
@@ -234,7 +244,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
         // Lane/Transaction level (Groups above, Transaction names here),
         // reading one shared `document.transactions` + `selectedId`/
         // `onSelect`, not a second selection-owning tree.
-        const laneTransactions = document.transactions.filter((transaction) => transaction.groupId === band.groupId && (transaction.laneId ?? "lane_0") === band.laneId);
+        const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.top, height: band.height }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
           {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color ?? "#8895a7" }} />{transaction.name}</button>)}
@@ -245,7 +255,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
       {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }} />)}
       {laneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.top, height: band.height }}>
         {cycleXs.map((value) => <i className="transaction-geometry-line" aria-hidden="true" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}
-        {document.transactions.filter((transaction) => transaction.groupId === band.groupId && (transaction.laneId ?? "lane_0") === band.laneId).map((transaction) => {
+        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;
@@ -260,7 +270,7 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
           // the normal cascade instead of being permanently shadowed by an
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
-          const resolvedColor = transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color;
+          const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
           return <TransactionBar key={transaction.id} transaction={transaction} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
