@@ -10,11 +10,11 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   const [name, setName] = useState("Transaction");
   const [start, setStart] = useState(1);
   const [end, setEnd] = useState(Math.min(5, document.timeline.cycleCount));
-  const [laneId, setLaneId] = useState("lane_0");
+  const [laneId, setLaneId] = useState("");
   const [editName, setEditName] = useState(transaction?.name ?? "");
   const [editStart, setEditStart] = useState(transaction?.start ?? 0);
   const [editEnd, setEditEnd] = useState(transaction?.end ?? 1);
-  const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "lane_0");
+  const [editLaneId, setEditLaneId] = useState(transaction?.laneId ?? "");
   // #426 Bottom Panel Consolidation: the Goal's own target structure for
   // this tab is "List / Timing / Phase / Linked Signals" -- Phase and
   // Linked Signal editing previously existed only in the Inspector
@@ -32,7 +32,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
     setEditName(transaction?.name ?? "");
     setEditStart(transaction?.start ?? 0);
     setEditEnd(transaction?.end ?? 1);
-    setEditLaneId(transaction?.laneId ?? "lane_0");
+    setEditLaneId(transaction?.laneId ?? "");
     setPhaseRows((transaction?.phases ?? []).map((phase) => ({ ...phase })));
     setPhaseError("");
   }, [transaction?.id, transaction?.name, transaction?.start, transaction?.end, transaction?.laneId, transaction?.phases]);
@@ -42,7 +42,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   // one Draft's two actions, the exact split-placement inconsistency the
   // Epic calls out. Both now live together in one sticky bottom action
   // bar, same shared classes Annotation's own bar already uses.
-  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || editLaneId !== transaction.laneId || JSON.stringify(phaseRows) !== JSON.stringify(transaction.phases ?? []));
+  const hasChanges = transaction !== undefined && (editName !== transaction.name || editStart !== transaction.start || editEnd !== transaction.end || (editLaneId.trim() || undefined) !== transaction.laneId || JSON.stringify(phaseRows) !== JSON.stringify(transaction.phases ?? []));
   const addPhaseRow = () => setPhaseRows((rows) => { const last = rows.at(-1); const rowStart = last ? last.end : editStart; return [...rows, { name: `Phase ${rows.length + 1}`, start: rowStart, end: Math.min(rowStart + 1, editEnd) }]; });
   const applyTransactionDraft = () => {
     if (!transaction || !hasChanges) return;

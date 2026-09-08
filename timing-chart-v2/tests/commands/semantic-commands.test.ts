@@ -179,6 +179,28 @@ describe("pure Semantic Command planning", () => {
     expect(session.getSnapshot().document.transactions[0]).toEqual(document.transactions[0]);
   });
 
+  it("preserves omitted Transaction fields and supports explicit clears", () => {
+    const document = canonicalFixture();
+    const original = {
+      id: "txn_partial" as TransactionId, name: "Original", start: 1, end: 4, laneId: "lane_1",
+      linkedSignals: ["sig_data" as SignalId], groupId: "txn_group_main" as never, color: "#ff0000", description: "Keep me",
+      phases: [{ name: "Data", start: 1, end: 3 }], category: "read", style: { emphasis: "strong" }, metadata: { owner: "test" }, links: { ticket: "T-1" },
+    } as const;
+    document.transactionGroups = [{ id: original.groupId, name: "Main", color: "#112233", order: 0 }];
+    document.transactions = [original];
+    const session = new CommandHistorySession(document);
+    expect(session.execute({ id: commandId("cmd_partial_start"), type: "transaction.update", transactionId: original.id, name: original.name, start: 1, end: 5 }).ok).toBe(true);
+    const updated = session.getSnapshot().document.transactions[0]!;
+    expect(updated).toEqual({ ...original, end: 5 });
+    expect(session.historyState().undoDepth).toBe(1);
+    expect(session.undo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toEqual(original);
+    expect(session.redo().ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toEqual({ ...original, end: 5 });
+    expect(session.execute({ id: commandId("cmd_partial_clear"), type: "transaction.update", transactionId: original.id, name: "Original", start: 1, end: 5, clearGroupId: true, clearColor: true, clearDescription: true, clearPhases: true }).ok).toBe(true);
+    expect(session.getSnapshot().document.transactions[0]).toEqual({ id: original.id, name: original.name, start: 1, end: 5, laneId: original.laneId, linkedSignals: original.linkedSignals, category: original.category, style: original.style, metadata: original.metadata, links: original.links });
+  });
+
   it("creates, edits, deletes, and restores a Comment Row through explicit commands", () => {
     const session = new CommandHistorySession(canonicalFixture());
     const commentRow: CommentRow = { id: "comment_review" as SignalId, type: "commentRow", name: "Review", role: "internal", source: { instancePath: [], signalName: "review" }, display: { name: "Review" }, title: "Review", body: "Initial" };
