@@ -99,7 +99,16 @@
 .bottom-sticky-buttons { display: flex; align-items: center; gap: 8px; margin-left: auto; }
 .bottom-sticky-buttons button[type="submit"] { height: var(--ds-control-height); border: 1px solid #246aa8; border-radius: 3px; background: #2c78bb; color: white; padding: 3px 16px; font-weight: 650; }
 .bottom-sticky-buttons button[type="submit"]:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; border-color: #aebccd; background: #f7f9fb; color: #273c57; }
-.bottom-sticky-buttons button[data-testid="cancel-bottom-draft"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
+/* #397 Visual Quality pass: scoped to `[type="button"]` (the shape every
+   secondary/Cancel action in this row uses), not one hardcoded testid --
+   the previous selector only matched Transaction/Annotation's shared
+   `cancel-bottom-draft` testid, silently leaving Bookmark's own Cancel
+   button (a different testid, `cancel-bottom-bookmark`) unstyled at the
+   UA-default button height (visibly shorter than its "Apply Changes"
+   sibling in the same row). Matching by shape instead of by name means
+   any future Bottom Editor's Cancel button gets this for free, no matter
+   what testid it uses. */
+.bottom-sticky-buttons button[type="button"] { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 12px; }
 /* Section 7: List management sits at the top of the List panel it
    manages. */
 .annotation-list-actions { display: flex; gap: 6px; margin-bottom: 6px; }

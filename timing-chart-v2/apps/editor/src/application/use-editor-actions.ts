@@ -57,6 +57,8 @@ export interface EditorActionsInput {
   readonly renameDraft: string;
   readonly bottomPinned: boolean;
   readonly setBottomPinned: (value: boolean) => void;
+  readonly followSelection: boolean;
+  readonly pinnedBottomSelection: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined;
   readonly setPinnedBottomSelection: (value: { readonly signalId?: SignalId; readonly groupId?: GroupId; readonly annotationId?: AnnotationId; readonly transactionId?: TransactionId } | undefined) => void;
   readonly selectedSignalId: SignalId | undefined;
   readonly selectedGroupId: GroupId | undefined;
@@ -201,6 +203,8 @@ export function useEditorActions(input: EditorActionsInput): EditorActions {
     selectedTransactionRef: input.selectedTransactionRef,
     bottomPinned: input.bottomPinned,
     setBottomPinned: input.setBottomPinned,
+    followSelection: input.followSelection,
+    pinnedBottomSelection: input.pinnedBottomSelection,
     setPinnedBottomSelection: input.setPinnedBottomSelection,
     selectedSignalId: input.selectedSignalId,
     selectedGroupId: input.selectedGroupId,
