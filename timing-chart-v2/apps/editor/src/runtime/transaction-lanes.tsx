@@ -51,8 +51,9 @@ function previewPhases(transaction: Transaction, preview: TransactionPreview, ed
   return transaction.phases.map((phase) => ({ ...phase, start: Math.max(preview.start, phase.start), end: Math.min(preview.end, phase.end) })).filter((phase) => phase.start < phase.end);
 }
 
-function TransactionBar({ transaction, row, color, selected, cycleCount, getBoundaryX, onSnap, onSelect, commands, onContextMenu }: {
+function TransactionBar({ transaction, documentEpoch, row, color, selected, cycleCount, getBoundaryX, onSnap, onSelect, commands, onContextMenu }: {
   readonly transaction: Transaction;
+  readonly documentEpoch: number;
   readonly row: number;
   readonly color: string | undefined;
   readonly selected: boolean;
@@ -63,7 +64,7 @@ function TransactionBar({ transaction, row, color, selected, cycleCount, getBoun
   readonly commands: Pick<TransactionLaneCommandActions, "move" | "resize">;
   readonly onContextMenu?: (event: MouseEvent<HTMLButtonElement>, id: TransactionId) => void;
 }) {
-  const [drag, setDrag] = useState<{ edge: TransactionDragEdge }>();
+  const [drag, setDrag] = useState<{ edge: TransactionDragEdge; documentEpoch: number }>();
   const [preview, setPreview] = useState<TransactionPreview>();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const current = preview ?? { start: transaction.start, end: transaction.end };
@@ -73,6 +74,7 @@ function TransactionBar({ transaction, row, color, selected, cycleCount, getBoun
 
   useEffect(() => {
     if (!drag) return undefined;
+    if (drag.documentEpoch !== documentEpoch) { setDrag(undefined); setPreview(undefined); return undefined; }
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
@@ -82,11 +84,11 @@ function TransactionBar({ transaction, row, color, selected, cycleCount, getBoun
     };
     window.document.addEventListener("keydown", onKeyDown);
     return () => window.document.removeEventListener("keydown", onKeyDown);
-  }, [drag]);
+  }, [drag, documentEpoch]);
 
   if (startX === undefined || endX === undefined) return null;
   const updatePreview = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!drag) return;
+    if (!drag || drag.documentEpoch !== documentEpoch) return;
     const cycle = onSnap(event.clientX);
     if (cycle === undefined) return;
     setPreview(previewTransaction(transaction, drag.edge, cycle, cycleCount));
@@ -95,7 +97,7 @@ function TransactionBar({ transaction, row, color, selected, cycleCount, getBoun
     event.preventDefault();
     event.stopPropagation();
     buttonRef.current?.setPointerCapture(event.pointerId);
-    setDrag({ edge });
+    setDrag({ edge, documentEpoch });
     setPreview({ start: transaction.start, end: transaction.end });
   };
   const cancel = (event?: ReactPointerEvent<HTMLButtonElement>) => {
@@ -104,7 +106,7 @@ function TransactionBar({ transaction, row, color, selected, cycleCount, getBoun
     setPreview(undefined);
   };
   const finish = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (!drag) return;
+    if (!drag || drag.documentEpoch !== documentEpoch) return;
     event.preventDefault();
     const cycle = onSnap(event.clientX);
     const final = cycle === undefined ? preview : previewTransaction(transaction, drag.edge, cycle, cycleCount);
@@ -277,7 +279,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
           // inline style -- the same interaction-priority bug already
           // fixed for Signal rows under #472.
           const resolvedColor = transaction.color ?? (transaction.groupId === undefined ? undefined : transactionGroupById.get(transaction.groupId)?.color);
-          return <TransactionBar key={transaction.id} transaction={transaction} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
+          return <TransactionBar key={transaction.id} transaction={transaction} documentEpoch={documentEpoch} row={row} color={resolvedColor} selected={selectedId === transaction.id} cycleCount={document.timeline.cycleCount} getBoundaryX={getBoundaryX} onSnap={onSnap} onSelect={onSelect} commands={commands} {...(onContextMenu === undefined ? {} : { onContextMenu })} />;
         })}
       </div>)}
     </div>
