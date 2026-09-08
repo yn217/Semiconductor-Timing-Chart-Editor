@@ -87,53 +87,63 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
     const result = commands.bulkDeleteTransactions(checkedTransactions.map((item) => item.id));
     if (result.ok) clearChecked();
   };
-  return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{transaction && <button type="button" className="danger" data-testid="delete-bottom-transaction" onClick={onDelete}>Delete Transaction</button>}</header>{!transaction && document.transactions.length === 0 && <div className="transaction-empty-state" data-testid="transaction-empty-state"><strong>No Transactions yet</strong><p>Transactions describe a named time span, optional phases, and the waveform Signals related to that operation. Use "+ Add" in the Tree above, or the Ribbon's "Create Transaction", to add one.</p></div>}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(transaction.phases === undefined ? {} : { phases: transaction.phases }) }); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label></form><div className="bottom-sticky-actions">{hasChanges && <output className="draft-unapplied-indicator" data-testid="transaction-properties-unapplied">● Unapplied changes</output>}<span className="bottom-sticky-buttons"><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="submit" form="transaction-properties-form" data-testid="apply-transaction-properties" disabled={!hasChanges}>Apply Transaction</button></span></div></> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: name.trim() || "Transaction", start, end, laneId }); if (result.ok) onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label><button type="submit">Create Transaction</button></form>}{document.transactions.length > 0 && <div className="event-toolbar" role="toolbar" aria-label="Transaction list commands" data-testid="transaction-list-toolbar">
-    <button type="button" data-testid="bottom-transaction-duplicate" disabled={!transaction} onClick={duplicateSelected}>Duplicate</button>
-    <label className="field-inline">Group<select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction?.groupId ?? ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-    <label className="field-inline">Color<input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction?.color ?? "#8895a7"} onChange={(event) => colorSelected(event.target.value)} /></label>
-    <input aria-label="Search transactions" data-testid="transaction-list-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search…" />
-  </div>}
-  {/* #453: bulk operations -- only shown once at least one row is checked,
-      so a single-Transaction workflow sees no new UI at all. Group/Color/
-      Delete here act on every checked row (via onCommandBatch, one atomic
-      History entry), completely independent of `transaction` (the row open
-      for editing above) -- checking a row for a bulk action and opening it
-      for editing are two different gestures. */}
-  {validCheckedIds.size > 0 && <div className="event-toolbar" role="toolbar" aria-label="Bulk transaction commands" data-testid="transaction-bulk-toolbar">
-    <span data-testid="transaction-bulk-count">{validCheckedIds.size} selected</span>
-    <label className="field-inline">Group<select aria-label="Move selected transactions to group" defaultValue="" onChange={(event) => bulkMoveToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
-    <label className="field-inline">Color<input aria-label="Set selected transactions color" type="color" defaultValue="#8895a7" onChange={(event) => bulkColor(event.target.value)} /></label>
-    <button type="button" className="danger" data-testid="bulk-delete-transactions" onClick={bulkDelete}>Delete Selected</button>
-    <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
-  </div>}
-  <div className="transaction-list">{visibleTransactions.length > 0 && <>
-    <label className="field-inline transaction-select-all"><input type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} />Select all</label>
-    {/* #397 Transaction Mode GUI Closure Section 6: column header row,
-        same shared pattern as .bookmark-list-header -- fixed labels over
-        the fixed 8-column grid every row below uses, so the list reads as
-        one aligned table rather than a wrapping card grid. The leading
-        spacer matches the row's checkbox column so the cell grid below it
-        lines up exactly with each row's button (same grid-template-columns
-        CSS rule, reused rather than duplicated). */}
-    <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span></span></div>
-  </>}{visibleTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
-    <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
-    <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
-      {/* #453: every new field is appended AFTER the original 4 (name/
-          start-end/lane/links), never interspersed between them -- several
-          existing tests match this row's accessible name against a regex
-          expecting those 4 immediately adjacent (e.g. /Transaction A 1–4
-          lane_0/), and inserting a new span between any of them broke that
-          match. The swatch is `aria-hidden`, so it doesn't affect the name
-          at all regardless of position. #397: Group is now always rendered
-          (an em dash when ungrouped) rather than only when present -- a
-          fixed 8-column table needs every row to occupy the same columns,
-          and a row silently skipping one grid child shifted Phases one
-          column left relative to rows that do have a Group. */}
-      <i className="transaction-row-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} />
-      <b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span>
-      <span>{item.end - item.start} cycles</span><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.phases?.length ?? 0} phases</span>
-    </button>
-  </div>)}
-  {visibleTransactions.length === 0 && <p className="inspector-note">No Transactions match this search.</p>}</div></section>;
+  // #397/#429 Transaction Mode GUI Closure P0-6: the multi-row table is the
+  // Bottom Panel's primary content -- the single-item editor (create-new or
+  // edit-selected) now renders AFTER the toolbar+table instead of pinning
+  // above them, so the table is what's visible first/dominant rather than
+  // pushed below the fold by a large always-on form. Nothing here removes
+  // or renames any existing field/testid -- overview/multi-select/bulk-ops
+  // stays first, quick single-item edit stays available right below it.
+  const toolbarAndTable = <>
+    {document.transactions.length > 0 && <div className="event-toolbar" role="toolbar" aria-label="Transaction list commands" data-testid="transaction-list-toolbar">
+      <button type="button" data-testid="bottom-transaction-duplicate" disabled={!transaction} onClick={duplicateSelected}>Duplicate</button>
+      <label className="field-inline">Group<select aria-label="Move selected transaction to group" disabled={!transaction} value={transaction?.groupId ?? ""} onChange={(event) => moveSelectedToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+      <label className="field-inline">Color<input aria-label="Set selected transaction color" type="color" disabled={!transaction} value={transaction?.color ?? "#8895a7"} onChange={(event) => colorSelected(event.target.value)} /></label>
+      <input aria-label="Search transactions" data-testid="transaction-list-search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search…" />
+    </div>}
+    {/* #453: bulk operations -- only shown once at least one row is checked,
+        so a single-Transaction workflow sees no new UI at all. Group/Color/
+        Delete here act on every checked row (via onCommandBatch, one atomic
+        History entry), completely independent of `transaction` (the row
+        open for editing below) -- checking a row for a bulk action and
+        opening it for editing are two different gestures. */}
+    {validCheckedIds.size > 0 && <div className="event-toolbar" role="toolbar" aria-label="Bulk transaction commands" data-testid="transaction-bulk-toolbar">
+      <span data-testid="transaction-bulk-count">{validCheckedIds.size} selected</span>
+      <label className="field-inline">Group<select aria-label="Move selected transactions to group" defaultValue="" onChange={(event) => bulkMoveToGroup(event.target.value ? event.target.value as TransactionGroup["id"] : undefined)}><option value="">Ungrouped</option>{document.transactionGroups?.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select></label>
+      <label className="field-inline">Color<input aria-label="Set selected transactions color" type="color" defaultValue="#8895a7" onChange={(event) => bulkColor(event.target.value)} /></label>
+      <button type="button" className="danger" data-testid="bulk-delete-transactions" onClick={bulkDelete}>Delete Selected</button>
+      <button type="button" data-testid="bulk-clear-selection" onClick={clearChecked}>Clear Selection</button>
+    </div>}
+    <div className="transaction-list">{visibleTransactions.length > 0 && <>
+      <label className="field-inline transaction-select-all"><input type="checkbox" aria-label="Select all visible transactions" checked={allVisibleChecked} onChange={toggleAllVisible} />Select all</label>
+      {/* #397 Transaction Mode GUI Closure Section 6: column header row,
+          same shared pattern as .bookmark-list-header -- fixed labels over
+          the fixed 8-column grid every row below uses, so the list reads as
+          one aligned table rather than a wrapping card grid. The leading
+          spacer matches the row's checkbox column so the cell grid below it
+          lines up exactly with each row's button (same grid-template-columns
+          CSS rule, reused rather than duplicated). */}
+      <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span></span></div>
+    </>}{visibleTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
+      <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
+      <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
+        {/* #453: every new field is appended AFTER the original 4 (name/
+            start-end/lane/links), never interspersed between them -- several
+            existing tests match this row's accessible name against a regex
+            expecting those 4 immediately adjacent (e.g. /Transaction A 1–4
+            lane_0/), and inserting a new span between any of them broke that
+            match. The swatch is `aria-hidden`, so it doesn't affect the name
+            at all regardless of position. #397: Group is now always rendered
+            (an em dash when ungrouped) rather than only when present -- a
+            fixed 8-column table needs every row to occupy the same columns,
+            and a row silently skipping one grid child shifted Phases one
+            column left relative to rows that do have a Group. */}
+        <i className="transaction-row-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} />
+        <b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span>
+        <span>{item.end - item.start} cycles</span><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.phases?.length ?? 0} phases</span>
+      </button>
+    </div>)}
+    {visibleTransactions.length === 0 && <p className="inspector-note">No Transactions match this search.</p>}</div>
+  </>;
+  return <section className="transaction-editor" data-testid="transaction-editor" onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); onCancel(); } }}><header><strong>{transaction ? `Editing: ${transaction.name}` : "Transaction Editor"}</strong><button type="button" onClick={onUndo} disabled={!history.canUndo}>Undo</button><button type="button" onClick={onRedo} disabled={!history.canRedo}>Redo</button>{transaction && <button type="button" className="danger" data-testid="delete-bottom-transaction" onClick={onDelete}>Delete Transaction</button>}</header>{!transaction && document.transactions.length === 0 && <div className="transaction-empty-state" data-testid="transaction-empty-state"><strong>No Transactions yet</strong><p>Transactions describe a named time span, optional phases, and the waveform Signals related to that operation. Use "+ Add" in the Tree above, or the Ribbon's "Create Transaction", to add one.</p></div>}{toolbarAndTable}{transaction ? <><form id="transaction-properties-form" onSubmit={(event) => { event.preventDefault(); if (!hasChanges) return; commands.updateTransactionFromBottom({ transactionId: transaction.id, name: editName.trim() || "Transaction", start: editStart, end: editEnd, laneId: editLaneId, ...(transaction.phases === undefined ? {} : { phases: transaction.phases }) }); }}><label>Name<input aria-label="Transaction name" value={editName} onChange={(event) => setEditName(event.target.value)} /></label><label>Start<input aria-label="Transaction start" type="number" min="0" max={editEnd - 1} value={editStart} onChange={(event) => setEditStart(Number(event.target.value))} /></label><label>End<input aria-label="Transaction end" type="number" min={editStart + 1} max={document.timeline.cycleCount} value={editEnd} onChange={(event) => setEditEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="Transaction lane" value={editLaneId} onChange={(event) => setEditLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label></form><div className="bottom-sticky-actions">{hasChanges && <output className="draft-unapplied-indicator" data-testid="transaction-properties-unapplied">● Unapplied changes</output>}<span className="bottom-sticky-buttons"><button type="button" data-testid="cancel-bottom-draft" onClick={onCancel}>Cancel</button><button type="submit" form="transaction-properties-form" data-testid="apply-transaction-properties" disabled={!hasChanges}>Apply Transaction</button></span></div></> : <form onSubmit={(event) => { event.preventDefault(); const id = nextEntityId("transaction", document) as TransactionId; const result = commands.createTransactionFromBottom({ id, name: name.trim() || "Transaction", start, end, laneId }); if (result.ok) onSelect(id); }}><label>Name<input aria-label="New Transaction name" value={name} onChange={(event) => setName(event.target.value)} /></label><label>Start<input aria-label="New Transaction start" type="number" min="0" max={end - 1} value={start} onChange={(event) => setStart(Number(event.target.value))} /></label><label>End<input aria-label="New Transaction end" type="number" min={start + 1} max={document.timeline.cycleCount} value={end} onChange={(event) => setEnd(Number(event.target.value))} /></label><label>Lane<input aria-label="New Transaction lane" value={laneId} onChange={(event) => setLaneId(event.target.value)} /><span className="inspector-note">A visual/semantic grouping row -- Transactions sharing a Lane render stacked in the same track.</span></label><button type="submit">Create Transaction</button></form>}</section>;
 }
