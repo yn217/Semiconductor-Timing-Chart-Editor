@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import type { CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
@@ -187,7 +187,18 @@ export function TransactionLanes({ document: rawDocument, zoom, selectedId, filt
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;
           const row = band.rowOf.get(transaction.id) ?? 0;
-          return <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerUp={(event) => finish(event, transaction)} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{transaction.phases?.map((phase) => { const from = x(phase.start); const to = x(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>;
+          // #429/#397 Transaction Mode Product Closure P0-4: the bar's own
+          // color/Group color was resolved and applied to the Tree row's
+          // swatch (above) but never reached this actual canvas bar --
+          // every Transaction rendered in the same static pale-blue CSS
+          // default regardless of its real color. Set as a custom property
+          // (not `background` directly) so the CSS selected-state rule
+          // (`[data-selected="true"]`, higher specificity) still wins by
+          // the normal cascade instead of being permanently shadowed by an
+          // inline style -- the same interaction-priority bug already
+          // fixed for Signal rows under #472.
+          const resolvedColor = transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color;
+          return <button type="button" key={transaction.id} data-transaction-id={transaction.id} data-selected={String(selectedId === transaction.id)} style={{ left: startX, width: endX - startX, top: 4 + row * LANE_ROW_HEIGHT, ...(resolvedColor ? { "--transaction-color": resolvedColor } as CSSProperties : {}) }} onClick={() => onSelect(transaction.id)} onContextMenu={(event) => { event.preventDefault(); onSelect(transaction.id); onContextMenu?.(event, transaction.id); }} onPointerUp={(event) => finish(event, transaction)} onPointerCancel={cancel}><i data-edge="start" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "start" })} /><span onPointerDown={(event) => capture(event, { id: transaction.id, edge: "body" })}>{transaction.name}</span><div className="transaction-phases" aria-hidden="true">{transaction.phases?.map((phase) => { const from = x(phase.start); const to = x(phase.end); if (from === undefined || to === undefined || endX <= startX) return null; return <small key={`${phase.start}:${phase.end}:${phase.name}`} title={`${phase.name}: ${phase.start}–${phase.end}`} style={{ left: `${100 * (from - startX) / (endX - startX)}%`, width: `${100 * (to - from) / (endX - startX)}%` }}>{phase.name}</small>; })}</div><i data-edge="end" onPointerDown={(event) => capture(event, { id: transaction.id, edge: "end" })} /></button>;
         })}
       </div>)}
     </div>
