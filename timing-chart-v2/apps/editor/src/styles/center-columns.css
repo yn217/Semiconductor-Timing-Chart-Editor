@@ -291,6 +291,16 @@
 .cycle-panel.mode-split { --split-lanes-height: 112px; }
 .cycle-panel.mode-split .transaction-lanes { max-height: var(--split-lanes-height); overflow: hidden; }
 .cycle-panel.mode-split .surface-host { padding-top: calc(34px + var(--split-lanes-height)); }
+/* #407: Split active pane indicator -- `cycle-viewport[data-active-pane]`
+   is set imperatively (minimal-cycle-view.tsx; the element itself is
+   editor-workspace-view.tsx's JSX, not this file's), one 2px inset border
+   on whichever of the two existing Split regions was last clicked/focused.
+   Deliberately not color-only (a border, not just a background tint), so
+   this doesn't collide with "unclear checkbox meaning"-style ambiguity
+   the Goal's Visual Quality checklist calls out for state that depends on
+   color alone. */
+.cycle-viewport[data-active-pane="transaction"] .transaction-lanes { box-shadow: inset 0 0 0 2px var(--ds-focus-color, #2678bc); }
+.cycle-viewport[data-active-pane="signal"] .surface-host { box-shadow: inset 0 0 0 2px var(--ds-focus-color, #2678bc); }
 
 /* Signal Split View (#200): Upper/Lower panes each keep the ruler's
    existing `position: sticky` behavior (native to each pane's own

@@ -139,6 +139,7 @@ export function MinimalCycleView() {
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,
     cursorA, cursorB, cursorDelta, setCursor, clearCursor, swapCursors,
+    activePane, setActivePane,
   } = workspace;
   const bottomTabs: readonly ("Signal" | "Annotation" | "Transaction" | "Bookmarks" | "AI" | "Problems" | "JSON")[] = viewMode === "Cycle"
     ? ["Signal", "Annotation", "Bookmarks", "AI", "Problems", "JSON"]
@@ -410,6 +411,36 @@ export function MinimalCycleView() {
   useEffect(() => {
     refreshTransactionLinkedRows(host, new Set(selectedTransaction?.linkedSignals ?? []));
   }, [selectedTransactionId, transactionPresentationRevision]);
+
+  // #407: Split active pane -- click-delegated (rather than a JSX onClick)
+  // because `.transaction-lanes` and the Signal surface both live inside
+  // `cycle-viewport`, a DOM node owned/rendered by editor-workspace-view.tsx
+  // (Codex's shell-decomposition file), not this one; a plain document-
+  // level listener on the existing `viewport` ref reads which of the two
+  // existing Split regions was clicked without touching that file's JSX at
+  // all. `setActivePaneRef` keeps the listener attached exactly once
+  // (rather than resubscribing every render) while still calling whichever
+  // `setActivePane` closure is current.
+  const setActivePaneRef = useRef(setActivePane);
+  setActivePaneRef.current = setActivePane;
+  useEffect(() => {
+    const root = viewport.current;
+    if (!root) return;
+    const onPointerDownCapture = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      setActivePaneRef.current(target?.closest(".transaction-lanes") ? "transaction" : "signal");
+    };
+    root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
+    return () => root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
+  }, []);
+  // View-only presentation of `activePane` -- an imperative DOM attribute
+  // (same reasoning as above: `cycle-viewport` isn't this file's JSX) so
+  // CSS alone can show which Split region is active, only meaningful while
+  // `viewMode === "Split"`.
+  useEffect(() => {
+    const root = viewport.current;
+    if (root) root.dataset.activePane = viewMode === "Split" ? activePane : "";
+  }, [activePane, viewMode]);
 
   const actions = useEditorActions({
     document: snapshot.document,
@@ -740,6 +771,9 @@ export function MinimalCycleView() {
     // display" contract, so the readout is fully assembled here.
     cursorStatus: cursorA === undefined && cursorB === undefined ? undefined
       : `Cursor: ${cursorA === undefined ? "A —" : `A ${cursorA}`} · ${cursorB === undefined ? "B —" : `B ${cursorB}`}${cursorDelta.cycles === undefined ? "" : ` · Δ ${cursorDelta.cycles} cycles`}`,
+    // #407: textual counterpart to the CSS border indicator -- only
+    // meaningful in Split (Cycle/Transaction each have exactly one pane).
+    activePaneStatus: viewMode === "Split" ? `Active Pane: ${activePane === "transaction" ? "Transaction" : "Signal"}` : undefined,
   };
   return <EditorShellView
     viewModel={{

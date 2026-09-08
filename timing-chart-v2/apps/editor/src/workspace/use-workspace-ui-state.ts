@@ -61,7 +61,20 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   // ActiveContext was already set (no natural single default there). A
   // Selection change alone must never call this -- only a real ViewMode
   // change may normalize ActiveContext.
-  const setViewMode = (next: ViewMode) => { setViewModeRaw(next); setActiveContext((current) => normalizedActiveContextFor(next, current)); };
+  const setViewMode = (next: ViewMode) => { setViewModeRaw(next); setActiveContext((current) => normalizedActiveContextFor(next, current)); if (next !== "Split") setActivePaneRaw(next === "Transaction" ? "transaction" : "signal"); };
+  // #407: Split's own pane-level counterpart to #404's ActiveContext --
+  // "existing Split layout, minimal change" scope (Non-goals explicitly
+  // exclude the horizontal side-by-side layout and the final Ribbon wiring
+  // -- those are #408/#409). `activePane` tracks which of the two existing
+  // Split regions (the Signal waveform surface, or `.transaction-lanes`
+  // stacked above it) the user last interacted with; `setActivePane` is the
+  // *only* place allowed to also normalize `activeContext` while in Split,
+  // mirroring #404's own "only a real mode/pane change may normalize
+  // ActiveContext" rule -- a Selection change (e.g. a Linked Signal jump)
+  // must never call this. Pure view-only UI state, like everything else
+  // here: never Canonical, never History/Dirty.
+  const [activePane, setActivePaneRaw] = useState<"signal" | "transaction">("signal");
+  const setActivePane = (pane: "signal" | "transaction") => { setActivePaneRaw(pane); if (viewMode === "Split") setActiveContext(pane === "transaction" ? "Transaction" : "Signal"); };
   // Signal Split View (#200): an independent Upper/Lower dual-pane layout
   // for Cycle mode -- unrelated to `viewMode`'s pre-existing "Split" value
   // (which only stacks Transaction lanes above the single Cycle surface).
@@ -134,6 +147,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     bottomTab, setBottomTab,
     viewMode, setViewMode,
     activeContext, setActiveContext,
+    activePane, setActivePane,
     signalSplitEnabled, setSignalSplitEnabled,
     signalSplitRatio, setSignalSplitRatio, signalSplitResizeRef,
     density, setDensity,
