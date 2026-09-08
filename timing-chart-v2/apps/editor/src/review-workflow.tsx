@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import type { CanonicalDocument, DocumentProblem, GroupId, SignalId } from "@timing-chart-v2/schema";
+import { DsRibbonButton, DsRibbonSelect } from "./design-system.js";
+import { RibbonIcon } from "./ribbon-icon.js";
 
 type ReviewSeverity = "all" | "error" | "warning" | "info";
 type ReviewScope = "all" | "selection" | "group";
-const iconSprite = new URL("../../../../timing-chart-v1/gui-mockup/icons.svg", import.meta.url).href;
 
 function diagnosticMatchesIds(item: DocumentProblem, ids: ReadonlySet<string>): boolean {
   if (ids.size === 0) return false;
@@ -57,14 +58,20 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
   // its own group below (same shared gap+separator convention already used
   // for the Timeline Ribbon's own group boundaries); no testid, text, or
   // command wiring changes.
+  // Ribbon visual grammar unification (same gap #527 closed for the
+  // Annotation tab): this was the Review/Check Ribbon tab's own bare
+  // <button>/<select> markup -- converted onto DsRibbonButton/DsRibbonSelect
+  // so icon size, control height and hover/focus/disabled treatment match
+  // every other Ribbon tab. Every aria-label/testid/value/callback is
+  // unchanged.
   return <div className="review-workflow" data-testid="review-workflow">
     <div className="review-filter-group" aria-label="Filter">
-      <label>Severity<select aria-label="Review severity" data-testid="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></select></label>
-      <label>Scope<select aria-label="Review scope" data-testid="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></select></label>
+      <label>Severity<DsRibbonSelect ariaLabel="Review severity" dataTestId="review-severity-filter" value={severity} onChange={(event) => setSeverity(event.target.value as ReviewSeverity)}><option value="all">All</option><option value="error">Errors</option><option value="warning">Warnings</option><option value="info">Info</option></DsRibbonSelect></label>
+      <label>Scope<DsRibbonSelect ariaLabel="Review scope" dataTestId="review-scope-filter" value={scope} onChange={(event) => { setScope(event.target.value as ReviewScope); setCurrentIndex(0); }}><option value="all">All</option><option value="selection">Selection</option><option value="group">Current Group</option></DsRibbonSelect></label>
     </div>
     <div className="review-nav-group" aria-label="Navigation">
-      <button type="button" data-testid="review-previous" onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</button>
-      <button type="button" data-testid="review-next" onClick={() => navigate(1)} disabled={visible.length === 0}>Next</button>
+      <DsRibbonButton ariaLabel="Previous" dataTestId="review-previous" icon={<RibbonIcon name="i-chevron-left" />} onClick={() => navigate(-1)} disabled={visible.length === 0}>Previous</DsRibbonButton>
+      <DsRibbonButton ariaLabel="Next" dataTestId="review-next" icon={<RibbonIcon name="i-chevron-right" />} onClick={() => navigate(1)} disabled={visible.length === 0}>Next</DsRibbonButton>
     </div>
     <div className="review-summary-group" aria-label="Summary">
       <output data-testid="review-summary">{visible.length} of {scopedDiagnostics.length} · Errors {errorCount} · Warnings {warningCount} · Info {infoCount}</output>
@@ -73,8 +80,8 @@ export function ReviewWorkflow({ diagnostics, document, selectedSignalId, select
       <output data-testid="review-current-target">{visible[currentIndex]?.path ?? "No diagnostic selected"}</output>
     </div>
     <div className="review-action-group" aria-label="Actions">
-      <button type="button" data-testid="review-refresh-checks" onClick={onRefreshChecks}>Refresh Checks</button>
-      <button type="button" className="ribbon-tool" data-testid="review-open-problems" onClick={onShowProblems}>{problemsIcon ?? <svg aria-hidden="true"><use href={`${iconSprite}#i-filter`} /></svg>}<span>Problems</span></button>
+      <DsRibbonButton ariaLabel="Refresh Checks" dataTestId="review-refresh-checks" icon={<RibbonIcon name="i-rotate-right" />} onClick={onRefreshChecks}>Refresh Checks</DsRibbonButton>
+      <DsRibbonButton ariaLabel="Problems" dataTestId="review-open-problems" icon={problemsIcon ?? <RibbonIcon name="i-filter" />} onClick={onShowProblems}>Problems</DsRibbonButton>
     </div>
   </div>;
 }
