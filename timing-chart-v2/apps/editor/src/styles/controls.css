@@ -57,6 +57,28 @@
   opacity: var(--ds-disabled-opacity);
 }
 
+/* #429/#397 Transaction Mode Product Closure P0-7: an unstyled
+   `<input type="checkbox">` takes its rendered appearance from the UA's
+   native widget theme -- under `color-scheme: dark` (responsive.css,
+   `prefers-color-scheme: dark`) Chromium's native dark *unchecked*
+   checkbox renders as a stark, unbordered solid-black square (setting only
+   `accent-color` tints the *checked* fill but leaves the unchecked native
+   widget exactly as dark), easy to mistake for a detached/broken element
+   (reported as exactly that: a stray black square in the Bottom Panel).
+   Every checkbox in the app was exposed to this (Inspector toggles,
+   Annotation/Clock/AI panels, Transaction bulk-select, the Event table...
+   none had ever set explicit checkbox styling) -- one shared, app-wide
+   rule here (not a Transaction-only patch) replaces the native widget with
+   an explicit checked/unchecked/focus/disabled appearance entirely, same
+   "never trust the UA default under color-scheme:dark" approach already
+   used for buttons/selects elsewhere in this file's sibling stylesheets
+   (#391, #401, #420). */
+input[type="checkbox"] { appearance: none; -webkit-appearance: none; box-sizing: border-box; position: relative; width: 13px; height: 13px; margin: 0; border: 1px solid #8a97ab; border-radius: 2px; background: white; vertical-align: middle; cursor: pointer; }
+input[type="checkbox"]:checked { border-color: var(--ds-focus-color, #2678bc); background: var(--ds-focus-color, #2678bc); }
+input[type="checkbox"]:checked::after { content: ""; position: absolute; left: 3px; top: 0; width: 4px; height: 8px; border: solid white; border-width: 0 2px 2px 0; transform: rotate(45deg); }
+input[type="checkbox"]:focus-visible { outline: var(--ds-focus-width, 2px) solid var(--ds-focus-color, #2678bc); outline-offset: 1px; }
+input[type="checkbox"]:disabled { opacity: var(--ds-disabled-opacity, .5); cursor: not-allowed; }
+
 /* Migrated from legacy.css (#260): .modal-backdrop backs every dialog
    (Document Properties, Export, Hardware Hierarchy, Rename, Bulk
    Registration, Save As, ...), a shared cross-region primitive. Its own
