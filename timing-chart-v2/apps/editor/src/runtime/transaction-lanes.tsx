@@ -263,9 +263,9 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       })}
     </div>
     <div className="transaction-track" style={{ height: totalHeight }}>
+      <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
       {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.top, height: GROUP_HEADER_HEIGHT }} />)}
       {laneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.top, height: band.height }}>
-        {cycleXs.map((value) => <i className="transaction-geometry-line" aria-hidden="true" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}
         {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
