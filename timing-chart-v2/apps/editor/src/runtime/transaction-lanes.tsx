@@ -148,7 +148,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   const owner = useRef<HTMLElement>(null);
   const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
   const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
-  const x = (cycle: number) => cycleXs.find((value) => value.cycle === cycle)?.x;
+  const boundaryXByCycle = new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const));
+  const x = (cycle: number) => boundaryXByCycle.get(cycle);
 
   // #452: Group headers only appear once real Groups are in use -- a
   // document with no `transactionGroups` (or none actually referenced)
@@ -161,12 +162,14 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   const groups = document.transactionGroups ?? [];
   const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
   const laneTransactionsByKey = new Map<string, Transaction[]>();
+  const transactionCountByGroup = new Map<string | undefined, number>();
   for (const transaction of document.transactions) {
     const laneId = transaction.laneId ?? "lane_0";
     const key = laneKey(transaction.groupId, laneId);
     const laneTransactions = laneTransactionsByKey.get(key);
     if (laneTransactions) laneTransactions.push(transaction);
     else laneTransactionsByKey.set(key, [transaction]);
+    transactionCountByGroup.set(transaction.groupId, (transactionCountByGroup.get(transaction.groupId) ?? 0) + 1);
   }
   const hasGroups = groups.length > 0 && document.transactions.some((transaction) => transaction.groupId !== undefined);
   type Section = { readonly groupId: string | undefined; readonly label: string | undefined; readonly color: string | undefined; readonly lanes: readonly string[] };
@@ -198,7 +201,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     const sectionKey = section.groupId ?? "ungrouped";
     const collapsed = section.label !== undefined && collapsedGroups.has(sectionKey);
     if (section.label !== undefined) {
-      const count = document.transactions.filter((transaction) => transaction.groupId === section.groupId).length;
+      const count = transactionCountByGroup.get(section.groupId) ?? 0;
       groupHeaders.push({ key: `group:${sectionKey}`, top: cursor, label: section.label, color: section.color, count, groupId: section.groupId, collapsed });
       cursor += GROUP_HEADER_HEIGHT;
     }
@@ -255,7 +258,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
         const laneTransactions = laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? [];
         return <span key={band.key} className="transaction-lane-label" data-testid="transaction-lane-label" style={{ top: band.top, height: band.height }}>
           {laneTransactions.length === 0 && <em>{band.laneId.replace(/^lane_(\d+)$/i, "Lane $1")}</em>}
-          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? groups.find((group) => group.id === transaction.groupId)?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
