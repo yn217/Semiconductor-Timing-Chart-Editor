@@ -24,6 +24,9 @@ export interface TimingDiagnostic extends DocumentProblem {
   readonly severity: "warning";
   readonly source: "validation";
   readonly stage: "validate";
+  /** Added by the registry evaluator; raw rule-local findings omit these. */
+  readonly ruleId?: string;
+  readonly stableKey?: string;
 }
 
 export interface TimingDiagnosticOptions {
@@ -233,9 +236,24 @@ function diagnosticOrder(left: TimingDiagnostic, right: TimingDiagnostic): numbe
   return left.path.localeCompare(right.path) || left.code.localeCompare(right.code) || (left.objectId ?? "").localeCompare(right.objectId ?? "");
 }
 
+export interface TimingDiagnosticRule {
+  readonly id: string;
+  readonly category: TimingDiagnosticCategory;
+  readonly evaluate: (document: CanonicalDocument, enabled: ReadonlySet<TimingDiagnosticCategory>) => readonly TimingDiagnostic[];
+}
+
+/** Shared derived-rule registry. Results remain outside CanonicalDocument. */
+export const TIMING_DIAGNOSTIC_RULES: readonly TimingDiagnosticRule[] = [
+  { id: "timing.unknown-value", category: "unknown-value", evaluate: valueDiagnostics },
+  { id: "timing.handshake", category: "protocol", evaluate: handshakeDiagnostics },
+];
+
 /** Derive deterministic, non-persistent timing/protocol Problems from Canonical data. */
 export function deriveTimingDiagnostics(document: CanonicalDocument, options: TimingDiagnosticOptions = {}): readonly TimingDiagnostic[] {
   const configured = options.enabledCategories ?? document.checkSettings.enabledCategories;
   const enabled = new Set<TimingDiagnosticCategory>(configured === undefined ? ["unknown-value", "protocol", "stability"] : configured.filter((category): category is TimingDiagnosticCategory => category === "unknown-value" || category === "protocol" || category === "stability"));
-  return [...valueDiagnostics(document, enabled), ...handshakeDiagnostics(document, enabled)].sort(diagnosticOrder);
+  return TIMING_DIAGNOSTIC_RULES.flatMap((rule) => rule.evaluate(document, enabled)
+    .filter(() => enabled.has(rule.category))
+    .map((diagnostic) => ({ ...diagnostic, ruleId: rule.id, stableKey: `${rule.id}:${diagnostic.code}:${diagnostic.objectId ?? diagnostic.entityId ?? ""}:${diagnostic.path}` })))
+    .sort(diagnosticOrder);
 }

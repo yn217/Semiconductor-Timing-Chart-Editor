@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveTimingDiagnostics } from "@timing-chart-v2/core";
+import { deriveTimingDiagnostics, TIMING_DIAGNOSTIC_RULES } from "@timing-chart-v2/core";
 import type { CanonicalDocument, Constraint, SignalId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
@@ -14,6 +14,14 @@ function withSignals(document: CanonicalDocument, signals: CanonicalDocument["si
 }
 
 describe("derived timing diagnostics", () => {
+  it("evaluates through a shared rule registry with stable semantic keys", () => {
+    expect(TIMING_DIAGNOSTIC_RULES.map((rule) => rule.id)).toEqual(["timing.unknown-value", "timing.handshake"]);
+    const source = canonicalFixture();
+    const signal = { ...source.signals[1]!, values: [{ start: 1, value: "X" }] };
+    const diagnostic = deriveTimingDiagnostics(withSignals(source, [source.signals[0]!, signal]))[0]!;
+    expect(diagnostic.ruleId).toBe("timing.unknown-value");
+    expect(diagnostic.stableKey).toContain(diagnostic.path);
+  });
   it("reports explicit and implicit unknown values without changing the canonical validator contract", () => {
     const source = canonicalFixture();
     const data = source.signals[1]!;
