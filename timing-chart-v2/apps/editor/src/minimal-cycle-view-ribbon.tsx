@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, AnnotationType, BookmarkId, CanonicalDocument, ClockSignal, CommentRow, DocumentProblem, GroupId, JsonObject, SignalId, SignalRole, SpacerId, TimeGroupId, TransactionGroup, TransactionId, ValueSignal } from "@timing-chart-v2/schema";
 import { FontStyleToolbar } from "./font-style-toolbar.js";
 import { ArrangeGroup } from "./arrange-group.js";
 import { FindReplacePanel } from "./find-replace-panel.js";
@@ -128,6 +128,13 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   const ungroupSelectedTransaction = () => {
     if (selectedTransactionGroupId !== undefined) commands.deleteTransactionGroup(selectedTransactionGroupId);
   };
+  // #429 Ribbon cleanup: parity for the Left Tree's own "+" Add Group
+  // button -- same `transactionGroup.create` command/ID generation.
+  const addTransactionGroup = () => {
+    const id = nextEntityId("transactionGroup", document) as TransactionGroup["id"];
+    const order = document.transactionGroups?.length ?? 0;
+    commands.createTransactionGroup({ id, name: `Group ${order + 1}`, order });
+  };
   // #406: Home Ribbon's group set now depends on ActiveContext (#404/#405)
   // rather than always showing every group regardless of Cycle/Transaction
   // ViewMode. Time/Layout (Cycle-specific row/timeline-range commands) only
@@ -225,17 +232,29 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       ],
     },
     {
+      // #429 Ribbon cleanup: this one "Transaction" group used to mix
+      // Transaction/Group/Time Scale commands with no visual distinction --
+      // split into three coherently-captioned groups (Transaction/Group/
+      // Time) over the same already-existing commands, no new model.
       id: "transaction", majorGroup: "Transaction", caption: "Transaction", items: [
         { kind: "button", id: "transaction-create", icon: "i-plus", label: "Create", ariaLabel: "Create Transaction", onClick: addTransaction },
         // #439: "wide" -- see the Clipboard group's "Duplicate" above.
         { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
-        // #397: Ungroup and Time Scale only make sense once Transaction
-        // Mode is active, so keep both controls scoped to this group rather
-        // than widening Home in Cycle mode (covered by ribbon-overflow tests).
-        ...(viewMode === "Transaction" ? [{ kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined }] as const : []),
-        ...(viewMode === "Transaction" ? [{ kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> }] as const : []),
       ],
     },
+    // #397: Group/Time Scale only apply in Transaction Mode -- gated the
+    // same way the single pre-split group already gated these controls.
+    ...(viewMode === "Transaction" ? [{
+      id: "transaction-group", majorGroup: "Group", caption: "Group", items: [
+        { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
+        { kind: "button", id: "transaction-ungroup", icon: "i-ungroup", label: "Ungroup", ariaLabel: "Ungroup selected Transaction", title: "Remove the selected Transaction's Group (keeps the Transaction, ungrouped)", onClick: ungroupSelectedTransaction, disabled: selectedTransactionGroupId === undefined },
+      ],
+    } as const] : []),
+    ...(viewMode === "Transaction" ? [{
+      id: "transaction-time", majorGroup: "Time", caption: "Time", items: [
+        { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
+      ],
+    } as const] : []),
   ];
   const signalRibbonGroups: readonly RibbonGroupSpec[] = [
     {
@@ -265,7 +284,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
   // Lane-specific commands, say) can be added later without re-threading
   // the ActiveContext plumbing again.
   const transactionRibbonGroups: readonly RibbonGroupSpec[] = [];
-  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "layout", "display"]);
+  const homeGroups: readonly RibbonGroupSpec[] = composeRibbon({ common: commonRibbonGroups, bySignal: signalRibbonGroups, byTransaction: transactionRibbonGroups }, { viewMode, activeContext }, ["file", "edit", "timeline", "view", "transaction", "transaction-group", "transaction-time", "layout", "display"]);
   // View tab visual-consistency fix: previously hand-written per-button
   // JSX with its own one-off sizing (tile-shaped toggle buttons, a fixed
   // 3-column grid, an unstyled native <select> that fell through to the
