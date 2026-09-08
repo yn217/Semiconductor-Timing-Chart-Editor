@@ -18,12 +18,7 @@ async function createTransaction(page: Page, name = "DMA Read", start = 2, end =
   // exactly matches canonical), so creating with the final values directly
   // would leave this second "set the exact values" edit as a no-op Apply
   // that never enables.
-  const createButton = page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true });
-  if (await createButton.count() > 0) {
-    await createButton.click();
-  } else {
-    await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
-  }
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await page.locator(".view-mode").getByRole("button", { name: "Split", exact: true }).click();
   const lane = page.getByTestId("transaction-lanes");
   await lane.locator("[data-transaction-id]").first().click();
