@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-09 03:45 JST
+# Last reconciled by ChatGPT: 2026-09-09 03:55 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
@@ -11,24 +11,35 @@
 #
 # Observed live state at reconciliation:
 #   main = 673f911 Merge PR #527: unify Annotation toolbar onto shared Design System (#403)
-#   newly completed/closed from the previous Codex queue: #481 #459 #460
-#   #481 Transaction drag live preview / commit-on-drop = CLOSED
-#   #459 Cursor A/B workspace semantic Core = CLOSED
-#   #460 deterministic diagnostic rule registry/evaluator Core = CLOSED
+#   completed/closed from prior Codex queue: #481 #459 #460
 #   #414 remains OPEN; therefore #415 remains dependency-waiting and MUST NOT start.
-#   There is currently no executable Codex Issue in this control queue.
+#   Independent bounded Core/data-integrity work is available and may proceed while #414 is open.
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: WAITING
+# STATUS: ACTIVE
 #
-# No executable issue at this reconciliation.
-# Report:
-# WAITING_FOR_NEXT_CODEX_ISSUE
+# 1) Prevent partial Transaction updates from silently dropping unrelated fields.
+# Re-audit latest main first; preserve recent Transaction GUI/command ownership changes.
+# Fix the shared Semantic Command contract, not only one caller.
+461
+
+# 2) Enforce Product Resource Budget at the authoritative Canonical mutation/replacement boundary.
+# Atomic reject when a command/batch/replacement would exceed product limits.
+# Keep schema validity / canonical invariants / product policy as separate layers.
+328
+
+# 3) Make migration fallback ID allocation document-wide and collision-free across entity kinds.
+# Re-audit current migration code; if already satisfied, collect evidence and close without code churn.
+464
+
+# 4) Restore the json-syntax test gate / duplicate import defect if it still exists on latest main.
+# This is intentionally last because current main may already have resolved the stale source defect.
+# If satisfied, run the real gate, attach evidence, close; do not manufacture changes.
+462
 #
-# Do not manufacture audit/test-only/refactor work merely to stay active.
-# Do not self-promote GUI/product Issues or mixed product-completion Issues.
+# After every issue, re-read this file and live GitHub state.
 #
 # ============================================================================
 # HIGH-PRIORITY DEPENDENCY WAIT
@@ -39,15 +50,29 @@
 # DO NOT start #415 while #414 is open.
 #
 # When #414 closes:
+# - finish the currently active bounded Codex issue safely;
 # - reconcile this file against live GitHub state;
-# - promote #415 as the highest-priority Codex issue because it unblocks #416;
-# - do not infer readiness from code alone; the live #414 Issue state must be completed/closed.
+# - promote #415 ahead of remaining lower-priority queue work because it unblocks #416;
+# - do not infer readiness from code alone; live #414 must be completed/closed.
 #
 # Time Outline chain:
 #   DONE  #412 -> #413
 #   NOW   Claude/product GUI #414
 #   WAIT  Codex #415
 #   THEN  #416 closure
+#
+# ============================================================================
+# DEFERRED TO AVOID CROSS-AGENT CONFLICT
+# ============================================================================
+# #463 Transaction lane virtualization/performance is independent of #414, but it touches the
+# active Transaction lane presentation/runtime currently being visually closed by Claude.
+# Do NOT queue #463 yet unless Transaction GUI work is quiescent or ownership is explicitly transferred.
+#
+# #258 broad MinimalCycleView decomposition is also intentionally not queued while multiple GUI/product
+# agents are actively modifying editor surfaces; avoid turning architecture refactoring into merge conflict churn.
+#
+# #495 mixes Reset Core semantics with production GUI work; split/transfer a bounded Core child before Codex
+# consumes it, rather than taking the whole mixed Issue.
 #
 # ============================================================================
 # TRANSACTION PRODUCT / GUI STATUS
@@ -66,6 +91,7 @@
 #   #397 Transaction + Split sample-driven final acceptance
 #   #429 Transaction Mode parent/final product completion
 #
+# #461 is a bounded data-integrity command-contract defect and is executable above.
 # Do not rebuild a parallel Transaction semantic model.
 #
 # ============================================================================
@@ -107,20 +133,20 @@
 # ============================================================================
 # EXECUTION POLICY
 # ============================================================================
-# For each future executable issue:
+# For each executable issue:
 # 1. sync latest origin/main;
 # 2. read the live GitHub Issue and inspect the current production owner;
 # 3. reproduce/audit the concrete gap before editing;
-# 4. implement the minimum coherent production fix;
-# 5. add focused regression tests;
-# 6. run applicable typecheck/unit/architecture/performance/Chromium checks and git diff --check;
-# 7. inspect/stage only intended hunks;
-# 8. commit/push to main according to repository workflow;
-# 9. verify main == origin/main;
-# 10. add evidence to the Issue and close only when acceptance is satisfied;
-# 11. re-read this queue before taking the next issue.
+# 4. if current main already satisfies it, collect executable evidence and close; do not manufacture code;
+# 5. otherwise implement the minimum coherent production fix;
+# 6. add focused regression tests;
+# 7. run applicable typecheck/unit/architecture/performance/Chromium checks and git diff --check;
+# 8. inspect/stage only intended hunks;
+# 9. commit/push to main according to repository workflow;
+# 10. verify main == origin/main;
+# 11. add evidence to the Issue and close only when acceptance is satisfied;
+# 12. re-read this queue before taking the next issue.
 #
-# If current main already satisfies an issue, collect concrete evidence and close it; do not manufacture code.
 # GitHub Actions availability alone is not a global blocker when local required gates can run.
 #
 # ============================================================================
