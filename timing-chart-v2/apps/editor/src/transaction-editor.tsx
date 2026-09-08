@@ -95,7 +95,8 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   // Re-derived against the live document every render so a Transaction
   // deleted elsewhere can't leave a stale, dangling checked ID behind.
   const [checkedIds, setCheckedIds] = useState<ReadonlySet<TransactionId>>(new Set());
-  const validCheckedIds = new Set([...checkedIds].filter((id) => document.transactions.some((item) => item.id === id)));
+  const documentTransactionIds = new Set(document.transactions.map((item) => item.id));
+  const validCheckedIds = new Set([...checkedIds].filter((id) => documentTransactionIds.has(id)));
   const checkedTransactions = document.transactions.filter((item) => validCheckedIds.has(item.id));
   const toggleChecked = (id: TransactionId) => setCheckedIds((current) => {
     const next = new Set(current);
@@ -105,7 +106,10 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
   const clearChecked = () => setCheckedIds(new Set());
   const allVisibleChecked = visibleTransactions.length > 0 && visibleTransactions.every((item) => validCheckedIds.has(item.id));
   const toggleAllVisible = () => setCheckedIds((current) => {
-    if (allVisibleChecked) return new Set([...current].filter((id) => !visibleTransactions.some((item) => item.id === id)));
+    if (allVisibleChecked) {
+      const visibleIds = new Set(visibleTransactions.map((item) => item.id));
+      return new Set([...current].filter((id) => !visibleIds.has(id)));
+    }
     return new Set([...current, ...visibleTransactions.map((item) => item.id)]);
   });
   // Bulk Group/Color/Delete: one command per checked Transaction, all
