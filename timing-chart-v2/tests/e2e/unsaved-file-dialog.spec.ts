@@ -210,6 +210,32 @@ test("Open resets entity-keyed Transaction bulk selection and Bottom pin across 
   await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
 });
 
+test("Open discards an entity-keyed Inspector draft when the replacement document reuses the ID", async ({ page }) => {
+  await page.goto("/");
+  const makeDocument = (title: string, transactionName: string) => {
+    const document = canonicalFixture();
+    document.document.title = title;
+    document.transactions = [{ id: "tx_shared", name: transactionName, start: 1, end: 3, laneId: "lane_0" }];
+    return document;
+  };
+  const open = async (document: ReturnType<typeof makeDocument>, filename: string) => {
+    await page.locator("input[accept='.json,.tcd']").setInputFiles({ name: filename, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  };
+
+  await open(makeDocument("Document A", "A Transaction"), "draft-a.tcd");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").click();
+  const inspectorName = page.getByTestId("inspector").getByLabel("Transaction name", { exact: true });
+  await inspectorName.fill("A Draft Only");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+
+  await open(makeDocument("Document B", "B Transaction"), "draft-b.tcd");
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id='tx_shared']").click();
+  await expect(page.getByTestId("inspector").getByLabel("Transaction name", { exact: true })).toHaveValue("B Transaction");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Clean");
+});
+
 test("future format opens a source-preserving read-only Compatibility Mode", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
