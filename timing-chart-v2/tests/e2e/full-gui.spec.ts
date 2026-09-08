@@ -1071,8 +1071,9 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   // "Create Transaction" button, which shares the same accessible name.
   await page.getByTestId("transaction-editor").getByRole("button", { name: "Create Transaction", exact: true }).click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
-  // #393: raw Phases JSON moved behind an Advanced disclosure -- the
-  // structured Name/Start/End table (Add Phase) is the primary path now.
+  // #429/#397: the structured Name/Start/End table (Add Phase) is the only
+  // Phase editing path -- raw "Advanced: edit as JSON" was removed from
+  // normal Transaction editing entirely.
   const inspector = page.getByTestId("inspector");
   await inspector.getByTestId("add-transaction-phase").click();
   await inspector.getByLabel("Phase 1 name").fill("Address");
@@ -1085,8 +1086,11 @@ test("applies Transaction Inspector phases through one semantic operation", asyn
   await inspector.getByTestId("apply-inspector-transaction").click();
   await expect(host).toHaveAttribute("data-editor-idle", "true");
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
-  await inspector.locator(".transaction-phase-advanced summary").click();
-  await expect(inspector.getByLabel("Transaction phases")).toHaveValue(/Address/);
+  // Verify the committed phases through the structured table itself
+  // (re-selecting to force a fresh read of the committed document).
+  await page.getByTestId("transaction-lanes").locator("[data-transaction-id]").first().click();
+  await expect(inspector.getByLabel("Phase 1 name")).toHaveValue("Address");
+  await expect(inspector.getByLabel("Phase 2 name")).toHaveValue("Data");
 });
 
 test("applies Clock Generator Inspector drafts with editable duty and one history entry", async ({ page }) => {
