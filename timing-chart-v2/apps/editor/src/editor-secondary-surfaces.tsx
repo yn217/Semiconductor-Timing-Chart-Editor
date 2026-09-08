@@ -162,7 +162,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     dialog.setContextMenu({ x: event.clientX, y: event.clientY, target: "transaction" });
   };
   const signalEditor = <SignalEditor
-    key={`${bottom.signal?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
+    key={`${input.documentEpoch}:${bottom.signal?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
     signal={bottom.signal}
     cycleCount={input.document.timeline.cycleCount}
     bookmarks={input.document.bookmarks}
@@ -185,7 +185,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     signalCommands={surfaceCommands}
   />;
   const annotationEditor = bottom.annotation ? <AnnotationEditor
-    key={`${bottom.annotation.id}:${input.revision}:${dialog.bottomResetToken}`}
+    key={`${input.documentEpoch}:${bottom.annotation.id}:${input.revision}:${dialog.bottomResetToken}`}
     annotation={bottom.annotation}
     annotations={input.document.annotations}
     document={input.document}
@@ -216,7 +216,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onToggleTransactionSignal={input.actions.toggleTransactionSignal}
   />;
   const bookmarkEditor = <BookmarkEditor
-    key={`${selected.bookmark?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
+    key={`${input.documentEpoch}:${selected.bookmark?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
     bookmark={selected.bookmark}
     document={input.document}
     history={input.history}
@@ -275,6 +275,6 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     summary={<div className="left-panel-tail"><span data-testid="left-tree-signal-count">{input.document.signals.length} signals</span>{selected.signal && <span className="scope-breadcrumb" data-testid="scope-breadcrumb">Scope: {selected.signal.source.instancePath.length ? selected.signal.source.instancePath.join(" / ") : "(root)"}</span>}</div>}
     content={workspace.bottomTab === "Signal" ? signalEditor : workspace.bottomTab === "Annotation" ? annotationEditor : workspace.bottomTab === "Transaction" ? transactionEditor : workspace.bottomTab === "Bookmarks" ? bookmarkEditor : workspace.bottomTab === "AI" ? <AIOperationPanel {...aiAssistantPanel} /> : workspace.bottomTab === "Problems" ? <ProblemsPanel diagnostics={input.diagnostics} onNavigate={input.navigateProblem} /> : <AdvancedJsonPanel document={input.document} selectedSignal={bottom.signal} selectedGroup={bottom.group} selectedAnnotation={bottom.annotation} selectedTransaction={bottom.transaction} onReplaceDocument={input.actions.replaceDocument} onDiagnostic={(next) => { const nextDiagnostics = next === undefined ? [] : Array.isArray(next) ? next : [next]; input.setRuntimeDiagnostics((current) => [...current.filter((item) => !item.detail?.startsWith("advanced-json:")), ...nextDiagnostics]); }} />}
   />;
-  const workspaceInspector = <InspectorPanel key={`${selected.signalIds.size > 1 ? `multi:${selected.signalIds.size}` : selected.signal?.id ?? selected.group?.id ?? selected.annotation?.id ?? selected.transaction?.id ?? selected.bookmark?.id ?? "none"}:${input.revision}:${dialog.inspectorResetToken}`} signal={selected.signal} selectedSignalIds={selected.signalIds} group={selected.group} annotation={selected.annotation} transaction={selected.transaction} bookmark={selected.bookmark} collapsedGroup={selected.group !== undefined && input.timeline.collapsedGroupIds.has(selected.group.id)} onToggleGroupCollapse={selected.group === undefined ? undefined : () => input.timeline.toggleCollapsedGroup(selected.group!.id)} registry={input.command.registry.current} document={input.document} viewport={refs.viewport} commands={surfaceCommands} onReveal={input.actions.revealSelectedInHierarchy} onCancel={() => { if (selected.group) refreshGroupStylePreview(refs.host.current!, selected.group.id, selected.group.style); dialog.setInspectorResetToken((value) => value + 1); }} onClose={() => dialog.setInspectorVisible(false)} onDeleteBookmark={input.actions.deleteBottomBookmark} onToggleTransactionSignal={input.actions.toggleTransactionSignal} onGroupPreview={(groupId, style) => refreshGroupStylePreview(refs.host.current!, groupId, style ?? input.document.signalGroups.find((group) => group.id === groupId)?.style)} minimapMode={workspace.viewMode === "Transaction" ? "transaction" : "signal"} />;
+  const workspaceInspector = <InspectorPanel key={`${input.documentEpoch}:${selected.signalIds.size > 1 ? `multi:${selected.signalIds.size}` : selected.signal?.id ?? selected.group?.id ?? selected.annotation?.id ?? selected.transaction?.id ?? selected.bookmark?.id ?? "none"}:${input.revision}:${dialog.inspectorResetToken}`} signal={selected.signal} selectedSignalIds={selected.signalIds} group={selected.group} annotation={selected.annotation} transaction={selected.transaction} bookmark={selected.bookmark} collapsedGroup={selected.group !== undefined && input.timeline.collapsedGroupIds.has(selected.group.id)} onToggleGroupCollapse={selected.group === undefined ? undefined : () => input.timeline.toggleCollapsedGroup(selected.group!.id)} registry={input.command.registry.current} document={input.document} viewport={refs.viewport} commands={surfaceCommands} onReveal={input.actions.revealSelectedInHierarchy} onCancel={() => { if (selected.group) refreshGroupStylePreview(refs.host.current!, selected.group.id, selected.group.style); dialog.setInspectorResetToken((value) => value + 1); }} onClose={() => dialog.setInspectorVisible(false)} onDeleteBookmark={input.actions.deleteBottomBookmark} onToggleTransactionSignal={input.actions.toggleTransactionSignal} onGroupPreview={(groupId, style) => refreshGroupStylePreview(refs.host.current!, groupId, style ?? input.document.signalGroups.find((group) => group.id === groupId)?.style)} minimapMode={workspace.viewMode === "Transaction" ? "transaction" : "signal"} />;
   return { surfaceCommands, workspaceHeader, workspaceViewportContent, workspaceViewportLegend, workspaceBottom, workspaceInspector, aiBridgeStatus };
 }
