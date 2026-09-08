@@ -89,7 +89,7 @@ const forbiddenOwners = [
   ["shell slot JSX leaked into root", /<(?:EditorRibbon|EditorWorkspaceView|EditorStatusBar)\b/],
   ["large shell markup in root", /className="(?:desktop-workspace|cycle-panel|inspector-shell|modal-backdrop)"|<main\b|<section\b|<aside\b/],
 ];
-const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Inspector panel composition", "Timeline surface controller", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator", "Document Properties presentation", "Legend presentation", "Bottom Bookmark editor"];
+const requiredOwners = ["Review scope, severity, navigation", "Viewport, timeline, ruler and grid lifecycle", "File open/save/export lifecycle", "UI action composition", "Presentation-only editor toggles", "Editor shell JSX", "Inspector panel composition", "Timeline surface controller", "Runtime viewport controller", "Runtime interaction controller", "Runtime document refresh lifecycle", "Runtime render coordinator", "Document Properties presentation", "Legend presentation", "Bottom Bookmark editor", "Bottom Annotation editor", "Annotation list presentation"];
 const rootAllowListContract = /MinimalCycleView.*root allow-list:[\s\S]*ALLOW:[\s\S]*DENY:/;
 const requiredSourceContracts = [
   ["command router", /useEditorCommandRouter/],
@@ -139,6 +139,8 @@ const presentationCommandSources = await Promise.all([
   ["document properties constructs semantic commands", "apps/editor/src/document-properties.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["legend view constructs semantic commands", "apps/editor/src/legend-view.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
   ["bookmark editor constructs semantic commands", "apps/editor/src/bookmark-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["annotation editor constructs semantic commands", "apps/editor/src/annotation-editor.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
+  ["annotation list constructs semantic commands", "apps/editor/src/annotation-list.tsx", /(?:^|\n)\s*import[^;\n]*(?:SemanticCommand|nextCommandId)/],
 ].map(async ([name, owner, pattern]) => [name, pattern, await readFile(resolve(root, owner), "utf8")]));
 const requiredShellContracts = [
   ["workspace shell owner", /EditorWorkspaceView/],

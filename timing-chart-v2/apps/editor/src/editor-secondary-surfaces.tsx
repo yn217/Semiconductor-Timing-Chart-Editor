@@ -189,13 +189,14 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onSelect={input.actions.selectAnnotation}
     onCreate={input.actions.createSelectedAnnotationForType}
     onDuplicate={input.actions.duplicateAnnotation}
-    onCommand={execute}
+    commands={surfaceCommands}
+    onReplaceDocument={input.actions.replaceDocument}
     onUndo={undo}
     onRedo={redo}
     onDelete={input.actions.deleteBottomAnnotation}
     onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
     onPreview={(draft) => refreshAnnotationPreview(refs.host.current!, bottom.annotation!.id, draft, { label: bottom.annotation!.label, color: bottom.annotation!.color, opacity: bottom.annotation!.opacity })}
-  /> : <><AnnotationList annotations={input.document.annotations} selectedId={undefined} onSelect={input.actions.selectAnnotation} onCommand={execute} /><div className="empty-editor">Select or create an Annotation.</div></>;
+  /> : <><AnnotationList annotations={input.document.annotations} selectedId={undefined} onSelect={input.actions.selectAnnotation} commands={surfaceCommands} /><div className="empty-editor">Select or create an Annotation.</div></>;
   const transactionEditor = <TransactionEditor
     key={`${bottom.transaction?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
     transaction={bottom.transaction}

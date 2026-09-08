@@ -50,6 +50,9 @@ export interface InspectorCommandActions {
   readonly updateTransaction: (payload: CommandPayload<"transaction.update">) => CommandResult;
   readonly updateAnnotationProperties: (payload: CommandPayload<"annotation.updateProperties">) => CommandResult;
   readonly setAnnotationAnchor: (annotationId: AnnotationId, field: "anchor" | "start" | "end" | "from" | "to", anchor: SemanticAnchor) => CommandResult;
+  readonly updateAnnotationLabelOffset: (annotationId: AnnotationId, labelOffset: CommandPayload<"annotation.updateLabelOffset">["labelOffset"]) => CommandResult;
+  readonly resetAnnotationOffsets: (annotationId: AnnotationId) => CommandResult;
+  readonly updateAnnotationMeasurement: (payload: CommandPayload<"annotation.updateMeasurement">) => CommandResult;
 }
 
 export interface DocumentPropertiesCommandActions {
@@ -162,6 +165,9 @@ export function createEditorSurfaceCommandController(input: {
     updateTransaction: (payload) => dispatch<"transaction.update">("transaction_update", { type: "transaction.update", ...payload }),
     updateAnnotationProperties: (payload) => dispatch<"annotation.updateProperties">("inspector_annotation_properties", { type: "annotation.updateProperties", ...payload }),
     setAnnotationAnchor: (annotationId, field, anchor) => dispatch<"annotation.setAnchor">("inspector_annotation_anchor", { type: "annotation.setAnchor", annotationId, field, anchor }),
+    updateAnnotationLabelOffset: (annotationId, labelOffset) => dispatch<"annotation.updateLabelOffset">("annotation_label_offset", { type: "annotation.updateLabelOffset", annotationId, labelOffset }),
+    resetAnnotationOffsets: (annotationId) => dispatch<"annotation.resetOffsets">("annotation_reset_offsets", { type: "annotation.resetOffsets", annotationId }),
+    updateAnnotationMeasurement: (payload) => dispatch<"annotation.updateMeasurement">("annotation_measurement", { type: "annotation.updateMeasurement", ...payload }),
     updateDocumentProperties,
     updateLegend: (legend) => dispatch<"legend.update">("legend_update", { type: "legend.update", legend }),
     createSignal: (signal, targetGroupId, index) => dispatch<"signal.create">("insert_signal", { type: "signal.create", signal, targetGroupId, index }),

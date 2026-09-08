@@ -37,6 +37,9 @@ describe("editor surface command controller", () => {
     controller.updateTransaction({ transactionId: "transaction_1" as never, name: "Read", start: 1, end: 3 });
     controller.updateAnnotationProperties({ annotationId: "annotation_1" as never, label: "A", visible: true });
     controller.setAnnotationAnchor("annotation_1" as never, "anchor", { cycle: 1, point: "cycle-start" });
+    controller.updateAnnotationLabelOffset("annotation_1" as never, { x: 4, y: -8 });
+    controller.resetAnnotationOffsets("annotation_1" as never);
+    controller.updateAnnotationMeasurement({ annotationId: "annotation_1" as never, profile: "custom", anchorKind: "ratio", start: 0.2, end: 0.8, layout: { startMarker: "bar", endMarker: "arrow", arrowLayout: "inward", extensionLines: "both" } });
 
     expect(execute.mock.calls.map(([command]) => command as SemanticCommand)).toEqual([
       expect.objectContaining({ id: "test_group_properties", type: "group.updateProperties" }),
@@ -44,6 +47,9 @@ describe("editor surface command controller", () => {
       expect.objectContaining({ id: "test_transaction_update", type: "transaction.update" }),
       expect.objectContaining({ id: "test_inspector_annotation_properties", type: "annotation.updateProperties" }),
       expect.objectContaining({ id: "test_inspector_annotation_anchor", type: "annotation.setAnchor" }),
+      expect.objectContaining({ id: "test_annotation_label_offset", type: "annotation.updateLabelOffset" }),
+      expect.objectContaining({ id: "test_annotation_reset_offsets", type: "annotation.resetOffsets" }),
+      expect.objectContaining({ id: "test_annotation_measurement", type: "annotation.updateMeasurement" }),
     ]);
   });
 

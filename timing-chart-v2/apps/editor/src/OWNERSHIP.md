@@ -15,7 +15,7 @@ controllers are extracted incrementally.
 | Event table row editing and quick values | `event-table-components.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Comment Row editor | `comment-row-editor.tsx` | parent `UiCommandRegistry` callback | Phase 1 extracted leaf |
 | Dialog focus trapping and restoration | `dialog-focus-loop.ts` | view-only focus lifecycle | Phase 1 extracted utility |
-| Annotation list presentation | `annotation-list.tsx` | parent selection callback | Phase 1 extracted leaf |
+| Annotation list presentation | `annotation-list.tsx` | `EditorSurfaceCommandController.updateAnnotationProperties` | second-pass typed command boundary |
 | Problems filter projection | `problem-filter.ts` | view-only diagnostic projection | Phase 1 extracted utility |
 | Read-only JSON panel | `json-panel.tsx` | parent document projection | Phase 1 extracted leaf |
 | Selected JSON object replacement | `json-selection.ts` | Advanced JSON command planner | Phase 1 extracted utility |
@@ -117,7 +117,7 @@ added to the inventory with its owner, lifetime, and replacement/reset rule.
 | Bottom Bookmark editor | `bookmark-editor.tsx` | `EditorSurfaceCommandController.createBookmark/updateBookmark` | second-pass typed command boundary |
 | `timeline-toolbar.tsx` | Timeline range, insert/edit, bookmark, and fold/break command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `layout-inspector.tsx` | Layout dimensions, column alignment, and auto-fit property surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
-| `annotation-editor.tsx` | Annotation list, import/export, style, anchor-offset, and command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
+| Bottom Annotation editor | `annotation-editor.tsx` | `EditorSurfaceCommandController` plus `EditorActions.replaceDocument` for import | second-pass typed command boundary |
 | `advanced-json-panel.tsx` | Advanced JSON draft, validation, resource policy, clipboard, and replace command surface | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `signal-editor.tsx` | Bottom signal editor, group drop targets, properties, and context editor composition | `minimal-cycle-view.tsx` composition | 2026-08-31 |
 | `runtime/transaction-lanes.tsx` | Transaction lane projection and pointer interaction using supplied geometry/snap callbacks | `minimal-cycle-view.tsx` composition | 2026-08-31 |
