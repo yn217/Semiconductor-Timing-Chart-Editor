@@ -182,6 +182,34 @@ test("Open atomically clears document-scoped selection, pin, filter and timeline
   await expect(page.getByTestId("cycle-status")).toHaveText("Cycle 0");
 });
 
+test("Open resets entity-keyed Transaction bulk selection and Bottom pin across colliding document IDs", async ({ page }) => {
+  await page.goto("/");
+  const makeDocument = (title: string) => {
+    const document = canonicalFixture();
+    document.document.title = title;
+    document.transactions = [{ id: "tx_shared", name: "Shared Transaction", start: 1, end: 3, laneId: "lane_0" }];
+    return document;
+  };
+  const open = async (document: ReturnType<typeof makeDocument>, filename: string) => {
+    await page.locator("input[accept='.json,.tcd']").setInputFiles({ name: filename, mimeType: "application/json", buffer: Buffer.from(JSON.stringify(document)) });
+    await expect(page.getByTestId("cycle-surface")).toHaveAttribute("data-editor-idle", "true");
+  };
+
+  await open(makeDocument("Document A"), "document-a.tcd");
+  await page.locator(".view-mode").getByRole("button", { name: "Transaction", exact: true }).click();
+  await page.getByRole("tab", { name: "Transaction", exact: true }).click();
+  await page.getByLabel("Select Shared Transaction", { exact: true }).check();
+  await expect(page.getByTestId("transaction-bulk-count")).toHaveText("1 selected");
+  await page.getByTestId("bottom-pin").click();
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "true");
+
+  await open(makeDocument("Document B"), "document-b.tcd");
+  await expect(page.locator(".app-titlebar h1")).toHaveText("Document B");
+  await expect(page.getByLabel("Select Shared Transaction", { exact: true })).not.toBeChecked();
+  await expect(page.getByTestId("transaction-bulk-toolbar")).toHaveCount(0);
+  await expect(page.getByTestId("bottom-pin")).toHaveAttribute("aria-pressed", "false");
+});
+
 test("future format opens a source-preserving read-only Compatibility Mode", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
