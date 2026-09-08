@@ -113,7 +113,7 @@ export function HomeOverflow(props: HomeOverflowProps) {
     // generated from the ribbon schema: every actionable child of a
     // role=menu surface is a menuitem, including disabled commands.
     menuRef.current?.querySelectorAll<HTMLButtonElement>("button").forEach((item) => item.setAttribute("role", "menuitem"));
-    const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
+    const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus());
     return () => cancelAnimationFrame(frame);
   }, [open]);
 

@@ -290,7 +290,7 @@ export function MinimalCycleView() {
   useEffect(() => {
     const selector = contextMenu ? ".context-menu" : treeAddMenuOpen ? ".tree-add-menu" : treeMoreMenuOpen ? ".tree-header-menu" : undefined;
     const menu = selector ? document.querySelector<HTMLElement>(selector) : undefined;
-    menu?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    menu?.querySelector<HTMLButtonElement>("button[role='menuitem']:not(:disabled)")?.focus();
     return attachMenuKeyboardNavigation(document, closeContextMenu, closeTreeAddMenu, closeTreeMoreMenu);
   }, [contextMenu, treeAddMenuOpen, treeMoreMenuOpen]);
   const clipboardStatus = editActions.status;
