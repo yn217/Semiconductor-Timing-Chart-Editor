@@ -1,5 +1,5 @@
 import type { CommandResult, SemanticCommand } from "@timing-chart-v2/commands";
-import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
+import type { Annotation, AnnotationGroup, AnnotationGroupId, AnnotationId, Bookmark, BookmarkId, CanonicalDocument, ClockGenerator, CommentRow, EdgeCounterSettings, GroupId, JsonObject, LabelAnchorId, ResetSemantics, SemanticAnchor, Signal, SignalGroup, SignalId, SpacerId, SpacerRow, TimeGroup, TimeGroupId, TimelineLabelAnchor, Transaction, TransactionGroup, TransactionId, CommandId, TransactionTimeScale, ValueSignal } from "@timing-chart-v2/schema";
 
 type CommandOf<T extends SemanticCommand["type"]> = Extract<SemanticCommand, { readonly type: T }>;
 type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id" | "type">;
@@ -7,6 +7,7 @@ type CommandPayload<T extends SemanticCommand["type"]> = Omit<CommandOf<T>, "id"
 export interface SignalEditorCommandActions {
   readonly updateClockGenerator: (signalId: SignalId, generator: ClockGenerator) => CommandResult;
   readonly updateEdgeCounter: (signalId: SignalId, edgeCounter: EdgeCounterSettings) => CommandResult;
+  readonly updateResetSemantics: (signalId: SignalId, resetSemantics: ResetSemantics | undefined) => CommandResult;
   readonly replaceValues: (signalId: SignalId, values: ValueSignal["values"]) => CommandResult;
   readonly updateValue: (signalId: SignalId, start: number, value: string | number, comment?: string) => CommandResult;
   readonly replaceValue: (signalId: SignalId, fromStart: number, start: number, value: string | number, comment?: string) => CommandResult;
@@ -130,6 +131,7 @@ export function createEditorSurfaceCommandController(input: {
   return {
     updateClockGenerator: (signalId, generator) => dispatch<"signal.updateClockGenerator">("clock", { type: "signal.updateClockGenerator", signalId, generator }),
     updateEdgeCounter: (signalId, edgeCounter) => dispatch<"signal.updateEdgeCounter">("edge_counter", { type: "signal.updateEdgeCounter", signalId, edgeCounter }),
+    updateResetSemantics: (signalId, resetSemantics) => dispatch<"signal.updateResetSemantics">("reset_semantics", { type: "signal.updateResetSemantics", signalId, ...(resetSemantics === undefined ? {} : { resetSemantics }) }),
     replaceValues: (signalId, values) => dispatch<"signal.replaceValues">("replace_values", { type: "signal.replaceValues", signalId, values }),
     updateValue: (signalId, start, value, comment) => dispatch<"signal.updateValue">("add_value", { type: "signal.updateValue", signalId, start, value, ...(comment === undefined || comment === "" ? {} : { comment }) }),
     replaceValue: (signalId, fromStart, start, value, comment) => dispatch<"signal.replaceValue">("replace_value", { type: "signal.replaceValue", signalId, fromStart, start, value, ...(comment === undefined || comment === "" ? {} : { comment }) }),
