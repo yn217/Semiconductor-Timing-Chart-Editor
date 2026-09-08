@@ -50,9 +50,10 @@ test("matches the v8 shell contract without mutating canonical state", async ({ 
   for (const name of ["File", "Edit", "Time", "Transaction", "Layout", "Zoom", "Display", "Options"]) {
     await expect(page.locator(`[data-major-group='${name}']`)).toBeVisible();
   }
+  // #416: "Open Timeline interval editor" (a pure setRibbonTab("Timeline")
+  // duplicate of the Timeline tab) was removed from this group entirely.
   const timeGroup = page.locator(".home-layout-group");
   await expect(timeGroup).toBeVisible();
-  await expect(timeGroup.getByRole("button", { name: "Open Timeline interval editor" })).toBeVisible();
   await expect(timeGroup.getByRole("button", { name: "Normalize row spacing" })).toBeVisible();
   await expect(page.getByTestId("ribbon").getByLabel("Display commands")).toBeVisible();
   await expect(page.locator(".left-column-heading strong")).toHaveText("Signals / Groups");
@@ -155,14 +156,18 @@ test("applies the v8 Signal Inspector style controls as one semantic operation",
   expect(after.localGeometryBuilds).toBe(before.localGeometryBuilds);
 });
 
+// #416 Home Ribbon cleanup: "Edit Interval" and Home's own "Create Time
+// Group" were removed as duplicates of the Timeline tab / Timeline
+// Ribbon's own "Create" button -- this now exercises those real,
+// non-duplicate routes instead.
 test("V8 Home secondary actions stay connected to real navigation and semantic commands", async ({ page }) => {
   await page.goto("/?visual-reference");
   const ribbon = page.getByTestId("ribbon");
-  await ribbon.getByRole("button", { name: "Open Timeline interval editor" }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true }).click();
   await expect(page.locator(".ribbon-tabs").getByRole("button", { name: "Timeline", exact: true })).toHaveClass(/active/);
-  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
-  await ribbon.getByRole("button", { name: "Create Time Group" }).click();
+  await ribbon.getByTestId("time-group-create").click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Home", exact: true }).click();
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await ribbon.getByRole("button", { name: "More" }).click();

@@ -273,12 +273,20 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       ],
     },
     {
+      // #416 Home Ribbon cleanup: "Edit Interval" was a pure navigation
+      // duplicate (`onOpenTimeline` is just `setRibbonTab("Timeline")`,
+      // and a "Timeline" tab already sits in the top tab strip) and
+      // "Time Group" duplicated the Timeline Ribbon's own "Create" button
+      // (timeline-toolbar.tsx's `time-group-create`, already functional --
+      // TimeGroup is Timeline-domain, not Home's). Both removed rather than
+      // kept disabled/hidden, per the issue's own explicit "don't keep as
+      // disabled/hidden" instruction. `onOpenTimeline` itself stays wired
+      // (use-editor-ai-assistant-model.ts's AI View Intent route still
+      // calls it) -- only this Home button is gone, not the callback.
+      // "Normalize Spacing" is a different feature (layout clamp, not
+      // TimeGroup/Outline) per the issue's own explicit separation --
+      // stays here rather than migrating alongside TimeGroup.
       id: "layout", majorGroup: "Layout", caption: "Layout", items: [
-        { kind: "button", id: "edit-interval", icon: "i-align-interval", label: "Edit Interval", ariaLabel: "Open Timeline interval editor", title: "Open Timeline to edit the selected interval.", onClick: onOpenTimeline },
-        // #439: visible label shortened to fit 2 lines at the default Home
-        // button width without a mid-word break ("Create Time Group" wraps
-        // to 3-4 lines) -- full meaning kept in ariaLabel/title.
-        { kind: "button", id: "time-group", icon: "i-group", label: "Time Group", ariaLabel: "Create Time Group", title: "Create a Time Group for the selected timeline range.", onClick: () => commands.createTimeGroup({ id: nextEntityId("time", document) as TimeGroupId, name: `Group ${range.start}-${range.end}`, start: range.start, end: Math.max(range.start + 1, Math.min(document.timeline.cycleCount, range.end)), presentation: { collapsed: false, foldStyle: "none" } }) },
         { kind: "button", id: "normalize-spacing", icon: "i-auto-layout", label: "Auto Space", ariaLabel: "Normalize row spacing", title: "Normalize row height and signal spacing to the supported minimums.", onClick: () => commands.normalizeLayout({ ...document.layout, rowHeight: Math.max(24, document.layout.rowHeight), signalSpacing: Math.max(2, document.layout.signalSpacing) }) },
       ],
     },
