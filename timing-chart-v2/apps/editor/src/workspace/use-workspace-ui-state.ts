@@ -91,6 +91,16 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
   const [treeFilter, setTreeFilter] = useState("");
   const [transactionTreeFilter, setTransactionTreeFilter] = useState("");
   const [treeTypeFilter, setTreeTypeFilter] = useState<TreeTypeFilter>("all");
+  // #429/#397 Transaction Mode Product Closure P0-2: which tree the Left
+  // panel shows while `viewMode === "Transaction"` -- "transactions" (the
+  // existing Group/Lane Transaction tree) or "signals" (the same Signal
+  // Tree Cycle Mode already renders, made visible/selectable here too so a
+  // user can browse/select Signals -- e.g. to link to a Transaction --
+  // without leaving Transaction Mode). Pure view-only UI state, same shape
+  // as `treeTypeFilter`/`viewMode` above: never touches Canonical, never a
+  // second selection owner (a Signal picked here is the exact same
+  // selection Cycle Mode's own tree would produce).
+  const [transactionTreeTab, setTransactionTreeTab] = useState<"transactions" | "signals">("transactions");
 
   const [followSelection, setFollowSelection] = useState(true);
   const followSelectionRef = useRef(true);
@@ -121,6 +131,7 @@ export function useWorkspaceUiState<SignalId, GroupId, AnnotationId, Transaction
     bottomHeight, setBottomHeight, bottomResizeRef,
     treeFilter, setTreeFilter, transactionTreeFilter, setTransactionTreeFilter,
     treeTypeFilter, setTreeTypeFilter,
+    transactionTreeTab, setTransactionTreeTab,
     followSelection, setFollowSelection, followSelectionRef,
     bottomPinned, setBottomPinned, bottomPinnedRef,
     pinnedBottomSelection, setPinnedBottomSelection,

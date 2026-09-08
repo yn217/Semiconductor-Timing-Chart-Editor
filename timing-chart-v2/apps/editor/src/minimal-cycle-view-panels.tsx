@@ -92,7 +92,11 @@ export type SignalTreeColumnHeaderProps = {
   // header (title/+Add/search) instead of the Signal one -- one shared
   // component so both stay visually identical (row density, Add-button
   // placement, filter-input styling) without a second header primitive.
-  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly onAdd: () => void; readonly onAddGroup: () => void } | undefined;
+  // #429/#397 P0-2: `tab`/`onTabChange` add the "Transactions | Signals"
+  // tab pair -- pure presentation of `transactionTreeTab` state, decided by
+  // the caller (`use-workspace-ui-state.ts`), same pattern as every other
+  // field here.
+  readonly transactionMode?: { readonly filter: string; readonly onFilterChange: (value: string) => void; readonly onAdd: () => void; readonly onAddGroup: () => void; readonly tab: "transactions" | "signals"; readonly onTabChange: (tab: "transactions" | "signals") => void } | undefined;
 };
 
 /** The Signal/Group tree's column header: type/text filter, the Add and
@@ -101,24 +105,31 @@ export type SignalTreeColumnHeaderProps = {
  * `use-dialog-menu-state.ts` (menu open flags) -- every state transition is
  * still decided by the caller via these callbacks. */
 export function SignalTreeColumnHeader({ treeTypeFilter, onTreeTypeFilterChange, treeFilter, onTreeFilterChange, onClearTreeFilter, addMenuOpen, onToggleAddMenu, moreMenuOpen, onToggleMoreMenu, onAddEntity, onCloseAddMenu, onOpenBulkRegistration, onCollapseAllGroups, onExpandAllGroups, onOpenHierarchy, onCloseMoreMenu, timeScaleLabel, transactionMode }: SignalTreeColumnHeaderProps) {
-  if (transactionMode) return <div className="column-headings" data-testid="transaction-tree-header">
+  if (transactionMode) {
+    const onTransactions = transactionMode.tab === "transactions";
+    return <div className="column-headings" data-testid="transaction-tree-header">
     <span className="left-column-heading">
-      <strong>Transactions</strong>
-      <label className="tree-filter-controls">
+      <span className="transaction-tree-tabs" role="tablist" aria-label="Transaction tree">
+        <button type="button" role="tab" aria-selected={onTransactions} data-testid="transaction-tree-tab-transactions" className={onTransactions ? "active" : ""} onClick={() => transactionMode.onTabChange("transactions")}>Transactions</button>
+        <button type="button" role="tab" aria-selected={!onTransactions} data-testid="transaction-tree-tab-signals" className={onTransactions ? "" : "active"} onClick={() => transactionMode.onTabChange("signals")}>Signals</button>
+      </span>
+      {onTransactions && <label className="tree-filter-controls">
         <span className="visually-hidden">Transaction tree filter</span>
         <input data-testid="transaction-tree-search" aria-label="Transaction tree filter" value={transactionMode.filter} onChange={(event) => transactionMode.onFilterChange(event.target.value)} placeholder="Search transactions..." />
         {transactionMode.filter && <button type="button" aria-label="Clear transaction tree filter" onMouseDown={(event) => event.preventDefault()} onClick={() => transactionMode.onFilterChange("")}><EditorIcon name="close" /></button>}
-      </label>
-      <span className="left-column-actions">
+      </label>}
+      {onTransactions && <span className="left-column-actions">
         <button type="button" className="tree-add-button" aria-label="Add Transaction" data-testid="add-transaction-tree" onClick={transactionMode.onAdd}><EditorIcon name="plus" /></button>
         <button type="button" className="tree-more-button" aria-label="Add Transaction Group" title="Add Transaction Group" data-testid="add-transaction-group-tree" onClick={transactionMode.onAddGroup}><EditorIcon name="plus" /></button>
-      </span>
+      </span>}
     </span>
-    <span className="role-column-heading" aria-label="Group">Group</span>
-    <span className="signal-column-heading" aria-label="Transaction">Transaction</span>
+    {onTransactions
+      ? <><span className="role-column-heading" aria-label="Group">Group</span><span className="signal-column-heading" aria-label="Transaction">Transaction</span></>
+      : <span className="signal-column-heading" aria-label="Signal">Signal</span>}
     <span className="frozen-pane-heading-gutter" aria-hidden="true" />
     <span>{timeScaleLabel}</span>
   </div>;
+  }
   return <div className="column-headings">
     <span className="left-column-heading">
       <strong>Signals / Groups</strong>

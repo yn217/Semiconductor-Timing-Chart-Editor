@@ -350,6 +350,10 @@
 .transition-form-actions { display: flex; gap: 6px; margin-top: 0; }
 .transition-form-actions button { height: var(--ds-control-height); border: 1px solid #aebccd; border-radius: 3px; background: #f7f9fb; color: #273c57; padding: 3px 10px; }
 .transition-form-actions button[type="submit"] { border-color: #246aa8; background: #2c78bb; color: white; }
+/* #426 Visual Quality Closure: same treatment as .value-helper-hint below --
+   a quiet caption, not a warning; explains the Add/Add & Continue commit
+   model without competing with the primary Add buttons above it. */
+.transition-form-hint { color: #758197; font-size: 9px; }
 .value-helper-panel { display: flex; flex-direction: column; gap: 4px; }
 .value-helper-hint { color: #758197; font-size: 9px; }
 /* #400/#402: `.signal-generator-form` had no dedicated rule anywhere --

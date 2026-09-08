@@ -169,6 +169,14 @@ export function EventTable({ signal, cycleCount, commands, generatorSlot }: { re
           <button type="submit" data-testid="add-signal-event">Add</button>
           <button type="button" data-testid="add-signal-event-continue" onClick={addAndContinue}>Add &amp; Continue</button>
         </div>
+        {/* #426 Visual Quality Closure: "unclear draft state" -- Add/Add &
+            Continue each commit one `signal.updateValue` command immediately
+            (own History/Undo step), there is no separate pending batch to
+            lose track of. This table intentionally uses an immediate-commit
+            model rather than a page-level Draft/Apply pair (unlike
+            Bookmark/Annotation's Cancel+Apply); make that explicit instead
+            of leaving the model to be inferred from behavior alone. */}
+        <span className="transition-form-hint">Applies immediately -- each Add is its own Undo step.</span>
       </form>
       <div className="value-helper-panel">
         <h2>Value Helper <span>({valueHelperCopy(signal).label})</span></h2>
