@@ -109,6 +109,10 @@ export function HomeOverflow(props: HomeOverflowProps) {
 
   useEffect(() => {
     if (!open) return;
+    // Keep the menu contract explicit even for commands whose markup is
+    // generated from the ribbon schema: every actionable child of a
+    // role=menu surface is a menuitem, including disabled commands.
+    menuRef.current?.querySelectorAll<HTMLButtonElement>("button").forEach((item) => item.setAttribute("role", "menuitem"));
     const frame = requestAnimationFrame(() => menuRef.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus());
     return () => cancelAnimationFrame(frame);
   }, [open]);
