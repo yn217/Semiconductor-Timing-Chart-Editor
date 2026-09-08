@@ -3,7 +3,7 @@ import { createPortal } from "react-dom";
 import type { CanonicalDocument, TransactionTimeScale } from "@timing-chart-v2/schema";
 import { RibbonIcon } from "./ribbon-icon.js";
 
-const DEFAULT_SCALE = { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
+const DEFAULT_SCALE: TransactionTimeScale = { clockCyclesPerTransactionCycle: 1, majorInterval: 5, minorInterval: 1 };
 
 /** #397 Transaction Mode GUI Closure Section 4: `transaction.setTimeScale`
  * already existed at the command/planner layer (validated ratio + integer
@@ -18,6 +18,7 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
   const [cyclesPerTc, setCyclesPerTc] = useState(current.clockCyclesPerTransactionCycle);
   const [majorInterval, setMajorInterval] = useState(current.majorInterval);
   const [minorInterval, setMinorInterval] = useState(current.minorInterval);
+  const [showSecondaryClock, setShowSecondaryClock] = useState(current.showSecondaryClock ?? false);
   const [position, setPosition] = useState<{ readonly left: number; readonly top: number; readonly maxHeight: number }>();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -27,6 +28,7 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
     setCyclesPerTc(current.clockCyclesPerTransactionCycle);
     setMajorInterval(current.majorInterval);
     setMinorInterval(current.minorInterval);
+    setShowSecondaryClock(current.showSecondaryClock ?? false);
     // Reopen should always reflect the document's actual current value,
     // not whatever was left over in a prior, cancelled edit session.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -83,7 +85,7 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
 
   const apply = () => {
     if (!valid) return;
-    onSetScale({ clockCyclesPerTransactionCycle: cyclesPerTc, majorInterval, minorInterval });
+    onSetScale({ clockCyclesPerTransactionCycle: cyclesPerTc, majorInterval, minorInterval, showSecondaryClock });
     setOpen(false);
   };
 
@@ -93,6 +95,7 @@ export function TransactionTimeScalePanel({ document, onSetScale }: { readonly d
       <label>Clock cycles per Transaction Cycle<input aria-label="Clock cycles per Transaction Cycle" type="number" min="0" step="any" value={cyclesPerTc} onChange={(event) => setCyclesPerTc(Number(event.target.value))} /></label>
       <label>Major tick interval (TC)<input aria-label="Major tick interval" type="number" min="1" step="1" value={majorInterval} onChange={(event) => setMajorInterval(Number(event.target.value))} /></label>
       <label>Minor tick interval (TC)<input aria-label="Minor tick interval" type="number" min="1" step="1" value={minorInterval} onChange={(event) => setMinorInterval(Number(event.target.value))} /></label>
+      <label><input aria-label="Show secondary clock" type="checkbox" checked={showSecondaryClock} onChange={(event) => setShowSecondaryClock(event.target.checked)} /> Show secondary clock</label>
       {!valid && <output role="alert" data-testid="transaction-time-scale-error">Cycles per Transaction Cycle must be a positive number; tick intervals must be positive whole numbers.</output>}
       <div className="transaction-time-scale-actions">
         <button type="button" data-testid="transaction-time-scale-apply" disabled={!valid} onClick={apply}>Apply</button>

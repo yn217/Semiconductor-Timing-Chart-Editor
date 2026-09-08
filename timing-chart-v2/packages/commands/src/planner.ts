@@ -1162,9 +1162,14 @@ export function planCommand(document: CanonicalDocument, command: SemanticComman
       return { ok: true, document: { ...document, transactions }, changeSet: { transactionSemantics: [transaction.id] }, inverseChangeSet: { transactionSemantics: [transaction.id] } };
     }
     case "transaction.setTimeScale": {
-      const scale = command.scale;
+      const currentScale = document.transactionTimeScale;
+      const scale = command.clearShowSecondaryClock
+        ? (({ showSecondaryClock: _removed, ...rest }) => rest)(
+          { ...currentScale, ...command.scale },
+        )
+        : { ...currentScale, ...command.scale };
       if (!Number.isFinite(scale.clockCyclesPerTransactionCycle) || scale.clockCyclesPerTransactionCycle <= 0 || !Number.isInteger(scale.majorInterval) || scale.majorInterval < 1 || !Number.isInteger(scale.minorInterval) || scale.minorInterval < 1) return fail("invalid", "INVALID_TRANSACTION_TIME_SCALE", "$.scale", "Transaction time scale must use positive finite ratio and positive integer intervals.");
-      if (JSON.stringify(document.transactionTimeScale ?? {}) === JSON.stringify(scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
+      if (JSON.stringify(currentScale ?? {}) === JSON.stringify(scale)) return fail("no-op", "NO_OP", "$", "Transaction time scale is unchanged.");
       return { ok: true, document: { ...document, transactionTimeScale: scale }, changeSet: { transactionSemantics: document.transactions.map((item) => item.id) }, inverseChangeSet: { transactionSemantics: document.transactions.map((item) => item.id) } };
     }
     case "annotation.updateAnchor": {
