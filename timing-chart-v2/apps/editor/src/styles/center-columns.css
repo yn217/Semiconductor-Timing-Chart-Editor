@@ -254,9 +254,17 @@
 .transaction-lane { position: absolute; left: 0; width: 100%; border-bottom: 1px solid #d9e1ea; }
 .transaction-lane > button:has(.transaction-phases) { height: 32px; align-items: start; }
 .transaction-phases { position: absolute; inset: 15px 0 0; pointer-events: none; }
-.transaction-phases small { position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 1px solid #6895bd; background: #c5dcf2; font-size: 9px; line-height: 15px; }
-.transaction-lane > button { position: absolute; top: 4px; z-index: 1; min-width: 18px; height: 20px; display: grid; grid-template-columns: 5px minmax(0,1fr) 5px; align-items: center; overflow: hidden; padding: 0; border: 1px solid #2e70ad; border-radius: 4px; background: #dbeafe; color: #174d7c; font-size: 10px; }
-.transaction-lane > button[data-selected="true"] { outline: 2px solid #0b74de; background: #bcdcff; }
+/* #429/#397 Transaction Mode Product Closure P0-4: derive both the bar's
+   header strip and its phase segments from the one `--transaction-color`
+   custom property set per-bar in transaction-lanes.tsx (Transaction color,
+   falling back to its Group color) -- `color-mix` tints keep text/border
+   contrast reasonable without hand-authoring a second palette, and since
+   custom properties inherit, setting it once on the bar covers its
+   descendant phase `<small>`s too. Absent the property (no Transaction or
+   Group color authored), both fall back to the original static blue. */
+.transaction-phases small { position: absolute; top: 0; bottom: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; border-inline-start: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 70%, black); background: color-mix(in srgb, var(--transaction-color, #2e70ad) 18%, white); font-size: 9px; line-height: 15px; }
+.transaction-lane > button { position: absolute; top: 4px; z-index: 1; min-width: 18px; height: 20px; display: grid; grid-template-columns: 5px minmax(0,1fr) 5px; align-items: center; overflow: hidden; padding: 0; border: 1px solid color-mix(in srgb, var(--transaction-color, #2e70ad) 85%, black); border-radius: 4px; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 25%, white); color: #174d7c; font-size: 10px; }
+.transaction-lane > button[data-selected="true"] { outline: 2px solid #0b74de; background: color-mix(in srgb, var(--transaction-color, #2e70ad) 45%, white); }
 .transaction-lane > button > i { height: 100%; cursor: ew-resize; }
 .transaction-lane span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: grab; }
 
