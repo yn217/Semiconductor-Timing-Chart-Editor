@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { CommandHistorySession } from "@timing-chart-v2/history";
-import { DOCUMENT_RESOURCE_BUDGET, type CommandId } from "@timing-chart-v2/schema";
+import { DOCUMENT_RESOURCE_BUDGET, type CommandId, type TransactionGroupId } from "@timing-chart-v2/schema";
 import { canonicalFixture } from "../fixtures/canonical.js";
 
 const commandId = (value: string) => value as CommandId;
@@ -41,5 +41,17 @@ describe("authoritative product resource budget boundary", () => {
     expect(result).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED" })] });
     expect(session.getSnapshot()).toBe(before);
     expect(session.historyState()).toEqual(beforeHistory);
+  });
+
+  it("enforces the TransactionGroup collection budget at the canonical command boundary", () => {
+    const base = canonicalFixture();
+    const group = (index: number) => ({ id: `budget_txn_group_${index}` as TransactionGroupId, name: `Group ${index}`, order: index });
+    const session = new CommandHistorySession({ ...base, transactionGroups: Array.from({ length: DOCUMENT_RESOURCE_BUDGET.transactionGroupCount }, (_, index) => group(index)) });
+    const before = session.getSnapshot();
+    const historyBefore = session.historyState();
+    const rejected = session.execute({ id: commandId("transaction_group_overflow"), type: "transactionGroup.create", group: group(DOCUMENT_RESOURCE_BUDGET.transactionGroupCount) });
+    expect(rejected).toMatchObject({ ok: false, reason: "invalid", problems: [expect.objectContaining({ code: "RESOURCE_LIMIT_EXCEEDED", path: "$.transactionGroups" })] });
+    expect(session.getSnapshot()).toBe(before);
+    expect(session.historyState()).toEqual(historyBefore);
   });
 });
