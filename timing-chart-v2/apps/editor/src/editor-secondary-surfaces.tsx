@@ -212,6 +212,7 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onRedo={redo}
     onDelete={input.actions.deleteBottomTransaction}
     onCancel={() => dialog.setBottomResetToken((value) => value + 1)}
+    onToggleTransactionSignal={input.actions.toggleTransactionSignal}
   />;
   const bookmarkEditor = <BookmarkEditor
     key={`${selected.bookmark?.id ?? "none"}:${input.revision}:${dialog.bottomResetToken}`}
