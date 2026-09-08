@@ -183,11 +183,16 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
         <div className="transaction-phase-editor" data-testid="transaction-bottom-phase-editor">
           <h4>Phases ({phaseRows.length})</h4>
           <div className="transaction-phase-table">
-            {phaseRows.length > 0 && <div className="transaction-phase-row transaction-phase-row-header" aria-hidden="true"><span>Phase</span><span>Start</span><span>End</span><span /></div>}
+            {phaseRows.length > 0 && <div className="transaction-phase-row transaction-phase-row-header" aria-hidden="true"><span>Phase</span><span>Start</span><span>End</span><span /><span /><span /></div>}
             {phaseRows.map((phase, index) => <div className="transaction-phase-row" key={index} data-phase-index={index}>
               <input aria-label={`Bottom Phase ${index + 1} name`} value={phase.name} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, name: event.target.value } : row))} />
               <input aria-label={`Bottom Phase ${index + 1} start`} type="number" value={phase.start} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, start: Number(event.target.value) } : row))} />
               <input aria-label={`Bottom Phase ${index + 1} end`} type="number" value={phase.end} onChange={(event) => setPhaseRows((rows) => rows.map((row, rowIndex) => rowIndex === index ? { ...row, end: Number(event.target.value) } : row))} />
+              {/* #454: same Reorder precedent as the Inspector's own Phase
+                  table (panels/inspector-panel.tsx) -- pure local draft
+                  array reordering, shared CSS, no separate implementation. */}
+              <button type="button" aria-label={`Move bottom phase ${index + 1} up`} disabled={index === 0} onClick={() => setPhaseRows((rows) => { const next = [...rows]; [next[index - 1], next[index]] = [next[index]!, next[index - 1]!]; return next; })}>↑</button>
+              <button type="button" aria-label={`Move bottom phase ${index + 1} down`} disabled={index === phaseRows.length - 1} onClick={() => setPhaseRows((rows) => { const next = [...rows]; [next[index], next[index + 1]] = [next[index + 1]!, next[index]!]; return next; })}>↓</button>
               <button type="button" aria-label={`Delete bottom phase ${index + 1}`} onClick={() => setPhaseRows((rows) => rows.filter((_, rowIndex) => rowIndex !== index))}>×</button>
             </div>)}
             {phaseRows.length === 0 && <span className="inspector-note">No phases -- the whole Start..End span is one unnamed phase.</span>}
