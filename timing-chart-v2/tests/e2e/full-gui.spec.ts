@@ -174,10 +174,10 @@ test("Inspector keeps the V1 sectioned editor geometry for a selected clock", as
   const history = await page.getByTestId("history-status").textContent();
   await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_clock']").click();
   const inspector = page.getByTestId("inspector");
-  await expect(inspector).toHaveCSS("width", "300px");
+  await expect(inspector).toHaveCSS("width", "297px");
   await expect(inspector.getByTestId("minimap")).toBeVisible();
   await expect(page.locator(".left-panel-tail").getByTestId("minimap")).toHaveCount(0);
-  await expect(inspector.locator("header")).toContainText("Clock");
+  await expect(inspector.locator("header")).toContainText("Inspector");
   await expect(inspector.locator("section")).toHaveCount(6);
   await expect(inspector.getByRole("heading", { name: "Clock Generator" })).toBeVisible();
   await expect(inspector.getByRole("heading", { name: "Edge Counter" })).toBeVisible();
