@@ -293,7 +293,7 @@
    surrounding timeline controls, while their vertical scrolling remains
    local to each pane. The Signal renderer stays single-owner in the right
    pane; TransactionLanes owns the left pane. */
-.cycle-panel.mode-split .split-workspace {
+.cycle-panel.mode-split .cycle-viewport.split-signal-pane {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(420px, 2fr);
   min-width: 0;
@@ -301,8 +301,15 @@
   flex: 1 1 auto;
   overflow: hidden;
 }
-.cycle-panel.mode-split .split-transaction-pane,
-.cycle-panel.mode-split .split-signal-pane {
+.cycle-panel.mode-split .split-transaction-pane {
+  grid-column: 1;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+}
+.cycle-panel.mode-split .split-signal-content {
+  grid-column: 2;
   position: relative;
   min-width: 0;
   min-height: 0;

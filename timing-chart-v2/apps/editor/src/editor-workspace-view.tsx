@@ -42,25 +42,16 @@ export function EditorWorkspaceView({
           as a stray vertical line bleeding through the Tree's content. */}
       {viewMode === "Cycle" && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
       {header}
-      {viewMode === "Split" ? <div className="split-workspace" data-testid="split-workspace">
-        <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">
-          {viewportContent}
-        </div>
-        <div className="cycle-viewport split-signal-pane" ref={viewport} data-testid="cycle-viewport" data-pane="signal" tabIndex={0} aria-label="Signal timing canvas navigation">
+      <div className={`cycle-viewport${viewMode === "Split" ? " split-signal-pane" : ""}`} ref={viewport} data-testid="cycle-viewport" data-pane={viewMode === "Split" ? "signal" : undefined} tabIndex={0} aria-label="Timing canvas navigation">
+        {viewMode === "Split" && <div className="split-transaction-pane" data-pane="transaction" tabIndex={0} aria-label="Transaction pane">{viewportContent}</div>}
+        <div className={`split-signal-content${viewMode === "Split" ? "" : " non-split-signal-content"}`}>
           <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
           <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={ruler} /></div>
           <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band" aria-hidden="true" hidden />
           {viewportLegend}
           <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
         </div>
-      </div> : <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
-        {viewportContent}
-        <div className="geometry-grid" ref={gridLayer} data-testid="geometry-grid" data-grid-enabled={String(gridEnabled)} aria-hidden="true" />
-        <div className="cycle-ruler" data-testid="cycle-ruler" aria-label="Cycle ruler" hidden={!rulerEnabled}><div className="cycle-ruler-content" ref={ruler} /></div>
-        <div className="range-selection-band" data-role="range-selection-band" data-testid="range-selection-band" aria-hidden="true" hidden />
-        {viewportLegend}
-        <div className="surface-host" ref={host} data-testid="cycle-surface" data-snap-enabled={String(snapEnabled)} />
-      </div>}
+      </div>
       {signalSplitEnabled && viewMode === "Cycle" && <>
         <div className="signal-split-divider" data-testid="signal-split-divider" role="separator" aria-label="Signal Split divider" aria-orientation="horizontal" aria-valuemin={15} aria-valuemax={85} aria-valuenow={Math.round(signalSplitRatio * 100)} tabIndex={0} onKeyDown={onSignalSplitKeyDown} onPointerDown={onSignalSplitPointerDown} onPointerMove={onSignalSplitPointerMove} onPointerUp={onSignalSplitPointerUp} onPointerCancel={onSignalSplitPointerUp} />
         <div className="cycle-viewport signal-split-lower" ref={viewportLower} data-testid="cycle-viewport-lower" data-pane="lower" tabIndex={0} aria-label="Lower pane timing canvas navigation">
