@@ -29,6 +29,8 @@ test("toggling Signal Split is view-only and Upper's own scroll position survive
   await expect(page.getByTestId("dirty-status")).toHaveText(before.dirty!);
 
   const viewport = page.getByTestId("cycle-viewport");
+  await page.getByRole("button", { name: "Zoom In", exact: true }).click();
+  await expect(page.getByTestId("zoom-status")).toHaveText("125%");
   await viewport.evaluate((element) => { element.scrollLeft = 60; element.dispatchEvent(new Event("scroll")); });
   await expect(page.getByTestId("cycle-ruler-lower").locator(".cycle-ruler-content")).toHaveCSS("transform", await page.getByTestId("cycle-ruler").locator(".cycle-ruler-content").evaluate((element) => getComputedStyle(element).transform));
 

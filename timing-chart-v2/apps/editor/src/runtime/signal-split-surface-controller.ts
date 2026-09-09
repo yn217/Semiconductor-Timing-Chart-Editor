@@ -20,7 +20,6 @@ export function createSignalSplitSurfaceController(input: TimelineSurfaceRuntime
       if (!signalSplitEnabled) {
         signalSplitRuntimeRef.current?.dispose();
         signalSplitRuntimeRef.current = null;
-        runtime.projection.setPane(undefined);
         forceUpperReprojectRef.current();
         return undefined;
       }
@@ -92,7 +91,6 @@ export function createSignalSplitSurfaceController(input: TimelineSurfaceRuntime
         getTotalHeight: () => lowerProjection.totalHeight,
         dispose: () => { renderCoordinatorLower.dispose(); },
       };
-      runtime.projection.setPane("upper");
       forceUpperReprojectRef.current();
       timelineRuntimeRef.current?.refreshGrid();
       refreshPlayhead.current();
