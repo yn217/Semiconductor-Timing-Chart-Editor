@@ -28,7 +28,17 @@ test("Highlight Position Mode is editable in the Bottom Panel and commits throug
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(modeSelect).toHaveValue("free");
 
-  await modeSelect.selectOption("cycle-snap");
+  const startCycle = page.getByLabel("Inspector annotation anchor cycle");
+  await expect(startCycle).toHaveAttribute("step", "0.01");
+  await startCycle.fill("8.35");
+  await page.getByRole("button", { name: "Apply Anchor" }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
-  await expect(modeSelect).toHaveValue("cycle-snap");
+  await expect(startCycle).toHaveValue("8.35");
+
+  await modeSelect.selectOption("cycle-snap");
+  // Fractional Free coordinates cannot be silently rounded when returning to
+  // Cycle Snap; the existing semantic command rejects the mode flip and
+  // leaves Canonical/History unchanged.
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(modeSelect).toHaveValue("free");
 });
