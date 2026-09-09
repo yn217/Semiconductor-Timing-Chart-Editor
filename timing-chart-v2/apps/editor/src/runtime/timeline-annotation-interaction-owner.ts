@@ -11,7 +11,7 @@ import { resolveAnchorPoint } from "../resolve-anchor-point.js";
 import { nextCommandId } from "../command-id.js";
 import type { DocumentEpoch } from "./document-epoch.js";
 
-type AnnotationField = typeof annotationFields[number];
+type AnnotationField = typeof annotationFields[number] | "verticalSpanStart" | "verticalSpanEnd";
 
 /** Read-only slice of TimelineGeometryOwner this interaction needs. */
 export type AnnotationGeometryPort = Readonly<{
@@ -115,6 +115,7 @@ export class AnnotationInteractionOwner {
     if (!drag.field && !drag.label) { for (const owner of drag.owners.values()) owner.style.translate = `${screenDx}px ${dy}px`; return; }
     const document = this.context.getDocument();
     const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
+    if (annotation?.type === "marker" && (drag.field === "verticalSpanStart" || drag.field === "verticalSpanEnd")) return;
     if (drag.label) {
       if (!annotation) return;
       this.context.publishState();
@@ -125,7 +126,7 @@ export class AnnotationInteractionOwner {
       return;
     }
     if (!drag.field) return;
-    const anchor = annotation?.[drag.field];
+    const anchor = drag.field !== "verticalSpanStart" && drag.field !== "verticalSpanEnd" ? annotation?.[drag.field as typeof annotationFields[number]] : undefined;
     const point = resolveAnchorPoint(anchor, document, this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
     if (!annotation || !anchor || !point) return;
     const desired = { x: point.x + screenDx / currentZoom, y: point.y + dy };
@@ -175,12 +176,18 @@ export class AnnotationInteractionOwner {
     }
     const annotation = document.annotations.find((item) => item.id === [...drag.annotationIds][0]);
     if (!annotation) return;
+    if (annotation.type === "marker" && (drag.field === "verticalSpanStart" || drag.field === "verticalSpanEnd")) {
+      const current = annotation.verticalSpan ?? { mode: "custom" as const, startOffset: 0, endOffset: 0 };
+      const verticalSpan = { ...current, mode: "custom" as const, ...(drag.field === "verticalSpanStart" ? { startOffset: (annotation.verticalSpan?.startOffset ?? 0) + dy } : { endOffset: (annotation.verticalSpan?.endOffset ?? 0) + dy }) };
+      this.context.execute({ id: nextCommandId("annotation_vertical_span_drag"), type: "annotation.updateVerticalSpan", annotationId: annotation.id, verticalSpan });
+      return;
+    }
     if (drag.label) {
       this.context.execute({ id: nextCommandId("annotation_label_drag"), type: "annotation.updateLabelOffset", annotationId: annotation.id, labelOffset: { x: (annotation.labelOffset?.x ?? 0) + dx, y: (annotation.labelOffset?.y ?? -14) + dy } });
       return;
     }
     const field = drag.field ?? annotationFields.find((key) => annotation[key] !== undefined);
-    const anchor = field ? annotation[field] : undefined;
+    const anchor = field && field !== "verticalSpanStart" && field !== "verticalSpanEnd" ? annotation[field as typeof annotationFields[number]] : undefined;
     const point = resolveAnchorPoint(anchor, this.context.getDocument(), this.context.getProjection(), this.context.timelineGeometry.geometryMaps, this.context.timelineGeometry.displayMapping, this.context.timelineGeometry.presentationScale);
     if (!field || !anchor || !point) return;
     const desired = { x: point.x + rawScreenDx / currentZoom, y: point.y + rawScreenDy };
@@ -192,6 +199,7 @@ export class AnnotationInteractionOwner {
       this.context.rendererHost.dataset.snapDistance = String(normalizeSnapDistance(snap.distance));
       this.context.rendererHost.dataset.snapCycle = String(snap.anchor.cycle);
     }
+    if (field === "verticalSpanStart" || field === "verticalSpanEnd") return;
     this.context.execute({ id: nextCommandId("annotation_drag"), type: "annotation.setAnchor", annotationId: annotation.id, field, anchor: nextAnchor });
   };
 
