@@ -295,7 +295,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
       viewport.removeEventListener("scroll", update);
       window.removeEventListener("resize", update);
     };
-  }, [documentEpoch, totalHeight]);
+  }, [documentEpoch, totalHeight, document.transactions.length, filter]);
   const virtualTop = Math.max(0, virtualWindow.top - 480);
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + 480);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
