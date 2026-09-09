@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { composeRibbon, type RibbonContextGroups } from "../../apps/editor/src/ribbon-composition.js";
-import type { RibbonGroupSpec } from "../../apps/editor/src/ribbon-schema.js";
+import { resolveRibbonPresentation, type RibbonGroupSpec } from "../../apps/editor/src/ribbon-schema.js";
 
 function group(id: string): RibbonGroupSpec {
   return { id, majorGroup: id, caption: id, items: [] };
@@ -49,5 +49,13 @@ describe("composeRibbon (#405)", () => {
     // two-value contract rather than silently needing a third case.
     const composed = composeRibbon(groups, { viewMode: "Split", activeContext: "Signal" });
     expect(composed.map((item) => item.id)).toEqual(["edit", "clipboard", "insert", "zoom"]);
+  });
+
+  it("degrades command presentation deterministically without breaking word labels", () => {
+    const presentation = { preferredSize: "large" as const, compactSize: "small" as const, overflow: "allowed" as const };
+    expect(resolveRibbonPresentation(presentation, "large")).toBe("large");
+    expect(resolveRibbonPresentation(presentation, "medium")).toBe("small");
+    expect(resolveRibbonPresentation({ ...presentation, overflow: "never" }, "icon")).toBe("icon");
+    expect(resolveRibbonPresentation({ ...presentation, overflow: "preferred" }, "small")).toBe("overflow");
   });
 });
