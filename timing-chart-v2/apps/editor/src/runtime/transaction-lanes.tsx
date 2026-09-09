@@ -289,7 +289,8 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + 480);
   const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
   const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
-  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight));
+  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
+  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || bandContainsSelected(band));
   const isTransactionVisible = (band: LaneBand, transaction: Transaction) => {
     if (selectedId === transaction.id) return true;
     const row = band.rowOf.get(transaction.id) ?? 0;
