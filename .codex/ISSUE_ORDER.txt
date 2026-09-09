@@ -3,7 +3,7 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-09 20:25 JST
+# Last reconciled by ChatGPT: 2026-09-09 20:33 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
@@ -11,54 +11,50 @@
 #
 # Observed live state at reconciliation:
 #   main = 6566c0c merge #537 transaction tree long-name tooltip
-#   #282 stable validation/rule-contract closure = CLOSED
-#   #414 Time Outline GUI remains OPEN
-#   therefore #415 remains dependency-waiting and MUST NOT start
-#   #534 Transaction Bottom empty-state simplification = OPEN, Claude/product GUI lane
+#   #282 = CLOSED
+#   #163 = OPEN and explicitly promoted for Codex
+#   #414 = OPEN
+#   #415 = intentionally SKIPPED/DEFERRED by user instruction; do not auto-promote when #414 closes
+#   #534 = OPEN, Claude/product GUI lane
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: WAITING
+# STATUS: ACTIVE
 #
-# No executable Codex Issue is currently assigned.
-# #282 is complete and removed.
-# #415 must not start until live #414 is completed/closed and the control queue is reconciled.
+# 1) #163 Semantic Command + History / ChangeSet closure.
+# Re-audit latest main first. Much of the foundation already exists; do not rebuild it.
+# Focus on remaining concrete defects only: Comment Row typed mutation contract, rejected-operation
+# atomicity including transient side effects, ChangeSet exactness (especially row/Y invalidation),
+# bounded-cost Dirty/savepoint behavior if still present, History scaling evidence/decision, and
+# current Signal property mutation coverage required by production semantics.
+163
 #
-# Codex report while this remains true:
-#   WAITING_FOR_NEXT_CODEX_ISSUE
-#
-# Do not manufacture audit/refactor/test work merely to remain active.
-# Do not self-promote GUI/product/mixed Issues.
+# After #163:
+# - add executable evidence to Issue #163;
+# - close only when current acceptance is actually satisfied;
+# - push/verify main == origin/main;
+# - re-read this file before taking any next issue.
 #
 # ============================================================================
-# HIGH-PRIORITY DEPENDENCY WAIT
+# EXPLICITLY SKIPPED / DEFERRED
 # ============================================================================
 # #415 Nested collapse + shared DisplayTimeMapping / Axis Break
-# Owner: Codex
-# Depends on: #414 completed/closed.
-# DO NOT start #415 while #414 is open.
+# Owner: Codex, but intentionally skipped by current user instruction.
+# Dependency remains #414 completed/closed, but even after #414 closes, DO NOT auto-promote #415.
+# #415 may start only after a later explicit queue update/user instruction promotes it.
 #
-# When #414 closes:
-# - reconcile live GitHub state and this file;
-# - promote #415 as highest-priority Codex task because it unblocks #416;
-# - live #414 completed/closed is mandatory; do not infer readiness from code alone.
-#
-# Time Outline chain:
+# Time Outline chain remains:
 #   DONE  #412 -> #413
 #   NOW   Claude/product GUI #414
-#   WAIT  Codex #415
-#   THEN  Claude #416 closure
+#   SKIP  Codex #415 until explicitly re-promoted
+#   WAIT  Claude #416 on #415
 #
-# ============================================================================
-# DEFERRED TO AVOID CROSS-AGENT CONFLICT
-# ============================================================================
-# #463 Transaction lane virtualization/performance is independent of #414, but touches the
-# Transaction lane runtime being exercised by Claude/product acceptance #397/#429.
-# Keep deferred until that surface is quiescent or ownership is explicitly transferred.
+# #463 Transaction lane virtualization/performance remains deferred while Claude/product acceptance
+# #397/#429 is actively exercising Transaction lane presentation/runtime.
 #
-# #258 broad MinimalCycleView decomposition remains deferred while Claude/product agents are
-# actively modifying shared editor surfaces. Avoid refactor-driven merge conflict churn.
+# #258 broad MinimalCycleView decomposition remains deferred while product agents are modifying
+# shared editor surfaces; avoid refactor-driven merge conflict churn.
 #
 # #495 mixes Reset Core semantics with production GUI work. Split/transfer a bounded Core child
 # before Codex consumes it wholesale.
@@ -87,7 +83,7 @@
 #   #534 Transaction Bottom empty-state simplification — Claude/product quick UX follow-up
 #   #397 Transaction + Split sample-driven final acceptance — Claude/product
 #   #429 Transaction parent closure — Claude/product; close after #397 evidence
-#   #416 Time Outline final Ribbon/export/E2E closure — Claude after #415
+#   #416 Time Outline final Ribbon/export/E2E closure — blocked by skipped #415
 #   #424 Marker vertical-span GUI/product completion
 #   #419 Highlight Snap/Free GUI/product completion
 #   #426 Bottom Panel consolidation
@@ -104,9 +100,9 @@
 # ============================================================================
 # For each executable issue:
 # 1. sync latest origin/main;
-# 2. read the live GitHub Issue and inspect the current production owner;
-# 3. reproduce/audit the concrete gap before editing;
-# 4. if current main already satisfies it, collect executable evidence and close; do not manufacture code;
+# 2. read the live GitHub Issue and current comments;
+# 3. inspect/reproduce the concrete current gap before editing;
+# 4. if current main already satisfies a criterion, prove it; do not manufacture code;
 # 5. otherwise implement the minimum coherent production fix;
 # 6. add focused regression tests;
 # 7. run applicable typecheck/unit/architecture/performance/Chromium checks and git diff --check;
