@@ -7,8 +7,10 @@ import { expect, test } from "@playwright/test";
 // drifted out of alignment with each other, and there was no column
 // header at all. This makes the list read as one full-width, aligned
 // table: a header row repeats the exact fixed-width grid every row's
-// button uses, and every row always renders all 7 data columns (an em
+// button uses, and every row always renders all 8 data columns (an em
 // dash placeholder when a column doesn't apply) so nothing shifts.
+// Description (Transaction Mode GUI realignment) is the newest column,
+// appended after the original 7 rather than interspersed.
 
 const columnXs = async (locator: import("@playwright/test").Locator) => (await locator.evaluateAll((cells) => cells.map((cell) => Math.round(cell.getBoundingClientRect().x))));
 
@@ -33,7 +35,7 @@ for (const [width, height] of [[1672, 941], [1280, 720]] as const) {
     const list = editor.locator(".transaction-list");
     const header = list.locator(".transaction-list-header");
     await expect(header).toBeVisible();
-    await expect(header).toHaveText("NameCyclesLaneLinksDurationGroupPhases");
+    await expect(header).toHaveText("NameCyclesLaneLinksDurationGroupPhasesDescription");
 
     const rows = list.locator(".transaction-list-row");
     await expect(rows).toHaveCount(2);

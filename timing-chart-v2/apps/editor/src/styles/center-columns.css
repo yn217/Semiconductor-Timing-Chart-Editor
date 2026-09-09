@@ -387,14 +387,14 @@
    with every other row (and with the header) the moment two rows' text
    lengths differ. Fixed widths make every row (and the header, which
    repeats this exact template) share identical column boundaries. */
-.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 34px; display: grid; grid-template-columns: 12px minmax(0,1fr) 52px 56px 52px 64px 72px 60px; align-items: center; gap: 7px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; padding-inline: 8px; overflow: hidden; }
+.transaction-list-row > button { flex: 1 1 auto; min-width: 0; height: 34px; display: grid; grid-template-columns: 12px minmax(0,1fr) 52px 56px 52px 64px 72px 60px minmax(0,1fr); align-items: center; gap: 7px; border: 1px solid #c2cfdd; border-radius: 4px; text-align: left; padding-inline: 8px; overflow: hidden; }
 .transaction-list-row > button > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; color: #5c687c; }
 /* #397: column header row -- the spacer matches the row checkbox's fixed
    width and `.transaction-list-header-cells` repeats the row button's own
    grid-template-columns/gap exactly, so header and every row line up. */
 .transaction-list-header { display: flex; align-items: center; gap: 4px; padding: 0 2px; }
 .transaction-list-header-spacer { flex: 0 0 auto; width: 13px; }
-.transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(0,1fr) 52px 56px 52px 64px 72px 60px; gap: 7px; padding-inline: 8px; color: #5c687c; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
+.transaction-list-header-cells { flex: 1 1 auto; min-width: 0; display: grid; grid-template-columns: 12px minmax(0,1fr) 52px 56px 52px 64px 72px 60px minmax(0,1fr); gap: 7px; padding-inline: 8px; color: #5c687c; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .02em; }
 .transaction-list-header-cells > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .transaction-row-swatch { width: 10px; height: 10px; border-radius: 3px; border: 1px solid #0000001a; }
 /* #388: Bookmark's Bottom Panel list -- Marker | Name | Cycle | Comment

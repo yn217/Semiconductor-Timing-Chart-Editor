@@ -206,7 +206,7 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
           spacer matches the row's checkbox column so the cell grid below it
           lines up exactly with each row's button (same grid-template-columns
           CSS rule, reused rather than duplicated). */}
-      <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span></span></div>
+      <div className="transaction-list-header" aria-hidden="true"><span className="transaction-list-header-spacer" /><span className="transaction-list-header-cells"><span /><span>Name</span><span>Cycles</span><span>Lane</span><span>Links</span><span>Duration</span><span>Group</span><span>Phases</span><span>Description</span></span></div>
     </>}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: transactionFirstVisibleIndex * transactionRowHeight }} />}{renderedTransactions.map((item) => <div className="transaction-list-row" key={item.id}>
       <input type="checkbox" aria-label={`Select ${item.name}`} checked={validCheckedIds.has(item.id)} onChange={() => toggleChecked(item.id)} />
       <button type="button" data-selected={String(item.id === transaction?.id)} onClick={() => onSelect(item.id)}>
@@ -224,6 +224,13 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
         <i className="transaction-row-swatch" aria-hidden="true" style={{ background: item.color ?? (item.groupId === undefined ? "#8895a7" : document.transactionGroups?.find((group) => group.id === item.groupId)?.color ?? "#8895a7") }} />
         <b>{item.name}</b><span>{item.start}–{item.end}</span><span>{item.laneId ?? "lane_0"}</span><span>{item.linkedSignals?.length ?? 0} links</span>
         <span>{item.end - item.start} cycles</span><span>{item.groupId === undefined ? "—" : groupNameById.get(item.groupId) ?? "Group"}</span><span>{item.phases?.length ?? 0} phases</span>
+        {/* Transaction Mode GUI realignment: Description is a real,
+            already-persisted field (Transaction.description, #454) with no
+            column in this table at all -- appended after the original
+            columns per this row's own established convention (see the
+            comment above), never interspersed, so no existing test's
+            accessible-name-order assertion breaks. */}
+        <span title={item.description}>{item.description ?? "—"}</span>
       </button>
     </div>)}{shouldVirtualizeTransactions && <div aria-hidden="true" style={{ height: (visibleTransactions.length - transactionLastVisibleIndex) * transactionRowHeight }} />}
     {visibleTransactions.length === 0 && document.transactions.length > 0 && search.trim() !== "" && <p className="inspector-note">No Transactions match this search.</p>}</div>
