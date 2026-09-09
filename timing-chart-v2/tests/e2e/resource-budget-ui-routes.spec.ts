@@ -119,6 +119,22 @@ test("annotation import is rejected at the resource boundary without replacing t
   await expect(page.getByTestId("problems-panel")).toContainText("RESOURCE_LIMIT_EXCEEDED");
 });
 
+test("annotation import rejects deeply nested JSON before migration or replacement", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await host.locator("[data-role='frozen-row'][data-row-id='sig_cycle_request']").click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByTestId("annotation-toolbar").getByRole("button", { name: "Add annotation", exact: true }).click();
+  const beforeRevision = await host.getAttribute("data-canonical-revision");
+  let nested: unknown = {};
+  for (let index = 0; index < 140; index += 1) nested = { nested };
+  await page.getByLabel("Import annotations").setInputFiles({ name: "deep-annotations.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(nested)) });
+  const editor = page.getByTestId("annotation-editor");
+  await expect(editor.getByTestId("annotation-import-status")).toContainText("Document JSON nesting depth exceeds the import limit.");
+  await expect(host).toHaveAttribute("data-canonical-revision", beforeRevision!);
+});
+
 test("Advanced JSON rejects a resource overflow before document replacement", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
