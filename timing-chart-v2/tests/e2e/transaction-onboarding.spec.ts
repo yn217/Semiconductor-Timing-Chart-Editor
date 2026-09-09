@@ -57,19 +57,26 @@ async function createReadRequestTransaction(page: Page, { withLinks = false }: {
   }
 }
 
-test("Transaction Mode shows an explanatory empty state and does not mutate the document merely by entering it", async ({ page }) => {
+test("Transaction Mode shows the create form directly and does not mutate the document merely by entering it", async ({ page }) => {
   await openTransactionMode(page);
   const host = page.getByTestId("cycle-surface");
   const before = {
     revision: await host.getAttribute("data-canonical-revision"),
     history: await page.getByTestId("history-status").textContent(),
   };
-  const empty = page.getByTestId("transaction-empty-state");
-  await expect(empty).toBeVisible();
-  await expect(empty).toContainText("No Transactions yet");
-  await expect(empty).toContainText("time span");
+  await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
+  await expect(page.getByLabel("New Transaction name")).toBeVisible();
+  await expect(page.getByText("No Transactions match this search.")).toHaveCount(0);
   await expect(host).toHaveAttribute("data-canonical-revision", before.revision!);
   await expect(page.getByTestId("history-status")).toHaveText(before.history!);
+});
+
+test("Transaction search empty state is reserved for an active no-match filter", async ({ page }) => {
+  await openTransactionMode(page);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const search = page.getByLabel("Search transactions");
+  await search.fill("no-such-transaction");
+  await expect(page.getByText("No Transactions match this search.")).toBeVisible();
 });
 
 test("Create Transaction removes the empty state as a single History entry, and Undo/Redo restores it exactly", async ({ page }) => {
@@ -85,7 +92,8 @@ test("Create Transaction removes the empty state as a single History entry, and 
   await page.getByTestId("ribbon").getByRole("button", { name: "Undo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 1");
   await expect(page.getByTestId("transaction-lanes").locator("[data-transaction-id]")).toHaveCount(0);
-  await expect(page.getByTestId("transaction-empty-state")).toBeVisible();
+  await expect(page.getByTestId("transaction-empty-state")).toHaveCount(0);
+  await expect(page.getByLabel("New Transaction name")).toBeVisible();
 
   await page.getByTestId("ribbon").getByRole("button", { name: "Redo", exact: true }).click();
   await expect(page.getByTestId("history-status")).toHaveText("History 1 / Redo 0");
