@@ -435,8 +435,16 @@ export function MinimalCycleView() {
       const target = event.target as HTMLElement | null;
       setActivePaneRef.current(target?.closest(".transaction-lanes") ? "transaction" : "signal");
     };
+    const onFocusIn = (event: FocusEvent) => {
+      const target = event.target as HTMLElement | null;
+      setActivePaneRef.current(target?.closest(".transaction-lanes") ? "transaction" : "signal");
+    };
     root.addEventListener("pointerdown", onPointerDownCapture, { capture: true });
-    return () => root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
+    root.addEventListener("focusin", onFocusIn);
+    return () => {
+      root.removeEventListener("pointerdown", onPointerDownCapture, { capture: true });
+      root.removeEventListener("focusin", onFocusIn);
+    };
   }, []);
   // View-only presentation of `activePane` -- an imperative DOM attribute
   // (same reasoning as above: `cycle-viewport` isn't this file's JSX) so

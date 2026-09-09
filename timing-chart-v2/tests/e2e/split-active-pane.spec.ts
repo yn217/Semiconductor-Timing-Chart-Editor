@@ -33,8 +33,8 @@ test("Split active pane follows clicks on the Signal surface vs Transaction lane
   // ActiveContext follows: the Ribbon shows Signal-context groups again.
   await expect(page.getByTestId("ribbon").locator("[data-major-group='Layout']")).toHaveCount(1);
 
-  // Clicking back on the Transaction lanes flips it back.
-  await page.locator(".transaction-lanes").click({ position: { x: 40, y: 8 } });
+  // Focusing a Transaction row also claims pane ownership.
+  await page.locator(".transaction-lane-label-row").first().focus();
   await expect(viewport).toHaveAttribute("data-active-pane", "transaction");
   await expect(page.getByTestId("active-pane-status")).toHaveText("Active Pane: Transaction");
   await expect(page.getByTestId("history-status")).toHaveText(before!);
