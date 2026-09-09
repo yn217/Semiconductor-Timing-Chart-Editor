@@ -13,16 +13,53 @@ const GROUP_HEADER_HEIGHT = 24;
 // gives a deterministic, minimal-row assignment with no dependency on
 // document/array order beyond that sort.
 function assignStackRows(transactions: readonly Transaction[]): { readonly rowOf: ReadonlyMap<TransactionId, number>; readonly rowCount: number } {
-  const sorted = [...transactions].sort((left, right) => left.start - right.start);
-  const rowEnds: number[] = [];
+  const sorted = [...transactions].sort((left, right) => left.start - right.start || left.end - right.end || left.id.localeCompare(right.id));
+  // A linear scan of every existing row made dense lanes quadratic. Keep the
+  // next available row in a min-heap keyed by its end cycle instead.
+  const available: Array<{ end: number; row: number }> = [];
+  const push = (item: { end: number; row: number }) => {
+    available.push(item);
+    let index = available.length - 1;
+    while (index > 0) {
+      const parent = Math.floor((index - 1) / 2);
+      const current = available[index]!;
+      const parentItem = available[parent]!;
+      if (parentItem.end < current.end || (parentItem.end === current.end && parentItem.row <= current.row)) break;
+      available[index] = parentItem;
+      available[parent] = current;
+      index = parent;
+    }
+  };
+  const pop = () => {
+    const result = available[0];
+    const last = available.pop();
+    if (last && available.length > 0) {
+      available[0] = last;
+      let index = 0;
+      while (true) {
+        const left = index * 2 + 1;
+        const right = left + 1;
+        let smallest = index;
+        if (left < available.length && (available[left]!.end < available[smallest]!.end || (available[left]!.end === available[smallest]!.end && available[left]!.row < available[smallest]!.row))) smallest = left;
+        if (right < available.length && (available[right]!.end < available[smallest]!.end || (available[right]!.end === available[smallest]!.end && available[right]!.row < available[smallest]!.row))) smallest = right;
+        if (smallest === index) break;
+        const current = available[index]!;
+        available[index] = available[smallest]!;
+        available[smallest] = current;
+        index = smallest;
+      }
+    }
+    return result!;
+  };
   const rowOf = new Map<TransactionId, number>();
+  let rowCount = 0;
   for (const transaction of sorted) {
-    let row = rowEnds.findIndex((end) => end <= transaction.start);
-    if (row === -1) { row = rowEnds.length; rowEnds.push(transaction.end); }
-    else rowEnds[row] = transaction.end;
+    const reusable = available[0] !== undefined && available[0].end <= transaction.start ? pop() : undefined;
+    const row = reusable?.row ?? rowCount++;
     rowOf.set(transaction.id, row);
+    push({ end: transaction.end, row });
   }
-  return { rowOf, rowCount: Math.max(1, rowEnds.length) };
+  return { rowOf, rowCount: Math.max(1, rowCount) };
 }
 
 type LaneBand = { readonly key: string; readonly laneId: string; readonly groupId: string | undefined; readonly labelTop: number; readonly trackTop: number; readonly labelHeight: number; readonly trackHeight: number; readonly rowOf: ReadonlyMap<TransactionId, number>; readonly treeRowOf: ReadonlyMap<TransactionId, number> };

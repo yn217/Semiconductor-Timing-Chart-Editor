@@ -92,7 +92,10 @@ export function TransactionEditor({ transaction, document, history, onSelect, co
     const nextScrollTop = Math.max(0, selectedIndex * transactionRowHeight - transactionOverscan * transactionRowHeight);
     setTransactionListScrollTop(nextScrollTop);
     if (transactionListViewportRef.current) transactionListViewportRef.current.scrollTop = nextScrollTop;
-  }, [shouldVirtualizeTransactions, transaction?.id, visibleTransactions, transactionOverscan, transactionRowHeight]);
+  // Selection is the explicit reveal request. Do not depend on the filtered
+  // array identity: canonical edits recreate that array and used to snap the
+  // user's manual scroll back to the selected row on every edit.
+  }, [shouldVirtualizeTransactions, transaction?.id, transactionOverscan, transactionRowHeight]);
   const duplicateSelected = () => {
     if (!transaction) return;
     const newTransactionId = nextEntityId("transaction", document) as TransactionId;
