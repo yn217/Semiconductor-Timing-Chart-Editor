@@ -3,32 +3,33 @@
 # AUTHORITATIVE CODEX QUEUE
 # Branch: codex-control
 # Path: .codex/ISSUE_ORDER.txt
-# Last reconciled by ChatGPT: 2026-09-09 07:35 JST
+# Last reconciled by ChatGPT: 2026-09-09 20:25 JST
 #
 # Codex implements on main and only READS codex-control.
 # Never merge/cherry-pick codex-control into main.
 # Parsing rule: exactly one executable GitHub Issue number per non-comment line.
 #
 # Observed live state at reconciliation:
-#   main = 3d62d1a test(transaction): use stable ribbon create path in drag specs
-#   #530 Transaction time-scale optional field / Secondary Clock / Save-Open = CLOSED
-#   #529 DocumentEpoch transient-state generation boundary = CLOSED
-#   prior independent queue #461 #328 #464 #462 = CLOSED
-#   #414 remains OPEN; therefore #415 remains dependency-waiting and MUST NOT start.
+#   main = 6566c0c merge #537 transaction tree long-name tooltip
+#   #282 stable validation/rule-contract closure = CLOSED
+#   #414 Time Outline GUI remains OPEN
+#   therefore #415 remains dependency-waiting and MUST NOT start
+#   #534 Transaction Bottom empty-state simplification = OPEN, Claude/product GUI lane
 #
 # ============================================================================
 # CURRENT CODEX EXECUTABLE QUEUE
 # ============================================================================
-# STATUS: ACTIVE
+# STATUS: WAITING
 #
-# 1) Finish the remaining stable validation/rule-contract closure work.
-# Existing comments show substantial typed descriptor/inventory groundwork already exists.
-# Re-audit latest main first; do not rebuild completed foundations.
-# Focus on machine-checked emitted-code inventory/drift protection, cross-layer compatibility,
-# locale-independent structured diagnostics, and stable code/path/entityId evidence.
-282
+# No executable Codex Issue is currently assigned.
+# #282 is complete and removed.
+# #415 must not start until live #414 is completed/closed and the control queue is reconciled.
 #
-# After every issue, re-read this file and live GitHub state.
+# Codex report while this remains true:
+#   WAITING_FOR_NEXT_CODEX_ISSUE
+#
+# Do not manufacture audit/refactor/test work merely to remain active.
+# Do not self-promote GUI/product/mixed Issues.
 #
 # ============================================================================
 # HIGH-PRIORITY DEPENDENCY WAIT
@@ -39,9 +40,8 @@
 # DO NOT start #415 while #414 is open.
 #
 # When #414 closes:
-# - finish the currently active bounded Codex issue safely;
-# - re-read live GitHub state and this file;
-# - promote #415 ahead of lower-priority independent work because it unblocks #416;
+# - reconcile live GitHub state and this file;
+# - promote #415 as highest-priority Codex task because it unblocks #416;
 # - live #414 completed/closed is mandatory; do not infer readiness from code alone.
 #
 # Time Outline chain:
@@ -67,6 +67,7 @@
 # COMPLETED / REMOVED FROM CODEX QUEUE
 # ============================================================================
 # Do not re-add merely for another audit or extra tests:
+#   #282
 #   #530 #529
 #   #461 #328 #464 #462
 #   #481 #459 #460
@@ -82,7 +83,8 @@
 # ============================================================================
 # GUI / PRODUCT LANES — NON-EXECUTABLE BY CODEX AS WHOLE ISSUES
 # ============================================================================
-#   #414 Time Outline GUI — Claude NOW
+#   #414 Time Outline GUI — Claude NOW / highest priority
+#   #534 Transaction Bottom empty-state simplification — Claude/product quick UX follow-up
 #   #397 Transaction + Split sample-driven final acceptance — Claude/product
 #   #429 Transaction parent closure — Claude/product; close after #397 evidence
 #   #416 Time Outline final Ribbon/export/E2E closure — Claude after #415
