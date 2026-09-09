@@ -158,6 +158,34 @@ test("concurrent Open requests are latest-request-wins", async ({ page }) => {
   await expect(page.getByTestId("history-status")).toHaveText("History 0 / Redo 0");
 });
 
+test("Open rechecks Dirty after a delayed file read", async ({ page }) => {
+  await page.addInitScript(() => {
+    const nativeText = Blob.prototype.text;
+    Object.assign(globalThis, { __delayedOpenResolve: undefined as (() => void) | undefined });
+    File.prototype.text = function () {
+      const file = this;
+      return new Promise<string>((resolve, reject) => {
+        (globalThis as typeof globalThis & { __delayedOpenResolve?: () => void }).__delayedOpenResolve = () => { void nativeText.call(file).then(resolve, reject); };
+      });
+    };
+  });
+  await page.goto("/");
+  const replacement = canonicalFixture();
+  replacement.document.title = "Delayed Replacement";
+  const input = page.locator("input[accept='.json,.tcd']");
+  await input.setInputFiles({ name: "delayed-replacement.tcd", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(replacement)) });
+
+  // The Open read is pending. Make the current document dirty before the
+  // lifecycle reaches its replacement/confirmation decision boundary.
+  await makeDirty(page);
+  await page.evaluate(() => (globalThis as typeof globalThis & { __delayedOpenResolve?: () => void }).__delayedOpenResolve?.());
+  await expect(page.getByTestId("unsaved-file-dialog")).toBeVisible();
+  await page.getByTestId("unsaved-cancel").click();
+  await expect(page.getByTestId("unsaved-file-dialog")).toHaveCount(0);
+  await expect(page.locator(".app-titlebar h1")).not.toHaveText("Delayed Replacement");
+  await expect(page.getByTestId("dirty-status")).toHaveText("Modified");
+});
+
 test("Open atomically clears document-scoped selection, pin, filter and timeline state", async ({ page }) => {
   await page.goto("/");
   const host = page.getByTestId("cycle-surface");
