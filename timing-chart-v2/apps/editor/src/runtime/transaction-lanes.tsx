@@ -208,7 +208,17 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     else laneTransactionsByKey.set(key, [transaction]);
     transactionCountByGroup.set(transaction.groupId, (transactionCountByGroup.get(transaction.groupId) ?? 0) + 1);
   }
-  const hasGroups = groups.length > 0 && document.transactions.some((transaction) => transaction.groupId !== undefined);
+  // Transaction Mode GUI realignment: this used to also require "at least
+  // one Transaction already references a Group" -- a freshly-created,
+  // still-empty Group (the Tree's own "+" -> Add Transaction Group button)
+  // produced a real History entry with zero visible change anywhere,
+  // reading as "grouping doesn't work" even though the Group genuinely
+  // existed in the document. A Group's existence alone is now enough to
+  // switch into grouped layout, and an empty Group still gets its own
+  // header row (0 count, no lanes under it) -- the same "you can see what
+  // you just created" contract the flat/ungrouped layout already gives
+  // every newly-created Transaction.
+  const hasGroups = groups.length > 0;
   type Section = { readonly groupId: string | undefined; readonly label: string | undefined; readonly color: string | undefined; readonly lanes: readonly string[] };
   const sections: readonly Section[] = hasGroups
     ? (() => {
@@ -220,11 +230,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
           lanesByGroup.get(key)!.add(lane);
         }
         const ordered = [...groups].sort((left, right) => left.order - right.order);
-        const result: Section[] = [];
-        for (const group of ordered) {
-          const lanes = [...(lanesByGroup.get(group.id) ?? [])].sort();
-          if (lanes.length > 0) result.push({ groupId: group.id, label: group.name, color: group.color, lanes });
-        }
+        const result: Section[] = ordered.map((group) => ({ groupId: group.id, label: group.name, color: group.color, lanes: [...(lanesByGroup.get(group.id) ?? [])].sort() }));
         const ungroupedLanes = [...(lanesByGroup.get(undefined) ?? [])].sort();
         if (ungroupedLanes.length > 0) result.push({ groupId: undefined, label: "Ungrouped", color: undefined, lanes: ungroupedLanes });
         return result;
@@ -271,10 +277,35 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
     }
   }
   const totalHeight = Math.max(labelCursor, trackCursor, LANE_ROW_HEIGHT);
+  const [virtualWindow, setVirtualWindow] = useState({ top: 0, height: 900 });
+  useEffect(() => {
+    const laneRoot = owner.current;
+    const viewport = laneRoot?.closest<HTMLElement>(".cycle-viewport");
+    if (!viewport) return;
+    const update = () => setVirtualWindow({ top: viewport.scrollTop, height: viewport.clientHeight || 900 });
+    update();
+    viewport.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      viewport.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [documentEpoch, totalHeight]);
+  const virtualTop = Math.max(0, virtualWindow.top - 480);
+  const virtualBottom = Math.min(totalHeight, virtualWindow.top + virtualWindow.height + 480);
+  const isVisible = (top: number, height: number) => top < virtualBottom && top + height > virtualTop;
+  const visibleGroupHeaders = groupHeaders.filter((header) => isVisible(header.labelTop, GROUP_HEADER_HEIGHT));
+  const bandContainsSelected = (band: LaneBand) => selectedId !== undefined && (laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).some((transaction) => transaction.id === selectedId);
+  const visibleLaneBands = laneBands.filter((band) => isVisible(band.labelTop, band.labelHeight) || bandContainsSelected(band));
+  const isTransactionVisible = (band: LaneBand, transaction: Transaction) => {
+    if (selectedId === transaction.id) return true;
+    const row = band.rowOf.get(transaction.id) ?? 0;
+    return isVisible(band.trackTop + 4 + row * LANE_ROW_HEIGHT, LANE_ROW_HEIGHT);
+  };
 
   return <section ref={owner} className="transaction-lanes" data-testid="transaction-lanes" style={{ "--transaction-zoom": zoom, height: totalHeight } as React.CSSProperties}>
     <div className="transaction-lane-labels">
-      {groupHeaders.map((header) => {
+      {visibleGroupHeaders.map((header) => {
         const group = header.groupId === undefined ? undefined : transactionGroupById.get(header.groupId);
         return <div key={header.key} className="transaction-group-header" data-testid="transaction-group-header" data-collapsed={String(header.collapsed)} style={{ top: header.labelTop, height: GROUP_HEADER_HEIGHT }}>
           <button type="button" className="transaction-group-header-chevron" aria-label={header.collapsed ? `Expand ${header.label}` : `Collapse ${header.label}`} aria-expanded={!header.collapsed} onClick={() => toggleGroupCollapsed(header.groupId ?? "ungrouped")}>{header.collapsed ? "▶" : "▼"}</button>
@@ -289,7 +320,7 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
           {group && <button type="button" className="transaction-group-header-delete" aria-label={`Ungroup ${group.name}`} title="Ungroup (deletes the Group, keeps its Transactions)" onClick={() => commands.deleteTransactionGroup(group.id)}>×</button>}
         </div>;
       })}
-      {laneBands.map((band) => {
+      {visibleLaneBands.map((band) => {
         // #451/#452 convergence: the same per-Transaction rows the central
         // bars occupy are also listed here, by name, in this sticky label
         // column -- this *is* Transaction Mode's left Tree content for the
@@ -306,15 +337,15 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
               once it was cut off. `title` is the same native-tooltip
               affordance the rest of the app already uses for truncated
               text, not a new pattern. */}
-          {laneTransactions.map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
+          {laneTransactions.filter((transaction) => isTransactionVisible(band, transaction)).map((transaction) => <button type="button" key={transaction.id} className="transaction-lane-label-row" data-testid={`transaction-tree-row-${transaction.id}`} data-selected={String(selectedId === transaction.id)} title={transaction.name} style={{ top: 4 + (band.treeRowOf.get(transaction.id) ?? 0) * LANE_ROW_HEIGHT }} onClick={() => onSelect(transaction.id)}><i className="transaction-lane-label-swatch" aria-hidden="true" style={{ background: transaction.color ?? transactionGroupById.get(transaction.groupId ?? "")?.color ?? "#8895a7" }} />{transaction.name}</button>)}
         </span>;
       })}
     </div>
     <div className="transaction-track" style={{ height: totalHeight }}>
       <div className="transaction-geometry-guides" aria-hidden="true">{cycleXs.map((value) => <i className="transaction-geometry-line" key={`cycle-${value.cycle}`} data-cycle={value.cycle} style={{ left: value.x }} />)}</div>
-      {groupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
-      {laneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
-        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).map((transaction) => {
+      {visibleGroupHeaders.map((header) => <div key={header.key} className="transaction-group-header-band" aria-hidden="true" style={{ top: header.trackTop, height: GROUP_HEADER_HEIGHT }} />)}
+      {visibleLaneBands.map((band) => <div className="transaction-lane" key={band.key} data-lane-id={band.laneId} style={{ top: band.trackTop, height: band.trackHeight }}>
+        {(laneTransactionsByKey.get(laneKey(band.groupId, band.laneId)) ?? []).filter((transaction) => isTransactionVisible(band, transaction)).map((transaction) => {
           const startX = x(transaction.start);
           const endX = x(transaction.end);
           if (startX === undefined || endX === undefined) return null;

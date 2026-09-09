@@ -1,5 +1,20 @@
 import type { ReactNode } from "react";
 
+export type RibbonPresentationSize = "large" | "medium" | "small" | "icon";
+export type RibbonOverflowPolicy = "never" | "allowed" | "preferred";
+export type RibbonPresentation = Readonly<{ preferredSize: RibbonPresentationSize; compactSize?: RibbonPresentationSize; overflow: RibbonOverflowPolicy; priority?: number }>;
+
+/** Deterministic degradation shared by Home, View and contextual ribbons. */
+export function resolveRibbonPresentation(presentation: RibbonPresentation, available: RibbonPresentationSize): RibbonPresentationSize | "overflow" {
+  if (presentation.overflow === "preferred" && available !== "large") return "overflow";
+  const rank: readonly RibbonPresentationSize[] = ["large", "medium", "small", "icon"];
+  const preferredIndex = rank.indexOf(presentation.preferredSize);
+  const availableIndex = rank.indexOf(available);
+  if (preferredIndex >= availableIndex) return presentation.preferredSize;
+  if (presentation.compactSize && rank.indexOf(presentation.compactSize) >= availableIndex) return presentation.compactSize;
+  return presentation.overflow === "never" ? "icon" : "overflow";
+}
+
 /**
  * Data-driven ribbon group/item schema. A group's buttons/toggles are
  * defined as an array of these specs, not hand-written per-button JSX --
@@ -18,6 +33,7 @@ export type RibbonItemSpec =
       readonly testId?: string;
       readonly disabled?: boolean;
       readonly title?: string;
+      readonly presentation?: RibbonPresentation;
       /** #439: opt into the one shared "wide" size class (see ribbon.css)
        * when `label` contains a single word that won't fit the default
        * Home button width without breaking mid-word. Omit for the default
@@ -32,6 +48,7 @@ export type RibbonItemSpec =
       readonly testId?: string;
       readonly checked: boolean;
       readonly onChange: () => void;
+      readonly presentation?: RibbonPresentation;
     }
   | {
       readonly kind: "custom";

@@ -26,6 +26,7 @@ import type {
   SignalRole,
   ResetSemantics,
   TimeGroupId,
+  TransactionGroupId,
   TimeGroup,
   Transaction,
   TransactionPhase,
@@ -159,6 +160,7 @@ export interface ChangeSet {
   readonly bookmarkPosition?: readonly BookmarkId[];
   readonly timeGroupSemantics?: readonly TimeGroupId[];
   readonly transactionSemantics?: readonly TransactionId[];
+  readonly transactionGroupSemantics?: readonly TransactionGroupId[];
   readonly minimapOverview?: boolean;
 }
 

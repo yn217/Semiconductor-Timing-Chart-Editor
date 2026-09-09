@@ -13,6 +13,7 @@ import type { RibbonGroupSpec } from "./ribbon-schema.js";
 import { composeRibbon } from "./ribbon-composition.js";
 import type { ActiveContext } from "./workspace/use-workspace-ui-state.js";
 import { InsertSemanticIcon } from "./insert-semantic-icon.js";
+import { SIGNAL_TYPE_OPTIONS, signalTypeDefinition, signalTypeLabel } from "./runtime/signal-type-registry.js";
 import { AnnotationToolbar } from "./annotation-toolbar.js";
 import { ReviewWorkflow } from "./review-workflow.js";
 import { TimelineToolbar } from "./timeline-toolbar.js";
@@ -247,8 +248,6 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
         { kind: "button", id: "transaction-duplicate", icon: "i-duplicate", label: "Duplicate", ariaLabel: "Duplicate Transaction", size: "wide", onClick: duplicateTransaction, disabled: !selectedTransactionId },
       ],
     },
-    // #397: Group/Time Scale only apply in Transaction Mode -- gated the
-    // same way the single pre-split group already gated these controls.
     ...(viewMode === "Transaction" ? [{
       id: "transaction-group", majorGroup: "Group", caption: "Group", items: [
         { kind: "button", id: "transaction-group-add", icon: "i-plus", label: "Add", ariaLabel: "Add Transaction Group", onClick: addTransactionGroup },
@@ -256,7 +255,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
       ],
     } as const] : []),
     ...(viewMode === "Transaction" ? [{
-      id: "transaction-time", majorGroup: "Time", caption: "Time", items: [
+      id: "transaction-time", majorGroup: "Transaction Time", caption: "Time Scale", items: [
         { kind: "custom", id: "transaction-time-scale", render: () => <TransactionTimeScalePanel key="transaction-time-scale" document={document} onSetScale={commands.setTransactionTimeScale} /> },
       ],
     } as const] : []),
@@ -463,7 +462,12 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
     </>}
     {tab === "Insert" && <div className="insert-ribbon insert-group" data-testid="insert-ribbon">
       <div className="ribbon-major-group insert-slot-group" data-major-group="Signals" aria-label="Signals commands"><DsRibbonGroup ariaLabel="Signals" className="insert-signals-group" density="compact-grid" label="Signals">
-        <DsRibbonButton icon={<InsertSemanticIcon kind="signal" />} onClick={() => insertValueSignal("binary")}>Signal</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>Clock</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="bus" />} onClick={() => insertValueSignal("bus")}>Bus</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="state" />} onClick={() => insertValueSignal("state")}>State</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="logic" />} onClick={() => insertValueSignal("logic")}>Level</DsRibbonButton><DsRibbonButton icon={<InsertSemanticIcon kind="event" />} onClick={() => insertValueSignal("event")}>Event</DsRibbonButton>
+        {SIGNAL_TYPE_OPTIONS.flatMap(({ type }) => {
+          if (type === "pulse") return [];
+          const definition = signalTypeDefinition(type);
+          const button = <DsRibbonButton key={type} icon={<InsertSemanticIcon kind={definition.icon} />} onClick={() => insertValueSignal(type)}>{definition.label}</DsRibbonButton>;
+          return type === "binary" ? [button, <DsRibbonButton key="clock" icon={<InsertSemanticIcon kind="clock" />} onClick={insertClockSignal}>{signalTypeLabel("clock")}</DsRibbonButton>] : [button];
+        })}
       </DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Structure" aria-label="Structure commands"><DsRibbonGroup ariaLabel="Structure" className="insert-structure-group" density="compact-grid" label="Structure"><DsRibbonButton icon={<RibbonIcon name="i-group" />} onClick={insertGroup}>Group</DsRibbonButton><DsRibbonButton icon={<RibbonIcon name="i-spacing" />} onClick={insertSpacer}>Spacer</DsRibbonButton></DsRibbonGroup></div>
       <div className="ribbon-major-group insert-slot-group" data-major-group="Annotation" aria-label="Annotation commands"><DsRibbonGroup ariaLabel="Annotation" className="insert-annotation-group" density="compact-grid" label="Annotation">
@@ -547,7 +551,7 @@ function Ribbon({ tab, document, revision, range, history, zoom, gridEnabled, sn
           here. The status line is truthful about what's actually
           connected today -- there is no external Claude/Codex bridge
           implemented yet (see #395), so it never claims one. */}
-      <div className="ribbon-major-group" data-major-group="Assistant" aria-label="AI Assistant commands">
+      <div className="ribbon-major-group ai-group" data-major-group="Assistant" aria-label="AI Assistant commands">
         <DsRibbonGroup ariaLabel="Assistant" className="ai-assistant-group" label="Assistant">
           <DsRibbonButton ariaLabel="Ask or edit with the AI Assistant" icon={<RibbonIcon name="i-ai" />} onClick={onOpenAIAssistant} title="Open the AI Assistant in the Bottom Panel to preview, validate and apply a proposal">Ask / Edit</DsRibbonButton>
         </DsRibbonGroup>

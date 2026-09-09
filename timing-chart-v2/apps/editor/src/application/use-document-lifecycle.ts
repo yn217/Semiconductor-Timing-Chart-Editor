@@ -143,9 +143,13 @@ export function useDocumentLifecycle({
   const requestAction = useCallback((action: Omit<PendingDocumentAction, "requestId">, requestId = ++requestIdRef.current) => {
     if (requestId !== requestIdRef.current) return;
     const pending: PendingDocumentAction = { ...action, requestId };
-    if (application.history.dirty) setPendingAction(pending);
+    // This decision can run after an async File.text() boundary. Read the
+    // replaceable session at decision time so edits made while the file was
+    // loading cannot be lost because a stale React history snapshot said the
+    // document was clean.
+    if (application.runtime.session.current().historyState().dirty) setPendingAction(pending);
     else performAction(pending);
-  }, [application.history.dirty, performAction]);
+  }, [application.runtime, performAction]);
 
   const requestNew = useCallback(() => requestAction({ kind: "new" }), [requestAction]);
   const requestOpenText = useCallback((text: string, requestId?: number) => requestAction({ kind: "open", text }, requestId), [requestAction]);

@@ -29,6 +29,17 @@ describe("pure Semantic Command planning", () => {
     const rejected = planCommand(document, { id: commandId("txn_bad_group"), type: "transaction.create", transaction: { id: transactionId, name: "Bad", start: 1, end: 2, groupId } });
     expect(rejected).toMatchObject({ ok: false, reason: "invalid" });
   });
+  it("publishes exact Transaction Group forward/inverse ChangeSets and rejects unchanged updates", () => {
+    const source = canonicalFixture();
+    const group = { id: "txn_group_changes" as TransactionGroupId, name: "Transfers", color: "#123456", order: 0 } as const;
+    const grouped = { ...source, transactionGroups: [group], transactions: [{ ...source.transactions[0]!, id: "txn_changes" as TransactionId, groupId: group.id }] };
+    const renamed = planCommand(grouped, { id: commandId("txn_group_rename_changes"), type: "transactionGroup.rename", groupId: group.id, name: "Renamed" });
+    expect(renamed).toMatchObject({ ok: true, changeSet: { transactionGroupSemantics: [group.id] }, inverseChangeSet: { transactionGroupSemantics: [group.id] } });
+    const unchanged = planCommand(grouped, { id: commandId("txn_group_update_noop"), type: "transactionGroup.update", groupId: group.id, name: group.name, order: group.order, color: group.color });
+    expect(unchanged).toMatchObject({ ok: false, reason: "no-op" });
+    const deleted = planCommand(grouped, { id: commandId("txn_group_delete_changes"), type: "transactionGroup.delete", groupId: group.id });
+    expect(deleted).toMatchObject({ ok: true, changeSet: { transactionGroupSemantics: [group.id], transactionSemantics: ["txn_changes"] }, inverseChangeSet: { transactionGroupSemantics: [group.id], transactionSemantics: ["txn_changes"] } });
+  });
   it("validates suppressed clock slots relative to a delayed generator start", () => {
     const source = canonicalFixture();
     const clock = source.signals[0] as ClockSignal;

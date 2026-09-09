@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildDisplayTimeMapping, DisplayTimeMappingCache, remapValueChangesToDisplay } from "@timing-chart-v2/projection";
+import { buildDisplayTimeMapping, DisplayTimeMappingCache, remapValueChangesToDisplay, resolveSourcePosition } from "@timing-chart-v2/projection";
 import type { TimeGroup, TimeGroupId, Timeline } from "@timing-chart-v2/schema";
 
 function timeline(cycleCount: number, labelAnchors: Timeline["labelAnchors"] = []): Pick<Timeline, "cycleCount" | "labelAnchors"> {
@@ -11,6 +11,16 @@ function collapsedGroup(id: string, start: number, end: number): TimeGroup {
 }
 
 describe("buildDisplayTimeMapping", () => {
+  it("interpolates fractional source positions through the shared mapping", () => {
+    const mapping = buildDisplayTimeMapping(timeline(10), []);
+    expect(resolveSourcePosition(mapping, 1.5, "interpolate")).toBe(1.5);
+  });
+
+  it("resolves fractional positions around a collapsed range without pixel fallback", () => {
+    const mapping = buildDisplayTimeMapping(timeline(20), [collapsedGroup("g1", 5, 10)]);
+    expect(resolveSourcePosition(mapping, 3.5, "interpolate")).toBe(3.5);
+    expect(resolveSourcePosition(mapping, 10.5, "interpolate")).toBe(5.5);
+  });
   it("is the identity mapping when there are no collapsed TimeGroups", () => {
     const mapping = buildDisplayTimeMapping(timeline(10), []);
     expect(mapping.displayCycleCount).toBe(10);

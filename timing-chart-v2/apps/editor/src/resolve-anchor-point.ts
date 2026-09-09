@@ -1,13 +1,13 @@
 import type { LocalGeometryMap, Point } from "@timing-chart-v2/geometry";
-import type { DisplayTimeMapping, RenderProjection } from "@timing-chart-v2/projection";
+import { resolveSourcePosition, type DisplayTimeMapping, type RenderProjection } from "@timing-chart-v2/projection";
 import type { CanonicalDocument, SemanticAnchor, SignalId } from "@timing-chart-v2/schema";
 
-export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): Point | undefined {
+export function resolveAnchorPoint(anchor: SemanticAnchor | undefined, document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1, continuous = false): Point | undefined {
   if (!anchor) return undefined;
   const axisOwnerSignalId = document.timeline.referenceClock ?? document.signals.find((signal) => signal.type !== "commentRow" && maps.has(signal.id))?.id;
   const signalId = anchor.signalId ?? axisOwnerSignalId;
   if (!signalId) return undefined;
-  const renderedCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : mapping.sourceToDisplay[anchor.cycle];
+  const renderedCycle = anchor.cycle === document.timeline.cycleCount ? mapping.displayCycleCount : resolveSourcePosition(mapping, anchor.cycle, continuous ? "interpolate" : "omit");
   if (renderedCycle === undefined) return undefined;
   const local = maps.get(signalId)?.find({ ...anchor, signalId, cycle: renderedCycle });
   if (!local) return undefined;

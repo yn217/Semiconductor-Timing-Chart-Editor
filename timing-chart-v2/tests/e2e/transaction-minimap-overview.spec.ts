@@ -43,6 +43,24 @@ test("MiniMap shows a Transaction-aware overview in Transaction Mode: one segmen
   // distinct colors, none of them the flat Signal-segment fallback.
   expect(new Set(colors).size).toBe(6);
   expect(colors).not.toContain("rgb(220, 234, 254)");
+
+  // Transaction Mode GUI realignment: the assertions above only ever
+  // checked each segment's OWN computed color -- they stayed green even
+  // while a real bug painted the viewport-indicator rectangle
+  // (`[data-testid="minimap-viewport"]`) with a near-opaque `#f7faff`
+  // background directly on top of every segment (DOM paint order puts it
+  // last), visually hiding the whole overview whenever the visible range
+  // wasn't exactly 100% zoomed out -- the overwhelmingly common case. A
+  // screenshot-based check would have caught this; a DOM-only one didn't.
+  // Guard the actual paint-order/opacity contract instead: the overlay's
+  // background alpha must stay low enough that it can never mask the
+  // segments underneath it, regardless of how much of the range it covers.
+  const viewportBg = await minimap.getByTestId("minimap-viewport").evaluate((el) => getComputedStyle(el).backgroundColor);
+  // rgba(r, g, b, a) has a 4th component; a plain rgb(r, g, b) is fully
+  // opaque (alpha 1) regardless of its channel values.
+  const alphaMatch = /^rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*([\d.]+)\s*\)$/.exec(viewportBg);
+  const alpha = alphaMatch ? Number(alphaMatch[1]) : 1;
+  expect(alpha).toBeLessThan(0.3);
 });
 
 test("MiniMap falls back to the Signal overview in Cycle Mode, view-only throughout", async ({ page }) => {

@@ -29,7 +29,15 @@
 
 .inspector > .minimap .minimap-rows { inset: 29px 12px 12px; }
 
-.inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"] { border-color: #367cf6; background: #f7faff; }
+/* Transaction Mode GUI realignment: this was a near-opaque `#f7faff`,
+   which -- whenever the visible range wasn't exactly 100% zoomed out (the
+   overwhelmingly common case) -- painted a solid mask over almost the
+   entire MiniMap, hiding every real Signal/Transaction segment underneath
+   it even though their own geometry/colors were computed correctly. Match
+   the base (non-Inspector) viewport indicator's translucency so the
+   viewport rectangle still reads clearly while the segments stay visible
+   through it. */
+.inspector > .minimap .minimap-rows > [data-testid="minimap-viewport"] { border-color: #367cf6; background: #367cf626; }
 
 .editor-shell .inspector > .minimap .minimap-overview-frame { position: absolute; top: -2px; left: 9px; width: 279px; height: 107px; display: block; border: 1px solid #ccd5e2; background: #fff; }
 

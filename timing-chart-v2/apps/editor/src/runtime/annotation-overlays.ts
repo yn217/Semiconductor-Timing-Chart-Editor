@@ -20,14 +20,15 @@ function measurementAnchorLabel(annotation: Pick<Annotation, "label" | "measurem
 export function projectAnnotationOverlays(document: CanonicalDocument, projection: RenderProjection, maps: ReadonlyMap<SignalId, LocalGeometryMap>, mapping: DisplayTimeMapping, xScale = 1): AnnotationOverlayPrimitive[] {
   const measurementSpans = document.annotations.flatMap((annotation) => {
     if (annotation.type !== "measurement" || !annotation.start || !annotation.end) return [];
-    const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale);
-    const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale);
+    const continuous = annotation.positionMode === "free";
+    const first = resolveAnchorPoint(annotation.start, document, projection, maps, mapping, xScale, continuous);
+    const second = resolveAnchorPoint(annotation.end, document, projection, maps, mapping, xScale, continuous);
     return first && second ? [{ id: annotation.id, firstX: first.x, secondX: second.x, ...(annotation.measurementLayout?.lane === undefined ? {} : { explicitLane: annotation.measurementLayout.lane }) }] : [];
   });
   const measurementLaneById = allocateMeasurementLanes(measurementSpans);
   return document.annotations.flatMap((annotation) => {
     const anchors = annotationFields.flatMap((field) => {
-      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale);
+      const point = resolveAnchorPoint(annotation[field], document, projection, maps, mapping, xScale, annotation.positionMode === "free");
       const fraction = anchorTransitionFraction(annotation[field]);
       const kind = anchorTransitionKind(annotation[field]);
       return point ? [{ field, ...point, ...(fraction === undefined ? {} : { threshold: fraction }), ...(kind === undefined ? {} : { transitionKind: kind }) }] : [];
