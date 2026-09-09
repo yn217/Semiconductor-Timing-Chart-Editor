@@ -18,5 +18,6 @@ export function RibbonGroup({ spec }: { readonly spec: RibbonGroupSpec }) {
 function RibbonSchemaItem({ item }: { readonly item: RibbonItemSpec }) {
   if (item.kind === "custom") return item.render();
   if (item.kind === "toggle") return <DsRibbonToggle checked={item.checked} dataTestId={item.testId} label={item.label} onChange={item.onChange} />;
-  return <DsRibbonButton ariaLabel={item.ariaLabel ?? item.label} className={item.size === "wide" ? "ds-ribbon-button--wide" : undefined} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} onClick={item.onClick} title={item.title} v1Label={item.v1Label}>{item.label}</DsRibbonButton>;
+  const presentationClass = item.presentation ? ` ribbon-presentation-${item.presentation.preferredSize}` : "";
+  return <DsRibbonButton ariaLabel={item.ariaLabel ?? item.label} className={`${item.size === "wide" ? "ds-ribbon-button--wide" : ""}${presentationClass}`} dataTestId={item.testId} disabled={item.disabled} icon={<RibbonIcon name={item.icon} />} onClick={item.onClick} title={item.title} v1Label={item.v1Label}>{item.label}</DsRibbonButton>;
 }
