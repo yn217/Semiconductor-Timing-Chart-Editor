@@ -314,15 +314,18 @@
   min-width: 0;
   min-height: 0;
   overflow: auto;
+  overscroll-behavior: contain;
 }
 .cycle-panel.mode-split .split-transaction-pane {
   border-right: 1px solid var(--ds-border-subtle, #b7c4d2);
   overscroll-behavior: contain;
+  overflow-x: auto;
+  z-index: 20;
 }
 .cycle-panel.mode-split .split-transaction-pane .transaction-lanes {
   position: relative;
   top: 0;
-  width: 100%;
+  width: calc(var(--gui-left-width) + var(--gui-frozen-width, 210px) + var(--wave-width, 640px));
   min-height: 100%;
   max-height: none;
   overflow: visible;
