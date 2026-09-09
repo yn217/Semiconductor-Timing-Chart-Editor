@@ -31,7 +31,16 @@ export function EditorWorkspaceView({
   return <div className="desktop-workspace">
     <section className={`cycle-panel mode-${viewMode.toLowerCase()}`} aria-label={`${viewMode} View`} data-view-mode={viewMode} data-signal-split={String(signalSplitEnabled && viewMode === "Cycle")}>
       <div className="left-pane-resize-handle" data-testid="left-pane-resizer" role="separator" aria-label="Resize Signal Group pane" aria-orientation="vertical" aria-valuemin={LEFT_PANE_MIN_WIDTH} aria-valuemax={LEFT_PANE_MAX_WIDTH} aria-valuenow={leftPaneWidth} tabIndex={0} onKeyDown={onLeftPaneKeyDown} onPointerDown={onLeftPanePointerDown} onPointerMove={onLeftPanePointerMove} onPointerUp={onLeftPanePointerUp} onPointerCancel={onLeftPanePointerUp} />
-      <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />
+      {/* Transaction Mode GUI realignment: this splitter's whole purpose is
+          separating Cycle Mode's frozen Role/Signal-name columns from the
+          waveform canvas -- Transaction Mode has no such split (its Tree
+          is one unified panel; "Group"/"Transaction" are header labels
+          only, not two independently-resizable body columns). It was
+          rendered unconditionally in every view mode, so its full-height
+          (top:0/bottom:0) hit target landed inside the Transaction Tree
+          panel with no corresponding column boundary to resize -- reported
+          as a stray vertical line bleeding through the Tree's content. */}
+      {viewMode === "Cycle" && <div className="frozen-pane-resize-handle" data-testid="frozen-pane-resizer" role="separator" aria-label="Resize Signal label and timing pane" aria-orientation="vertical" aria-valuemin={frozenPaneMinWidth} aria-valuemax={360} aria-valuenow={frozenPaneWidth} tabIndex={0} onKeyDown={onFrozenPaneKeyDown} onPointerDown={onFrozenPanePointerDown} onPointerMove={onFrozenPanePointerMove} onPointerUp={onFrozenPanePointerUp} onPointerCancel={onFrozenPanePointerUp} />}
       {header}
       <div className="cycle-viewport" ref={viewport} data-testid="cycle-viewport" tabIndex={0} aria-label="Timing canvas navigation">
         {viewportContent}
