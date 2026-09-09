@@ -42,3 +42,30 @@ test("Highlight Position Mode is editable in the Bottom Panel and commits throug
   await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
   await expect(modeSelect).toHaveValue("free");
 });
+
+test("Fractional Highlight Free position survives production Save/Open", async ({ page }) => {
+  await page.goto("/");
+  const host = page.getByTestId("cycle-surface");
+  await expect(host).toHaveAttribute("data-cycle-view-ready", "true");
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByLabel("Annotation type").selectOption("highlight");
+  await page.getByRole("button", { name: "Add annotation" }).click();
+  await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+  const modeSelect = page.getByRole("combobox", { name: "Highlight position mode" });
+  await modeSelect.selectOption("free");
+  const startCycle = page.getByLabel("Inspector annotation anchor cycle");
+  await startCycle.fill("8.35");
+  await page.getByRole("button", { name: "Apply Anchor" }).click();
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "File", exact: true }).click();
+  const pendingSave = page.waitForEvent("download");
+  await page.getByTestId("ribbon").getByRole("button", { name: "Save", exact: true }).click();
+  const saved = await pendingSave;
+  const savedPath = await saved.path();
+  expect(savedPath).toBeTruthy();
+  await page.locator("input[type='file'][accept='.json,.tcd']").setInputFiles(savedPath!);
+  await page.locator(".ribbon-tabs").getByRole("button", { name: "Annotation", exact: true }).click();
+  await page.getByRole("tab", { name: "Annotation", exact: true }).click();
+  await page.locator("[data-annotation-list-id]").first().click();
+  await expect(modeSelect).toHaveValue("free");
+  await expect(startCycle).toHaveValue("8.35");
+});
