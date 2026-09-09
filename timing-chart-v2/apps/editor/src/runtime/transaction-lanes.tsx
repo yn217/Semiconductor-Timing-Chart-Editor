@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent as ReactPointerEvent } from "react";
 import type { CanonicalDocument, Transaction, TransactionId } from "@timing-chart-v2/schema";
 import type { TransactionLaneCommandActions } from "../application/editor-surface-command-controller.js";
 import { InlineNameInput } from "../inline-name-input.js";
@@ -183,9 +183,11 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   }, [documentEpoch]);
   const toggleGroupCollapsed = (key: string) => setCollapsedGroups((current) => { const next = new Set(current); if (next.has(key)) next.delete(key); else next.add(key); return next; });
   const owner = useRef<HTMLElement>(null);
-  const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
-  const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
-  const boundaryXByCycle = new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const));
+  const { cycleXs, boundaryXByCycle } = useMemo(() => {
+    const relevantCycles = [...new Set(document.transactions.flatMap((transaction) => [transaction.start, transaction.end, ...(transaction.phases ?? []).flatMap(phase => [phase.start, phase.end])]))].sort((left, right) => left - right);
+    const cycleXs = relevantCycles.flatMap((cycle) => { const x = getBoundaryX(cycle); return x === undefined ? [] : [{ cycle, x }]; });
+    return { cycleXs, boundaryXByCycle: new Map(cycleXs.map(({ cycle, x }) => [cycle, x] as const)) };
+  }, [document, getBoundaryX]);
   const x = (cycle: number) => boundaryXByCycle.get(cycle);
 
   // #452: Group headers only appear once real Groups are in use -- a
@@ -198,16 +200,19 @@ export function TransactionLanes({ document: rawDocument, documentEpoch, zoom, s
   // "Memory / Lane 0" vs "CPU / Lane 1" structure.
   const groups = document.transactionGroups ?? [];
   const laneKey = (groupId: string | undefined, laneId: string) => `${groupId ?? "ungrouped"}\u0000${laneId}`;
-  const laneTransactionsByKey = new Map<string, Transaction[]>();
-  const transactionCountByGroup = new Map<string | undefined, number>();
-  for (const transaction of document.transactions) {
-    const laneId = transaction.laneId ?? "lane_0";
-    const key = laneKey(transaction.groupId, laneId);
-    const laneTransactions = laneTransactionsByKey.get(key);
-    if (laneTransactions) laneTransactions.push(transaction);
-    else laneTransactionsByKey.set(key, [transaction]);
-    transactionCountByGroup.set(transaction.groupId, (transactionCountByGroup.get(transaction.groupId) ?? 0) + 1);
-  }
+  const { laneTransactionsByKey, transactionCountByGroup } = useMemo(() => {
+    const laneTransactionsByKey = new Map<string, Transaction[]>();
+    const transactionCountByGroup = new Map<string | undefined, number>();
+    for (const transaction of document.transactions) {
+      const laneId = transaction.laneId ?? "lane_0";
+      const key = laneKey(transaction.groupId, laneId);
+      const laneTransactions = laneTransactionsByKey.get(key);
+      if (laneTransactions) laneTransactions.push(transaction);
+      else laneTransactionsByKey.set(key, [transaction]);
+      transactionCountByGroup.set(transaction.groupId, (transactionCountByGroup.get(transaction.groupId) ?? 0) + 1);
+    }
+    return { laneTransactionsByKey, transactionCountByGroup };
+  }, [document]);
   // Transaction Mode GUI realignment: this used to also require "at least
   // one Transaction already references a Group" -- a freshly-created,
   // still-empty Group (the Tree's own "+" -> Add Transaction Group button)
