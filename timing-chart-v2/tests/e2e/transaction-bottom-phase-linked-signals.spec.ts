@@ -61,3 +61,23 @@ test("Bottom Panel Transaction tab exposes Phase and Linked Signals, sharing Ins
   // Inspector reflects the same link -- one shared Canonical owner.
   await expect(inspector.getByTestId("transaction-linked-signals")).toContainText("CLOCK");
 });
+
+test("an unapplied Transaction draft survives an immediate linked-signal command", async ({ page }) => {
+  await openTransactionMode(page);
+  await page.getByTestId("ribbon").getByRole("button", { name: "Create Transaction", exact: true }).click();
+  const bottom = page.getByTestId("transaction-editor");
+  await bottom.getByLabel("Transaction name", { exact: true }).fill("Draft survives link");
+  await bottom.getByTestId("apply-transaction-properties").click();
+
+  await bottom.getByTestId("add-bottom-transaction-phase").click();
+  await bottom.getByLabel("Bottom Phase 1 name").fill("Unapplied phase");
+  await expect(bottom.getByTestId("transaction-properties-unapplied")).toBeVisible();
+
+  await bottom.getByTestId("open-linked-signal-picker").click();
+  await bottom.getByLabel("Search linked signals").fill("CLOCK");
+  await bottom.getByRole("option", { name: /CLOCK/ }).click();
+
+  await expect(bottom.getByLabel("Transaction name", { exact: true })).toHaveValue("Draft survives link");
+  await expect(bottom.getByLabel("Bottom Phase 1 name")).toHaveValue("Unapplied phase");
+  await expect(bottom.getByTestId("transaction-properties-unapplied")).toBeVisible();
+});
