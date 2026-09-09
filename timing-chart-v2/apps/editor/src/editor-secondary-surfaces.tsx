@@ -248,9 +248,16 @@ export function useEditorSecondarySurfaces(input: EditorSecondarySurfacesInput):
     onOpenHierarchy={() => dialog.setHierarchyVisible(true)}
     onCloseMoreMenu={dialog.closeTreeMoreMenu}
     timeScaleLabel={workspace.viewMode === "Transaction"
-      ? (input.document.transactionTimeScale
-        ? `Time Scale: 1 TC = ${input.document.transactionTimeScale.clockCyclesPerTransactionCycle} Cycle${input.document.transactionTimeScale.clockCyclesPerTransactionCycle === 1 ? "" : "s"}`
-        : "Time Scale: 1 TC = 1 Cycle")
+      ? (() => {
+          // Transaction Mode GUI realignment: the reference mockup's own
+          // Time Scale readout is "TRANSACTION CYCLE (TC) | REFERENCE:
+          // SYSTEM CLOCK (1 TC = N cycles)" -- same underlying
+          // `document.transactionTimeScale` data this already read, just a
+          // clearer two-part label (what TC means, then what it maps to in
+          // real clock cycles) instead of the terser "1 TC = N Cycles".
+          const perTc = input.document.transactionTimeScale?.clockCyclesPerTransactionCycle ?? 1;
+          return `Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = ${perTc} Cycle${perTc === 1 ? "" : "s"})`;
+        })()
       : input.document.timeline.referenceClock ? `Time Scale: Cycle    Reference: ${input.referenceClockName ?? input.document.timeline.referenceClock}` : "Time Scale: Cycle    Axis: Time"}
     transactionMode={workspace.viewMode === "Transaction" ? { filter: workspace.transactionTreeFilter, onFilterChange: workspace.setTransactionTreeFilter, onAdd: input.actions.createTransaction, onAddGroup: input.actions.createTransactionGroup, tab: workspace.transactionTreeTab, onTabChange: workspace.setTransactionTreeTab } : undefined}
   />;

@@ -64,5 +64,5 @@ test("selection highlight still visibly overrides a Transaction's own color", as
 
 test("Transaction Time Scale label reflects the document's authored 1 TC = 10 cycles", async ({ page }) => {
   await openSample(page);
-  await expect(page.locator("span", { hasText: /^Time Scale:/ })).toHaveText("Time Scale: 1 TC = 10 Cycles");
+  await expect(page.locator("span", { hasText: /^Time Scale:/ })).toHaveText("Time Scale: Transaction Cycle (TC)    Reference: System Clock (1 TC = 10 Cycles)");
 });
