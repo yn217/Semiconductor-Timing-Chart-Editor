@@ -39,4 +39,19 @@ test("Marker's Vertical span is editable in the Bottom Panel, dispatching the ex
   // One logical History unit for the whole vertical-span edit.
   await expect(page.getByTestId("history-status")).toHaveText("History 2 / Redo 0");
   await expect(applyBtn).toBeDisabled(); // draft now matches applied Canonical state
+
+  const markerOwner = page.locator("[data-role='annotation-owner'][data-annotation-type='marker']");
+  await expect(markerOwner).toBeVisible();
+  await expect(markerOwner.locator("[data-role='annotation-handle'][data-annotation-field='verticalSpanStart']")).toHaveCount(1);
+  const bottomHandle = markerOwner.locator("[data-role='annotation-handle'][data-annotation-field='verticalSpanEnd']");
+  await expect(bottomHandle).toHaveCount(1);
+  const anchorBefore = await markerOwner.locator("[data-role='annotation-handle'][data-annotation-field='anchor']").getAttribute("style");
+  const box = await bottomHandle.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width / 2, box!.y + box!.height / 2 + 24);
+  await page.mouse.up();
+  await expect(page.getByTestId("history-status")).toHaveText("History 3 / Redo 0");
+  await expect(markerOwner.locator("[data-role='annotation-handle'][data-annotation-field='anchor']")).toHaveAttribute("style", anchorBefore!);
 });
